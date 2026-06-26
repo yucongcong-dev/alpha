@@ -1,58 +1,125 @@
 # WorldQuant Brain Alpha Runner
 
-Generic WorldQuant Brain dataset alpha simulation/check/submit runner.
+通用的 WorldQuant Brain 数据集 Alpha 模拟/检查/提交运行器。
 
-## Setup
+## 项目结构
 
-```bash
-python3 -m pip install -r requirements.txt
+```
+alpha/                     # 项目根目录
+├── src/                   # 源码目录
+│   └── alpha/             # 主包
+│       ├── __init__.py    # 包入口（导出基础公共 API）
+│       ├── __main__.py    # python -m alpha 入口
+│       ├── main.py        # 主流程编排
+│       │
+│       ├── core/          # 核心业务层
+│       │   └── executor.py
+│       │
+│       ├── generators/    # Alpha 生成层
+│       │   ├── templates.py
+│       │   ├── expressions.py
+│       │   ├── fields.py
+│       │   └── settings.py
+│       │
+│       ├── analysis/      # 分析优化层
+│       │   ├── stats.py
+│       │   └── feedback.py
+│       │
+│       ├── api/           # API 客户端层
+│       │   └── client.py
+│       │
+│       ├── io/            # 输入输出层
+│       │   ├── credentials.py
+│       │   └── output.py
+│       │
+│       ├── cli/           # 命令行接口层
+│       │   └── parser.py
+│       │
+│       ├── models/        # 数据模型层
+│       │   └── base.py
+│       │
+│       ├── utils/         # 工具函数层
+│       │   └── helpers.py
+│       │
+│       ├── config.py      # 配置常量
+│       └── exceptions.py  # 自定义异常
+│
+├── tests/                 # 测试目录
+│   ├── unit/              # 单元测试
+│   └── integration/       # 集成测试
+│
+├── README.md              # 项目说明
+├── requirements.txt       # 依赖
+├── pyproject.toml         # 项目配置
+└── .gitignore
 ```
 
-## Run
-
-Smoke test, only for checking login/API flow:
+## 安装
 
 ```bash
-python3 worldquant_brain_dataset_submit.py --smoke-test
+# 开发模式安装（推荐）
+pip install -e .
+
+# 或直接使用 PYTHONPATH 运行
+export PYTHONPATH=src
+python -m alpha --smoke-test
 ```
 
-Default exploration run, suitable for looking for candidate alphas. This is the recommended daily command because it tests a useful sample instead of only one field/template:
+## 运行
+
+冒烟测试，仅用于检查登录/API 流程：
 
 ```bash
-python3 worldquant_brain_dataset_submit.py
+python -m alpha --smoke-test
 ```
 
-Preview the next run without creating simulations:
+默认探索运行，适合寻找候选 Alpha：
 
 ```bash
-python3 worldquant_brain_dataset_submit.py --dry-run-plan
+python -m alpha
 ```
 
-Wider exploration, when you want a better chance of finding useful candidates:
+预览下一次运行而不创建模拟任务：
 
 ```bash
-python3 worldquant_brain_dataset_submit.py --limit 50 --max-templates-per-field 8
+python -m alpha --dry-run-plan
 ```
 
-Force refresh the local field cache before exploring:
+更广泛的探索：
 
 ```bash
-python3 worldquant_brain_dataset_submit.py --refresh-fields-cache
+python -m alpha --limit 50 --max-templates-per-field 8
 ```
 
-Full run, can be slow and queue-heavy. Use it only when you are ready to spend more API queue time:
+强制刷新本地字段缓存：
 
 ```bash
-python3 worldquant_brain_dataset_submit.py --full-run
+python -m alpha --refresh-fields-cache
 ```
 
-Avoid using `--limit 1 --max-templates-per-field 1` for alpha discovery. That mode is intentionally tiny and almost never finds high-quality alphas.
+完整运行：
 
-The script automatically refreshes the field cache when the cached field count is smaller than the requested `--limit`.
-If the cache already has some fields, the script extends it from the next offset instead of refetching everything.
-The default simulation concurrency is `2`, and the runner automatically cools down to `1` when queue congestion is detected.
+```bash
+python -m alpha --full-run
+```
 
-After each run, inspect `*_test_results_analysis.json` for `failed_check_leaderboard`, `near_pass_summary`, and `optimization_hints`. These sections show the main blockers and the best candidates for the next iteration.
-Historical failed checks also feed back into the next run: the runner boosts template families that address the dominant blockers, demotes weak legacy-style families, and creates local variants around near-pass expressions.
+## 测试
 
-The first run prompts for WorldQuant Brain credentials and stores them encrypted locally. Credential files, logs, caches, and result files are ignored by git.
+运行单元测试：
+
+```bash
+python -m unittest discover tests -v
+
+# 或使用 pytest（需要安装）
+pip install pytest
+pytest tests/ -v
+```
+
+## 打包发布
+
+```bash
+pip install build
+python -m build
+```
+
+生成的包在 `dist/` 目录下。

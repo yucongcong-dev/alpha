@@ -1,0 +1,342 @@
+# -*- coding: utf-8 -*-
+"""
+并发调度与拥塞控制模块
+
+本模块负责并发任务调度、队列拥塞控制和任务结果处理，
+包括动态调整并发数、拥塞冷却、任务节流等功能。
+
+模块内容：
+    - 已完成任务处理函数
+    - 并发度动态调整函数
+    - 队列拥塞跟踪函数
+    - 任务节流函数
+    - 批量结果消费函数
+"""
+
+import argparse
+import time
+from typing import Any, Dict, List, Optional, Sequence, Tuple
+
+from ..models.base import (
+    ExecutionState,
+    FieldTestResult,
+    RuntimeConcurrencyState,
+)
+from ..api.client import wait_seconds
+
+
+# ============================================================================
+# 已完成任务处理函数
+# ============================================================================
+
+def handle_completed_future(
+    future,
+    *,
+    results: List[FieldTestResult],
+    attempted_keys: set[Tuple[str, str, str, str]],
+    template_stats: Dict[str, Dict[str, int]],
+    args: argparse.Namespace,
+    pending_contexts: Dict[Any, Dict[str, Any]],
+    settings_fingerprint: str,
+    template_library_fingerprint: str,
+    run_config: Optional[Dict[str, Any]],
+) -> Tuple[Dict[str, Dict[str, int]], bool, Optional[str]]:
+    """
+    收尾一个 worker future，落盘结果并回传拥塞信号。
+
+    处理已完成的异步任务，保存结果、更新统计数据，
+    并检测拥塞信号。
+
+    Args:
+        future: 已完成的 Future 对象。
+        results: 结果列表（会被修改）。
+        attempted_keys: 已尝试的键集合（会被修改）。
+        template_stats: 模板统计数据（会被修改）。
+        args: 命令行参数。
+        pending_contexts: 待处理上下文字典（会被修改）。
+        settings_fingerprint: 设置配置指纹。
+        template_library_fingerprint: 模板库指纹。
+        run_config: 运行配置。
+
+    Returns:
+        Tuple[Dict[str, Dict[str, int]], bool, Optional[str]]: 返回一个元组，包含：
+            - template_stats: 更新后的模板统计数据
+            - congestion_detected: 是否检测到拥塞
+            - queue_busy_field_id: 队列拥塞的字段 ID（如果有）
+
+    Note:
+        - 此函数需要导入 output 模块的 dump_results
+        - 此函数需要导入 expressions 模块的分析函数
+    """
+    from ..io.output import dump_results
+    from ..analysis.stats import (
+        compile_template_stats,
+        is_informative_result,
+        result_identity,
+    )
+    from .simulation import build_failure_result
+
+    context = pending_contexts.pop(future)
+    field_id = context["field_id"]
+    template_name = context["template_name"]
+
+    try:
+        result = future.result()
+    except Exception as exc:  # noqa: BLE001
+        result = build_failure_result(
+            field_id=field_id,
+            field_type=context["field_type"],
+            field_name=context["field_name"],
+            template_name=template_name,
+            simulation_id=None,
+            alpha_id=None,
+            expression=context["expression"],
+            settings_fingerprint=context["settings_fingerprint"],
+            template_library_fingerprint=template_library_fingerprint,
+            failed_stage="worker",
+            message=str(exc),
+        )
+
+    results.append(result)
+    if is_informative_result(result):
+        attempted_keys.add(result_identity(result))
+    template_stats = compile_template_stats(results)
+    print(
+        f"[result] field={result.field_id} template={result.template_name} status={result.status} "
+        f"submittable={result.submittable} submitted={result.submitted} message={result.message}",
+        flush=True,
+    )
+    dump_results(
+        args.output,
+        args.dataset_id,
+        results,
+        settings_fingerprint=settings_fingerprint,
+        template_library_fingerprint=template_library_fingerprint,
+        run_config=run_config,
+    )
+    congestion_detected = False
+    if "CONCURRENT_SIMULATION_LIMIT_EXCEEDED" in result.message:
+        congestion_detected = True
+    if isinstance(result.message, str) and "queued too long" in result.message.lower():
+        congestion_detected = True
+    if result.failed_stage == "simulate" and isinstance(result.message, str) and "rate limited" in result.message.lower():
+        congestion_detected = True
+    queue_busy_field_id = None
+    if result.failed_stage == "simulate" and isinstance(result.message, str):
+        lowered = result.message.lower()
+        if "queued too long" in lowered or "queue budget" in lowered:
+            queue_busy_field_id = result.field_id
+    return template_stats, congestion_detected, queue_busy_field_id
+
+
+# ============================================================================
+# 并发度动态调整函数
+# ============================================================================
+
+def maybe_restore_runtime_concurrency(state: RuntimeConcurrencyState) -> None:
+    """
+    在拥塞冷却结束后恢复正常并发度。
+
+    检查冷却时间是否已结束，如果结束则恢复正常的并发度设置。
+
+    Args:
+        state: RuntimeConcurrencyState 实例（会被修改）。
+
+    Example:
+        >>> state = RuntimeConcurrencyState(max_workers=5, runtime_max_workers=1, cooldown_until=100.0)
+        >>> # 时间已超过冷却时间
+        >>> maybe_restore_runtime_concurrency(state)
+        >>> print(state.runtime_max_workers)
+        5
+
+    Note:
+        - 使用单调时钟判断冷却时间
+        - 恢复后会打印日志消息
+    """
+    if state.cooldown_until and time.monotonic() >= state.cooldown_until and state.runtime_max_workers != state.max_workers:
+        state.runtime_max_workers = state.max_workers
+        state.cooldown_until = 0.0
+        print(
+            f"[cooldown] restored runtime concurrency to {state.runtime_max_workers}",
+            flush=True,
+        )
+
+
+def apply_congestion_cooldown(args: argparse.Namespace, state: RuntimeConcurrencyState) -> None:
+    """
+    检测到拥塞后，临时切换到单 worker 运行模式。
+
+    当检测到队列拥塞时，临时将并发度降低到 1，
+    并设置冷却时间。
+
+    Args:
+        args: 命令行参数，需要包含 queue_busy_cooldown_seconds。
+        state: RuntimeConcurrencyState 实例（会被修改）。
+
+    Example:
+        >>> args.queue_busy_cooldown_seconds = 180
+        >>> state = RuntimeConcurrencyState(max_workers=5, runtime_max_workers=5)
+        >>> apply_congestion_cooldown(args, state)
+        >>> print(state.runtime_max_workers)
+        1
+
+    Note:
+        - 将 runtime_max_workers 设置为 1
+        - 使用 queue_busy_cooldown_seconds 设置冷却时间
+        - 会打印日志消息
+    """
+    state.runtime_max_workers = 1
+    state.cooldown_until = time.monotonic() + max(args.queue_busy_cooldown_seconds, 0.0)
+    print(
+        f"[cooldown] detected queue congestion, runtime concurrency -> 1 for {args.queue_busy_cooldown_seconds:.0f}s",
+        flush=True,
+    )
+
+
+# ============================================================================
+# 队列拥塞跟踪函数
+# ============================================================================
+
+def register_queue_busy_field(
+    field_id: Optional[str],
+    args: argparse.Namespace,
+    field_queue_busy_counts: Dict[str, int],
+    skipped_fields_due_to_queue: set[str],
+) -> None:
+    """
+    记录重复的排队拥塞字段，并在达到阈值后跳过该字段。
+
+    跟踪字段的队列拥塞次数，当达到阈值时将字段加入跳过列表。
+
+    Args:
+        field_id: 字段 ID（可能为 None）。
+        args: 命令行参数，需要包含 field_queue_busy_skip_after。
+        field_queue_busy_counts: 字段拥塞计数字典（会被修改）。
+        skipped_fields_due_to_queue: 跳过字段集合（会被修改）。
+
+    Example:
+        >>> args.field_queue_busy_skip_after = 2
+        >>> field_queue_busy_counts = {}
+        >>> skipped_fields_due_to_queue = set()
+        >>> register_queue_busy_field("field_1", args, field_queue_busy_counts, skipped_fields_due_to_queue)
+        >>> print(field_queue_busy_counts)
+        {'field_1': 1}
+
+    Note:
+        - 如果 field_id 为 None 或阈值为 0，不执行任何操作
+        - 达到阈值后会打印日志消息
+    """
+    if not field_id or args.field_queue_busy_skip_after <= 0:
+        return
+    field_queue_busy_counts[field_id] = field_queue_busy_counts.get(field_id, 0) + 1
+    if field_queue_busy_counts[field_id] >= args.field_queue_busy_skip_after:
+        skipped_fields_due_to_queue.add(field_id)
+        print(
+            f"[skip] field={field_id} hit queue-busy limit {field_queue_busy_counts[field_id]}/{args.field_queue_busy_skip_after}",
+            flush=True,
+        )
+
+
+# ============================================================================
+# 任务节流函数
+# ============================================================================
+
+def throttle_before_submission(args: argparse.Namespace, execution_state: ExecutionState) -> None:
+    """
+    在提交新任务前控制节奏，避免阻塞已完成任务处理。
+
+    在提交新任务前检查是否需要等待，以保持稳定的提交节奏。
+
+    Args:
+        args: 命令行参数，需要包含 sleep_between_fields。
+        execution_state: ExecutionState 实例，包含上次提交时间。
+
+    Example:
+        >>> args.sleep_between_fields = 2.0
+        >>> execution_state.last_submission_at = time.monotonic() - 1.0
+        >>> throttle_before_submission(args, execution_state)
+        >>> # 等待 1 秒
+
+    Note:
+        - 如果 sleep_between_fields <= 0，不执行任何操作
+        - 如果上次提交时间为 0（首次），不执行任何操作
+        - 使用 wait_seconds 函数等待剩余时间
+    """
+    if args.sleep_between_fields <= 0:
+        return
+    if execution_state.last_submission_at <= 0:
+        return
+    elapsed = time.monotonic() - execution_state.last_submission_at
+    remaining = args.sleep_between_fields - elapsed
+    if remaining > 0:
+        wait_seconds(remaining, "before next template submission")
+
+
+# ============================================================================
+# 批量结果消费函数
+# ============================================================================
+
+def drain_completed_futures(
+    *,
+    completed_futures: Sequence[Any],
+    execution_state: ExecutionState,
+    args: argparse.Namespace,
+    settings_fingerprint: str,
+    template_library_fingerprint: str,
+    run_config: Optional[Dict[str, Any]],
+    runtime_state: RuntimeConcurrencyState,
+) -> Dict[str, Dict[str, int]]:
+    """
+    消费已完成的 future，落盘结果并更新队列退避状态。
+
+    处理所有已完成的异步任务，更新结果和状态。
+
+    Args:
+        completed_futures: 已完成的 Future 序列。
+        execution_state: ExecutionState 实例（会被修改）。
+        args: 命令行参数。
+        settings_fingerprint: 设置配置指纹。
+        template_library_fingerprint: 模板库指纹。
+        run_config: 运行配置。
+        runtime_state: RuntimeConcurrencyState 实例（会被修改）。
+
+    Returns:
+        Dict[str, Dict[str, int]]: 更新后的模板统计数据。
+
+    Example:
+        >>> template_stats = drain_completed_futures(
+        ...     completed_futures=[done_future],
+        ...     execution_state=state,
+        ...     args=args,
+        ...     settings_fingerprint="abc",
+        ...     template_library_fingerprint="def",
+        ...     run_config={},
+        ...     runtime_state=runtime_state,
+        ... )
+
+    Note:
+        - 对每个完成的 future 调用 handle_completed_future
+        - 检测拥塞并应用冷却
+        - 注册队列拥塞字段
+    """
+    for done_future in completed_futures:
+        execution_state.template_stats, congestion_detected, queue_busy_field_id = handle_completed_future(
+            done_future,
+            results=execution_state.results,
+            attempted_keys=execution_state.attempted_keys,
+            template_stats=execution_state.template_stats,
+            args=args,
+            pending_contexts=execution_state.pending_futures,
+            settings_fingerprint=settings_fingerprint,
+            template_library_fingerprint=template_library_fingerprint,
+            run_config=run_config,
+        )
+        register_queue_busy_field(
+            queue_busy_field_id,
+            args,
+            execution_state.field_queue_busy_counts,
+            execution_state.skipped_fields_due_to_queue,
+        )
+        if congestion_detected:
+            apply_congestion_cooldown(args, runtime_state)
+    return execution_state.template_stats
