@@ -44,4 +44,6 @@ Avoid using `--limit 1 --max-templates-per-field 1` for alpha discovery. That mo
 
 The script automatically refreshes the field cache when the cached field count is smaller than the requested `--limit`.
 
+After each run, inspect `*_test_results_analysis.json` for `failed_check_leaderboard`, `near_pass_summary`, and `optimization_hints`. These sections show the main blockers and the best candidates for the next iteration.
+
 The first run prompts for WorldQuant Brain credentials and stores them encrypted locally. Credential files, logs, caches, and result files are ignored by git.

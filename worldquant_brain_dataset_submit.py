@@ -2379,6 +2379,157 @@ def score_failed_checks(failed_checks: Optional[Sequence[Dict[str, Any]]]) -> fl
     return score / counted
 
 
+def failed_check_closeness(check: Dict[str, Any]) -> Optional[float]:
+    """计算单个失败检查离通过阈值有多近，返回 0-1 左右的分数。
+    Calculate how close one failed check is to its passing threshold.
+    """
+    name = str(check.get("name", "UNKNOWN"))
+    value = check.get("value")
+    limit = check.get("limit")
+    if not isinstance(value, (int, float)) or not isinstance(limit, (int, float)) or limit == 0:
+        return None
+    if name.startswith("LOW_"):
+        return value / limit
+    if value == 0:
+        return None
+    return limit / value
+
+
+def failed_check_gap(check: Dict[str, Any]) -> Optional[float]:
+    """计算失败检查到阈值的原始差距，正数表示还差多少。
+    Calculate the raw gap to the threshold; positive means how much is missing.
+    """
+    name = str(check.get("name", "UNKNOWN"))
+    value = check.get("value")
+    limit = check.get("limit")
+    if not isinstance(value, (int, float)) or not isinstance(limit, (int, float)):
+        return None
+    if name.startswith("LOW_"):
+        return limit - value
+    return value - limit
+
+
+def summarize_failed_check(check: Dict[str, Any]) -> Dict[str, Any]:
+    """把失败检查转换成适合分析排序的紧凑结构。
+    Convert one failed check into a compact structure suitable for analysis ranking.
+    """
+    return {
+        "name": check.get("name"),
+        "value": check.get("value"),
+        "limit": check.get("limit"),
+        "gap": failed_check_gap(check),
+        "closeness": failed_check_closeness(check),
+    }
+
+
+def compile_failed_check_leaderboard(results: Sequence[FieldTestResult]) -> List[Dict[str, Any]]:
+    """统计失败检查排行榜，帮助判断整体策略主要卡在哪里。
+    Compile a failed-check leaderboard to show where the strategy is getting stuck.
+    """
+    grouped: Dict[str, Dict[str, Any]] = {}
+    for result in results:
+        if is_queue_timeout_result(result):
+            continue
+        for check in result.failed_checks or []:
+            name = str(check.get("name", "UNKNOWN"))
+            row = grouped.setdefault(
+                name,
+                {
+                    "name": name,
+                    "count": 0,
+                    "values": [],
+                    "limits": [],
+                    "gaps": [],
+                    "closeness_scores": [],
+                    "example_alpha_ids": [],
+                },
+            )
+            row["count"] += 1
+            value = check.get("value")
+            limit = check.get("limit")
+            gap = failed_check_gap(check)
+            closeness = failed_check_closeness(check)
+            if isinstance(value, (int, float)):
+                row["values"].append(value)
+            if isinstance(limit, (int, float)):
+                row["limits"].append(limit)
+            if gap is not None:
+                row["gaps"].append(gap)
+            if closeness is not None:
+                row["closeness_scores"].append(closeness)
+            if result.alpha_id and result.alpha_id not in row["example_alpha_ids"] and len(row["example_alpha_ids"]) < 5:
+                row["example_alpha_ids"].append(result.alpha_id)
+
+    leaderboard: List[Dict[str, Any]] = []
+    for row in grouped.values():
+        values = row.pop("values")
+        limits = row.pop("limits")
+        gaps = row.pop("gaps")
+        closeness_scores = row.pop("closeness_scores")
+        row["avg_value"] = sum(values) / len(values) if values else None
+        row["avg_limit"] = sum(limits) / len(limits) if limits else None
+        row["avg_gap"] = sum(gaps) / len(gaps) if gaps else None
+        row["avg_closeness"] = sum(closeness_scores) / len(closeness_scores) if closeness_scores else None
+        leaderboard.append(row)
+    return sorted(leaderboard, key=lambda row: (-row["count"], -(row["avg_closeness"] or -999.0), row["name"]))
+
+
+def compile_near_pass_summary(results: Sequence[FieldTestResult], limit: int = 20) -> List[Dict[str, Any]]:
+    """列出最接近通过检查的 Alpha，用于指导下一轮变体搜索。
+    List alphas closest to passing checks so the next run can focus mutations.
+    """
+    rows: List[Dict[str, Any]] = []
+    for result in results:
+        if result.status != "simulated" or result.submittable or not result.failed_checks:
+            continue
+        if is_queue_timeout_result(result):
+            continue
+        score = score_failed_checks(result.failed_checks)
+        rows.append(
+            {
+                "score": score,
+                "field_id": result.field_id,
+                "field_name": result.field_name,
+                "field_type": result.field_type,
+                "template_name": result.template_name,
+                "alpha_id": result.alpha_id,
+                "expression": result.expression,
+                "message": result.message,
+                "failed_checks": [summarize_failed_check(check) for check in result.failed_checks or []],
+            }
+        )
+    return sorted(rows, key=lambda row: (-row["score"], row["field_id"], row["template_name"]))[:limit]
+
+
+def compile_optimization_hints(
+    failed_check_leaderboard: Sequence[Dict[str, Any]],
+    near_pass_summary: Sequence[Dict[str, Any]],
+) -> List[str]:
+    """根据失败分布生成下一轮搜索建议。
+    Generate next-run search hints from the failed-check distribution.
+    """
+    dominant_names = {str(row.get("name")) for row in failed_check_leaderboard[:3]}
+    hints: List[str] = []
+    if not failed_check_leaderboard:
+        return ["No failed checks recorded yet; run a wider exploration sample first."]
+    if "LOW_SHARPE" in dominant_names or "LOW_SUB_UNIVERSE_SHARPE" in dominant_names:
+        hints.append("Sharpe is the dominant blocker; prioritize group-neutralized, zscore/spread, and less raw level-like templates.")
+    if "LOW_FITNESS" in dominant_names:
+        hints.append("Fitness is weak; prioritize expressions that improve both Sharpe and turnover instead of only smoothing levels.")
+    if "LOW_TURNOVER" in dominant_names:
+        hints.append("Turnover is too low; try shorter delta windows, rank-then-delta variants, or lower decay.")
+    if "HIGH_TURNOVER" in dominant_names:
+        hints.append("Turnover is too high; try longer windows, higher decay, or smoother ts_mean/ts_decay structures.")
+    if "CONCENTRATED_WEIGHT" in dominant_names:
+        hints.append("Weight concentration is high; prefer group_rank/group_zscore variants and avoid raw ratios or sparse level signals.")
+    if near_pass_summary:
+        best = near_pass_summary[0]
+        hints.append(
+            f"Best near-pass candidate: field={best['field_id']} template={best['template_name']} score={best['score']:.3f}; prioritize local variants of this expression."
+        )
+    return hints
+
+
 def compile_field_feedback(results: Sequence[FieldTestResult]) -> Dict[str, Dict[str, Any]]:
     """将历史接近通过的结果转为按字段组织的优化反馈。
     Convert historical near-pass results into per-field optimization hints.
@@ -3451,6 +3602,9 @@ def dump_results(
     ]
     template_performance_summary = compile_template_performance_summary(results)
     field_performance_summary = compile_field_performance_summary(results)
+    failed_check_leaderboard = compile_failed_check_leaderboard(results)
+    near_pass_summary = compile_near_pass_summary(results)
+    optimization_hints = compile_optimization_hints(failed_check_leaderboard, near_pass_summary)
     summary = {
         "dataset_id": dataset_id,
         "run_config": run_config or {},
@@ -3477,6 +3631,9 @@ def dump_results(
         "submittable": submittable_results,
         "submitted": submitted_results,
         "failed_checks_summary": failed_checks_summary,
+        "failed_check_leaderboard": failed_check_leaderboard,
+        "near_pass_summary": near_pass_summary,
+        "optimization_hints": optimization_hints,
         "template_performance_summary": template_performance_summary,
         "field_performance_summary": field_performance_summary,
     }
