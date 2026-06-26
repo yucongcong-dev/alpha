@@ -1,0 +1,316 @@
+# -*- coding: utf-8 -*-
+"""
+并发调度与拥塞控制模块单元测试（pytest 风格）
+
+测试 alpha.core.scheduler 中的核心函数，覆盖拥塞控制和并发管理边界条件。
+使用 conftest.py 中的共享 fixtures 消除重复 setup 和 MagicMock 风险。
+"""
+
+from __future__ import annotations
+
+import time
+from typing import Dict
+from unittest.mock import patch
+
+import pytest
+
+from tests.conftest import MockArgs
+
+from alpha.core.scheduler import (
+    apply_congestion_cooldown,
+    maybe_restore_runtime_concurrency,
+    register_queue_busy_field,
+    throttle_before_submission,
+)
+from alpha.models.base import ExecutionState, RuntimeConcurrencyState
+
+
+# ============================================================================
+# maybe_restore_runtime_concurrency 测试
+# ============================================================================
+
+class TestMaybeRestoreRuntimeConcurrency:
+    """maybe_restore_runtime_concurrency 函数测试"""
+
+    def test_restores_when_cooldown_expired(
+        self, runtime_state_cooldown_expired: RuntimeConcurrencyState
+    ) -> None:
+        maybe_restore_runtime_concurrency(runtime_state_cooldown_expired)
+        assert runtime_state_cooldown_expired.runtime_max_workers == 5
+        assert runtime_state_cooldown_expired.cooldown_until == 0.0
+
+    def test_no_restore_when_still_cooling(
+        self, runtime_state_cooling_down: RuntimeConcurrencyState
+    ) -> None:
+        maybe_restore_runtime_concurrency(runtime_state_cooling_down)
+        assert runtime_state_cooling_down.runtime_max_workers == 1
+
+    def test_no_restore_when_already_max(
+        self, runtime_state_max_workers_5: RuntimeConcurrencyState
+    ) -> None:
+        state = runtime_state_max_workers_5
+        state.cooldown_until = 100.0
+        maybe_restore_runtime_concurrency(state)
+        assert state.runtime_max_workers == 5
+
+    def test_no_cooldown_zero(self) -> None:
+        state = RuntimeConcurrencyState(max_workers=5, runtime_max_workers=1, cooldown_until=0.0)
+        maybe_restore_runtime_concurrency(state)
+        assert state.runtime_max_workers == 1
+
+    def test_restore_logs_message(self) -> None:
+        state = RuntimeConcurrencyState(
+            max_workers=10,
+            runtime_max_workers=2,
+            cooldown_until=100.0,
+        )
+        with patch("builtins.print") as mock_print:
+            maybe_restore_runtime_concurrency(state)
+            assert state.runtime_max_workers == 10
+            assert any(
+                "restored runtime concurrency" in str(call)
+                for call in mock_print.call_args_list
+            )
+
+
+# ============================================================================
+# apply_congestion_cooldown 测试
+# ============================================================================
+
+class TestApplyCongestionCooldown:
+    """apply_congestion_cooldown 函数测试"""
+
+    def test_sets_workers_to_1(
+        self,
+        scheduler_args: MockArgs,
+        runtime_state_max_workers_5: RuntimeConcurrencyState,
+    ) -> None:
+        apply_congestion_cooldown(scheduler_args, runtime_state_max_workers_5)
+        assert runtime_state_max_workers_5.runtime_max_workers == 1
+        assert runtime_state_max_workers_5.cooldown_until > time.monotonic()
+
+    def test_sets_cooldown_until(
+        self,
+        scheduler_args: MockArgs,
+        runtime_state_max_workers_5: RuntimeConcurrencyState,
+    ) -> None:
+        scheduler_args.queue_busy_cooldown_seconds = 60
+        now = time.monotonic()
+        apply_congestion_cooldown(scheduler_args, runtime_state_max_workers_5)
+        expected_cooldown = now + 60
+        assert abs(runtime_state_max_workers_5.cooldown_until - expected_cooldown) < 0.5
+
+    def test_negative_cooldown_clamped(
+        self,
+        scheduler_args: MockArgs,
+        runtime_state_max_workers_5: RuntimeConcurrencyState,
+    ) -> None:
+        scheduler_args.queue_busy_cooldown_seconds = -10
+        apply_congestion_cooldown(scheduler_args, runtime_state_max_workers_5)
+        assert runtime_state_max_workers_5.runtime_max_workers == 1
+        # cooldown 应该被 clamp 到当前时间附近
+        assert runtime_state_max_workers_5.cooldown_until <= time.monotonic() + 0.5
+
+    def test_zero_cooldown(
+        self,
+        scheduler_args: MockArgs,
+        runtime_state_max_workers_5: RuntimeConcurrencyState,
+    ) -> None:
+        scheduler_args.queue_busy_cooldown_seconds = 0
+        now = time.monotonic()
+        apply_congestion_cooldown(scheduler_args, runtime_state_max_workers_5)
+        assert abs(runtime_state_max_workers_5.cooldown_until - now) < 0.5
+
+
+# ============================================================================
+# register_queue_busy_field 测试
+# ============================================================================
+
+class TestRegisterQueueBusyField:
+    """register_queue_busy_field 函数测试"""
+
+    def test_increments_count(
+        self, scheduler_args: MockArgs, empty_counts_and_skipped: tuple
+    ) -> None:
+        counts, skipped = empty_counts_and_skipped
+        register_queue_busy_field("field_1", scheduler_args, counts, skipped)
+        assert counts["field_1"] == 1
+
+    def test_multi_increment(
+        self, scheduler_args: MockArgs, empty_counts_and_skipped: tuple
+    ) -> None:
+        counts, skipped = empty_counts_and_skipped
+        for _ in range(3):
+            register_queue_busy_field("field_1", scheduler_args, counts, skipped)
+        assert counts["field_1"] == 3
+        assert "field_1" in skipped
+
+    def test_reaches_threshold(
+        self, scheduler_args: MockArgs, empty_counts_and_skipped: tuple
+    ) -> None:
+        scheduler_args.field_queue_busy_skip_after = 2
+        counts, skipped = empty_counts_and_skipped
+        register_queue_busy_field("field_1", scheduler_args, counts, skipped)
+        assert "field_1" not in skipped
+        register_queue_busy_field("field_1", scheduler_args, counts, skipped)
+        assert "field_1" in skipped
+
+    def test_exceeds_threshold_still_skipped(
+        self, scheduler_args: MockArgs, empty_counts_and_skipped: tuple
+    ) -> None:
+        scheduler_args.field_queue_busy_skip_after = 2
+        counts, skipped = empty_counts_and_skipped
+        for _ in range(5):
+            register_queue_busy_field("field_1", scheduler_args, counts, skipped)
+        assert "field_1" in skipped
+        assert counts["field_1"] == 5
+
+    def test_none_field_id_ignored(
+        self, scheduler_args: MockArgs, empty_counts_and_skipped: tuple
+    ) -> None:
+        counts, skipped = empty_counts_and_skipped
+        register_queue_busy_field(None, scheduler_args, counts, skipped)
+        assert counts == {}
+
+    def test_different_fields_independent(
+        self, scheduler_args: MockArgs, empty_counts_and_skipped: tuple
+    ) -> None:
+        scheduler_args.field_queue_busy_skip_after = 2
+        counts, skipped = empty_counts_and_skipped
+        register_queue_busy_field("field_1", scheduler_args, counts, skipped)
+        register_queue_busy_field("field_2", scheduler_args, counts, skipped)
+        assert counts["field_1"] == 1
+        assert counts["field_2"] == 1
+        assert "field_1" not in skipped
+        assert "field_2" not in skipped
+
+    def test_zero_skip_disabled(
+        self, scheduler_args: MockArgs, empty_counts_and_skipped: tuple
+    ) -> None:
+        scheduler_args.field_queue_busy_skip_after = 0
+        counts, skipped = empty_counts_and_skipped
+        for _ in range(10):
+            register_queue_busy_field("field_1", scheduler_args, counts, skipped)
+        assert "field_1" not in skipped
+
+    def test_negative_skip_disabled(
+        self, scheduler_args: MockArgs, empty_counts_and_skipped: tuple
+    ) -> None:
+        scheduler_args.field_queue_busy_skip_after = -1
+        counts, skipped = empty_counts_and_skipped
+        register_queue_busy_field("field_1", scheduler_args, counts, skipped)
+        assert "field_1" not in skipped
+
+    def test_empty_string_field_id_ignored(
+        self, scheduler_args: MockArgs, empty_counts_and_skipped: tuple
+    ) -> None:
+        """空字符串 field_id 被视为空值。"""
+        counts, skipped = empty_counts_and_skipped
+        register_queue_busy_field("", scheduler_args, counts, skipped)
+        assert counts == {}
+
+
+# ============================================================================
+# throttle_before_submission 测试
+# ============================================================================
+
+class TestThrottleBeforeSubmission:
+    """throttle_before_submission 函数测试"""
+
+    def test_no_sleep_when_disabled(
+        self,
+        scheduler_args: MockArgs,
+        empty_execution_state: ExecutionState,
+    ) -> None:
+        scheduler_args.sleep_between_fields = 0
+        with patch("alpha.core.scheduler.wait_seconds") as mock_wait:
+            throttle_before_submission(scheduler_args, empty_execution_state)
+            mock_wait.assert_not_called()
+
+    def test_no_sleep_on_first_submission(
+        self,
+        scheduler_args: MockArgs,
+        empty_execution_state: ExecutionState,
+    ) -> None:
+        with patch("alpha.core.scheduler.wait_seconds") as mock_wait:
+            throttle_before_submission(scheduler_args, empty_execution_state)
+            mock_wait.assert_not_called()
+
+    def test_sleeps_when_too_soon(
+        self,
+        scheduler_args: MockArgs,
+        execution_state_after_submit: ExecutionState,
+    ) -> None:
+        with patch("alpha.core.scheduler.wait_seconds") as mock_wait:
+            throttle_before_submission(scheduler_args, execution_state_after_submit)
+            mock_wait.assert_called_once()
+
+    def test_no_sleep_when_enough_elapsed(
+        self,
+        scheduler_args: MockArgs,
+        execution_state_long_ago_submit: ExecutionState,
+    ) -> None:
+        with patch("alpha.core.scheduler.wait_seconds") as mock_wait:
+            throttle_before_submission(scheduler_args, execution_state_long_ago_submit)
+            mock_wait.assert_not_called()
+
+    def test_zero_sleep_between_fields_never_waits(self) -> None:
+        """sleep_between_fields=0 时永远不等待，无论上次提交时间。"""
+        state = ExecutionState(
+            results=[],
+            attempted_keys=set(),
+            template_stats={},
+            pending_futures={},
+            field_queue_busy_counts={},
+            skipped_fields_due_to_queue=set(),
+            last_submission_at=time.monotonic(),  # 刚刚提交
+        )
+        args = MockArgs(sleep_between_fields=0)
+        with patch("alpha.core.scheduler.wait_seconds") as mock_wait:
+            throttle_before_submission(args, state)
+            mock_wait.assert_not_called()
+
+
+# ============================================================================
+# RuntimeConcurrencyState 方法测试
+# ============================================================================
+
+class TestRuntimeConcurrencyState:
+    """RuntimeConcurrencyState 数据类测试"""
+
+    def test_is_cooling_down_true(
+        self, runtime_state_cooling_down: RuntimeConcurrencyState
+    ) -> None:
+        assert runtime_state_cooling_down.is_cooling_down() is True
+
+    def test_is_cooling_down_false(
+        self, runtime_state_max_workers_5: RuntimeConcurrencyState
+    ) -> None:
+        assert runtime_state_max_workers_5.is_cooling_down() is False
+
+    def test_is_cooling_down_zero(self) -> None:
+        state = RuntimeConcurrencyState(cooldown_until=0.0)
+        assert state.is_cooling_down() is False
+
+    def test_can_restore_concurrency_true(
+        self, runtime_state_cooldown_expired: RuntimeConcurrencyState
+    ) -> None:
+        assert runtime_state_cooldown_expired.can_restore_concurrency() is True
+
+    def test_can_restore_concurrency_false_still_cooling(
+        self, runtime_state_cooling_down: RuntimeConcurrencyState
+    ) -> None:
+        assert runtime_state_cooling_down.can_restore_concurrency() is False
+
+    def test_can_restore_concurrency_false_already_max(
+        self, runtime_state_max_workers_5: RuntimeConcurrencyState
+    ) -> None:
+        state = runtime_state_max_workers_5
+        state.cooldown_until = 100.0
+        assert state.can_restore_concurrency() is False
+
+    def test_default_values(self) -> None:
+        state = RuntimeConcurrencyState()
+        assert state.max_workers == 2
+        assert state.runtime_max_workers == 2
+        assert state.cooldown_until == 0.0
