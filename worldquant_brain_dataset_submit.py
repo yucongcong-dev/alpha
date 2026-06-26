@@ -216,6 +216,7 @@ class HistoricalRunState:
     attempted_keys: set[Tuple[str, str, str, str]]
     template_stats: Dict[str, Dict[str, int]]
     field_feedback: Dict[str, Dict[str, Any]]
+    global_failed_check_counts: Dict[str, int]
 
 
 @dataclass
@@ -1949,6 +1950,89 @@ def apply_similarity_penalty(
     return penalized
 
 
+def adaptive_template_priority_adjustment(
+    template_name: str,
+    expression: str,
+    *,
+    field_feedback: Optional[Dict[str, Any]],
+    global_failed_check_counts: Dict[str, int],
+) -> int:
+    """根据字段与全局失败分布动态调整模板优先级。
+    Dynamically adjust template priority from field-level and global failed-check feedback.
+    """
+    field_counts = field_feedback.get("failed_check_counts", {}) if field_feedback else {}
+    dominant_names = dominant_failed_check_names(merge_failed_check_counts(global_failed_check_counts, field_counts))
+    family = classify_expression_family(template_name, expression)
+    lower_name = template_name.lower()
+    adjustment = 0
+
+    if "LOW_SHARPE" in dominant_names or "LOW_SUB_UNIVERSE_SHARPE" in dominant_names:
+        if family.startswith("group_") or family in {"group_rank_delta", "group_zscore", "group_mean_spread", "group_vol_scaled_delta"}:
+            adjustment += 28
+        if family in {"zscore_time", "rank_spread", "mean_spread", "vol_scaled_delta", "rank_delta", "decayed_delta"}:
+            adjustment += 18
+        if family in {"legacy_level", "legacy_group_level", "legacy_ratio", "legacy_neg_ratio", "group_ratio_level"}:
+            adjustment -= 35
+
+    if "LOW_FITNESS" in dominant_names:
+        if "delta" in family or "spread" in family or lower_name.startswith("iter_"):
+            adjustment += 22
+        if family in {"legacy_level", "legacy_group_level"}:
+            adjustment -= 25
+
+    if "LOW_TURNOVER" in dominant_names:
+        if "delta" in family or lower_name.startswith(("iter_rank_delta", "iter_rank_then_delta")):
+            adjustment += 30
+        if family in {"legacy_level", "legacy_group_level", "mean_spread"}:
+            adjustment -= 18
+
+    if "HIGH_TURNOVER" in dominant_names:
+        if family in {"mean_spread", "decayed_delta", "decayed_ratio"}:
+            adjustment += 20
+        if "delta" in family:
+            adjustment -= 20
+
+    if "CONCENTRATED_WEIGHT" in dominant_names:
+        if family.startswith("group_"):
+            adjustment += 24
+        if family in {"legacy_ratio", "legacy_neg_ratio", "group_ratio_level"}:
+            adjustment -= 30
+
+    if field_feedback:
+        best_score = float(field_feedback.get("best_score", -999.0))
+        if best_score >= 0.50 and lower_name.startswith("iter_nearpass_"):
+            adjustment += 35
+        elif best_score >= 0.20 and lower_name.startswith("iter_"):
+            adjustment += 18
+
+    return adjustment
+
+
+def apply_adaptive_priority(
+    templates: Sequence[Tuple[str, str, int]],
+    *,
+    field_feedback: Optional[Dict[str, Any]],
+    global_failed_check_counts: Dict[str, int],
+) -> List[Tuple[str, str, int]]:
+    """对候选模板应用自适应优先级调整。
+    Apply adaptive priority adjustments to candidate templates.
+    """
+    return [
+        (
+            name,
+            expression,
+            priority
+            + adaptive_template_priority_adjustment(
+                name,
+                expression,
+                field_feedback=field_feedback,
+                global_failed_check_counts=global_failed_check_counts,
+            ),
+        )
+        for name, expression, priority in templates
+    ]
+
+
 def cap_templates_per_family(
     templates: Sequence[Tuple[str, str, int]],
     max_templates_per_family: int,
@@ -1978,6 +2062,7 @@ def build_expression_candidates(
     legacy_similarity_penalty: int,
     all_fields: Optional[Sequence[Dict[str, Any]]] = None,
     field_feedback: Optional[Dict[str, Any]] = None,
+    global_failed_check_counts: Optional[Dict[str, int]] = None,
     use_dataset_heuristics: bool = True,
 ) -> List[Tuple[str, str, int]]:
     """为单个字段构建、变异、多样化并排序表达式候选。
@@ -1986,6 +2071,7 @@ def build_expression_candidates(
     field_name = choose_field_name(field)
     field_type = choose_field_type(field)
     all_fields = all_fields or []
+    global_failed_check_counts = global_failed_check_counts or {}
 
     # Template selection is now driven by an externalizable library so we can
     # expand or shrink search coverage between runs without changing code.
@@ -2185,9 +2271,14 @@ def build_expression_candidates(
         [(name, expression, priority) for name, expression, priority in adaptive_templates],
         legacy_similarity_penalty,
     )
+    prioritized_by_feedback = apply_adaptive_priority(
+        deduped,
+        field_feedback=field_feedback,
+        global_failed_check_counts=global_failed_check_counts,
+    )
     unique_by_expression = []
     seen_expressions: set[str] = set()
-    for name, expression, priority in deduped:
+    for name, expression, priority in prioritized_by_feedback:
         if expression in seen_expressions:
             continue
         seen_expressions.add(expression)
@@ -2647,6 +2738,44 @@ def compile_field_feedback(results: Sequence[FieldTestResult]) -> Dict[str, Dict
     return feedback
 
 
+def compile_global_failed_check_counts(results: Sequence[FieldTestResult]) -> Dict[str, int]:
+    """汇总所有历史结果中的失败检查计数，作为全局搜索方向。
+    Count failed checks across all historical results to guide global search direction.
+    """
+    counts: Dict[str, int] = {}
+    for result in results:
+        if is_queue_timeout_result(result):
+            continue
+        for check in result.failed_checks or []:
+            name = str(check.get("name", "UNKNOWN"))
+            counts[name] = counts.get(name, 0) + 1
+    return counts
+
+
+def dominant_failed_check_names(counts: Dict[str, int], limit: int = 4) -> set[str]:
+    """返回失败检查计数最高的若干名称。
+    Return the highest-count failed check names.
+    """
+    return {
+        name
+        for name, count in sorted(counts.items(), key=lambda item: (-item[1], item[0]))[:limit]
+        if count > 0
+    }
+
+
+def merge_failed_check_counts(*count_maps: Dict[str, Any]) -> Dict[str, int]:
+    """合并多个失败检查计数字典。
+    Merge multiple failed-check count dictionaries.
+    """
+    merged: Dict[str, int] = {}
+    for count_map in count_maps:
+        for name, count in count_map.items():
+            if not isinstance(count, int):
+                continue
+            merged[str(name)] = merged.get(str(name), 0) + count
+    return merged
+
+
 def field_priority(field_id: str, field_feedback: Dict[str, Dict[str, Any]]) -> float:
     """返回字段在续跑排序中使用的历史优先级分数。
     Return the historical priority score used to sort fields for reruns.
@@ -2673,11 +2802,13 @@ def build_historical_run_state(output_path: str, feedback_output_path: str) -> H
     template_stats = compile_template_stats(existing_results)
     feedback_results = existing_results if feedback_output_path == output_path else load_existing_results(feedback_output_path)
     field_feedback = compile_field_feedback(feedback_results)
+    global_failed_check_counts = compile_global_failed_check_counts(feedback_results)
     return HistoricalRunState(
         existing_results=existing_results,
         attempted_keys=attempted_keys,
         template_stats=template_stats,
         field_feedback=field_feedback,
+        global_failed_check_counts=global_failed_check_counts,
     )
 
 
@@ -2863,6 +2994,30 @@ def build_feedback_mutations(
                 ("iter_group_decay_best_5", f"group_rank(ts_decay_linear(ts_backfill({best_expression}, 120), 5), subindustry)", 170),
             ]
         )
+        if best_score >= 0.45:
+            for window in (3, 5, 10):
+                mutations.extend(
+                    [
+                        (
+                            f"iter_nearpass_delta_best_{window}",
+                            f"rank(ts_delta({best_expression}, {window}))",
+                            188 - window,
+                        ),
+                        (
+                            f"iter_nearpass_group_delta_best_{window}",
+                            f"group_rank(ts_delta({best_expression}, {window}), subindustry)",
+                            192 - window,
+                        ),
+                    ]
+                )
+            for decay in (3, 5, 8):
+                mutations.append(
+                    (
+                        f"iter_nearpass_decay_best_{decay}",
+                        f"rank(ts_decay_linear({best_expression}, {decay}))",
+                        184 - decay,
+                    )
+                )
 
     return mutations
 
@@ -3337,6 +3492,7 @@ def build_pending_templates_for_field(
     all_fields: Sequence[Dict[str, Any]],
     template_library: TemplateLibrary,
     field_feedback: Optional[Dict[str, Any]],
+    global_failed_check_counts: Dict[str, int],
     include_templates: set[str],
     exclude_templates: set[str],
     template_stats: Dict[str, Dict[str, int]],
@@ -3357,6 +3513,7 @@ def build_pending_templates_for_field(
         args.legacy_similarity_penalty,
         all_fields=all_fields,
         field_feedback=field_feedback,
+        global_failed_check_counts=global_failed_check_counts,
         use_dataset_heuristics=use_dataset_heuristics,
     )
     pending_templates: List[Tuple[str, str, int, SettingsVariant, str]] = []
@@ -3970,6 +4127,7 @@ def print_dry_run_plan(
             all_fields=fields,
             template_library=template_library,
             field_feedback=historical_state.field_feedback.get(field_id),
+            global_failed_check_counts=historical_state.global_failed_check_counts,
             include_templates=filters.include_templates,
             exclude_templates=filters.exclude_templates,
             template_stats=execution_state.template_stats,
@@ -4146,6 +4304,7 @@ def main() -> int:
                 all_fields=fields,
                 template_library=template_library,
                 field_feedback=historical_state.field_feedback.get(field_id),
+                global_failed_check_counts=historical_state.global_failed_check_counts,
                 include_templates=filters.include_templates,
                 exclude_templates=filters.exclude_templates,
                 template_stats=execution_state.template_stats,

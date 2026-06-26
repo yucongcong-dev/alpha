@@ -53,5 +53,6 @@ If the cache already has some fields, the script extends it from the next offset
 The default simulation concurrency is `2`, and the runner automatically cools down to `1` when queue congestion is detected.
 
 After each run, inspect `*_test_results_analysis.json` for `failed_check_leaderboard`, `near_pass_summary`, and `optimization_hints`. These sections show the main blockers and the best candidates for the next iteration.
+Historical failed checks also feed back into the next run: the runner boosts template families that address the dominant blockers, demotes weak legacy-style families, and creates local variants around near-pass expressions.
 
 The first run prompts for WorldQuant Brain credentials and stores them encrypted locally. Credential files, logs, caches, and result files are ignored by git.
