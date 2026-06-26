@@ -2,7 +2,10 @@
 """Test all fields in a WorldQuant Brain dataset and submit submittable alphas.
 
 Usage examples:
-  python3 worldquant_brain_dataset_submit.py --limit 10
+  python3 worldquant_brain_dataset_submit.py
+  python3 worldquant_brain_dataset_submit.py --smoke-test
+  python3 worldquant_brain_dataset_submit.py --limit 50 --max-templates-per-field 8
+  python3 worldquant_brain_dataset_submit.py --full-run
   python3 worldquant_brain_dataset_submit.py --submit
   python3 worldquant_brain_dataset_submit.py --dataset-id fundamental6 --submit
   WQB_EMAIL=you@example.com WQB_PASSWORD=secret python3 worldquant_brain_dataset_submit.py --submit
@@ -304,14 +307,25 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--neutralization", default="SUBINDUSTRY")
     parser.add_argument("--truncation", type=float, default=0.05)
     parser.add_argument("--nan-handling", default="ON")
-    parser.add_argument("--limit", type=int, default=0, help="0 means all fields")
+    run_mode_group = parser.add_mutually_exclusive_group()
+    run_mode_group.add_argument(
+        "--smoke-test",
+        action="store_true",
+        help="Run a tiny one-field/one-template flow check; not useful for alpha discovery",
+    )
+    run_mode_group.add_argument(
+        "--full-run",
+        action="store_true",
+        help="Run all fetched fields and all generated templates; can be slow and queue-heavy",
+    )
+    parser.add_argument("--limit", type=int, default=20, help="How many fields to fetch/test; 0 means all fields")
     parser.add_argument("--offset", type=int, default=0)
     parser.add_argument("--page-size", type=int, default=50)
     parser.add_argument("--sleep-between-fields", type=float, default=2.0)
     parser.add_argument(
         "--max-templates-per-field",
         type=int,
-        default=0,
+        default=5,
         help="0 means try all built-in templates for each field",
     )
     parser.add_argument(
@@ -457,7 +471,16 @@ def parse_args() -> argparse.Namespace:
         default=DEFAULT_OUTPUT_FILE,
         help="Where to save the full JSON results",
     )
-    return parser.parse_args()
+    args = parser.parse_args()
+    if args.smoke_test:
+        args.limit = 1
+        args.max_templates_per_field = 1
+        args.max_concurrent_simulations = 1
+        args.max_concurrent_creates = 1
+    elif args.full_run:
+        args.limit = 0
+        args.max_templates_per_field = 0
+    return args
 
 
 def ensure_parent_dir(path: str) -> None:
