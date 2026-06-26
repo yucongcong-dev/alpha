@@ -3870,14 +3870,8 @@ def main() -> int:
                 runtime_state=runtime_state,
             )
 
-    dump_results(
-        args.output,
-        args.dataset_id,
-        execution_state.results,
-        settings_fingerprint=settings_fingerprint,
-        template_library_fingerprint=template_library_fingerprint,
-        run_config=run_config,
-    )
+    # Completed futures are persisted as they finish, so avoid writing the
+    # same result set again and duplicating the final [done] log lines.
     return 0
 
 
