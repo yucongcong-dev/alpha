@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 结果输出模块
 
@@ -27,7 +26,6 @@ from typing import Any, Dict, List, Optional, Sequence
 from ..config import DEFAULT_DATASET_ID
 from ..exceptions import BrainAPIError
 from ..models.base import FieldTestResult
-
 
 # ============================================================================
 # 常量定义
@@ -373,9 +371,9 @@ def load_existing_results(path: str) -> List[FieldTestResult]:
         return []
 
     try:
-        with open(path, "r", encoding="utf-8") as handle:
+        with open(path, encoding="utf-8") as handle:
             payload = json.load(handle)
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         raise BrainAPIError(f"Failed to read existing results file {path}: {exc}") from exc
 
     rows = payload.get("results")
@@ -1039,16 +1037,16 @@ def ensure_analysis_synced(output_path: str) -> None:
         return
     sidecar_paths = build_output_sidecar_paths(output_path)
     try:
-        with open(output_path, "r", encoding="utf-8") as handle:
+        with open(output_path, encoding="utf-8") as handle:
             summary = json.load(handle)
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         print(f"[analysis] skipped sync; failed to read main results: {exc}", flush=True)
         return
 
     should_rebuild = not os.path.exists(sidecar_paths["analysis"])
     if not should_rebuild:
         try:
-            with open(sidecar_paths["analysis"], "r", encoding="utf-8") as handle:
+            with open(sidecar_paths["analysis"], encoding="utf-8") as handle:
                 analysis = json.load(handle)
             should_rebuild = (
                 analysis.get("tested") != summary.get("tested")

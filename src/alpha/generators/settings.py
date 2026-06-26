@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 参数变体模块
 
@@ -17,9 +16,8 @@ import hashlib
 import json
 from typing import Any, Dict, List
 
-from ..exceptions import BrainAPIError
-from .expressions import classify_expression_family
 from ..models.base import SettingsVariant
+from .expressions import classify_expression_family
 
 
 def stable_fingerprint(payload: Any) -> str:

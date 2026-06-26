@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 模拟生命周期管理模块
 
@@ -21,11 +20,6 @@ import re
 import threading
 from typing import Any, Dict, List, Optional
 
-from ..models.base import (
-    FieldTestContext,
-    FieldTestResult,
-    SettingsVariant,
-)
 from ..api.client import (
     BrainClient,
     WorkerClientFactory,
@@ -33,15 +27,19 @@ from ..api.client import (
     retry_operation,
 )
 from ..config import (
+    SUBMIT_MAX_TURNOVER,
+    SUBMIT_MAX_WEIGHT,
     SUBMIT_MIN_FITNESS,
     SUBMIT_MIN_SHARPE,
     SUBMIT_MIN_TURNOVER,
-    SUBMIT_MAX_TURNOVER,
-    SUBMIT_MAX_WEIGHT,
 )
 from ..generators.settings import build_simulation_payload
-from ..utils.helpers import choose_field_name, choose_field_type
-
+from ..models.base import (
+    FieldTestContext,
+    FieldTestResult,
+    SettingsVariant,
+)
+from ..utils.helpers import choose_field_type
 
 # ============================================================================
 # Alpha ID 提取与解析函数
@@ -727,7 +725,7 @@ def _run_simulation_create(
             if create_semaphore is not None:
                 create_semaphore.release()
         return simulation_location, simulation_id
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         return ctx.failure(failed_stage="simulation", message=str(exc))
 
 
@@ -774,7 +772,7 @@ def _run_simulation_poll(
                 status="simulation_failed",
             )
         return alpha_id, simulation_result
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         return ctx.failure(
             failed_stage="simulation",
             message=str(exc),
@@ -816,7 +814,7 @@ def _run_checksubmit_stage(
 
     try:
         return checksubmit_with_retry(client, alpha_id, args.check_submit_retries)
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         return ctx.failure(
             failed_stage="checksubmit",
             message=str(exc),
@@ -851,7 +849,7 @@ def _run_submit_stage(
         )
         message = submit_with_retry(client, alpha_id, args.submit_retries)
         return True, "submitted", message
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         return ctx.failure(
             failed_stage="submit",
             message=str(exc),

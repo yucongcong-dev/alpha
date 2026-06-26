@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 历史迭代优化模块
 
@@ -21,10 +20,8 @@
 """
 
 import argparse
-from typing import Any, Dict, List, Optional, Sequence, Set, Tuple
+from typing import Any, Dict, List, Optional, Sequence, Tuple
 
-from ..exceptions import BrainAPIError
-from ..models.base import FieldTestResult, HistoricalRunState
 from ..config import (
     FEEDBACK_MUTATION_HIGHSCORE_THRESHOLD,
     FEEDBACK_MUTATION_NEARPASS_THRESHOLD,
@@ -32,6 +29,10 @@ from ..config import (
     SETTINGS_VARIANT_BUDGET_HIGH,
     SETTINGS_VARIANT_BUDGET_MID,
 )
+
+# 从 expressions 模块导入分类函数（唯一源）
+from ..generators.expressions import classify_expression_family, is_legacy_family
+from ..models.base import FieldTestResult, HistoricalRunState
 
 # 从 analysis 模块导入分析函数
 from .stats import (
@@ -41,12 +42,7 @@ from .stats import (
     compile_template_stats,
     current_submittable_count,
     load_existing_results,
-    score_failed_checks,
 )
-
-# 从 expressions 模块导入分类函数（唯一源）
-from ..generators.expressions import classify_expression_family, is_legacy_family
-
 
 # ============================================================================
 # 历史状态构建函数

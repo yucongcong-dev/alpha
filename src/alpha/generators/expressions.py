@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 表达式构建模块
 
@@ -30,8 +29,8 @@ from ..config import (
     RATIO_KEYWORDS,
     RATIO_PARTNER_CANDIDATES,
 )
-from ..utils.helpers import choose_field_name, choose_field_type
 from ..models.base import TemplateLibrary
+from ..utils.helpers import choose_field_name, choose_field_type
 
 
 def tokenize_field_name(field_name: str) -> List[str]:

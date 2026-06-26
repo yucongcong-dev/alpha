@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 测试执行流程模块
 
@@ -16,8 +15,20 @@
 """
 
 import argparse
-from typing import Any, Dict, List, Optional, Sequence, Tuple
+from typing import Any, Dict, List, Sequence, Tuple
 
+from ..analysis.feedback import (
+    choose_settings_variant_budget,
+    is_legacy_family_disabled,
+    is_template_disabled,
+    should_skip_field_template_family,
+)
+from ..analysis.stats import historical_template_priority_bonus
+from ..generators.expressions import build_expression_candidates
+from ..generators.settings import (
+    build_setting_variants,
+    build_settings_fingerprint_from_payload,
+)
 from ..models.base import (
     ExecutionState,
     FieldTestResult,
@@ -27,44 +38,7 @@ from ..models.base import (
     TemplateBuildContext,
     TemplateLibrary,
 )
-from ..utils.helpers import choose_field_name, choose_field_type, first_non_empty
-from ..generators.expressions import build_expression_candidates
-from ..generators.settings import (
-    build_setting_variants,
-    build_settings_fingerprint_from_payload,
-)
-from ..analysis.feedback import (
-    should_skip_field_template_family,
-    is_template_disabled,
-    is_legacy_family_disabled,
-    choose_settings_variant_budget,
-)
-from ..analysis.stats import historical_template_priority_bonus
-
-from .simulation import (
-    extract_alpha_id,
-    extract_checks,
-    extract_failed_checks,
-    is_submittable_from_checks,
-    summarize_failure,
-    create_simulation_with_retry,
-    poll_simulation_with_retry,
-    checksubmit_with_retry,
-    submit_with_retry,
-    build_failure_result,
-    run_field_test,
-    run_field_test_in_worker,
-)
-
-from .scheduler import (
-    handle_completed_future,
-    maybe_restore_runtime_concurrency,
-    register_queue_busy_field,
-    apply_congestion_cooldown,
-    throttle_before_submission,
-    drain_completed_futures,
-)
-
+from ..utils.helpers import choose_field_name, first_non_empty
 
 # ============================================================================
 # 模板队列构建函数

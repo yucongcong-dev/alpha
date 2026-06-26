@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 WorldQuant BRAIN Alpha 自动生成与提交工具包。
 
@@ -28,62 +27,62 @@ WorldQuant BRAIN Alpha 自动生成与提交工具包。
 """
 
 from .config import (
+    ALPHAS_URL,
     API_BASE,
     AUTH_URL,
     DATA_FIELDS_URL,
-    SIMULATIONS_URL,
-    ALPHAS_URL,
     DEFAULT_DATASET_ID,
     DEFAULT_HEADERS,
-    VERSION_HEADER,
     SIM_ACCEPT_HEADER,
+    SIMULATIONS_URL,
+    VERSION_HEADER,
     use_fundamental6_heuristics,
 )
 from .exceptions import (
     BrainAPIError,
-    BrainRateLimitError,
     BrainQueueBusyError,
+    BrainRateLimitError,
 )
 from .models import (
+    ExecutionState,
     FieldTestResult,
-    TemplateLibrary,
-    SettingsVariant,
+    HistoricalRunState,
+    RunFilters,
     RunPaths,
     RuntimeConcurrencyState,
-    RunFilters,
-    HistoricalRunState,
-    ExecutionState,
+    SettingsVariant,
+    TemplateLibrary,
 )
-from .utils import first_non_empty, choose_field_name, choose_field_type
+from .utils import choose_field_name, choose_field_type, first_non_empty
 
 __version__ = "1.0.0"
 __author__ = "Alpha Generator Team"
 
 __all__ = [
-    "__version__",
-    "__author__",
+    "ALPHAS_URL",
     "API_BASE",
     "AUTH_URL",
     "DATA_FIELDS_URL",
-    "SIMULATIONS_URL",
-    "ALPHAS_URL",
     "DEFAULT_DATASET_ID",
     "DEFAULT_HEADERS",
-    "VERSION_HEADER",
+    "SIMULATIONS_URL",
     "SIM_ACCEPT_HEADER",
-    "use_fundamental6_heuristics",
+    "VERSION_HEADER",
     "BrainAPIError",
-    "BrainRateLimitError",
     "BrainQueueBusyError",
+    "BrainRateLimitError",
+    "ExecutionState",
     "FieldTestResult",
-    "TemplateLibrary",
-    "SettingsVariant",
+    "HistoricalRunState",
+    "RunFilters",
     "RunPaths",
     "RuntimeConcurrencyState",
-    "RunFilters",
-    "HistoricalRunState",
-    "ExecutionState",
-    "first_non_empty",
+    "SettingsVariant",
+    "TemplateLibrary",
+    "__author__",
+    "__version__",
     "choose_field_name",
     "choose_field_type",
+    "first_non_empty",
+    "use_fundamental6_heuristics",
 ]

@@ -38,24 +38,22 @@ from urllib.parse import urlencode
 from urllib.request import HTTPCookieProcessor, Request, build_opener
 
 from ..config import (
+    ALPHAS_URL,
     API_BASE,
     AUTH_URL,
     DATA_FIELDS_URL,
-    SIMULATIONS_URL,
-    ALPHAS_URL,
     DEFAULT_HEADERS,
     DEFAULT_RATE_LIMIT_MAX_RETRIES,
-    VERSION_HEADER,
     SIM_ACCEPT_HEADER,
+    SIMULATIONS_URL,
+    VERSION_HEADER,
 )
 from ..exceptions import (
     BrainAPIError,
-    BrainRateLimitError,
     BrainQueueBusyError,
+    BrainRateLimitError,
 )
-from ..models.base import TemplateLibrary
 from ..utils.helpers import first_non_empty
-
 
 # ============================================================================
 # 辅助函数 - 时间与等待
@@ -456,7 +454,7 @@ def retry_operation(
             # 队列拥塞也应立即跳过当前模板，
             # 让主循环可以降低运行时并发并冷却
             break
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             last_error = exc
             print(
                 f"[retry] {name} failed on attempt {attempt}/{retries}: {exc}",
@@ -653,7 +651,7 @@ class BrainClient:
             - 登录失败会抛出异常，包含详细错误信息
         """
         token = base64.b64encode(
-            f"{self.email}:{self.password}".encode("utf-8")
+            f"{self.email}:{self.password}".encode()
         ).decode("ascii")
         status, _, content = self.raw_request(
             "POST",

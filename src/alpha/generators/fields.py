@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 字段缓存管理模块
 
@@ -23,15 +22,7 @@ import os
 import tempfile
 from typing import Any, Dict, List, Optional, Sequence
 
-from ..config import (
-    DATA_FIELDS_URL,
-    DEFAULT_DATASET_ID,
-    DEFAULT_HEADERS,
-    VERSION_HEADER,
-)
-from ..exceptions import BrainAPIError
-from ..models.base import RunPaths
-from ..utils.helpers import choose_field_name, choose_field_type, first_non_empty
+from ..utils.helpers import first_non_empty
 
 
 def atomic_write_json(path: str, payload: Any) -> None:
@@ -112,7 +103,7 @@ def load_fields_cache(
     if not path or not os.path.exists(path):
         return []
     try:
-        with open(path, "r", encoding="utf-8") as handle:
+        with open(path, encoding="utf-8") as handle:
             payload = json.load(handle)
     except Exception:
         return []

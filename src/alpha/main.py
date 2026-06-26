@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 主入口模块
 
@@ -23,34 +22,23 @@
 """
 
 import argparse
-import json
-import os
 import sys
 import threading
 import time
 from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
-from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Tuple
 
-# 导入配置和模型
-from .config import DEFAULT_DATASET_ID, use_fundamental6_heuristics
-from .models.base import (
-    ExecutionState,
-    FieldTestResult,
-    HistoricalRunState,
-    RunFilters,
-    RunPaths,
-    RuntimeConcurrencyState,
-    SettingsVariant,
-    TemplateBuildContext,
-    TemplateLibrary,
+# 导入历史迭代优化
+from .analysis.feedback import (
+    build_historical_run_state,
+    should_stop_after_submittable,
 )
 
-# 导入异常类
-from .exceptions import BrainAPIError
-
-# 导入凭证管理
-from .io.credentials import load_credentials
+# 导入分析模块
+from .analysis.stats import (
+    current_submittable_count,
+    field_priority,
+)
 
 # 导入 API 客户端
 from .api.client import (
@@ -59,83 +47,63 @@ from .api.client import (
     login_with_retry,
 )
 
-# 导入公共工具
-from .utils.helpers import first_non_empty, choose_field_name, choose_field_type
+# 导入 CLI 模块
+from .cli.parser import (
+    build_run_config_snapshot,
+    load_run_filters_extended,
+    normalize_args_paths,
+    parse_args,
+    setup_runtime_logging,
+)
 
-# 导入模板库管理
-from .generators.templates import load_template_library
+# 导入配置和模型
+from .config import use_fundamental6_heuristics
 
+# 导入执行器
+from .core import (
+    build_pending_templates_for_field,
+    drain_completed_futures,
+    maybe_restore_runtime_concurrency,
+    print_dry_run_plan,
+    run_field_test_in_worker,
+    should_skip_field,
+    throttle_before_submission,
+)
+
+# 导入异常类
+# 导入表达式构建
 # 导入字段管理
 from .generators.fields import (
     fetch_fields_with_cache,
-    load_fields_cache,
-    save_fields_cache,
     fields_cache_refresh_reason,
-)
-
-# 导入表达式构建
-from .generators.expressions import (
-    build_expression_candidates,
+    load_fields_cache,
 )
 
 # 导入设置变体
 from .generators.settings import (
-    build_simulation_payload,
     build_settings_fingerprint,
-    build_settings_fingerprint_from_payload,
-    build_setting_variants,
     stable_fingerprint,
 )
 
-# 导入分析模块
-from .analysis.stats import (
-    load_existing_results,
-    compile_template_stats,
-    compile_field_feedback,
-    compile_global_failed_check_counts,
-    compile_template_performance_summary,
-    compile_field_performance_summary,
-    current_submittable_count,
-    score_failed_checks,
-    field_priority,
-)
+# 导入模板库管理
+from .generators.templates import load_template_library
 
-# 导入历史迭代优化
-from .analysis.feedback import (
-    build_historical_run_state,
-    should_stop_after_submittable,
-    choose_settings_variant_budget,
-)
-
-# 导入执行器
-from .core import (
-    run_field_test_in_worker,
-    handle_completed_future,
-    drain_completed_futures,
-    build_pending_templates_for_field,
-    should_skip_field,
-    maybe_restore_runtime_concurrency,
-    throttle_before_submission,
-    print_dry_run_plan,
-)
+# 导入凭证管理
+from .io.credentials import load_credentials
 
 # 导入输出模块
 from .io.output import (
-    dump_results,
     cleanup_legacy_sidecar_files,
-    build_output_sidecar_paths,
     ensure_analysis_synced,
 )
-
-# 导入 CLI 模块
-from .cli.parser import (
-    parse_args,
-    normalize_args_paths,
-    build_run_config_snapshot,
-    load_run_filters_extended,
-    setup_runtime_logging,
+from .models.base import (
+    ExecutionState,
+    RuntimeConcurrencyState,
+    TemplateBuildContext,
 )
 
+# 导入公共工具
+from .utils.helpers import choose_field_name, choose_field_type, first_non_empty
 
 # ============================================================================
 # 客户端创建和登录函数
@@ -553,6 +521,6 @@ if __name__ == "__main__":
     except KeyboardInterrupt:
         print("\n[abort] 用户中断", file=sys.stderr)
         raise SystemExit(130)
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         print(f"[error] {exc}", file=sys.stderr)
         raise SystemExit(1)

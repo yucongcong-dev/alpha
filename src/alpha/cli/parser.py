@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 命令行参数解析模块
 
@@ -14,22 +13,19 @@
 """
 
 import argparse
-import json
 import logging
 import os
 import sys
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set
+from typing import Any, Dict, Set
 
 from ..config import DEFAULT_DATASET_ID
-from ..models.base import RunFilters, RunPaths, TeeStream
 from ..io.output import (
-    resolve_cli_path,
     build_dataset_scoped_paths,
     build_output_sidecar_paths,
-    atomic_write_json,
+    resolve_cli_path,
 )
-
+from ..models.base import RunFilters, RunPaths, TeeStream
 
 # ============================================================================
 # 常量定义
@@ -647,9 +643,9 @@ def load_line_set(path: str) -> Set[str]:
     if not path or not os.path.exists(path):
         return set()
     try:
-        with open(path, "r", encoding="utf-8") as handle:
+        with open(path, encoding="utf-8") as handle:
             return {line.strip() for line in handle if line.strip()}
-    except Exception:  # noqa: BLE001
+    except Exception:
         return set()
 
 

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 模板库管理模块
 
@@ -13,7 +12,6 @@ Alpha 表达式。
 
 import json
 import os
-from typing import Any, Dict, List
 
 from ..exceptions import BrainAPIError
 from ..models.base import TemplateLibrary
@@ -182,9 +180,9 @@ def load_template_library(path: str) -> TemplateLibrary:
         return default_template_library()
 
     try:
-        with open(path, "r", encoding="utf-8") as handle:
+        with open(path, encoding="utf-8") as handle:
             payload = json.load(handle)
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         raise BrainAPIError(f"读取模板库文件失败 {path}: {exc}") from exc
 
     if not isinstance(payload, dict):

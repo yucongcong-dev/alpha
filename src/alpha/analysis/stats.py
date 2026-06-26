@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 结果分析统计模块
 
@@ -75,9 +74,9 @@ def load_existing_results(path: str) -> List[FieldTestResult]:
         return []
 
     try:
-        with open(path, "r", encoding="utf-8") as handle:
+        with open(path, encoding="utf-8") as handle:
             payload = json.load(handle)
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         raise BrainAPIError(f"读取现有结果文件失败 {path}: {exc}") from exc
 
     rows = payload.get("results")

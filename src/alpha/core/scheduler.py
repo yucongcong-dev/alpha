@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 并发调度与拥塞控制模块
 
@@ -17,21 +16,20 @@ import argparse
 import time
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 
+from ..analysis.stats import (
+    compile_template_stats,
+    is_informative_result,
+    result_identity,
+)
+from ..api.client import wait_seconds
+from ..io.output import dump_results
 from ..models.base import (
     ExecutionState,
     FieldTestResult,
     FutureCompletionContext,
     RuntimeConcurrencyState,
 )
-from ..api.client import wait_seconds
-from ..io.output import dump_results
-from ..analysis.stats import (
-    compile_template_stats,
-    is_informative_result,
-    result_identity,
-)
 from .simulation import build_failure_result
-
 
 # ============================================================================
 # 已完成任务处理函数
@@ -77,7 +75,7 @@ def handle_completed_future(
 
     try:
         result = future.result()
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         result = build_failure_result(
             field_id=field_id,
             field_type=context["field_type"],

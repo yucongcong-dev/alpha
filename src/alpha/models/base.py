@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 数据类模块
 
@@ -19,9 +18,7 @@
 
 import sys
 from dataclasses import dataclass, field
-from datetime import datetime
 from typing import Any, Dict, List, Optional, Sequence, TextIO, Tuple
-
 
 # ============================================================================
 # 类型别名定义

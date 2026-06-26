@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Alpha 测试系统命令行入口模块
 
@@ -34,7 +33,7 @@ def main() -> int:
     except KeyboardInterrupt:
         print("\n[abort] 用户中断", file=sys.stderr)
         return 130
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         print(f"[error] {exc}", file=sys.stderr)
         return 1
 

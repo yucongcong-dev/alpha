@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Alpha 生成器包
 

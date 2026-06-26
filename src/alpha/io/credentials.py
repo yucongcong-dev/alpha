@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 凭证管理模块
 
@@ -31,9 +30,7 @@ import tempfile
 from pathlib import Path
 from typing import Any, Dict, Optional, Tuple
 
-from ..config import DEFAULT_HEADERS
 from ..exceptions import BrainAPIError
-
 
 # ============================================================================
 # 常量定义
@@ -329,7 +326,7 @@ def decrypt_credentials_payload(
         ) from exc
     try:
         decoded = json.loads(plaintext)
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         raise BrainAPIError(
             f"Failed to parse decrypted credentials: {exc}"
         ) from exc
@@ -524,9 +521,9 @@ def load_credentials(args: argparse.Namespace) -> Tuple[Optional[str], Optional[
         return prompt_and_store_credentials(creds_file, creds_key_file)
 
     try:
-        with open(creds_file, "r", encoding="utf-8") as handle:
+        with open(creds_file, encoding="utf-8") as handle:
             payload = json.load(handle)
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         raise BrainAPIError(
             f"Failed to read credentials file {creds_file}: {exc}"
         ) from exc
