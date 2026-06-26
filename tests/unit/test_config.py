@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 配置模块单元测试（pytest 风格）
 
@@ -6,8 +5,6 @@
 """
 
 from __future__ import annotations
-
-import pytest
 
 from alpha.config import (
     API_BASE,

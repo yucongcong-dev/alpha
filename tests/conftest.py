@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 pytest 共享 fixtures 和配置。
 
@@ -8,9 +7,7 @@ pytest 共享 fixtures 和配置。
 from __future__ import annotations
 
 import time
-from dataclasses import dataclass
-from typing import Any, Dict, List, Optional, Tuple
-from unittest.mock import MagicMock
+from typing import Any, Dict, Tuple
 
 import pytest
 
@@ -20,7 +17,6 @@ from alpha.models.base import (
     FieldTestResult,
     RuntimeConcurrencyState,
 )
-
 
 # ============================================================================
 # 常量定义
@@ -60,9 +56,7 @@ class MockArgs:
             object.__setattr__(self, key, value)
 
     def __setattr__(self, name: str, value: Any) -> None:
-        if name == "_allowed":
-            object.__setattr__(self, name, value)
-        elif name in self._allowed:
+        if name == "_allowed" or name in self._allowed:
             object.__setattr__(self, name, value)
         else:
             raise AttributeError(

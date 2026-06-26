@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 模拟生命周期模块单元测试（pytest 风格）
 
@@ -7,10 +6,6 @@
 """
 
 from __future__ import annotations
-
-from typing import Dict, List, Optional
-
-import pytest
 
 from alpha.core.simulation import (
     build_failure_result,
@@ -21,7 +16,6 @@ from alpha.core.simulation import (
     summarize_failure,
 )
 from alpha.models.base import FieldTestContext, FieldTestResult
-
 
 # ============================================================================
 # extract_alpha_id 测试
@@ -34,10 +28,10 @@ class TestExtractAlphaId:
     def test_direct_alpha_field(self) -> None:
         assert extract_alpha_id({"alpha": "alpha_123"}) == "alpha_123"
 
-    def test_alphaId_field(self) -> None:
+    def test_alphaId_field(self) -> None:  # noqa: N802
         assert extract_alpha_id({"alphaId": "alpha_456"}) == "alpha_456"
 
-    def test_id_with_type_ALPHA(self) -> None:
+    def test_id_with_type_ALPHA(self) -> None:  # noqa: N802
         assert extract_alpha_id({"type": "ALPHA", "id": "alpha_789"}) == "alpha_789"
 
     def test_id_not_alpha_type(self) -> None:

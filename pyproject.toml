@@ -88,6 +88,11 @@ select = [
 ]
 ignore = [
     "E501",   # line-too-long (handled by formatter)
+    "UP006",  # non-pep585-annotation (requires py3.9+)
+    "UP045",  # non-pep604-annotation-optional (requires py3.10+)
+    "RUF001", # ambiguous-unicode-character-string (Chinese comments are legitimate)
+    "RUF002", # ambiguous-unicode-character-docstring (Chinese docstrings are legitimate)
+    "RUF003", # ambiguous-unicode-character-comment (Chinese comments are legitimate)
 ]
 fixable = ["ALL"]
 
@@ -100,7 +105,7 @@ indent-style = "space"
 skip-magic-trailing-comma = false
 
 [tool.mypy]
-python_version = "3.8"
+python_version = "3.10"
 strict = false
 warn_unused_ignores = true
 ignore_missing_imports = true

@@ -582,6 +582,4 @@ def should_skip_field_template_family(
     weak_mean_spread_fields = {"assets", "assets_curr", "cash", "bookvalue_ps", "capex"}
     if field_name in weak_mean_spread_fields and family in {"group_mean_spread", "mean_spread", "rank_spread"}:
         return True
-    if field_name in {"assets", "assets_curr"} and family in {"zscore_time", "group_zscore"}:
-        return True
-    return False
+    return field_name in {"assets", "assets_curr"} and family in {"zscore_time", "group_zscore"}

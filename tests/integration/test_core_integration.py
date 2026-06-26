@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 核心模块集成测试
 
@@ -11,35 +10,30 @@
 
 from __future__ import annotations
 
-import time
-from typing import Dict, List
+from typing import ClassVar, Dict, List
 from unittest.mock import MagicMock, patch
 
 import pytest
 
-from tests.conftest import MockArgs
-
-from alpha.models.base import (
-    ExecutionState,
-    FieldTestContext,
-    FieldTestResult,
-    FutureCompletionContext,
-    HistoricalRunState,
-    RunFilters,
-    RuntimeConcurrencyState,
-    TemplateBuildContext,
-)
 from alpha.core.executor import should_skip_expression_by_history, should_skip_field
 from alpha.core.scheduler import (
     apply_congestion_cooldown,
     drain_completed_futures,
     handle_completed_future,
     register_queue_busy_field,
-    throttle_before_submission,
 )
 from alpha.core.simulation import build_failure_result, summarize_failure
+from alpha.models.base import (
+    ExecutionState,
+    FieldTestContext,
+    FieldTestResult,
+    FutureCompletionContext,
+    RunFilters,
+    RuntimeConcurrencyState,
+    TemplateBuildContext,
+)
 from alpha.utils.helpers import first_non_empty
-
+from tests.conftest import MockArgs
 
 # ============================================================================
 # simulation ↔ scheduler 拥塞信号传递测试
@@ -53,7 +47,7 @@ class TestCongestionSignalPropagation:
     scheduler 应该能检测到并应用拥塞冷却。
     """
 
-    CONGESTION_MESSAGES: List[str] = [
+    CONGESTION_MESSAGES: ClassVar[List[str]] = [
         "CONCURRENT_SIMULATION_LIMIT_EXCEEDED",
         "queued too long for resource",
         "rate limited - please slow down",
@@ -158,7 +152,7 @@ class TestCongestionSignalPropagation:
 
         with patch("alpha.core.scheduler.dump_results"), \
              patch("alpha.core.scheduler.compile_template_stats", return_value={}):
-            _stats, congestion_detected, queue_busy_field_id = handle_completed_future(
+            _stats, congestion_detected, _queue_busy_field_id = handle_completed_future(
                 future,
                 completion_ctx=completion_ctx,
                 results=results,
@@ -374,7 +368,7 @@ class TestDrainCompletedFuturesFlow:
              patch("alpha.core.scheduler.compile_template_stats", return_value={}), \
              patch("alpha.core.scheduler.is_informative_result", return_value=True), \
              patch("alpha.core.scheduler.result_identity", return_value=("f1", "tpl", "rank(test)", "abc")):
-            stats = drain_completed_futures(
+            _stats = drain_completed_futures(
                 completed_futures=[future],
                 execution_state=empty_execution_state,
                 args=scheduler_args,

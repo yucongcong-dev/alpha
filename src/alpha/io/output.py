@@ -20,6 +20,7 @@ import os
 import re
 import tempfile
 import time
+from contextlib import suppress
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Sequence
 
@@ -110,10 +111,8 @@ def atomic_write_json(path: str, payload: Any) -> None:
         os.replace(temp_path, path)
     finally:
         if os.path.exists(temp_path):
-            try:
+            with suppress(OSError):
                 os.remove(temp_path)
-            except OSError:
-                pass
 
 
 # ============================================================================

@@ -20,6 +20,7 @@ API 调用次数，提高运行效率。
 import json
 import os
 import tempfile
+from contextlib import suppress
 from typing import Any, Dict, List, Optional, Sequence
 
 from ..utils.helpers import first_non_empty
@@ -50,10 +51,8 @@ def atomic_write_json(path: str, payload: Any) -> None:
         os.replace(temp_path, path)
     finally:
         if os.path.exists(temp_path):
-            try:
+            with suppress(OSError):
                 os.remove(temp_path)
-            except OSError:
-                pass
 
 
 def load_fields_cache(

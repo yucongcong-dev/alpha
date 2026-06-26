@@ -1,6 +1,3 @@
-from __future__ import annotations
-
-# -*- coding: utf-8 -*-
 """
 Brain API 客户端模块
 
@@ -25,6 +22,8 @@ Brain API 客户端模块
     - BrainClient: 主 API 客户端类
     - WorkerClientFactory: 多线程客户端工厂
 """
+
+from __future__ import annotations
 
 import argparse
 import base64
@@ -771,7 +770,7 @@ class BrainClient:
             raise BrainRateLimitError(
                 f"{method} {url} rate limited after {retries} attempts, "
                 f"skip current template: {detail}",
-                retry_after,
+                int(retry_after),
             )
         detail = safe_json_bytes(content)
         raise BrainAPIError(f"{method} {url} failed: {status} {detail}")

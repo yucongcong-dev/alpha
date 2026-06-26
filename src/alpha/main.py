@@ -520,7 +520,7 @@ if __name__ == "__main__":
         raise SystemExit(main())
     except KeyboardInterrupt:
         print("\n[abort] 用户中断", file=sys.stderr)
-        raise SystemExit(130)
+        raise SystemExit(130) from None
     except Exception as exc:
         print(f"[error] {exc}", file=sys.stderr)
-        raise SystemExit(1)
+        raise SystemExit(1) from None

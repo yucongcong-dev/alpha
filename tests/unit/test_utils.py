@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 公共工具模块单元测试（pytest 风格）
 
@@ -7,10 +6,7 @@
 
 from __future__ import annotations
 
-import pytest
-
 from alpha.utils import choose_field_name, choose_field_type, first_non_empty
-
 
 # ============================================================================
 # first_non_empty 测试
@@ -115,7 +111,7 @@ class TestChooseFieldType:
     def test_prefers_type(self) -> None:
         assert choose_field_type({"type": "MATRIX", "fieldType": "vector"}) == "MATRIX"
 
-    def test_falls_back_to_fieldType(self) -> None:
+    def test_falls_back_to_fieldType(self) -> None:  # noqa: N802
         assert choose_field_type({"fieldType": "vector"}) == "VECTOR"
 
     def test_falls_back_to_category(self) -> None:

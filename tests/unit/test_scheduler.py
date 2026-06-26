@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 并发调度与拥塞控制模块单元测试（pytest 风格）
 
@@ -9,12 +8,7 @@
 from __future__ import annotations
 
 import time
-from typing import Dict
 from unittest.mock import patch
-
-import pytest
-
-from tests.conftest import MockArgs
 
 from alpha.core.scheduler import (
     apply_congestion_cooldown,
@@ -23,7 +17,7 @@ from alpha.core.scheduler import (
     throttle_before_submission,
 )
 from alpha.models.base import ExecutionState, RuntimeConcurrencyState
-
+from tests.conftest import MockArgs
 
 # ============================================================================
 # maybe_restore_runtime_concurrency 测试

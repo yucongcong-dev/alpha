@@ -722,7 +722,7 @@ def build_feedback_mutations(
         name
         for name, _ in sorted(failed_counts.items(), key=lambda item: (-item[1], item[0]))[:3]
     }
-    best_expression = str(field_feedback.get("best_expression", "")).strip()
+    _best_expression = str(field_feedback.get("best_expression", "")).strip()
     best_score = float(field_feedback.get("best_score", -999.0))
 
     if best_score >= 0.15:

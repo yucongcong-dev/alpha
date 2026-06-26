@@ -182,9 +182,8 @@ def should_skip_expression_by_history(
         values = {str(check.get("name")): check.get("value") for check in failed_checks}
         low_sharpe = values.get("LOW_SHARPE")
         low_fitness = values.get("LOW_FITNESS")
-        if isinstance(low_sharpe, (int, float)) and isinstance(low_fitness, (int, float)):
-            if low_sharpe < 0.0 and low_fitness < 0.0:
-                return True
+        if isinstance(low_sharpe, (int, float)) and isinstance(low_fitness, (int, float)) and low_sharpe < 0.0 and low_fitness < 0.0:
+            return True
         if "CONCENTRATED_WEIGHT" in values and "LOW_SUB_UNIVERSE_SHARPE" in values:
             return True
     return False

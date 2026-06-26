@@ -18,7 +18,7 @@ import argparse
 import json
 import re
 import threading
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 from ..api.client import (
     BrainClient,
@@ -223,10 +223,7 @@ def is_submittable_from_checks(checks: List[Dict[str, Any]]) -> Optional[bool]:
     """
     if not checks:
         return None
-    for check in checks:
-        if str(check.get("result", "")).upper() == "FAIL":
-            return False
-    return True
+    return all(str(check.get("result", "")).upper() != "FAIL" for check in checks)
 
 
 # ============================================================================
@@ -698,9 +695,9 @@ def _run_simulation_create(
     *,
     simulation_settings: Optional[SettingsVariant] = None,
     create_semaphore: Optional[threading.Semaphore] = None,
-) -> "Optional[FieldTestResult] | Tuple[str, str]":
+) -> "FieldTestResult | Tuple[str, str]":
     """simulation 阶段 (创建): 构建 payload 并创建模拟任务。
-    
+
     Returns:
         - FieldTestResult: 发生失败，调用方应直接返回
         - Tuple[str, str]: (simulation_location, simulation_id) 继续流水线
@@ -736,9 +733,9 @@ def _run_simulation_poll(
     *,
     simulation_location: str,
     simulation_id: str,
-) -> "Optional[FieldTestResult] | Tuple[str, Dict[str, Any]]":
+) -> "FieldTestResult | Tuple[str, Dict[str, Any]]":
     """simulation 阶段 (轮询): 等待模拟完成并提取 alpha_id。
-    
+
     Returns:
         - FieldTestResult: 发生失败，调用方应直接返回
         - Tuple[str, Dict[str, Any]]: (alpha_id, simulation_result) 继续流水线
@@ -788,7 +785,7 @@ def _run_checksubmit_stage(
     alpha_id: str,
     simulation_id: str,
     simulation_result: Optional[Dict[str, Any]] = None,
-) -> "Optional[FieldTestResult] | Tuple[bool, str, List[Dict[str, Any]]]":
+) -> "FieldTestResult | Tuple[Optional[bool], str, List[Dict[str, Any]]]":
     """checksubmit 阶段: 先本地预检指标，达标后再调用 checksubmit API。
 
     模拟响应中已包含原始 is.sharpe、is.fitness、is.turnover 等指标。
@@ -831,10 +828,10 @@ def _run_submit_stage(
     alpha_id: str,
     simulation_id: str,
     simulation_location: str,
-    submittable: bool,
-) -> "Optional[FieldTestResult] | Tuple[bool, str, str]":
+    submittable: Optional[bool],
+) -> "FieldTestResult | Tuple[bool, str, str]":
     """submit 阶段: 条件提交 Alpha（仅当 args.submit 且 submittable 为真）。
-    
+
     Returns:
         - FieldTestResult: 提交失败，调用方应直接返回
         - Tuple[bool, str, str]: (submitted, status, message) 继续流水线

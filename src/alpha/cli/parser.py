@@ -687,10 +687,10 @@ def load_run_filters(run_paths: RunPaths) -> RunFilters:
         - 排除列表在包含列表之后应用：排除列表中的项会被跳过
     """
     # 从文件加载过滤列表
-    include_fields = load_line_set(run_paths.include_fields_file if hasattr(run_paths, 'include_fields_file') else "")
+    _include_fields = load_line_set(run_paths.include_fields_file if hasattr(run_paths, 'include_fields_file') else "")
     exclude_fields = load_line_set(run_paths.exclude_fields_file if hasattr(run_paths, 'exclude_fields_file') else "")
-    include_templates = load_line_set(run_paths.include_templates_file if hasattr(run_paths, 'include_templates_file') else "")
-    exclude_templates = load_line_set(run_paths.exclude_templates_file if hasattr(run_paths, 'exclude_templates_file') else "")
+    _include_templates = load_line_set(run_paths.include_templates_file if hasattr(run_paths, 'include_templates_file') else "")
+    _exclude_templates = load_line_set(run_paths.exclude_templates_file if hasattr(run_paths, 'exclude_templates_file') else "")
 
     # 创建扩展的 RunFilters（添加 include/exclude 字段和模板）
     return RunFilters(
@@ -777,8 +777,8 @@ def setup_runtime_logging(log_path: str) -> None:
     if log_dir:
         os.makedirs(log_dir, exist_ok=True)
 
-    # 打开日志文件
-    log_file_handle = open(log_path, "a", encoding="utf-8")
+    # 打开日志文件（程序全局持有，需在进程退出时由 OS 自动关闭）
+    log_file_handle = open(log_path, "a", encoding="utf-8")  # noqa: SIM115
 
     # 使用 TeeStream 同时输出到控制台和文件
     tee_stream = TeeStream(sys.stdout, log_file_handle)

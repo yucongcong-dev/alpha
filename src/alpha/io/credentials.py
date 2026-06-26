@@ -27,6 +27,7 @@ import getpass
 import json
 import os
 import tempfile
+from contextlib import suppress
 from pathlib import Path
 from typing import Any, Dict, Optional, Tuple
 
@@ -100,10 +101,8 @@ def atomic_write_json(path: str, payload: Any) -> None:
         os.replace(temp_path, path)
     finally:
         if os.path.exists(temp_path):
-            try:
+            with suppress(OSError):
                 os.remove(temp_path)
-            except OSError:
-                pass
 
 
 # ============================================================================
@@ -165,10 +164,8 @@ def restrict_file_to_owner(path: str) -> None:
         - 在 Windows 系统上可能无效，但不会抛出异常
         - 这是一个"尽力而为"的操作，失败不影响程序运行
     """
-    try:
+    with suppress(OSError):
         os.chmod(path, 0o600)
-    except OSError:
-        pass
 
 
 def read_or_create_credentials_key(key_path: str) -> bytes:
@@ -197,7 +194,7 @@ def read_or_create_credentials_key(key_path: str) -> bytes:
         - 密钥文件权限会被设置为 0o600（仅所有者可读写）
         - 生成的密钥文件会被打印到控制台，方便用户确认
     """
-    Fernet, _ = load_crypto_dependencies()
+    fernet_cls, _ = load_crypto_dependencies()
     if os.path.exists(key_path):
         restrict_file_to_owner(key_path)
         with open(key_path, "rb") as handle:
@@ -207,7 +204,7 @@ def read_or_create_credentials_key(key_path: str) -> bytes:
         raise BrainAPIError(f"Credentials key file is empty: {key_path}")
 
     ensure_parent_dir(key_path)
-    key = Fernet.generate_key()
+    key = fernet_cls.generate_key()
     with open(key_path, "wb") as handle:
         handle.write(key + b"\n")
     restrict_file_to_owner(key_path)
@@ -256,7 +253,7 @@ def encrypt_credentials_payload(
         - 使用 UTF-8 编码存储凭证
         - JSON 序列化时使用紧凑格式（无空格）以减少存储空间
     """
-    Fernet, _ = load_crypto_dependencies()
+    fernet_cls, _ = load_crypto_dependencies()
     key = read_or_create_credentials_key(key_path)
     plaintext = json.dumps(
         {"email": email, "password": password},
@@ -266,7 +263,7 @@ def encrypt_credentials_payload(
     return {
         "version": CREDENTIALS_STORAGE_VERSION,
         "storage": "cryptography-fernet-local-key-file",
-        "ciphertext": Fernet(key).encrypt(plaintext.encode("utf-8")).decode("ascii"),
+        "ciphertext": fernet_cls(key).encrypt(plaintext.encode("utf-8")).decode("ascii"),
     }
 
 
@@ -307,7 +304,7 @@ def decrypt_credentials_payload(
         - 密钥文件必须与加密时使用的密钥一致
         - 如果密钥文件丢失，需要重新输入凭证
     """
-    Fernet, InvalidToken = load_crypto_dependencies()
+    fernet_cls, invalid_token_cls = load_crypto_dependencies()
     ciphertext = payload.get("ciphertext")
     if not isinstance(ciphertext, str) or not ciphertext.strip():
         raise BrainAPIError("Encrypted credentials file is missing ciphertext.")
@@ -317,10 +314,10 @@ def decrypt_credentials_payload(
         )
     key = read_or_create_credentials_key(key_path)
     try:
-        plaintext = Fernet(key).decrypt(
+        plaintext = fernet_cls(key).decrypt(
             ciphertext.strip().encode("ascii")
         ).decode("utf-8")
-    except InvalidToken as exc:
+    except invalid_token_cls as exc:
         raise BrainAPIError(
             "Failed to decrypt credentials. The local credentials key file may not match."
         ) from exc
