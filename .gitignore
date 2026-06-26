@@ -1,0 +1,23 @@
+__pycache__/
+*.py[cod]
+.DS_Store
+.env
+
+# Local WorldQuant Brain secrets. Never commit these files.
+worldquant_brain_credentials.json
+worldquant_brain_credentials.key
+
+# Local run outputs and logs.
+*_fields_cache.json
+*_test_results.json
+*_test_results_analysis.json
+*_test_results_*_run.log
+*_test_results_submittable.json
+*_test_results_submitted.json
+*_test_results_failed_checks_summary.json
+*_test_results_field_performance_summary.json
+*_test_results_template_performance_summary.json
+*_test_results_run_config.json
+
+# Optional local template experiments.
+worldquant_template_library*.json
