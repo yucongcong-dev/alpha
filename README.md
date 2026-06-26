@@ -22,6 +22,12 @@ Default exploration run, suitable for looking for candidate alphas. This is the 
 python3 worldquant_brain_dataset_submit.py
 ```
 
+Preview the next run without creating simulations:
+
+```bash
+python3 worldquant_brain_dataset_submit.py --dry-run-plan
+```
+
 Wider exploration, when you want a better chance of finding useful candidates:
 
 ```bash
@@ -43,6 +49,8 @@ python3 worldquant_brain_dataset_submit.py --full-run
 Avoid using `--limit 1 --max-templates-per-field 1` for alpha discovery. That mode is intentionally tiny and almost never finds high-quality alphas.
 
 The script automatically refreshes the field cache when the cached field count is smaller than the requested `--limit`.
+If the cache already has some fields, the script extends it from the next offset instead of refetching everything.
+The default simulation concurrency is `2`, and the runner automatically cools down to `1` when queue congestion is detected.
 
 After each run, inspect `*_test_results_analysis.json` for `failed_check_leaderboard`, `near_pass_summary`, and `optimization_hints`. These sections show the main blockers and the best candidates for the next iteration.
 

@@ -4,6 +4,7 @@
 Usage examples:
   python3 worldquant_brain_dataset_submit.py
   python3 worldquant_brain_dataset_submit.py --smoke-test
+  python3 worldquant_brain_dataset_submit.py --dry-run-plan
   python3 worldquant_brain_dataset_submit.py --limit 50 --max-templates-per-field 8
   python3 worldquant_brain_dataset_submit.py --full-run
   python3 worldquant_brain_dataset_submit.py --submit
@@ -367,6 +368,11 @@ def parse_args() -> argparse.Namespace:
         help="Force refetching dataset fields and overwrite the local fields cache",
     )
     parser.add_argument(
+        "--dry-run-plan",
+        action="store_true",
+        help="Print the planned fields/templates without creating simulations",
+    )
+    parser.add_argument(
         "--include-fields-file",
         default="",
         help="Optional text file listing field ids/names to include, one per line",
@@ -423,8 +429,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--max-concurrent-simulations",
         type=int,
-        default=1,
-        help="How many field-template simulations to run in parallel; use 3 if your account supports it",
+        default=2,
+        help="How many field-template simulations to run in parallel; runtime cooldown drops to 1 on queue congestion",
     )
     parser.add_argument(
         "--max-concurrent-creates",
@@ -1063,6 +1069,7 @@ def fields_cache_refresh_reason(
     cached_fields: Sequence[Dict[str, Any]],
     *,
     requested_limit: int,
+    requested_offset: int,
     force_refresh: bool,
 ) -> str:
     """判断字段缓存是否应刷新，并返回可打印的原因。
@@ -1072,9 +1079,90 @@ def fields_cache_refresh_reason(
         return "forced by --refresh-fields-cache"
     if not cached_fields:
         return "cache missing or invalid"
+    if requested_offset > 0:
+        return "non-zero --offset requires an exact field fetch"
+    if requested_limit == 0:
+        return "all-fields request requires a complete field fetch"
     if requested_limit > 0 and len(cached_fields) < requested_limit:
         return f"cache has {len(cached_fields)} fields but current limit requests {requested_limit}"
     return ""
+
+
+def merge_fields_by_id(existing_fields: Sequence[Dict[str, Any]], new_fields: Sequence[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """按字段 ID 合并缓存和新拉取字段，保持原始顺序并去重。
+    Merge cached and newly fetched fields by field id while preserving order.
+    """
+    merged: List[Dict[str, Any]] = []
+    seen: set[str] = set()
+    for field in list(existing_fields) + list(new_fields):
+        field_id = str(first_non_empty(field.get("id"), field.get("name"), ""))
+        if field_id and field_id in seen:
+            continue
+        if field_id:
+            seen.add(field_id)
+        merged.append(dict(field))
+    return merged
+
+
+def fetch_fields_with_cache(
+    client: BrainClient,
+    args: argparse.Namespace,
+    run_paths: RunPaths,
+    cached_fields: Sequence[Dict[str, Any]],
+    cache_refresh_reason: str,
+) -> List[Dict[str, Any]]:
+    """根据缓存状态拉取字段；能补齐时补齐，必要时才覆盖刷新。
+    Fetch fields based on cache state; append when possible and overwrite only when needed.
+    """
+    if not cache_refresh_reason:
+        fields = list(cached_fields)
+        print(f"[cache] loaded {len(fields)} fields from {run_paths.fields_cache_file}", flush=True)
+        return fields
+
+    print(f"[cache] refreshing fields cache: {cache_refresh_reason}", flush=True)
+    append_to_cache = (
+        bool(cached_fields)
+        and not args.refresh_fields_cache
+        and args.offset == 0
+        and args.limit > len(cached_fields)
+    )
+    fetch_offset = len(cached_fields) if append_to_cache else args.offset
+    fetch_limit = args.limit - len(cached_fields) if append_to_cache else args.limit
+    if append_to_cache:
+        print(
+            f"[cache] extending cached fields from {len(cached_fields)} to {args.limit} using offset={fetch_offset} limit={fetch_limit}",
+            flush=True,
+        )
+
+    # Fetching the field list is also wrapped so temporary API instability
+    # does not abort the whole batch before it starts.
+    fetched_fields = retry_operation(
+        "fetch dataset fields",
+        args.field_fetch_retries,
+        lambda: client.fetch_dataset_fields(
+            args.dataset_id,
+            limit=fetch_limit,
+            offset=fetch_offset,
+            page_size=args.page_size,
+            region=args.region,
+            universe=args.universe,
+            instrument_type=args.instrument_type,
+            delay=args.delay,
+        ),
+        retry_wait_seconds=3.0,
+    )
+    fields = merge_fields_by_id(cached_fields, fetched_fields) if append_to_cache else fetched_fields
+    save_fields_cache(
+        run_paths.fields_cache_file,
+        dataset_id=args.dataset_id,
+        region=args.region,
+        universe=args.universe,
+        instrument_type=args.instrument_type,
+        delay=args.delay,
+        fields=fields,
+    )
+    print(f"[cache] saved {len(fields)} fields to {run_paths.fields_cache_file}", flush=True)
+    return fields
 
 
 def build_settings_fingerprint(args: argparse.Namespace) -> str:
@@ -3852,6 +3940,77 @@ def drain_completed_futures(
     return execution_state.template_stats
 
 
+def print_dry_run_plan(
+    *,
+    args: argparse.Namespace,
+    fields: Sequence[Dict[str, Any]],
+    filters: RunFilters,
+    template_library: TemplateLibrary,
+    historical_state: HistoricalRunState,
+    execution_state: ExecutionState,
+    use_dataset_heuristics: bool,
+    sample_limit: int = 20,
+) -> None:
+    """打印本轮计划执行的字段/模板，不创建任何 simulation。
+    Print the planned field/template work without creating any simulations.
+    """
+    planned_fields = 0
+    planned_templates = 0
+    disabled_templates = 0
+    samples: List[Dict[str, Any]] = []
+
+    for field in fields:
+        field_id = str(first_non_empty(field.get("id"), "UNKNOWN"))
+        field_name = choose_field_name(field)
+        if should_skip_field(field_id, field_name, filters, execution_state.skipped_fields_due_to_queue):
+            continue
+        pending_templates, disabled_count, template_count = build_pending_templates_for_field(
+            args,
+            field,
+            all_fields=fields,
+            template_library=template_library,
+            field_feedback=historical_state.field_feedback.get(field_id),
+            include_templates=filters.include_templates,
+            exclude_templates=filters.exclude_templates,
+            template_stats=execution_state.template_stats,
+            attempted_keys=execution_state.attempted_keys,
+            prior_results=execution_state.results,
+            use_dataset_heuristics=use_dataset_heuristics,
+        )
+        if not pending_templates and template_count == 0:
+            continue
+        planned_fields += 1
+        planned_templates += len(pending_templates)
+        disabled_templates += disabled_count
+        for template_name, expression, priority, _settings_variant, variant_fingerprint in pending_templates:
+            if len(samples) >= sample_limit:
+                break
+            samples.append(
+                {
+                    "field_id": field_id,
+                    "field_name": field_name,
+                    "template_name": template_name,
+                    "priority": priority,
+                    "settings": variant_fingerprint,
+                    "expression": expression,
+                }
+            )
+
+    print("[dry-run] simulation creation is disabled; this is a plan only", flush=True)
+    print(f"[dry-run] planned_fields={planned_fields}", flush=True)
+    print(f"[dry-run] planned_simulations={planned_templates}", flush=True)
+    print(f"[dry-run] disabled_templates={disabled_templates}", flush=True)
+    print(f"[dry-run] existing_results={len(execution_state.results)}", flush=True)
+    print(f"[dry-run] attempted_keys={len(execution_state.attempted_keys)}", flush=True)
+    for index, sample in enumerate(samples, start=1):
+        print(
+            f"[dry-run] sample {index}/{len(samples)} field={sample['field_id']} "
+            f"template={sample['template_name']} priority={sample['priority']} settings={sample['settings']} "
+            f"expression={sample['expression']}",
+            flush=True,
+        )
+
+
 def main() -> int:
     """编排凭证加载、字段发现、候选测试与结果持久化的主流程。
     Orchestrate credential loading, field discovery, candidate testing, and persistence.
@@ -3897,40 +4056,16 @@ def main() -> int:
     cache_refresh_reason = fields_cache_refresh_reason(
         cached_fields,
         requested_limit=args.limit,
+        requested_offset=args.offset,
         force_refresh=args.refresh_fields_cache,
     )
-    if not cache_refresh_reason:
-        fields = cached_fields
-        print(f"[cache] loaded {len(fields)} fields from {run_paths.fields_cache_file}", flush=True)
-    else:
-        print(f"[cache] refreshing fields cache: {cache_refresh_reason}", flush=True)
-        # Fetching the field list is also wrapped so temporary API instability
-        # does not abort the whole batch before it starts.
-        fields = retry_operation(
-            "fetch dataset fields",
-            args.field_fetch_retries,
-            lambda: bootstrap_client.fetch_dataset_fields(
-                args.dataset_id,
-                limit=args.limit,
-                offset=args.offset,
-                page_size=args.page_size,
-                region=args.region,
-                universe=args.universe,
-                instrument_type=args.instrument_type,
-                delay=args.delay,
-            ),
-            retry_wait_seconds=3.0,
-        )
-        save_fields_cache(
-            run_paths.fields_cache_file,
-            dataset_id=args.dataset_id,
-            region=args.region,
-            universe=args.universe,
-            instrument_type=args.instrument_type,
-            delay=args.delay,
-            fields=fields,
-        )
-        print(f"[cache] saved {len(fields)} fields to {run_paths.fields_cache_file}", flush=True)
+    fields = fetch_fields_with_cache(
+        bootstrap_client,
+        args,
+        run_paths,
+        cached_fields,
+        cache_refresh_reason,
+    )
     if not fields:
         raise BrainAPIError(f"No fields returned for dataset {args.dataset_id}")
 
@@ -3978,6 +4113,18 @@ def main() -> int:
     print(f"[config] max_concurrent_simulations={max_workers}", flush=True)
     print(f"[config] max_concurrent_creates={max_create_workers}", flush=True)
     print(f"[config] simulation_max_pending_cycles={args.simulation_max_pending_cycles}", flush=True)
+
+    if args.dry_run_plan:
+        print_dry_run_plan(
+            args=args,
+            fields=fields,
+            filters=filters,
+            template_library=template_library,
+            historical_state=historical_state,
+            execution_state=execution_state,
+            use_dataset_heuristics=use_dataset_heuristics,
+        )
+        return 0
 
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
         for field_index, field in enumerate(fields, start=1):
