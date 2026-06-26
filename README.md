@@ -28,6 +28,12 @@ Wider exploration, when you want a better chance of finding useful candidates:
 python3 worldquant_brain_dataset_submit.py --limit 50 --max-templates-per-field 8
 ```
 
+Force refresh the local field cache before exploring:
+
+```bash
+python3 worldquant_brain_dataset_submit.py --refresh-fields-cache
+```
+
 Full run, can be slow and queue-heavy. Use it only when you are ready to spend more API queue time:
 
 ```bash
@@ -35,5 +41,7 @@ python3 worldquant_brain_dataset_submit.py --full-run
 ```
 
 Avoid using `--limit 1 --max-templates-per-field 1` for alpha discovery. That mode is intentionally tiny and almost never finds high-quality alphas.
+
+The script automatically refreshes the field cache when the cached field count is smaller than the requested `--limit`.
 
 The first run prompts for WorldQuant Brain credentials and stores them encrypted locally. Credential files, logs, caches, and result files are ignored by git.

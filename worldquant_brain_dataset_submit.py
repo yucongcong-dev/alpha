@@ -362,6 +362,11 @@ def parse_args() -> argparse.Namespace:
         help="Optional local JSON cache for fetched data-fields metadata",
     )
     parser.add_argument(
+        "--refresh-fields-cache",
+        action="store_true",
+        help="Force refetching dataset fields and overwrite the local fields cache",
+    )
+    parser.add_argument(
         "--include-fields-file",
         default="",
         help="Optional text file listing field ids/names to include, one per line",
@@ -1052,6 +1057,24 @@ def save_fields_cache(
             "fields": list(fields),
         },
     )
+
+
+def fields_cache_refresh_reason(
+    cached_fields: Sequence[Dict[str, Any]],
+    *,
+    requested_limit: int,
+    force_refresh: bool,
+) -> str:
+    """判断字段缓存是否应刷新，并返回可打印的原因。
+    Decide whether the fields cache should be refreshed and return a printable reason.
+    """
+    if force_refresh:
+        return "forced by --refresh-fields-cache"
+    if not cached_fields:
+        return "cache missing or invalid"
+    if requested_limit > 0 and len(cached_fields) < requested_limit:
+        return f"cache has {len(cached_fields)} fields but current limit requests {requested_limit}"
+    return ""
 
 
 def build_settings_fingerprint(args: argparse.Namespace) -> str:
@@ -3714,10 +3737,16 @@ def main() -> int:
         instrument_type=args.instrument_type,
         delay=args.delay,
     )
-    if cached_fields:
+    cache_refresh_reason = fields_cache_refresh_reason(
+        cached_fields,
+        requested_limit=args.limit,
+        force_refresh=args.refresh_fields_cache,
+    )
+    if not cache_refresh_reason:
         fields = cached_fields
         print(f"[cache] loaded {len(fields)} fields from {run_paths.fields_cache_file}", flush=True)
     else:
+        print(f"[cache] refreshing fields cache: {cache_refresh_reason}", flush=True)
         # Fetching the field list is also wrapped so temporary API instability
         # does not abort the whole batch before it starts.
         fields = retry_operation(
