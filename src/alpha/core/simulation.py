@@ -32,6 +32,13 @@ from ..api.client import (
     first_non_empty,
     retry_operation,
 )
+from ..config import (
+    SUBMIT_MIN_FITNESS,
+    SUBMIT_MIN_SHARPE,
+    SUBMIT_MIN_TURNOVER,
+    SUBMIT_MAX_TURNOVER,
+    SUBMIT_MAX_WEIGHT,
+)
 from ..generators.settings import build_simulation_payload
 from ..utils.helpers import choose_field_name, choose_field_type
 
@@ -222,6 +229,126 @@ def is_submittable_from_checks(checks: List[Dict[str, Any]]) -> Optional[bool]:
         if str(check.get("result", "")).upper() == "FAIL":
             return False
     return True
+
+
+# ============================================================================
+# 模拟指标预检函数
+# ============================================================================
+
+def precheck_simulation_metrics(
+    simulation_result: Dict[str, Any],
+    *,
+    min_sharpe: float = SUBMIT_MIN_SHARPE,
+    min_fitness: float = SUBMIT_MIN_FITNESS,
+    min_turnover: float = SUBMIT_MIN_TURNOVER,
+    max_turnover: float = SUBMIT_MAX_TURNOVER,
+    max_weight: float = SUBMIT_MAX_WEIGHT,
+) -> tuple:
+    """
+    在调用 check-submit API 之前，用本地阈值预检模拟响应中的原始指标。
+
+    模拟响应通常包含 is.sharpe、is.fitness、is.turnover 等原始指标。
+    如果这些指标明显不达标，可以直接跳过 check-submit API 调用，
+    节省请求配额和网络开销。
+
+    Args:
+        simulation_result: 模拟完成的响应 JSON 字典。
+        min_sharpe: 最低 Sharpe 阈值（默认 1.25）。
+        min_fitness: 最低 Fitness 阈值（默认 1.0）。
+        min_turnover: 最低 Turnover 阈值（默认 1%）。
+        max_turnover: 最高 Turnover 阈值（默认 70%）。
+        max_weight: 单股最大权重上限（默认 10%）。
+
+    Returns:
+        tuple: (passed: bool, reason: str, failed_checks: list)
+            - passed=True 表示预检通过，可以继续 checkSubmit
+            - passed=False 表示预检不通过，reason 描述原因，
+              failed_checks 是构造的失败检查项列表（用于结果持久化）
+
+    Example:
+        >>> result = {"is": {"sharpe": 0.8, "fitness": 0.5, "turnover": 0.15}}
+        >>> passed, reason, checks = precheck_simulation_metrics(result)
+        >>> print(passed)
+        False
+        >>> print(reason)
+        'sharpe=0.8000 < 1.25; fitness=0.5000 < 1.00'
+
+    Note:
+        - 如果 is 段缺失或指标无法提取，返回 passed=True（回退到 checkSubmit）
+        - 阈值可被调用方覆盖以适应不同的 universe/region 设置
+        - 构造的 failed_checks 结构与真实 check-submit 返回一致
+    """
+    is_section = simulation_result.get("is")
+    if not isinstance(is_section, dict):
+        return True, "", []
+
+    sharpe = is_section.get("sharpe")
+    fitness = is_section.get("fitness")
+    turnover = is_section.get("turnover")
+    max_stock_weight = (
+        is_section.get("maxWeight")
+        or is_section.get("max_weight")
+        or is_section.get("concentratedWeight")
+    )
+
+    failures: list = []
+
+    if isinstance(sharpe, (int, float)) and sharpe < min_sharpe:
+        failures.append(
+            {
+                "name": "LOW_SHARPE",
+                "result": "FAIL",
+                "value": float(sharpe),
+                "limit": min_sharpe,
+            }
+        )
+    if isinstance(fitness, (int, float)) and fitness < min_fitness:
+        failures.append(
+            {
+                "name": "LOW_FITNESS",
+                "result": "FAIL",
+                "value": float(fitness),
+                "limit": min_fitness,
+            }
+        )
+    if isinstance(turnover, (int, float)):
+        if turnover < min_turnover:
+            failures.append(
+                {
+                    "name": "LOW_TURNOVER",
+                    "result": "FAIL",
+                    "value": float(turnover),
+                    "limit": min_turnover,
+                }
+            )
+        elif turnover > max_turnover:
+            failures.append(
+                {
+                    "name": "HIGH_TURNOVER",
+                    "result": "FAIL",
+                    "value": float(turnover),
+                    "limit": max_turnover,
+                }
+            )
+    if isinstance(max_stock_weight, (int, float)) and max_stock_weight > max_weight:
+        failures.append(
+            {
+                "name": "CONCENTRATED_WEIGHT",
+                "result": "FAIL",
+                "value": float(max_stock_weight),
+                "limit": max_weight,
+            }
+        )
+
+    if not failures:
+        return True, "", []
+
+    reason_parts = []
+    for f in failures:
+        reason_parts.append(
+            f"{f['name'].lower()}: {f['value']:.4f} vs limit {f['limit']}"
+        )
+    return False, "; ".join(reason_parts), failures
 
 
 # ============================================================================
@@ -662,13 +789,31 @@ def _run_check_stage(
     *,
     alpha_id: str,
     simulation_id: str,
+    simulation_result: Optional[Dict[str, Any]] = None,
 ) -> "Optional[FieldTestResult] | Tuple[bool, str, List[Dict[str, Any]]]":
-    """阶段 3: 检查可提交状态。
-    
+    """阶段 3: 先本地预检指标，达标后再调用 check-submit API。
+
+    模拟响应中已包含原始 is.sharpe、is.fitness、is.turnover 等指标。
+    先用这些指标做一次本地预检：达标才调用 checkSubmit API，
+    否则直接标记为 precheck_failed 跳过，节省 API 调用。
+
     Returns:
         - FieldTestResult: 发生失败，调用方应直接返回
         - Tuple[bool, str, list]: (submittable, message, failed_checks) 继续流水线
     """
+    # 本地预检：用模拟返回的原始指标判断是否值得提交
+    if simulation_result:
+        passed, reason, precheck_failed_checks = precheck_simulation_metrics(
+            simulation_result
+        )
+        if not passed:
+            print(
+                f"[alpha-precheck] alpha_id={alpha_id} simulation_id={simulation_id} "
+                f"precheck_failed={reason}",
+                flush=True,
+            )
+            return False, f"precheck_failed: {reason}", precheck_failed_checks
+
     try:
         return check_submit_with_retry(client, alpha_id, args.check_submit_retries)
     except Exception as exc:  # noqa: BLE001
@@ -792,13 +937,14 @@ def run_field_test(
     )
     if isinstance(poll_result, FieldTestResult):
         return poll_result
-    alpha_id, _simulation_result = poll_result
+    alpha_id, simulation_result = poll_result
 
-    # 阶段 3: 检查可提交性
+    # 阶段 3: 检查可提交性（先本地预检指标，达标才调 checkSubmit API）
     check_result = _run_check_stage(
         ctx, client, args,
         alpha_id=alpha_id,
         simulation_id=simulation_id,
+        simulation_result=simulation_result,
     )
     if isinstance(check_result, FieldTestResult):
         return check_result
