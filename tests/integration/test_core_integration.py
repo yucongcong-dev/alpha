@@ -74,7 +74,7 @@ class TestCongestionSignalPropagation:
             submittable=False,
             expression="rank(test)",
             message="queue budget exceeded",
-            failed_stage="simulate",
+            failed_stage="simulation",
         )
         results: List[FieldTestResult] = []
         attempted_keys: set[tuple[str, str, str, str]] = set()
@@ -131,7 +131,7 @@ class TestCongestionSignalPropagation:
             submittable=False,
             expression="rank(test)",
             message=congestion_msg,
-            failed_stage="simulate",
+            failed_stage="simulation",
         )
 
         results: List[FieldTestResult] = []
@@ -405,7 +405,7 @@ class TestDrainCompletedFuturesFlow:
             submittable=False,
             expression="rank(test)",
             message="CONCURRENT_SIMULATION_LIMIT_EXCEEDED",
-            failed_stage="simulate",
+            failed_stage="simulation",
         )
         future.result.return_value = result
 
@@ -494,7 +494,7 @@ class TestContextConsistency:
     ) -> None:
         """failure() → success() 链：上下文字段在两种路径下保持一致。"""
         fail_result = basic_test_context.failure(
-            failed_stage="simulate", message="Network error",
+            failed_stage="simulation", message="Network error",
         )
         assert fail_result.field_id == "sales"
         assert fail_result.field_type == "MATRIX"
@@ -570,7 +570,7 @@ class TestFailureReportingPipeline:
             expression="rank(ts_mean(sales, 20))",
             settings_fingerprint="abc",
             template_library_fingerprint="def",
-            failed_stage="simulate",
+            failed_stage="simulation",
             message=summary,
         )
         assert result.status == "error"

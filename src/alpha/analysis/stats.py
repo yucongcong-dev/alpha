@@ -160,7 +160,7 @@ def is_queue_timeout_result(result: FieldTestResult) -> bool:
         bool: 如果是队列超时结果返回 True，否则返回 False。
 
     判断条件：
-        - failed_stage 为 "simulate"
+        - failed_stage 为 "simulation"
         - 消息中包含 "queue budget"、"queued too long" 或
           "stayed queued too long" 等关键词
 
@@ -169,7 +169,7 @@ def is_queue_timeout_result(result: FieldTestResult) -> bool:
         ...     print("这是队列超时，不参与质量学习")
     """
     message = str(result.message or "").lower()
-    return result.failed_stage == "simulate" and (
+    return result.failed_stage == "simulation" and (
         "queue budget" in message
         or "queued too long" in message
         or "stayed queued too long" in message

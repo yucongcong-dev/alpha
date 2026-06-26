@@ -320,7 +320,7 @@ class TestBuildFailureResult:
             expression="rank(sales)",
             settings_fingerprint="abc",
             template_library_fingerprint="def",
-            failed_stage="simulate",
+            failed_stage="simulation",
             message="Network error",
         )
         assert isinstance(result, FieldTestResult)
@@ -328,7 +328,7 @@ class TestBuildFailureResult:
         assert result.status == "error"
         assert result.submittable is False
         assert result.submitted is False
-        assert result.failed_stage == "simulate"
+        assert result.failed_stage == "simulation"
 
     def test_failure_with_failed_checks(self) -> None:
         checks = [{"name": "LOW_SHARPE", "value": 0.8, "limit": 1.0}]
@@ -380,7 +380,7 @@ class TestBuildFailureResult:
             expression="e1",
             settings_fingerprint="s_fp",
             template_library_fingerprint="tl_fp",
-            failed_stage="simulate",
+            failed_stage="simulation",
             message="err",
         )
         assert result.settings_fingerprint == "s_fp"
@@ -396,10 +396,10 @@ class TestFieldTestContext:
     """FieldTestContext 数据类测试"""
 
     def test_failure_method(self, basic_test_context: FieldTestContext) -> None:
-        result = basic_test_context.failure(failed_stage="simulate", message="error msg")
+        result = basic_test_context.failure(failed_stage="simulation", message="error msg")
         assert result.field_id == "sales"
         assert result.submittable is False
-        assert result.failed_stage == "simulate"
+        assert result.failed_stage == "simulation"
 
     def test_success_method(self, basic_test_context: FieldTestContext) -> None:
         result = basic_test_context.success(
@@ -432,7 +432,7 @@ class TestFieldTestContext:
     def test_failure_default_status_is_error(
         self, minimal_test_context: FieldTestContext
     ) -> None:
-        result = minimal_test_context.failure(failed_stage="simulate", message="err")
+        result = minimal_test_context.failure(failed_stage="simulation", message="err")
         assert result.status == "error"
 
     def test_success_default_status_is_simulated(
@@ -468,8 +468,8 @@ class TestFieldTestContext:
             field_id="b", field_type="VECTOR", field_name="b",
             template_name="tb", expression="eb",
         )
-        r1 = ctx1.failure(failed_stage="simulate", message="e1")
-        r2 = ctx2.failure(failed_stage="simulate", message="e2")
+        r1 = ctx1.failure(failed_stage="simulation", message="e1")
+        r2 = ctx2.failure(failed_stage="simulation", message="e2")
         assert r1.field_id == "a"
         assert r2.field_id == "b"
         assert r1.field_type == "MATRIX"

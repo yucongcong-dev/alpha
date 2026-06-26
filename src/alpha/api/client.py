@@ -1217,7 +1217,7 @@ class BrainClient:
                         f"({max_queue_seconds:.0f}s) for {url}; skip current template."
                     )
                 print(
-                    f"[simulation-poll] pending simulation_location={url} "
+                    f"[simulation] pending simulation_location={url} "
                     f"status={status} progress={progress} "
                     f"retry_after={response_headers.get('Retry-After')}",
                     flush=True,
@@ -1253,7 +1253,7 @@ class BrainClient:
                         f"({max_queue_seconds:.0f}s) for {url}; skip current template."
                     )
                 print(
-                    f"[simulation-poll] pending simulation_location={url} "
+                    f"[simulation] pending simulation_location={url} "
                     f"retry_after={response_headers.get('Retry-After')}",
                     flush=True,
                 )
@@ -1332,7 +1332,7 @@ class BrainClient:
             retry_after = response_headers.get("Retry-After")
             if retry_after:
                 print(
-                    f"[alpha-submit] pending alpha_id={alpha_id} "
+                    f"[submit] pending alpha_id={alpha_id} "
                     f"method={method} retry_after={retry_after}",
                     flush=True,
                 )

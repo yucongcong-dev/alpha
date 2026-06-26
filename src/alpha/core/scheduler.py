@@ -114,10 +114,10 @@ def handle_completed_future(
         congestion_detected = True
     if isinstance(result.message, str) and "queued too long" in result.message.lower():
         congestion_detected = True
-    if result.failed_stage == "simulate" and isinstance(result.message, str) and "rate limited" in result.message.lower():
+    if result.failed_stage == "simulation" and isinstance(result.message, str) and "rate limited" in result.message.lower():
         congestion_detected = True
     queue_busy_field_id = None
-    if result.failed_stage == "simulate" and isinstance(result.message, str):
+    if result.failed_stage == "simulation" and isinstance(result.message, str):
         lowered = result.message.lower()
         if "queued too long" in lowered or "queue budget" in lowered:
             queue_busy_field_id = result.field_id

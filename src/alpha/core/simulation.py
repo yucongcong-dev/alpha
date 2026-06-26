@@ -3,14 +3,14 @@
 模拟生命周期管理模块
 
 本模块负责单个 Alpha 模拟任务的完整生命周期管理，
-包括模拟创建、轮询等待、结果解析、检查验证和提交等操作。
+包括 simulation (创建+轮询)、checksubmit (检查验证) 和 submit (提交) 三个顶层阶段。
 
 模块内容：
     - Alpha ID 提取与解析函数
     - 检查项提取与分析函数
+    - 模拟指标预检函数
     - 失败摘要函数
-    - 模拟任务创建与轮询函数
-    - 提交相关函数
+    - simulation / checksubmit / submit 阶段函数
     - 结果构建函数
     - 字段测试核心执行函数
 """
@@ -245,10 +245,10 @@ def precheck_simulation_metrics(
     max_weight: float = SUBMIT_MAX_WEIGHT,
 ) -> tuple:
     """
-    在调用 check-submit API 之前，用本地阈值预检模拟响应中的原始指标。
+    在调用 checksubmit API 之前，用本地阈值预检模拟响应中的原始指标。
 
     模拟响应通常包含 is.sharpe、is.fitness、is.turnover 等原始指标。
-    如果这些指标明显不达标，可以直接跳过 check-submit API 调用，
+    如果这些指标明显不达标，可以直接跳过 checksubmit API 调用，
     节省请求配额和网络开销。
 
     Args:
@@ -261,7 +261,7 @@ def precheck_simulation_metrics(
 
     Returns:
         tuple: (passed: bool, reason: str, failed_checks: list)
-            - passed=True 表示预检通过，可以继续 checkSubmit
+            - passed=True 表示预检通过，可以继续 checksubmit
             - passed=False 表示预检不通过，reason 描述原因，
               failed_checks 是构造的失败检查项列表（用于结果持久化）
 
@@ -274,9 +274,9 @@ def precheck_simulation_metrics(
         'sharpe=0.8000 < 1.25; fitness=0.5000 < 1.00'
 
     Note:
-        - 如果 is 段缺失或指标无法提取，返回 passed=True（回退到 checkSubmit）
+        - 如果 is 段缺失或指标无法提取，返回 passed=True（回退到 checksubmit）
         - 阈值可被调用方覆盖以适应不同的 universe/region 设置
-        - 构造的 failed_checks 结构与真实 check-submit 返回一致
+        - 构造的 failed_checks 结构与真实 checksubmit 返回一致
     """
     is_section = simulation_result.get("is")
     if not isinstance(is_section, dict):
@@ -401,7 +401,7 @@ def summarize_failure(payload: Dict[str, Any]) -> str:
 
 
 # ============================================================================
-# 模拟任务创建与轮询函数
+# simulation 阶段函数 (创建 + 轮询)
 # ============================================================================
 
 def create_simulation_with_retry(
@@ -513,10 +513,10 @@ def poll_simulation_with_retry(
 
 
 # ============================================================================
-# 提交相关函数
+# checksubmit & submit 阶段函数
 # ============================================================================
 
-def check_submit_with_retry(
+def checksubmit_with_retry(
     client: BrainClient,
     alpha_id: str,
     retries: int,
@@ -541,18 +541,18 @@ def check_submit_with_retry(
         BrainAPIError: 当所有重试都失败时抛出。
 
     Example:
-        >>> submittable, message, failed_checks = check_submit_with_retry(client, "alpha_123", 3)
+        >>> submittable, message, failed_checks = checksubmit_with_retry(client, "alpha_123", 3)
         >>> print(submittable)
         True
         >>> print(message)
         checks passed
 
     Note:
-        - "check submit" 表示读取 alpha checks 并转换为简单的可提交状态
+        - 读取 alpha checks 并转换为简单的可提交状态
         - 重试间隔为 3 秒
     """
     alpha_detail = retry_operation(
-        "check submit",
+        "checksubmit",
         retries,
         lambda: client.get_alpha_detail(alpha_id),
         retry_wait_seconds=3.0,
@@ -562,13 +562,13 @@ def check_submit_with_retry(
     failed_checks = extract_failed_checks(alpha_detail)
     message = "checks unavailable" if submittable is None else "checks passed" if submittable else "checks failed"
     print(
-        f"[alpha-check] alpha_id={alpha_id} submittable={submittable} message={message}",
+        f"[checksubmit] alpha_id={alpha_id} submittable={submittable} message={message}",
         flush=True,
     )
     return submittable, message, failed_checks
 
 
-def submit_alpha_with_retry(client: BrainClient, alpha_id: str, retries: int) -> str:
+def submit_with_retry(client: BrainClient, alpha_id: str, retries: int) -> str:
     """
     带重试地提交 Alpha，并返回紧凑状态消息。
 
@@ -586,7 +586,7 @@ def submit_alpha_with_retry(client: BrainClient, alpha_id: str, retries: int) ->
         BrainAPIError: 当所有重试都失败时抛出。
 
     Example:
-        >>> message = submit_alpha_with_retry(client, "alpha_123", 3)
+        >>> message = submit_with_retry(client, "alpha_123", 3)
         >>> print(message)
         submitted
 
@@ -595,7 +595,7 @@ def submit_alpha_with_retry(client: BrainClient, alpha_id: str, retries: int) ->
         - 重试间隔为 3 秒
     """
     submit_result = retry_operation(
-        "submit alpha",
+        "submit",
         retries,
         lambda: client.submit_alpha(alpha_id),
         retry_wait_seconds=3.0,
@@ -660,7 +660,7 @@ def build_failure_result(
         ...     expression="rank(ts_mean(sales, 20))",
         ...     settings_fingerprint="abc123",
         ...     template_library_fingerprint="def456",
-        ...     failed_stage="simulate",
+        ...     failed_stage="simulation",
         ...     message="Network error"
         ... )
         >>> print(result.status)
@@ -690,10 +690,10 @@ def build_failure_result(
 
 
 # ============================================================================
-# 字段测试阶段子函数
+# simulation / checksubmit / submit 三阶段子函数
 # ============================================================================
 
-def _run_create_stage(
+def _run_simulation_create(
     ctx: FieldTestContext,
     client: BrainClient,
     args: argparse.Namespace,
@@ -701,7 +701,7 @@ def _run_create_stage(
     simulation_settings: Optional[SettingsVariant] = None,
     create_semaphore: Optional[threading.Semaphore] = None,
 ) -> "Optional[FieldTestResult] | Tuple[str, str]":
-    """阶段 1: 构建 payload 并创建模拟任务。
+    """simulation 阶段 (创建): 构建 payload 并创建模拟任务。
     
     Returns:
         - FieldTestResult: 发生失败，调用方应直接返回
@@ -728,10 +728,10 @@ def _run_create_stage(
                 create_semaphore.release()
         return simulation_location, simulation_id
     except Exception as exc:  # noqa: BLE001
-        return ctx.failure(failed_stage="simulate", message=str(exc))
+        return ctx.failure(failed_stage="simulation", message=str(exc))
 
 
-def _run_poll_stage(
+def _run_simulation_poll(
     ctx: FieldTestContext,
     client: BrainClient,
     args: argparse.Namespace,
@@ -739,7 +739,7 @@ def _run_poll_stage(
     simulation_location: str,
     simulation_id: str,
 ) -> "Optional[FieldTestResult] | Tuple[str, Dict[str, Any]]":
-    """阶段 2: 轮询等待模拟完成并提取 alpha_id。
+    """simulation 阶段 (轮询): 等待模拟完成并提取 alpha_id。
     
     Returns:
         - FieldTestResult: 发生失败，调用方应直接返回
@@ -761,14 +761,14 @@ def _run_poll_stage(
             simulation_result.get("state"),
         )
         print(
-            f"[simulation-poll] completed simulation_id={simulation_id} "
+            f"[simulation] completed simulation_id={simulation_id} "
             f"simulation_location={simulation_location} progress={progress}",
             flush=True,
         )
         alpha_id = extract_alpha_id(simulation_result)
         if not alpha_id:
             return ctx.failure(
-                failed_stage="simulate",
+                failed_stage="simulation",
                 message=summarize_failure(simulation_result),
                 simulation_id=simulation_id,
                 status="simulation_failed",
@@ -776,13 +776,13 @@ def _run_poll_stage(
         return alpha_id, simulation_result
     except Exception as exc:  # noqa: BLE001
         return ctx.failure(
-            failed_stage="simulate",
+            failed_stage="simulation",
             message=str(exc),
             simulation_id=simulation_id,
         )
 
 
-def _run_check_stage(
+def _run_checksubmit_stage(
     ctx: FieldTestContext,
     client: BrainClient,
     args: argparse.Namespace,
@@ -791,10 +791,10 @@ def _run_check_stage(
     simulation_id: str,
     simulation_result: Optional[Dict[str, Any]] = None,
 ) -> "Optional[FieldTestResult] | Tuple[bool, str, List[Dict[str, Any]]]":
-    """阶段 3: 先本地预检指标，达标后再调用 check-submit API。
+    """checksubmit 阶段: 先本地预检指标，达标后再调用 checksubmit API。
 
     模拟响应中已包含原始 is.sharpe、is.fitness、is.turnover 等指标。
-    先用这些指标做一次本地预检：达标才调用 checkSubmit API，
+    先用这些指标做一次本地预检：达标才调用 checksubmit API，
     否则直接标记为 precheck_failed 跳过，节省 API 调用。
 
     Returns:
@@ -808,14 +808,14 @@ def _run_check_stage(
         )
         if not passed:
             print(
-                f"[alpha-precheck] alpha_id={alpha_id} simulation_id={simulation_id} "
+                f"[checksubmit-precheck] alpha_id={alpha_id} simulation_id={simulation_id} "
                 f"precheck_failed={reason}",
                 flush=True,
             )
             return False, f"precheck_failed: {reason}", precheck_failed_checks
 
     try:
-        return check_submit_with_retry(client, alpha_id, args.check_submit_retries)
+        return checksubmit_with_retry(client, alpha_id, args.check_submit_retries)
     except Exception as exc:  # noqa: BLE001
         return ctx.failure(
             failed_stage="checksubmit",
@@ -835,7 +835,7 @@ def _run_submit_stage(
     simulation_location: str,
     submittable: bool,
 ) -> "Optional[FieldTestResult] | Tuple[bool, str, str]":
-    """阶段 4: 条件提交 Alpha（仅当 args.submit 且 submittable 为真）。
+    """submit 阶段: 条件提交 Alpha（仅当 args.submit 且 submittable 为真）。
     
     Returns:
         - FieldTestResult: 提交失败，调用方应直接返回
@@ -845,11 +845,11 @@ def _run_submit_stage(
         return False, "simulated", ""
     try:
         print(
-            f"[alpha-submit] eligible alpha_id={alpha_id} "
+            f"[submit] eligible alpha_id={alpha_id} "
             f"simulation_id={simulation_id} simulation_location={simulation_location}",
             flush=True,
         )
-        message = submit_alpha_with_retry(client, alpha_id, args.submit_retries)
+        message = submit_with_retry(client, alpha_id, args.submit_retries)
         return True, "submitted", message
     except Exception as exc:  # noqa: BLE001
         return ctx.failure(
@@ -876,13 +876,12 @@ def run_field_test(
     create_semaphore: Optional[threading.Semaphore] = None,
 ) -> FieldTestResult:
     """
-    执行单个候选表达式的创建、轮询、检查与可选提交流程。
+    执行单个候选表达式的 simulation / checksubmit / submit 三阶段流程。
 
-    这是字段测试的核心执行函数，协调四个独立阶段：
-    1. 创建模拟任务 (_run_create_stage)
-    2. 轮询等待模拟完成 (_run_poll_stage)
-    3. 检查可提交状态 (_run_check_stage)
-    4. 可选：提交 Alpha (_run_submit_stage)
+    这是字段测试的核心执行函数，协调三个独立的顶层阶段：
+    1. simulation 阶段 (_run_simulation_create → _run_simulation_poll)
+    2. checksubmit 阶段 (_run_checksubmit_stage)
+    3. submit 阶段 (_run_submit_stage)
 
     Args:
         client: BrainClient 实例。
@@ -901,7 +900,7 @@ def run_field_test(
     Note:
         - 任一阶段失败都会立即返回失败结果，不阻塞后续字段
         - 使用信号量控制并发创建，避免速率限制
-        - 四个阶段子函数使得函数体保持在 ~30 行，便于测试和调试
+        - 三个顶层阶段各自由子函数实现，便于测试和调试
     """
     ctx = FieldTestContext(
         field_id=str(first_non_empty(field.get("id"), "UNKNOWN")),
@@ -919,8 +918,8 @@ def run_field_test(
         flush=True,
     )
 
-    # 阶段 1: 创建模拟
-    create_result = _run_create_stage(
+    # simulation 阶段 (创建)
+    create_result = _run_simulation_create(
         ctx, client, args,
         simulation_settings=simulation_settings,
         create_semaphore=create_semaphore,
@@ -929,8 +928,8 @@ def run_field_test(
         return create_result
     simulation_location, simulation_id = create_result
 
-    # 阶段 2: 轮询等待
-    poll_result = _run_poll_stage(
+    # simulation 阶段 (轮询等待)
+    poll_result = _run_simulation_poll(
         ctx, client, args,
         simulation_location=simulation_location,
         simulation_id=simulation_id,
@@ -939,8 +938,8 @@ def run_field_test(
         return poll_result
     alpha_id, simulation_result = poll_result
 
-    # 阶段 3: 检查可提交性（先本地预检指标，达标才调 checkSubmit API）
-    check_result = _run_check_stage(
+    # checksubmit 阶段（先本地预检指标，达标才调 checksubmit API）
+    check_result = _run_checksubmit_stage(
         ctx, client, args,
         alpha_id=alpha_id,
         simulation_id=simulation_id,
@@ -950,7 +949,7 @@ def run_field_test(
         return check_result
     submittable, message, failed_checks = check_result
 
-    # 阶段 4: 条件提交
+    # submit 阶段（条件提交）
     submit_result = _run_submit_stage(
         ctx, client, args,
         alpha_id=alpha_id,
@@ -966,7 +965,7 @@ def run_field_test(
 
     if submittable:
         print(
-            f"[alpha-submit] submittable alpha_id={alpha_id} "
+            f"[submit] submittable alpha_id={alpha_id} "
             f"simulation_id={simulation_id} simulation_location={simulation_location}",
             flush=True,
         )
@@ -1021,7 +1020,7 @@ def run_field_test_in_worker(
 
     Note:
         - 每个工作线程解析自己的已认证客户端
-        - 确保并发模拟/轮询/检查/提交调用不共享 cookie 或连接状态
+        - 确保并发 simulation/checksubmit/submit 调用不共享 cookie 或连接状态
     """
     client = client_factory.get_client()
     return run_field_test(

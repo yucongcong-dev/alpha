@@ -429,25 +429,25 @@ def is_queue_timeout_result(result: FieldTestResult) -> bool:
 
     Example:
         >>> result = FieldTestResult(
-        ...     field_id="sales", failed_stage="simulate",
+        ...     field_id="sales", failed_stage="simulation",
         ...     message="Simulation exceeded queue budget"
         ... )
         >>> is_queue_timeout_result(result)
         True
 
         >>> result = FieldTestResult(
-        ...     field_id="sales", failed_stage="simulate",
+        ...     field_id="sales", failed_stage="simulation",
         ...     message="LOW_SHARPE"
         ... )
         >>> is_queue_timeout_result(result)
         False
 
     Note:
-        - 必须满足：failed_stage == "simulate"
+        - 必须满足：failed_stage == "simulation"
         - 且消息中包含 "queue budget"、"queued too long" 或 "stayed queued too long"
     """
     message = str(result.message or "").lower()
-    return result.failed_stage == "simulate" and (
+    return result.failed_stage == "simulation" and (
         "queue budget" in message
         or "queued too long" in message
         or "stayed queued too long" in message
