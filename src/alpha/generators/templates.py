@@ -13,6 +13,7 @@ Alpha 表达式。
 import json
 import os
 
+from ..config import BACKFILL_WINDOW
 from ..exceptions import BrainAPIError
 from ..models.base import TemplateLibrary
 
@@ -57,23 +58,23 @@ def default_template_library() -> TemplateLibrary:
             - expression: 模板表达式，包含 {field} 占位符
             - priority: 可选字段，表示模板的优先级（默认为 0）
     """
-    # Template expressions use {field} and are expanded per field at runtime.
+    bw = BACKFILL_WINDOW
     return {
         "default": [
             {"name": "ts_mean_20", "expression": "rank(ts_mean({field}, 20))"},
             {"name": "ts_mean_60", "expression": "rank(ts_mean({field}, 60))"},
             {"name": "ts_mean_120", "expression": "rank(ts_mean({field}, 120))"},
-            {"name": "backfill_120", "expression": "rank(ts_backfill({field}, 120))"},
-            {"name": "backfill_mean_60", "expression": "rank(ts_mean(ts_backfill({field}, 120), 60))"},
+            {"name": f"backfill_{bw}", "expression": f"rank(ts_backfill({{field}}, {bw}))"},
+            {"name": "backfill_mean_60", "expression": f"rank(ts_mean(ts_backfill({{field}}, {bw}), 60))"},
             {"name": "ts_rank_60", "expression": "rank(ts_rank({field}, 60))"},
             {"name": "ts_rank_120", "expression": "rank(ts_rank({field}, 120))"},
             {"name": "ts_zscore_60", "expression": "rank(ts_zscore({field}, 60))"},
-            {"name": "ts_zscore_120", "expression": "rank(ts_zscore(ts_backfill({field}, 120), 120))"},
+            {"name": f"ts_zscore_{bw}", "expression": f"rank(ts_zscore(ts_backfill({{field}}, {bw}), {bw}))"},
             {"name": "zscore", "expression": "rank(zscore({field}))"},
             {"name": "scale", "expression": "rank(scale({field}))"},
             {"name": "delta_20", "expression": "rank(ts_delta({field}, 20))"},
             {"name": "delta_60", "expression": "rank(ts_delta({field}, 60))"},
-            {"name": "decay_20", "expression": "rank(ts_decay_linear(ts_backfill({field}, 120), 20))"},
+            {"name": "decay_20", "expression": f"rank(ts_decay_linear(ts_backfill({{field}}, {bw}), 20))"},
             {"name": "stddev_60", "expression": "rank(ts_std_dev({field}, 60))"},
             {"name": "sum_20", "expression": "rank(ts_sum({field}, 20))"},
             {"name": "argmax_60", "expression": "rank(ts_arg_max({field}, 60))"},
@@ -83,7 +84,7 @@ def default_template_library() -> TemplateLibrary:
             {"name": "vec_avg_rank", "expression": "rank(vec_avg({field}))"},
             {"name": "vec_avg_ts_mean_20", "expression": "rank(ts_mean(vec_avg({field}), 20))"},
             {"name": "vec_avg_ts_mean_60", "expression": "rank(ts_mean(vec_avg({field}), 60))"},
-            {"name": "vec_avg_backfill_120", "expression": "rank(ts_backfill(vec_avg({field}), 120))"},
+            {"name": f"vec_avg_backfill_{bw}", "expression": f"rank(ts_backfill(vec_avg({{field}}), {bw}))"},
             {"name": "vec_avg_ts_rank_60", "expression": "rank(ts_rank(vec_avg({field}), 60))"},
             {"name": "vec_avg_ts_zscore_60", "expression": "rank(ts_zscore(vec_avg({field}), 60))"},
             {"name": "vec_avg_zscore", "expression": "rank(zscore(vec_avg({field})))"},
@@ -91,7 +92,7 @@ def default_template_library() -> TemplateLibrary:
             {"name": "vec_avg_delta_20", "expression": "rank(ts_delta(vec_avg({field}), 20))"},
             {
                 "name": "vec_avg_decay_20",
-                "expression": "rank(ts_decay_linear(ts_backfill(vec_avg({field}), 120), 20))",
+                "expression": f"rank(ts_decay_linear(ts_backfill(vec_avg({{field}}), {bw}), 20))",
             },
         ],
         "GROUP": [

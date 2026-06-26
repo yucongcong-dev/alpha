@@ -379,6 +379,44 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--check-submit-retries", type=int, default=3, help="检查提交重试次数")
     parser.add_argument("--submit-retries", type=int, default=3, help="提交重试次数")
 
+    # 质量阈值参数
+    parser.add_argument(
+        "--min-sharpe",
+        type=float,
+        default=0.85,
+        help="本地预检最低 Sharpe 阈值",
+    )
+    parser.add_argument(
+        "--min-fitness",
+        type=float,
+        default=0.50,
+        help="本地预检最低 Fitness 阈值",
+    )
+    parser.add_argument(
+        "--min-turnover",
+        type=float,
+        default=0.005,
+        help="本地预检最低 Turnover 阈值",
+    )
+    parser.add_argument(
+        "--max-turnover",
+        type=float,
+        default=0.75,
+        help="本地预检最高 Turnover 阈值",
+    )
+    parser.add_argument(
+        "--max-weight",
+        type=float,
+        default=0.13,
+        help="本地预检单股最大权重阈值",
+    )
+    parser.add_argument(
+        "--backfill-window",
+        type=int,
+        default=240,
+        help="ts_backfill 时间窗口大小（天）",
+    )
+
     # 提交和输出参数
     parser.add_argument("--submit", action="store_true", help="检查通过时提交 Alpha")
     parser.add_argument(

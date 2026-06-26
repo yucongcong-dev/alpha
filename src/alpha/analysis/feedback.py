@@ -581,7 +581,5 @@ def should_skip_field_template_family(
     if not use_dataset_heuristics:
         return False
     family = classify_expression_family(template_name, expression)
-    weak_mean_spread_fields = {"assets", "assets_curr", "cash", "bookvalue_ps", "capex"}
-    if field_name in weak_mean_spread_fields and family in {"group_mean_spread", "mean_spread", "rank_spread"}:
-        return True
-    return field_name in {"assets", "assets_curr"} and family in {"zscore_time", "group_zscore"}
+    weak_mean_spread_fields: set = {"assets", "assets_curr"}
+    return field_name in weak_mean_spread_fields and family in {"group_mean_spread", "mean_spread", "rank_spread"}

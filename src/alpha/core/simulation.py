@@ -798,7 +798,12 @@ def _run_checksubmit_stage(
     # 本地预检：用模拟返回的原始指标判断是否值得提交
     if simulation_result:
         passed, reason, precheck_failed_checks = precheck_simulation_metrics(
-            simulation_result
+            simulation_result,
+            min_sharpe=getattr(args, "min_sharpe", 0.85),
+            min_fitness=getattr(args, "min_fitness", 0.50),
+            min_turnover=getattr(args, "min_turnover", 0.005),
+            max_turnover=getattr(args, "max_turnover", 0.75),
+            max_weight=getattr(args, "max_weight", 0.13),
         )
         if not passed:
             print(

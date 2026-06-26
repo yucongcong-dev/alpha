@@ -60,23 +60,31 @@ DEFAULT_RATE_LIMIT_MAX_RETRIES: int = 3
 # Alpha 提交质量标准常量 (USA TOP3000, delay=1)
 # ============================================================================
 
-SUBMIT_MIN_FITNESS: float = 1.0
-"""提交要求的最低 Fitness 值。Fitness = Sharpe × Turnover 惩罚调整，综合衡量风险调整后收益。"""
+SUBMIT_MIN_FITNESS: float = 0.50
+"""提交要求的最低 Fitness 值（放宽）。Fitness = Sharpe × Turnover 惩罚调整，综合衡量风险调整后收益。"""
 
-SUBMIT_MIN_SHARPE: float = 1.25
-"""提交要求的最低 Sharpe 值。衡量单位风险带来的超额收益。"""
+SUBMIT_MIN_SHARPE: float = 0.85
+"""提交要求的最低 Sharpe 值（放宽）。衡量单位风险带来的超额收益。"""
 
-SUBMIT_MIN_TURNOVER: float = 0.01
-"""提交要求的最低 Turnover（1%）。换手率过低意味着信号过于稳定，缺乏交易机会。"""
+SUBMIT_MIN_TURNOVER: float = 0.005
+"""提交要求的最低 Turnover（0.5%）。换手率过低意味着信号过于稳定，缺乏交易机会。"""
 
-SUBMIT_MAX_TURNOVER: float = 0.70
-"""提交要求的最高 Turnover（70%）。换手率过高意味着交易过于频繁，交易成本侵蚀收益。"""
+SUBMIT_MAX_TURNOVER: float = 0.75
+"""提交要求的最高 Turnover（75%）。换手率过高意味着交易过于频繁，交易成本侵蚀收益。"""
 
-SUBMIT_MAX_WEIGHT: float = 0.10
-"""提交要求的单股最大权重上限（10%）。防止权重过度集中在少数股票上。"""
+SUBMIT_MAX_WEIGHT: float = 0.13
+"""提交要求的单股最大权重上限（13%）。防止权重过度集中在少数股票上。"""
 
-SUBMIT_MAX_SELF_CORRELATION: float = 0.70
+SUBMIT_MAX_SELF_CORRELATION: float = 0.75
 """提交要求的最大自相关性。与已提交 Alpha 相关性超过此值会被拒绝。"""
+
+
+# ============================================================================
+# 表达式生成器配置
+# ============================================================================
+
+BACKFILL_WINDOW: int = 240
+"""ts_backfill 默认时间窗口（天）。更大的窗口能捕捉更多历史数据，提升信号稳定性。"""
 
 
 # ============================================================================

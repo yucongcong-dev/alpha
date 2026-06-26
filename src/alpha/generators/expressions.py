@@ -24,6 +24,7 @@ import re
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 from ..config import (
+    BACKFILL_WINDOW,
     NEGATIVE_RAW_FIELDS,
     POSITIVE_RAW_FIELDS,
     RATIO_KEYWORDS,
@@ -686,30 +687,31 @@ def build_feedback_mutations(
     """
     # Use failed-check feedback to bias the search toward higher-turnover,
     # less-concentrated, better-neutralized variants.
+    bw = BACKFILL_WINDOW
     mutations: List[Tuple[str, str, int]] = [
         (
             "iter_group_rank_delta_of_rank_3",
-            f"group_rank(ts_delta(rank(ts_backfill({field_name}, 120)), 3), subindustry)",
+            f"group_rank(ts_delta(rank(ts_backfill({field_name}, {bw})), 3), subindustry)",
             182,
         ),
         (
             "iter_group_rank_delta_of_rank_5",
-            f"group_rank(ts_delta(rank(ts_backfill({field_name}, 120)), 5), subindustry)",
+            f"group_rank(ts_delta(rank(ts_backfill({field_name}, {bw})), 5), subindustry)",
             180,
         ),
         (
             "iter_group_mean_spread_over_std_5_20_20",
-            f"group_rank((ts_mean(ts_backfill({field_name}, 120), 5) - ts_mean(ts_backfill({field_name}, 120), 20)) / ts_std_dev(ts_backfill({field_name}, 120), 20), subindustry)",
+            f"group_rank((ts_mean(ts_backfill({field_name}, {bw}), 5) - ts_mean(ts_backfill({field_name}, {bw}), 20)) / ts_std_dev(ts_backfill({field_name}, {bw}), 20), subindustry)",
             178,
         ),
         (
             "iter_rank_mean_spread_over_std_5_20_20",
-            f"rank((ts_mean(ts_backfill({field_name}, 120), 5) - ts_mean(ts_backfill({field_name}, 120), 20)) / ts_std_dev(ts_backfill({field_name}, 120), 20))",
+            f"rank((ts_mean(ts_backfill({field_name}, {bw}), 5) - ts_mean(ts_backfill({field_name}, {bw}), 20)) / ts_std_dev(ts_backfill({field_name}, {bw}), 20))",
             176,
         ),
         (
             "iter_rank_zscore_spread_5_40",
-            f"rank(ts_zscore(ts_backfill({field_name}, 120), 5) - ts_zscore(ts_backfill({field_name}, 120), 40))",
+            f"rank(ts_zscore(ts_backfill({field_name}, {bw}), 5) - ts_zscore(ts_backfill({field_name}, {bw}), 40))",
             174,
         ),
     ]
@@ -730,22 +732,22 @@ def build_feedback_mutations(
             [
                 (
                     "iter_nearpass_group_rank_delta_of_rank_10",
-                    f"group_rank(ts_delta(rank(ts_backfill({field_name}, 120)), 10), subindustry)",
+                    f"group_rank(ts_delta(rank(ts_backfill({field_name}, {bw})), 10), subindustry)",
                     194,
                 ),
                 (
                     "iter_nearpass_group_rank_delta_of_rank_20",
-                    f"group_rank(ts_delta(rank(ts_backfill({field_name}, 120)), 20), subindustry)",
+                    f"group_rank(ts_delta(rank(ts_backfill({field_name}, {bw})), 20), subindustry)",
                     190,
                 ),
                 (
                     "iter_nearpass_group_delta_zscore_5_60",
-                    f"group_rank(ts_delta(ts_zscore(ts_backfill({field_name}, 120), 60), 5), subindustry)",
+                    f"group_rank(ts_delta(ts_zscore(ts_backfill({field_name}, {bw}), 60), 5), subindustry)",
                     188,
                 ),
                 (
                     "iter_nearpass_group_delta_zscore_10_60",
-                    f"group_rank(ts_delta(ts_zscore(ts_backfill({field_name}, 120), 60), 10), subindustry)",
+                    f"group_rank(ts_delta(ts_zscore(ts_backfill({field_name}, {bw}), 60), 10), subindustry)",
                     186,
                 ),
             ]
@@ -754,19 +756,19 @@ def build_feedback_mutations(
     if "LOW_TURNOVER" in dominant_names:
         mutations.extend(
             [
-                ("iter_rank_delta_3", f"rank(ts_delta(ts_backfill({field_name}, 120), 3))", 186),
-                ("iter_rank_delta_5", f"rank(ts_delta(ts_backfill({field_name}, 120), 5))", 184),
-                ("iter_rank_then_delta_3", f"rank(ts_delta(rank(ts_backfill({field_name}, 120)), 3))", 183),
+                ("iter_rank_delta_3", f"rank(ts_delta(ts_backfill({field_name}, {bw}), 3))", 186),
+                ("iter_rank_delta_5", f"rank(ts_delta(ts_backfill({field_name}, {bw}), 5))", 184),
+                ("iter_rank_then_delta_3", f"rank(ts_delta(rank(ts_backfill({field_name}, {bw})), 3))", 183),
             ]
         )
 
     if "LOW_SUB_UNIVERSE_SHARPE" in dominant_names or "CONCENTRATED_WEIGHT" in dominant_names:
         mutations.extend(
             [
-                ("iter_group_zscore_20", f"group_rank(ts_zscore(ts_backfill({field_name}, 120), 20), subindustry)", 185),
+                ("iter_group_zscore_20", f"group_rank(ts_zscore(ts_backfill({field_name}, {bw}), 20), subindustry)", 185),
                 (
                     "iter_group_zscore_spread_5_20",
-                    f"group_rank(ts_zscore(ts_backfill({field_name}, 120), 5) - ts_zscore(ts_backfill({field_name}, 120), 20), subindustry)",
+                    f"group_rank(ts_zscore(ts_backfill({field_name}, {bw}), 5) - ts_zscore(ts_backfill({field_name}, {bw}), 20), subindustry)",
                     183,
                 ),
             ]
@@ -858,6 +860,7 @@ def build_expression_candidates(
     field_type = choose_field_type(field)
     all_fields = all_fields or []
     global_failed_check_counts = global_failed_check_counts or {}
+    bw = BACKFILL_WINDOW
 
     # Template selection is now driven by an externalizable library so we can
     # expand or shrink search coverage between runs without changing code.
@@ -883,32 +886,32 @@ def build_expression_candidates(
             [
                 (
                     "group_delta_over_std_subindustry_20_60",
-                    f"group_rank(ts_delta(ts_backfill({field_name}, 120), 20) / ts_std_dev(ts_backfill({field_name}, 120), 60), subindustry)",
+                    f"group_rank(ts_delta(ts_backfill({field_name}, {bw}), 20) / ts_std_dev(ts_backfill({field_name}, {bw}), 60), subindustry)",
                     168,
                 ),
                 (
-                    "group_short_long_mean_spread_subindustry_20_120",
-                    f"group_rank(ts_mean(ts_backfill({field_name}, 120), 20) - ts_mean(ts_backfill({field_name}, 120), 120), subindustry)",
+                    "group_short_long_mean_spread_subindustry_20_{bw}",
+                    f"group_rank(ts_mean(ts_backfill({field_name}, {bw}), 20) - ts_mean(ts_backfill({field_name}, {bw}), {bw}), subindustry)",
                     164,
                 ),
                 (
                     "group_zscore_subindustry_60",
-                    f"group_rank(ts_zscore(ts_backfill({field_name}, 120), 60), subindustry)",
+                    f"group_rank(ts_zscore(ts_backfill({field_name}, {bw}), 60), subindustry)",
                     161,
                 ),
                 (
-                    "rank_mean_spread_over_std_20_120_60",
-                    f"rank((ts_mean(ts_backfill({field_name}, 120), 20) - ts_mean(ts_backfill({field_name}, 120), 120)) / ts_std_dev(ts_backfill({field_name}, 120), 60))",
+                    "rank_mean_spread_over_std_20_{bw}_60",
+                    f"rank((ts_mean(ts_backfill({field_name}, {bw}), 20) - ts_mean(ts_backfill({field_name}, {bw}), {bw})) / ts_std_dev(ts_backfill({field_name}, {bw}), 60))",
                     158,
                 ),
                 (
-                    "rank_zscore_spread_20_120",
-                    f"rank(ts_zscore(ts_backfill({field_name}, 120), 20) - ts_zscore(ts_backfill({field_name}, 120), 120))",
+                    "rank_zscore_spread_20_{bw}",
+                    f"rank(ts_zscore(ts_backfill({field_name}, {bw}), 20) - ts_zscore(ts_backfill({field_name}, {bw}), {bw}))",
                     154,
                 ),
                 (
                     "group_rank_delta_of_rank_20",
-                    f"group_rank(ts_delta(rank(ts_backfill({field_name}, 120)), 20), subindustry)",
+                    f"group_rank(ts_delta(rank(ts_backfill({field_name}, {bw})), 20), subindustry)",
                     150,
                 ),
             ]
@@ -942,37 +945,37 @@ def build_expression_candidates(
                 [
                     (
                         f"group_ratio_delta_rank_3_{field_name}_over_{partner}",
-                        f"group_rank(ts_delta(rank(ts_backfill({field_name}/{partner}, 120)), 3), subindustry)",
+                        f"group_rank(ts_delta(rank(ts_backfill({field_name}/{partner}, {bw})), 3), subindustry)",
                         188,
                     ),
                     (
                         f"group_ratio_delta_rank_5_{field_name}_over_{partner}",
-                        f"group_rank(ts_delta(rank(ts_backfill({field_name}/{partner}, 120)), 5), subindustry)",
+                        f"group_rank(ts_delta(rank(ts_backfill({field_name}/{partner}, {bw})), 5), subindustry)",
                         184,
                     ),
                     (
                         f"group_ratio_delta_rank_10_{field_name}_over_{partner}",
-                        f"group_rank(ts_delta(rank(ts_backfill({field_name}/{partner}, 120)), 10), subindustry)",
+                        f"group_rank(ts_delta(rank(ts_backfill({field_name}/{partner}, {bw})), 10), subindustry)",
                         176,
                     ),
                     (
                         f"group_ratio_delta_over_std_{field_name}_over_{partner}",
-                        f"group_rank(ts_delta(ts_backfill({field_name}/{partner}, 120), 20) / ts_std_dev(ts_backfill({field_name}/{partner}, 120), 60), subindustry)",
+                        f"group_rank(ts_delta(ts_backfill({field_name}/{partner}, {bw}), 20) / ts_std_dev(ts_backfill({field_name}/{partner}, {bw}), 60), subindustry)",
                         172,
                     ),
                     (
                         f"group_ratio_zscore_{field_name}_over_{partner}",
-                        f"group_rank(ts_zscore(ts_backfill({field_name}/{partner}, 120), 60), subindustry)",
+                        f"group_rank(ts_zscore(ts_backfill({field_name}/{partner}, {bw}), 60), subindustry)",
                         160,
                     ),
                     (
                         f"ratio_mean_spread_over_std_{field_name}_over_{partner}",
-                        f"rank((ts_mean(ts_backfill({field_name}/{partner}, 120), 20) - ts_mean(ts_backfill({field_name}/{partner}, 120), 120)) / ts_std_dev(ts_backfill({field_name}/{partner}, 120), 60))",
+                        f"rank((ts_mean(ts_backfill({field_name}/{partner}, {bw}), 20) - ts_mean(ts_backfill({field_name}/{partner}, {bw}), {bw})) / ts_std_dev(ts_backfill({field_name}/{partner}, {bw}), 60))",
                         156,
                     ),
                     (
                         f"ratio_zscore_spread_{field_name}_over_{partner}",
-                        f"rank(ts_zscore(ts_backfill({field_name}/{partner}, 120), 20) - ts_zscore(ts_backfill({field_name}/{partner}, 120), 120))",
+                        f"rank(ts_zscore(ts_backfill({field_name}/{partner}, {bw}), 20) - ts_zscore(ts_backfill({field_name}/{partner}, {bw}), {bw}))",
                         152,
                     ),
                 ]
@@ -985,7 +988,7 @@ def build_expression_candidates(
                     (f"rank_ratio_{field_name}_over_{partner}", f"rank({field_name}/{partner})", 138),
                     (
                         f"decay_ratio_{field_name}_over_{partner}",
-                        f"rank(ts_decay_linear(ts_backfill({field_name}/{partner}, 120), 10))",
+                        f"rank(ts_decay_linear(ts_backfill({field_name}/{partner}, {bw}), 10))",
                         126,
                     ),
                 ]
