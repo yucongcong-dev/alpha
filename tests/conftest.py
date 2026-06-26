@@ -96,9 +96,8 @@ def scheduler_args() -> MockArgs:
 # 状态对象 fixtures
 # ============================================================================
 
-@pytest.fixture
-def empty_execution_state() -> ExecutionState:
-    """空的 ExecutionState，所有集合/字典为空，last_submission_at 为 0.0。"""
+def _make_execution_state(last_submission_at: float = 0.0) -> ExecutionState:
+    """ExecutionState 工厂：除 last_submission_at 外其他字段均为空。"""
     return ExecutionState(
         results=[],
         attempted_keys=set(),
@@ -106,35 +105,26 @@ def empty_execution_state() -> ExecutionState:
         pending_futures={},
         field_queue_busy_counts={},
         skipped_fields_due_to_queue=set(),
+        last_submission_at=last_submission_at,
     )
+
+
+@pytest.fixture
+def empty_execution_state() -> ExecutionState:
+    """空的 ExecutionState，所有集合/字典为空，last_submission_at 为 0.0。"""
+    return _make_execution_state()
 
 
 @pytest.fixture
 def execution_state_after_submit() -> ExecutionState:
     """模拟已提交一次的 ExecutionState，last_submission_at 为 0.5 秒前。"""
-    return ExecutionState(
-        results=[],
-        attempted_keys=set(),
-        template_stats={},
-        pending_futures={},
-        field_queue_busy_counts={},
-        skipped_fields_due_to_queue=set(),
-        last_submission_at=time.monotonic() - 0.5,
-    )
+    return _make_execution_state(time.monotonic() - 0.5)
 
 
 @pytest.fixture
 def execution_state_long_ago_submit() -> ExecutionState:
     """模拟很久前提交的 ExecutionState，last_submission_at 为 5 秒前。"""
-    return ExecutionState(
-        results=[],
-        attempted_keys=set(),
-        template_stats={},
-        pending_futures={},
-        field_queue_busy_counts={},
-        skipped_fields_due_to_queue=set(),
-        last_submission_at=time.monotonic() - 5.0,
-    )
+    return _make_execution_state(time.monotonic() - 5.0)
 
 
 @pytest.fixture

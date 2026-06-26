@@ -27,8 +27,7 @@ from ..models.base import (
     TemplateBuildContext,
     TemplateLibrary,
 )
-from ..api.client import first_non_empty
-from ..utils.helpers import choose_field_name, choose_field_type
+from ..utils.helpers import choose_field_name, choose_field_type, first_non_empty
 from ..generators.expressions import build_expression_candidates
 from ..generators.settings import (
     build_setting_variants,
