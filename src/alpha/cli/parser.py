@@ -38,19 +38,28 @@ from ..io.output import (
 SCRIPT_DIR = Path(__file__).resolve().parent
 """脚本目录的绝对路径"""
 
-DEFAULT_CREDS_FILE = str(SCRIPT_DIR / "worldquant_brain_credentials.json")
+PROJECT_ROOT = SCRIPT_DIR.parent.parent.parent
+"""项目根目录的绝对路径（alpha/ 目录）"""
+
+# 运行时文件目录（相对于项目根目录）
+CREDS_DIR = PROJECT_ROOT / ".credentials"
+CACHE_DIR = PROJECT_ROOT / "cache"
+RESULTS_DIR = PROJECT_ROOT / "results"
+DATA_DIR = PROJECT_ROOT / "data"
+
+DEFAULT_CREDS_FILE = str(CREDS_DIR / "worldquant_brain_credentials.json")
 """默认凭证文件路径"""
 
-DEFAULT_CREDS_KEY_FILE = str(SCRIPT_DIR / "worldquant_brain_credentials.key")
+DEFAULT_CREDS_KEY_FILE = str(CREDS_DIR / "worldquant_brain_credentials.key")
 """默认凭证密钥文件路径"""
 
-DEFAULT_TEMPLATE_LIBRARY_FILE = str(SCRIPT_DIR / "worldquant_template_library.json")
+DEFAULT_TEMPLATE_LIBRARY_FILE = str(DATA_DIR / "worldquant_template_library.json")
 """默认模板库文件路径"""
 
-DEFAULT_FIELDS_CACHE_FILE = str(SCRIPT_DIR / "fundamental6_fields_cache.json")
+DEFAULT_FIELDS_CACHE_FILE = str(CACHE_DIR / "fundamental6_fields_cache.json")
 """默认字段缓存文件路径"""
 
-DEFAULT_OUTPUT_FILE = str(SCRIPT_DIR / "fundamental6_test_results.json")
+DEFAULT_OUTPUT_FILE = str(RESULTS_DIR / "fundamental6_test_results.json")
 """默认输出文件路径"""
 
 
@@ -489,6 +498,16 @@ def normalize_args_paths(args: argparse.Namespace) -> RunPaths:
         log_file=log_file,
         state_file=state_file,
         checkpoint_file=checkpoint_file,
+        fields_cache_file=fields_cache_file,
+        template_library_file=template_library_file,
+        output=output_file,
+        feedback_output=feedback_output,
+        creds_file=creds_file,
+        creds_key_file=creds_key_file,
+        include_fields_file=include_fields_file,
+        exclude_fields_file=exclude_fields_file,
+        include_templates_file=include_templates_file,
+        exclude_templates_file=exclude_templates_file,
     )
 
 
@@ -687,17 +706,17 @@ def load_run_filters(run_paths: RunPaths) -> RunFilters:
     )
 
 
-def load_run_filters_extended(run_paths: RunPaths) -> Dict[str, Any]:
+def load_run_filters_extended(run_paths: RunPaths) -> RunFilters:
     """
     加载扩展的运行过滤器，包括字段和模板的包含/排除列表。
 
-    返回一个字典而不是 RunFilters 对象，包含更多的过滤信息。
+    返回一个 RunFilters 对象。
 
     Args:
         run_paths (RunPaths): 运行路径对象。
 
     Returns:
-        Dict[str, Any]: 过滤器字典，包含：
+        RunFilters: 过滤器对象，包含：
             - include_fields: 包含字段集合
             - exclude_fields: 排除字段集合
             - include_templates: 包含模板集合
@@ -705,15 +724,19 @@ def load_run_filters_extended(run_paths: RunPaths) -> Dict[str, Any]:
 
     Example:
         >>> filters = load_run_filters_extended(run_paths)
-        >>> print(filters["include_fields"])
+        >>> print(filters.include_fields)
         {'field1', 'field2'}
     """
-    return {
-        "include_fields": load_line_set(run_paths.include_fields_file if hasattr(run_paths, 'include_fields_file') else ""),
-        "exclude_fields": load_line_set(run_paths.exclude_fields_file if hasattr(run_paths, 'exclude_fields_file') else ""),
-        "include_templates": load_line_set(run_paths.include_templates_file if hasattr(run_paths, 'include_templates_file') else ""),
-        "exclude_templates": load_line_set(run_paths.exclude_templates_file if hasattr(run_paths, 'exclude_templates_file') else ""),
-    }
+    return RunFilters(
+        region_filter=None,
+        delay_filter=None,
+        min_sharpe=None,
+        max_turnover=None,
+        include_fields=load_line_set(run_paths.include_fields_file if hasattr(run_paths, 'include_fields_file') else ""),
+        exclude_fields=load_line_set(run_paths.exclude_fields_file if hasattr(run_paths, 'exclude_fields_file') else ""),
+        include_templates=load_line_set(run_paths.include_templates_file if hasattr(run_paths, 'include_templates_file') else ""),
+        exclude_templates=load_line_set(run_paths.exclude_templates_file if hasattr(run_paths, 'exclude_templates_file') else ""),
+    )
 
 
 # ============================================================================

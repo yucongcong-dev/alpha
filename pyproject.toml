@@ -28,7 +28,7 @@ classifiers = [
 ]
 
 dependencies = [
-    # 无外部依赖，纯标准库
+    "cryptography>=42.0.0",
 ]
 
 [project.optional-dependencies]

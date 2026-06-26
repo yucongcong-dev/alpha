@@ -365,7 +365,7 @@ def extract_total(payload: Dict[str, Any]) -> Optional[int]:
 def fetch_fields_with_cache(
     client: Any,
     args: Any,
-    run_paths: RunPaths,
+    fields_cache_file: str,
     cached_fields: Sequence[Dict[str, Any]],
     cache_refresh_reason: str,
 ) -> List[Dict[str, Any]]:
@@ -380,7 +380,7 @@ def fetch_fields_with_cache(
     Args:
         client: Brain API 客户端实例，需要实现 fetch_dataset_fields 方法。
         args: 命令行参数对象，包含 dataset_id、limit、offset 等属性。
-        run_paths (RunPaths): 运行路径配置，包含 fields_cache_file 属性。
+        fields_cache_file: 字段缓存文件路径。
         cached_fields (Sequence[Dict[str, Any]]): 当前缓存的字段列表。
         cache_refresh_reason (str): 刷新原因字符串。如果为空，表示无需刷新。
 
@@ -391,7 +391,7 @@ def fetch_fields_with_cache(
         >>> fields = fetch_fields_with_cache(
         ...     client=brain_client,
         ...     args=args,
-        ...     run_paths=paths,
+        ...     fields_cache_file="/path/to/cache.json",
         ...     cached_fields=[{"id": "sales"}],
         ...     cache_refresh_reason="cache has 1 fields but limit requests 100"
         ... )
@@ -404,7 +404,7 @@ def fetch_fields_with_cache(
     """
     if not cache_refresh_reason:
         fields = list(cached_fields)
-        print(f"[cache] 从 {run_paths.fields_cache_file} 加载 {len(fields)} 个字段", flush=True)
+        print(f"[cache] 从 {fields_cache_file} 加载 {len(fields)} 个字段", flush=True)
         return fields
 
     print(f"[cache] 刷新字段缓存: {cache_refresh_reason}", flush=True)
@@ -437,7 +437,7 @@ def fetch_fields_with_cache(
     )
     fields = merge_fields_by_id(cached_fields, fetched_fields) if append_to_cache else fetched_fields
     save_fields_cache(
-        run_paths.fields_cache_file,
+        fields_cache_file,
         dataset_id=args.dataset_id,
         region=args.region,
         universe=args.universe,
@@ -445,5 +445,5 @@ def fetch_fields_with_cache(
         delay=args.delay,
         fields=fields,
     )
-    print(f"[cache] 保存 {len(fields)} 个字段到 {run_paths.fields_cache_file}", flush=True)
+    print(f"[cache] 保存 {len(fields)} 个字段到 {fields_cache_file}", flush=True)
     return fields

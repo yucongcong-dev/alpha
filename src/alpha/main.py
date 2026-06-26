@@ -42,6 +42,7 @@ from .models.base import (
     RunPaths,
     RuntimeConcurrencyState,
     SettingsVariant,
+    TemplateBuildContext,
     TemplateLibrary,
 )
 
@@ -296,7 +297,7 @@ def main() -> int:
     historical_state = build_historical_run_state(output_file, feedback_output)
 
     # 步骤 14：加载字段缓存
-    fields_cache_file = getattr(run_paths, 'fields_cache_file', None) or args.fields_cache_file
+    fields_cache_file = args.fields_cache_file
     cached_fields = load_fields_cache(
         fields_cache_file,
         dataset_id=args.dataset_id,
@@ -318,7 +319,7 @@ def main() -> int:
     fields = fetch_fields_with_cache(
         bootstrap_client,
         args,
-        run_paths,
+        fields_cache_file,
         cached_fields,
         cache_refresh_reason,
     )
@@ -399,9 +400,21 @@ def main() -> int:
         )
         return 0
 
-    # 步骤 23：启动线程池执行器
+    # 步骤 23：构建模板构建上下文（收敛 11 个参数为 1 个）
+    template_build_ctx = TemplateBuildContext(
+        args=args,
+        all_fields=fields,
+        template_library=template_library,
+        field_feedback=historical_state.field_feedback,
+        global_failed_check_counts=historical_state.global_failed_check_counts,
+        include_templates=filters_dict.include_templates,
+        exclude_templates=filters_dict.exclude_templates,
+        use_dataset_heuristics=use_dataset_heuristics,
+    )
+
+    # 步骤 24：启动线程池执行器
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
-        # 步骤 24：遍历字段
+        # 步骤 25：遍历字段
         for field_index, field in enumerate(fields, start=1):
             # 检查是否达到目标可提交数量
             if should_stop_after_submittable(args, execution_state.results):
@@ -424,20 +437,13 @@ def main() -> int:
             ):
                 continue
 
-            # 步骤 25：为字段构建待执行模板队列
+            # 步骤 26：为字段构建待执行模板队列
             pending_templates, disabled_templates, template_count = build_pending_templates_for_field(
-                args,
+                template_build_ctx,
                 field,
-                all_fields=fields,
-                template_library=template_library,
-                field_feedback=historical_state.field_feedback.get(field_id),
-                global_failed_check_counts=historical_state.global_failed_check_counts,
-                include_templates=filters_dict.get("include_templates", set()),
-                exclude_templates=filters_dict.get("exclude_templates", set()),
                 template_stats=execution_state.template_stats,
                 attempted_keys=execution_state.attempted_keys,
                 prior_results=execution_state.results,
-                use_dataset_heuristics=use_dataset_heuristics,
             )
 
             print(

@@ -25,6 +25,13 @@ from typing import Any, Dict, List, Optional, Sequence, Set, Tuple
 
 from ..exceptions import BrainAPIError
 from ..models.base import FieldTestResult, HistoricalRunState
+from ..config import (
+    FEEDBACK_MUTATION_HIGHSCORE_THRESHOLD,
+    FEEDBACK_MUTATION_NEARPASS_THRESHOLD,
+    FEEDBACK_TEMPLATE_MIN_PRIORITY,
+    SETTINGS_VARIANT_BUDGET_HIGH,
+    SETTINGS_VARIANT_BUDGET_MID,
+)
 
 # 从 analysis 模块导入分析函数
 from .stats import (
@@ -114,9 +121,9 @@ def choose_settings_variant_budget(field_feedback: Optional[Dict[str, Any]]) -> 
     if not field_feedback:
         return 1
     best_score = float(field_feedback.get("best_score", -999.0))
-    if best_score >= 0.55:
+    if best_score >= SETTINGS_VARIANT_BUDGET_HIGH:
         return 3
-    if best_score >= 0.20:
+    if best_score >= SETTINGS_VARIANT_BUDGET_MID:
         return 2
     return 1
 
@@ -364,7 +371,7 @@ def build_feedback_mutations(
     best_expression = str(field_feedback.get("best_expression", "")).strip()
     best_score = float(field_feedback.get("best_score", -999.0))
 
-    if best_score >= 0.15:
+    if best_score >= FEEDBACK_MUTATION_NEARPASS_THRESHOLD:
         mutations.extend(
             [
                 (
@@ -419,7 +426,7 @@ def build_feedback_mutations(
                 ("iter_group_decay_best_5", f"group_rank(ts_decay_linear(ts_backfill({best_expression}, 120), 5), subindustry)", 170),
             ]
         )
-        if best_score >= 0.45:
+        if best_score >= FEEDBACK_MUTATION_HIGHSCORE_THRESHOLD:
             for window in (3, 5, 10):
                 mutations.extend(
                     [
@@ -537,7 +544,7 @@ def should_keep_template_for_feedback(
             return False
 
     # In focused mode, keep only reasonably strong candidates.
-    return priority >= 120
+    return priority >= FEEDBACK_TEMPLATE_MIN_PRIORITY
 
 
 def should_skip_field_template_family(

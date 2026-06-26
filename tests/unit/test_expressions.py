@@ -1,95 +1,104 @@
 # -*- coding: utf-8 -*-
 """
-表达式构建模块单元测试
+表达式构建模块单元测试（pytest 风格）
 
 测试 alpha.generators.expressions 中的表达式分类和构建函数。
 """
 
-import unittest
+from __future__ import annotations
+
+import pytest
 
 from alpha.generators.expressions import classify_expression_family, is_legacy_family
 
 
-class TestClassifyExpressionFamily(unittest.TestCase):
+class TestClassifyExpressionFamily:
     """classify_expression_family 函数测试用例"""
 
-    def test_group_rank_delta(self):
-        """测试 group_rank_delta 家族"""
+    def test_group_rank_delta(self) -> None:
         family = classify_expression_family(
-            "test",
-            "group_rank(ts_delta(rank(sales), 5), subindustry)"
+            "test", "group_rank(ts_delta(rank(sales), 5), subindustry)"
         )
-        self.assertEqual(family, "group_rank_delta")
+        assert family == "group_rank_delta"
 
-    def test_rank_delta(self):
-        """测试 rank_delta 家族"""
-        family = classify_expression_family(
-            "test",
-            "rank(ts_delta(rank(sales), 5))"
-        )
-        self.assertEqual(family, "rank_delta")
+    def test_rank_delta(self) -> None:
+        family = classify_expression_family("test", "rank(ts_delta(rank(sales), 5))")
+        assert family == "rank_delta"
 
-    def test_legacy_level_raw_field(self):
-        """测试 legacy_level 家族 - raw_field"""
+    def test_legacy_level_raw_field(self) -> None:
         family = classify_expression_family("raw_field", "sales")
-        self.assertEqual(family, "legacy_level")
+        assert family == "legacy_level"
 
-    def test_legacy_ratio(self):
-        """测试 legacy_ratio 家族"""
+    def test_legacy_ratio(self) -> None:
         family = classify_expression_family("ratio_debt_assets", "debt/assets")
-        self.assertEqual(family, "legacy_ratio")
+        assert family == "legacy_ratio"
 
-    def test_zscore_time(self):
-        """测试 zscore_time 家族"""
+    def test_zscore_time(self) -> None:
+        family = classify_expression_family("test", "ts_zscore(sales, 60)")
+        assert family == "zscore_time"
+
+    def test_vol_scaled_delta(self) -> None:
         family = classify_expression_family(
-            "test",
-            "ts_zscore(sales, 60)"
+            "test", "ts_delta(sales, 5) / ts_std_dev(sales, 20)"
         )
-        self.assertEqual(family, "zscore_time")
+        assert family == "vol_scaled_delta"
 
-    def test_vol_scaled_delta(self):
-        """测试 vol_scaled_delta 家族"""
+    def test_mean_spread(self) -> None:
         family = classify_expression_family(
-            "test",
-            "ts_delta(sales, 5) / ts_std_dev(sales, 20)"
+            "test", "ts_mean(sales, 5) - ts_mean(sales, 20)"
         )
-        self.assertEqual(family, "vol_scaled_delta")
+        assert family == "mean_spread"
 
-    def test_mean_spread(self):
-        """测试 mean_spread 家族"""
+    # ---- 补充边界测试 ----
+    def test_unknown_template_falls_back(self) -> None:
+        """未知模板名回退到表达式分类。"""
         family = classify_expression_family(
-            "test",
-            "ts_mean(sales, 5) - ts_mean(sales, 20)"
+            "completely_unknown_template", "ts_zscore(sales, 60)"
         )
-        self.assertEqual(family, "mean_spread")
+        assert family == "zscore_time"
+
+    def test_empty_expression(self) -> None:
+        """空表达式应返回某个默认值（不应崩溃）。"""
+        # 空表达式应能处理而不抛异常
+        family = classify_expression_family("test", "")
+        assert isinstance(family, str)
+
+    def test_non_string_expression(self) -> None:
+        """非字符串表达式会抛出 AttributeError（设计如此）。"""
+        with pytest.raises(AttributeError):
+            classify_expression_family("test", None)  # type: ignore[arg-type]
 
 
-class TestIsLegacyFamily(unittest.TestCase):
+class TestIsLegacyFamily:
     """is_legacy_family 函数测试用例"""
 
-    def test_raw_field_is_legacy(self):
-        """测试 raw_field 属于 legacy"""
-        self.assertTrue(is_legacy_family("raw_field", "sales"))
+    def test_raw_field_is_legacy(self) -> None:
+        assert is_legacy_family("raw_field", "sales") is True
 
-    def test_rank_raw_field_is_legacy(self):
-        """测试 rank_raw_field 属于 legacy"""
-        self.assertTrue(is_legacy_family("rank_raw_field", "rank(sales)"))
+    def test_rank_raw_field_is_legacy(self) -> None:
+        assert is_legacy_family("rank_raw_field", "rank(sales)") is True
 
-    def test_ratio_is_legacy(self):
-        """测试 ratio_ 前缀属于 legacy"""
-        self.assertTrue(is_legacy_family("ratio_debt_assets", "debt/assets"))
+    def test_ratio_is_legacy(self) -> None:
+        assert is_legacy_family("ratio_debt_assets", "debt/assets") is True
 
-    def test_group_rank_delta_not_legacy(self):
-        """测试 group_rank_delta 不属于 legacy"""
-        self.assertFalse(is_legacy_family(
-            "test",
-            "group_rank(ts_delta(rank(sales), 5), subindustry)"
-        ))
+    def test_group_rank_delta_not_legacy(self) -> None:
+        assert (
+            is_legacy_family("test", "group_rank(ts_delta(rank(sales), 5), subindustry)")
+            is False
+        )
 
-    def test_zscore_not_legacy(self):
-        """测试 zscore 不属于 legacy"""
-        self.assertFalse(is_legacy_family("test", "ts_zscore(sales, 60)"))
+    def test_zscore_not_legacy(self) -> None:
+        assert is_legacy_family("test", "ts_zscore(sales, 60)") is False
 
+    # ---- 补充边界测试 ----
+    def test_unknown_template_not_legacy(self) -> None:
+        """未知模板不应被视为 legacy。"""
+        assert is_legacy_family("unknown_template", "ts_mean(sales, 20)") is False
 
-if __name__ == "__main__":
-    unittest.main()
+    def test_empty_template_not_legacy(self) -> None:
+        """空模板名不应被视为 legacy。"""
+        assert is_legacy_family("", "sales") is False
+
+    def test_ratio_with_suffix_is_legacy(self) -> None:
+        """ratio_ 前缀的变体也应视为 legacy。"""
+        assert is_legacy_family("ratio_profit_margin", "profit/cost") is True

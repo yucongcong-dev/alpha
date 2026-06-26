@@ -20,7 +20,7 @@
 import sys
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Any, Dict, List, Optional, TextIO, Tuple
+from typing import Any, Dict, List, Optional, Sequence, TextIO, Tuple
 
 
 # ============================================================================
@@ -176,6 +176,143 @@ class FieldTestResult:
         return f"FieldTestResult({self.field_name}/{self.template_name}: {status_symbol})"
 
 
+@dataclass
+class FieldTestContext:
+    """
+    字段测试运行上下文数据类。
+
+    封装 run_field_test 各阶段中反复传递的元数据，
+    避免每个 build_failure_result / FieldTestResult 调用都重复 8+ 个参数。
+
+    用于将 200+ 行的 run_field_test 拆分为独立的阶段函数。
+
+    Attributes:
+        field_id: 字段唯一标识符。
+        field_type: 字段类型。
+        field_name: 字段名称。
+        template_name: 模板名称。
+        expression: Alpha 表达式。
+        settings_fingerprint: 设置配置指纹。
+        template_library_fingerprint: 模板库指纹。
+    """
+
+    field_id: str
+    field_type: str
+    field_name: str
+    template_name: str
+    expression: str
+    settings_fingerprint: str = ""
+    template_library_fingerprint: str = ""
+
+    def failure(
+        self,
+        *,
+        failed_stage: str,
+        message: str,
+        simulation_id: Optional[str] = None,
+        alpha_id: Optional[str] = None,
+        status: str = "error",
+        failed_checks: Optional[List[Dict[str, Any]]] = None,
+    ) -> "FieldTestResult":
+        """构建与上下文绑定的失败结果对象。"""
+        return FieldTestResult(
+            field_id=self.field_id,
+            field_type=self.field_type,
+            field_name=self.field_name,
+            template_name=self.template_name,
+            simulation_id=simulation_id,
+            alpha_id=alpha_id,
+            status=status,
+            submittable=False,
+            submitted=False,
+            message=message,
+            expression=self.expression,
+            settings_fingerprint=self.settings_fingerprint,
+            template_library_fingerprint=self.template_library_fingerprint,
+            failed_stage=failed_stage,
+            failed_checks=failed_checks,
+        )
+
+    def success(
+        self,
+        *,
+        simulation_id: Optional[str],
+        alpha_id: Optional[str],
+        submittable: Optional[bool],
+        submitted: bool,
+        message: str,
+        status: str = "simulated",
+        failed_checks: Optional[List[Dict[str, Any]]] = None,
+    ) -> "FieldTestResult":
+        """构建与上下文绑定的成功/正常结果对象。"""
+        return FieldTestResult(
+            field_id=self.field_id,
+            field_type=self.field_type,
+            field_name=self.field_name,
+            template_name=self.template_name,
+            simulation_id=simulation_id,
+            alpha_id=alpha_id,
+            status=status,
+            submittable=submittable,
+            submitted=submitted,
+            message=message,
+            expression=self.expression,
+            settings_fingerprint=self.settings_fingerprint,
+            template_library_fingerprint=self.template_library_fingerprint,
+            failed_checks=failed_checks,
+        )
+
+
+@dataclass
+class TemplateBuildContext:
+    """
+    模板队列构建的只读上下文数据类。
+
+    将 build_pending_templates_for_field 中反复透传的配置
+    收敛为单个对象，从 11 个参数减少到 4 个。
+
+    Attributes:
+        args: 命令行参数命名空间。
+        all_fields: 所有字段列表。
+        template_library: 模板库字典。
+        field_feedback: 按字段 ID 组织的反馈字典。
+        global_failed_check_counts: 全局失败检查计数。
+        include_templates: 包含模板集合。
+        exclude_templates: 排除模板集合。
+        use_dataset_heuristics: 是否使用数据集启发式。
+    """
+
+    args: Any = field(default=None)
+    all_fields: Sequence[Any] = field(default_factory=list)
+    template_library: Dict[str, List[Dict[str, Any]]] = field(default_factory=dict)
+    field_feedback: Dict[str, Dict[str, Any]] = field(default_factory=dict)
+    global_failed_check_counts: Dict[str, int] = field(default_factory=dict)
+    include_templates: set[str] = field(default_factory=set)
+    exclude_templates: set[str] = field(default_factory=set)
+    use_dataset_heuristics: bool = False
+
+
+@dataclass
+class FutureCompletionContext:
+    """
+    future 完成处理的不可变配置上下文。
+
+    将 handle_completed_future 中透传的只读配置收敛，
+    从 9 个参数减少到 6 个。
+
+    Attributes:
+        args: 命令行参数命名空间。
+        settings_fingerprint: 设置配置指纹。
+        template_library_fingerprint: 模板库指纹。
+        run_config: 运行配置（可选）。
+    """
+
+    args: Any = field(default=None)
+    settings_fingerprint: str = ""
+    template_library_fingerprint: str = ""
+    run_config: Optional[Dict[str, Any]] = None
+
+
 @dataclass(frozen=True)
 class RunPaths:
     """
@@ -192,13 +329,33 @@ class RunPaths:
         log_file (str): 日志文件的绝对路径。
         state_file (str): 状态文件的绝对路径，用于保存运行状态。
         checkpoint_file (str): 检查点文件的绝对路径，用于断点续传。
+        fields_cache_file (str): 字段缓存文件的绝对路径。
+        template_library_file (str): 模板库文件的绝对路径。
+        output (str): 结果输出文件的绝对路径。
+        feedback_output (str): 反馈输出文件的绝对路径。
+        creds_file (str): 凭证文件的绝对路径。
+        creds_key_file (str): 凭证密钥文件的绝对路径。
+        include_fields_file (str): 包含字段文件的绝对路径。
+        exclude_fields_file (str): 排除字段文件的绝对路径。
+        include_templates_file (str): 包含模板文件的绝对路径。
+        exclude_templates_file (str): 排除模板文件的绝对路径。
 
     Example:
         >>> paths = RunPaths(
         ...     results_dir="/path/to/results",
         ...     log_file="/path/to/results/run.log",
         ...     state_file="/path/to/results/state.json",
-        ...     checkpoint_file="/path/to/results/checkpoint.pkl"
+        ...     checkpoint_file="/path/to/results/checkpoint.pkl",
+        ...     fields_cache_file="/path/to/fields_cache.json",
+        ...     template_library_file="/path/to/template_library.json",
+        ...     output="/path/to/results.json",
+        ...     feedback_output="/path/to/feedback.json",
+        ...     creds_file="/path/to/creds.json",
+        ...     creds_key_file="/path/to/creds.key",
+        ...     include_fields_file="",
+        ...     exclude_fields_file="",
+        ...     include_templates_file="",
+        ...     exclude_templates_file=""
         ... )
     """
 
@@ -213,6 +370,36 @@ class RunPaths:
 
     checkpoint_file: str
     """检查点文件的绝对路径"""
+
+    fields_cache_file: str = ""
+    """字段缓存文件的绝对路径"""
+
+    template_library_file: str = ""
+    """模板库文件的绝对路径"""
+
+    output: str = ""
+    """结果输出文件的绝对路径"""
+
+    feedback_output: str = ""
+    """反馈输出文件的绝对路径"""
+
+    creds_file: str = ""
+    """凭证文件的绝对路径"""
+
+    creds_key_file: str = ""
+    """凭证密钥文件的绝对路径"""
+
+    include_fields_file: str = ""
+    """包含字段文件的绝对路径"""
+
+    exclude_fields_file: str = ""
+    """排除字段文件的绝对路径"""
+
+    include_templates_file: str = ""
+    """包含模板文件的绝对路径"""
+
+    exclude_templates_file: str = ""
+    """排除模板文件的绝对路径"""
 
 
 @dataclass

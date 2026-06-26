@@ -20,9 +20,17 @@ from typing import Any, Dict, List, Optional, Sequence, Tuple
 from ..models.base import (
     ExecutionState,
     FieldTestResult,
+    FutureCompletionContext,
     RuntimeConcurrencyState,
 )
 from ..api.client import wait_seconds
+from ..io.output import dump_results
+from ..analysis.stats import (
+    compile_template_stats,
+    is_informative_result,
+    result_identity,
+)
+from .simulation import build_failure_result
 
 
 # ============================================================================
@@ -32,31 +40,25 @@ from ..api.client import wait_seconds
 def handle_completed_future(
     future,
     *,
+    completion_ctx: FutureCompletionContext,
     results: List[FieldTestResult],
     attempted_keys: set[Tuple[str, str, str, str]],
     template_stats: Dict[str, Dict[str, int]],
-    args: argparse.Namespace,
     pending_contexts: Dict[Any, Dict[str, Any]],
-    settings_fingerprint: str,
-    template_library_fingerprint: str,
-    run_config: Optional[Dict[str, Any]],
 ) -> Tuple[Dict[str, Dict[str, int]], bool, Optional[str]]:
     """
     收尾一个 worker future，落盘结果并回传拥塞信号。
 
     处理已完成的异步任务，保存结果、更新统计数据，
-    并检测拥塞信号。
+    并检测拥塞信号。使用 FutureCompletionContext 将只读配置收敛为单个参数。
 
     Args:
         future: 已完成的 Future 对象。
+        completion_ctx: 包含 args、settings_fingerprint、template_library_fingerprint、run_config 的上下文。
         results: 结果列表（会被修改）。
         attempted_keys: 已尝试的键集合（会被修改）。
         template_stats: 模板统计数据（会被修改）。
-        args: 命令行参数。
         pending_contexts: 待处理上下文字典（会被修改）。
-        settings_fingerprint: 设置配置指纹。
-        template_library_fingerprint: 模板库指纹。
-        run_config: 运行配置。
 
     Returns:
         Tuple[Dict[str, Dict[str, int]], bool, Optional[str]]: 返回一个元组，包含：
@@ -65,17 +67,10 @@ def handle_completed_future(
             - queue_busy_field_id: 队列拥塞的字段 ID（如果有）
 
     Note:
-        - 此函数需要导入 output 模块的 dump_results
-        - 此函数需要导入 expressions 模块的分析函数
+        - 结果立即落盘以防止中断丢失
+        - 检测拥塞信号并返回给调用方
     """
-    from ..io.output import dump_results
-    from ..analysis.stats import (
-        compile_template_stats,
-        is_informative_result,
-        result_identity,
-    )
-    from .simulation import build_failure_result
-
+    args = completion_ctx.args
     context = pending_contexts.pop(future)
     field_id = context["field_id"]
     template_name = context["template_name"]
@@ -92,7 +87,7 @@ def handle_completed_future(
             alpha_id=None,
             expression=context["expression"],
             settings_fingerprint=context["settings_fingerprint"],
-            template_library_fingerprint=template_library_fingerprint,
+            template_library_fingerprint=completion_ctx.template_library_fingerprint,
             failed_stage="worker",
             message=str(exc),
         )
@@ -110,9 +105,9 @@ def handle_completed_future(
         args.output,
         args.dataset_id,
         results,
-        settings_fingerprint=settings_fingerprint,
-        template_library_fingerprint=template_library_fingerprint,
-        run_config=run_config,
+        settings_fingerprint=completion_ctx.settings_fingerprint,
+        template_library_fingerprint=completion_ctx.template_library_fingerprint,
+        run_config=completion_ctx.run_config,
     )
     congestion_detected = False
     if "CONCURRENT_SIMULATION_LIMIT_EXCEEDED" in result.message:
@@ -303,33 +298,25 @@ def drain_completed_futures(
     Returns:
         Dict[str, Dict[str, int]]: 更新后的模板统计数据。
 
-    Example:
-        >>> template_stats = drain_completed_futures(
-        ...     completed_futures=[done_future],
-        ...     execution_state=state,
-        ...     args=args,
-        ...     settings_fingerprint="abc",
-        ...     template_library_fingerprint="def",
-        ...     run_config={},
-        ...     runtime_state=runtime_state,
-        ... )
-
     Note:
         - 对每个完成的 future 调用 handle_completed_future
         - 检测拥塞并应用冷却
         - 注册队列拥塞字段
     """
+    completion_ctx = FutureCompletionContext(
+        args=args,
+        settings_fingerprint=settings_fingerprint,
+        template_library_fingerprint=template_library_fingerprint,
+        run_config=run_config,
+    )
     for done_future in completed_futures:
         execution_state.template_stats, congestion_detected, queue_busy_field_id = handle_completed_future(
             done_future,
+            completion_ctx=completion_ctx,
             results=execution_state.results,
             attempted_keys=execution_state.attempted_keys,
             template_stats=execution_state.template_stats,
-            args=args,
             pending_contexts=execution_state.pending_futures,
-            settings_fingerprint=settings_fingerprint,
-            template_library_fingerprint=template_library_fingerprint,
-            run_config=run_config,
         )
         register_queue_busy_field(
             queue_busy_field_id,

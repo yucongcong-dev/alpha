@@ -36,6 +36,14 @@ from ..models.base import FieldTestResult
 SCRIPT_DIR = Path(__file__).resolve().parent
 """脚本目录的绝对路径"""
 
+PROJECT_ROOT = SCRIPT_DIR.parent.parent.parent
+"""项目根目录的绝对路径（alpha/ 目录）"""
+
+CACHE_DIR = PROJECT_ROOT / "cache"
+RESULTS_DIR = PROJECT_ROOT / "results"
+DATA_DIR = PROJECT_ROOT / "data"
+"""数据文件目录"""
+
 
 # ============================================================================
 # 辅助函数
@@ -228,9 +236,9 @@ def build_dataset_scoped_paths(dataset_id: str) -> Dict[str, str]:
     """
     dataset_key = sanitize_dataset_id_for_filename(dataset_id)
     return {
-        "template_library_file": str(SCRIPT_DIR / f"worldquant_template_library_{dataset_key}.json"),
-        "fields_cache_file": str(SCRIPT_DIR / f"{dataset_key}_fields_cache.json"),
-        "output": str(SCRIPT_DIR / f"{dataset_key}_test_results.json"),
+        "template_library_file": str(DATA_DIR / f"worldquant_template_library_{dataset_key}.json"),
+        "fields_cache_file": str(CACHE_DIR / f"{dataset_key}_fields_cache.json"),
+        "output": str(RESULTS_DIR / f"{dataset_key}_test_results.json"),
     }
 
 

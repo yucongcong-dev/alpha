@@ -59,6 +59,26 @@ DEFAULT_RATE_LIMIT_MAX_RETRIES: int = 3
 
 
 # ============================================================================
+# 反馈优化阈值常量
+# ============================================================================
+
+SETTINGS_VARIANT_BUDGET_HIGH: float = 0.55
+"""settings 变体预算高分阈值：best_score >= 此值时分配 3 个变体预算"""
+
+SETTINGS_VARIANT_BUDGET_MID: float = 0.20
+"""settings 变体预算中分阈值：best_score >= 此值时分配 2 个变体预算"""
+
+FEEDBACK_MUTATION_NEARPASS_THRESHOLD: float = 0.15
+"""反馈变异生成 - 接近通过阈值：best_score >= 此值时生成额外的 delta/zscore 变体"""
+
+FEEDBACK_MUTATION_HIGHSCORE_THRESHOLD: float = 0.45
+"""反馈变异生成 - 高分阈值：best_score >= 此值时生成 delta/decay 最佳表达式变体"""
+
+FEEDBACK_TEMPLATE_MIN_PRIORITY: int = 120
+"""反馈剪枝最低优先级：仅保留 priority >= 此值的模板候选"""
+
+
+# ============================================================================
 # 数据字段分类配置
 # ============================================================================
 

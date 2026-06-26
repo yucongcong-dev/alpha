@@ -22,6 +22,7 @@ import threading
 from typing import Any, Dict, List, Optional
 
 from ..models.base import (
+    FieldTestContext,
     FieldTestResult,
     SettingsVariant,
 )
@@ -29,7 +30,9 @@ from ..api.client import (
     BrainClient,
     WorkerClientFactory,
     first_non_empty,
+    retry_operation,
 )
+from ..generators.settings import build_simulation_payload
 from ..utils.helpers import choose_field_name, choose_field_type
 
 
@@ -309,7 +312,6 @@ def create_simulation_with_retry(
         - 存储可读的 simulation_id 用于结果，但保留完整 location 用于轮询
         - 重试间隔为 3 秒
     """
-    from ..api.client import retry_operation
     simulation_location = retry_operation(
         "create simulation",
         retries,
@@ -369,7 +371,6 @@ def poll_simulation_with_retry(
         - 轮询重试策略与创建重试策略分离，因为长时间运行的任务在这里是正常的
         - 重试间隔为 3 秒
     """
-    from ..api.client import retry_operation
     return retry_operation(
         "poll simulation",
         retries,
@@ -423,7 +424,6 @@ def check_submit_with_retry(
         - "check submit" 表示读取 alpha checks 并转换为简单的可提交状态
         - 重试间隔为 3 秒
     """
-    from ..api.client import retry_operation
     alpha_detail = retry_operation(
         "check submit",
         retries,
@@ -467,7 +467,6 @@ def submit_alpha_with_retry(client: BrainClient, alpha_id: str, retries: int) ->
         - 提交是最终的副作用阶段，因此重试处理与只读检查分离
         - 重试间隔为 3 秒
     """
-    from ..api.client import retry_operation
     submit_result = retry_operation(
         "submit alpha",
         retries,
@@ -564,6 +563,159 @@ def build_failure_result(
 
 
 # ============================================================================
+# 字段测试阶段子函数
+# ============================================================================
+
+def _run_create_stage(
+    ctx: FieldTestContext,
+    client: BrainClient,
+    args: argparse.Namespace,
+    *,
+    simulation_settings: Optional[SettingsVariant] = None,
+    create_semaphore: Optional[threading.Semaphore] = None,
+) -> "Optional[FieldTestResult] | Tuple[str, str]":
+    """阶段 1: 构建 payload 并创建模拟任务。
+    
+    Returns:
+        - FieldTestResult: 发生失败，调用方应直接返回
+        - Tuple[str, str]: (simulation_location, simulation_id) 继续流水线
+    """
+    try:
+        payload = build_simulation_payload(args, ctx.expression)
+        if simulation_settings is not None:
+            payload["settings"] = dict(simulation_settings)
+        if create_semaphore is not None:
+            print(
+                f"[simulation] waiting for create slot field={ctx.field_id} template={ctx.template_name}",
+                flush=True,
+            )
+            create_semaphore.acquire()
+        try:
+            simulation_location, simulation_id = create_simulation_with_retry(
+                client,
+                payload,
+                args.simulation_create_retries,
+            )
+        finally:
+            if create_semaphore is not None:
+                create_semaphore.release()
+        return simulation_location, simulation_id
+    except Exception as exc:  # noqa: BLE001
+        return ctx.failure(failed_stage="simulate", message=str(exc))
+
+
+def _run_poll_stage(
+    ctx: FieldTestContext,
+    client: BrainClient,
+    args: argparse.Namespace,
+    *,
+    simulation_location: str,
+    simulation_id: str,
+) -> "Optional[FieldTestResult] | Tuple[str, Dict[str, Any]]":
+    """阶段 2: 轮询等待模拟完成并提取 alpha_id。
+    
+    Returns:
+        - FieldTestResult: 发生失败，调用方应直接返回
+        - Tuple[str, Dict[str, Any]]: (alpha_id, simulation_result) 继续流水线
+    """
+    try:
+        simulation_result = poll_simulation_with_retry(
+            client,
+            simulation_location,
+            args.simulation_poll_retries,
+            max_polls=args.simulation_max_polls,
+            max_wait_seconds=args.simulation_max_wait_seconds,
+            max_pending_cycles=args.simulation_max_pending_cycles,
+            max_queue_seconds=args.simulation_max_queue_seconds,
+        )
+        progress = first_non_empty(
+            simulation_result.get("progress"),
+            simulation_result.get("status"),
+            simulation_result.get("state"),
+        )
+        print(
+            f"[simulation-poll] completed simulation_id={simulation_id} "
+            f"simulation_location={simulation_location} progress={progress}",
+            flush=True,
+        )
+        alpha_id = extract_alpha_id(simulation_result)
+        if not alpha_id:
+            return ctx.failure(
+                failed_stage="simulate",
+                message=summarize_failure(simulation_result),
+                simulation_id=simulation_id,
+                status="simulation_failed",
+            )
+        return alpha_id, simulation_result
+    except Exception as exc:  # noqa: BLE001
+        return ctx.failure(
+            failed_stage="simulate",
+            message=str(exc),
+            simulation_id=simulation_id,
+        )
+
+
+def _run_check_stage(
+    ctx: FieldTestContext,
+    client: BrainClient,
+    args: argparse.Namespace,
+    *,
+    alpha_id: str,
+    simulation_id: str,
+) -> "Optional[FieldTestResult] | Tuple[bool, str, List[Dict[str, Any]]]":
+    """阶段 3: 检查可提交状态。
+    
+    Returns:
+        - FieldTestResult: 发生失败，调用方应直接返回
+        - Tuple[bool, str, list]: (submittable, message, failed_checks) 继续流水线
+    """
+    try:
+        return check_submit_with_retry(client, alpha_id, args.check_submit_retries)
+    except Exception as exc:  # noqa: BLE001
+        return ctx.failure(
+            failed_stage="checksubmit",
+            message=str(exc),
+            simulation_id=simulation_id,
+            alpha_id=alpha_id,
+        )
+
+
+def _run_submit_stage(
+    ctx: FieldTestContext,
+    client: BrainClient,
+    args: argparse.Namespace,
+    *,
+    alpha_id: str,
+    simulation_id: str,
+    simulation_location: str,
+    submittable: bool,
+) -> "Optional[FieldTestResult] | Tuple[bool, str, str]":
+    """阶段 4: 条件提交 Alpha（仅当 args.submit 且 submittable 为真）。
+    
+    Returns:
+        - FieldTestResult: 提交失败，调用方应直接返回
+        - Tuple[bool, str, str]: (submitted, status, message) 继续流水线
+    """
+    if not (args.submit and submittable):
+        return False, "simulated", ""
+    try:
+        print(
+            f"[alpha-submit] eligible alpha_id={alpha_id} "
+            f"simulation_id={simulation_id} simulation_location={simulation_location}",
+            flush=True,
+        )
+        message = submit_alpha_with_retry(client, alpha_id, args.submit_retries)
+        return True, "submitted", message
+    except Exception as exc:  # noqa: BLE001
+        return ctx.failure(
+            failed_stage="submit",
+            message=str(exc),
+            simulation_id=simulation_id,
+            alpha_id=alpha_id,
+        )
+
+
+# ============================================================================
 # 字段测试核心执行函数
 # ============================================================================
 
@@ -581,11 +733,11 @@ def run_field_test(
     """
     执行单个候选表达式的创建、轮询、检查与可选提交流程。
 
-    这是字段测试的核心执行函数，完成整个测试流程：
-    1. 创建模拟任务
-    2. 轮询等待模拟完成
-    3. 检查可提交状态
-    4. 可选：提交 Alpha
+    这是字段测试的核心执行函数，协调四个独立阶段：
+    1. 创建模拟任务 (_run_create_stage)
+    2. 轮询等待模拟完成 (_run_poll_stage)
+    3. 检查可提交状态 (_run_check_stage)
+    4. 可选：提交 Alpha (_run_submit_stage)
 
     Args:
         client: BrainClient 实例。
@@ -601,178 +753,85 @@ def run_field_test(
     Returns:
         FieldTestResult: 测试结果对象，包含所有阶段的状态信息。
 
-    Example:
-        >>> result = run_field_test(
-        ...     client, args, field, "ts_mean_20",
-        ...     "rank(ts_mean(sales, 20))", "abc123", "def456"
-        ... )
-        >>> print(result.status)
-        simulated
-
     Note:
-        - 此函数为每个字段返回结果对象，包括阶段失败
-        - 使整个批处理可以端到端继续执行
+        - 任一阶段失败都会立即返回失败结果，不阻塞后续字段
         - 使用信号量控制并发创建，避免速率限制
+        - 四个阶段子函数使得函数体保持在 ~30 行，便于测试和调试
     """
-    from ..generators.settings import build_simulation_payload
-
-    field_id = str(first_non_empty(field.get("id"), "UNKNOWN"))
-    field_name = str(first_non_empty(field.get("name"), field_id))
-    field_type = choose_field_type(field)
-
-    print(
-        f"[field] testing {field_id} ({field_type}) template={template_name} expression: {expression}",
-        flush=True,
-    )
-
-    try:
-        payload = build_simulation_payload(args, expression)
-        if simulation_settings is not None:
-            payload["settings"] = dict(simulation_settings)
-        if create_semaphore is not None:
-            print(
-                f"[simulation] waiting for create slot field={field_id} template={template_name}",
-                flush=True,
-            )
-            create_semaphore.acquire()
-        try:
-            simulation_location, simulation_id = create_simulation_with_retry(
-                client,
-                payload,
-                args.simulation_create_retries,
-            )
-        finally:
-            if create_semaphore is not None:
-                create_semaphore.release()
-    except Exception as exc:  # noqa: BLE001
-        return build_failure_result(
-            field_id=field_id,
-            field_type=field_type,
-            field_name=field_name,
-            template_name=template_name,
-            simulation_id=None,
-            alpha_id=None,
-            expression=expression,
-            settings_fingerprint=settings_fingerprint,
-            template_library_fingerprint=template_library_fingerprint,
-            failed_stage="simulate",
-            message=str(exc),
-        )
-
-    try:
-        simulation_result = poll_simulation_with_retry(
-            client,
-            simulation_location,
-            args.simulation_poll_retries,
-            max_polls=args.simulation_max_polls,
-            max_wait_seconds=args.simulation_max_wait_seconds,
-            max_pending_cycles=args.simulation_max_pending_cycles,
-            max_queue_seconds=args.simulation_max_queue_seconds,
-        )
-        progress = first_non_empty(
-            simulation_result.get("progress"),
-            simulation_result.get("status"),
-            simulation_result.get("state"),
-        )
-        print(
-            f"[simulation-poll] completed simulation_id={simulation_id} simulation_location={simulation_location} progress={progress}",
-            flush=True,
-        )
-        alpha_id = extract_alpha_id(simulation_result)
-        if not alpha_id:
-            return build_failure_result(
-                field_id=field_id,
-                field_type=field_type,
-                field_name=field_name,
-                template_name=template_name,
-                simulation_id=simulation_id,
-                alpha_id=None,
-                expression=expression,
-                settings_fingerprint=settings_fingerprint,
-                template_library_fingerprint=template_library_fingerprint,
-                failed_stage="simulate",
-                message=summarize_failure(simulation_result),
-                status="simulation_failed",
-            )
-    except Exception as exc:  # noqa: BLE001
-        return build_failure_result(
-            field_id=field_id,
-            field_type=field_type,
-            field_name=field_name,
-            template_name=template_name,
-            simulation_id=simulation_id,
-            alpha_id=None,
-            expression=expression,
-            settings_fingerprint=settings_fingerprint,
-            template_library_fingerprint=template_library_fingerprint,
-            failed_stage="simulate",
-            message=str(exc),
-        )
-
-    try:
-        submittable, message, failed_checks = check_submit_with_retry(client, alpha_id, args.check_submit_retries)
-    except Exception as exc:  # noqa: BLE001
-        return build_failure_result(
-            field_id=field_id,
-            field_type=field_type,
-            field_name=field_name,
-            template_name=template_name,
-            simulation_id=simulation_id,
-            alpha_id=alpha_id,
-            expression=expression,
-            settings_fingerprint=settings_fingerprint,
-            template_library_fingerprint=template_library_fingerprint,
-            failed_stage="checksubmit",
-            message=str(exc),
-        )
-
-    submitted = False
-    status = "simulated"
-
-    if args.submit and submittable:
-        try:
-            print(
-                f"[alpha-submit] eligible alpha_id={alpha_id} simulation_id={simulation_id} simulation_location={simulation_location}",
-                flush=True,
-            )
-            message = submit_alpha_with_retry(client, alpha_id, args.submit_retries)
-            submitted = True
-            status = "submitted"
-        except Exception as exc:  # noqa: BLE001
-            return build_failure_result(
-                field_id=field_id,
-                field_type=field_type,
-                field_name=field_name,
-                template_name=template_name,
-                simulation_id=simulation_id,
-                alpha_id=alpha_id,
-                expression=expression,
-                settings_fingerprint=settings_fingerprint,
-                template_library_fingerprint=template_library_fingerprint,
-                failed_stage="submit",
-                message=str(exc),
-            )
-
-    if submittable:
-        print(
-            f"[alpha-submit] submittable alpha_id={alpha_id} simulation_id={simulation_id} simulation_location={simulation_location}",
-            flush=True,
-        )
-
-    return FieldTestResult(
-        field_id=field_id,
-        field_type=field_type,
-        field_name=field_name,
+    ctx = FieldTestContext(
+        field_id=str(first_non_empty(field.get("id"), "UNKNOWN")),
+        field_type=choose_field_type(field),
+        field_name=str(first_non_empty(field.get("name"), field.get("id"), "UNKNOWN")),
         template_name=template_name,
-        simulation_id=simulation_id,
-        alpha_id=alpha_id,
-        status=status,
-        submittable=submittable,
-        submitted=submitted,
-        message=message,
         expression=expression,
         settings_fingerprint=settings_fingerprint,
         template_library_fingerprint=template_library_fingerprint,
+    )
+
+    print(
+        f"[field] testing {ctx.field_id} ({ctx.field_type}) "
+        f"template={template_name} expression: {expression}",
+        flush=True,
+    )
+
+    # 阶段 1: 创建模拟
+    create_result = _run_create_stage(
+        ctx, client, args,
+        simulation_settings=simulation_settings,
+        create_semaphore=create_semaphore,
+    )
+    if isinstance(create_result, FieldTestResult):
+        return create_result
+    simulation_location, simulation_id = create_result
+
+    # 阶段 2: 轮询等待
+    poll_result = _run_poll_stage(
+        ctx, client, args,
+        simulation_location=simulation_location,
+        simulation_id=simulation_id,
+    )
+    if isinstance(poll_result, FieldTestResult):
+        return poll_result
+    alpha_id, _simulation_result = poll_result
+
+    # 阶段 3: 检查可提交性
+    check_result = _run_check_stage(
+        ctx, client, args,
+        alpha_id=alpha_id,
+        simulation_id=simulation_id,
+    )
+    if isinstance(check_result, FieldTestResult):
+        return check_result
+    submittable, message, failed_checks = check_result
+
+    # 阶段 4: 条件提交
+    submit_result = _run_submit_stage(
+        ctx, client, args,
+        alpha_id=alpha_id,
+        simulation_id=simulation_id,
+        simulation_location=simulation_location,
+        submittable=submittable,
+    )
+    if isinstance(submit_result, FieldTestResult):
+        return submit_result
+    submitted, status, _submit_message = submit_result
+    if submitted:
+        message = _submit_message
+
+    if submittable:
+        print(
+            f"[alpha-submit] submittable alpha_id={alpha_id} "
+            f"simulation_id={simulation_id} simulation_location={simulation_location}",
+            flush=True,
+        )
+
+    return ctx.success(
+        simulation_id=simulation_id,
+        alpha_id=alpha_id,
+        submittable=submittable,
+        submitted=submitted,
+        message=message,
+        status=status,
         failed_checks=failed_checks,
     )
 

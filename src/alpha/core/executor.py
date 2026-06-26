@@ -19,15 +19,28 @@ import argparse
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 from ..models.base import (
+    ExecutionState,
     FieldTestResult,
     HistoricalRunState,
     RunFilters,
     SettingsVariant,
+    TemplateBuildContext,
     TemplateLibrary,
-    ExecutionState,
 )
 from ..api.client import first_non_empty
 from ..utils.helpers import choose_field_name, choose_field_type
+from ..generators.expressions import build_expression_candidates
+from ..generators.settings import (
+    build_setting_variants,
+    build_settings_fingerprint_from_payload,
+)
+from ..analysis.feedback import (
+    should_skip_field_template_family,
+    is_template_disabled,
+    is_legacy_family_disabled,
+    choose_settings_variant_budget,
+)
+from ..analysis.stats import historical_template_priority_bonus
 
 from .simulation import (
     extract_alpha_id,
@@ -59,89 +72,65 @@ from .scheduler import (
 # ============================================================================
 
 def build_pending_templates_for_field(
-    args: argparse.Namespace,
+    build_ctx: TemplateBuildContext,
     field: Dict[str, Any],
     *,
-    all_fields: Sequence[Dict[str, Any]],
-    template_library: TemplateLibrary,
-    field_feedback: Optional[Dict[str, Any]],
-    global_failed_check_counts: Dict[str, int],
-    include_templates: set[str],
-    exclude_templates: set[str],
     template_stats: Dict[str, Dict[str, int]],
     attempted_keys: set[Tuple[str, str, str, str]],
     prior_results: Sequence[FieldTestResult],
-    use_dataset_heuristics: bool,
 ) -> Tuple[List[Tuple[str, str, int, SettingsVariant, str]], int, int]:
     """
     为单个字段构建真正可执行的模板与 settings 队列。
 
     根据字段信息、历史反馈和各种过滤条件，构建一个可执行的模板队列，
     包含模板名称、表达式、优先级、设置变体和指纹。
+    使用 TemplateBuildContext 将 11 个参数收敛到 4 个。
 
     Args:
-        args: 命令行参数命名空间。
+        build_ctx: 包含 args、all_fields、template_library、field_feedback 等只读配置的上下文对象。
         field: 字段元数据字典。
-        all_fields: 所有字段列表。
-        template_library: 模板库字典。
-        field_feedback: 字段反馈信息。
-        global_failed_check_counts: 全局失败检查计数。
-        include_templates: 包含模板名称集合。
-        exclude_templates: 排除模板名称集合。
         template_stats: 模板统计数据。
         attempted_keys: 已尝试的模板键集合。
         prior_results: 历史测试结果列表。
-        use_dataset_heuristics: 是否使用数据集启发式。
 
     Returns:
         Tuple[List[Tuple[str, str, int, SettingsVariant, str]], int, int]: 返回一个元组，包含：
-            - pending_templates: 待执行模板列表，每个元素为（模板名、表达式、优先级、设置变体、指纹）
+            - pending_templates: 待执行模板列表
             - disabled_templates: 禁用模板数量
             - template_count: 原始模板总数
 
     Note:
-        - 此函数需要导入 expressions 模块中的相关函数
-        - 实际实现依赖于 expressions 模块的 build_expression_candidates 等函数
+        - 模板按优先级降序排列
+        - 已尝试的键会被跳过
     """
-    from ..generators.expressions import build_expression_candidates
-    from ..analysis.feedback import (
-        should_skip_field_template_family,
-        is_template_disabled,
-        is_legacy_family_disabled,
-        choose_settings_variant_budget,
-    )
-    from ..generators.settings import (
-        build_setting_variants,
-        build_settings_fingerprint_from_payload,
-    )
-    from ..analysis.stats import historical_template_priority_bonus
-
+    args = build_ctx.args
     field_id = str(first_non_empty(field.get("id"), "UNKNOWN"))
     field_name = choose_field_name(field)
+    field_feedback = build_ctx.field_feedback.get(field_id)
     templates = build_expression_candidates(
         field,
-        template_library,
+        build_ctx.template_library,
         args.max_templates_per_field,
         args.max_templates_per_family,
         args.legacy_similarity_penalty,
-        all_fields=all_fields,
+        all_fields=build_ctx.all_fields,
         field_feedback=field_feedback,
-        global_failed_check_counts=global_failed_check_counts,
-        use_dataset_heuristics=use_dataset_heuristics,
+        global_failed_check_counts=build_ctx.global_failed_check_counts,
+        use_dataset_heuristics=build_ctx.use_dataset_heuristics,
     )
     pending_templates: List[Tuple[str, str, int, SettingsVariant, str]] = []
     disabled_templates = 0
     max_setting_variants = choose_settings_variant_budget(field_feedback)
     for template_name, expression, priority in templates:
-        if include_templates and template_name not in include_templates:
+        if build_ctx.include_templates and template_name not in build_ctx.include_templates:
             continue
-        if template_name in exclude_templates:
+        if template_name in build_ctx.exclude_templates:
             continue
         if should_skip_field_template_family(
             field_name,
             template_name,
             expression,
-            use_dataset_heuristics=use_dataset_heuristics,
+            use_dataset_heuristics=build_ctx.use_dataset_heuristics,
         ):
             disabled_templates += 1
             continue
@@ -325,24 +314,28 @@ def print_dry_run_plan(
     disabled_templates = 0
     samples: List[Dict[str, Any]] = []
 
+    build_ctx = TemplateBuildContext(
+        args=args,
+        all_fields=fields,
+        template_library=template_library,
+        field_feedback=historical_state.field_feedback,
+        global_failed_check_counts=historical_state.global_failed_check_counts,
+        include_templates=filters.include_templates,
+        exclude_templates=filters.exclude_templates,
+        use_dataset_heuristics=use_dataset_heuristics,
+    )
+
     for field in fields:
         field_id = str(first_non_empty(field.get("id"), "UNKNOWN"))
         field_name = choose_field_name(field)
         if should_skip_field(field_id, field_name, filters, execution_state.skipped_fields_due_to_queue):
             continue
         pending_templates, disabled_count, template_count = build_pending_templates_for_field(
-            args,
+            build_ctx,
             field,
-            all_fields=fields,
-            template_library=template_library,
-            field_feedback=historical_state.field_feedback.get(field_id),
-            global_failed_check_counts=historical_state.global_failed_check_counts,
-            include_templates=filters.include_templates,
-            exclude_templates=filters.exclude_templates,
             template_stats=execution_state.template_stats,
             attempted_keys=execution_state.attempted_keys,
             prior_results=execution_state.results,
-            use_dataset_heuristics=use_dataset_heuristics,
         )
         if not pending_templates and template_count == 0:
             continue
