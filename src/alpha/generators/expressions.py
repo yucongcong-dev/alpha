@@ -294,7 +294,7 @@ def classify_expression_family(template_name: str, expression: str) -> str:
         return "rank_delta"
     if lower_name in {"raw_field", "neg_raw_field", "rank_raw_field"}:
         return "legacy_level"
-    if lower_name.startswith("raw_ratio_") or lower_name.startswith("ratio_") or lower_name.startswith("rank_ratio_"):
+    if lower_name.startswith(("raw_ratio_", "ratio_", "rank_ratio_")):
         return "legacy_ratio"
     if lower_name.startswith("neg_ratio_"):
         return "legacy_neg_ratio"
@@ -1001,6 +1001,7 @@ def build_expression_candidates(
         global_failed_check_counts=global_failed_check_counts,
     )
     templates = sort_templates_by_priority(templates)
-    templates = cap_templates_per_family(templates, max_templates_per_family)
-    templates = limit_templates(templates, max_templates_per_field)
-    return templates
+    return limit_templates(
+        cap_templates_per_family(templates, max_templates_per_family),
+        max_templates_per_field,
+    )

@@ -338,11 +338,10 @@ def precheck_simulation_metrics(
     if not failures:
         return True, "", []
 
-    reason_parts = []
-    for f in failures:
-        reason_parts.append(
-            f"{f['name'].lower()}: {f['value']:.4f} vs limit {f['limit']}"
-        )
+    reason_parts = [
+        f"{f['name'].lower()}: {f['value']:.4f} vs limit {f['limit']}"
+        for f in failures
+    ]
     return False, "; ".join(reason_parts), failures
 
 

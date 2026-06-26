@@ -438,14 +438,16 @@ def build_feedback_mutations(
                         ),
                     ]
                 )
-            for decay in (3, 5, 8):
-                mutations.append(
+            mutations.extend(
+                [
                     (
                         f"iter_nearpass_decay_best_{decay}",
                         f"rank(ts_decay_linear({best_expression}, {decay}))",
                         184 - decay,
                     )
-                )
+                    for decay in (3, 5, 8)
+                ]
+            )
 
     return mutations
 
