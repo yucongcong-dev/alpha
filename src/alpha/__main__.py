@@ -10,7 +10,17 @@ Example:
     python -m alpha --dataset-id fundamental6 --region USA --universe TOP3000
 """
 
-import sys
+import logging
+
+logger = logging.getLogger(__name__)
+
+# 确保在 setup_runtime_logging 尚未调用时也有基本的日志输出
+logging.basicConfig(
+    level=logging.INFO,
+    format="[%(asctime)s] %(message)s",
+    datefmt="%H:%M:%S",
+    force=False,
+)
 
 
 def main() -> int:
@@ -31,10 +41,10 @@ def main() -> int:
 
         return _main()
     except KeyboardInterrupt:
-        print("\n[abort] 用户中断", file=sys.stderr)
+        logger.warning("[abort] 用户中断")
         return 130
     except Exception as exc:
-        print(f"[error] {exc}", file=sys.stderr)
+        logger.error("[error] %s", exc)
         return 1
 
 
