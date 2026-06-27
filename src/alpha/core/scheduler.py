@@ -1,5 +1,4 @@
 
-from __future__ import annotations
 """
 并发调度与拥塞控制模块
 
@@ -13,6 +12,7 @@ from __future__ import annotations
     - 任务节流函数
     - 批量结果消费函数
 """
+from __future__ import annotations
 
 import argparse
 import logging

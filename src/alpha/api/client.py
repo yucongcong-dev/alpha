@@ -392,9 +392,6 @@ def normalize_results(payload: dict[str, Any]) -> list[dict[str, Any]]:
         - 如果 payload 本身是列表，直接返回
         - 如果 payload 是字典，依次尝试 results / items / data / records 键
     """
-    # 如果 payload 本身是列表，直接返回
-    if isinstance(payload, list):
-        return payload
     # 不同列表端点使用不同的容器键
     for key in ("results", "items", "data", "records"):
         value = payload.get(key)
@@ -1490,7 +1487,7 @@ class WorkerClientFactory:
             - 创建时自动登录，使用 login_with_retry
             - 使用 args 中的配置参数创建客户端
         """
-        client = getattr(self._local, "client", None)
+        client: BrainClient | None = getattr(self._local, "client", None)
         if client is not None:
             return client
 

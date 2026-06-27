@@ -1,5 +1,4 @@
 
-from __future__ import annotations
 """
 结果分析统计模块
 
@@ -30,12 +29,15 @@ from __future__ import annotations
     - field_priority(field_id, field_feedback) -> float: 字段优先级分数
     - current_submittable_count(results) -> int: 当前可提交数量计数
 """
+from __future__ import annotations
 
 import json
 import os
 from typing import Any, Sequence
 
 from ..config import (
+    API_KEY_MESSAGE,
+    API_KEY_STATUS,
     CHECK_CONCENTRATED_WEIGHT,
     CHECK_HIGH_TURNOVER,
     CHECK_LOW_FITNESS,

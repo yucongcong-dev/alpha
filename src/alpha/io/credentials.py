@@ -1,5 +1,4 @@
 
-from __future__ import annotations
 """
 凭证管理模块
 
@@ -23,6 +22,7 @@ from __future__ import annotations
     - prompt_and_store_credentials: 交互式凭证输入
     - load_credentials: 加载凭证
 """
+from __future__ import annotations
 
 import argparse
 import getpass
@@ -180,7 +180,7 @@ def read_or_create_credentials_key(key_path: str) -> bytes:
         handle.write(key + b"\n")
     restrict_file_to_owner(key_path)
     logger.info("[creds] generated local credentials key file: %s", key_path)
-    return key
+    return bytes(key)
 
 
 # ============================================================================

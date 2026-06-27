@@ -1,5 +1,4 @@
 
-from __future__ import annotations
 """
 结果输出模块
 
@@ -15,6 +14,7 @@ from __future__ import annotations
     - 边车文件路径构建函数
     - 旧版边车文件清理函数
 """
+from __future__ import annotations
 
 import json
 import logging
@@ -24,10 +24,7 @@ import tempfile
 import time
 from contextlib import suppress
 from pathlib import Path
-from typing import Any, Sequence
-
-from ..config import DEFAULT_DATASET_ID
-from ..models.base import FieldTestResult
+from typing import Any
 
 # 分析函数统一从 stats 模块导入（避免重复定义）
 from ..analysis.stats import (
@@ -39,6 +36,8 @@ from ..analysis.stats import (
     is_queue_timeout_result,
     load_existing_results,
 )
+from ..config import DEFAULT_DATASET_ID
+from ..models.base import FieldTestResult
 
 logger = logging.getLogger(__name__)
 
@@ -361,7 +360,7 @@ def dump_results(
     # 原始结果保存在主文件中用于续跑/去重
     # 分析保存在配套文件中使目录易于理解
     sidecar_paths = build_output_sidecar_paths(path)
-    
+
     # 单次遍历构建所有需要的数据（性能优化）
     results_dicts = []
     submittable_results = []
@@ -372,12 +371,12 @@ def dump_results(
     submitted_count = 0
     error_count = 0
     queue_timeout_count = 0
-    
+
     for result in results:
         d = result.to_dict()
         results_dicts.append(d)
         field_ids.add(result.field_id)
-        
+
         if result.submittable:
             submittable_count += 1
             submittable_results.append(d)

@@ -1,5 +1,4 @@
 
-from __future__ import annotations
 """
 历史迭代优化模块
 
@@ -18,6 +17,7 @@ from __future__ import annotations
     - should_keep_template_for_feedback(template_name, expression, ...) -> bool: 判断模板是否应保留
     - should_skip_field_template_family(field_id, template_name, ...) -> bool: 判断字段-模板组合是否应跳过
 """
+from __future__ import annotations
 
 import argparse
 from typing import Any, Sequence
@@ -35,7 +35,11 @@ from ..config import (
 )
 
 # 从 expressions 模块导入分类函数（唯一源）
-from ..generators.expressions import classify_expression_family, dominant_failed_check_names, is_legacy_family
+from ..generators.expressions import (
+    classify_expression_family,
+    dominant_failed_check_names,
+    is_legacy_family,
+)
 from ..models.base import FieldTestResult, HistoricalRunState
 
 # 从 analysis 模块导入分析函数
@@ -153,7 +157,11 @@ def should_stop_after_submittable(args: argparse.Namespace, results: Sequence[Fi
         >>> if should_stop_after_submittable(args, results):
         ...     print("已达到目标，停止运行")
     """
-    return args.stop_after_submittable > 0 and current_submittable_count(results) >= args.stop_after_submittable
+    stop_threshold = args.stop_after_submittable
+    if stop_threshold <= 0:
+        return False
+    current_count = current_submittable_count(results)
+    return bool(current_count >= stop_threshold)
 
 
 # ============================================================================

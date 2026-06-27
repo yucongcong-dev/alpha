@@ -1,5 +1,4 @@
 
-from __future__ import annotations
 """
 测试执行流程模块
 
@@ -15,6 +14,7 @@ from __future__ import annotations
     - 字段跳过判断函数
     - 干运行计划打印函数
 """
+from __future__ import annotations
 
 import argparse
 import logging

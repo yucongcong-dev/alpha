@@ -1,5 +1,4 @@
 
-from __future__ import annotations
 """
 模拟生命周期管理模块
 
@@ -15,9 +14,9 @@ from __future__ import annotations
     - 结果构建函数
     - 字段测试核心执行函数
 """
+from __future__ import annotations
 
 # pyright: reportExplicitAny=false, reportAny=false
-
 import argparse
 import json
 import logging
@@ -31,7 +30,6 @@ from ..api.client import (
     WorkerClientFactory,
     retry_operation,
 )
-from ..utils.helpers import first_non_empty
 from ..config import (
     API_KEY_DETAIL,
     API_KEY_ERROR,
@@ -70,7 +68,7 @@ from ..models.base import (
     FieldTestResult,
     SettingsVariant,
 )
-from ..utils.helpers import choose_field_type
+from ..utils.helpers import choose_field_type, first_non_empty
 
 logger = logging.getLogger(__name__)
 
@@ -83,9 +81,9 @@ class PrecheckConfig:
     min_turnover: float = PRECHECK_FALLBACK_MIN_TURNOVER
     max_turnover: float = PRECHECK_FALLBACK_MAX_TURNOVER
     max_weight: float = PRECHECK_FALLBACK_MAX_WEIGHT
-    
+
     @classmethod
-    def from_args(cls, args: argparse.Namespace) -> "PrecheckConfig":
+    def from_args(cls, args: argparse.Namespace) -> PrecheckConfig:
         """从命令行参数构建配置"""
         return cls(
             min_sharpe=getattr(args, "min_sharpe", cls.min_sharpe),
@@ -786,7 +784,7 @@ def _run_simulation_create(
     *,
     simulation_settings: SettingsVariant | None = None,
     create_semaphore: threading.Semaphore | None = None,
-) -> "FieldTestResult | tuple[str, str]":
+) -> FieldTestResult | tuple[str, str]:
     """simulation 阶段 (创建): 构建 payload 并创建模拟任务。
 
     Returns:
@@ -825,7 +823,7 @@ def _run_simulation_poll(
     *,
     simulation_location: str,
     simulation_id: str,
-) -> "FieldTestResult | tuple[str, dict[str, Any]]":
+) -> FieldTestResult | tuple[str, dict[str, Any]]:
     """simulation 阶段 (轮询): 等待模拟完成并提取 alpha_id。
 
     Returns:
@@ -880,7 +878,7 @@ def _run_checksubmit_stage(
     alpha_id: str,
     simulation_id: str,
     simulation_result: dict[str, Any] | None = None,
-) -> "FieldTestResult | tuple[bool | None, str, list[dict[str, Any]]]":
+) -> FieldTestResult | tuple[bool | None, str, list[dict[str, Any]]]:
     """checksubmit 阶段: 先本地预检指标，达标后再调用 checksubmit API。
 
     模拟响应中已包含原始 is.sharpe、is.fitness、is.turnover 等指标。
@@ -929,7 +927,7 @@ def _run_submit_stage(
     simulation_id: str,
     simulation_location: str,
     submittable: bool | None,
-) -> "FieldTestResult | tuple[bool, str, str]":
+) -> FieldTestResult | tuple[bool, str, str]:
     """submit 阶段: 条件提交 Alpha（仅当 args.submit 且 submittable 为真）。
 
     Returns:

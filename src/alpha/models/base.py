@@ -245,7 +245,7 @@ class FieldTestContext:
         alpha_id: str | None = None,
         status: str = "error",
         failed_checks: list[dict[str, Any]] | None = None,
-    ) -> "FieldTestResult":
+    ) -> FieldTestResult:
         """构建与上下文绑定的失败结果对象。"""
         return FieldTestResult(
             field_id=self.field_id,
@@ -275,7 +275,7 @@ class FieldTestContext:
         message: str,
         status: str = "simulated",
         failed_checks: list[dict[str, Any]] | None = None,
-    ) -> "FieldTestResult":
+    ) -> FieldTestResult:
         """构建与上下文绑定的成功/正常结果对象。"""
         return FieldTestResult(
             field_id=self.field_id,
