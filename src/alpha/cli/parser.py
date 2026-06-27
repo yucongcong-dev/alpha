@@ -528,6 +528,10 @@ def normalize_args_paths(args: argparse.Namespace) -> RunPaths:
         resolve_cli_path(args.fields_cache_file) or scoped_paths["fields_cache_file"]
     )
     output_file = resolve_cli_path(args.output) or scoped_paths["output"]
+    
+    # 同步更新 args 对象，确保后续代码（如 scheduler.py）能使用正确的路径
+    args.output = output_file
+    
     feedback_output = resolve_cli_path(args.feedback_output) or output_file
     creds_file = resolve_cli_path(args.creds_file) or DEFAULT_CREDS_FILE
     creds_key_file = resolve_cli_path(args.creds_key_file) or DEFAULT_CREDS_KEY_FILE
