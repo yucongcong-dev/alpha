@@ -18,12 +18,15 @@ API 调用次数，提高运行效率。
 """
 
 import json
+import logging
 import os
 import tempfile
 from contextlib import suppress
 from typing import Any, Dict, List, Optional, Sequence
 
 from ..utils.helpers import first_non_empty
+
+logger = logging.getLogger(__name__)
 
 
 def atomic_write_json(path: str, payload: Any) -> None:
@@ -394,10 +397,10 @@ def fetch_fields_with_cache(
     """
     if not cache_refresh_reason:
         fields = list(cached_fields)
-        print(f"[cache] 从 {fields_cache_file} 加载 {len(fields)} 个字段", flush=True)
+        logger.info("[cache] 从 %s 加载 %d 个字段", fields_cache_file, len(fields))
         return fields
 
-    print(f"[cache] 刷新字段缓存: {cache_refresh_reason}", flush=True)
+    logger.info("[cache] 刷新字段缓存: %s", cache_refresh_reason)
     append_to_cache = (
         bool(cached_fields)
         and not args.refresh_fields_cache
@@ -407,10 +410,9 @@ def fetch_fields_with_cache(
     fetch_offset = len(cached_fields) if append_to_cache else args.offset
     fetch_limit = args.limit - len(cached_fields) if append_to_cache else args.limit
     if append_to_cache:
-        print(
-            f"[cache] 从 {len(cached_fields)} 扩展缓存到 {args.limit}，"
-            f"使用 offset={fetch_offset} limit={fetch_limit}",
-            flush=True,
+        logger.info(
+            "[cache] 从 %d 扩展缓存到 %d，使用 offset=%d limit=%d",
+            len(cached_fields), args.limit, fetch_offset, fetch_limit,
         )
 
     # Fetching the field list is also wrapped so temporary API instability
@@ -435,5 +437,5 @@ def fetch_fields_with_cache(
         delay=args.delay,
         fields=fields,
     )
-    print(f"[cache] 保存 {len(fields)} 个字段到 {fields_cache_file}", flush=True)
+    logger.info("[cache] 保存 %d 个字段到 %s", len(fields), fields_cache_file)
     return fields

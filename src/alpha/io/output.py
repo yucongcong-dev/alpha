@@ -16,6 +16,7 @@
 
 import hashlib
 import json
+import logging
 import os
 import re
 import tempfile
@@ -27,6 +28,8 @@ from typing import Any, Dict, List, Optional, Sequence
 from ..config import DEFAULT_DATASET_ID
 from ..exceptions import BrainAPIError
 from ..models.base import FieldTestResult
+
+logger = logging.getLogger(__name__)
 
 # ============================================================================
 # 常量定义
@@ -326,7 +329,7 @@ def cleanup_legacy_sidecar_files(output_path: str, *, verbose: bool = False) -> 
         try:
             legacy_path.unlink()
             if verbose:
-                print(f"[cleanup] removed legacy sidecar file {legacy_path}", flush=True)
+                logger.info("[cleanup] removed legacy sidecar file %s", legacy_path)
         except FileNotFoundError:
             continue
 
@@ -1001,8 +1004,8 @@ def dump_results(
     atomic_write_json(path, summary)
     atomic_write_json(sidecar_paths["analysis"], analysis)
     cleanup_legacy_sidecar_files(path)
-    print(f"[done] wrote results to {path}", flush=True)
-    print(f"[done] wrote analysis to {sidecar_paths['analysis']}", flush=True)
+    logger.info("[done] wrote results to %s", path)
+    logger.info("[done] wrote analysis to %s", sidecar_paths['analysis'])
 
 
 # ============================================================================
@@ -1039,7 +1042,7 @@ def ensure_analysis_synced(output_path: str) -> None:
         with open(output_path, encoding="utf-8") as handle:
             summary = json.load(handle)
     except Exception as exc:
-        print(f"[analysis] skipped sync; failed to read main results: {exc}", flush=True)
+        logger.warning("[analysis] skipped sync; failed to read main results: %s", exc)
         return
 
     should_rebuild = not os.path.exists(sidecar_paths["analysis"])
@@ -1067,4 +1070,4 @@ def ensure_analysis_synced(output_path: str) -> None:
         template_library_fingerprint=str(summary.get("template_library_fingerprint", "")),
         run_config=summary.get("run_config") if isinstance(summary.get("run_config"), dict) else {},
     )
-    print(f"[analysis] rebuilt analysis from main results: {sidecar_paths['analysis']}", flush=True)
+    logger.info("[analysis] rebuilt analysis from main results: %s", sidecar_paths['analysis'])

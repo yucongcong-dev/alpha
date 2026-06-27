@@ -16,6 +16,7 @@
 
 import argparse
 import json
+import logging
 import re
 import threading
 from typing import Any, Dict, List, Optional, Tuple
@@ -40,6 +41,8 @@ from ..models.base import (
     SettingsVariant,
 )
 from ..utils.helpers import choose_field_type
+
+logger = logging.getLogger(__name__)
 
 # ============================================================================
 # Alpha ID 提取与解析函数
@@ -441,9 +444,8 @@ def create_simulation_with_retry(
     )
     simulation_id_match = re.search(r"/simulations/([^/]+)", simulation_location)
     simulation_id = simulation_id_match.group(1) if simulation_id_match else simulation_location
-    print(
-        f"[simulation] created simulation_id={simulation_id} location={simulation_location}",
-        flush=True,
+    logger.info(
+        "[simulation] created simulation_id=%s location=%s", simulation_id, simulation_location,
     )
     return simulation_location, simulation_id
 
@@ -555,9 +557,8 @@ def checksubmit_with_retry(
     submittable = is_submittable_from_checks(checks)
     failed_checks = extract_failed_checks(alpha_detail)
     message = "checks unavailable" if submittable is None else "checks passed" if submittable else "checks failed"
-    print(
-        f"[checksubmit] alpha_id={alpha_id} submittable={submittable} message={message}",
-        flush=True,
+    logger.info(
+        "[checksubmit] alpha_id=%s submittable=%s message=%s", alpha_id, submittable, message,
     )
     return submittable, message, failed_checks
 
@@ -706,9 +707,9 @@ def _run_simulation_create(
         if simulation_settings is not None:
             payload["settings"] = dict(simulation_settings)
         if create_semaphore is not None:
-            print(
-                f"[simulation] waiting for create slot field={ctx.field_id} template={ctx.template_name}",
-                flush=True,
+            logger.info(
+                "[simulation] waiting for create slot field=%s template=%s",
+                ctx.field_id, ctx.template_name,
             )
             create_semaphore.acquire()
         try:
@@ -754,10 +755,9 @@ def _run_simulation_poll(
             simulation_result.get("status"),
             simulation_result.get("state"),
         )
-        print(
-            f"[simulation] completed simulation_id={simulation_id} "
-            f"simulation_location={simulation_location} progress={progress}",
-            flush=True,
+        logger.info(
+            "[simulation] completed simulation_id=%s simulation_location=%s progress=%s",
+            simulation_id, simulation_location, progress,
         )
         alpha_id = extract_alpha_id(simulation_result)
         if not alpha_id:
@@ -806,10 +806,9 @@ def _run_checksubmit_stage(
             max_weight=getattr(args, "max_weight", 0.13),
         )
         if not passed:
-            print(
-                f"[checksubmit-precheck] alpha_id={alpha_id} simulation_id={simulation_id} "
-                f"precheck_failed={reason}",
-                flush=True,
+            logger.info(
+                "[checksubmit-precheck] alpha_id=%s simulation_id=%s precheck_failed=%s",
+                alpha_id, simulation_id, reason,
             )
             return False, f"precheck_failed: {reason}", precheck_failed_checks
 
@@ -843,10 +842,9 @@ def _run_submit_stage(
     if not (args.submit and submittable):
         return False, "simulated", ""
     try:
-        print(
-            f"[submit] eligible alpha_id={alpha_id} "
-            f"simulation_id={simulation_id} simulation_location={simulation_location}",
-            flush=True,
+        logger.info(
+            "[submit] eligible alpha_id=%s simulation_id=%s simulation_location=%s",
+            alpha_id, simulation_id, simulation_location,
         )
         message = submit_with_retry(client, alpha_id, args.submit_retries)
         return True, "submitted", message
@@ -911,10 +909,9 @@ def run_field_test(
         template_library_fingerprint=template_library_fingerprint,
     )
 
-    print(
-        f"[field] testing {ctx.field_id} ({ctx.field_type}) "
-        f"template={template_name} expression: {expression}",
-        flush=True,
+    logger.info(
+        "[field] testing %s (%s) template=%s expression: %s",
+        ctx.field_id, ctx.field_type, template_name, expression,
     )
 
     # simulation 阶段 (创建)
@@ -963,10 +960,9 @@ def run_field_test(
         message = _submit_message
 
     if submittable:
-        print(
-            f"[submit] submittable alpha_id={alpha_id} "
-            f"simulation_id={simulation_id} simulation_location={simulation_location}",
-            flush=True,
+        logger.info(
+            "[submit] submittable alpha_id=%s simulation_id=%s simulation_location=%s",
+            alpha_id, simulation_id, simulation_location,
         )
 
     return ctx.success(

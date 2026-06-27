@@ -25,6 +25,7 @@
 import argparse
 import getpass
 import json
+import logging
 import os
 import tempfile
 from contextlib import suppress
@@ -32,6 +33,8 @@ from pathlib import Path
 from typing import Any, Dict, Optional, Tuple
 
 from ..exceptions import BrainAPIError
+
+logger = logging.getLogger(__name__)
 
 # ============================================================================
 # 常量定义
@@ -208,7 +211,7 @@ def read_or_create_credentials_key(key_path: str) -> bytes:
     with open(key_path, "wb") as handle:
         handle.write(key + b"\n")
     restrict_file_to_owner(key_path)
-    print(f"[creds] generated local credentials key file: {key_path}", flush=True)
+    logger.info("[creds] generated local credentials key file: %s", key_path)
     return key
 
 
@@ -441,11 +444,10 @@ def prompt_and_store_credentials(
         - 凭证会被加密存储，后续运行无需重新输入
         - 首次运行时会自动生成密钥文件
     """
-    print(f"[creds] credentials need to be entered or refreshed: {path}", flush=True)
-    print(
+    logger.info("[creds] credentials need to be entered or refreshed: %s", path)
+    logger.info(
         "[creds] Please input your WorldQuant BRAIN credentials. "
         "They will be encrypted locally for future runs.",
-        flush=True,
     )
     email = input("WorldQuant BRAIN email: ").strip()
     password = getpass.getpass("WorldQuant BRAIN password: ").strip()
@@ -454,7 +456,7 @@ def prompt_and_store_credentials(
             "Credentials were empty; aborted without saving credentials file."
         )
     write_credentials_file(path, key_path, email, password)
-    print(f"[creds] encrypted credentials saved to {path}", flush=True)
+    logger.info("[creds] encrypted credentials saved to %s", path)
     return email, password
 
 
@@ -539,15 +541,13 @@ def load_credentials(args: argparse.Namespace) -> Tuple[Optional[str], Optional[
                 str(file_email),
                 str(file_password)
             )
-            print(
-                f"[creds] migrated plaintext credentials to encrypted storage: {creds_file}",
-                flush=True,
+            logger.info(
+                "[creds] migrated plaintext credentials to encrypted storage: %s", creds_file,
             )
         elif payload.get("ciphertext"):
-            print(
+            logger.info(
                 "[creds] existing encrypted credentials use an unsupported old format; "
                 "please re-enter them once.",
-                flush=True,
             )
 
     if not (email or file_email) or not (password or file_password):

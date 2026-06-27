@@ -14,7 +14,6 @@ from .base import (
     RunPaths,
     RuntimeConcurrencyState,
     SettingsVariant,
-    TeeStream,
     TemplateBuildContext,
     TemplateLibrary,
 )
@@ -29,7 +28,6 @@ __all__ = [
     "RunPaths",
     "RuntimeConcurrencyState",
     "SettingsVariant",
-    "TeeStream",
     "TemplateBuildContext",
     "TemplateLibrary",
 ]

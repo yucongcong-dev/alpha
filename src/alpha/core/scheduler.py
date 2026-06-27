@@ -13,6 +13,7 @@
 """
 
 import argparse
+import logging
 import time
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 
@@ -30,6 +31,8 @@ from ..models.base import (
     RuntimeConcurrencyState,
 )
 from .simulation import build_failure_result
+
+logger = logging.getLogger(__name__)
 
 # ============================================================================
 # 已完成任务处理函数
@@ -94,10 +97,9 @@ def handle_completed_future(
     if is_informative_result(result):
         attempted_keys.add(result_identity(result))
     template_stats = compile_template_stats(results)
-    print(
-        f"[result] field={result.field_id} template={result.template_name} status={result.status} "
-        f"submittable={result.submittable} submitted={result.submitted} message={result.message}",
-        flush=True,
+    logger.info(
+        "[result] field=%s template=%s status=%s submittable=%s submitted=%s message=%s",
+        result.field_id, result.template_name, result.status, result.submittable, result.submitted, result.message,
     )
     dump_results(
         args.output,
@@ -149,9 +151,8 @@ def maybe_restore_runtime_concurrency(state: RuntimeConcurrencyState) -> None:
     if state.cooldown_until and time.monotonic() >= state.cooldown_until and state.runtime_max_workers != state.max_workers:
         state.runtime_max_workers = state.max_workers
         state.cooldown_until = 0.0
-        print(
-            f"[cooldown] restored runtime concurrency to {state.runtime_max_workers}",
-            flush=True,
+        logger.info(
+            "[cooldown] restored runtime concurrency to %d", state.runtime_max_workers,
         )
 
 
@@ -180,9 +181,9 @@ def apply_congestion_cooldown(args: argparse.Namespace, state: RuntimeConcurrenc
     """
     state.runtime_max_workers = 1
     state.cooldown_until = time.monotonic() + max(args.queue_busy_cooldown_seconds, 0.0)
-    print(
-        f"[cooldown] detected queue congestion, runtime concurrency -> 1 for {args.queue_busy_cooldown_seconds:.0f}s",
-        flush=True,
+    logger.info(
+        "[cooldown] detected queue congestion, runtime concurrency -> 1 for %.0fs",
+        args.queue_busy_cooldown_seconds,
     )
 
 
@@ -224,9 +225,9 @@ def register_queue_busy_field(
     field_queue_busy_counts[field_id] = field_queue_busy_counts.get(field_id, 0) + 1
     if field_queue_busy_counts[field_id] >= args.field_queue_busy_skip_after:
         skipped_fields_due_to_queue.add(field_id)
-        print(
-            f"[skip] field={field_id} hit queue-busy limit {field_queue_busy_counts[field_id]}/{args.field_queue_busy_skip_after}",
-            flush=True,
+        logger.info(
+            "[skip] field=%s hit queue-busy limit %d/%d",
+            field_id, field_queue_busy_counts[field_id], args.field_queue_busy_skip_after,
         )
 
 

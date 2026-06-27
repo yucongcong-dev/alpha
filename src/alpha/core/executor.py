@@ -15,6 +15,7 @@
 """
 
 import argparse
+import logging
 from typing import Any, Dict, List, Sequence, Tuple
 
 from ..analysis.feedback import (
@@ -39,6 +40,8 @@ from ..models.base import (
     TemplateLibrary,
 )
 from ..utils.helpers import choose_field_name, first_non_empty
+
+logger = logging.getLogger(__name__)
 
 # ============================================================================
 # 模板队列构建函数
@@ -227,13 +230,13 @@ def should_skip_field(
         - 如果字段在排除列表中，跳过
     """
     if field_id in skipped_fields_due_to_queue:
-        print(f"[skip] field={field_id} skipped after repeated queue-busy simulations", flush=True)
+        logger.info("[skip] field=%s skipped after repeated queue-busy simulations", field_id)
         return True
     if filters.include_fields and field_id not in filters.include_fields and field_name not in filters.include_fields:
-        print(f"[skip] field={field_id} excluded by include-fields filter", flush=True)
+        logger.info("[skip] field=%s excluded by include-fields filter", field_id)
         return True
     if field_id in filters.exclude_fields or field_name in filters.exclude_fields:
-        print(f"[skip] field={field_id} excluded by exclude-fields filter", flush=True)
+        logger.info("[skip] field=%s excluded by exclude-fields filter", field_id)
         return True
     return False
 
@@ -328,16 +331,15 @@ def print_dry_run_plan(
                 }
             )
 
-    print("[dry-run] simulation creation is disabled; this is a plan only", flush=True)
-    print(f"[dry-run] planned_fields={planned_fields}", flush=True)
-    print(f"[dry-run] planned_simulations={planned_templates}", flush=True)
-    print(f"[dry-run] disabled_templates={disabled_templates}", flush=True)
-    print(f"[dry-run] existing_results={len(execution_state.results)}", flush=True)
-    print(f"[dry-run] attempted_keys={len(execution_state.attempted_keys)}", flush=True)
+    logger.info("[dry-run] simulation creation is disabled; this is a plan only")
+    logger.info("[dry-run] planned_fields=%d", planned_fields)
+    logger.info("[dry-run] planned_simulations=%d", planned_templates)
+    logger.info("[dry-run] disabled_templates=%d", disabled_templates)
+    logger.info("[dry-run] existing_results=%d", len(execution_state.results))
+    logger.info("[dry-run] attempted_keys=%d", len(execution_state.attempted_keys))
     for index, sample in enumerate(samples, start=1):
-        print(
-            f"[dry-run] sample {index}/{len(samples)} field={sample['field_id']} "
-            f"template={sample['template_name']} priority={sample['priority']} settings={sample['settings']} "
-            f"expression={sample['expression']}",
-            flush=True,
+        logger.info(
+            "[dry-run] sample %d/%d field=%s template=%s priority=%d settings=%s expression=%s",
+            index, len(samples), sample['field_id'], sample['template_name'],
+            sample['priority'], sample['settings'], sample['expression'],
         )

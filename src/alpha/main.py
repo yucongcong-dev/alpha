@@ -22,6 +22,7 @@
 """
 
 import argparse
+import logging
 import sys
 import threading
 import time
@@ -104,6 +105,8 @@ from .models.base import (
 
 # 导入公共工具
 from .utils.helpers import choose_field_name, choose_field_type, first_non_empty
+
+logger = logging.getLogger(__name__)
 
 # ============================================================================
 # 客户端创建和登录函数
@@ -217,26 +220,26 @@ def main() -> int:
     # 步骤 2：标准化路径
     run_paths = normalize_args_paths(args)
 
-    # 清理旧版边车文件
+    # 步骤 3：设置运行时日志（必须在任何其他日志输出之前）
     output_file = getattr(run_paths, 'output', None) or args.output
-    cleanup_legacy_sidecar_files(output_file, verbose=True)
-
-    # 步骤 3：设置运行时日志
     log_file = getattr(run_paths, 'log_file', None)
     if log_file:
         setup_runtime_logging(log_file)
+
+    # 清理旧版边车文件
+    cleanup_legacy_sidecar_files(output_file, verbose=True)
 
     # 确保分析文件同步
     ensure_analysis_synced(output_file)
 
     # 步骤 4：构建运行配置快照
     run_config = build_run_config_snapshot(args, run_paths)
-    print("[config] 运行配置将嵌入主结果文件", flush=True)
+    logger.info("[config] 运行配置将嵌入主结果文件")
 
     # 步骤 5：加载凭证
     email, password = load_credentials(args)
     if not email or not password:
-        print("[error] 缺少凭证，无法继续", file=sys.stderr, flush=True)
+        logger.error("[error] 缺少凭证，无法继续")
         return 1
 
     # 步骤 6：创建并登录客户端
@@ -293,7 +296,7 @@ def main() -> int:
     )
 
     if not fields:
-        print(f"[error] 数据集 {args.dataset_id} 未返回任何字段", file=sys.stderr, flush=True)
+        logger.error("[error] 数据集 %s 未返回任何字段", args.dataset_id)
         return 1
 
     # 步骤 17：按反馈分数排序字段
@@ -318,18 +321,17 @@ def main() -> int:
             ) > -999.0
         ]
         fields = focused_fields[: args.top_fields_by_feedback]
-        print(
-            f"[focus] 限制运行到按反馈排序的前 {len(fields)} 个字段",
-            flush=True,
+        logger.info(
+            "[focus] 限制运行到按反馈排序的前 %d 个字段", len(fields),
         )
 
-    print(f"[data] 从数据集 {args.dataset_id} 获取 {len(fields)} 个字段", flush=True)
+    logger.info("[data] 从数据集 %s 获取 %d 个字段", args.dataset_id, len(fields))
 
     # 步骤 19：打印历史结果信息
     if historical_state.existing_results:
-        print(
-            f"[resume] 从 {output_file} 加载 {len(historical_state.existing_results)} 个历史结果",
-            flush=True,
+        logger.info(
+            "[resume] 从 %s 加载 %d 个历史结果",
+            output_file, len(historical_state.existing_results),
         )
 
     # 步骤 20：初始化执行状态
@@ -351,9 +353,9 @@ def main() -> int:
     max_create_workers = max(1, args.max_concurrent_creates)
     create_semaphore = threading.Semaphore(max_create_workers)
 
-    print(f"[config] max_concurrent_simulations={max_workers}", flush=True)
-    print(f"[config] max_concurrent_creates={max_create_workers}", flush=True)
-    print(f"[config] simulation_max_pending_cycles={args.simulation_max_pending_cycles}", flush=True)
+    logger.info("[config] max_concurrent_simulations=%d", max_workers)
+    logger.info("[config] max_concurrent_creates=%d", max_create_workers)
+    logger.info("[config] simulation_max_pending_cycles=%d", args.simulation_max_pending_cycles)
 
     # 步骤 22：干运行模式处理
     if args.dry_run_plan:
@@ -386,9 +388,8 @@ def main() -> int:
         for field_index, field in enumerate(fields, start=1):
             # 检查是否达到目标可提交数量
             if should_stop_after_submittable(args, execution_state.results):
-                print(
-                    f"[stop] 达到 stop-after-submittable={args.stop_after_submittable}",
-                    flush=True,
+                logger.info(
+                    "[stop] 达到 stop-after-submittable=%d", args.stop_after_submittable,
                 )
                 break
 
@@ -414,25 +415,24 @@ def main() -> int:
                 prior_results=execution_state.results,
             )
 
-            print(
-                f"[progress] 字段 {field_index}/{len(fields)} field_id={field_id} "
-                f"templates={template_count} pending={len(pending_templates)} disabled={disabled_templates}",
-                flush=True,
+            logger.info(
+                "[progress] 字段 %d/%d field_id=%s templates=%d pending=%d disabled=%d",
+                field_index, len(fields), field_id, template_count,
+                len(pending_templates), disabled_templates,
             )
 
             # 步骤 26：遍历模板
             for template_index, (template_name, expression, priority, settings_variant, variant_fingerprint) in enumerate(pending_templates, start=1):
                 # 检查是否达到目标可提交数量
                 if should_stop_after_submittable(args, execution_state.results):
-                    print(
-                        f"[stop] 达到 stop-after-submittable={args.stop_after_submittable}",
-                        flush=True,
+                    logger.info(
+                        "[stop] 达到 stop-after-submittable=%d", args.stop_after_submittable,
                     )
                     break
 
                 # 检查字段是否因队列拥塞被跳过
                 if field_id in execution_state.skipped_fields_due_to_queue:
-                    print(f"[skip] field={field_id} 队列拥塞后停止剩余模板", flush=True)
+                    logger.info("[skip] field=%s 队列拥塞后停止剩余模板", field_id)
                     break
 
                 # 恢复运行时并发度
@@ -453,11 +453,11 @@ def main() -> int:
                     if field_id in execution_state.skipped_fields_due_to_queue:
                         break
 
-                print(
-                    f"[progress] field={field_id} template {template_index}/{len(pending_templates)} "
-                    f"name={template_name} priority={priority} queued={len(execution_state.pending_futures) + 1}/{runtime_state.runtime_max_workers} "
-                    f"settings={variant_fingerprint}",
-                    flush=True,
+                logger.info(
+                    "[progress] field=%s template %d/%d name=%s priority=%d queued=%d/%d settings=%s",
+                    field_id, template_index, len(pending_templates), template_name,
+                    priority, len(execution_state.pending_futures) + 1,
+                    runtime_state.runtime_max_workers, variant_fingerprint,
                 )
 
                 # 步骤 27：提交前节流
@@ -501,11 +501,11 @@ def main() -> int:
             )
 
     # 步骤 30：完成的任务已实时持久化，避免重复写入
-    print(
-        f"[done] 测试完成：tested={len(execution_state.results)} "
-        f"submittable={current_submittable_count(execution_state.results)} "
-        f"errors={sum(1 for r in execution_state.results if r.status == 'error')}",
-        flush=True,
+    logger.info(
+        "[done] 测试完成：tested=%d submittable=%d errors=%d",
+        len(execution_state.results),
+        current_submittable_count(execution_state.results),
+        sum(1 for r in execution_state.results if r.status == 'error'),
     )
 
     return 0

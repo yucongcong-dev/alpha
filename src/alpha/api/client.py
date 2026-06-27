@@ -28,6 +28,7 @@ from __future__ import annotations
 import argparse
 import base64
 import json
+import logging
 import threading
 import time
 from http.cookiejar import CookieJar
@@ -53,6 +54,8 @@ from ..exceptions import (
     BrainRateLimitError,
 )
 from ..utils.helpers import first_non_empty
+
+logger = logging.getLogger(__name__)
 
 # ============================================================================
 # 辅助函数 - 时间与等待
@@ -84,7 +87,7 @@ def wait_seconds(seconds: float, reason: str) -> None:
     # 集中化的休眠辅助函数，使每次暂停都在日志中可见
     seconds = max(seconds, 0.0)
     if seconds > 0:
-        print(f"[wait] {reason}: sleeping {seconds:.1f}s", flush=True)
+        logger.info("[wait] %s: sleeping %.1fs", reason, seconds)
         time.sleep(seconds)
 
 
@@ -437,18 +440,16 @@ def retry_operation(
             return func()
         except BrainRateLimitError as exc:
             last_error = exc
-            print(
-                f"[retry] {name} rate limited on attempt {attempt}/{retries}: {exc}",
-                flush=True,
+            logger.warning(
+                "[retry] %s rate limited on attempt %d/%d: %s", name, attempt, retries, exc,
             )
             # 当内层 API 调用已耗尽自身的速率限制重试时，
             # 立即跳过当前模板而不是重新运行整个阶段
             break
         except BrainQueueBusyError as exc:
             last_error = exc
-            print(
-                f"[retry] {name} queue busy on attempt {attempt}/{retries}: {exc}",
-                flush=True,
+            logger.warning(
+                "[retry] %s queue busy on attempt %d/%d: %s", name, attempt, retries, exc,
             )
             # 队列拥塞也应立即跳过当前模板，
             # 让主循环可以降低运行时并发并冷却
@@ -457,16 +458,14 @@ def retry_operation(
             # poll_simulation 内部已耗尽轮询/等待预算，
             # 不应再次重试整个阶段（否则有效超时成倍增长）
             last_error = exc
-            print(
-                f"[retry] {name} exhausted on attempt {attempt}/{retries}: {exc}",
-                flush=True,
+            logger.warning(
+                "[retry] %s exhausted on attempt %d/%d: %s", name, attempt, retries, exc,
             )
             break
         except Exception as exc:
             last_error = exc
-            print(
-                f"[retry] {name} failed on attempt {attempt}/{retries}: {exc}",
-                flush=True,
+            logger.warning(
+                "[retry] %s failed on attempt %d/%d: %s", name, attempt, retries, exc,
             )
             if attempt < retries:
                 wait_seconds(retry_wait_seconds, f"retry {name}")
@@ -670,7 +669,7 @@ class BrainClient:
         if status not in (200, 201):
             detail = safe_json_bytes(content)
             raise BrainAPIError(f"Login failed: {status} {detail}")
-        print("[auth] login success", flush=True)
+        logger.info("[auth] login success")
 
     def request(
         self,
@@ -750,10 +749,9 @@ class BrainClient:
             )
             last_response = (status, response_headers, content)
             if status == 429:
-                print(
-                    f"[rate-limit] {method} {url} attempt={attempt}/{retries} "
-                    f"retry_after={response_headers.get('Retry-After')}",
-                    flush=True,
+                logger.warning(
+                    "[rate-limit] %s %s attempt=%d/%d retry_after=%s",
+                    method, url, attempt, retries, response_headers.get('Retry-After'),
                 )
                 wait_seconds(
                     doubled_retry_after(response_headers, default=10.0),
@@ -761,9 +759,9 @@ class BrainClient:
                 )
                 continue
             if status == 401 and attempt < retries:
-                print(
-                    f"[auth] session expired on {method} {url}, re-logging in...",
-                    flush=True,
+                logger.warning(
+                    "[auth] session expired on %s %s, re-logging in...",
+                    method, url,
                 )
                 self.login()
                 continue
@@ -1075,13 +1073,12 @@ class BrainClient:
                     headers=VERSION_HEADER,
                     expected={200},
                 )
-                print(f"[data] data-fields query accepted: {params}", flush=True)
+                logger.info("[data] data-fields query accepted: %s", params)
                 return safe_json_bytes(content)
             except BrainAPIError as exc:
                 last_error = exc
-                print(
-                    f"[data] data-fields query rejected: {params} -> {exc}",
-                    flush=True,
+                logger.warning(
+                    "[data] data-fields query rejected: %s -> %s", params, exc,
                 )
 
         raise BrainAPIError(
@@ -1229,11 +1226,9 @@ class BrainClient:
                         f"Simulation exceeded queue budget "
                         f"({max_queue_seconds:.0f}s) for {url}; skip current template."
                     )
-                print(
-                    f"[simulation] pending location={url} "
-                    f"status={status} progress={progress} "
-                    f"retry_after={response_headers.get('Retry-After')}",
-                    flush=True,
+                logger.info(
+                    "[simulation] pending location=%s status=%s progress=%s retry_after=%s",
+                    url, status, progress, response_headers.get('Retry-After'),
                 )
                 if response_headers.get("Retry-After"):
                     wait_seconds(
@@ -1256,20 +1251,17 @@ class BrainClient:
                 # 如果 response body 已经是终态，直接返回，
                 # 不被 Retry-After 头误导继续等待
                 if body_status in {"COMPLETED", "FAILED", "ERROR", "CANCELLED"}:
-                    print(
-                        f"[simulation] terminal state detected body_status={body_status} "
-                        f"ignoring Retry-After header",
-                        flush=True,
+                    logger.info(
+                        "[simulation] terminal state detected body_status=%s ignoring Retry-After header",
+                        body_status,
                     )
                     return payload
                 # body_status 为空或 NONE 说明服务器尚未准备好，
                 # 这等价于 PENDING，打印一次 body 帮助排查
                 if body_status in {"", "NONE"} and pending_cycles == 0:
-                    print(
-                        f"[simulation] status is null/empty, "
-                        f"body_keys={sorted(payload.keys())} "
-                        f"body_preview={str(payload)[:200]}",
-                        flush=True,
+                    logger.info(
+                        "[simulation] status is null/empty, body_keys=%s body_preview=%.200s",
+                        sorted(payload.keys()), str(payload),
                     )
                 if pending_started_at is None:
                     pending_started_at = time.monotonic()
@@ -1288,11 +1280,9 @@ class BrainClient:
                         f"Simulation exceeded queue budget "
                         f"({max_queue_seconds:.0f}s) for {url}; skip current template."
                     )
-                print(
-                    f"[simulation] pending location={url} "
-                    f"body_status={body_status or 'unknown'} "
-                    f"retry_after={response_headers.get('Retry-After')}",
-                    flush=True,
+                logger.info(
+                    "[simulation] pending location=%s body_status=%s retry_after=%s",
+                    url, body_status or 'unknown', response_headers.get('Retry-After'),
                 )
                 wait_seconds(
                     polling_retry_after(response_headers, default=5.0),
@@ -1368,10 +1358,9 @@ class BrainClient:
             )
             retry_after = response_headers.get("Retry-After")
             if retry_after:
-                print(
-                    f"[submit] pending alpha_id={alpha_id} "
-                    f"method={method} retry_after={retry_after}",
-                    flush=True,
+                logger.info(
+                    "[submit] pending alpha_id=%s method=%s retry_after=%s",
+                    alpha_id, method, retry_after,
                 )
                 wait_seconds(
                     polling_retry_after(response_headers, default=5.0),
