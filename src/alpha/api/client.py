@@ -34,7 +34,7 @@ from http.cookiejar import CookieJar
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
-from urllib.request import HTTPCookieProcessor, Request, build_opener
+from urllib.request import HTTPCookieProcessor, ProxyHandler, Request, build_opener
 
 from ..config import (
     ALPHAS_URL,
@@ -453,6 +453,15 @@ def retry_operation(
             # 队列拥塞也应立即跳过当前模板，
             # 让主循环可以降低运行时并发并冷却
             break
+        except BrainAPIError as exc:
+            # poll_simulation 内部已耗尽轮询/等待预算，
+            # 不应再次重试整个阶段（否则有效超时成倍增长）
+            last_error = exc
+            print(
+                f"[retry] {name} exhausted on attempt {attempt}/{retries}: {exc}",
+                flush=True,
+            )
+            break
         except Exception as exc:
             last_error = exc
             print(
@@ -627,7 +636,7 @@ class BrainClient:
         self.rate_limit_max_retries = max(rate_limit_max_retries, 1)
         self.last_request_started_at = 0.0
         self.cookies = CookieJar()
-        self.opener = build_opener(HTTPCookieProcessor(self.cookies))
+        self.opener = build_opener(ProxyHandler({}), HTTPCookieProcessor(self.cookies))
 
     def login(self) -> None:
         """
@@ -750,6 +759,13 @@ class BrainClient:
                     doubled_retry_after(response_headers, default=10.0),
                     "rate limit",
                 )
+                continue
+            if status == 401 and attempt < retries:
+                print(
+                    f"[auth] session expired on {method} {url}, re-logging in...",
+                    flush=True,
+                )
+                self.login()
                 continue
             if status in (500, 502, 503, 504):
                 wait_seconds(
@@ -1232,6 +1248,29 @@ class BrainClient:
             # 仅在确认响应体尚未包含完成的模拟负载后，
             # 才将这些视为等待状态。
             if response_headers.get("Retry-After"):
+                body_status = str(
+                    first_non_empty(
+                        payload.get("status"), payload.get("state"), ""
+                    )
+                ).upper()
+                # 如果 response body 已经是终态，直接返回，
+                # 不被 Retry-After 头误导继续等待
+                if body_status in {"COMPLETED", "FAILED", "ERROR", "CANCELLED"}:
+                    print(
+                        f"[simulation] terminal state detected body_status={body_status} "
+                        f"ignoring Retry-After header",
+                        flush=True,
+                    )
+                    return payload
+                # body_status 为空或 NONE 说明服务器尚未准备好，
+                # 这等价于 PENDING，打印一次 body 帮助排查
+                if body_status in {"", "NONE"} and pending_cycles == 0:
+                    print(
+                        f"[simulation] status is null/empty, "
+                        f"body_keys={sorted(payload.keys())} "
+                        f"body_preview={str(payload)[:200]}",
+                        flush=True,
+                    )
                 if pending_started_at is None:
                     pending_started_at = time.monotonic()
                 pending_cycles += 1
@@ -1251,6 +1290,7 @@ class BrainClient:
                     )
                 print(
                     f"[simulation] pending simulation_location={url} "
+                    f"body_status={body_status or 'unknown'} "
                     f"retry_after={response_headers.get('Retry-After')}",
                     flush=True,
                 )

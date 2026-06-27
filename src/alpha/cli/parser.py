@@ -438,6 +438,8 @@ def parse_args() -> argparse.Namespace:
         args.max_templates_per_field = 1
         args.max_concurrent_simulations = 1
         args.max_concurrent_creates = 1
+        args.simulation_max_pending_cycles = min(args.simulation_max_pending_cycles, 30)
+        args.simulation_max_queue_seconds = min(args.simulation_max_queue_seconds, 180)
     elif args.full_run:
         args.limit = 0
         args.max_templates_per_field = 0
