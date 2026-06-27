@@ -519,8 +519,8 @@ if __name__ == "__main__":
     try:
         raise SystemExit(main())
     except KeyboardInterrupt:
-        print("\n[abort] 用户中断", file=sys.stderr)
+        logger.warning("[abort] 用户中断")
         raise SystemExit(130) from None
     except Exception as exc:
-        print(f"[error] {exc}", file=sys.stderr)
+        logger.error("[error] %s", exc)
         raise SystemExit(1) from None
