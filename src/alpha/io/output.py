@@ -258,7 +258,9 @@ def build_output_sidecar_paths(output_path: str) -> dict[str, str]:
     """
     output = Path(output_path)
     base_dir = output.parent
-    base_name = output.stem
+    base_name = output.stem or "results"
+    if not output.suffix:
+        base_name = output.name or "results"
     log_date = time.strftime("%Y-%m-%d")
     return {
         "analysis": str(base_dir / f"{base_name}_analysis.json"),
