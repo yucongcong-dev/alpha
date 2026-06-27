@@ -83,8 +83,10 @@ python -m alpha --smoke-test
 #### 阶段 2：广泛探索（发现候选字段）
 
 ```bash
-python -m alpha --limit 50 --max-templates-per-field 5
+python -m alpha
 ```
+
+不传参时使用内置默认值（`--limit 50 --max-templates-per-field 8`）。
 
 **目标**：从数据集中找出有潜力的字段和模板家族。
 
@@ -93,7 +95,7 @@ python -m alpha --limit 50 --max-templates-per-field 5
 - `failed_check_leaderboard`：主要失败原因分布
 - `optimization_hints`：自动生成的优化建议
 
-**预估时间**：15-30 分钟（50 字段 × 5 模板 ≈ 250 模拟）
+**预估时间**：25-50 分钟（50 字段 × 8 模板 ≈ 400 模拟）
 
 #### 阶段 3：聚焦深挖（针对高反馈字段）
 
@@ -105,6 +107,7 @@ python -m alpha --top-fields-by-feedback 10 --max-templates-per-field 15
 
 **机制**：
 - 自动根据历史反馈调整模板优先级
+- 优先探索 **delta/std 比率模板**（如 `delta_over_std`、`ratio_delta_over_std`），历史数据显示该家族 Sharpe 显著优于均值
 - 为 high-score 字段生成更多 near-pass 变体
 - 为 vol-scaled delta 家族生成更多 settings 变体
 
