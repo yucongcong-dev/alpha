@@ -93,6 +93,8 @@ python -m alpha --limit 50 --max-templates-per-field 5
 - `failed_check_leaderboard`：主要失败原因分布
 - `optimization_hints`：自动生成的优化建议
 
+**预估时间**：15-30 分钟（50 字段 × 5 模板 ≈ 250 模拟）
+
 #### 阶段 3：聚焦深挖（针对高反馈字段）
 
 ```bash
@@ -106,13 +108,33 @@ python -m alpha --top-fields-by-feedback 10 --max-templates-per-field 15
 - 为 high-score 字段生成更多 near-pass 变体
 - 为 vol-scaled delta 家族生成更多 settings 变体
 
+**反馈循环**：
+- 默认读取同一输出文件（`results/fundamental6_test_results.json`）
+- 阶段 2 的结果会自动用于字段优先级排序
+- 可多次运行，每次自动续跑（不重复已完成的组合）
+
+**预估时间**：30-60 分钟（10 字段 × 15 模板 ≈ 150 模拟，含变体）
+
 #### 阶段 4：完整运行（可选）
 
 ```bash
 python -m alpha --full-run
 ```
 
-穷举所有字段和模板组合，适合有充足时间时使用。
+穷举所有字段和模板组合，适合：
+- 首次使用新数据集时进行全面扫描
+- 有充足时间（可能数小时）
+- 不依赖反馈历史，从零开始探索
+
+---
+
+### 续跑机制
+
+每次运行默认是**增量模式**：
+- 已完成的字段+模板组合不会重复
+- 新结果追加到同一输出文件
+- 中断后再次运行自动继续
+- 如需重新开始，使用不同的 `--output` 路径
 
 ---
 
