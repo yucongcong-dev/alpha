@@ -26,7 +26,7 @@ import logging
 import threading
 import time
 from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
-from typing import Tuple
+from typing import Any, Dict, List, Tuple
 
 # 导入历史迭代优化
 from .analysis.feedback import (
@@ -165,108 +165,51 @@ def create_and_login_client(
 
 
 # ============================================================================
-# 主入口函数
+# 初始化函数：设置凭证、客户端、模板、字段与历史状态
 # ============================================================================
 
-def main() -> int:
+def _initialize(
+    args: argparse.Namespace,
+    run_paths: Any,
+) -> Tuple[Any, ...]:
+    """执行主流程的初始化阶段（步骤 2-19），返回所有需要的状态变量。
+
+    Returns a tuple:
+        (email, password, bootstrap_client, client_factory,
+         template_library, filters_dict, use_dataset_heuristics,
+         template_library_fingerprint, settings_fingerprint,
+         feedback_output, historical_state, fields,
+         execution_state, runtime_state, create_semaphore,
+         run_config, output_file)
     """
-    主入口函数，编排凭证加载、字段发现、候选测试与结果持久化的主流程。
-
-    这是 Alpha 测试系统的核心函数，负责协调所有模块完成测试流程。
-    主流程包括：
-
-    1. 解析命令行参数
-    2. 加载凭证
-    3. 创建并登录客户端
-    4. 加载模板库和过滤器
-    5. 获取字段列表（带缓存）
-    6. 构建历史运行状态
-    7. 启动多线程执行器
-    8. 遍历字段和模板组合
-    9. 调用 run_field_test_in_worker
-    10. 处理完成的任务
-    11. 保存结果
-    12. 打印汇总统计
-
-    Returns:
-        int: 退出状态码。
-            - 0: 正常完成
-            - 1: 发生错误
-            - 130: 用户中断（Ctrl+C）
-
-    Example:
-        >>> exit_code = main()
-        >>> print(exit_code)
-        0
-
-    Note:
-        - 支持 Ctrl+C 中断
-        - 支持干运行模式（只打印计划）
-        - 支持续跑（加载历史结果）
-        - 支持并发测试
-        - 结果实时持久化，避免中断丢失
-    """
-    # 主流程：
-    # 1. 加载凭证
-    # 2. 认证登录
-    # 3. 获取数据集字段
-    # 4. 对每个字段-模板候选进行独立模拟/检查/提交
-    # 5. 持久化 JSON 结果报告
-
-    # 步骤 1：解析命令行参数
-    args = parse_args()
-
-    # 步骤 2：标准化路径
-    run_paths = normalize_args_paths(args)
-
-    # 步骤 3：设置运行时日志（必须在任何其他日志输出之前）
     output_file = getattr(run_paths, 'output', None) or args.output
     log_file = getattr(run_paths, 'log_file', None)
     if log_file:
         setup_runtime_logging(log_file)
 
-    # 清理旧版边车文件
     cleanup_legacy_sidecar_files(output_file, verbose=True)
-
-    # 确保分析文件同步
     ensure_analysis_synced(output_file)
 
-    # 步骤 4：构建运行配置快照
     run_config = build_run_config_snapshot(args, run_paths)
     logger.info("[config] 运行配置将嵌入主结果文件")
 
-    # 步骤 5：加载凭证
     email, password = load_credentials(args)
     if not email or not password:
         logger.error("[error] 缺少凭证，无法继续")
-        return 1
+        return (None,) * 18
 
-    # 步骤 6：创建并登录客户端
     bootstrap_client, client_factory = create_and_login_client(email, password, args)
 
-    # 步骤 7：加载模板库
     template_library_file = getattr(run_paths, 'template_library_file', None) or args.template_library_file
     template_library = load_template_library(template_library_file)
-
-    # 步骤 8：加载过滤器
     filters_dict = load_run_filters_extended(run_paths)
-
-    # 步骤 9：判断是否使用数据集启发式规则
     use_dataset_heuristics = use_fundamental6_heuristics(args.dataset_id)
-
-    # 步骤 10：生成模板库指纹
     template_library_fingerprint = stable_fingerprint(template_library)
-
-    # 步骤 11：生成设置指纹
     settings_fingerprint = build_settings_fingerprint(args)
-
-    # 步骤 12：确定反馈输出文件
     feedback_output = getattr(run_paths, 'feedback_output', None) or output_file
-
-    # 步骤 13：构建历史运行状态
     historical_state = build_historical_run_state(output_file, feedback_output)
 
-    # 步骤 14：加载字段缓存
+    # --- 字段加载与排序 ---
     fields_cache_file = args.fields_cache_file
     cached_fields = load_fields_cache(
         fields_cache_file,
@@ -276,64 +219,50 @@ def main() -> int:
         instrument_type=args.instrument_type,
         delay=args.delay,
     )
-
-    # 步骤 15：判断是否需要刷新缓存
     cache_refresh_reason = fields_cache_refresh_reason(
         cached_fields,
         requested_limit=args.limit,
         requested_offset=args.offset,
         force_refresh=args.refresh_fields_cache,
     )
-
-    # 步骤 16：获取字段（带缓存）
     fields = fetch_fields_with_cache(
-        bootstrap_client,
-        args,
-        fields_cache_file,
-        cached_fields,
-        cache_refresh_reason,
+        bootstrap_client, args, fields_cache_file, cached_fields, cache_refresh_reason,
     )
-
     if not fields:
         logger.error("[error] 数据集 %s 未返回任何字段", args.dataset_id)
-        return 1
+        return (None,) * 18
 
-    # 步骤 17：按反馈分数排序字段
     fields.sort(
         key=lambda item: (
             -field_priority(
                 str(first_non_empty(item.get("id"), "UNKNOWN")),
-                historical_state.field_feedback
+                historical_state.field_feedback,
             ),
             choose_field_name(item),
         )
     )
-
-    # 步骤 18：如果指定了按反馈筛选，只保留前 N 个字段
     if args.top_fields_by_feedback > 0:
         focused_fields = [
             field
             for field in fields
             if field_priority(
                 str(first_non_empty(field.get("id"), "UNKNOWN")),
-                historical_state.field_feedback
-            ) > -999.0
+                historical_state.field_feedback,
+            )
+            > -999.0
         ]
         fields = focused_fields[: args.top_fields_by_feedback]
-        logger.info(
-            "[focus] 限制运行到按反馈排序的前 %d 个字段", len(fields),
-        )
+        logger.info("[focus] 限制运行到按反馈排序的前 %d 个字段", len(fields))
 
     logger.info("[data] 从数据集 %s 获取 %d 个字段", args.dataset_id, len(fields))
 
-    # 步骤 19：打印历史结果信息
     if historical_state.existing_results:
         logger.info(
             "[resume] 从 %s 加载 %d 个历史结果",
             output_file, len(historical_state.existing_results),
         )
 
-    # 步骤 20：初始化执行状态
+    # --- 执行状态初始化 ---
     execution_state = ExecutionState(
         results=list(historical_state.existing_results),
         attempted_keys=set(historical_state.attempted_keys),
@@ -343,7 +272,6 @@ def main() -> int:
         skipped_fields_due_to_queue=set(),
     )
 
-    # 步骤 21：初始化并发状态
     max_workers = max(1, args.max_concurrent_simulations)
     runtime_state = RuntimeConcurrencyState(
         max_workers=max_workers,
@@ -356,7 +284,43 @@ def main() -> int:
     logger.info("[config] max_concurrent_creates=%d", max_create_workers)
     logger.info("[config] simulation_max_pending_cycles=%d", args.simulation_max_pending_cycles)
 
-    # 步骤 22：干运行模式处理
+    return (
+        email, password, bootstrap_client, client_factory,
+        template_library, filters_dict, use_dataset_heuristics,
+        template_library_fingerprint, settings_fingerprint,
+        feedback_output, historical_state, fields,
+        execution_state, runtime_state, create_semaphore,
+        run_config, output_file,
+    )
+
+
+# ============================================================================
+# 执行循环：线程池 + 字段遍历 + 结果持久化
+# ============================================================================
+
+def _run_field_test_loop(
+    args: argparse.Namespace,
+    client_factory: WorkerClientFactory,
+    template_library: Any,
+    filters_dict: Any,
+    use_dataset_heuristics: bool,
+    template_library_fingerprint: str,
+    settings_fingerprint: str,
+    historical_state: Any,
+    fields: List[Dict[str, Any]],
+    execution_state: ExecutionState,
+    runtime_state: RuntimeConcurrencyState,
+    create_semaphore: threading.Semaphore,
+    run_config: Dict[str, Any],
+) -> None:
+    """线程池中遍历字段并提交模拟任务，实时消费结果。
+
+    包含干运行检查、模板构建上下文创建、
+    双重循环（字段 × 模板）和结果排空逻辑。
+    """
+    max_workers = runtime_state.max_workers
+
+    # 干运行检查
     if args.dry_run_plan:
         print_dry_run_plan(
             args=args,
@@ -367,9 +331,9 @@ def main() -> int:
             execution_state=execution_state,
             use_dataset_heuristics=use_dataset_heuristics,
         )
-        return 0
+        return
 
-    # 步骤 23：构建模板构建上下文（收敛 11 个参数为 1 个）
+    # 模板构建上下文
     template_build_ctx = TemplateBuildContext(
         args=args,
         all_fields=fields,
@@ -381,11 +345,8 @@ def main() -> int:
         use_dataset_heuristics=use_dataset_heuristics,
     )
 
-    # 步骤 24：启动线程池执行器
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
-        # 步骤 25：遍历字段
         for field_index, field in enumerate(fields, start=1):
-            # 检查是否达到目标可提交数量
             if should_stop_after_submittable(args, execution_state.results):
                 logger.info(
                     "[stop] 达到 stop-after-submittable=%d", args.stop_after_submittable,
@@ -396,16 +357,12 @@ def main() -> int:
             field_name = choose_field_name(field)
             field_type = choose_field_type(field)
 
-            # 检查是否应该跳过该字段
             if should_skip_field(
-                field_id,
-                field_name,
-                filters_dict,
+                field_id, field_name, filters_dict,
                 execution_state.skipped_fields_due_to_queue,
             ):
                 continue
 
-            # 步骤 26：为字段构建待执行模板队列
             pending_templates, disabled_templates, template_count = build_pending_templates_for_field(
                 template_build_ctx,
                 field,
@@ -420,24 +377,19 @@ def main() -> int:
                 len(pending_templates), disabled_templates,
             )
 
-            # 步骤 26：遍历模板
             for template_index, (template_name, expression, priority, settings_variant, variant_fingerprint) in enumerate(pending_templates, start=1):
-                # 检查是否达到目标可提交数量
                 if should_stop_after_submittable(args, execution_state.results):
                     logger.info(
                         "[stop] 达到 stop-after-submittable=%d", args.stop_after_submittable,
                     )
                     break
 
-                # 检查字段是否因队列拥塞被跳过
                 if field_id in execution_state.skipped_fields_due_to_queue:
                     logger.info("[skip] field=%s 队列拥塞后停止剩余模板", field_id)
                     break
 
-                # 恢复运行时并发度
                 maybe_restore_runtime_concurrency(runtime_state)
 
-                # 等待有空闲工作线程
                 while len(execution_state.pending_futures) >= runtime_state.runtime_max_workers:
                     done, _ = wait(set(execution_state.pending_futures), return_when=FIRST_COMPLETED)
                     drain_completed_futures(
@@ -459,10 +411,8 @@ def main() -> int:
                     runtime_state.runtime_max_workers, variant_fingerprint,
                 )
 
-                # 步骤 27：提交前节流
                 throttle_before_submission(args, execution_state)
 
-                # 步骤 28：提交任务到执行器
                 future = executor.submit(
                     run_field_test_in_worker,
                     client_factory,
@@ -486,7 +436,7 @@ def main() -> int:
                     "settings_fingerprint": variant_fingerprint,
                 }
 
-        # 步骤 29：处理剩余的待处理任务
+        # 排空剩余任务
         while execution_state.pending_futures:
             done, _ = wait(set(execution_state.pending_futures), return_when=FIRST_COMPLETED)
             drain_completed_futures(
@@ -499,12 +449,60 @@ def main() -> int:
                 runtime_state=runtime_state,
             )
 
-    # 步骤 30：完成的任务已实时持久化，避免重复写入
     logger.info(
         "[done] 测试完成：tested=%d submittable=%d errors=%d",
         len(execution_state.results),
         current_submittable_count(execution_state.results),
         sum(1 for r in execution_state.results if r.status == 'error'),
+    )
+
+
+
+
+# ============================================================================
+# 主入口函数
+# ============================================================================
+
+def main() -> int:
+    """
+    主入口函数，编排凭证加载、字段发现、候选测试与结果持久化的主流程。
+
+    分为两个阶段：
+    1. _initialize(): 参数解析、凭证、客户端、模板、字段、历史状态
+    2. _run_field_test_loop(): 线程池中遍历字段、提交模拟、实时持久化
+
+    Returns:
+        int: 退出状态码（0=正常, 1=错误, 130=用户中断）。
+    """
+    args = parse_args()
+    run_paths = normalize_args_paths(args)
+
+    (
+        email, password, bootstrap_client, client_factory,
+        template_library, filters_dict, use_dataset_heuristics,
+        template_library_fingerprint, settings_fingerprint,
+        feedback_output, historical_state, fields,
+        execution_state, runtime_state, create_semaphore,
+        run_config, output_file,
+    ) = _initialize(args, run_paths)
+
+    if not email or not password or not fields:
+        return 1
+
+    _run_field_test_loop(
+        args=args,
+        client_factory=client_factory,
+        template_library=template_library,
+        filters_dict=filters_dict,
+        use_dataset_heuristics=use_dataset_heuristics,
+        template_library_fingerprint=template_library_fingerprint,
+        settings_fingerprint=settings_fingerprint,
+        historical_state=historical_state,
+        fields=fields,
+        execution_state=execution_state,
+        runtime_state=runtime_state,
+        create_semaphore=create_semaphore,
+        run_config=run_config,
     )
 
     return 0

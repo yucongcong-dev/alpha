@@ -14,7 +14,7 @@
 
 import hashlib
 import json
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 from ..config import (
     SETTINGS_CLOSE_THRESHOLD,
@@ -168,6 +168,97 @@ def build_settings_fingerprint_from_payload(payload: Dict[str, Any]) -> str:
     return stable_fingerprint(payload)
 
 
+# ---------------------------------------------------------------------------
+# 设置变体规则表
+# ---------------------------------------------------------------------------
+# 每条规则: (families, condition, overrides_dict)
+#   families: 适用的家族元组
+#   condition: "always" | "near_pass" | "close"
+#   overrides: 覆盖 base settings 的参数字典
+
+_VARIANT_SPECS: List[Tuple[Tuple[str, ...], str, Dict[str, Any]]] = [
+    # --- group_vol_scaled_delta / group_mean_spread / group_zscore ---
+    (("group_vol_scaled_delta", "group_mean_spread", "group_zscore"), "always",
+     {"decay": 0, "truncation": 0.05, "nanHandling": "ON", "neutralization": "SUBINDUSTRY"}),
+    (("group_vol_scaled_delta", "group_mean_spread", "group_zscore"), "always",
+     {"decay": 3, "truncation": 0.08, "nanHandling": "ON", "neutralization": "SUBINDUSTRY"}),
+    (("group_vol_scaled_delta", "group_mean_spread", "group_zscore"), "always",
+     {"decay": 0, "truncation": 0.12, "nanHandling": "ON", "neutralization": "INDUSTRY"}),
+    (("group_vol_scaled_delta", "group_mean_spread", "group_zscore"), "near_pass",
+     {"decay": 3, "truncation": 0.05, "nanHandling": "ON", "neutralization": "MARKET"}),
+    (("group_vol_scaled_delta", "group_mean_spread", "group_zscore"), "near_pass",
+     {"decay": 0, "truncation": 0.08, "nanHandling": "ON", "neutralization": "MARKET"}),
+    (("group_vol_scaled_delta", "group_mean_spread", "group_zscore"), "close",
+     {"decay": 7, "truncation": 0.05, "nanHandling": "ON", "neutralization": "SUBINDUSTRY"}),
+    (("group_vol_scaled_delta", "group_mean_spread", "group_zscore"), "close",
+     {"decay": 3, "truncation": 0.05, "nanHandling": "ON", "neutralization": "INDUSTRY"}),
+
+    # --- group_vol_scaled_delta 额外变体（best performing family） ---
+    (("group_vol_scaled_delta",), "always",
+     {"decay": 2, "truncation": 0.03, "nanHandling": "ON", "neutralization": "SUBINDUSTRY"}),
+    (("group_vol_scaled_delta",), "always",
+     {"decay": 5, "truncation": 0.05, "nanHandling": "ON", "neutralization": "SUBINDUSTRY"}),
+    (("group_vol_scaled_delta",), "always",
+     {"decay": 0, "truncation": 0.05, "nanHandling": "OFF", "neutralization": "SUBINDUSTRY"}),
+    (("group_vol_scaled_delta",), "always",
+     {"decay": 3, "truncation": 0.05, "nanHandling": "ON", "neutralization": "INDUSTRY"}),
+    (("group_vol_scaled_delta",), "near_pass",
+     {"decay": 2, "truncation": 0.03, "nanHandling": "ON", "neutralization": "MARKET"}),
+    (("group_vol_scaled_delta",), "near_pass",
+     {"decay": 5, "truncation": 0.03, "nanHandling": "ON", "neutralization": "MARKET"}),
+    (("group_vol_scaled_delta",), "near_pass",
+     {"decay": 0, "truncation": 0.03, "nanHandling": "ON", "neutralization": "SUBINDUSTRY"}),
+    (("group_vol_scaled_delta",), "near_pass",
+     {"decay": 7, "truncation": 0.05, "nanHandling": "ON", "neutralization": "MARKET"}),
+    (("group_vol_scaled_delta",), "close",
+     {"decay": 2, "truncation": 0.02, "nanHandling": "ON", "neutralization": "SUBINDUSTRY"}),
+    (("group_vol_scaled_delta",), "close",
+     {"decay": 3, "truncation": 0.02, "nanHandling": "ON", "neutralization": "MARKET"}),
+    (("group_vol_scaled_delta",), "close",
+     {"decay": 5, "truncation": 0.02, "nanHandling": "ON", "neutralization": "INDUSTRY"}),
+
+    # --- vol_scaled_delta / mean_spread / zscore_time / rank_delta / decayed_delta ---
+    (("vol_scaled_delta", "mean_spread", "zscore_time", "rank_delta", "decayed_delta"), "always",
+     {"decay": 0, "truncation": 0.05, "nanHandling": "ON", "neutralization": "SUBINDUSTRY"}),
+    (("vol_scaled_delta", "mean_spread", "zscore_time", "rank_delta", "decayed_delta"), "always",
+     {"decay": 5, "truncation": 0.08, "nanHandling": "OFF", "neutralization": "SUBINDUSTRY"}),
+    (("vol_scaled_delta", "mean_spread", "zscore_time", "rank_delta", "decayed_delta"), "always",
+     {"decay": 0, "truncation": 0.12, "nanHandling": "ON", "neutralization": "INDUSTRY"}),
+    (("vol_scaled_delta", "mean_spread", "zscore_time", "rank_delta", "decayed_delta"), "near_pass",
+     {"decay": 3, "truncation": 0.05, "nanHandling": "ON", "neutralization": "MARKET"}),
+    (("vol_scaled_delta", "mean_spread", "zscore_time", "rank_delta", "decayed_delta"), "near_pass",
+     {"decay": 0, "truncation": 0.08, "nanHandling": "ON", "neutralization": "MARKET"}),
+    (("vol_scaled_delta", "mean_spread", "zscore_time", "rank_delta", "decayed_delta"), "close",
+     {"decay": 7, "truncation": 0.05, "nanHandling": "ON", "neutralization": "SUBINDUSTRY"}),
+
+    # --- vol_scaled_delta 额外变体 ---
+    (("vol_scaled_delta",), "always",
+     {"decay": 2, "truncation": 0.03, "nanHandling": "ON", "neutralization": "SUBINDUSTRY"}),
+    (("vol_scaled_delta",), "always",
+     {"decay": 3, "truncation": 0.05, "nanHandling": "ON", "neutralization": "INDUSTRY"}),
+    (("vol_scaled_delta",), "near_pass",
+     {"decay": 2, "truncation": 0.03, "nanHandling": "ON", "neutralization": "MARKET"}),
+    (("vol_scaled_delta",), "near_pass",
+     {"decay": 0, "truncation": 0.03, "nanHandling": "ON", "neutralization": "SUBINDUSTRY"}),
+
+    # --- group_ratio_level / legacy_ratio ---
+    (("group_ratio_level", "legacy_ratio"), "always",
+     {"decay": 5, "truncation": 0.08, "nanHandling": "OFF", "neutralization": "SUBINDUSTRY"}),
+    (("group_ratio_level", "legacy_ratio"), "always",
+     {"decay": 7, "truncation": 0.08, "nanHandling": "OFF", "neutralization": "SUBINDUSTRY"}),
+    (("group_ratio_level", "legacy_ratio"), "always",
+     {"decay": 0, "truncation": 0.05, "nanHandling": "ON", "neutralization": "SUBINDUSTRY"}),
+
+    # --- legacy_level / legacy_group_level ---
+    (("legacy_level", "legacy_group_level"), "always",
+     {"decay": 0, "truncation": 0.05, "nanHandling": "ON", "neutralization": "SUBINDUSTRY"}),
+    (("legacy_level", "legacy_group_level"), "always",
+     {"decay": 5, "truncation": 0.08, "nanHandling": "OFF", "neutralization": "SUBINDUSTRY"}),
+    (("legacy_level", "legacy_group_level"), "always",
+     {"decay": 0, "truncation": 0.12, "nanHandling": "ON", "neutralization": "INDUSTRY"}),
+]
+
+
 def build_setting_variants(
     args: Any,
     template_name: str,
@@ -176,132 +267,43 @@ def build_setting_variants(
     field_feedback: Optional[Dict[str, Any]] = None,
 ) -> List[SettingsVariant]:
     """
-    为一个表达式生成少量且多样化的 settings 变体。
+    为一个表达式生成少量且多样化的 settings 变体（声明式规则表驱动）。
 
-    根据表达式家族类型和历史反馈，生成适合的参数变体组合，
-    提高发现高质量 Alpha 的概率。
+    根据表达式家族类型和历史反馈，通过 _VARIANT_SPECS 规则表生成参数变体组合。
 
     Args:
         args: 命令行参数对象。
         template_name (str): 模板名称。
         expression (str): 表达式字符串。
-        field_feedback: 可选，字段历史反馈，用于判断是否加大变体探索力度。
+        field_feedback: 可选，字段历史反馈。
 
     Returns:
-        List[SettingsVariant]: 设置变体列表，每个变体是一个字典。
-
-    变体策略：
-        对于不同的表达式家族，使用不同的参数组合：
-        - group_vol_scaled_delta, group_mean_spread, group_zscore:
-            低 decay、低 truncation、SUBINDUSTRY/MARKET 中性化
-        - vol_scaled_delta, mean_spread, zscore_time, rank_delta, decayed_delta:
-            中等 decay、中等 truncation、SUBINDUSTRY 中性化
-        - group_ratio_level, legacy_ratio:
-            中等 decay、中等 truncation、SUBINDUSTRY 中性化
-        - legacy_level, legacy_group_level:
-            低到中等 decay、低到中等 truncation、SUBINDUSTRY/INDUSTRY 中性化
-        - 其他:
-            使用基础设置
-
-    Example:
-        >>> variants = build_setting_variants(
-        ...     args,
-        ...     "group_zscore_subindustry_60",
-        ...     "group_rank(ts_zscore(close, 60), subindustry)"
-        ... )
-        >>> print(len(variants))
-        4
-        >>> print(variants[0]["decay"])
-        0
-
-    Note:
-        多样化的模板通常更适合较低的截断阈值和时间标准化输入，
-        而简单的原始/比率型表达式需要不同的参数配置。
-        存在近通反馈时，增加 MARKET 中性化变体以改善子宇宙 Sharpe。
-        每个变体都经过去重处理，避免重复测试相同的配置。
+        List[SettingsVariant]: 去重后的设置变体列表。
     """
-    # Keep only a few settings variants per expression family.
-    # The diversified templates below often work better with lower truncation
-    # and time-normalized inputs than plain raw/ratio shapes do.
-    # When field feedback shows near-pass results, add MARKET neutralization
-    # variants to improve sub-universe Sharpe.
     base = build_simulation_payload(args, expression)["settings"]
     variants: List[SettingsVariant] = []
-
-    def push_variant(**overrides: Any) -> None:
-        """
-        添加一个新的设置变体。
-
-        将基础设置与覆盖参数合并，添加到变体列表。
-
-        Args:
-            **overrides: 要覆盖的参数键值对。
-        """
-        merged = dict(base)
-        merged.update(overrides)
-        variants.append(merged)
-
     family = classify_expression_family(template_name, expression)
 
-    # Determine if this field has near-pass feedback deserving extra variants
     best_score = float(field_feedback.get("best_score", STATS_DEFAULT_SCORE)) if field_feedback else STATS_DEFAULT_SCORE
     is_near_pass = best_score >= SETTINGS_NEARPASS_THRESHOLD
     is_close = best_score >= SETTINGS_CLOSE_THRESHOLD
 
-    if family in {"group_vol_scaled_delta", "group_mean_spread", "group_zscore"}:
-        push_variant(decay=0, truncation=0.05, nanHandling="ON", neutralization="SUBINDUSTRY")
-        push_variant(decay=3, truncation=0.08, nanHandling="ON", neutralization="SUBINDUSTRY")
-        push_variant(decay=0, truncation=0.12, nanHandling="ON", neutralization="INDUSTRY")
-        if is_near_pass:
-            push_variant(decay=3, truncation=0.05, nanHandling="ON", neutralization="MARKET")
-            push_variant(decay=0, truncation=0.08, nanHandling="ON", neutralization="MARKET")
-        if is_close:
-            push_variant(decay=7, truncation=0.05, nanHandling="ON", neutralization="SUBINDUSTRY")
-            push_variant(decay=3, truncation=0.05, nanHandling="ON", neutralization="INDUSTRY")
+    for families, condition, overrides in _VARIANT_SPECS:
+        if family not in families:
+            continue
+        if condition == "near_pass" and not is_near_pass:
+            continue
+        if condition == "close" and not is_close:
+            continue
+        merged = dict(base)
+        merged.update(overrides)
+        variants.append(merged)
 
-    # Extra variants for vol-scaled delta — best performing family on fundamental6
-    if family == "group_vol_scaled_delta":
-        push_variant(decay=2, truncation=0.03, nanHandling="ON", neutralization="SUBINDUSTRY")
-        push_variant(decay=5, truncation=0.05, nanHandling="ON", neutralization="SUBINDUSTRY")
-        push_variant(decay=0, truncation=0.05, nanHandling="OFF", neutralization="SUBINDUSTRY")
-        push_variant(decay=3, truncation=0.05, nanHandling="ON", neutralization="INDUSTRY")
-        if is_near_pass:
-            push_variant(decay=2, truncation=0.03, nanHandling="ON", neutralization="MARKET")
-            push_variant(decay=5, truncation=0.03, nanHandling="ON", neutralization="MARKET")
-            push_variant(decay=0, truncation=0.03, nanHandling="ON", neutralization="SUBINDUSTRY")
-            push_variant(decay=7, truncation=0.05, nanHandling="ON", neutralization="MARKET")
-        if is_close:
-            push_variant(decay=2, truncation=0.02, nanHandling="ON", neutralization="SUBINDUSTRY")
-            push_variant(decay=3, truncation=0.02, nanHandling="ON", neutralization="MARKET")
-            push_variant(decay=5, truncation=0.02, nanHandling="ON", neutralization="INDUSTRY")
-    elif family in {"vol_scaled_delta", "mean_spread", "zscore_time", "rank_delta", "decayed_delta"}:
-        push_variant(decay=0, truncation=0.05, nanHandling="ON", neutralization="SUBINDUSTRY")
-        push_variant(decay=5, truncation=0.08, nanHandling="OFF", neutralization="SUBINDUSTRY")
-        push_variant(decay=0, truncation=0.12, nanHandling="ON", neutralization="INDUSTRY")
-        if is_near_pass:
-            push_variant(decay=3, truncation=0.05, nanHandling="ON", neutralization="MARKET")
-            push_variant(decay=0, truncation=0.08, nanHandling="ON", neutralization="MARKET")
-        if is_close:
-            push_variant(decay=7, truncation=0.05, nanHandling="ON", neutralization="SUBINDUSTRY")
+    # 兜底：无匹配规则时使用基础设置
+    if not variants:
+        variants.append(dict(base))
 
-    # Extra variants for standalone vol-scaled delta
-    if family == "vol_scaled_delta":
-        push_variant(decay=2, truncation=0.03, nanHandling="ON", neutralization="SUBINDUSTRY")
-        push_variant(decay=3, truncation=0.05, nanHandling="ON", neutralization="INDUSTRY")
-        if is_near_pass:
-            push_variant(decay=2, truncation=0.03, nanHandling="ON", neutralization="MARKET")
-            push_variant(decay=0, truncation=0.03, nanHandling="ON", neutralization="SUBINDUSTRY")
-    elif family in {"group_ratio_level", "legacy_ratio"}:
-        push_variant(decay=5, truncation=0.08, nanHandling="OFF", neutralization="SUBINDUSTRY")
-        push_variant(decay=7, truncation=0.08, nanHandling="OFF", neutralization="SUBINDUSTRY")
-        push_variant(decay=0, truncation=0.05, nanHandling="ON", neutralization="SUBINDUSTRY")
-    elif family in {"legacy_level", "legacy_group_level"}:
-        push_variant(decay=0, truncation=0.05, nanHandling="ON", neutralization="SUBINDUSTRY")
-        push_variant(decay=5, truncation=0.08, nanHandling="OFF", neutralization="SUBINDUSTRY")
-        push_variant(decay=0, truncation=0.12, nanHandling="ON", neutralization="INDUSTRY")
-    else:
-        push_variant()
-
+    # 去重
     deduped: List[SettingsVariant] = []
     seen: set = set()
     for variant in variants:

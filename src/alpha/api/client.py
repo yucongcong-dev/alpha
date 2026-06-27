@@ -1137,6 +1137,31 @@ class BrainClient:
             raise BrainAPIError("Simulation created but Location header is missing.")
         return location
 
+    @staticmethod
+    def _check_pending_limits(
+        pending_cycles: int,
+        max_pending_cycles: int,
+        max_queue_seconds: float,
+        pending_started_at: Optional[float],
+        url: str,
+    ) -> None:
+        """检查 pending 状态是否超出排队/时间预算。"""
+        if pending_cycles > max_pending_cycles:
+            raise BrainQueueBusyError(
+                f"Simulation stayed queued too long "
+                f"({pending_cycles} pending cycles) for {url}; "
+                f"skip current template."
+            )
+        if (
+            max_queue_seconds > 0
+            and pending_started_at is not None
+            and time.monotonic() - pending_started_at > max_queue_seconds
+        ):
+            raise BrainQueueBusyError(
+                f"Simulation exceeded queue budget "
+                f"({max_queue_seconds:.0f}s) for {url}; skip current template."
+            )
+
     def poll_simulation(
         self,
         location: str,
@@ -1221,20 +1246,10 @@ class BrainClient:
                 if pending_started_at is None:
                     pending_started_at = time.monotonic()
                 pending_cycles += 1
-                if pending_cycles > max_pending_cycles:
-                    raise BrainQueueBusyError(
-                        f"Simulation stayed queued too long "
-                        f"({pending_cycles} pending cycles) for {url}; "
-                        f"skip current template."
-                    )
-                if (
-                    max_queue_seconds > 0
-                    and time.monotonic() - pending_started_at > max_queue_seconds
-                ):
-                    raise BrainQueueBusyError(
-                        f"Simulation exceeded queue budget "
-                        f"({max_queue_seconds:.0f}s) for {url}; skip current template."
-                    )
+                self._check_pending_limits(
+                    pending_cycles, max_pending_cycles,
+                    max_queue_seconds, pending_started_at, url,
+                )
                 logger.info(
                     "[simulation] pending location=%s status=%s progress=%s retry_after=%s",
                     url, status, progress, response_headers.get('Retry-After'),
@@ -1275,20 +1290,10 @@ class BrainClient:
                 if pending_started_at is None:
                     pending_started_at = time.monotonic()
                 pending_cycles += 1
-                if pending_cycles > max_pending_cycles:
-                    raise BrainQueueBusyError(
-                        f"Simulation stayed queued too long "
-                        f"({pending_cycles} pending cycles) for {url}; "
-                        f"skip current template."
-                    )
-                if (
-                    max_queue_seconds > 0
-                    and time.monotonic() - pending_started_at > max_queue_seconds
-                ):
-                    raise BrainQueueBusyError(
-                        f"Simulation exceeded queue budget "
-                        f"({max_queue_seconds:.0f}s) for {url}; skip current template."
-                    )
+                self._check_pending_limits(
+                    pending_cycles, max_pending_cycles,
+                    max_queue_seconds, pending_started_at, url,
+                )
                 logger.info(
                     "[simulation] pending location=%s body_status=%s retry_after=%s",
                     url, body_status or 'unknown', response_headers.get('Retry-After'),
