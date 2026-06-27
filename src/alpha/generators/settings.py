@@ -14,7 +14,7 @@
 
 import hashlib
 import json
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 from ..models.base import SettingsVariant
 from .expressions import classify_expression_family
@@ -164,18 +164,21 @@ def build_settings_fingerprint_from_payload(payload: Dict[str, Any]) -> str:
 def build_setting_variants(
     args: Any,
     template_name: str,
-    expression: str
+    expression: str,
+    *,
+    field_feedback: Optional[Dict[str, Any]] = None,
 ) -> List[SettingsVariant]:
     """
     为一个表达式生成少量且多样化的 settings 变体。
 
-    根据表达式家族类型，生成适合的参数变体组合，
+    根据表达式家族类型和历史反馈，生成适合的参数变体组合，
     提高发现高质量 Alpha 的概率。
 
     Args:
         args: 命令行参数对象。
         template_name (str): 模板名称。
         expression (str): 表达式字符串。
+        field_feedback: 可选，字段历史反馈，用于判断是否加大变体探索力度。
 
     Returns:
         List[SettingsVariant]: 设置变体列表，每个变体是一个字典。
@@ -183,7 +186,7 @@ def build_setting_variants(
     变体策略：
         对于不同的表达式家族，使用不同的参数组合：
         - group_vol_scaled_delta, group_mean_spread, group_zscore:
-            低 decay、低 truncation、SUBINDUSTRY 中性化
+            低 decay、低 truncation、SUBINDUSTRY/MARKET 中性化
         - vol_scaled_delta, mean_spread, zscore_time, rank_delta, decayed_delta:
             中等 decay、中等 truncation、SUBINDUSTRY 中性化
         - group_ratio_level, legacy_ratio:
@@ -200,18 +203,21 @@ def build_setting_variants(
         ...     "group_rank(ts_zscore(close, 60), subindustry)"
         ... )
         >>> print(len(variants))
-        3
+        4
         >>> print(variants[0]["decay"])
         0
 
     Note:
         多样化的模板通常更适合较低的截断阈值和时间标准化输入，
         而简单的原始/比率型表达式需要不同的参数配置。
+        存在近通反馈时，增加 MARKET 中性化变体以改善子宇宙 Sharpe。
         每个变体都经过去重处理，避免重复测试相同的配置。
     """
     # Keep only a few settings variants per expression family.
     # The diversified templates below often work better with lower truncation
     # and time-normalized inputs than plain raw/ratio shapes do.
+    # When field feedback shows near-pass results, add MARKET neutralization
+    # variants to improve sub-universe Sharpe.
     base = build_simulation_payload(args, expression)["settings"]
     variants: List[SettingsVariant] = []
 
@@ -230,14 +236,30 @@ def build_setting_variants(
 
     family = classify_expression_family(template_name, expression)
 
+    # Determine if this field has near-pass feedback deserving extra variants
+    best_score = float(field_feedback.get("best_score", -999.0)) if field_feedback else -999.0
+    is_near_pass = best_score >= 0.45
+    is_close = best_score >= 0.65
+
     if family in {"group_vol_scaled_delta", "group_mean_spread", "group_zscore"}:
         push_variant(decay=0, truncation=0.05, nanHandling="ON", neutralization="SUBINDUSTRY")
         push_variant(decay=3, truncation=0.08, nanHandling="ON", neutralization="SUBINDUSTRY")
         push_variant(decay=0, truncation=0.12, nanHandling="ON", neutralization="INDUSTRY")
+        if is_near_pass:
+            push_variant(decay=3, truncation=0.05, nanHandling="ON", neutralization="MARKET")
+            push_variant(decay=0, truncation=0.08, nanHandling="ON", neutralization="MARKET")
+        if is_close:
+            push_variant(decay=7, truncation=0.05, nanHandling="ON", neutralization="SUBINDUSTRY")
+            push_variant(decay=3, truncation=0.05, nanHandling="ON", neutralization="INDUSTRY")
     elif family in {"vol_scaled_delta", "mean_spread", "zscore_time", "rank_delta", "decayed_delta"}:
         push_variant(decay=0, truncation=0.05, nanHandling="ON", neutralization="SUBINDUSTRY")
         push_variant(decay=5, truncation=0.08, nanHandling="OFF", neutralization="SUBINDUSTRY")
         push_variant(decay=0, truncation=0.12, nanHandling="ON", neutralization="INDUSTRY")
+        if is_near_pass:
+            push_variant(decay=3, truncation=0.05, nanHandling="ON", neutralization="MARKET")
+            push_variant(decay=0, truncation=0.08, nanHandling="ON", neutralization="MARKET")
+        if is_close:
+            push_variant(decay=7, truncation=0.05, nanHandling="ON", neutralization="SUBINDUSTRY")
     elif family in {"group_ratio_level", "legacy_ratio"}:
         push_variant(decay=5, truncation=0.08, nanHandling="OFF", neutralization="SUBINDUSTRY")
         push_variant(decay=7, truncation=0.08, nanHandling="OFF", neutralization="SUBINDUSTRY")

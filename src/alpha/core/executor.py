@@ -125,7 +125,9 @@ def build_pending_templates_for_field(
             disabled_templates += 1
             continue
         effective_priority = priority + historical_template_priority_bonus(template_name, template_stats)
-        for settings_variant in build_setting_variants(args, template_name, expression)[:max_setting_variants]:
+        for settings_variant in build_setting_variants(
+            args, template_name, expression, field_feedback=field_feedback
+        )[:max_setting_variants]:
             variant_fingerprint = build_settings_fingerprint_from_payload(settings_variant)
             if (field_id, template_name, expression, variant_fingerprint) in attempted_keys:
                 continue

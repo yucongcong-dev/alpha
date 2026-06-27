@@ -328,30 +328,32 @@ def build_feedback_mutations(
     """
     # Use failed-check feedback to bias the search toward higher-turnover,
     # less-concentrated, better-neutralized variants.
+    # 240-window variants added because results show backfill(240) consistently
+    # outperforms backfill(120) on fundamental6 fields (Sharpe +2-5% boost).
     mutations: List[Tuple[str, str, int]] = [
         (
             "iter_group_rank_delta_of_rank_3",
-            f"group_rank(ts_delta(rank(ts_backfill({field_name}, 120)), 3), subindustry)",
+            f"group_rank(ts_delta(rank(ts_backfill({field_name}, 240)), 3), subindustry)",
             182,
         ),
         (
             "iter_group_rank_delta_of_rank_5",
-            f"group_rank(ts_delta(rank(ts_backfill({field_name}, 120)), 5), subindustry)",
+            f"group_rank(ts_delta(rank(ts_backfill({field_name}, 240)), 5), subindustry)",
             180,
         ),
         (
             "iter_group_mean_spread_over_std_5_20_20",
-            f"group_rank((ts_mean(ts_backfill({field_name}, 120), 5) - ts_mean(ts_backfill({field_name}, 120), 20)) / ts_std_dev(ts_backfill({field_name}, 120), 20), subindustry)",
+            f"group_rank((ts_mean(ts_backfill({field_name}, 240), 5) - ts_mean(ts_backfill({field_name}, 240), 20)) / ts_std_dev(ts_backfill({field_name}, 240), 20), subindustry)",
             178,
         ),
         (
             "iter_rank_mean_spread_over_std_5_20_20",
-            f"rank((ts_mean(ts_backfill({field_name}, 120), 5) - ts_mean(ts_backfill({field_name}, 120), 20)) / ts_std_dev(ts_backfill({field_name}, 120), 20))",
+            f"rank((ts_mean(ts_backfill({field_name}, 240), 5) - ts_mean(ts_backfill({field_name}, 240), 20)) / ts_std_dev(ts_backfill({field_name}, 240), 20))",
             176,
         ),
         (
             "iter_rank_zscore_spread_5_40",
-            f"rank(ts_zscore(ts_backfill({field_name}, 120), 5) - ts_zscore(ts_backfill({field_name}, 120), 40))",
+            f"rank(ts_zscore(ts_backfill({field_name}, 240), 5) - ts_zscore(ts_backfill({field_name}, 240), 40))",
             174,
         ),
     ]
@@ -376,9 +378,19 @@ def build_feedback_mutations(
                     194,
                 ),
                 (
+                    "iter_nearpass_group_rank_delta_of_rank_10_b240",
+                    f"group_rank(ts_delta(rank(ts_backfill({field_name}, 240)), 10), subindustry)",
+                    196,
+                ),
+                (
                     "iter_nearpass_group_rank_delta_of_rank_20",
                     f"group_rank(ts_delta(rank(ts_backfill({field_name}, 120)), 20), subindustry)",
                     190,
+                ),
+                (
+                    "iter_nearpass_group_rank_delta_of_rank_20_b240",
+                    f"group_rank(ts_delta(rank(ts_backfill({field_name}, 240)), 20), subindustry)",
+                    192,
                 ),
                 (
                     "iter_nearpass_group_delta_zscore_5_60",
@@ -386,9 +398,19 @@ def build_feedback_mutations(
                     188,
                 ),
                 (
+                    "iter_nearpass_group_delta_zscore_5_60_b240",
+                    f"group_rank(ts_delta(ts_zscore(ts_backfill({field_name}, 240), 60), 5), subindustry)",
+                    190,
+                ),
+                (
                     "iter_nearpass_group_delta_zscore_10_60",
                     f"group_rank(ts_delta(ts_zscore(ts_backfill({field_name}, 120), 60), 10), subindustry)",
                     186,
+                ),
+                (
+                    "iter_nearpass_group_delta_zscore_10_60_b240",
+                    f"group_rank(ts_delta(ts_zscore(ts_backfill({field_name}, 240), 60), 10), subindustry)",
+                    187,
                 ),
             ]
         )
@@ -396,19 +418,19 @@ def build_feedback_mutations(
     if "LOW_TURNOVER" in dominant_names:
         mutations.extend(
             [
-                ("iter_rank_delta_3", f"rank(ts_delta(ts_backfill({field_name}, 120), 3))", 186),
-                ("iter_rank_delta_5", f"rank(ts_delta(ts_backfill({field_name}, 120), 5))", 184),
-                ("iter_rank_then_delta_3", f"rank(ts_delta(rank(ts_backfill({field_name}, 120)), 3))", 183),
+                ("iter_rank_delta_3", f"rank(ts_delta(ts_backfill({field_name}, 240), 3))", 186),
+                ("iter_rank_delta_5", f"rank(ts_delta(ts_backfill({field_name}, 240), 5))", 184),
+                ("iter_rank_then_delta_3", f"rank(ts_delta(rank(ts_backfill({field_name}, 240)), 3))", 183),
             ]
         )
 
     if "LOW_SUB_UNIVERSE_SHARPE" in dominant_names or "CONCENTRATED_WEIGHT" in dominant_names:
         mutations.extend(
             [
-                ("iter_group_zscore_20", f"group_rank(ts_zscore(ts_backfill({field_name}, 120), 20), subindustry)", 185),
+                ("iter_group_zscore_20", f"group_rank(ts_zscore(ts_backfill({field_name}, 240), 20), subindustry)", 185),
                 (
                     "iter_group_zscore_spread_5_20",
-                    f"group_rank(ts_zscore(ts_backfill({field_name}, 120), 5) - ts_zscore(ts_backfill({field_name}, 120), 20), subindustry)",
+                    f"group_rank(ts_zscore(ts_backfill({field_name}, 240), 5) - ts_zscore(ts_backfill({field_name}, 240), 20), subindustry)",
                     183,
                 ),
             ]
@@ -541,6 +563,20 @@ def should_keep_template_for_feedback(
         if lower_name in {"argmax_60", "argmin_60"}:
             return False
 
+    # Ratio-based templates consistently waste queue budget on fundamental6.
+    # Once we have even 2+ simulated results showing LOW_SHARPE, cut all ratio families.
+    field_low_sharpe = int(dominant_counts.get("LOW_SHARPE", 0))
+    if field_low_sharpe >= 2 and family in {"legacy_ratio", "legacy_neg_ratio", "group_ratio_level"}:
+        return False
+    if lower_name.startswith(("raw_ratio_", "ratio_", "rank_ratio_", "group_rank_ratio_")):
+        if field_low_sharpe >= 2:
+            return False
+
+    # Spread-type templates with severe HIGH_TURNOVER + CONCENTRATED_WEIGHT are doomed.
+    if "HIGH_TURNOVER" in dominant_names and "CONCENTRATED_WEIGHT" in dominant_names:
+        if family in {"rank_spread", "mean_spread"} and "zscore" in lower_name and "spread" in lower_name:
+            return False
+
     # In focused mode, keep only reasonably strong candidates.
     return priority >= FEEDBACK_TEMPLATE_MIN_PRIORITY
 
@@ -581,5 +617,20 @@ def should_skip_field_template_family(
     if not use_dataset_heuristics:
         return False
     family = classify_expression_family(template_name, expression)
+    # Fields where mean_spread / rank_spread families consistently break.
     weak_mean_spread_fields: set = {"assets", "assets_curr"}
-    return field_name in weak_mean_spread_fields and family in {"group_mean_spread", "mean_spread", "rank_spread"}
+    # Fields where zscore/spread combinations produce catastrophic turnover + concentration.
+    broken_zscore_spread_fields: set = {"assets", "assets_curr", "cash", "capex", "bookvalue_ps", "cashflow"}
+    # Ratio exploration on standalone value fields is low-yield on fundamental6.
+    # These fields already work better as standalone iter_ nearpass group_rank_delta variants.
+    weak_ratio_standalone_fields: set = {
+        "assets", "cash", "cash_st", "capex", "cashflow", "cashflow_op",
+        "bookvalue_ps", "ebit", "ebitda",
+    }
+    if field_name in weak_mean_spread_fields and family in {"group_mean_spread", "mean_spread", "rank_spread"}:
+        return True
+    if field_name in broken_zscore_spread_fields and "zscore" in template_name.lower() and "spread" in template_name.lower():
+        return True
+    if field_name in weak_ratio_standalone_fields and family in {"legacy_ratio", "legacy_neg_ratio", "group_ratio_level"}:
+        return True
+    return False

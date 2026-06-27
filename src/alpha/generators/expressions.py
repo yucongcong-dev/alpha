@@ -561,12 +561,30 @@ def adaptive_template_priority_adjustment(
         if family in {"legacy_ratio", "legacy_neg_ratio", "group_ratio_level"}:
             adjustment -= 30
 
+    # Results show rank_zscore_spread is fundamentally broken on fundamental6:
+    # negative Sharpe, extreme turnover (0.86-0.99), concentrated weight (0.5).
+    # Heavily penalize spread-type templates when both HIGH_TURNOVER + CONCENTRATED_WEIGHT fire.
+    if "HIGH_TURNOVER" in dominant_names and "CONCENTRATED_WEIGHT" in dominant_names:
+        if family in {"rank_spread", "mean_spread"}:
+            adjustment -= 50
+        if "zscore" in lower_name and "spread" in lower_name:
+            adjustment -= 45
+
+    # Ratio-based templates consistently underperform on standalone fields.
+    # When the field already has near-pass feedback on non-ratio templates,
+    # skip ratio exploration entirely.
     if field_feedback:
         best_score = float(field_feedback.get("best_score", -999.0))
         if best_score >= 0.50 and lower_name.startswith("iter_nearpass_"):
-            adjustment += 35
+            adjustment += 40
         elif best_score >= 0.20 and lower_name.startswith("iter_"):
             adjustment += 18
+        # Ratio templates waste queue when field already has decent non-ratio signal.
+        if best_score >= 0.30 and family in {"legacy_ratio", "legacy_neg_ratio", "group_ratio_level"}:
+            adjustment -= 40
+        # group_rank_delta nearpass deserves extra boost — best Sharpe on fundamental6
+        if best_score >= 0.50 and family == "group_rank_delta" and "nearpass" in lower_name:
+            adjustment += 20
 
     return adjustment
 
