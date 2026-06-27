@@ -29,6 +29,7 @@ from ..config import (
     FEEDBACK_TEMPLATE_MIN_PRIORITY,
     SETTINGS_VARIANT_BUDGET_HIGH,
     SETTINGS_VARIANT_BUDGET_MID,
+    STATS_DEFAULT_SCORE,
 )
 
 # 从 expressions 模块导入分类函数（唯一源）
@@ -117,7 +118,7 @@ def choose_settings_variant_budget(field_feedback: Optional[Dict[str, Any]]) -> 
     """
     if not field_feedback:
         return 1
-    best_score = float(field_feedback.get("best_score", -999.0))
+    best_score = float(field_feedback.get("best_score", STATS_DEFAULT_SCORE))
     if best_score >= SETTINGS_VARIANT_BUDGET_HIGH:
         return 3
     if best_score >= SETTINGS_VARIANT_BUDGET_MID:
@@ -368,7 +369,7 @@ def build_feedback_mutations(
         for name, _ in sorted(failed_counts.items(), key=lambda item: (-item[1], item[0]))[:3]
     }
     best_expression = str(field_feedback.get("best_expression", "")).strip()
-    best_score = float(field_feedback.get("best_score", -999.0))
+    best_score = float(field_feedback.get("best_score", STATS_DEFAULT_SCORE))
 
     if best_score >= FEEDBACK_MUTATION_NEARPASS_THRESHOLD:
         mutations.extend(

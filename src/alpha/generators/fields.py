@@ -11,8 +11,6 @@ API 调用次数，提高运行效率。
     - fields_cache_refresh_reason(): 判断缓存是否需要刷新
     - merge_fields_by_id(): 按字段 ID 合并字段列表
     - fetch_fields_with_cache(): 根据缓存状态获取字段
-    - normalize_results(): 从 API 返回中提取统一结果列表
-    - extract_total(): 提取总数元数据
     - choose_field_name(): 解析标准字段名
     - choose_field_type(): 标准化字段类型
 """
@@ -22,7 +20,7 @@ import logging
 import os
 import tempfile
 from contextlib import suppress
-from typing import Any, Dict, List, Optional, Sequence
+from typing import Any, Dict, List, Sequence
 
 from ..utils.helpers import first_non_empty
 
@@ -266,8 +264,8 @@ def merge_fields_by_id(
         如果字段没有 ID，仍然会包含在结果中但不进行去重。
     """
     merged: List[Dict[str, Any]] = []
-    seen: set = set()
-    for field in list(existing_fields) + list(new_fields):
+    seen: set[str] = set()
+    for field in (*existing_fields, *new_fields):
         field_id = str(first_non_empty(field.get("id"), field.get("name"), ""))
         if field_id and field_id in seen:
             continue
@@ -275,84 +273,6 @@ def merge_fields_by_id(
             seen.add(field_id)
         merged.append(dict(field))
     return merged
-
-
-def normalize_results(payload: Dict[str, Any]) -> List[Dict[str, Any]]:
-    """
-    从多种常见 API 返回结构中提取统一的列表结果。
-
-    API 的不同列表端点使用不同的容器键，此函数尝试从
-    多个常见键中提取结果列表，提供统一的接口。
-
-    Args:
-        payload (Dict[str, Any]): API 返回的原始数据。
-
-    Returns:
-        List[Dict[str, Any]]: 提取的结果列表。如果 payload
-            本身就是列表，则直接返回。
-
-    支持的容器键：
-        - "results"
-        - "items"
-        - "data"
-        - "records"
-
-    Example:
-        >>> payload = {"results": [{"id": "sales"}, {"id": "ebitda"}]}
-        >>> results = normalize_results(payload)
-        >>> print(len(results))
-        2
-
-        >>> payload = [{"id": "sales"}]
-        >>> results = normalize_results(payload)
-        >>> print(len(results))
-        1
-    """
-    # Different list endpoints use different container keys.
-    for key in ("results", "items", "data", "records"):
-        value = payload.get(key)
-        if isinstance(value, list):
-            return value
-    if isinstance(payload, list):
-        return payload
-    return []
-
-
-def extract_total(payload: Dict[str, Any]) -> Optional[int]:
-    """
-    在接口提供时提取总数元数据。
-
-    从 API 返回中提取总数信息，用于支持分页和进度显示。
-    API 可能使用不同的键名表示总数。
-
-    Args:
-        payload (Dict[str, Any]): API 返回的原始数据。
-
-    Returns:
-        Optional[int]: 总数。如果 payload 中没有总数信息，返回 None。
-
-    支持的总数键：
-        - "count"
-        - "total"
-        - "total_count"
-
-    Example:
-        >>> payload = {"results": [...], "count": 100}
-        >>> total = extract_total(payload)
-        >>> print(total)
-        100
-
-        >>> payload = {"items": [...]}
-        >>> total = extract_total(payload)
-        >>> print(total)
-        None
-    """
-    # Preserve pagination support even if the API changes the total-count key.
-    for key in ("count", "total", "total_count"):
-        value = payload.get(key)
-        if isinstance(value, int):
-            return value
-    return None
 
 
 def fetch_fields_with_cache(

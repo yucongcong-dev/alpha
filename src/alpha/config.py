@@ -118,6 +118,114 @@ DELTA_STD_MIN_WINDOWS: int = 6
 
 
 # ============================================================================
+# Settings 变体生成阈值
+# ============================================================================
+
+SETTINGS_NEARPASS_THRESHOLD: float = 0.45
+"""settings 变体生成 - 接近通过阈值：best_score >= 此值时生成 MARKET 中性化变体"""
+
+SETTINGS_CLOSE_THRESHOLD: float = 0.65
+"""settings 变体生成 - 接近成功阈值：best_score >= 此值时生成更多微调变体"""
+
+
+# ============================================================================
+# Settings 变体参数候选值（decay / truncation / neutralization）
+# ============================================================================
+
+SETTINGS_DECAY_CANDIDATES: tuple = (0, 2, 3, 5, 7)
+"""settings 变体中可用的 decay 候选值列表"""
+
+SETTINGS_TRUNCATION_CANDIDATES: tuple = (0.02, 0.03, 0.05, 0.08, 0.12)
+"""settings 变体中可用的 truncation 候选值列表"""
+
+SETTINGS_NEUTRALIZATION_CANDIDATES: tuple = ("SUBINDUSTRY", "INDUSTRY", "MARKET")
+"""settings 变体中可用的 neutralization 候选值列表"""
+
+SETTINGS_NAN_HANDLING_CANDIDATES: tuple = ("ON", "OFF")
+"""settings 变体中可用的 nanHandling 候选值列表"""
+
+
+# ============================================================================
+# 表达式自适应优先级调整阈值
+# ============================================================================
+
+EXPR_NEARPASS_BOOST_THRESHOLD: float = 0.50
+"""表达式调整 - 高分阈值：best_score >= 此值时 nearpass 模板大幅加分"""
+
+EXPR_ITER_BOOST_THRESHOLD: float = 0.20
+"""表达式调整 - 中等阈值：best_score >= 此值时 iter 模板适度加分"""
+
+EXPR_RATIO_PENALTY_THRESHOLD: float = 0.30
+"""表达式调整 - 比率惩罚阈值：best_score >= 此值时 ratio 家族被惩罚，避免浪费队列"""
+
+EXPR_MUTATION_EXTEND_THRESHOLD: float = 0.15
+"""表达式变异 - 扩展阈值：best_score >= 此值时生成额外 nearpass 变异候选"""
+
+
+# ============================================================================
+# HTTP 客户端超时与重试参数
+# ============================================================================
+
+HTTP_REQUEST_TIMEOUT: float = 90.0
+"""HTTP 请求默认超时时间（秒）"""
+
+RATE_LIMIT_DEFAULT_WAIT: float = 10.0
+"""速率限制默认等待时间（秒）"""
+
+POLLING_DEFAULT_WAIT: float = 5.0
+"""模拟轮询默认等待间隔（秒）"""
+
+POLLING_NO_RETRY_AFTER_WAIT: float = 3.0
+"""无 Retry-After 头时的轮询等待间隔（秒）"""
+
+SERVER_ERROR_BACKOFF_MAX: float = 30.0
+"""服务器错误退避策略最大等待时间（秒）"""
+
+SERVER_ERROR_BACKOFF_STEP: float = 3.0
+"""服务器错误退避策略步长（秒/attempt）"""
+
+RETRY_OPERATION_DEFAULT_WAIT: float = 2.0
+"""重试操作默认等待间隔（秒）"""
+
+LOGIN_RETRY_WAIT: float = 3.0
+"""登录重试等待间隔（秒）"""
+
+SIMULATION_RETRY_WAIT: float = 3.0
+"""模拟各阶段重试等待间隔（秒），略高于默认值以应对 API 排队"""
+
+POLLING_RETRY_BUFFER: float = 1.0
+"""轮询重试缓冲时间（秒），附加在 Retry-After 值上"""
+
+
+# ============================================================================
+# 模拟默认参数
+# ============================================================================
+
+SIMULATION_DEFAULT_START_DATE: str = "2019-01-01"
+"""模拟默认开始日期"""
+
+SIMULATION_DEFAULT_END_DATE: str = "2023-12-31"
+"""模拟默认结束日期"""
+
+
+# ============================================================================
+# Stats 分析哨兵值
+# ============================================================================
+
+STATS_DEFAULT_SCORE: float = -999.0
+"""stats 分析中 best_score / field_priority 的默认哨兵值"""
+
+STATS_FAILED_CHECK_DEFAULT_SCORE: float = -10.0
+"""stats 分析中失败检查的默认评分"""
+
+STATS_NEARPASS_SUMMARY_LIMIT: int = 20
+"""compile_near_pass_summary 默认返回的候选数量上限"""
+
+STATS_PERFORMANCE_TOP_N: int = 10
+"""compile_template_performance_summary / compile_field_performance_summary 默认截断数量"""
+
+
+# ============================================================================
 # 数据字段分类配置
 # ============================================================================
 

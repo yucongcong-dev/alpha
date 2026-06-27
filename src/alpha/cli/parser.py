@@ -190,6 +190,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--neutralization", default="SUBINDUSTRY", help="中性化类型")
     parser.add_argument("--truncation", type=float, default=0.05, help="截断阈值")
     parser.add_argument("--nan-handling", default="ON", help="NaN 处理方式")
+    parser.add_argument("--start-date", default=None, help="模拟开始日期 (YYYY-MM-DD)，默认使用 config 中的值")
+    parser.add_argument("--end-date", default=None, help="模拟结束日期 (YYYY-MM-DD)，默认使用 config 中的值")
 
     # 运行模式（互斥）
     run_mode_group = parser.add_mutually_exclusive_group()

@@ -26,10 +26,15 @@ from typing import Any, Dict, List, Optional, Sequence, Tuple
 from ..config import (
     BACKFILL_WINDOW,
     DELTA_STD_PRIORITY_BOOST,
+    EXPR_ITER_BOOST_THRESHOLD,
+    EXPR_MUTATION_EXTEND_THRESHOLD,
+    EXPR_NEARPASS_BOOST_THRESHOLD,
+    EXPR_RATIO_PENALTY_THRESHOLD,
     NEGATIVE_RAW_FIELDS,
     POSITIVE_RAW_FIELDS,
     RATIO_KEYWORDS,
     RATIO_PARTNER_CANDIDATES,
+    STATS_DEFAULT_SCORE,
 )
 from ..models.base import TemplateLibrary
 from ..utils.helpers import choose_field_name, choose_field_type
@@ -578,16 +583,16 @@ def adaptive_template_priority_adjustment(
     # When the field already has near-pass feedback on non-ratio templates,
     # skip ratio exploration entirely.
     if field_feedback:
-        best_score = float(field_feedback.get("best_score", -999.0))
-        if best_score >= 0.50 and lower_name.startswith("iter_nearpass_"):
+        best_score = float(field_feedback.get("best_score", STATS_DEFAULT_SCORE))
+        if best_score >= EXPR_NEARPASS_BOOST_THRESHOLD and lower_name.startswith("iter_nearpass_"):
             adjustment += 40
-        elif best_score >= 0.20 and lower_name.startswith("iter_"):
+        elif best_score >= EXPR_ITER_BOOST_THRESHOLD and lower_name.startswith("iter_"):
             adjustment += 18
         # Ratio templates waste queue when field already has decent non-ratio signal.
-        if best_score >= 0.30 and family in {"legacy_ratio", "legacy_neg_ratio", "group_ratio_level"}:
+        if best_score >= EXPR_RATIO_PENALTY_THRESHOLD and family in {"legacy_ratio", "legacy_neg_ratio", "group_ratio_level"}:
             adjustment -= 40
         # group_rank_delta nearpass deserves extra boost — best Sharpe on fundamental6
-        if best_score >= 0.50 and family == "group_rank_delta" and "nearpass" in lower_name:
+        if best_score >= EXPR_NEARPASS_BOOST_THRESHOLD and family == "group_rank_delta" and "nearpass" in lower_name:
             adjustment += 20
         # vol-scaled delta nearpass deserves the highest boost — best overall on fundamental6
         if family in {"group_vol_scaled_delta", "vol_scaled_delta"}:
@@ -780,9 +785,9 @@ def build_feedback_mutations(
         for name, _ in sorted(failed_counts.items(), key=lambda item: (-item[1], item[0]))[:3]
     }
     _best_expression = str(field_feedback.get("best_expression", "")).strip()
-    best_score = float(field_feedback.get("best_score", -999.0))
+    best_score = float(field_feedback.get("best_score", STATS_DEFAULT_SCORE))
 
-    if best_score >= 0.15:
+    if best_score >= EXPR_MUTATION_EXTEND_THRESHOLD:
         mutations.extend(
             [
                 (
@@ -809,7 +814,7 @@ def build_feedback_mutations(
         )
 
     # Near-pass on vol-scaled: generate fine-tuned backfill/delta window variants
-    if best_score >= 0.50:
+    if best_score >= EXPR_NEARPASS_BOOST_THRESHOLD:
         mutations.extend(
             [
                 (

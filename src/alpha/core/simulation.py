@@ -28,6 +28,7 @@ from ..api.client import (
     retry_operation,
 )
 from ..config import (
+    SIMULATION_RETRY_WAIT,
     SUBMIT_MAX_TURNOVER,
     SUBMIT_MAX_WEIGHT,
     SUBMIT_MIN_FITNESS,
@@ -440,7 +441,7 @@ def create_simulation_with_retry(
         "create simulation",
         retries,
         lambda: client.create_simulation(payload),
-        retry_wait_seconds=3.0,
+        retry_wait_seconds=SIMULATION_RETRY_WAIT,
     )
     simulation_id_match = re.search(r"/simulations/([^/]+)", simulation_location)
     simulation_id = simulation_id_match.group(1) if simulation_id_match else simulation_location
@@ -504,7 +505,7 @@ def poll_simulation_with_retry(
             max_pending_cycles=max_pending_cycles,
             max_queue_seconds=max_queue_seconds,
         ),
-        retry_wait_seconds=3.0,
+        retry_wait_seconds=SIMULATION_RETRY_WAIT,
     )
 
 
@@ -551,7 +552,7 @@ def checksubmit_with_retry(
         "checksubmit",
         retries,
         lambda: client.get_alpha_detail(alpha_id),
-        retry_wait_seconds=3.0,
+        retry_wait_seconds=SIMULATION_RETRY_WAIT,
     )
     checks = extract_checks(alpha_detail)
     submittable = is_submittable_from_checks(checks)
@@ -593,7 +594,7 @@ def submit_with_retry(client: BrainClient, alpha_id: str, retries: int) -> str:
         "submit",
         retries,
         lambda: client.submit_alpha(alpha_id),
-        retry_wait_seconds=3.0,
+        retry_wait_seconds=SIMULATION_RETRY_WAIT,
     )
     if submit_result.get("status") == "failed":
         return summarize_failure(submit_result)

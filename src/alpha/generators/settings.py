@@ -16,6 +16,13 @@ import hashlib
 import json
 from typing import Any, Dict, List, Optional
 
+from ..config import (
+    SETTINGS_CLOSE_THRESHOLD,
+    SETTINGS_NEARPASS_THRESHOLD,
+    SIMULATION_DEFAULT_END_DATE,
+    SIMULATION_DEFAULT_START_DATE,
+    STATS_DEFAULT_SCORE,
+)
 from ..models.base import SettingsVariant
 from .expressions import classify_expression_family
 
@@ -108,8 +115,8 @@ def build_simulation_payload(args: Any, expression: str) -> Dict[str, Any]:
             "maxPosition": "OFF",
             "language": "FASTEXPR",
             "visualization": False,
-            "startDate": "2019-01-01",
-            "endDate": "2023-12-31",
+            "startDate": getattr(args, "start_date", None) or SIMULATION_DEFAULT_START_DATE,
+            "endDate": getattr(args, "end_date", None) or SIMULATION_DEFAULT_END_DATE,
         },
         "regular": expression,
     }
@@ -237,9 +244,9 @@ def build_setting_variants(
     family = classify_expression_family(template_name, expression)
 
     # Determine if this field has near-pass feedback deserving extra variants
-    best_score = float(field_feedback.get("best_score", -999.0)) if field_feedback else -999.0
-    is_near_pass = best_score >= 0.45
-    is_close = best_score >= 0.65
+    best_score = float(field_feedback.get("best_score", STATS_DEFAULT_SCORE)) if field_feedback else STATS_DEFAULT_SCORE
+    is_near_pass = best_score >= SETTINGS_NEARPASS_THRESHOLD
+    is_close = best_score >= SETTINGS_CLOSE_THRESHOLD
 
     if family in {"group_vol_scaled_delta", "group_mean_spread", "group_zscore"}:
         push_variant(decay=0, truncation=0.05, nanHandling="ON", neutralization="SUBINDUSTRY")

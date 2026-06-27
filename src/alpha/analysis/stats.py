@@ -33,6 +33,12 @@ import json
 import os
 from typing import Any, Dict, List, Optional, Sequence, Set, Tuple
 
+from ..config import (
+    STATS_DEFAULT_SCORE,
+    STATS_FAILED_CHECK_DEFAULT_SCORE,
+    STATS_NEARPASS_SUMMARY_LIMIT,
+    STATS_PERFORMANCE_TOP_N,
+)
 from ..exceptions import BrainAPIError
 from ..models.base import FieldTestResult
 
@@ -403,7 +409,7 @@ def compile_template_performance_summary(results: Sequence[FieldTestResult]) -> 
     rows = list(grouped.values())
     for row in rows:
         counts = row["failed_check_counts"]
-        row["top_failed_checks"] = sorted(counts.items(), key=lambda item: (-item[1], item[0]))[:10]
+        row["top_failed_checks"] = sorted(counts.items(), key=lambda item: (-item[1], item[0]))[:STATS_PERFORMANCE_TOP_N]
     return sorted(rows, key=lambda row: (-row["submittable"], -row["submitted"], -row["attempted"], row["template_name"]))
 
 
@@ -472,7 +478,7 @@ def compile_field_performance_summary(results: Sequence[FieldTestResult]) -> Lis
     rows = list(grouped.values())
     for row in rows:
         counts = row["failed_check_counts"]
-        row["top_failed_checks"] = sorted(counts.items(), key=lambda item: (-item[1], item[0]))[:10]
+        row["top_failed_checks"] = sorted(counts.items(), key=lambda item: (-item[1], item[0]))[:STATS_PERFORMANCE_TOP_N]
     return sorted(rows, key=lambda row: (-row["submittable"], -row["submitted"], -row["attempted_templates"], row["field_id"]))
 
 
@@ -505,7 +511,7 @@ def score_failed_checks(failed_checks: Optional[Sequence[Dict[str, Any]]]) -> fl
     """
     checks = list(failed_checks or [])
     if not checks:
-        return -10.0
+        return STATS_FAILED_CHECK_DEFAULT_SCORE
 
     score = 0.0
     counted = 0
@@ -521,7 +527,7 @@ def score_failed_checks(failed_checks: Optional[Sequence[Dict[str, Any]]]) -> fl
         elif name == "CONCENTRATED_WEIGHT":
             score += max(0.0, 1.0 - ((value - limit) / max(abs(limit), 1e-9)))
     if counted == 0:
-        return -10.0
+        return STATS_FAILED_CHECK_DEFAULT_SCORE
     return score / counted
 
 
@@ -699,10 +705,10 @@ def compile_failed_check_leaderboard(results: Sequence[FieldTestResult]) -> List
         row["avg_gap"] = sum(gaps) / len(gaps) if gaps else None
         row["avg_closeness"] = sum(closeness_scores) / len(closeness_scores) if closeness_scores else None
         leaderboard.append(row)
-    return sorted(leaderboard, key=lambda row: (-row["count"], -(row["avg_closeness"] or -999.0), row["name"]))
+    return sorted(leaderboard, key=lambda row: (-row["count"], -(row["avg_closeness"] or STATS_DEFAULT_SCORE), row["name"]))
 
 
-def compile_near_pass_summary(results: Sequence[FieldTestResult], limit: int = 20) -> List[Dict[str, Any]]:
+def compile_near_pass_summary(results: Sequence[FieldTestResult], limit: int = STATS_NEARPASS_SUMMARY_LIMIT) -> List[Dict[str, Any]]:
     """
     列出最接近通过检查的 Alpha，用于指导下一轮变体搜索。
 
@@ -839,7 +845,7 @@ def compile_field_feedback(results: Sequence[FieldTestResult]) -> Dict[str, Dict
             result.field_id,
             {
                 "field_name": result.field_name,
-                "best_score": -999.0,
+                "best_score": STATS_DEFAULT_SCORE,
                 "best_expression": "",
                 "best_template_name": "",
                 "failed_check_counts": {},
@@ -961,8 +967,8 @@ def field_priority(field_id: str, field_feedback: Dict[str, Dict[str, Any]]) -> 
     """
     summary = field_feedback.get(field_id)
     if not summary:
-        return -999.0
-    return float(summary.get("best_score", -999.0))
+        return STATS_DEFAULT_SCORE
+    return float(summary.get("best_score", STATS_DEFAULT_SCORE))
 
 
 def current_submittable_count(results: Sequence[FieldTestResult]) -> int:
