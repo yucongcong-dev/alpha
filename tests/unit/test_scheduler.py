@@ -58,12 +58,12 @@ class TestMaybeRestoreRuntimeConcurrency:
             runtime_max_workers=2,
             cooldown_until=100.0,
         )
-        with patch("builtins.print") as mock_print:
+        with patch("alpha.core.scheduler.logger") as mock_logger:
             maybe_restore_runtime_concurrency(state)
             assert state.runtime_max_workers == 10
             assert any(
                 "restored runtime concurrency" in str(call)
-                for call in mock_print.call_args_list
+                for call in mock_logger.info.call_args_list
             )
 
 

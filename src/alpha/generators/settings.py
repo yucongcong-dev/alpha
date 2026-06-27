@@ -251,6 +251,22 @@ def build_setting_variants(
         if is_close:
             push_variant(decay=7, truncation=0.05, nanHandling="ON", neutralization="SUBINDUSTRY")
             push_variant(decay=3, truncation=0.05, nanHandling="ON", neutralization="INDUSTRY")
+
+    # Extra variants for vol-scaled delta — best performing family on fundamental6
+    if family == "group_vol_scaled_delta":
+        push_variant(decay=2, truncation=0.03, nanHandling="ON", neutralization="SUBINDUSTRY")
+        push_variant(decay=5, truncation=0.05, nanHandling="ON", neutralization="SUBINDUSTRY")
+        push_variant(decay=0, truncation=0.05, nanHandling="OFF", neutralization="SUBINDUSTRY")
+        push_variant(decay=3, truncation=0.05, nanHandling="ON", neutralization="INDUSTRY")
+        if is_near_pass:
+            push_variant(decay=2, truncation=0.03, nanHandling="ON", neutralization="MARKET")
+            push_variant(decay=5, truncation=0.03, nanHandling="ON", neutralization="MARKET")
+            push_variant(decay=0, truncation=0.03, nanHandling="ON", neutralization="SUBINDUSTRY")
+            push_variant(decay=7, truncation=0.05, nanHandling="ON", neutralization="MARKET")
+        if is_close:
+            push_variant(decay=2, truncation=0.02, nanHandling="ON", neutralization="SUBINDUSTRY")
+            push_variant(decay=3, truncation=0.02, nanHandling="ON", neutralization="MARKET")
+            push_variant(decay=5, truncation=0.02, nanHandling="ON", neutralization="INDUSTRY")
     elif family in {"vol_scaled_delta", "mean_spread", "zscore_time", "rank_delta", "decayed_delta"}:
         push_variant(decay=0, truncation=0.05, nanHandling="ON", neutralization="SUBINDUSTRY")
         push_variant(decay=5, truncation=0.08, nanHandling="OFF", neutralization="SUBINDUSTRY")
@@ -260,6 +276,14 @@ def build_setting_variants(
             push_variant(decay=0, truncation=0.08, nanHandling="ON", neutralization="MARKET")
         if is_close:
             push_variant(decay=7, truncation=0.05, nanHandling="ON", neutralization="SUBINDUSTRY")
+
+    # Extra variants for standalone vol-scaled delta
+    if family == "vol_scaled_delta":
+        push_variant(decay=2, truncation=0.03, nanHandling="ON", neutralization="SUBINDUSTRY")
+        push_variant(decay=3, truncation=0.05, nanHandling="ON", neutralization="INDUSTRY")
+        if is_near_pass:
+            push_variant(decay=2, truncation=0.03, nanHandling="ON", neutralization="MARKET")
+            push_variant(decay=0, truncation=0.03, nanHandling="ON", neutralization="SUBINDUSTRY")
     elif family in {"group_ratio_level", "legacy_ratio"}:
         push_variant(decay=5, truncation=0.08, nanHandling="OFF", neutralization="SUBINDUSTRY")
         push_variant(decay=7, truncation=0.08, nanHandling="OFF", neutralization="SUBINDUSTRY")
