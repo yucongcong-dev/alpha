@@ -1,3 +1,4 @@
+
 """
 Alpha 测试系统命令行入口模块
 
@@ -9,6 +10,8 @@ Usage:
 Example:
     python -m alpha --dataset-id fundamental6 --region USA --universe TOP3000
 """
+
+from __future__ import annotations
 
 import logging
 
@@ -47,6 +50,20 @@ def main() -> int:
     except Exception as exc:
         logger.error("[error] %s", exc)
         return 1
+
+
+def run_pv1_optimization() -> int:
+    """PV1 optimization runner CLI 入口。
+
+    加载并执行 scripts/run_pv1_optimization 中的优化脚本。
+    """
+    import subprocess
+    import sys
+    from pathlib import Path
+
+    script = Path(__file__).parent.parent.parent / "scripts" / "run_pv1_optimization.py"
+    result = subprocess.run([sys.executable, str(script)])
+    return result.returncode
 
 
 if __name__ == "__main__":

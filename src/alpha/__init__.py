@@ -1,3 +1,5 @@
+
+from __future__ import annotations
 """
 WorldQuant BRAIN Alpha 自动生成与提交工具包。
 

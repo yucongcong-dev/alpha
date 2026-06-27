@@ -24,3 +24,6 @@ worldquant_brain_credentials.key
 
 # Runtime logs
 *.log
+
+# Analysis artifacts
+_analysis.json

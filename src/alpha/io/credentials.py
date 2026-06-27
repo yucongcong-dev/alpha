@@ -1,3 +1,5 @@
+
+from __future__ import annotations
 """
 凭证管理模块
 

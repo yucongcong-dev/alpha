@@ -1,3 +1,5 @@
+
+from __future__ import annotations
 """
 模拟生命周期管理模块
 
@@ -97,10 +99,10 @@ class PrecheckConfig:
 # 模块级常量（API 响应 JSON 键名）
 # ============================================================================
 
-_ALPHA_ID_REGEX: re.Pattern = re.compile(r"/alphas/([^/]+)", re.IGNORECASE)
+_ALPHA_ID_REGEX: re.Pattern[str] = re.compile(r"/alphas/([^/]+)", re.IGNORECASE)
 """从 location URL 提取 alpha ID 的正则模式（预编译）"""
 
-_SIM_ID_REGEX: re.Pattern = re.compile(r"/simulations/([^/]+)", re.IGNORECASE)
+_SIM_ID_REGEX: re.Pattern[str] = re.compile(r"/simulations/([^/]+)", re.IGNORECASE)
 """从 location URL 提取 simulation ID 的正则模式（预编译）"""
 
 _RESULT_FAIL: str = "FAIL"

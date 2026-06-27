@@ -1,3 +1,5 @@
+
+from __future__ import annotations
 """
 模板库管理模块
 

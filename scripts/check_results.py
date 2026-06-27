@@ -1,6 +1,8 @@
 import json
+from pathlib import Path
 
-data = json.load(open('results/pv1_test_results_analysis.json'))
+results_file = Path(__file__).parent.parent / "results" / "pv1_test_results_analysis.json"
+data = json.loads(results_file.read_text(encoding="utf-8"))
 print(f"Tested: {data['tested']}")
 print(f"Submittable: {data['submittable_count']}")
 print(f"Errors: {data['error_count']}")

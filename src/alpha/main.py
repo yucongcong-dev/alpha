@@ -1,3 +1,5 @@
+
+from __future__ import annotations
 """
 主入口模块
 
@@ -171,16 +173,13 @@ def create_and_login_client(
 def _initialize(
     args: argparse.Namespace,
     run_paths: Any,
-) -> tuple[Any, ...]:
+) -> tuple[Any, ...] | None:
     """执行主流程的初始化阶段（步骤 2-19），返回所有需要的状态变量。
 
-    Returns a tuple:
-        (email, password, bootstrap_client, client_factory,
-         template_library, filters_dict, use_dataset_heuristics,
-         template_library_fingerprint, settings_fingerprint,
-         feedback_output, historical_state, fields,
-         execution_state, runtime_state, create_semaphore,
-         run_config, output_file)
+    成功时返回包含 18 个值的元组，失败时返回 None。
+
+    Returns:
+        tuple or None: 成功时为包含所有状态变量的元组，失败时为 None。
     """
     output_file = getattr(run_paths, 'output', None) or args.output
     log_file = getattr(run_paths, 'log_file', None)
@@ -196,7 +195,7 @@ def _initialize(
     email, password = load_credentials(args)
     if not email or not password:
         logger.error("[error] 缺少凭证，无法继续")
-        return (None,) * 18
+        return None
 
     bootstrap_client, client_factory = create_and_login_client(email, password, args)
 
@@ -230,7 +229,7 @@ def _initialize(
     )
     if not fields:
         logger.error("[error] 数据集 %s 未返回任何字段", args.dataset_id)
-        return (None,) * 18
+        return None
 
     fields.sort(
         key=lambda item: (
@@ -477,6 +476,10 @@ def main() -> int:
     args = parse_args()
     run_paths = normalize_args_paths(args)
 
+    init_result = _initialize(args, run_paths)
+    if init_result is None:
+        return 1
+
     (
         email, password, bootstrap_client, client_factory,
         template_library, filters_dict, use_dataset_heuristics,
@@ -484,10 +487,7 @@ def main() -> int:
         feedback_output, historical_state, fields,
         execution_state, runtime_state, create_semaphore,
         run_config, output_file,
-    ) = _initialize(args, run_paths)
-
-    if not email or not password or not fields:
-        return 1
+    ) = init_result
 
     _run_field_test_loop(
         args=args,

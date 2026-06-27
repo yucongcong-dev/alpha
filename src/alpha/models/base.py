@@ -15,6 +15,9 @@
     - ExecutionState: 执行状态数据类
 """
 
+from __future__ import annotations
+
+import time
 from dataclasses import dataclass, field
 from typing import Any, Sequence
 
@@ -465,25 +468,11 @@ class RuntimeConcurrencyState:
     """冷却结束时间（单调时钟），0 表示未冷却"""
 
     def is_cooling_down(self) -> bool:
-        """
-        判断是否正在冷却中。
-
-        Returns:
-            bool: 如果 cooldown_until 大于当前时间，返回 True；
-                否则返回 False。
-        """
-        import time
+        """判断是否正在冷却中（cooldown_until 大于当前时间）。"""
         return self.cooldown_until > 0 and time.monotonic() < self.cooldown_until
 
     def can_restore_concurrency(self) -> bool:
-        """
-        判断是否可以恢复正常的并发度。
-
-        Returns:
-            bool: 如果冷却时间已结束且当前并发数不等于最大并发数，
-                返回 True；否则返回 False。
-        """
-        import time
+        """判断是否可以恢复正常的并发度（冷却已结束且当前并发不等于最大并发）。"""
         return (
             self.cooldown_until > 0 and
             time.monotonic() >= self.cooldown_until and

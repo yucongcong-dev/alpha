@@ -1,3 +1,5 @@
+
+from __future__ import annotations
 """
 输入输出包
 

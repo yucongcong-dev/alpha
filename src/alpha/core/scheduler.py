@@ -1,3 +1,5 @@
+
+from __future__ import annotations
 """
 并发调度与拥塞控制模块
 

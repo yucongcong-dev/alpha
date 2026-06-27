@@ -1,3 +1,5 @@
+
+from __future__ import annotations
 """
 结果分析统计模块
 

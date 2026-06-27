@@ -1,3 +1,5 @@
+
+from __future__ import annotations
 """
 字段缓存管理模块
 

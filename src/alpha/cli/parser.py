@@ -1,3 +1,5 @@
+
+from __future__ import annotations
 """
 命令行参数解析模块
 
@@ -24,7 +26,15 @@ from ..io.output import (
     build_output_sidecar_paths,
     resolve_cli_path,
 )
-from ..models.base import RunFilters, RunPaths
+from ..models.base import RunPaths
+
+# 过滤器/日志函数已提取到 cli.filters，此处保留重导出以兼容
+from .filters import (  # noqa: F401
+    load_line_set,
+    load_run_filters,
+    load_run_filters_extended,
+    setup_runtime_logging,
+)
 
 # ============================================================================
 # 常量定义
@@ -654,170 +664,5 @@ def build_run_config_snapshot(
     }
 
 
-# ============================================================================
-# 过滤器加载函数
-# ============================================================================
-
-def load_line_set(path: str) -> set[str]:
-    """
-    从文本文件加载非空行作为集合。
-
-    从文本文件中读取所有非空行，去除空白字符后返回为集合。
-    用于加载包含字段 ID 或模板名称的过滤器文件。
-
-    Args:
-        path (str): 文本文件路径。
-
-    Returns:
-        Set[str]: 非空行的集合。如果文件不存在或为空，返回空集合。
-
-    Example:
-        >>> names = load_line_set("include_fields.txt")
-        >>> print(names)
-        {'field1', 'field2', 'field3'}
-
-    Note:
-        - 每行去除前后空白字符
-        - 空行被忽略
-        - 文件不存在时返回空集合
-    """
-    if not path or not os.path.exists(path):
-        return set()
-    try:
-        with open(path, encoding="utf-8") as handle:
-            return {line.strip() for line in handle if line.strip()}
-    except Exception:
-        return set()
-
-
-def load_run_filters(run_paths: RunPaths) -> RunFilters:
-    """
-    加载运行过滤器，包括字段和模板的包含/排除列表。
-
-    从配置文件中加载字段和模板的过滤规则，
-    用于限制测试的范围。
-
-    Args:
-        run_paths (RunPaths): 运行路径对象，包含以下属性：
-            - include_fields_file: 包含字段文件路径
-            - exclude_fields_file: 排除字段文件路径
-            - include_templates_file: 包含模板文件路径
-            - exclude_templates_file: 排除模板文件路径
-
-    Returns:
-        RunFilters: 过滤器对象，包含以下属性：
-            - region_filter: 地区过滤器（当前未使用）
-            - delay_filter: 延迟过滤器（当前未使用）
-            - min_sharpe: 最小夏普比率（当前未使用）
-            - max_turnover: 最大换手率（当前未使用）
-            - exclude_fields: 排除字段集合
-            - include_fields: 包含字段集合
-            - include_templates: 包含模板集合
-            - exclude_templates: 排除模板集合
-
-    Example:
-        >>> filters = load_run_filters(run_paths)
-        >>> print(filters.include_fields)
-        {'field1', 'field2'}
-        >>> print(filters.exclude_templates)
-        {'template1'}
-
-    Note:
-        - 包含列表和排除列表可以同时使用
-        - 包含列表优先：如果设置了包含列表，只测试包含列表中的项
-        - 排除列表在包含列表之后应用：排除列表中的项会被跳过
-    """
-    # 从文件加载过滤列表
-    _include_fields = load_line_set(run_paths.include_fields_file if hasattr(run_paths, 'include_fields_file') else "")
-    exclude_fields = load_line_set(run_paths.exclude_fields_file if hasattr(run_paths, 'exclude_fields_file') else "")
-    _include_templates = load_line_set(run_paths.include_templates_file if hasattr(run_paths, 'include_templates_file') else "")
-    _exclude_templates = load_line_set(run_paths.exclude_templates_file if hasattr(run_paths, 'exclude_templates_file') else "")
-
-    # 创建扩展的 RunFilters（添加 include/exclude 字段和模板）
-    return RunFilters(
-        region_filter=None,
-        delay_filter=None,
-        min_sharpe=None,
-        max_turnover=None,
-        exclude_fields=exclude_fields,
-    )
-
-
-def load_run_filters_extended(run_paths: RunPaths) -> RunFilters:
-    """
-    加载扩展的运行过滤器，包括字段和模板的包含/排除列表。
-
-    返回一个 RunFilters 对象。
-
-    Args:
-        run_paths (RunPaths): 运行路径对象。
-
-    Returns:
-        RunFilters: 过滤器对象，包含：
-            - include_fields: 包含字段集合
-            - exclude_fields: 排除字段集合
-            - include_templates: 包含模板集合
-            - exclude_templates: 排除模板集合
-
-    Example:
-        >>> filters = load_run_filters_extended(run_paths)
-        >>> print(filters.include_fields)
-        {'field1', 'field2'}
-    """
-    return RunFilters(
-        region_filter=None,
-        delay_filter=None,
-        min_sharpe=None,
-        max_turnover=None,
-        include_fields=load_line_set(run_paths.include_fields_file if hasattr(run_paths, 'include_fields_file') else ""),
-        exclude_fields=load_line_set(run_paths.exclude_fields_file if hasattr(run_paths, 'exclude_fields_file') else ""),
-        include_templates=load_line_set(run_paths.include_templates_file if hasattr(run_paths, 'include_templates_file') else ""),
-        exclude_templates=load_line_set(run_paths.exclude_templates_file if hasattr(run_paths, 'exclude_templates_file') else ""),
-    )
-
-
-# ============================================================================
-# 日志设置函数
-# ============================================================================
-
-def setup_runtime_logging(log_path: str) -> None:
-    """
-    设置运行时日志，将日志同时输出到控制台和文件。
-
-    控制台使用 coloredlogs 输出彩色日志，文件输出纯文本。
-
-    Args:
-        log_path (str): 日志文件的绝对路径。如果为空，只输出到控制台。
-
-    Note:
-        - 控制台格式：[HH:MM:SS] LEVEL    message（按等级着色）
-        - 文件格式：[HH:MM:SS] LEVEL    message（纯文本）
-        - 全局生效，所有模块的 logger 均受影响
-    """
-    import coloredlogs
-
-    root = logging.getLogger()
-
-    # 移除旧 handler，避免重复输出
-    for handler in root.handlers[:]:
-        root.removeHandler(handler)
-
-    # 控制台 handler（coloredlogs）
-    coloredlogs.install(
-        level="INFO",
-        fmt="[%(asctime)s] %(levelname)-8s %(message)s",
-        datefmt="%H:%M:%S",
-    )
-
-    if log_path:
-        log_dir = os.path.dirname(os.path.abspath(log_path))
-        if log_dir:
-            os.makedirs(log_dir, exist_ok=True)
-        plain_fmt = logging.Formatter(
-            "[%(asctime)s] %(levelname)-8s %(message)s", datefmt="%H:%M:%S"
-        )
-        file_handler = logging.FileHandler(log_path, encoding="utf-8")
-        file_handler.setFormatter(plain_fmt)
-        root.addHandler(file_handler)
-
-    root.info(f"logging to {log_path}" if log_path else "logging to console only")
+# 过滤器函数和日志设置已提取到 cli/filters.py
+# 通过顶部的 from .filters import ... 提供重导出兼容

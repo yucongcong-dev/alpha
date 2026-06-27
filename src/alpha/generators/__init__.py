@@ -1,3 +1,5 @@
+
+from __future__ import annotations
 """
 Alpha 生成器包
 

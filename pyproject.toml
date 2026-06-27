@@ -42,10 +42,11 @@ dev = [
 
 [project.scripts]
 alpha = "alpha.__main__:main"
+pv1-optimize = "alpha.__main__:run_pv1_optimization"
 
 [project.urls]
-Homepage = "https://github.com/your-org/alpha"
-Repository = "https://github.com/your-org/alpha"
+Homepage = "https://github.com/yucongcong-dev/alpha"
+Repository = "https://github.com/yucongcong-dev/alpha"
 
 [tool.setuptools.packages.find]
 where = ["src"]

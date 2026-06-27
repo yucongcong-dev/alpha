@@ -1,3 +1,5 @@
+
+from __future__ import annotations
 """
 命令行接口包
 

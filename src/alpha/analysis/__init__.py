@@ -1,3 +1,5 @@
+
+from __future__ import annotations
 """
 分析与优化包
 

@@ -1,3 +1,5 @@
+
+from __future__ import annotations
 """
 参数变体模块
 
