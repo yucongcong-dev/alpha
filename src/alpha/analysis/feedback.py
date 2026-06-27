@@ -18,7 +18,7 @@
 """
 
 import argparse
-from typing import Any, Dict, List, Optional, Sequence, Tuple
+from typing import Any, Sequence
 
 from ..config import (
     CHECK_CONCENTRATED_WEIGHT,

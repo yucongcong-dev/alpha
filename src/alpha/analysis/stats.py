@@ -31,7 +31,7 @@
 
 import json
 import os
-from typing import Any, Dict, List, Optional, Sequence, Set, Tuple
+from typing import Any, Sequence
 
 from ..config import (
     CHECK_CONCENTRATED_WEIGHT,
@@ -40,10 +40,33 @@ from ..config import (
     CHECK_LOW_SHARPE,
     CHECK_LOW_SUB_UNIVERSE_SHARPE,
     CHECK_LOW_TURNOVER,
+    SENTINEL_UNKNOWN,
+    SENTINEL_UNKNOWN_CHECK,
+    SENTINEL_UNKNOWN_STATUS,
+    STAT_FIELD_ATTEMPTED,
+    STAT_FIELD_ATTEMPTED_TEMPLATES,
+    STAT_FIELD_CONCENTRATED_WEIGHT,
+    STAT_FIELD_ERRORS,
+    STAT_FIELD_FAILED_CHECK_COUNTS,
+    STAT_FIELD_FIELD_ID,
+    STAT_FIELD_FIELD_NAME,
+    STAT_FIELD_FIELD_TYPE,
+    STAT_FIELD_LOW_FITNESS,
+    STAT_FIELD_LOW_SHARPE,
+    STAT_FIELD_LOW_SUB_UNIVERSE_SHARPE,
+    STAT_FIELD_QUEUE_TIMEOUTS,
+    STAT_FIELD_SIMULATED,
+    STAT_FIELD_SUBMITTABLE,
+    STAT_FIELD_SUBMITTED,
+    STAT_FIELD_TEMPLATE_NAME,
+    STAT_FIELD_TOP_FAILED_CHECKS,
     STATS_DEFAULT_SCORE,
     STATS_FAILED_CHECK_DEFAULT_SCORE,
     STATS_NEARPASS_SUMMARY_LIMIT,
     STATS_PERFORMANCE_TOP_N,
+    STATUS_ERROR,
+    STATUS_SIMULATED,
+    STATUS_SUBMITTED,
 )
 from ..exceptions import BrainAPIError
 from ..models.base import FieldTestResult
@@ -102,16 +125,16 @@ def load_existing_results(path: str) -> List[FieldTestResult]:
         try:
             results.append(
                 FieldTestResult(
-                    field_id=str(row.get("field_id", "UNKNOWN")),
-                    field_type=str(row.get("field_type", "UNKNOWN")),
-                    field_name=str(row.get("field_name", "UNKNOWN")),
-                    template_name=str(row.get("template_name", "")),
+                    field_id=str(row.get(STAT_FIELD_FIELD_ID, SENTINEL_UNKNOWN)),
+                    field_type=str(row.get(STAT_FIELD_FIELD_TYPE, SENTINEL_UNKNOWN)),
+                    field_name=str(row.get(STAT_FIELD_FIELD_NAME, SENTINEL_UNKNOWN)),
+                    template_name=str(row.get(STAT_FIELD_TEMPLATE_NAME, "")),
                     simulation_id=row.get("simulation_id"),
                     alpha_id=row.get("alpha_id"),
-                    status=str(row.get("status", "unknown")),
-                    submittable=row.get("submittable"),
-                    submitted=bool(row.get("submitted", False)),
-                    message=str(row.get("message", "")),
+                    status=str(row.get(API_KEY_STATUS, SENTINEL_UNKNOWN_STATUS)),
+                    submittable=row.get(STAT_FIELD_SUBMITTABLE),
+                    submitted=bool(row.get(STAT_FIELD_SUBMITTED, False)),
+                    message=str(row.get(API_KEY_MESSAGE, "")),
                     expression=str(row.get("expression", "")),
                     settings_fingerprint=str(row.get("settings_fingerprint", "")),
                     template_library_fingerprint=str(row.get("template_library_fingerprint", "")),
@@ -267,39 +290,39 @@ def compile_template_stats(results: Sequence[FieldTestResult]) -> Dict[str, Dict
         stat = stats.setdefault(
             result.template_name,
             {
-                "attempted": 0,
-                "submittable": 0,
-                "submitted": 0,
-                "errors": 0,
-                "simulated": 0,
-                "queue_timeouts": 0,
-                "low_sharpe": 0,
-                "low_fitness": 0,
-                "concentrated_weight": 0,
-                "low_sub_universe_sharpe": 0,
+                STAT_FIELD_ATTEMPTED: 0,
+                STAT_FIELD_SUBMITTABLE: 0,
+                STAT_FIELD_SUBMITTED: 0,
+                STAT_FIELD_ERRORS: 0,
+                STAT_FIELD_SIMULATED: 0,
+                STAT_FIELD_QUEUE_TIMEOUTS: 0,
+                STAT_FIELD_LOW_SHARPE: 0,
+                STAT_FIELD_LOW_FITNESS: 0,
+                STAT_FIELD_CONCENTRATED_WEIGHT: 0,
+                STAT_FIELD_LOW_SUB_UNIVERSE_SHARPE: 0,
             },
         )
         if is_queue_timeout_result(result):
-            stat["queue_timeouts"] += 1
+            stat[STAT_FIELD_QUEUE_TIMEOUTS] += 1
             continue
-        stat["attempted"] += 1
+        stat[STAT_FIELD_ATTEMPTED] += 1
         if result.submittable:
-            stat["submittable"] += 1
+            stat[STAT_FIELD_SUBMITTABLE] += 1
         if result.submitted:
-            stat["submitted"] += 1
-        if result.status in {"simulated", "submitted"}:
-            stat["simulated"] += 1
-        if result.status == "error":
-            stat["errors"] += 1
+            stat[STAT_FIELD_SUBMITTED] += 1
+        if result.status in {STATUS_SIMULATED, STATUS_SUBMITTED}:
+            stat[STAT_FIELD_SIMULATED] += 1
+        if result.status == STATUS_ERROR:
+            stat[STAT_FIELD_ERRORS] += 1
         failed_check_names = {str(check.get("name", "")) for check in result.failed_checks or []}
         if CHECK_LOW_SHARPE in failed_check_names:
-            stat["low_sharpe"] += 1
+            stat[STAT_FIELD_LOW_SHARPE] += 1
         if CHECK_LOW_FITNESS in failed_check_names:
-            stat["low_fitness"] += 1
+            stat[STAT_FIELD_LOW_FITNESS] += 1
         if CHECK_CONCENTRATED_WEIGHT in failed_check_names:
-            stat["concentrated_weight"] += 1
+            stat[STAT_FIELD_CONCENTRATED_WEIGHT] += 1
         if CHECK_LOW_SUB_UNIVERSE_SHARPE in failed_check_names:
-            stat["low_sub_universe_sharpe"] += 1
+            stat[STAT_FIELD_LOW_SUB_UNIVERSE_SHARPE] += 1
     return stats
 
 
@@ -339,17 +362,17 @@ def historical_template_priority_bonus(
     stat = template_stats.get(template_name)
     if not stat:
         return 0
-    if stat["submittable"] > 0:
+    if stat[STAT_FIELD_SUBMITTABLE] > 0:
         return 200 * multiplier
-    if stat["simulated"] > 0:
-        bonus = 40 + min(stat["simulated"], 5) * 8
-        if stat.get("submittable", 0) == 0 and stat.get("simulated", 0) >= 3:
-            if stat.get("low_sharpe", 0) >= 3 and stat.get("low_fitness", 0) >= 3:
+    if stat[STAT_FIELD_SIMULATED] > 0:
+        bonus = 40 + min(stat[STAT_FIELD_SIMULATED], 5) * 8
+        if stat.get(STAT_FIELD_SUBMITTABLE, 0) == 0 and stat.get(STAT_FIELD_SIMULATED, 0) >= 3:
+            if stat.get(STAT_FIELD_LOW_SHARPE, 0) >= 3 and stat.get(STAT_FIELD_LOW_FITNESS, 0) >= 3:
                 bonus -= 90
-            if stat.get("concentrated_weight", 0) >= 2:
+            if stat.get(STAT_FIELD_CONCENTRATED_WEIGHT, 0) >= 2:
                 bonus -= 60
         return bonus * multiplier
-    if stat["errors"] >= 3 and stat["simulated"] == 0:
+    if stat[STAT_FIELD_ERRORS] >= 3 and stat[STAT_FIELD_SIMULATED] == 0:
         return -20 * multiplier
     return 0
 
@@ -389,34 +412,36 @@ def compile_template_performance_summary(results: Sequence[FieldTestResult]) -> 
         summary = grouped.setdefault(
             result.template_name,
             {
-                "template_name": result.template_name,
-                "attempted": 0,
-                "submittable": 0,
-                "submitted": 0,
-                "errors": 0,
-                "queue_timeouts": 0,
-                "failed_check_counts": {},
+                STAT_FIELD_TEMPLATE_NAME: result.template_name,
+                STAT_FIELD_ATTEMPTED: 0,
+                STAT_FIELD_SUBMITTABLE: 0,
+                STAT_FIELD_SUBMITTED: 0,
+                STAT_FIELD_ERRORS: 0,
+                STAT_FIELD_QUEUE_TIMEOUTS: 0,
+                STAT_FIELD_FAILED_CHECK_COUNTS: {},
             },
         )
         if is_queue_timeout_result(result):
-            summary["queue_timeouts"] += 1
+            summary[STAT_FIELD_QUEUE_TIMEOUTS] += 1
             continue
-        summary["attempted"] += 1
+        summary[STAT_FIELD_ATTEMPTED] += 1
         if result.submittable:
-            summary["submittable"] += 1
+            summary[STAT_FIELD_SUBMITTABLE] += 1
         if result.submitted:
-            summary["submitted"] += 1
-        if result.status == "error":
-            summary["errors"] += 1
+            summary[STAT_FIELD_SUBMITTED] += 1
+        if result.status == STATUS_ERROR:
+            summary[STAT_FIELD_ERRORS] += 1
         for check in result.failed_checks or []:
-            name = str(check.get("name", "UNKNOWN"))
-            summary["failed_check_counts"][name] = summary["failed_check_counts"].get(name, 0) + 1
+            name = str(check.get("name", SENTINEL_UNKNOWN_CHECK))
+            summary[STAT_FIELD_FAILED_CHECK_COUNTS][name] = summary[STAT_FIELD_FAILED_CHECK_COUNTS].get(name, 0) + 1
 
     rows = list(grouped.values())
     for row in rows:
-        counts = row["failed_check_counts"]
-        row["top_failed_checks"] = sorted(counts.items(), key=lambda item: (-item[1], item[0]))[:STATS_PERFORMANCE_TOP_N]
-    return sorted(rows, key=lambda row: (-row["submittable"], -row["submitted"], -row["attempted"], row["template_name"]))
+        counts = row[STAT_FIELD_FAILED_CHECK_COUNTS]
+        row[STAT_FIELD_TOP_FAILED_CHECKS] = sorted(counts.items(), key=lambda item: (-item[1], item[0]))[:STATS_PERFORMANCE_TOP_N]
+    return sorted(rows, key=lambda row: (
+        -row[STAT_FIELD_SUBMITTABLE], -row[STAT_FIELD_SUBMITTED], -row[STAT_FIELD_ATTEMPTED], row[STAT_FIELD_TEMPLATE_NAME],
+    ))
 
 
 def compile_field_performance_summary(results: Sequence[FieldTestResult]) -> List[Dict[str, Any]]:
@@ -456,36 +481,38 @@ def compile_field_performance_summary(results: Sequence[FieldTestResult]) -> Lis
         summary = grouped.setdefault(
             result.field_id,
             {
-                "field_id": result.field_id,
-                "field_name": result.field_name,
-                "field_type": result.field_type,
-                "attempted_templates": 0,
-                "submittable": 0,
-                "submitted": 0,
-                "errors": 0,
-                "queue_timeouts": 0,
-                "failed_check_counts": {},
+                STAT_FIELD_FIELD_ID: result.field_id,
+                STAT_FIELD_FIELD_NAME: result.field_name,
+                STAT_FIELD_FIELD_TYPE: result.field_type,
+                STAT_FIELD_ATTEMPTED_TEMPLATES: 0,
+                STAT_FIELD_SUBMITTABLE: 0,
+                STAT_FIELD_SUBMITTED: 0,
+                STAT_FIELD_ERRORS: 0,
+                STAT_FIELD_QUEUE_TIMEOUTS: 0,
+                STAT_FIELD_FAILED_CHECK_COUNTS: {},
             },
         )
         if is_queue_timeout_result(result):
-            summary["queue_timeouts"] += 1
+            summary[STAT_FIELD_QUEUE_TIMEOUTS] += 1
             continue
-        summary["attempted_templates"] += 1
+        summary[STAT_FIELD_ATTEMPTED_TEMPLATES] += 1
         if result.submittable:
-            summary["submittable"] += 1
+            summary[STAT_FIELD_SUBMITTABLE] += 1
         if result.submitted:
-            summary["submitted"] += 1
-        if result.status == "error":
-            summary["errors"] += 1
+            summary[STAT_FIELD_SUBMITTED] += 1
+        if result.status == STATUS_ERROR:
+            summary[STAT_FIELD_ERRORS] += 1
         for check in result.failed_checks or []:
-            name = str(check.get("name", "UNKNOWN"))
-            summary["failed_check_counts"][name] = summary["failed_check_counts"].get(name, 0) + 1
+            name = str(check.get("name", SENTINEL_UNKNOWN_CHECK))
+            summary[STAT_FIELD_FAILED_CHECK_COUNTS][name] = summary[STAT_FIELD_FAILED_CHECK_COUNTS].get(name, 0) + 1
 
     rows = list(grouped.values())
     for row in rows:
-        counts = row["failed_check_counts"]
-        row["top_failed_checks"] = sorted(counts.items(), key=lambda item: (-item[1], item[0]))[:STATS_PERFORMANCE_TOP_N]
-    return sorted(rows, key=lambda row: (-row["submittable"], -row["submitted"], -row["attempted_templates"], row["field_id"]))
+        counts = row[STAT_FIELD_FAILED_CHECK_COUNTS]
+        row[STAT_FIELD_TOP_FAILED_CHECKS] = sorted(counts.items(), key=lambda item: (-item[1], item[0]))[:STATS_PERFORMANCE_TOP_N]
+    return sorted(rows, key=lambda row: (
+        -row[STAT_FIELD_SUBMITTABLE], -row[STAT_FIELD_SUBMITTED], -row[STAT_FIELD_ATTEMPTED_TEMPLATES], row[STAT_FIELD_FIELD_ID],
+    ))
 
 
 def score_failed_checks(failed_checks: Optional[Sequence[Dict[str, Any]]]) -> float:
@@ -522,7 +549,7 @@ def score_failed_checks(failed_checks: Optional[Sequence[Dict[str, Any]]]) -> fl
     score = 0.0
     counted = 0
     for check in checks:
-        name = str(check.get("name", "UNKNOWN"))
+        name = str(check.get("name", SENTINEL_UNKNOWN_CHECK))
         value = check.get("value")
         limit = check.get("limit")
         if not isinstance(value, (int, float)) or not isinstance(limit, (int, float)):
@@ -560,7 +587,7 @@ def failed_check_closeness(check: Dict[str, Any]) -> Optional[float]:
         >>> print(closeness)
         0.9
     """
-    name = str(check.get("name", "UNKNOWN"))
+    name = str(check.get("name", SENTINEL_UNKNOWN_CHECK))
     value = check.get("value")
     limit = check.get("limit")
     if not isinstance(value, (int, float)) or not isinstance(limit, (int, float)) or limit == 0:
@@ -596,7 +623,7 @@ def failed_check_gap(check: Dict[str, Any]) -> Optional[float]:
         >>> print(gap)
         0.1  # 还需要提升 0.1 才能通过
     """
-    name = str(check.get("name", "UNKNOWN"))
+    name = str(check.get("name", SENTINEL_UNKNOWN_CHECK))
     value = check.get("value")
     limit = check.get("limit")
     if not isinstance(value, (int, float)) or not isinstance(limit, (int, float)):
@@ -671,7 +698,7 @@ def compile_failed_check_leaderboard(results: Sequence[FieldTestResult]) -> List
         if is_queue_timeout_result(result):
             continue
         for check in result.failed_checks or []:
-            name = str(check.get("name", "UNKNOWN"))
+            name = str(check.get("name", SENTINEL_UNKNOWN_CHECK))
             row = grouped.setdefault(
                 name,
                 {
@@ -850,17 +877,17 @@ def compile_field_feedback(results: Sequence[FieldTestResult]) -> Dict[str, Dict
         summary = feedback.setdefault(
             result.field_id,
             {
-                "field_name": result.field_name,
+                STAT_FIELD_FIELD_NAME: result.field_name,
                 "best_score": STATS_DEFAULT_SCORE,
                 "best_expression": "",
                 "best_template_name": "",
-                "failed_check_counts": {},
+                STAT_FIELD_FAILED_CHECK_COUNTS: {},
             },
         )
         for check in result.failed_checks or []:
-            name = str(check.get("name", "UNKNOWN"))
-            summary["failed_check_counts"][name] = summary["failed_check_counts"].get(name, 0) + 1
-        if result.status != "simulated" or not result.failed_checks:
+            name = str(check.get("name", SENTINEL_UNKNOWN_CHECK))
+            summary[STAT_FIELD_FAILED_CHECK_COUNTS][name] = summary[STAT_FIELD_FAILED_CHECK_COUNTS].get(name, 0) + 1
+        if result.status != STATUS_SIMULATED or not result.failed_checks:
             continue
         score = score_failed_checks(result.failed_checks)
         if score > summary["best_score"]:
@@ -894,7 +921,7 @@ def compile_global_failed_check_counts(results: Sequence[FieldTestResult]) -> Di
         if is_queue_timeout_result(result):
             continue
         for check in result.failed_checks or []:
-            name = str(check.get("name", "UNKNOWN"))
+            name = str(check.get("name", SENTINEL_UNKNOWN_CHECK))
             counts[name] = counts.get(name, 0) + 1
     return counts
 

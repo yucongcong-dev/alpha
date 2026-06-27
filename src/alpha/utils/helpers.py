@@ -10,10 +10,12 @@
     - choose_field_type(): 将字段类型标准化为统一的大写标签
 """
 
-from typing import Any, Dict, Optional
+from typing import Any
+
+from ..config import SENTINEL_UNKNOWN
 
 
-def first_non_empty(*values: Any) -> Optional[Any]:
+def first_non_empty(*values: Any) -> Any | None:
     """
     从多个候选值中返回第一个非空值。
 
@@ -40,7 +42,7 @@ def first_non_empty(*values: Any) -> Optional[Any]:
     return None
 
 
-def choose_field_name(field: Dict[str, Any]) -> str:
+def choose_field_name(field: dict[str, Any]) -> str:
     """
     从异构字段元数据中解析标准字段名或标识。
 
@@ -80,7 +82,7 @@ def choose_field_name(field: Dict[str, Any]) -> str:
     )
 
 
-def choose_field_type(field: Dict[str, Any]) -> str:
+def choose_field_type(field: dict[str, Any]) -> str:
     """
     将字段类型标准化为统一的大写标签，便于模板分发。
 
@@ -121,6 +123,6 @@ def choose_field_type(field: Dict[str, Any]) -> str:
             field.get("type"),
             field.get("fieldType"),
             field.get("category"),
-            "UNKNOWN",
+            SENTINEL_UNKNOWN,
         )
     ).upper()

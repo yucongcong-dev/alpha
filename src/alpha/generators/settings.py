@@ -14,7 +14,7 @@
 
 import hashlib
 import json
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 from ..config import (
     SETTINGS_CLOSE_THRESHOLD,
@@ -54,7 +54,7 @@ def stable_fingerprint(payload: Any) -> str:
     return hashlib.sha256(text.encode("utf-8")).hexdigest()[:16]
 
 
-def build_simulation_payload(args: Any, expression: str) -> Dict[str, Any]:
+def build_simulation_payload(args: Any, expression: str) -> dict[str, Any]:
     """
     为单个表达式构建完整的模拟请求体。
 
@@ -147,7 +147,7 @@ def build_settings_fingerprint(args: Any) -> str:
     return stable_fingerprint(payload["settings"])
 
 
-def build_settings_fingerprint_from_payload(payload: Dict[str, Any]) -> str:
+def build_settings_fingerprint_from_payload(payload: dict[str, Any]) -> str:
     """
     为单个具体 settings 变体生成配置指纹。
 
@@ -176,7 +176,7 @@ def build_settings_fingerprint_from_payload(payload: Dict[str, Any]) -> str:
 #   condition: "always" | "near_pass" | "close"
 #   overrides: 覆盖 base settings 的参数字典
 
-_VARIANT_SPECS: List[Tuple[Tuple[str, ...], str, Dict[str, Any]]] = [
+_VARIANT_SPECS: list[tuple[tuple[str, ...], str, dict[str, Any]]] = [
     # --- group_vol_scaled_delta / group_mean_spread / group_zscore ---
     (("group_vol_scaled_delta", "group_mean_spread", "group_zscore"), "always",
      {"decay": 0, "truncation": 0.05, "nanHandling": "ON", "neutralization": "SUBINDUSTRY"}),
@@ -264,8 +264,8 @@ def build_setting_variants(
     template_name: str,
     expression: str,
     *,
-    field_feedback: Optional[Dict[str, Any]] = None,
-) -> List[SettingsVariant]:
+    field_feedback: dict[str, Any] | None = None,
+) -> list[SettingsVariant]:
     """
     为一个表达式生成少量且多样化的 settings 变体（声明式规则表驱动）。
 
@@ -281,7 +281,7 @@ def build_setting_variants(
         List[SettingsVariant]: 去重后的设置变体列表。
     """
     base = build_simulation_payload(args, expression)["settings"]
-    variants: List[SettingsVariant] = []
+    variants: list[SettingsVariant] = []
     family = classify_expression_family(template_name, expression)
 
     best_score = float(field_feedback.get("best_score", STATS_DEFAULT_SCORE)) if field_feedback else STATS_DEFAULT_SCORE
@@ -304,7 +304,7 @@ def build_setting_variants(
         variants.append(dict(base))
 
     # 去重
-    deduped: List[SettingsVariant] = []
+    deduped: list[SettingsVariant] = []
     seen: set = set()
     for variant in variants:
         fingerprint = build_settings_fingerprint_from_payload(variant)

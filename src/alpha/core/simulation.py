@@ -14,26 +14,47 @@
     - 字段测试核心执行函数
 """
 
+# pyright: reportExplicitAny=false, reportAny=false
+
 import argparse
 import json
 import logging
 import re
 import threading
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, cast
 
 from ..api.client import (
     BrainClient,
     WorkerClientFactory,
-    first_non_empty,
     retry_operation,
 )
+from ..utils.helpers import first_non_empty
 from ..config import (
+    API_KEY_DETAIL,
+    API_KEY_ERROR,
+    API_KEY_FAILED,
+    API_KEY_MESSAGE,
+    API_KEY_PROGRESS,
+    API_KEY_STATE,
+    API_KEY_STATUS,
     CHECK_CONCENTRATED_WEIGHT,
     CHECK_HIGH_TURNOVER,
     CHECK_LOW_FITNESS,
     CHECK_LOW_SHARPE,
     CHECK_LOW_TURNOVER,
+    FAILURE_SUMMARY_MAX_LEN,
+    MAX_FAILED_CHECK_NAMES,
+    PRECHECK_FALLBACK_MAX_TURNOVER,
+    PRECHECK_FALLBACK_MAX_WEIGHT,
+    PRECHECK_FALLBACK_MIN_FITNESS,
+    PRECHECK_FALLBACK_MIN_SHARPE,
+    PRECHECK_FALLBACK_MIN_TURNOVER,
+    SENTINEL_UNKNOWN,
+    SENTINEL_UNKNOWN_CHECK,
     SIMULATION_RETRY_WAIT,
+    STATUS_ERROR,
+    STATUS_SIMULATED,
+    STATUS_SUBMITTED,
     SUBMIT_MAX_TURNOVER,
     SUBMIT_MAX_WEIGHT,
     SUBMIT_MIN_FITNESS,
@@ -51,10 +72,47 @@ from ..utils.helpers import choose_field_type
 logger = logging.getLogger(__name__)
 
 # ============================================================================
+# 模块级常量（API 响应 JSON 键名）
+# ============================================================================
+
+_ALPHA_ID_REGEX: str = r"/alphas/([^/]+)"
+"""从 location URL 提取 alpha ID 的正则模式"""
+
+_SIM_ID_REGEX: str = r"/simulations/([^/]+)"
+"""从 location URL 提取 simulation ID 的正则模式"""
+
+_RESULT_FAIL: str = "FAIL"
+"""check 结果字符串常量"""
+
+_RESULT_PASS: str = "PASS"
+"""check 结果字符串常量"""
+
+_KEY_ALPHA: str = "alpha"
+_KEY_ALPHA_ID: str = "alphaId"
+_KEY_CHECKS: str = "checks"
+_KEY_CHILDREN: str = "children"
+_KEY_CONCENTRATED_WEIGHT: str = "concentratedWeight"
+_KEY_ID: str = "id"
+_KEY_IS: str = "is"
+_KEY_LIMIT: str = "limit"
+_KEY_LOCATION: str = "location"
+_KEY_MAX_WEIGHT: str = "maxWeight"
+_KEY_MAX_WEIGHT_ALT: str = "max_weight"
+_KEY_NAME: str = "name"
+_KEY_RESULT: str = "result"
+_KEY_SHARPE: str = "sharpe"
+_KEY_FITNESS: str = "fitness"
+_KEY_THRESHOLD: str = "threshold"
+_KEY_TURNOVER: str = "turnover"
+_KEY_TYPE: str = "type"
+_KEY_VALUE: str = "value"
+_TYPE_ALPHA: str = "ALPHA"
+
+# ============================================================================
 # Alpha ID 提取与解析函数
 # ============================================================================
 
-def extract_alpha_id(payload: Dict[str, Any]) -> Optional[str]:
+def extract_alpha_id(payload: dict[str, Any]) -> str | None:
     """
     从结构不稳定的模拟返回中提取 Alpha ID。
 
@@ -87,28 +145,33 @@ def extract_alpha_id(payload: Dict[str, Any]) -> Optional[str]:
         - 支持从 children 列表中递归提取
     """
     candidates = [
-        payload.get("alpha"),
-        payload.get("alphaId"),
-        payload.get("id") if payload.get("type") == "ALPHA" else None,
+        payload.get(_KEY_ALPHA),
+        payload.get(_KEY_ALPHA_ID),
+        payload.get(_KEY_ID) if payload.get(_KEY_TYPE) == _TYPE_ALPHA else None,
     ]
     for candidate in candidates:
         if isinstance(candidate, str) and candidate:
             return candidate
         if isinstance(candidate, dict):
-            candidate_id = first_non_empty(candidate.get("id"), candidate.get("alpha"))
+            cd = cast(dict[str, Any], candidate)
+            candidate_id = first_non_empty(cd.get(_KEY_ID), cd.get(_KEY_ALPHA))
             if isinstance(candidate_id, str) and candidate_id:
                 return candidate_id
 
-    children = payload.get("children")
+    children = payload.get(_KEY_CHILDREN)
     if isinstance(children, list):
-        for child in children:
-            alpha_id = extract_alpha_id(child if isinstance(child, dict) else {})
+        for child in children:  # pyright: ignore[reportUnknownVariableType]
+            if isinstance(child, dict):
+                cd = cast(dict[str, Any], child)
+                alpha_id = extract_alpha_id(cd)
+            else:
+                alpha_id = None
             if alpha_id:
                 return alpha_id
 
-    location = payload.get("location")
+    location = payload.get(_KEY_LOCATION)
     if isinstance(location, str):
-        match = re.search(r"/alphas/([^/]+)", location)
+        match = re.search(_ALPHA_ID_REGEX, location)
         if match:
             return match.group(1)
     return None
@@ -118,7 +181,7 @@ def extract_alpha_id(payload: Dict[str, Any]) -> Optional[str]:
 # 检查项提取与分析函数
 # ============================================================================
 
-def extract_checks(alpha_payload: Dict[str, Any]) -> List[Dict[str, Any]]:
+def extract_checks(alpha_payload: dict[str, Any]) -> list[dict[str, Any]]:
     """
     从嵌套或顶层 Alpha 结构中提取 check-submit 检查项。
 
@@ -144,16 +207,19 @@ def extract_checks(alpha_payload: Dict[str, Any]) -> List[Dict[str, Any]]:
         - 检查项可能位于 alpha.is.checks 或顶层 checks
         - 返回空列表而不是 None，便于后续处理
     """
-    is_section = alpha_payload.get("is")
-    if isinstance(is_section, dict) and isinstance(is_section.get("checks"), list):
-        return is_section["checks"]
-    checks = alpha_payload.get("checks")
+    is_section = alpha_payload.get(_KEY_IS)
+    if isinstance(is_section, dict):
+        section = cast(dict[str, Any], is_section)
+        section_checks = section.get(_KEY_CHECKS)
+        if isinstance(section_checks, list):
+            return section_checks  # pyright: ignore[reportUnknownVariableType]
+    checks = alpha_payload.get(_KEY_CHECKS)
     if isinstance(checks, list):
-        return checks
+        return checks  # pyright: ignore[reportUnknownVariableType]
     return []
 
 
-def extract_failed_checks(alpha_payload: Dict[str, Any]) -> List[Dict[str, Any]]:
+def extract_failed_checks(alpha_payload: dict[str, Any]) -> list[dict[str, Any]]:
     """
     仅提取失败检查项，并转换为适合结果持久化的紧凑结构。
 
@@ -182,22 +248,22 @@ def extract_failed_checks(alpha_payload: Dict[str, Any]) -> List[Dict[str, Any]]
         - 只返回失败的检查项
         - 使用 first_non_empty 选择 limit 或 threshold
     """
-    failed_checks: List[Dict[str, Any]] = []
+    failed_checks: list[dict[str, Any]] = []
     for check in extract_checks(alpha_payload):
-        if str(check.get("result", "")).upper() != "FAIL":
+        if str(check.get(_KEY_RESULT, "")).upper() != _RESULT_FAIL:
             continue
         failed_checks.append(
             {
-                "name": check.get("name"),
-                "result": check.get("result"),
-                "value": check.get("value"),
-                "limit": first_non_empty(check.get("limit"), check.get("threshold")),
+                _KEY_NAME: check.get(_KEY_NAME),
+                _KEY_RESULT: check.get(_KEY_RESULT),
+                _KEY_VALUE: check.get(_KEY_VALUE),
+                _KEY_LIMIT: first_non_empty(check.get(_KEY_LIMIT), check.get(_KEY_THRESHOLD)),
             }
         )
     return failed_checks
 
 
-def is_submittable_from_checks(checks: List[Dict[str, Any]]) -> Optional[bool]:
+def is_submittable_from_checks(checks: list[dict[str, Any]]) -> bool | None:
     """
     将检查项列表折叠为 True、False 或 None 三态结果。
 
@@ -232,7 +298,7 @@ def is_submittable_from_checks(checks: List[Dict[str, Any]]) -> Optional[bool]:
     """
     if not checks:
         return None
-    return all(str(check.get("result", "")).upper() != "FAIL" for check in checks)
+    return all(str(check.get(_KEY_RESULT, "")).upper() != _RESULT_FAIL for check in checks)
 
 
 # ============================================================================
@@ -240,14 +306,14 @@ def is_submittable_from_checks(checks: List[Dict[str, Any]]) -> Optional[bool]:
 # ============================================================================
 
 def precheck_simulation_metrics(
-    simulation_result: Dict[str, Any],
+    simulation_result: dict[str, Any],
     *,
     min_sharpe: float = SUBMIT_MIN_SHARPE,
     min_fitness: float = SUBMIT_MIN_FITNESS,
     min_turnover: float = SUBMIT_MIN_TURNOVER,
     max_turnover: float = SUBMIT_MAX_TURNOVER,
     max_weight: float = SUBMIT_MAX_WEIGHT,
-) -> tuple:
+) -> tuple[bool, str, list[dict[str, Any]]]:
     """
     在调用 checksubmit API 之前，用本地阈值预检模拟响应中的原始指标。
 
@@ -269,86 +335,52 @@ def precheck_simulation_metrics(
             - passed=False 表示预检不通过，reason 描述原因，
               failed_checks 是构造的失败检查项列表（用于结果持久化）
 
-    Example:
-        >>> result = {"is": {"sharpe": 0.8, "fitness": 0.5, "turnover": 0.15}}
-        >>> passed, reason, checks = precheck_simulation_metrics(result)
-        >>> print(passed)
-        False
-        >>> print(reason)
-        'sharpe=0.8000 < 1.25; fitness=0.5000 < 1.00'
-
     Note:
         - 如果 is 段缺失或指标无法提取，返回 passed=True（回退到 checksubmit）
         - 阈值可被调用方覆盖以适应不同的 universe/region 设置
         - 构造的 failed_checks 结构与真实 checksubmit 返回一致
     """
-    is_section = simulation_result.get("is")
+    is_section = simulation_result.get(_KEY_IS)
     if not isinstance(is_section, dict):
         return True, "", []
 
-    sharpe = is_section.get("sharpe")
-    fitness = is_section.get("fitness")
-    turnover = is_section.get("turnover")
+    is_dict = cast(dict[str, Any], is_section)
+    sharpe = is_dict.get(_KEY_SHARPE)
+    fitness = is_dict.get(_KEY_FITNESS)
+    turnover = is_dict.get(_KEY_TURNOVER)
     max_stock_weight = (
-        is_section.get("maxWeight")
-        or is_section.get("max_weight")
-        or is_section.get("concentratedWeight")
+        is_dict.get(_KEY_MAX_WEIGHT)
+        or is_dict.get(_KEY_MAX_WEIGHT_ALT)
+        or is_dict.get(_KEY_CONCENTRATED_WEIGHT)
     )
 
-    failures: list = []
+    failures: list[dict[str, Any]] = []
+
+    def _add_failure(check_name: str, v: int | float, limit: float) -> None:
+        failures.append({
+            _KEY_NAME: check_name,
+            _KEY_RESULT: _RESULT_FAIL,
+            _KEY_VALUE: float(v),
+            _KEY_LIMIT: limit,
+        })
 
     if isinstance(sharpe, (int, float)) and sharpe < min_sharpe:
-        failures.append(
-            {
-                "name": CHECK_LOW_SHARPE,
-                "result": "FAIL",
-                "value": float(sharpe),
-                "limit": min_sharpe,
-            }
-        )
+        _add_failure(CHECK_LOW_SHARPE, sharpe, min_sharpe)
     if isinstance(fitness, (int, float)) and fitness < min_fitness:
-        failures.append(
-            {
-                "name": CHECK_LOW_FITNESS,
-                "result": "FAIL",
-                "value": float(fitness),
-                "limit": min_fitness,
-            }
-        )
+        _add_failure(CHECK_LOW_FITNESS, fitness, min_fitness)
     if isinstance(turnover, (int, float)):
         if turnover < min_turnover:
-            failures.append(
-                {
-                    "name": CHECK_LOW_TURNOVER,
-                    "result": "FAIL",
-                    "value": float(turnover),
-                    "limit": min_turnover,
-                }
-            )
+            _add_failure(CHECK_LOW_TURNOVER, turnover, min_turnover)
         elif turnover > max_turnover:
-            failures.append(
-                {
-                    "name": CHECK_HIGH_TURNOVER,
-                    "result": "FAIL",
-                    "value": float(turnover),
-                    "limit": max_turnover,
-                }
-            )
+            _add_failure(CHECK_HIGH_TURNOVER, turnover, max_turnover)
     if isinstance(max_stock_weight, (int, float)) and max_stock_weight > max_weight:
-        failures.append(
-            {
-                "name": CHECK_CONCENTRATED_WEIGHT,
-                "result": "FAIL",
-                "value": float(max_stock_weight),
-                "limit": max_weight,
-            }
-        )
+        _add_failure(CHECK_CONCENTRATED_WEIGHT, max_stock_weight, max_weight)
 
     if not failures:
         return True, "", []
 
     reason_parts = [
-        f"{f['name'].lower()}: {f['value']:.4f} vs limit {f['limit']}"
+        f"{f[_KEY_NAME].lower()}: {f[_KEY_VALUE]:.4f} vs limit {f[_KEY_LIMIT]}"
         for f in failures
     ]
     return False, "; ".join(reason_parts), failures
@@ -358,7 +390,7 @@ def precheck_simulation_metrics(
 # 失败摘要函数
 # ============================================================================
 
-def summarize_failure(payload: Dict[str, Any]) -> str:
+def summarize_failure(payload: dict[str, Any]) -> str:
     """
     将冗长的 API 失败负载压缩为简短的运维可读消息。
 
@@ -389,17 +421,23 @@ def summarize_failure(payload: Dict[str, Any]) -> str:
         - 其次提取失败的检查项名称
         - 最后截断原始 JSON 文本（最多 300 字符）
     """
-    detail = first_non_empty(payload.get("detail"), payload.get("message"), payload.get("error"))
+    detail = first_non_empty(
+        payload.get(API_KEY_DETAIL),
+        payload.get(API_KEY_MESSAGE),
+        payload.get(API_KEY_ERROR),
+    )
     if detail:
         return str(detail)
 
     checks = extract_checks(payload)
-    failed = [check for check in checks if str(check.get("result", "")).upper() == "FAIL"]
+    failed = [check for check in checks if str(check.get(_KEY_RESULT, "")).upper() == _RESULT_FAIL]
     if failed:
-        names = ", ".join(str(check.get("name", "UNKNOWN")) for check in failed[:5])
+        names = ", ".join(
+            str(check.get(_KEY_NAME, SENTINEL_UNKNOWN_CHECK)) for check in failed[:MAX_FAILED_CHECK_NAMES]
+        )
         return f"failed checks: {names}"
 
-    text = json.dumps(payload, ensure_ascii=False)[:300]
+    text = json.dumps(payload, ensure_ascii=False)[:FAILURE_SUMMARY_MAX_LEN]
     return text or "unknown error"
 
 
@@ -409,7 +447,7 @@ def summarize_failure(payload: Dict[str, Any]) -> str:
 
 def create_simulation_with_retry(
     client: BrainClient,
-    payload: Dict[str, Any],
+    payload: dict[str, Any],
     retries: int
 ) -> tuple[str, str]:
     """
@@ -448,7 +486,7 @@ def create_simulation_with_retry(
         lambda: client.create_simulation(payload),
         retry_wait_seconds=SIMULATION_RETRY_WAIT,
     )
-    simulation_id_match = re.search(r"/simulations/([^/]+)", simulation_location)
+    simulation_id_match = re.search(_SIM_ID_REGEX, simulation_location)
     simulation_id = simulation_id_match.group(1) if simulation_id_match else simulation_location
     logger.info(
         "[simulation] created simulation_id=%s location=%s", simulation_id, simulation_location,
@@ -465,7 +503,7 @@ def poll_simulation_with_retry(
     max_wait_seconds: float,
     max_pending_cycles: int,
     max_queue_seconds: float,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     按独立的重试预算与排队限制轮询模拟任务。
 
@@ -522,7 +560,7 @@ def checksubmit_with_retry(
     client: BrainClient,
     alpha_id: str,
     retries: int,
-) -> tuple[Optional[bool], str, List[Dict[str, Any]]]:
+) -> tuple[bool | None, str, list[dict[str, Any]]]:
     """
     获取 Alpha 检查结果并转成可提交状态输出。
 
@@ -601,9 +639,9 @@ def submit_with_retry(client: BrainClient, alpha_id: str, retries: int) -> str:
         lambda: client.submit_alpha(alpha_id),
         retry_wait_seconds=SIMULATION_RETRY_WAIT,
     )
-    if submit_result.get("status") == "failed":
+    if submit_result.get(API_KEY_STATUS) == API_KEY_FAILED:
         return summarize_failure(submit_result)
-    return "submitted"
+    return STATUS_SUBMITTED
 
 
 # ============================================================================
@@ -616,15 +654,15 @@ def build_failure_result(
     field_type: str,
     field_name: str,
     template_name: str,
-    simulation_id: Optional[str],
-    alpha_id: Optional[str],
+    simulation_id: str | None,
+    alpha_id: str | None,
     expression: str,
     settings_fingerprint: str,
     template_library_fingerprint: str,
     failed_stage: str,
     message: str,
-    status: str = "error",
-    failed_checks: Optional[List[Dict[str, Any]]] = None,
+    status: str = STATUS_ERROR,
+    failed_checks: list[dict[str, Any]] | None = None,
 ) -> FieldTestResult:
     """
     构建标准化失败结果对象，简化后续落盘与统计逻辑。
@@ -694,14 +732,37 @@ def build_failure_result(
 # simulation / checksubmit / submit 三阶段子函数
 # ============================================================================
 
+def _handle_stage_error(
+    ctx: FieldTestContext,
+    failed_stage: str,
+    exc: Exception,
+    *,
+    simulation_id: str | None = None,
+    alpha_id: str | None = None,
+) -> FieldTestResult:
+    """将阶段异常统一转换为 FieldTestResult，同时确保 KeyboardInterrupt 不被吞掉。
+
+    只捕获 BrainAPIError（及子类）和连接/超时等预期异常；KeyboardInterrupt 和
+    SystemExit 直接向上传播，保证 Ctrl+C 能正常中断运行。
+    """
+    if isinstance(exc, (KeyboardInterrupt, SystemExit)):
+        raise
+    return ctx.failure(
+        failed_stage=failed_stage,
+        message=str(exc),
+        simulation_id=simulation_id,
+        alpha_id=alpha_id,
+    )
+
+
 def _run_simulation_create(
     ctx: FieldTestContext,
     client: BrainClient,
     args: argparse.Namespace,
     *,
-    simulation_settings: Optional[SettingsVariant] = None,
-    create_semaphore: Optional[threading.Semaphore] = None,
-) -> "FieldTestResult | Tuple[str, str]":
+    simulation_settings: SettingsVariant | None = None,
+    create_semaphore: threading.Semaphore | None = None,
+) -> "FieldTestResult | tuple[str, str]":
     """simulation 阶段 (创建): 构建 payload 并创建模拟任务。
 
     Returns:
@@ -717,19 +778,20 @@ def _run_simulation_create(
                 "[simulation] waiting for create slot field=%s template=%s",
                 ctx.field_id, ctx.template_name,
             )
-            create_semaphore.acquire()
+            _ = create_semaphore.acquire()
         try:
+            create_retries: int = args.simulation_create_retries
             simulation_location, simulation_id = create_simulation_with_retry(
                 client,
                 payload,
-                args.simulation_create_retries,
+                create_retries,
             )
         finally:
             if create_semaphore is not None:
                 create_semaphore.release()
         return simulation_location, simulation_id
     except Exception as exc:
-        return ctx.failure(failed_stage="simulation", message=str(exc))
+        return _handle_stage_error(ctx, "simulation", exc)
 
 
 def _run_simulation_poll(
@@ -739,7 +801,7 @@ def _run_simulation_poll(
     *,
     simulation_location: str,
     simulation_id: str,
-) -> "FieldTestResult | Tuple[str, Dict[str, Any]]":
+) -> "FieldTestResult | tuple[str, dict[str, Any]]":
     """simulation 阶段 (轮询): 等待模拟完成并提取 alpha_id。
 
     Returns:
@@ -747,19 +809,24 @@ def _run_simulation_poll(
         - Tuple[str, Dict[str, Any]]: (alpha_id, simulation_result) 继续流水线
     """
     try:
+        poll_retries: int = args.simulation_poll_retries
+        max_polls: int = args.simulation_max_polls
+        max_wait: float = args.simulation_max_wait_seconds
+        max_pending: int = args.simulation_max_pending_cycles
+        max_queue: float = args.simulation_max_queue_seconds
         simulation_result = poll_simulation_with_retry(
             client,
             simulation_location,
-            args.simulation_poll_retries,
-            max_polls=args.simulation_max_polls,
-            max_wait_seconds=args.simulation_max_wait_seconds,
-            max_pending_cycles=args.simulation_max_pending_cycles,
-            max_queue_seconds=args.simulation_max_queue_seconds,
+            poll_retries,
+            max_polls=max_polls,
+            max_wait_seconds=max_wait,
+            max_pending_cycles=max_pending,
+            max_queue_seconds=max_queue,
         )
         progress = first_non_empty(
-            simulation_result.get("progress"),
-            simulation_result.get("status"),
-            simulation_result.get("state"),
+            simulation_result.get(API_KEY_PROGRESS),
+            simulation_result.get(API_KEY_STATUS),
+            simulation_result.get(API_KEY_STATE),
         )
         logger.info(
             "[simulation] completed simulation_id=%s simulation_location=%s progress=%s",
@@ -775,9 +842,8 @@ def _run_simulation_poll(
             )
         return alpha_id, simulation_result
     except Exception as exc:
-        return ctx.failure(
-            failed_stage="simulation",
-            message=str(exc),
+        return _handle_stage_error(
+            ctx, "simulation", exc,
             simulation_id=simulation_id,
         )
 
@@ -789,8 +855,8 @@ def _run_checksubmit_stage(
     *,
     alpha_id: str,
     simulation_id: str,
-    simulation_result: Optional[Dict[str, Any]] = None,
-) -> "FieldTestResult | Tuple[Optional[bool], str, List[Dict[str, Any]]]":
+    simulation_result: dict[str, Any] | None = None,
+) -> "FieldTestResult | tuple[bool | None, str, list[dict[str, Any]]]":
     """checksubmit 阶段: 先本地预检指标，达标后再调用 checksubmit API。
 
     模拟响应中已包含原始 is.sharpe、is.fitness、is.turnover 等指标。
@@ -803,13 +869,18 @@ def _run_checksubmit_stage(
     """
     # 本地预检：用模拟返回的原始指标判断是否值得提交
     if simulation_result:
+        min_s: float = getattr(args, "min_sharpe", PRECHECK_FALLBACK_MIN_SHARPE)
+        min_f: float = getattr(args, "min_fitness", PRECHECK_FALLBACK_MIN_FITNESS)
+        min_t: float = getattr(args, "min_turnover", PRECHECK_FALLBACK_MIN_TURNOVER)
+        max_t: float = getattr(args, "max_turnover", PRECHECK_FALLBACK_MAX_TURNOVER)
+        max_w: float = getattr(args, "max_weight", PRECHECK_FALLBACK_MAX_WEIGHT)
         passed, reason, precheck_failed_checks = precheck_simulation_metrics(
             simulation_result,
-            min_sharpe=getattr(args, "min_sharpe", 0.85),
-            min_fitness=getattr(args, "min_fitness", 0.50),
-            min_turnover=getattr(args, "min_turnover", 0.005),
-            max_turnover=getattr(args, "max_turnover", 0.75),
-            max_weight=getattr(args, "max_weight", 0.13),
+            min_sharpe=min_s,
+            min_fitness=min_f,
+            min_turnover=min_t,
+            max_turnover=max_t,
+            max_weight=max_w,
         )
         if not passed:
             logger.info(
@@ -819,11 +890,11 @@ def _run_checksubmit_stage(
             return False, f"precheck_failed: {reason}", precheck_failed_checks
 
     try:
-        return checksubmit_with_retry(client, alpha_id, args.check_submit_retries)
+        check_retries: int = args.check_submit_retries
+        return checksubmit_with_retry(client, alpha_id, check_retries)
     except Exception as exc:
-        return ctx.failure(
-            failed_stage="checksubmit",
-            message=str(exc),
+        return _handle_stage_error(
+            ctx, "checksubmit", exc,
             simulation_id=simulation_id,
             alpha_id=alpha_id,
         )
@@ -837,27 +908,28 @@ def _run_submit_stage(
     alpha_id: str,
     simulation_id: str,
     simulation_location: str,
-    submittable: Optional[bool],
-) -> "FieldTestResult | Tuple[bool, str, str]":
+    submittable: bool | None,
+) -> "FieldTestResult | tuple[bool, str, str]":
     """submit 阶段: 条件提交 Alpha（仅当 args.submit 且 submittable 为真）。
 
     Returns:
         - FieldTestResult: 提交失败，调用方应直接返回
         - Tuple[bool, str, str]: (submitted, status, message) 继续流水线
     """
-    if not (args.submit and submittable):
-        return False, "simulated", ""
+    should_submit: bool = args.submit
+    if not (should_submit and submittable):
+        return False, STATUS_SIMULATED, ""
     try:
         logger.info(
             "[submit] eligible alpha_id=%s simulation_id=%s simulation_location=%s",
             alpha_id, simulation_id, simulation_location,
         )
-        message = submit_with_retry(client, alpha_id, args.submit_retries)
-        return True, "submitted", message
+        submit_retries: int = args.submit_retries
+        message = submit_with_retry(client, alpha_id, submit_retries)
+        return True, STATUS_SUBMITTED, message
     except Exception as exc:
-        return ctx.failure(
-            failed_stage="submit",
-            message=str(exc),
+        return _handle_stage_error(
+            ctx, "submit", exc,
             simulation_id=simulation_id,
             alpha_id=alpha_id,
         )
@@ -870,13 +942,13 @@ def _run_submit_stage(
 def run_field_test(
     client: BrainClient,
     args: argparse.Namespace,
-    field: Dict[str, Any],
+    field: dict[str, Any],
     template_name: str,
     expression: str,
     settings_fingerprint: str,
     template_library_fingerprint: str,
-    simulation_settings: Optional[SettingsVariant] = None,
-    create_semaphore: Optional[threading.Semaphore] = None,
+    simulation_settings: SettingsVariant | None = None,
+    create_semaphore: threading.Semaphore | None = None,
 ) -> FieldTestResult:
     """
     执行单个候选表达式的 simulation / checksubmit / submit 三阶段流程。
@@ -906,9 +978,9 @@ def run_field_test(
         - 三个顶层阶段各自由子函数实现，便于测试和调试
     """
     ctx = FieldTestContext(
-        field_id=str(first_non_empty(field.get("id"), "UNKNOWN")),
+        field_id=str(first_non_empty(field.get("id"), SENTINEL_UNKNOWN)),
         field_type=choose_field_type(field),
-        field_name=str(first_non_empty(field.get("name"), field.get("id"), "UNKNOWN")),
+        field_name=str(first_non_empty(field.get("name"), field.get("id"), SENTINEL_UNKNOWN)),
         template_name=template_name,
         expression=expression,
         settings_fingerprint=settings_fingerprint,
@@ -985,13 +1057,13 @@ def run_field_test(
 def run_field_test_in_worker(
     client_factory: WorkerClientFactory,
     args: argparse.Namespace,
-    field: Dict[str, Any],
+    field: dict[str, Any],
     template_name: str,
     expression: str,
     settings_fingerprint: str,
     template_library_fingerprint: str,
-    simulation_settings: Optional[SettingsVariant] = None,
-    create_semaphore: Optional[threading.Semaphore] = None,
+    simulation_settings: SettingsVariant | None = None,
+    create_semaphore: threading.Semaphore | None = None,
 ) -> FieldTestResult:
     """
     工作线程入口，先解析线程本地客户端再执行测试。

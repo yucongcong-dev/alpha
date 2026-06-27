@@ -21,7 +21,7 @@
 """
 
 import re
-from typing import Any, Dict, List, Optional, Sequence, Set, Tuple
+from typing import Any, Sequence
 
 from ..config import (
     BACKFILL_WINDOW,

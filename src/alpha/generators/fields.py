@@ -18,7 +18,7 @@ API 调用次数，提高运行效率。
 import json
 import logging
 import os
-from typing import Any, Dict, List, Sequence
+from typing import Any, Sequence
 
 from ..io.output import atomic_write_json
 from ..utils.helpers import first_non_empty
@@ -34,7 +34,7 @@ def load_fields_cache(
     universe: str,
     instrument_type: str,
     delay: int,
-) -> List[Dict[str, Any]]:
+) -> list[dict[str, Any]]:
     """
     仅在数据集上下文完全匹配时加载字段缓存。
 
@@ -101,7 +101,7 @@ def save_fields_cache(
     universe: str,
     instrument_type: str,
     delay: int,
-    fields: Sequence[Dict[str, Any]],
+    fields: Sequence[dict[str, Any]],
 ) -> None:
     """
     保存字段元数据及其缓存作用域键。
@@ -152,7 +152,7 @@ def save_fields_cache(
 
 
 def fields_cache_refresh_reason(
-    cached_fields: Sequence[Dict[str, Any]],
+    cached_fields: Sequence[dict[str, Any]],
     *,
     requested_limit: int,
     requested_offset: int,
@@ -204,9 +204,9 @@ def fields_cache_refresh_reason(
 
 
 def merge_fields_by_id(
-    existing_fields: Sequence[Dict[str, Any]],
-    new_fields: Sequence[Dict[str, Any]]
-) -> List[Dict[str, Any]]:
+    existing_fields: Sequence[dict[str, Any]],
+    new_fields: Sequence[dict[str, Any]]
+) -> list[dict[str, Any]]:
     """
     按字段 ID 合并缓存和新拉取字段，保持原始顺序并去重。
 
@@ -233,7 +233,7 @@ def merge_fields_by_id(
         字段 ID 从 id、name 字段中提取，优先使用 id。
         如果字段没有 ID，仍然会包含在结果中但不进行去重。
     """
-    merged: List[Dict[str, Any]] = []
+    merged: list[dict[str, Any]] = []
     seen: set[str] = set()
     for field in (*existing_fields, *new_fields):
         field_id = str(first_non_empty(field.get("id"), field.get("name"), ""))
@@ -249,9 +249,9 @@ def fetch_fields_with_cache(
     client: Any,
     args: Any,
     fields_cache_file: str,
-    cached_fields: Sequence[Dict[str, Any]],
+    cached_fields: Sequence[dict[str, Any]],
     cache_refresh_reason: str,
-) -> List[Dict[str, Any]]:
+) -> list[dict[str, Any]]:
     """
     根据缓存状态拉取字段；能补齐时补齐，必要时才覆盖刷新。
 

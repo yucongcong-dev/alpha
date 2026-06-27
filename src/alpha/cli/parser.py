@@ -16,7 +16,7 @@ import argparse
 import logging
 import os
 from pathlib import Path
-from typing import Any, Dict, Set
+from typing import Any
 
 from ..config import DEFAULT_DATASET_ID
 from ..io.output import (
@@ -555,7 +555,7 @@ def normalize_args_paths(args: argparse.Namespace) -> RunPaths:
 def build_run_config_snapshot(
     args: argparse.Namespace,
     run_paths: RunPaths
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     构建运行配置快照，记录所有影响结果的配置参数。
 
@@ -658,7 +658,7 @@ def build_run_config_snapshot(
 # 过滤器加载函数
 # ============================================================================
 
-def load_line_set(path: str) -> Set[str]:
+def load_line_set(path: str) -> set[str]:
     """
     从文本文件加载非空行作为集合。
 

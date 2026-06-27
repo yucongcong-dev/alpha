@@ -11,7 +11,7 @@
     - 辅助判断函数
 """
 
-from typing import Dict, List, Tuple
+from typing import Any
 
 # ============================================================================
 # API 端点配置
@@ -46,10 +46,10 @@ DEFAULT_HEADERS: dict = {
 }
 """默认 HTTP 请求头配置，包含 JSON 内容类型"""
 
-VERSION_HEADER: Dict[str, str] = {"Accept": "application/json;version=2.0"}
+VERSION_HEADER: dict[str, str] = {"Accept": "application/json;version=2.0"}
 """数据字段查询专用的 Accept 请求头，包含版本信息"""
 
-SIM_ACCEPT_HEADER: Dict[str, str] = {"Accept": "application/json;version=3.0"}
+SIM_ACCEPT_HEADER: dict[str, str] = {"Accept": "application/json;version=3.0"}
 """模拟计算专用的 Accept 请求头，包含版本信息"""
 
 DEFAULT_RATE_LIMIT_MAX_RETRIES: int = 3
@@ -81,6 +81,32 @@ SUBMIT_MAX_WEIGHT: float = 0.13
 
 BACKFILL_WINDOW: int = 240
 """ts_backfill 默认时间窗口（天）。更大的窗口能捕捉更多历史数据，提升信号稳定性。"""
+
+
+# ============================================================================
+# 模拟预检 fallback 阈值
+# ============================================================================
+
+PRECHECK_FALLBACK_MIN_SHARPE: float = 0.85
+"""precheck_simulation_metrics 的最小 Sharpe fallback（当 CLI 未提供时）"""
+
+PRECHECK_FALLBACK_MIN_FITNESS: float = 0.50
+"""precheck_simulation_metrics 的最小 Fitness fallback（当 CLI 未提供时）"""
+
+PRECHECK_FALLBACK_MIN_TURNOVER: float = 0.005
+"""precheck_simulation_metrics 的最小 Turnover fallback（当 CLI 未提供时）"""
+
+PRECHECK_FALLBACK_MAX_TURNOVER: float = 0.75
+"""precheck_simulation_metrics 的最大 Turnover fallback（当 CLI 未提供时）"""
+
+PRECHECK_FALLBACK_MAX_WEIGHT: float = 0.13
+"""precheck_simulation_metrics 的单股最大权重 fallback（当 CLI 未提供时）"""
+
+MAX_FAILED_CHECK_NAMES: int = 5
+"""summarize_failure 中最多展示的失败检查项名称数量"""
+
+FAILURE_SUMMARY_MAX_LEN: int = 300
+"""summarize_failure 中截断原始 payload JSON 的最大字符数"""
 
 
 # ============================================================================
@@ -224,6 +250,54 @@ STATS_PERFORMANCE_TOP_N: int = 10
 
 
 # ============================================================================
+# 通用哨兵值与 API 响应键名常量
+# ============================================================================
+
+SENTINEL_UNKNOWN: str = "UNKNOWN"
+"""当字段 id/name/type 等无法解析时使用的哨兵值"""
+
+SENTINEL_UNKNOWN_CHECK: str = "UNKNOWN"
+"""当检查项 name 无法解析时使用的哨兵值"""
+
+SENTINEL_UNKNOWN_STATUS: str = "unknown"
+"""当结果 status 无法解析时使用的哨兵值"""
+
+API_KEY_DETAIL: str = "detail"
+API_KEY_ERROR: str = "error"
+API_KEY_MESSAGE: str = "message"
+API_KEY_STATUS: str = "status"
+API_KEY_FAILED: str = "failed"
+API_KEY_PROGRESS: str = "progress"
+API_KEY_STATE: str = "state"
+
+STATUS_SUBMITTED: str = "submitted"
+"""submit 成功状态字符串"""
+
+STATUS_SIMULATED: str = "simulated"
+"""模拟成功但未提交状态字符串"""
+
+STATUS_ERROR: str = "error"
+"""错误状态字符串"""
+
+STAT_FIELD_ATTEMPTED: str = "attempted"
+STAT_FIELD_SUBMITTABLE: str = "submittable"
+STAT_FIELD_SUBMITTED: str = "submitted"
+STAT_FIELD_ERRORS: str = "errors"
+STAT_FIELD_SIMULATED: str = "simulated"
+STAT_FIELD_QUEUE_TIMEOUTS: str = "queue_timeouts"
+STAT_FIELD_LOW_SHARPE: str = "low_sharpe"
+STAT_FIELD_LOW_FITNESS: str = "low_fitness"
+STAT_FIELD_CONCENTRATED_WEIGHT: str = "concentrated_weight"
+STAT_FIELD_LOW_SUB_UNIVERSE_SHARPE: str = "low_sub_universe_sharpe"
+STAT_FIELD_FAILED_CHECK_COUNTS: str = "failed_check_counts"
+STAT_FIELD_TOP_FAILED_CHECKS: str = "top_failed_checks"
+STAT_FIELD_TEMPLATE_NAME: str = "template_name"
+STAT_FIELD_FIELD_ID: str = "field_id"
+STAT_FIELD_FIELD_NAME: str = "field_name"
+STAT_FIELD_FIELD_TYPE: str = "field_type"
+STAT_FIELD_ATTEMPTED_TEMPLATES: str = "attempted_templates"
+
+# ============================================================================
 # 表达式家族分类常量
 # ============================================================================
 
@@ -235,7 +309,7 @@ UNKNOWN_FAMILY: str = "other"
 # 数据字段分类配置
 # ============================================================================
 
-RATIO_PARTNER_CANDIDATES: Dict[str, Tuple[str, ...]] = {
+RATIO_PARTNER_CANDIDATES: dict[str, tuple[str, ...]] = {
     "debt": ("cap", "fnd6_mkvalt", "fnd6_mkvaltq", "assets", "equity", "enterprise_value"),
     "debt_lt": ("fnd6_mkvalt", "fnd6_mkvaltq", "assets", "equity", "enterprise_value"),
     "debt_st": ("assets", "cash", "cash_st", "fnd6_mkvalt"),
@@ -259,7 +333,7 @@ RATIO_PARTNER_CANDIDATES: Dict[str, Tuple[str, ...]] = {
 cap（市值）、assets（资产）等字段组合构建比率。
 """
 
-RATIO_KEYWORDS: Dict[str, Tuple[str, ...]] = {
+RATIO_KEYWORDS: dict[str, tuple[str, ...]] = {
     "debt": ("cap", "assets", "equity", "enterprise_value", "liabilities"),
     "liabilities": ("assets", "equity", "cap", "enterprise_value"),
     "cash": ("debt", "liabilities", "assets", "enterprise_value"),

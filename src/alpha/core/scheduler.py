@@ -15,7 +15,7 @@
 import argparse
 import logging
 import time
-from typing import Any, Dict, List, Optional, Sequence, Tuple
+from typing import Any, Sequence
 
 from ..analysis.stats import (
     compile_template_stats,
@@ -42,11 +42,11 @@ def handle_completed_future(
     future,
     *,
     completion_ctx: FutureCompletionContext,
-    results: List[FieldTestResult],
-    attempted_keys: set[Tuple[str, str, str, str]],
-    template_stats: Dict[str, Dict[str, int]],
-    pending_contexts: Dict[Any, Dict[str, Any]],
-) -> Tuple[Dict[str, Dict[str, int]], bool, Optional[str]]:
+    results: list[FieldTestResult],
+    attempted_keys: set[tuple[str, str, str, str]],
+    template_stats: dict[str, dict[str, int]],
+    pending_contexts: dict[Any, dict[str, Any]],
+) -> tuple[dict[str, dict[str, int]], bool, str | None]:
     """
     收尾一个 worker future，落盘结果并回传拥塞信号。
 
@@ -192,9 +192,9 @@ def apply_congestion_cooldown(args: argparse.Namespace, state: RuntimeConcurrenc
 # ============================================================================
 
 def register_queue_busy_field(
-    field_id: Optional[str],
+    field_id: str | None,
     args: argparse.Namespace,
-    field_queue_busy_counts: Dict[str, int],
+    field_queue_busy_counts: dict[str, int],
     skipped_fields_due_to_queue: set[str],
 ) -> None:
     """
@@ -277,9 +277,9 @@ def drain_completed_futures(
     args: argparse.Namespace,
     settings_fingerprint: str,
     template_library_fingerprint: str,
-    run_config: Optional[Dict[str, Any]],
+    run_config: dict[str, Any] | None,
     runtime_state: RuntimeConcurrencyState,
-) -> Dict[str, Dict[str, int]]:
+) -> dict[str, dict[str, int]]:
     """
     消费已完成的 future，落盘结果并更新队列退避状态。
 

@@ -29,7 +29,7 @@ import logging
 import os
 from contextlib import suppress
 from pathlib import Path
-from typing import Any, Dict, Optional, Tuple
+from typing import Any
 
 from ..exceptions import BrainAPIError
 from ..io.output import atomic_write_json
@@ -78,7 +78,7 @@ def ensure_parent_dir(path: str) -> None:
 # 加密相关函数
 # ============================================================================
 
-def load_crypto_dependencies() -> Tuple[Any, Any]:
+def load_crypto_dependencies() -> tuple[Any, Any]:
     """
     加载跨平台加密依赖库。
 
@@ -189,7 +189,7 @@ def encrypt_credentials_payload(
     email: str,
     password: str,
     key_path: str
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     生成只包含密文的本地凭证 JSON 负载。
 
@@ -301,7 +301,7 @@ def decrypt_credentials_payload(
     return decoded.get("email"), decoded.get("password")
 
 
-def is_encrypted_credentials_payload(payload: Dict[str, Any]) -> bool:
+def is_encrypted_credentials_payload(payload: dict[str, Any]) -> bool:
     """
     判断凭证文件是否已经是加密格式。
 
@@ -426,7 +426,7 @@ def prompt_and_store_credentials(
     return email, password
 
 
-def load_credentials(args: argparse.Namespace) -> Tuple[Optional[str], Optional[str]]:
+def load_credentials(args: argparse.Namespace) -> tuple[str | None, str | None]:
     """
     优先从命令行或环境变量读取凭证，否则回退到本地凭证文件。
 

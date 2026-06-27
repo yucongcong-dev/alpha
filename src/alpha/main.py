@@ -26,7 +26,7 @@ import logging
 import threading
 import time
 from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
-from typing import Any, Dict, List, Tuple
+from typing import Any
 
 # 导入历史迭代优化
 from .analysis.feedback import (
@@ -57,7 +57,7 @@ from .cli.parser import (
 )
 
 # 导入配置和模型
-from .config import use_fundamental6_heuristics
+from .config import SENTINEL_UNKNOWN, use_fundamental6_heuristics
 
 # 导入执行器
 from .core import (
@@ -115,7 +115,7 @@ def create_and_login_client(
     email: str,
     password: str,
     args: argparse.Namespace
-) -> Tuple[BrainClient, WorkerClientFactory]:
+) -> tuple[BrainClient, WorkerClientFactory]:
     """
     创建 Brain API 客户端并完成登录，同时创建工作线程客户端工厂。
 
@@ -171,7 +171,7 @@ def create_and_login_client(
 def _initialize(
     args: argparse.Namespace,
     run_paths: Any,
-) -> Tuple[Any, ...]:
+) -> tuple[Any, ...]:
     """执行主流程的初始化阶段（步骤 2-19），返回所有需要的状态变量。
 
     Returns a tuple:
@@ -235,7 +235,7 @@ def _initialize(
     fields.sort(
         key=lambda item: (
             -field_priority(
-                str(first_non_empty(item.get("id"), "UNKNOWN")),
+                str(first_non_empty(item.get("id"), SENTINEL_UNKNOWN)),
                 historical_state.field_feedback,
             ),
             choose_field_name(item),
@@ -246,7 +246,7 @@ def _initialize(
             field
             for field in fields
             if field_priority(
-                str(first_non_empty(field.get("id"), "UNKNOWN")),
+                str(first_non_empty(field.get("id"), SENTINEL_UNKNOWN)),
                 historical_state.field_feedback,
             )
             > -999.0
@@ -307,11 +307,11 @@ def _run_field_test_loop(
     template_library_fingerprint: str,
     settings_fingerprint: str,
     historical_state: Any,
-    fields: List[Dict[str, Any]],
+    fields: list[dict[str, Any]],
     execution_state: ExecutionState,
     runtime_state: RuntimeConcurrencyState,
     create_semaphore: threading.Semaphore,
-    run_config: Dict[str, Any],
+    run_config: dict[str, Any],
 ) -> None:
     """线程池中遍历字段并提交模拟任务，实时消费结果。
 
@@ -353,7 +353,7 @@ def _run_field_test_loop(
                 )
                 break
 
-            field_id = str(first_non_empty(field.get("id"), "UNKNOWN"))
+            field_id = str(first_non_empty(field.get("id"), SENTINEL_UNKNOWN))
             field_name = choose_field_name(field)
             field_type = choose_field_type(field)
 

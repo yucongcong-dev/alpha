@@ -16,7 +16,7 @@
 
 import argparse
 import logging
-from typing import Any, Dict, List, Sequence, Tuple
+from typing import Any, Sequence
 
 from ..analysis.feedback import (
     choose_settings_variant_budget,
@@ -25,7 +25,13 @@ from ..analysis.feedback import (
     should_skip_field_template_family,
 )
 from ..analysis.stats import historical_template_priority_bonus
-from ..config import CHECK_CONCENTRATED_WEIGHT, CHECK_LOW_FITNESS, CHECK_LOW_SHARPE, CHECK_LOW_SUB_UNIVERSE_SHARPE
+from ..config import (
+    CHECK_CONCENTRATED_WEIGHT,
+    CHECK_LOW_FITNESS,
+    CHECK_LOW_SHARPE,
+    CHECK_LOW_SUB_UNIVERSE_SHARPE,
+    SENTINEL_UNKNOWN,
+)
 from ..generators.expressions import build_expression_candidates
 from ..generators.settings import (
     build_setting_variants,
@@ -50,12 +56,12 @@ logger = logging.getLogger(__name__)
 
 def build_pending_templates_for_field(
     build_ctx: TemplateBuildContext,
-    field: Dict[str, Any],
+    field: dict[str, Any],
     *,
-    template_stats: Dict[str, Dict[str, int]],
-    attempted_keys: set[Tuple[str, str, str, str]],
+    template_stats: dict[str, dict[str, int]],
+    attempted_keys: set[tuple[str, str, str, str]],
     prior_results: Sequence[FieldTestResult],
-) -> Tuple[List[Tuple[str, str, int, SettingsVariant, str]], int, int]:
+) -> tuple[list[tuple[str, str, int, SettingsVariant, str]], int, int]:
     """
     为单个字段构建真正可执行的模板与 settings 队列。
 
@@ -81,7 +87,7 @@ def build_pending_templates_for_field(
         - 已尝试的键会被跳过
     """
     args = build_ctx.args
-    field_id = str(first_non_empty(field.get("id"), "UNKNOWN"))
+    field_id = str(first_non_empty(field.get("id"), SENTINEL_UNKNOWN))
     field_name = choose_field_name(field)
     field_feedback = build_ctx.field_feedback.get(field_id)
     templates = build_expression_candidates(
@@ -95,7 +101,7 @@ def build_pending_templates_for_field(
         global_failed_check_counts=build_ctx.global_failed_check_counts,
         use_dataset_heuristics=build_ctx.use_dataset_heuristics,
     )
-    pending_templates: List[Tuple[str, str, int, SettingsVariant, str]] = []
+    pending_templates: list[tuple[str, str, int, SettingsVariant, str]] = []
     disabled_templates = 0
     max_setting_variants = choose_settings_variant_budget(field_feedback)
     for template_name, expression, priority in templates:
@@ -251,7 +257,7 @@ def should_skip_field(
 def print_dry_run_plan(
     *,
     args: argparse.Namespace,
-    fields: Sequence[Dict[str, Any]],
+    fields: Sequence[dict[str, Any]],
     filters: RunFilters,
     template_library: TemplateLibrary,
     historical_state: HistoricalRunState,
@@ -290,7 +296,7 @@ def print_dry_run_plan(
     planned_fields = 0
     planned_templates = 0
     disabled_templates = 0
-    samples: List[Dict[str, Any]] = []
+    samples: list[dict[str, Any]] = []
 
     build_ctx = TemplateBuildContext(
         args=args,
@@ -304,7 +310,7 @@ def print_dry_run_plan(
     )
 
     for field in fields:
-        field_id = str(first_non_empty(field.get("id"), "UNKNOWN"))
+        field_id = str(first_non_empty(field.get("id"), SENTINEL_UNKNOWN))
         field_name = choose_field_name(field)
         if should_skip_field(field_id, field_name, filters, execution_state.skipped_fields_due_to_queue):
             continue

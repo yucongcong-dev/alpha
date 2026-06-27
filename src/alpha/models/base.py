@@ -16,13 +16,13 @@
 """
 
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional, Sequence, Tuple
+from typing import Any, Sequence
 
 # ============================================================================
 # 类型别名定义
 # ============================================================================
 
-TemplateLibrary = Dict[str, List[Dict[str, Any]]]
+TemplateLibrary = dict[str, list[dict[str, Any]]]
 """
 模板库类型别名。
 
@@ -38,7 +38,7 @@ Example:
     }
 """
 
-SettingsVariant = Dict[str, Any]
+SettingsVariant = dict[str, Any]
 """
 设置变体类型别名。
 
@@ -118,16 +118,16 @@ class FieldTestResult:
     template_name: str
     """使用的模板名称"""
 
-    simulation_id: Optional[str] = None
+    simulation_id: str | None = None
     """模拟任务的 ID"""
 
-    alpha_id: Optional[str] = None
+    alpha_id: str | None = None
     """Alpha 表达式的 ID"""
 
     status: str = "unknown"
     """当前状态"""
 
-    submittable: Optional[bool] = None
+    submittable: bool | None = None
     """是否可提交"""
 
     submitted: bool = False
@@ -145,10 +145,10 @@ class FieldTestResult:
     template_library_fingerprint: str = ""
     """模板库的指纹标识"""
 
-    failed_stage: Optional[str] = None
+    failed_stage: str | None = None
     """失败的阶段名称"""
 
-    failed_checks: Optional[List[Dict[str, Any]]] = None
+    failed_checks: list[dict[str, Any]] | None = None
     """失败的检查项列表"""
 
     def is_successful(self) -> bool:
@@ -204,10 +204,10 @@ class FieldTestContext:
         *,
         failed_stage: str,
         message: str,
-        simulation_id: Optional[str] = None,
-        alpha_id: Optional[str] = None,
+        simulation_id: str | None = None,
+        alpha_id: str | None = None,
         status: str = "error",
-        failed_checks: Optional[List[Dict[str, Any]]] = None,
+        failed_checks: list[dict[str, Any]] | None = None,
     ) -> "FieldTestResult":
         """构建与上下文绑定的失败结果对象。"""
         return FieldTestResult(
@@ -231,13 +231,13 @@ class FieldTestContext:
     def success(
         self,
         *,
-        simulation_id: Optional[str],
-        alpha_id: Optional[str],
-        submittable: Optional[bool],
+        simulation_id: str | None,
+        alpha_id: str | None,
+        submittable: bool | None,
         submitted: bool,
         message: str,
         status: str = "simulated",
-        failed_checks: Optional[List[Dict[str, Any]]] = None,
+        failed_checks: list[dict[str, Any]] | None = None,
     ) -> "FieldTestResult":
         """构建与上下文绑定的成功/正常结果对象。"""
         return FieldTestResult(
@@ -279,9 +279,9 @@ class TemplateBuildContext:
 
     args: Any = field(default=None)
     all_fields: Sequence[Any] = field(default_factory=list)
-    template_library: Dict[str, List[Dict[str, Any]]] = field(default_factory=dict)
-    field_feedback: Dict[str, Dict[str, Any]] = field(default_factory=dict)
-    global_failed_check_counts: Dict[str, int] = field(default_factory=dict)
+    template_library: dict[str, list[dict[str, Any]]] = field(default_factory=dict)
+    field_feedback: dict[str, dict[str, Any]] = field(default_factory=dict)
+    global_failed_check_counts: dict[str, int] = field(default_factory=dict)
     include_templates: set[str] = field(default_factory=set)
     exclude_templates: set[str] = field(default_factory=set)
     use_dataset_heuristics: bool = False
@@ -305,7 +305,7 @@ class FutureCompletionContext:
     args: Any = field(default=None)
     settings_fingerprint: str = ""
     template_library_fingerprint: str = ""
-    run_config: Optional[Dict[str, Any]] = None
+    run_config: dict[str, Any] | None = None
 
 
 @dataclass(frozen=True)
@@ -495,16 +495,16 @@ class RunFilters:
         ... )
     """
 
-    region_filter: Optional[List[str]] = None
+    region_filter: list[str] | None = None
     """地区过滤器列表"""
 
-    delay_filter: Optional[List[int]] = None
+    delay_filter: list[int] | None = None
     """延迟过滤器列表"""
 
-    min_sharpe: Optional[float] = None
+    min_sharpe: float | None = None
     """最小夏普比率阈值"""
 
-    max_turnover: Optional[float] = None
+    max_turnover: float | None = None
     """最大换手率阈值"""
 
     include_fields: set[str] = field(default_factory=set)
@@ -550,19 +550,19 @@ class HistoricalRunState:
         ... )
     """
 
-    existing_results: List[FieldTestResult] = field(default_factory=list)
+    existing_results: list[FieldTestResult] = field(default_factory=list)
     """已存在的历史结果列表"""
 
-    attempted_keys: set[Tuple[str, str, str, str]] = field(default_factory=set)
+    attempted_keys: set[tuple[str, str, str, str]] = field(default_factory=set)
     """已经尝试过的组合键集合"""
 
-    template_stats: Dict[str, Dict[str, int]] = field(default_factory=dict)
+    template_stats: dict[str, dict[str, int]] = field(default_factory=dict)
     """按模板名称聚合的历史统计信息"""
 
-    field_feedback: Dict[str, Dict[str, Any]] = field(default_factory=dict)
+    field_feedback: dict[str, dict[str, Any]] = field(default_factory=dict)
     """按字段 ID 组织的优化反馈信息"""
 
-    global_failed_check_counts: Dict[str, int] = field(default_factory=dict)
+    global_failed_check_counts: dict[str, int] = field(default_factory=dict)
     """全局失败检查计数"""
 
 
@@ -594,19 +594,19 @@ class ExecutionState:
         ... )
     """
 
-    results: List[FieldTestResult]
+    results: list[FieldTestResult]
     """已完成的测试结果列表"""
 
-    attempted_keys: set[Tuple[str, str, str, str]]
+    attempted_keys: set[tuple[str, str, str, str]]
     """已尝试的模板键集合"""
 
-    template_stats: Dict[str, Dict[str, int]]
+    template_stats: dict[str, dict[str, int]]
     """模板统计数据字典"""
 
-    pending_futures: Dict[Any, Dict[str, Any]]
+    pending_futures: dict[Any, dict[str, Any]]
     """待处理的异步任务字典"""
 
-    field_queue_busy_counts: Dict[str, int]
+    field_queue_busy_counts: dict[str, int]
     """字段队列拥塞计数"""
 
     skipped_fields_due_to_queue: set[str]

@@ -32,7 +32,7 @@ import logging
 import threading
 import time
 from http.cookiejar import CookieJar
-from typing import Any, Dict, Iterable, List, Optional, Tuple
+from typing import Any, Callable, Iterable, TypeVar
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
 from urllib.request import HTTPCookieProcessor, ProxyHandler, Request, build_opener
@@ -101,7 +101,7 @@ def wait_seconds(seconds: float, reason: str) -> None:
 
 
 def extract_retry_after(
-    headers: Dict[str, str],
+    headers: dict[str, str],
     default: float = 5.0
 ) -> float:
     """
@@ -148,7 +148,7 @@ def extract_retry_after(
 
 
 def doubled_retry_after(
-    headers: Dict[str, str],
+    headers: dict[str, str],
     default: float = 5.0
 ) -> float:
     """
@@ -184,7 +184,7 @@ def doubled_retry_after(
 
 
 def polling_retry_after(
-    headers: Dict[str, str],
+    headers: dict[str, str],
     default: float = 5.0,
     buffer_seconds: float = POLLING_RETRY_BUFFER
 ) -> float:
@@ -227,7 +227,7 @@ def polling_retry_after(
 # ============================================================================
 
 
-def safe_json_bytes(content: bytes) -> Dict[str, Any]:
+def safe_json_bytes(content: bytes) -> dict[str, Any]:
     """
     安全解码 JSON 字节内容，并保留可调试的原始文本回退。
 
@@ -274,8 +274,8 @@ def safe_json_bytes(content: bytes) -> Dict[str, Any]:
 
 
 def simulation_payload_is_pending(
-    payload: Dict[str, Any]
-) -> Tuple[bool, str, Any]:
+    payload: dict[str, Any]
+) -> tuple[bool, str, Any]:
     """
     从 simulation 响应体判断任务是否仍在等待。
 
@@ -316,7 +316,7 @@ def simulation_payload_is_pending(
     return status in {"PENDING", "RUNNING", "QUEUED"}, status, progress
 
 
-def extract_total(payload: Dict[str, Any]) -> Optional[int]:
+def extract_total(payload: dict[str, Any]) -> int | None:
     """
     在接口提供时提取总数元数据。
 
@@ -355,7 +355,7 @@ def extract_total(payload: Dict[str, Any]) -> Optional[int]:
     return None
 
 
-def normalize_results(payload: Dict[str, Any]) -> List[Dict[str, Any]]:
+def normalize_results(payload: dict[str, Any]) -> list[dict[str, Any]]:
     """
     从响应负载中规范化提取结果列表。
 
@@ -397,13 +397,16 @@ def normalize_results(payload: Dict[str, Any]) -> List[Dict[str, Any]]:
 # 辅助函数 - 重试与登录
 # ============================================================================
 
+_T = TypeVar("_T")
+
+
 def retry_operation(
     name: str,
     retries: int,
-    func: Any,
+    func: Callable[[], _T],
     *,
     retry_wait_seconds: float = RETRY_OPERATION_DEFAULT_WAIT,
-) -> Any:
+) -> _T:
     """
     以有限重试执行单个阶段，并特殊处理限流与排队拥塞。
 
@@ -442,7 +445,7 @@ def retry_operation(
     # - 每次失败都打印日志
     # - 遵守显式的速率限制重试窗口
     # - 仅在配置的尝试次数后才失败
-    last_error: Optional[Exception] = None
+    last_error: Exception | None = None
 
     for attempt in range(1, retries + 1):
         try:
@@ -685,11 +688,11 @@ class BrainClient:
         method: str,
         url: str,
         *,
-        expected: Optional[Iterable[int]] = None,
-        headers: Optional[Dict[str, str]] = None,
-        retries: Optional[int] = None,
+        expected: Iterable[int] | None = None,
+        headers: dict[str, str] | None = None,
+        retries: int | None = None,
         **kwargs: Any,
-    ) -> Tuple[int, Dict[str, str], bytes]:
+    ) -> tuple[int, dict[str, str], bytes]:
         """
         发送带共享头、退避与重试策略的 HTTP 请求。
 
@@ -751,7 +754,7 @@ class BrainClient:
             else max(retries, 1)
         )
 
-        last_response: Optional[Tuple[int, Dict[str, str], bytes]] = None
+        last_response: tuple[int, dict[str, str], bytes] | None = None
         for attempt in range(1, retries + 1):
             status, response_headers, content = self.raw_request(
                 method, url, headers=merged_headers, **kwargs
@@ -803,10 +806,10 @@ class BrainClient:
         method: str,
         url: str,
         *,
-        headers: Optional[Dict[str, str]] = None,
-        params: Optional[Dict[str, Any]] = None,
-        data: Optional[Any] = None,
-    ) -> Tuple[int, Dict[str, str], bytes]:
+        headers: dict[str, str] | None = None,
+        params: dict[str, Any] | None = None,
+        data: Any | None = None,
+    ) -> tuple[int, dict[str, str], bytes]:
         """
         执行一次不带高层重试策略的原始 HTTP 请求。
 
@@ -859,7 +862,7 @@ class BrainClient:
             separator = "&" if "?" in url else "?"
             url = f"{url}{separator}{query}"
 
-        request_data: Optional[bytes]
+        request_data: bytes | None
         if data is None:
             request_data = None
         elif isinstance(data, bytes):
@@ -935,7 +938,7 @@ class BrainClient:
             - 当达到 limit 或数据耗尽时停止
             - 使用 extract_total 提取总数，优化分页控制
         """
-        fields: List[Dict[str, Any]] = []
+        fields: list[dict[str, Any]] = []
         current_offset = offset
 
         while True:
@@ -982,7 +985,7 @@ class BrainClient:
         universe: str,
         instrument_type: str,
         delay: int,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         获取一页字段元数据，并尝试几种已知可行的查询参数形态。
 
@@ -1025,7 +1028,7 @@ class BrainClient:
             - API 已观察到会拒绝某些形态（HTTP 400）
             - 我们尝试一小组合理的变体，然后才失败
         """
-        last_error: Optional[Exception] = None
+        last_error: Exception | None = None
 
         # 这些查询形态来自当前的前端打包代码：
         # - dataset.id 在请求查询中保留
@@ -1094,7 +1097,7 @@ class BrainClient:
             f"Unable to fetch dataset fields for {dataset_id}: {last_error}"
         )
 
-    def create_simulation(self, payload: Dict[str, Any]) -> str:
+    def create_simulation(self, payload: dict[str, Any]) -> str:
         """
         创建模拟任务并返回后续轮询使用的 Location 地址。
 
@@ -1142,7 +1145,7 @@ class BrainClient:
         pending_cycles: int,
         max_pending_cycles: int,
         max_queue_seconds: float,
-        pending_started_at: Optional[float],
+        pending_started_at: float | None,
         url: str,
     ) -> None:
         """检查 pending 状态是否超出排队/时间预算。"""
@@ -1170,7 +1173,7 @@ class BrainClient:
         max_wait_seconds: float,
         max_pending_cycles: int,
         max_queue_seconds: float,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         轮询单个模拟任务，直到完成或超出排队/等待预算。
 
@@ -1305,7 +1308,7 @@ class BrainClient:
                 continue
             return payload
 
-    def get_alpha_detail(self, alpha_id: str) -> Dict[str, Any]:
+    def get_alpha_detail(self, alpha_id: str) -> dict[str, Any]:
         """
         获取 Alpha 详情，包括可用时的 check-submit 结果。
 
@@ -1335,7 +1338,7 @@ class BrainClient:
         )
         return safe_json_bytes(content)
 
-    def submit_alpha(self, alpha_id: str) -> Dict[str, Any]:
+    def submit_alpha(self, alpha_id: str) -> dict[str, Any]:
         """
         提交可提交的 Alpha，并在需要时跟随异步 Retry-After 轮询。
 

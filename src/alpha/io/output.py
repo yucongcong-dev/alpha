@@ -22,7 +22,7 @@ import tempfile
 import time
 from contextlib import suppress
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Sequence
+from typing import Any, Sequence
 
 from ..config import DEFAULT_DATASET_ID
 from ..models.base import FieldTestResult
@@ -181,7 +181,7 @@ def sanitize_dataset_id_for_filename(dataset_id: str) -> str:
 # 数据集范围路径构建函数
 # ============================================================================
 
-def build_dataset_scoped_paths(dataset_id: str) -> Dict[str, str]:
+def build_dataset_scoped_paths(dataset_id: str) -> dict[str, str]:
     """
     根据 dataset_id 派生默认缓存、结果与模板库路径。
 
@@ -225,7 +225,7 @@ def build_dataset_scoped_paths(dataset_id: str) -> Dict[str, str]:
 # 边车文件路径构建函数
 # ============================================================================
 
-def build_output_sidecar_paths(output_path: str) -> Dict[str, str]:
+def build_output_sidecar_paths(output_path: str) -> dict[str, str]:
     """
     生成主结果文件旁边的精简分析与日志路径。
 
@@ -320,11 +320,11 @@ def cleanup_legacy_sidecar_files(output_path: str, *, verbose: bool = False) -> 
 def dump_results(
     path: str,
     dataset_id: str,
-    results: List[FieldTestResult],
+    results: list[FieldTestResult],
     *,
     settings_fingerprint: str,
     template_library_fingerprint: str,
-    run_config: Optional[Dict[str, Any]] = None,
+    run_config: dict[str, Any] | None = None,
 ) -> None:
     """
     持久化完整运行结果，并写入一个统一分析文件。

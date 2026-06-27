@@ -11,7 +11,7 @@ API 交互过程中可能出现的各种错误情况。
         └── BrainQueueBusyError (队列繁忙错误)
 """
 
-from typing import Optional
+from __future__ import annotations
 
 
 class BrainAPIError(RuntimeError):
@@ -92,7 +92,7 @@ class BrainRateLimitError(BrainAPIError):
     def __init__(
         self,
         message: str,
-        retry_after: Optional[int] = None
+        retry_after: int | None = None
     ) -> None:
         """
         初始化 BrainRateLimitError 异常。
