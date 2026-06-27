@@ -30,7 +30,6 @@ import base64
 import json
 import threading
 import time
-from datetime import datetime
 from http.cookiejar import CookieJar
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 from urllib.error import HTTPError, URLError
@@ -1231,8 +1230,7 @@ class BrainClient:
                         f"({max_queue_seconds:.0f}s) for {url}; skip current template."
                     )
                 print(
-                    f"[simulation] {datetime.now().strftime('%H:%M:%S')} "
-                    f"pending location={url} "
+                    f"[simulation] pending location={url} "
                     f"status={status} progress={progress} "
                     f"retry_after={response_headers.get('Retry-After')}",
                     flush=True,
@@ -1291,8 +1289,7 @@ class BrainClient:
                         f"({max_queue_seconds:.0f}s) for {url}; skip current template."
                     )
                 print(
-                    f"[simulation] {datetime.now().strftime('%H:%M:%S')} "
-                    f"pending location={url} "
+                    f"[simulation] pending location={url} "
                     f"body_status={body_status or 'unknown'} "
                     f"retry_after={response_headers.get('Retry-After')}",
                     flush=True,

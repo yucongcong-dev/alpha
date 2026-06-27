@@ -18,6 +18,7 @@
 
 import sys
 from dataclasses import dataclass, field
+from datetime import datetime
 from typing import Any, Dict, List, Optional, Sequence, TextIO, Tuple
 
 # ============================================================================
@@ -717,3 +718,45 @@ class TeeStream:
             if stream not in standard_streams:
                 stream.close()
                 self.streams.remove(stream)
+
+
+class TimestampedTeeStream:
+    """
+    带时间戳的日志分流输出类。
+
+    在每行输出前自动添加时间戳，同时写入多个流（控制台 + 日志文件）。
+    所有 print() 调用无需修改即可自动带上时间戳。
+
+    Attributes:
+        streams: 输出流列表。
+        _new_line: 是否处于新行的开始位置。
+
+    Example:
+        >>> import sys
+        >>> ts_tee = TimestampedTeeStream(sys.stdout, log_file)
+        >>> print("hello", file=ts_tee)
+        [11:01:23] hello
+    """
+
+    def __init__(self, *streams: TextIO) -> None:
+        self.streams: List[TextIO] = list(streams)
+        self._new_line = True
+
+    def write(self, message: str) -> int:
+        if self._new_line and message and message.strip():
+            ts = datetime.now().strftime("[%H:%M:%S] ")
+            result = 0
+            for stream in self.streams:
+                result = stream.write(ts)
+            for stream in self.streams:
+                result = stream.write(message)
+            self._new_line = message.endswith("\n")
+            return result
+        for stream in self.streams:
+            stream.write(message)
+        self._new_line = message.endswith("\n")
+        return len(message)
+
+    def flush(self) -> None:
+        for stream in self.streams:
+            stream.flush()

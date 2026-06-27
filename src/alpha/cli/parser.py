@@ -25,7 +25,7 @@ from ..io.output import (
     build_output_sidecar_paths,
     resolve_cli_path,
 )
-from ..models.base import RunFilters, RunPaths, TeeStream
+from ..models.base import RunFilters, RunPaths, TeeStream, TimestampedTeeStream
 
 # ============================================================================
 # 常量定义
@@ -783,52 +783,46 @@ def setup_runtime_logging(log_path: str) -> None:
     """
     设置运行时日志，将日志同时输出到控制台和文件。
 
-    配置 Python logging 模块，使日志消息同时输出到标准输出
-    和指定的日志文件。
+    用 TimestampedTeeStream 替换 sys.stdout，使所有 print() 输出
+    自动带时间戳并同时写入控制台和日志文件。
 
     Args:
-        log_path (str): 日志文件的绝对路径。如果为空，只输出到控制台。
+        log_path (str): 日志文件的绝对路径。如果为空，只输出到控制台
+            （带时间戳）。
 
     Example:
         >>> setup_runtime_logging("/path/to/run.log")
-        >>> # 日志消息会同时输出到控制台和文件
+        >>> # 所有 print() 输出都会带 [HH:MM:SS] 前缀并写入文件
 
         >>> setup_runtime_logging("")
-        >>> # 只输出到控制台
+        >>> # 只输出到控制台（带时间戳）
 
     Note:
-        - 使用 TeeStream 实现同时输出
-        - 日志级别设置为 INFO
-        - 日志格式包含时间戳、级别和消息
-        - 如果日志文件路径不为空，会自动创建父目录
+        - 替换 sys.stdout 为 TimestampedTeeStream，全局生效
+        - 日志格式包含时间戳前缀 [HH:MM:SS]
+        - 同时配置 logging 模块用于 logging.info() 调用
     """
-    if not log_path:
-        # 只输出到控制台
-        logging.basicConfig(
-            level=logging.INFO,
-            format="%(asctime)s [%(levelname)s] %(message)s",
-            stream=sys.stdout,
-            force=True,
-        )
-        return
+    if log_path:
+        # 确保日志目录存在
+        log_dir = os.path.dirname(os.path.abspath(log_path))
+        if log_dir:
+            os.makedirs(log_dir, exist_ok=True)
 
-    # 确保日志目录存在
-    log_dir = os.path.dirname(os.path.abspath(log_path))
-    if log_dir:
-        os.makedirs(log_dir, exist_ok=True)
+        # 打开日志文件（程序全局持有，需在进程退出时由 OS 自动关闭）
+        log_file_handle = open(log_path, "a", encoding="utf-8")  # noqa: SIM115
 
-    # 打开日志文件（程序全局持有，需在进程退出时由 OS 自动关闭）
-    log_file_handle = open(log_path, "a", encoding="utf-8")  # noqa: SIM115
+        # 替换 sys.stdout 为带时间戳的双写流（控制台 + 文件）
+        sys.stdout = TimestampedTeeStream(sys.__stdout__, log_file_handle)
 
-    # 使用 TeeStream 同时输出到控制台和文件
-    tee_stream = TeeStream(sys.stdout, log_file_handle)
+        print(f"[log] logging to {log_path}", flush=True)
+    else:
+        # 只输出到控制台（也带时间戳）
+        sys.stdout = TimestampedTeeStream(sys.__stdout__)
 
-    # 配置日志
+    # 配置 logging 模块（兜底，代码中极少使用 logging.info）
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s [%(levelname)s] %(message)s",
-        stream=tee_stream,
+        stream=sys.stdout,
         force=True,
     )
-
-    print(f"[log] 日志输出到 {log_path}", flush=True)
