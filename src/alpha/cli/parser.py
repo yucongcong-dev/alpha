@@ -259,8 +259,8 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--fields-cache-file",
-        default=DEFAULT_FIELDS_CACHE_FILE,
-        help="本地 JSON 字段缓存文件路径",
+        default="",
+        help="本地 JSON 字段缓存文件路径（留空则根据 dataset_id 自动生成）",
     )
     parser.add_argument(
         "--refresh-fields-cache",
@@ -422,8 +422,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--submit", action="store_true", help="检查通过时提交 Alpha")
     parser.add_argument(
         "--output",
-        default=DEFAULT_OUTPUT_FILE,
-        help="结果 JSON 输出文件路径",
+        default="",
+        help="结果 JSON 输出文件路径（留空则根据 dataset_id 自动生成）",
     )
 
     # 日志参数
