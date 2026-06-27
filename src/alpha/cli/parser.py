@@ -784,43 +784,40 @@ def setup_runtime_logging(log_path: str) -> None:
     """
     设置运行时日志，将日志同时输出到控制台和文件。
 
-    使用 Python 标准 logging 模块，为根 logger 配置带时间戳的格式化输出，
-    并可选地添加文件 handler。
+    控制台使用 coloredlogs 输出彩色日志，文件输出纯文本。
 
     Args:
         log_path (str): 日志文件的绝对路径。如果为空，只输出到控制台。
 
-    Example:
-        >>> setup_runtime_logging("/path/to/run.log")
-        >>> # 所有 logger.info() 输出都会带 [HH:MM:SS] 前缀并写入文件
-
-        >>> setup_runtime_logging("")
-        >>> # 只输出到控制台（带时间戳）
-
     Note:
-        - 使用 logging 模块的 StreamHandler 和 FileHandler
-        - 日志格式：[HH:MM:SS] message
+        - 控制台格式：[HH:MM:SS] LEVEL    message（按等级着色）
+        - 文件格式：[HH:MM:SS] LEVEL    message（纯文本）
         - 全局生效，所有模块的 logger 均受影响
     """
-    fmt = logging.Formatter("[%(asctime)s] %(message)s", datefmt="%H:%M:%S")
+    import coloredlogs
+
     root = logging.getLogger()
-    root.setLevel(logging.INFO)
 
     # 移除旧 handler，避免重复输出
     for handler in root.handlers[:]:
         root.removeHandler(handler)
 
-    # 控制台 handler
-    console_handler = logging.StreamHandler()
-    console_handler.setFormatter(fmt)
-    root.addHandler(console_handler)
+    # 控制台 handler（coloredlogs）
+    coloredlogs.install(
+        level="INFO",
+        fmt="[%(asctime)s] %(levelname)-8s %(message)s",
+        datefmt="%H:%M:%S",
+    )
 
     if log_path:
         log_dir = os.path.dirname(os.path.abspath(log_path))
         if log_dir:
             os.makedirs(log_dir, exist_ok=True)
+        plain_fmt = logging.Formatter(
+            "[%(asctime)s] %(levelname)-8s %(message)s", datefmt="%H:%M:%S"
+        )
         file_handler = logging.FileHandler(log_path, encoding="utf-8")
-        file_handler.setFormatter(fmt)
+        file_handler.setFormatter(plain_fmt)
         root.addHandler(file_handler)
 
     root.info(f"logging to {log_path}" if log_path else "logging to console only")

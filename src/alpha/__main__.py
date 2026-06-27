@@ -12,15 +12,16 @@ Example:
 
 import logging
 
-logger = logging.getLogger(__name__)
+import coloredlogs
 
-# 确保在 setup_runtime_logging 尚未调用时也有基本的日志输出
-logging.basicConfig(
-    level=logging.INFO,
-    format="[%(asctime)s] %(message)s",
+# 确保在 setup_runtime_logging 尚未调用时也有基本的日志输出（带颜色）
+coloredlogs.install(
+    level="INFO",
+    fmt="[%(asctime)s] %(levelname)-8s %(message)s",
     datefmt="%H:%M:%S",
-    force=False,
 )
+
+logger = logging.getLogger(__name__)
 
 
 def main() -> int:
