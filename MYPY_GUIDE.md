@@ -5,10 +5,7 @@
 ### 基本检查
 
 ```bash
-# 使用便捷脚本（推荐）
-python scripts/run_mypy.py
-
-# 或直接使用 mypy
+# 基本检查
 python -m mypy src/alpha
 ```
 
@@ -16,13 +13,13 @@ python -m mypy src/alpha
 
 ```bash
 # 检查单个文件
-python scripts/run_mypy.py src/alpha/core/simulation.py
+python -m mypy src/alpha/core/simulation.py
 
 # 检查多个文件
-python scripts/run_mypy.py src/alpha/core/simulation.py src/alpha/api/client.py
+python -m mypy src/alpha/core/simulation.py src/alpha/api/client.py
 
 # 检查整个目录
-python scripts/run_mypy.py src/alpha/core
+python -m mypy src/alpha/core
 ```
 
 ## 高级用法
@@ -30,7 +27,7 @@ python scripts/run_mypy.py src/alpha/core
 ### 严格模式
 
 ```bash
-python scripts/run_mypy.py --strict
+python -m mypy src/alpha --strict
 ```
 
 严格模式会启用更多检查项：
@@ -46,16 +43,16 @@ python scripts/run_mypy.py --strict
 
 ```bash
 # 生成 JUnit XML 报告（用于 CI/CD）
-python scripts/run_mypy.py --junit-xml mypy-report.xml
+python -m mypy src/alpha --junit-xml mypy-report.xml
 
 # 生成 HTML 报告
-python scripts/run_mypy.py --html-report mypy-html-report
+python -m mypy src/alpha --html-report mypy-html-report
 ```
 
 ### 详细输出
 
 ```bash
-python scripts/run_mypy.py --verbose
+python -m mypy src/alpha --verbose
 ```
 
 ## 配置说明
@@ -135,7 +132,7 @@ pip install types-requests  # 示例
 
 ```bash
 set PYTHONIOENCODING=utf-8
-python scripts/run_mypy.py
+python -m mypy src/alpha
 ```
 
 ## 集成到开发流程
@@ -147,7 +144,7 @@ python scripts/run_mypy.py
 ```bash
 #!/bin/bash
 echo "运行 mypy 类型检查..."
-python scripts/run_mypy.py
+python -m mypy src/alpha
 if [ $? -ne 0 ]; then
     echo "类型检查失败，提交中止"
     exit 1
@@ -170,7 +167,7 @@ jobs:
         with:
           python-version: "3.10"
       - run: pip install -e ".[dev]"
-      - run: python scripts/run_mypy.py
+      - run: python -m mypy src/alpha
 ```
 
 ### VS Code 集成
