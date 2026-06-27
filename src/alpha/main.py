@@ -394,7 +394,7 @@ def _run_field_test_loop(
                 )
             )
 
-            logger.info(
+            logger.debug(
                 "[progress] 字段 %d/%d field_id=%s templates=%d pending=%d disabled=%d",
                 field_index,
                 len(fields),
@@ -419,7 +419,9 @@ def _run_field_test_loop(
                     break
 
                 if field_id in execution_state.skipped_fields_due_to_queue:
-                    logger.info("[skip] field=%s 队列拥塞后停止剩余模板", field_id)
+                    logger.warning(
+                        "[skip] field=%s 队列拥塞后停止剩余模板", field_id
+                    )
                     break
 
                 maybe_restore_runtime_concurrency(runtime_state)
@@ -440,7 +442,7 @@ def _run_field_test_loop(
                     if field_id in execution_state.skipped_fields_due_to_queue:
                         break
 
-                logger.info(
+                logger.debug(
                     "[progress] field=%s template %d/%d name=%s priority=%d queued=%d/%d settings=%s",
                     field_id,
                     template_index,

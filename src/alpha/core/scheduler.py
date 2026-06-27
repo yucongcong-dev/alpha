@@ -112,15 +112,34 @@ def handle_completed_future(
     if is_informative_result(result):
         attempted_keys.add(result_identity(result))
     template_stats = compile_template_stats(results)
-    logger.info(
-        "[result] field=%s template=%s status=%s submittable=%s submitted=%s message=%s",
-        result.field_id,
-        result.template_name,
-        result.status,
-        result.submittable,
-        result.submitted,
-        result.message,
-    )
+    
+    # 根据结果状态使用不同日志级别
+    if result.status == "error":
+        logger.error(
+            "[result] field=%s template=%s status=ERROR message=%s",
+            result.field_id,
+            result.template_name,
+            result.message,
+        )
+    elif not result.submittable:
+        logger.debug(
+            "[result] field=%s template=%s status=%s submittable=%s message=%s",
+            result.field_id,
+            result.template_name,
+            result.status,
+            result.submittable,
+            result.message,
+        )
+    else:
+        logger.info(
+            "[result] field=%s template=%s status=%s submittable=%s submitted=%s message=%s",
+            result.field_id,
+            result.template_name,
+            result.status,
+            result.submittable,
+            result.submitted,
+            result.message,
+        )
     dump_results(
         args.output,
         args.dataset_id,
@@ -132,8 +151,17 @@ def handle_completed_future(
     congestion_detected = False
     if "CONCURRENT_SIMULATION_LIMIT_EXCEEDED" in result.message:
         congestion_detected = True
+        logger.warning(
+            "[congestion] concurrent simulation limit exceeded for field=%s",
+            result.field_id,
+        )
     if isinstance(result.message, str) and "queued too long" in result.message.lower():
         congestion_detected = True
+        logger.warning(
+            "[congestion] queue timeout for field=%s template=%s",
+            result.field_id,
+            result.template_name,
+        )
     if (
         result.failed_stage == "simulation"
         and isinstance(result.message, str)

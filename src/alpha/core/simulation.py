@@ -519,7 +519,7 @@ def create_simulation_with_retry(
     )
     simulation_id_match = re.search(_SIM_ID_REGEX, simulation_location)
     simulation_id = simulation_id_match.group(1) if simulation_id_match else simulation_location
-    logger.info(
+    logger.debug(
         "[simulation] created simulation_id=%s location=%s",
         simulation_id,
         simulation_location,
@@ -647,7 +647,7 @@ def checksubmit_with_retry(
         if submittable
         else "checks failed"
     )
-    logger.info(
+    logger.debug(
         "[checksubmit] alpha_id=%s submittable=%s message=%s",
         alpha_id,
         submittable,
@@ -880,7 +880,7 @@ def _run_simulation_poll(
             simulation_result.get(API_KEY_STATUS),
             simulation_result.get(API_KEY_STATE),
         )
-        logger.info(
+        logger.warning(
             "[simulation] completed simulation_id=%s simulation_location=%s progress=%s",
             simulation_id,
             simulation_location,

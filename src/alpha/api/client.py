@@ -1256,7 +1256,7 @@ class BrainClient:
                     pending_started_at,
                     url,
                 )
-                logger.info(
+                logger.debug(
                     "[simulation] pending location=%s status=%s progress=%s retry_after=%s",
                     url,
                     status,

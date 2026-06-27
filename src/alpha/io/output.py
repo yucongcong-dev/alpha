@@ -443,8 +443,16 @@ def dump_results(
     atomic_write_json(path, summary)
     atomic_write_json(sidecar_paths["analysis"], analysis)
     cleanup_legacy_sidecar_files(path)
-    logger.info("[done] wrote results to %s", path)
-    logger.info("[done] wrote analysis to %s", sidecar_paths["analysis"])
+    logger.info(
+        "[done] wrote results to %s (tested=%d, submittable=%d)",
+        path,
+        len(results),
+        submittable_count,
+    )
+    logger.debug(
+        "[done] wrote analysis to %s",
+        sidecar_paths["analysis"],
+    )
 
 
 # ============================================================================
