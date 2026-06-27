@@ -618,14 +618,12 @@ def apply_yaml_global_defaults(
     if not isinstance(global_cfg, dict):
         return
 
-    # dataset
-    _merge_section(args, global_cfg.get("dataset", {}), {
-        "region", "universe", "instrument_type", "delay",
-    })
-
-    # simulation settings
+    # simulation settings —— 与官网 Simulation Settings 一一对应
     _merge_section(args, global_cfg.get("simulation", {}), {
+        "region", "universe", "instrument_type", "delay",
         "decay", "neutralization", "truncation", "nan_handling",
+        "pasteurization", "unit_handling", "max_trade", "max_position",
+        "language", "visualization", "lookback",
         "start_date", "end_date",
     })
 

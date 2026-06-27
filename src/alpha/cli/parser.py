@@ -207,16 +207,23 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--instrument-type", default="EQUITY", help="工具类型")
     parser.add_argument("--delay", type=int, default=1, help="延迟天数")
 
-    # 模拟设置参数
-    parser.add_argument("--decay", type=int, default=5, help="衰减天数")
-    parser.add_argument("--neutralization", default="SUBINDUSTRY", help="中性化类型")
-    parser.add_argument("--truncation", type=float, default=0.05, help="截断阈值")
-    parser.add_argument("--nan-handling", default="ON", help="NaN 处理方式")
+    # 模拟设置参数 —— 与官网 Simulation Settings 一一对应
+    parser.add_argument("--decay", type=int, default=0, help="衰减天数 (Decay)")
+    parser.add_argument("--neutralization", default="SUBINDUSTRY", help="中性化类型 (Neutralization)")
+    parser.add_argument("--truncation", type=float, default=0.05, help="截断阈值 (Truncation)")
+    parser.add_argument("--nan-handling", default="ON", help="NaN 处理方式 (NaN Handling)")
+    parser.add_argument("--pasteurization", default="ON", help="Pasteurization 开关 (ON/OFF)")
+    parser.add_argument("--unit-handling", default="VERIFY", help="单位验证 (Unit Handling)")
+    parser.add_argument("--max-trade", default="OFF", help="最大交易限制 (Max Trade)")
+    parser.add_argument("--max-position", default="OFF", help="最大持仓限制 (Max Position)")
+    parser.add_argument("--language", default="FASTEXPR", help="表达式语言 (Language)")
+    parser.add_argument("--visualization", action="store_true", help="是否生成可视化 (Visualization)")
+    parser.add_argument("--lookback", default="OFF", help="Lookback 开关 (ON/OFF)")
     parser.add_argument(
-        "--start-date", default=None, help="模拟开始日期 (YYYY-MM-DD)，默认使用 config 中的值"
+        "--start-date", default=None, help="模拟开始日期 (Start Date, YYYY-MM-DD)，默认使用 config 中的值"
     )
     parser.add_argument(
-        "--end-date", default=None, help="模拟结束日期 (YYYY-MM-DD)，默认使用 config 中的值"
+        "--end-date", default=None, help="模拟结束日期 (End Date, YYYY-MM-DD)，默认使用 config 中的值"
     )
 
     # 运行模式（互斥）

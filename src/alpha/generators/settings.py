@@ -84,16 +84,8 @@ def build_simulation_payload(args: Any, expression: str) -> dict[str, Any]:
         'USA'
 
     Note:
-        默认配置包括：
-            - type: "REGULAR"（常规模拟）
-            - pasteurization: "ON"（启用 Pasteurization）
-            - unitHandling: "VERIFY"（单位验证）
-            - maxTrade: "OFF"（最大交易限制关闭）
-            - maxPosition: "OFF"（最大持仓限制关闭）
-            - language: "FASTEXPR"（使用 FastExpr 语言）
-            - visualization: False（不生成可视化）
-            - startDate: "2019-01-01"（开始日期）
-            - endDate: "2023-12-31"（结束日期）
+        所有 simulation settings 均可通过 settings.yaml 或 CLI 参数配置。
+        参数名与官网 Simulation Settings 页面一一对应。
     """
     # Keep simulation settings centralized so all field tests are comparable.
     return {
@@ -106,13 +98,13 @@ def build_simulation_payload(args: Any, expression: str) -> dict[str, Any]:
             "decay": args.decay,
             "neutralization": args.neutralization,
             "truncation": args.truncation,
-            "pasteurization": "ON",
-            "unitHandling": "VERIFY",
-            "nanHandling": args.nan_handling,
-            "maxTrade": "OFF",
-            "maxPosition": "OFF",
-            "language": "FASTEXPR",
-            "visualization": False,
+            "pasteurization": getattr(args, "pasteurization", "ON"),
+            "unitHandling": getattr(args, "unit_handling", "VERIFY"),
+            "nanHandling": getattr(args, "nan_handling", "ON"),
+            "maxTrade": getattr(args, "max_trade", "OFF"),
+            "maxPosition": getattr(args, "max_position", "OFF"),
+            "language": getattr(args, "language", "FASTEXPR"),
+            "visualization": getattr(args, "visualization", False),
             "startDate": getattr(args, "start_date", None) or get_simulation_default_start_date(),
             "endDate": getattr(args, "end_date", None) or get_simulation_default_end_date(),
         },

@@ -6,17 +6,10 @@
 # 也可通过 --config /path/to/custom.yaml 指定其他配置文件。
 #
 # 快速索引:
-#   1. 数据集 & 模拟设置  (dataset, simulation)
-#   2. 字段筛选 & 限制    (limits)
-#   3. 并发控制           (concurrency)
-#   4. 重试 & 超时        (retries)
-#   5. 过滤器             (filters)
-#   6. 质量阈值           (quality)
-#   7. HTTP 客户端        (http)
-#   8. 表达式生成         (expression)
-#   9. 反馈优化           (feedback)
-#  10. 运行时开关         (runtime)
-#  11. 数据集 Profiles     (dataset_profiles)
+#   1. 模拟设置 (Simulation Settings)  —— 与官网参数一一对应
+#   2. 运维参数 (Operational)          —— 字段筛选、并发、重试、过滤、质量、HTTP、反馈
+#   3. 运行时开关 (Runtime)            —— submit, smoke_test, full_run 等
+#   4. 数据集 Profiles (Dataset Profiles) —— 各数据集的专属参数
 # ============================================================================
 
 # ============================================================================
@@ -24,25 +17,31 @@
 # ============================================================================
 global:
 
-  # --------------------------------------------------------------------------
-  # 数据集参数 —— 对应 CLI --dataset-id / --region / --universe / --instrument-type / --delay
-  # --------------------------------------------------------------------------
-  dataset:
-    region: "USA"                  # 地区代码 (USA, CHN, JPN, EUR, ...)
-    universe: "TOP3000"            # 股票宇宙 (TOP3000, TOP2000, TOP1000, ...)
-    instrument_type: "EQUITY"      # 工具类型 (EQUITY, FUTURES, ...)
-    delay: 1                       # 延迟天数 (0=无延迟, 1=隔日)
-
-  # --------------------------------------------------------------------------
-  # 模拟设置 —— 对应 CLI --decay / --neutralization / --truncation / --nan-handling
-  # --------------------------------------------------------------------------
+  # ==========================================================================
+  # Simulation Settings —— 对应官网 Simulation Settings 页面所有参数
+  # ==========================================================================
   simulation:
-    decay: 5                       # 衰减天数 (指数加权窗口)
-    neutralization: "SUBINDUSTRY"  # 中性化方式 (SUBINDUSTRY, MARKET, SECTOR, NONE)
-    truncation: 0.05               # 截断阈值 (0.05 = 5% 截断)
-    nan_handling: "ON"             # NaN 处理 (ON=启用, OFF=关闭)
-    start_date: "2019-01-01"       # 模拟开始日期 (YYYY-MM-DD)
-    end_date: "2023-12-31"         # 模拟结束日期 (YYYY-MM-DD)
+    instrument_type: "EQUITY"      # Instrument Type: EQUITY, FUTURES, ...
+    region: "USA"                  # Region: USA, CHN, JPN, EUR, ...
+    universe: "TOP3000"            # Universe: TOP3000, TOP2000, TOP1000, ...
+    language: "FASTEXPR"           # Language: FASTEXPR (Fast Expression)
+    decay: 0                       # Decay: 指数加权衰减天数 (0=无衰减)
+    delay: 1                       # Delay: 延迟天数 (0=无延迟, 1=隔日)
+    truncation: 0.05               # Truncation: 截断阈值 (0.05=5% 截断)
+    neutralization: "SUBINDUSTRY"  # Neutralization: SUBINDUSTRY, MARKET, SECTOR, NONE
+    pasteurization: "ON"           # Pasteurization: ON/OFF
+    unit_handling: "VERIFY"        # Unit Handling: VERIFY
+    nan_handling: "ON"             # NaN Handling: ON/OFF
+    max_trade: "OFF"               # Max Trade: OFF (不限制最大交易)
+    max_position: "OFF"            # Max Position: OFF (不限制最大持仓)
+    lookback: "OFF"                # Lookback: ON/OFF
+    visualization: false           # Visualization: 是否生成可视化图表
+    start_date: "2019-01-01"       # Start Date: 模拟开始日期 (YYYY-MM-DD)
+    end_date: "2023-12-31"         # End Date: 模拟结束日期 (YYYY-MM-DD)
+
+  # ==========================================================================
+  # Operational — 运维参数（字段筛选、并发、重试、过滤、质量、HTTP、反馈）
+  # ==========================================================================
 
   # --------------------------------------------------------------------------
   # 字段筛选 & 限制 —— 对应 CLI --limit / --offset / --page-size / ...
