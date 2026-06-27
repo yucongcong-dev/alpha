@@ -43,6 +43,8 @@ def atomic_write_json(path: str, payload: Any) -> None:
         使用临时文件确保写入操作的原子性。
     """
     # Write to a temporary file first, then atomically replace the target.
+    if not path:
+        return
     directory = os.path.dirname(os.path.abspath(path)) or "."
     os.makedirs(directory, exist_ok=True)
     fd, temp_path = tempfile.mkstemp(prefix=".tmp_", suffix=".json", dir=directory)

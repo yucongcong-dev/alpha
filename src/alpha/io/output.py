@@ -113,6 +113,8 @@ def atomic_write_json(path: str, payload: Any) -> None:
         - 使用 UTF-8 编码和美观格式化（indent=2）
     """
     # 先写入临时文件，然后原子性地替换目标文件
+    if not path:
+        return
     directory = os.path.dirname(os.path.abspath(path)) or "."
     os.makedirs(directory, exist_ok=True)
     fd, temp_path = tempfile.mkstemp(prefix=".tmp_", suffix=".json", dir=directory)
