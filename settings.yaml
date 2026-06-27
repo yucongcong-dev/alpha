@@ -1,0 +1,232 @@
+# ============================================================================
+# Alpha 运行配置文件 (settings.yaml)
+# ============================================================================
+# 优先级: 命令行参数 > YAML 配置 > 代码内默认值
+# 修改此文件后保存，下次运行 python -m alpha 自动生效。
+# 也可通过 --config /path/to/custom.yaml 指定其他配置文件。
+#
+# 快速索引:
+#   1. 数据集 & 模拟设置  (dataset, simulation)
+#   2. 字段筛选 & 限制    (limits)
+#   3. 并发控制           (concurrency)
+#   4. 重试 & 超时        (retries)
+#   5. 过滤器             (filters)
+#   6. 质量阈值           (quality)
+#   7. HTTP 客户端        (http)
+#   8. 表达式生成         (expression)
+#   9. 反馈优化           (feedback)
+#  10. 运行时开关         (runtime)
+#  11. 数据集 Profiles     (dataset_profiles)
+# ============================================================================
+
+# ============================================================================
+# Global — 全局默认参数 (所有数据集的通用默认值)
+# ============================================================================
+global:
+
+  # --------------------------------------------------------------------------
+  # 数据集参数 —— 对应 CLI --dataset-id / --region / --universe / --instrument-type / --delay
+  # --------------------------------------------------------------------------
+  dataset:
+    region: "USA"                  # 地区代码 (USA, CHN, JPN, EUR, ...)
+    universe: "TOP3000"            # 股票宇宙 (TOP3000, TOP2000, TOP1000, ...)
+    instrument_type: "EQUITY"      # 工具类型 (EQUITY, FUTURES, ...)
+    delay: 1                       # 延迟天数 (0=无延迟, 1=隔日)
+
+  # --------------------------------------------------------------------------
+  # 模拟设置 —— 对应 CLI --decay / --neutralization / --truncation / --nan-handling
+  # --------------------------------------------------------------------------
+  simulation:
+    decay: 5                       # 衰减天数 (指数加权窗口)
+    neutralization: "SUBINDUSTRY"  # 中性化方式 (SUBINDUSTRY, MARKET, SECTOR, NONE)
+    truncation: 0.05               # 截断阈值 (0.05 = 5% 截断)
+    nan_handling: "ON"             # NaN 处理 (ON=启用, OFF=关闭)
+    start_date: "2019-01-01"       # 模拟开始日期 (YYYY-MM-DD)
+    end_date: "2023-12-31"         # 模拟结束日期 (YYYY-MM-DD)
+
+  # --------------------------------------------------------------------------
+  # 字段筛选 & 限制 —— 对应 CLI --limit / --offset / --page-size / ...
+  # --------------------------------------------------------------------------
+  limits:
+    limit: 50                      # 测试字段数量上限，0=不限制 (全部字段)
+    offset: 0                      # 字段起始偏移量 (跳过前 N 个)
+    page_size: 50                  # API 分页大小 (每次请求字段数)
+    sleep_between_fields: 3.0      # 字段间休眠 (秒)，增大以降低限流风险
+    max_templates_per_field: 0     # 每字段最大模板数，0=不限制
+    max_templates_per_family: 1    # 每表达式家族保留的最大候选数
+    legacy_similarity_penalty: 42  # legacy 模板族优先级惩罚值
+    disable_legacy_after: 8        # N 次零可提交后禁用 legacy，0=不启用
+
+  # --------------------------------------------------------------------------
+  # 并发控制 —— 对应 CLI --max-concurrent-simulations / --max-concurrent-creates
+  # --------------------------------------------------------------------------
+  concurrency:
+    max_concurrent_simulations: 1  # 同时进行的模拟数 (建议1，避免 429)
+    max_concurrent_creates: 1      # 同时进行的创建请求数
+
+  # --------------------------------------------------------------------------
+  # 重试 & 超时 —— 对应 CLI --simulation-create-retries / --simulation-max-wait-seconds / ...
+  # --------------------------------------------------------------------------
+  retries:
+    min_request_interval: 1.5            # API 请求最小间隔 (秒)，防止被限流
+    simulation_create_retries: 3         # 模拟创建重试次数
+    simulation_poll_retries: 3           # 模拟轮询重试次数
+    simulation_max_polls: 240            # 单模拟最大轮询次数
+    simulation_max_wait_seconds: 600     # 单模拟最大等待时间 (秒)
+    simulation_max_pending_cycles: 120   # 最大 "pending" 状态等待周期
+    simulation_max_queue_seconds: 300    # 排队最大等待时间 (秒)
+    queue_busy_cooldown_seconds: 60      # 队列繁忙后冷却时间 (秒)
+    field_queue_busy_skip_after: 2       # 字段连续队列拥挤 N 次后跳过，0=不跳过
+    check_submit_retries: 3              # 检查提交结果的重试次数
+    submit_retries: 3                    # 提交 Alpha 的重试次数
+    rate_limit_max_retries: 5            # 触发限流 (429) 的最大重试次数
+    login_retries: 3                     # 登录失败重试次数
+
+  # --------------------------------------------------------------------------
+  # 过滤器 —— 对应 CLI --template-disable-after / --top-fields-by-feedback / --stop-after-submittable
+  # --------------------------------------------------------------------------
+  filters:
+    template_disable_after: 0       # 模板自动禁用阈值 (N 次失败后禁用)，0=不剪枝
+    top_fields_by_feedback: 0       # 仅测试反馈排序前 N 个字段，0=不限制
+    stop_after_submittable: 0       # 找到 N 个可提交 Alpha 后停止，0=不停止
+
+  # --------------------------------------------------------------------------
+  # 质量阈值 —— 对应 CLI --min-sharpe / --min-fitness / --min-turnover / --max-turnover / --max-weight
+  # --------------------------------------------------------------------------
+  # 模拟完成后本地预检: 低于阈值的 Alpha 不会被提交。
+  quality:
+    min_sharpe: 0.85                # 最低 Sharpe 比率 (风险调整后收益)
+    min_fitness: 0.50               # 最低 Fitness (Sharpe × Turnover 惩罚调整)
+    min_turnover: 0.005             # 最低换手率 (0.5%)
+    max_turnover: 0.75              # 最高换手率 (75%)
+    max_weight: 0.13                # 单股最大权重 (13%)
+
+  # --------------------------------------------------------------------------
+  # HTTP 客户端参数 —— 无对应 CLI，仅 YAML 可配
+  # --------------------------------------------------------------------------
+  # 控制底层 HTTP 请求的超时、退避和等待策略。仅在客户端模块使用。
+  http:
+    request_timeout: 90.0               # HTTP 请求默认超时 (秒)
+    rate_limit_default_wait: 10.0       # 限流触发后默认等待 (秒)
+    polling_default_wait: 5.0           # 轮询默认间隔 (秒)
+    polling_no_retry_after_wait: 3.0    # 无 Retry-After 头时的轮询间隔 (秒)
+    server_error_backoff_max: 30.0      # 服务器错误退避最大等待 (秒)
+    server_error_backoff_step: 3.0      # 服务器错误退避步长 (秒/次)
+    retry_operation_default_wait: 2.0   # 重试操作默认等待 (秒)
+    login_retry_wait: 3.0               # 登录重试等待 (秒)
+    simulation_retry_wait: 3.0          # 模拟重试等待 (秒)
+    polling_retry_buffer: 1.0           # 轮询缓冲时间 (秒)，附加在 Retry-After 值上
+
+  # --------------------------------------------------------------------------
+  # 表达式生成 —— 对应 CLI --backfill-window
+  # --------------------------------------------------------------------------
+  expression:
+    backfill_window: 240              # ts_backfill 时间窗口 (天)，越大信号越稳定
+
+  # --------------------------------------------------------------------------
+  # 反馈优化阈值 —— 无对应 CLI，仅 YAML 可配
+  # --------------------------------------------------------------------------
+  # 控制模板优先级、变异生成和自适应调整的精细参数。
+  feedback:
+    settings_variant_budget_high: 0.35   # settings 变体高分阈值 (>= 此值分配 3 个变体)
+    settings_variant_budget_mid: 0.10    # settings 变体中分阈值 (>= 此值分配 2 个变体)
+    feedback_mutation_nearpass_threshold: 0.08  # 接近通过时生成额外变异的阈值
+    feedback_mutation_highscore_threshold: 0.25 # 高分时生成最佳变体的阈值
+    feedback_template_min_priority: 105   # 反馈剪枝最低优先级 (仅保留 >= 此值的模板)
+    delta_std_priority_boost: 15          # delta/std 模板额外优先级加成
+    settings_nearpass_threshold: 0.45     # settings nearpass 阈值 (>= 时生成 MARKET 变体)
+    settings_close_threshold: 0.65        # settings close 阈值 (>= 时生成更多微调变体)
+    expr_nearpass_boost_threshold: 0.50   # 表达式 nearpass 大幅加分阈值
+    expr_iter_boost_threshold: 0.20       # 表达式 iter 适度加分阈值
+    expr_ratio_penalty_threshold: 0.30    # 表达式 ratio 家族惩罚阈值
+    expr_mutation_extend_threshold: 0.15  # 表达式额外 nearpass 变异阈值
+
+  # --------------------------------------------------------------------------
+  # 运行时开关 —— 对应 CLI --submit / --smoke-test / --dry-run-plan / --full-run / --verbose / --quiet
+  # --------------------------------------------------------------------------
+  runtime:
+    submit: false          # 是否自动提交通过预检的 Alpha
+    smoke_test: false      # 冒烟测试模式 (1字段/1模板，快速验证)
+    dry_run_plan: false    # 干运行模式 (仅打印计划，不创建模拟)
+    full_run: false        # 全量运行模式 (所有字段/所有模板)
+    verbose: false         # 详细日志
+    quiet: false           # 安静模式 (仅输出错误)
+
+# ============================================================================
+# Dataset Profiles — 数据集自适应配置
+# ============================================================================
+# 运行时根据 --dataset-id 自动匹配。优先级:
+#   YAML dataset_profiles > 代码内 DATASET_PROFILES > global 默认值
+#
+# 字段说明:
+#   min_request_interval          API 请求最小间隔 (秒)，字段多应增大
+#   sleep_between_fields          字段间休眠 (秒)
+#   max_concurrent_simulations    最大并发模拟数
+#   max_concurrent_creates        最大并发创建数
+#   max_templates_per_field       每字段最大模板数 (0=全部)
+#   simulation_max_wait_seconds   单个模拟最大等待 (秒)
+#   simulation_max_queue_seconds  排队最大等待 (秒)
+#   queue_busy_cooldown_seconds   队列繁忙冷却 (秒)
+#   template_disable_after        模板自动禁用阈值 (0=不剪枝)
+# ============================================================================
+dataset_profiles:
+
+  # model51: 16 字段, Value Score=7, 预测力强, 几乎无限流
+  model51:
+    min_request_interval: 1.5
+    sleep_between_fields: 3.0
+    max_concurrent_simulations: 1       # 建议1，避免并发限制
+    max_concurrent_creates: 1
+    max_templates_per_field: 0          # 测试全部模板
+    simulation_max_wait_seconds: 600
+    simulation_max_queue_seconds: 300
+    queue_busy_cooldown_seconds: 60
+    template_disable_after: 0           # 不剪枝，字段太少
+
+  # option: 138 字段, Value Score=6, 期权数据
+  option:
+    min_request_interval: 1.5
+    sleep_between_fields: 3.0
+    max_concurrent_simulations: 1
+    max_concurrent_creates: 1
+    max_templates_per_field: 20
+    simulation_max_wait_seconds: 600
+    simulation_max_queue_seconds: 300
+    queue_busy_cooldown_seconds: 60
+    template_disable_after: 15
+
+  # pv1: 202 字段, Value Score=2, 容易触发限流
+  pv1:
+    min_request_interval: 2.5
+    sleep_between_fields: 5.0
+    max_concurrent_simulations: 1
+    max_concurrent_creates: 1
+    max_templates_per_field: 15
+    simulation_max_wait_seconds: 900
+    simulation_max_queue_seconds: 600
+    queue_busy_cooldown_seconds: 300    # pv1 限流需要更长的冷却
+    template_disable_after: 12
+
+  # fundamental6: 1758 字段, Value Score=4, 字段量巨大需保守策略
+  fundamental6:
+    min_request_interval: 2.0
+    sleep_between_fields: 5.0
+    max_concurrent_simulations: 1
+    max_concurrent_creates: 1
+    max_templates_per_field: 8
+    simulation_max_wait_seconds: 900
+    simulation_max_queue_seconds: 600
+    queue_busy_cooldown_seconds: 120
+    template_disable_after: 12
+
+  # 默认配置 — 未匹配到任何已知数据集时使用
+  default_profile:
+    min_request_interval: 2.0
+    sleep_between_fields: 5.0
+    max_concurrent_simulations: 1
+    max_concurrent_creates: 1
+    max_templates_per_field: 12
+    simulation_max_wait_seconds: 900
+    simulation_max_queue_seconds: 600
+    queue_busy_cooldown_seconds: 120
+    template_disable_after: 12

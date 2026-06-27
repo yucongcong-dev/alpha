@@ -19,7 +19,12 @@ import os
 from pathlib import Path
 from typing import Any
 
-from ..config import DEFAULT_DATASET_ID, get_dataset_profile
+from ..config import (
+    DEFAULT_DATASET_ID,
+    apply_yaml_global_defaults,
+    get_dataset_profile,
+    get_yaml_config,
+)
 from ..io.output import (
     build_dataset_scoped_paths,
     build_output_sidecar_paths,
@@ -172,6 +177,13 @@ def parse_args() -> argparse.Namespace:
     """
     parser = argparse.ArgumentParser(
         description="测试 WorldQuant Brain 数据集中的所有字段并提交可提交的 Alpha。"
+    )
+
+    # 配置文件参数
+    parser.add_argument(
+        "--config",
+        default="",
+        help="YAML 配置文件路径（留空自动搜索 settings.yaml）。所有参数可在此文件中配置。",
     )
 
     # 凭证参数
@@ -447,12 +459,20 @@ def parse_args() -> argparse.Namespace:
 
     args = parser.parse_args()
 
-    # 根据数据集自动适配运行参数（CLI 显式传参会覆盖）
-    profile = get_dataset_profile(args.dataset_id)
+    # 加载 YAML 配置文件（优先级：CLI --config > 自动搜索 > 无）
+    yaml_config = get_yaml_config(args.config if args.config else "")
+
+    # 应用 YAML global 默认值（在 dataset profile 之前，profile 可覆盖）
+    apply_yaml_global_defaults(args, yaml_config)
+
+    # 根据数据集自动适配运行参数（YAML > 代码 profile > DEFAULT）
+    # CLI 显式传参不会被此处覆盖，因为 profile 仅设置未覆盖的参数
+    profile = get_dataset_profile(args.dataset_id, yaml_config)
     _dataset_profile_keys = (
         "min_request_interval",
         "sleep_between_fields",
         "max_concurrent_simulations",
+        "max_concurrent_creates",
         "max_templates_per_field",
         "simulation_max_wait_seconds",
         "simulation_max_queue_seconds",

@@ -30,6 +30,7 @@ classifiers = [
 dependencies = [
     "cryptography>=42.0.0",
     "coloredlogs>=15.0",
+    "pyyaml>=6.0",
 ]
 
 [project.optional-dependencies]

@@ -13,6 +13,84 @@
 
 from __future__ import annotations
 
+import os
+from pathlib import Path
+from typing import Any, Optional
+
+# ============================================================================
+# YAML 配置文件支持
+# ============================================================================
+
+# 默认 YAML 配置文件查找路径（按优先级）
+_YAML_SEARCH_PATHS: list[str] = [
+    "settings.yaml",                          # 当前工作目录
+    "config/settings.yaml",                   # config 子目录
+]
+
+# 可通过环境变量指定配置文件路径
+_ENV_CONFIG_PATH: str = "ALPHA_CONFIG_FILE"
+
+
+def _resolve_yaml_path() -> Optional[str]:
+    """按优先级查找 YAML 配置文件路径。
+
+    优先级：
+        1. 环境变量 ALPHA_CONFIG_FILE
+        2. 当前目录 settings.yaml
+        3. config/settings.yaml
+        4. 项目根目录 settings.yaml（相对于 src/alpha/config.py）
+
+    Returns:
+        str or None: 找到的配置文件绝对路径，未找到返回 None。
+    """
+    # 1. 环境变量
+    env_path = os.environ.get(_ENV_CONFIG_PATH)
+    if env_path and os.path.isfile(env_path):
+        return os.path.abspath(env_path)
+
+    # 2. 工作目录下的 settings.yaml
+    for rel in _YAML_SEARCH_PATHS:
+        if os.path.isfile(rel):
+            return os.path.abspath(rel)
+
+    # 3. 项目根目录 (相对于此文件位置)
+    project_root = Path(__file__).resolve().parent.parent.parent
+    candidate = project_root / "settings.yaml"
+    if candidate.is_file():
+        return str(candidate)
+
+    return None
+
+
+def load_yaml_config(config_path: str = "") -> dict[str, Any]:
+    """从 YAML 文件加载运行配置。
+
+    Args:
+        config_path: YAML 配置文件路径。为空时自动搜索。
+
+    Returns:
+        dict: 解析后的配置字典。文件不存在或解析失败返回空字典。
+    """
+    try:
+        import yaml
+    except ImportError:
+        return {}
+
+    path = config_path if config_path else _resolve_yaml_path()
+    if not path or not os.path.isfile(path):
+        return {}
+
+    try:
+        with open(path, "r", encoding="utf-8") as fh:
+            data = yaml.safe_load(fh)
+        if isinstance(data, dict):
+            return data
+    except (yaml.YAMLError, UnicodeDecodeError, OSError):
+        pass
+
+    return {}
+
+
 # ============================================================================
 # API 端点配置
 # ============================================================================
@@ -467,16 +545,350 @@ DEFAULT_PROFILE: dict[str, Any] = {
 }
 
 
-def get_dataset_profile(dataset_id: str) -> dict[str, Any]:
+def get_dataset_profile(dataset_id: str, yaml_config: dict[str, Any] | None = None) -> dict[str, Any]:
     """返回指定数据集的运行参数配置。
+
+    优先级：YAML dataset_profiles > 代码内 DATASET_PROFILES > DEFAULT_PROFILE
 
     Args:
         dataset_id: 数据集 ID，如 "model51", "pv1", "fundamental6"。
+        yaml_config: 从 YAML 加载的配置字典（可选）。
 
     Returns:
-        dict: 该数据集的参数配置；未匹配时返回 DEFAULT_PROFILE。
+        dict: 该数据集的参数配置；未匹配时返回默认配置。
     """
-    return DATASET_PROFILES.get(dataset_id, DEFAULT_PROFILE)
+    profile = dict(DEFAULT_PROFILE)
+
+    # 代码内 profile（作为 fallback）
+    code_profile = DATASET_PROFILES.get(dataset_id)
+    if code_profile:
+        profile.update(code_profile)
+
+    # YAML profile（最高优先级）
+    if yaml_config:
+        yaml_profiles = yaml_config.get("dataset_profiles", {})
+        if isinstance(yaml_profiles, dict):
+            yaml_profile = yaml_profiles.get(dataset_id)
+            if isinstance(yaml_profile, dict):
+                profile.update(yaml_profile)
+
+    return profile
+
+
+def get_yaml_config(config_path: str = "") -> dict[str, Any]:
+    """获取 YAML 配置（带缓存）。
+
+    仅在首次调用时加载文件，之后返回缓存。
+
+    Args:
+        config_path: YAML 配置文件路径。为空时自动搜索。
+
+    Returns:
+        dict: 解析后的配置字典。
+    """
+    cache_attr = "_yaml_config_cache"
+    if hasattr(get_yaml_config, cache_attr):
+        return getattr(get_yaml_config, cache_attr)  # type: ignore[attr-defined]
+    data = load_yaml_config(config_path)
+    setattr(get_yaml_config, cache_attr, data)
+    return data
+
+
+def apply_yaml_global_defaults(
+    args: Any,
+    yaml_config: dict[str, Any] | None = None,
+) -> None:
+    """将 YAML global 默认值应用到 argparse namespace 上（CLI 未显式传参时）。
+
+    仅当 argparse 值仍然是代码默认值时才会被 YAML 值覆盖。
+    此函数在 parser.parse_args 之后调用，确保 CLI > YAML > 代码默认的优先级。
+
+    覆盖所有 YAML global section，包括:
+        dataset, simulation, limits, concurrency, retries,
+        filters, quality, expression, runtime
+
+    Args:
+        args: argparse.Namespace 对象。
+        yaml_config: YAML 配置字典。
+    """
+    if not yaml_config:
+        return
+
+    global_cfg = yaml_config.get("global", {})
+    if not isinstance(global_cfg, dict):
+        return
+
+    # dataset
+    _merge_section(args, global_cfg.get("dataset", {}), {
+        "region", "universe", "instrument_type", "delay",
+    })
+
+    # simulation settings
+    _merge_section(args, global_cfg.get("simulation", {}), {
+        "decay", "neutralization", "truncation", "nan_handling",
+        "start_date", "end_date",
+    })
+
+    # limits (字段筛选)
+    _merge_section(args, global_cfg.get("limits", {}), {
+        "limit", "offset", "page_size", "sleep_between_fields",
+        "max_templates_per_field", "max_templates_per_family",
+        "legacy_similarity_penalty", "disable_legacy_after",
+    })
+
+    # concurrency (并发)
+    _merge_section(args, global_cfg.get("concurrency", {}), {
+        "max_concurrent_simulations",
+        "max_concurrent_creates",
+    })
+
+    # retries (重试和超时)
+    _merge_section(args, global_cfg.get("retries", {}), {
+        "simulation_create_retries", "simulation_poll_retries",
+        "simulation_max_polls", "simulation_max_wait_seconds",
+        "simulation_max_pending_cycles", "simulation_max_queue_seconds",
+        "queue_busy_cooldown_seconds", "field_queue_busy_skip_after",
+        "check_submit_retries", "submit_retries",
+        "rate_limit_max_retries", "login_retries", "min_request_interval",
+    })
+
+    # filters
+    _merge_section(args, global_cfg.get("filters", {}), {
+        "template_disable_after", "top_fields_by_feedback",
+        "stop_after_submittable",
+    })
+
+    # quality (质量阈值)
+    _merge_section(args, global_cfg.get("quality", {}), {
+        "min_sharpe", "min_fitness", "min_turnover",
+        "max_turnover", "max_weight",
+    })
+
+    # expression (表达式生成)
+    _merge_section(args, global_cfg.get("expression", {}), {
+        "backfill_window",
+    })
+
+    # runtime (运行时开关)
+    _merge_section(args, global_cfg.get("runtime", {}), {
+        "submit", "smoke_test", "dry_run_plan", "full_run",
+        "verbose", "quiet",
+    })
+
+
+def _merge_section(
+    args: Any,
+    section: dict[str, Any],
+    keys: set[str],
+) -> None:
+    """将 YAML section 中的值合并到 args（仅当 key 在 section 中存在时）。"""
+    if not isinstance(section, dict):
+        return
+    for key in keys:
+        if key in section and hasattr(args, key):
+            setattr(args, key, section[key])
+
+
+# ============================================================================
+# YAML 驱动的 getter 函数 (用于模块级别常量替代)
+# ============================================================================
+# 这些函数允许运行时模块动态读取 YAML 配置，而非硬编码常量。
+# 用法: 将 from ..config import CONSTANT 替换为 from ..config import get_CONSTANT()
+# 未配置 YAML 时回退到模块级别的代码默认值。
+
+
+def _yaml_global_section(section: str) -> dict[str, Any]:
+    """获取 YAML global 下的指定 section（如果已加载）。
+
+    Args:
+        section: section 名称，如 "http", "feedback"。
+
+    Returns:
+        dict: section 字典，未找到时返回空字典。
+    """
+    yaml_cfg = get_yaml_config()
+    if not yaml_cfg:
+        return {}
+    global_cfg = yaml_cfg.get("global", {})
+    if not isinstance(global_cfg, dict):
+        return {}
+    sect = global_cfg.get(section, {})
+    return sect if isinstance(sect, dict) else {}
+
+
+def _yaml_get(section: str, key: str, default: Any) -> Any:
+    """从 YAML global.<section>.<key> 读取值，无则返回 default。
+
+    Args:
+        section: section 名称。
+        key: 键名。
+        default: 代码默认值。
+
+    Returns:
+        配置值。
+    """
+    sect = _yaml_global_section(section)
+    return sect.get(key, default)
+
+
+def get_http_request_timeout() -> float:
+    """HTTP 请求超时时间（秒）。"""
+    return float(_yaml_get("http", "request_timeout", HTTP_REQUEST_TIMEOUT))
+
+
+def get_rate_limit_default_wait() -> float:
+    """速率限制默认等待时间（秒）。"""
+    return float(_yaml_get("http", "rate_limit_default_wait", RATE_LIMIT_DEFAULT_WAIT))
+
+
+def get_polling_default_wait() -> float:
+    """轮询默认等待间隔（秒）。"""
+    return float(_yaml_get("http", "polling_default_wait", POLLING_DEFAULT_WAIT))
+
+
+def get_polling_no_retry_after_wait() -> float:
+    """无 Retry-After 头时的轮询等待间隔（秒）。"""
+    return float(_yaml_get("http", "polling_no_retry_after_wait", POLLING_NO_RETRY_AFTER_WAIT))
+
+
+def get_server_error_backoff_max() -> float:
+    """服务器错误退避最大等待（秒）。"""
+    return float(_yaml_get("http", "server_error_backoff_max", SERVER_ERROR_BACKOFF_MAX))
+
+
+def get_server_error_backoff_step() -> float:
+    """服务器错误退避步长（秒/次）。"""
+    return float(_yaml_get("http", "server_error_backoff_step", SERVER_ERROR_BACKOFF_STEP))
+
+
+def get_retry_operation_default_wait() -> float:
+    """重试操作默认等待（秒）。"""
+    return float(_yaml_get("http", "retry_operation_default_wait", RETRY_OPERATION_DEFAULT_WAIT))
+
+
+def get_login_retry_wait() -> float:
+    """登录重试等待（秒）。"""
+    return float(_yaml_get("http", "login_retry_wait", LOGIN_RETRY_WAIT))
+
+
+def get_simulation_retry_wait() -> float:
+    """模拟重试等待（秒）。"""
+    return float(_yaml_get("http", "simulation_retry_wait", SIMULATION_RETRY_WAIT))
+
+
+def get_polling_retry_buffer() -> float:
+    """轮询重试缓冲（秒）。"""
+    return float(_yaml_get("http", "polling_retry_buffer", POLLING_RETRY_BUFFER))
+
+
+def get_settings_variant_budget_high() -> float:
+    """settings 变体预算高分阈值。"""
+    return float(_yaml_get("feedback", "settings_variant_budget_high", SETTINGS_VARIANT_BUDGET_HIGH))
+
+
+def get_settings_variant_budget_mid() -> float:
+    """settings 变体预算中分阈值。"""
+    return float(_yaml_get("feedback", "settings_variant_budget_mid", SETTINGS_VARIANT_BUDGET_MID))
+
+
+def get_feedback_mutation_nearpass_threshold() -> float:
+    """反馈变异 - 接近通过阈值。"""
+    return float(_yaml_get("feedback", "feedback_mutation_nearpass_threshold", FEEDBACK_MUTATION_NEARPASS_THRESHOLD))
+
+
+def get_feedback_mutation_highscore_threshold() -> float:
+    """反馈变异 - 高分阈值。"""
+    return float(_yaml_get("feedback", "feedback_mutation_highscore_threshold", FEEDBACK_MUTATION_HIGHSCORE_THRESHOLD))
+
+
+def get_feedback_template_min_priority() -> int:
+    """反馈剪枝最低优先级。"""
+    return int(_yaml_get("feedback", "feedback_template_min_priority", FEEDBACK_TEMPLATE_MIN_PRIORITY))
+
+
+def get_delta_std_priority_boost() -> int:
+    """delta/std 模板优先级加成。"""
+    return int(_yaml_get("feedback", "delta_std_priority_boost", DELTA_STD_PRIORITY_BOOST))
+
+
+def get_settings_nearpass_threshold() -> float:
+    """settings nearpass 阈值。"""
+    return float(_yaml_get("feedback", "settings_nearpass_threshold", SETTINGS_NEARPASS_THRESHOLD))
+
+
+def get_settings_close_threshold() -> float:
+    """settings close 阈值。"""
+    return float(_yaml_get("feedback", "settings_close_threshold", SETTINGS_CLOSE_THRESHOLD))
+
+
+def get_expr_nearpass_boost_threshold() -> float:
+    """表达式 nearpass 大幅加分阈值。"""
+    return float(_yaml_get("feedback", "expr_nearpass_boost_threshold", EXPR_NEARPASS_BOOST_THRESHOLD))
+
+
+def get_expr_iter_boost_threshold() -> float:
+    """表达式 iter 加分阈值。"""
+    return float(_yaml_get("feedback", "expr_iter_boost_threshold", EXPR_ITER_BOOST_THRESHOLD))
+
+
+def get_expr_ratio_penalty_threshold() -> float:
+    """表达式 ratio 惩罚阈值。"""
+    return float(_yaml_get("feedback", "expr_ratio_penalty_threshold", EXPR_RATIO_PENALTY_THRESHOLD))
+
+
+def get_expr_mutation_extend_threshold() -> float:
+    """表达式变异扩展阈值。"""
+    return float(_yaml_get("feedback", "expr_mutation_extend_threshold", EXPR_MUTATION_EXTEND_THRESHOLD))
+
+
+def get_backfill_window() -> int:
+    """ts_backfill 时间窗口（天）。"""
+    return int(_yaml_get("expression", "backfill_window", BACKFILL_WINDOW))
+
+
+def get_simulation_default_start_date() -> str:
+    """模拟默认开始日期。"""
+    return str(_yaml_get("simulation", "start_date", SIMULATION_DEFAULT_START_DATE))
+
+
+def get_simulation_default_end_date() -> str:
+    """模拟默认结束日期。"""
+    return str(_yaml_get("simulation", "end_date", SIMULATION_DEFAULT_END_DATE))
+
+
+def get_precheck_fallback_min_sharpe() -> float:
+    """预检 fallback Sharpe。"""
+    return float(_yaml_get("quality", "min_sharpe", PRECHECK_FALLBACK_MIN_SHARPE))
+
+
+def get_precheck_fallback_min_fitness() -> float:
+    """预检 fallback Fitness。"""
+    return float(_yaml_get("quality", "min_fitness", PRECHECK_FALLBACK_MIN_FITNESS))
+
+
+def get_submit_min_sharpe() -> float:
+    """提交最小 Sharpe。"""
+    return float(_yaml_get("quality", "min_sharpe", SUBMIT_MIN_SHARPE))
+
+
+def get_submit_min_fitness() -> float:
+    """提交最小 Fitness。"""
+    return float(_yaml_get("quality", "min_fitness", SUBMIT_MIN_FITNESS))
+
+
+def get_submit_min_turnover() -> float:
+    """提交最小 Turnover。"""
+    return float(_yaml_get("quality", "min_turnover", SUBMIT_MIN_TURNOVER))
+
+
+def get_submit_max_turnover() -> float:
+    """提交最大 Turnover。"""
+    return float(_yaml_get("quality", "max_turnover", SUBMIT_MAX_TURNOVER))
+
+
+def get_submit_max_weight() -> float:
+    """提交最大权重。"""
+    return float(_yaml_get("quality", "max_weight", SUBMIT_MAX_WEIGHT))
 
 
 # ============================================================================

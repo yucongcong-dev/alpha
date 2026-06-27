@@ -27,7 +27,6 @@ import re
 from typing import Any
 
 from ..config import (
-    BACKFILL_WINDOW,
     CHECK_CONCENTRATED_WEIGHT,
     CHECK_HIGH_TURNOVER,
     CHECK_LOW_FITNESS,
@@ -750,7 +749,7 @@ def build_feedback_mutations(
     """
     # Use failed-check feedback to bias the search toward higher-turnover,
     # less-concentrated, better-neutralized variants.
-    bw = BACKFILL_WINDOW
+    bw = get_backfill_window()
 
     # --- std-normalized delta templates (vol-scaled) ---
     # (delta, std, priority) 窗口配置

@@ -45,18 +45,19 @@ from ..config import (
     DATA_FIELDS_URL,
     DEFAULT_HEADERS,
     DEFAULT_RATE_LIMIT_MAX_RETRIES,
-    HTTP_REQUEST_TIMEOUT,
-    LOGIN_RETRY_WAIT,
-    POLLING_DEFAULT_WAIT,
-    POLLING_NO_RETRY_AFTER_WAIT,
-    POLLING_RETRY_BUFFER,
-    RATE_LIMIT_DEFAULT_WAIT,
-    RETRY_OPERATION_DEFAULT_WAIT,
-    SERVER_ERROR_BACKOFF_MAX,
-    SERVER_ERROR_BACKOFF_STEP,
     SIM_ACCEPT_HEADER,
     SIMULATIONS_URL,
     VERSION_HEADER,
+    get_http_request_timeout,
+    get_login_retry_wait,
+    get_polling_default_wait,
+    get_polling_no_retry_after_wait,
+    get_polling_retry_buffer,
+    get_rate_limit_default_wait,
+    get_retry_operation_default_wait,
+    get_server_error_backoff_max,
+    get_server_error_backoff_step,
+    get_simulation_retry_wait,
 )
 from ..exceptions import (
     BrainAPIError,
@@ -190,8 +191,10 @@ def doubled_retry_after(headers: dict[str, str], default: float = 5.0) -> float:
 
 
 def polling_retry_after(
-    headers: dict[str, str], default: float = 5.0, buffer_seconds: float = POLLING_RETRY_BUFFER
+    headers: dict[str, str], default: float = 5.0, buffer_seconds: float | None = None
 ) -> float:
+    if buffer_seconds is None:
+        buffer_seconds = get_polling_retry_buffer()
     """
     按服务端 Retry-After 轮询异步任务，并添加小缓冲时间。
 
@@ -402,7 +405,7 @@ def retry_operation(
     retries: int,
     func: Callable[[], _T],
     *,
-    retry_wait_seconds: float = RETRY_OPERATION_DEFAULT_WAIT,
+    retry_wait_seconds: float | None = None,
 ) -> _T:
     """
     以有限重试执行单个阶段，并特殊处理限流与排队拥塞。
@@ -442,6 +445,8 @@ def retry_operation(
     # - 每次失败都打印日志
     # - 遵守显式的速率限制重试窗口
     # - 仅在配置的尝试次数后才失败
+    if retry_wait_seconds is None:
+        retry_wait_seconds = get_retry_operation_default_wait()
     last_error: Exception | None = None
 
     for attempt in range(1, retries + 1):
@@ -557,7 +562,7 @@ def login_with_retry(client: BrainClient, retries: int) -> None:
     # 和比低层 HTTP 错误更清晰的最终消息
     attempts = max(retries, 1)
     try:
-        retry_operation("login", attempts, client.login, retry_wait_seconds=LOGIN_RETRY_WAIT)
+        retry_operation("login", attempts, client.login, retry_wait_seconds=get_login_retry_wait())
     except BrainAPIError as exc:
         if is_invalid_credentials_error(exc):
             raise BrainAPIError(
@@ -774,7 +779,7 @@ class BrainClient:
                     response_headers.get("Retry-After"),
                 )
                 wait_seconds(
-                    doubled_retry_after(response_headers, default=RATE_LIMIT_DEFAULT_WAIT),
+                    doubled_retry_after(response_headers, default=get_rate_limit_default_wait()),
                     "rate limit",
                 )
                 continue
@@ -788,7 +793,7 @@ class BrainClient:
                 continue
             if status in (500, 502, 503, 504):
                 wait_seconds(
-                    min(SERVER_ERROR_BACKOFF_MAX, attempt * SERVER_ERROR_BACKOFF_STEP),
+                    min(get_server_error_backoff_max(), attempt * get_server_error_backoff_step()),
                     f"server error {status}",
                 )
                 continue
@@ -800,7 +805,7 @@ class BrainClient:
             raise BrainAPIError(f"No response from {method} {url}")
         status, response_headers, content = last_response
         if status == 429:
-            retry_after = doubled_retry_after(response_headers, default=RATE_LIMIT_DEFAULT_WAIT)
+            retry_after = doubled_retry_after(response_headers, default=get_rate_limit_default_wait())
             detail = safe_json_bytes(content)
             raise BrainRateLimitError(
                 f"{method} {url} rate limited after {retries} attempts, "
@@ -884,7 +889,7 @@ class BrainClient:
             method=method,
         )
         try:
-            with self.opener.open(request, timeout=HTTP_REQUEST_TIMEOUT) as response:
+            with self.opener.open(request, timeout=get_http_request_timeout()) as response:
                 return (
                     response.getcode(),
                     dict(response.headers.items()),
@@ -1265,13 +1270,13 @@ class BrainClient:
                 )
                 if response_headers.get("Retry-After"):
                     wait_seconds(
-                        polling_retry_after(response_headers, default=POLLING_DEFAULT_WAIT),
+                        polling_retry_after(response_headers, default=get_polling_default_wait()),
                         "simulation pending",
                         verbose=False,  # 常规轮询等待不打印 INFO 日志
                     )
                 else:
                     wait_seconds(
-                        POLLING_NO_RETRY_AFTER_WAIT, f"simulation {status.lower()}", verbose=False
+                        get_polling_no_retry_after_wait(), f"simulation {status.lower()}", verbose=False
                     )
                 continue
 
@@ -1315,7 +1320,7 @@ class BrainClient:
                     response_headers.get("Retry-After"),
                 )
                 wait_seconds(
-                    polling_retry_after(response_headers, default=POLLING_DEFAULT_WAIT),
+                    polling_retry_after(response_headers, default=get_polling_default_wait()),
                     "simulation pending",
                     verbose=False,  # 常规轮询等待不打印 INFO 日志
                 )
@@ -1396,7 +1401,7 @@ class BrainClient:
                     retry_after,
                 )
                 wait_seconds(
-                    polling_retry_after(response_headers, default=POLLING_DEFAULT_WAIT),
+                    polling_retry_after(response_headers, default=get_polling_default_wait()),
                     "submission pending",
                 )
                 method = "GET"

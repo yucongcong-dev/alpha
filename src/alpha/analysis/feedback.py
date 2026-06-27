@@ -30,9 +30,6 @@ from ..config import (
     CHECK_LOW_SUB_UNIVERSE_SHARPE,
     CHECK_LOW_TURNOVER,
     FEEDBACK_TEMPLATE_MIN_PRIORITY,
-    SETTINGS_VARIANT_BUDGET_HIGH,
-    SETTINGS_VARIANT_BUDGET_MID,
-    STATS_DEFAULT_SCORE,
 )
 
 # 从 expressions 模块导入分类函数（唯一源）
@@ -106,36 +103,18 @@ def build_historical_run_state(output_path: str, feedback_output_path: str) -> H
 
 def choose_settings_variant_budget(field_feedback: dict[str, Any] | None) -> int:
     """
-    根据字段历史反馈决定每个模板应该尝试多少个 settings 变体。
+    固定返回 3 组 settings 变体（精简后只有 3 组 always 变体）。
 
-    根据字段的最佳历史分数，决定投入多少 settings 变体尝试预算。
-    分数越高表示字段越接近成功，应该投入更多变体尝试。
+    参照网站已通过 alpha 的 settings 规律，不再需要评分驱动的预算决策。
+    每个表达式固定尝试 decay=0/5/7, truncation=0.05/0.08, SUBINDUSTRY 的 3 组变体。
 
     Args:
-        field_feedback (dict[str, Any] | None): 字段反馈字典，
-            包含 best_score、best_expression 等字段。如果为 None，
-            返回默认值 1。
+        field_feedback (dict[str, Any] | None): 字段反馈字典（未使用，保留兼容）。
 
     Returns:
-        int: settings 变体预算数量。可能的值：
-            - 3: 如果 best_score >= 0.55（接近成功）
-            - 2: 如果 best_score >= 0.20（有一定进展）
-            - 1: 如果无反馈或分数较低（默认）
-
-    Example:
-        >>> feedback = {"best_score": 0.6, "best_expression": "..."}
-        >>> budget = choose_settings_variant_budget(feedback)
-        >>> print(budget)
-        3
+        int: 固定返回 3。
     """
-    if not field_feedback:
-        return 1
-    best_score = float(field_feedback.get("best_score", STATS_DEFAULT_SCORE))
-    if best_score >= SETTINGS_VARIANT_BUDGET_HIGH:
-        return 3
-    if best_score >= SETTINGS_VARIANT_BUDGET_MID:
-        return 2
-    return 1
+    return 3
 
 
 def should_stop_after_submittable(

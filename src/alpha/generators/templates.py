@@ -15,7 +15,7 @@ from __future__ import annotations
 import json
 import os
 
-from ..config import BACKFILL_WINDOW
+from ..config import get_backfill_window
 from ..exceptions import BrainAPIError
 from ..models.base import TemplateLibrary
 
@@ -60,7 +60,7 @@ def default_template_library() -> TemplateLibrary:
             - expression: 模板表达式，包含 {field} 占位符
             - priority: 可选字段，表示模板的优先级（默认为 0）
     """
-    bw = BACKFILL_WINDOW
+    bw = get_backfill_window()
     return {
         "default": [
             {"name": "ts_mean_20", "expression": "rank(ts_mean({field}, 20))", "priority": 122},
