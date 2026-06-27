@@ -379,7 +379,7 @@ class RunPaths:
         ...     results_dir="/path/to/results",
         ...     log_file="/path/to/results/run.log",
         ...     state_file="/path/to/results/state.json",
-        ...     checkpoint_file="/path/to/results/checkpoint.pkl",
+        ...     checkpoint_file="/path/to/results/checkpoint.json",
         ...     fields_cache_file="/path/to/fields_cache.json",
         ...     template_library_file="/path/to/template_library.json",
         ...     output="/path/to/results.json",

@@ -37,6 +37,12 @@ from .simulation import (
     submit_with_retry,
     summarize_failure,
 )
+from .checkpoint import (
+    delete_pipeline_state,
+    load_pipeline_state,
+    save_checkpoint,
+    save_pipeline_state,
+)
 
 __all__ = [
     "apply_congestion_cooldown",
@@ -44,18 +50,22 @@ __all__ = [
     "build_pending_templates_for_field",
     "checksubmit_with_retry",
     "create_simulation_with_retry",
+    "delete_pipeline_state",
     "drain_completed_futures",
     "extract_alpha_id",
     "extract_checks",
     "extract_failed_checks",
     "handle_completed_future",
     "is_submittable_from_checks",
+    "load_pipeline_state",
     "maybe_restore_runtime_concurrency",
     "poll_simulation_with_retry",
     "print_dry_run_plan",
     "register_queue_busy_field",
     "run_field_test",
     "run_field_test_in_worker",
+    "save_checkpoint",
+    "save_pipeline_state",
     "should_skip_expression_by_history",
     "should_skip_field",
     "submit_with_retry",

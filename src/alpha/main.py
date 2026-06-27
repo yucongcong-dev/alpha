@@ -64,10 +64,14 @@ from .config import SENTINEL_UNKNOWN, use_fundamental6_heuristics
 # 导入执行器
 from .core import (
     build_pending_templates_for_field,
+    delete_pipeline_state,
     drain_completed_futures,
+    load_pipeline_state,
     maybe_restore_runtime_concurrency,
     print_dry_run_plan,
     run_field_test_in_worker,
+    save_checkpoint,
+    save_pipeline_state,
     should_skip_field,
     throttle_before_submission,
 )
@@ -330,13 +334,34 @@ def _run_field_test_loop(
     runtime_state: RuntimeConcurrencyState,
     create_semaphore: threading.Semaphore,
     run_config: dict[str, Any],
+    run_paths: Any = None,
 ) -> None:
     """线程池中遍历字段并提交模拟任务，实时消费结果。
 
     包含干运行检查、模板构建上下文创建、
     双重循环（字段 × 模板）和结果排空逻辑。
+    支持断点续传：从 state_file 恢复进度并周期性保存。
     """
+    state_file = getattr(run_paths, "state_file", "") if run_paths is not None else ""
+    checkpoint_file = getattr(run_paths, "checkpoint_file", "") if run_paths is not None else ""
     max_workers = runtime_state.max_workers
+
+    # --- 断点续传：恢复上次进度 ---
+    resumed_index = 0
+    if state_file:
+        resumed_index = load_pipeline_state(
+            state_file,
+            runtime_state=runtime_state,
+            execution_state=execution_state,
+        )
+        if resumed_index > 0:
+            logger.info(
+                "[resume] 从字段索引 %d/%d 继续 (跳过 %d 个已完成字段)",
+                resumed_index + 1,
+                len(fields),
+                resumed_index,
+            )
+            fields = fields[resumed_index:]
 
     # 干运行检查
     if args.dry_run_plan:
@@ -364,53 +389,9 @@ def _run_field_test_loop(
     )
 
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
-        for field_index, field in enumerate(fields, start=1):
-            if should_stop_after_submittable(args, execution_state.results):
-                logger.info(
-                    "[stop] 达到 stop-after-submittable=%d",
-                    args.stop_after_submittable,
-                )
-                break
-
-            field_id = str(first_non_empty(field.get("id"), SENTINEL_UNKNOWN))
-            field_name = choose_field_name(field)
-            field_type = choose_field_type(field)
-
-            if should_skip_field(
-                field_id,
-                field_name,
-                filters_dict,
-                execution_state.skipped_fields_due_to_queue,
-            ):
-                continue
-
-            pending_templates, disabled_templates, template_count = (
-                build_pending_templates_for_field(
-                    template_build_ctx,
-                    field,
-                    template_stats=execution_state.template_stats,
-                    attempted_keys=execution_state.attempted_keys,
-                    prior_results=execution_state.results,
-                )
-            )
-
-            logger.debug(
-                "[progress] 字段 %d/%d field_id=%s templates=%d pending=%d disabled=%d",
-                field_index,
-                len(fields),
-                field_id,
-                template_count,
-                len(pending_templates),
-                disabled_templates,
-            )
-
-            for template_index, (
-                template_name,
-                expression,
-                priority,
-                settings_variant,
-                variant_fingerprint,
-            ) in enumerate(pending_templates, start=1):
+        last_field_id = ""
+        try:
+            for field_index, field in enumerate(fields, start=1):
                 if should_stop_after_submittable(args, execution_state.results):
                     logger.info(
                         "[stop] 达到 stop-after-submittable=%d",
@@ -418,79 +399,171 @@ def _run_field_test_loop(
                     )
                     break
 
-                if field_id in execution_state.skipped_fields_due_to_queue:
-                    logger.warning(
-                        "[skip] field=%s 队列拥塞后停止剩余模板", field_id
-                    )
-                    break
+                field_id = str(first_non_empty(field.get("id"), SENTINEL_UNKNOWN))
+                last_field_id = field_id
+                field_name = choose_field_name(field)
+                field_type = choose_field_type(field)
 
-                maybe_restore_runtime_concurrency(runtime_state)
+                if should_skip_field(
+                    field_id,
+                    field_name,
+                    filters_dict,
+                    execution_state.skipped_fields_due_to_queue,
+                ):
+                    continue
 
-                while len(execution_state.pending_futures) >= runtime_state.runtime_max_workers:
-                    done, _ = wait(
-                        set(execution_state.pending_futures), return_when=FIRST_COMPLETED
+                pending_templates, disabled_templates, template_count = (
+                    build_pending_templates_for_field(
+                        template_build_ctx,
+                        field,
+                        template_stats=execution_state.template_stats,
+                        attempted_keys=execution_state.attempted_keys,
+                        prior_results=execution_state.results,
                     )
-                    drain_completed_futures(
-                        completed_futures=list(done),
-                        execution_state=execution_state,
-                        args=args,
-                        settings_fingerprint=settings_fingerprint,
-                        template_library_fingerprint=template_library_fingerprint,
-                        run_config=run_config,
-                        runtime_state=runtime_state,
-                    )
-                    if field_id in execution_state.skipped_fields_due_to_queue:
-                        break
+                )
 
                 logger.debug(
-                    "[progress] field=%s template %d/%d name=%s priority=%d queued=%d/%d settings=%s",
+                    "[progress] 字段 %d/%d field_id=%s templates=%d pending=%d disabled=%d",
+                    field_index,
+                    len(fields),
                     field_id,
-                    template_index,
+                    template_count,
                     len(pending_templates),
-                    template_name,
-                    priority,
-                    len(execution_state.pending_futures) + 1,
-                    runtime_state.runtime_max_workers,
-                    variant_fingerprint,
+                    disabled_templates,
                 )
 
-                throttle_before_submission(args, execution_state)
-
-                future = executor.submit(
-                    run_field_test_in_worker,
-                    client_factory,
-                    args,
-                    field,
+                for template_index, (
                     template_name,
                     expression,
-                    variant_fingerprint,
-                    template_library_fingerprint,
+                    priority,
                     settings_variant,
-                    create_semaphore,
+                    variant_fingerprint,
+                ) in enumerate(pending_templates, start=1):
+                    if should_stop_after_submittable(args, execution_state.results):
+                        logger.info(
+                            "[stop] 达到 stop-after-submittable=%d",
+                            args.stop_after_submittable,
+                        )
+                        break
+
+                    if field_id in execution_state.skipped_fields_due_to_queue:
+                        logger.warning(
+                            "[skip] field=%s 队列拥塞后停止剩余模板", field_id
+                        )
+                        break
+
+                    maybe_restore_runtime_concurrency(runtime_state)
+
+                    while len(execution_state.pending_futures) >= runtime_state.runtime_max_workers:
+                        done, _ = wait(
+                            set(execution_state.pending_futures), return_when=FIRST_COMPLETED
+                        )
+                        drain_completed_futures(
+                            completed_futures=list(done),
+                            execution_state=execution_state,
+                            args=args,
+                            settings_fingerprint=settings_fingerprint,
+                            template_library_fingerprint=template_library_fingerprint,
+                            run_config=run_config,
+                            runtime_state=runtime_state,
+                        )
+                        if field_id in execution_state.skipped_fields_due_to_queue:
+                            break
+
+                    logger.debug(
+                        "[progress] field=%s template %d/%d name=%s priority=%d queued=%d/%d settings=%s",
+                        field_id,
+                        template_index,
+                        len(pending_templates),
+                        template_name,
+                        priority,
+                        len(execution_state.pending_futures) + 1,
+                        runtime_state.runtime_max_workers,
+                        variant_fingerprint,
+                    )
+
+                    throttle_before_submission(args, execution_state)
+
+                    future = executor.submit(
+                        run_field_test_in_worker,
+                        client_factory,
+                        args,
+                        field,
+                        template_name,
+                        expression,
+                        variant_fingerprint,
+                        template_library_fingerprint,
+                        settings_variant,
+                        create_semaphore,
+                    )
+
+                    execution_state.last_submission_at = time.monotonic()
+                    execution_state.pending_futures[future] = {
+                        "field_id": field_id,
+                        "field_name": field_name,
+                        "field_type": field_type,
+                        "template_name": template_name,
+                        "expression": expression,
+                        "settings_fingerprint": variant_fingerprint,
+                    }
+
+                # 字段处理完成（含已跳过字段），保存中间状态
+                if state_file:
+                    completed_index = resumed_index + field_index
+                    save_pipeline_state(
+                        state_file,
+                        completed_field_index=completed_index,
+                        execution_state=execution_state,
+                        runtime_state=runtime_state,
+                        field_id=field_id,
+                    )
+
+            # 排空剩余任务
+            while execution_state.pending_futures:
+                done, _ = wait(set(execution_state.pending_futures), return_when=FIRST_COMPLETED)
+                drain_completed_futures(
+                    completed_futures=list(done),
+                    execution_state=execution_state,
+                    args=args,
+                    settings_fingerprint=settings_fingerprint,
+                    template_library_fingerprint=template_library_fingerprint,
+                    run_config=run_config,
+                    runtime_state=runtime_state,
                 )
-
-                execution_state.last_submission_at = time.monotonic()
-                execution_state.pending_futures[future] = {
-                    "field_id": field_id,
-                    "field_name": field_name,
-                    "field_type": field_type,
-                    "template_name": template_name,
-                    "expression": expression,
-                    "settings_fingerprint": variant_fingerprint,
-                }
-
-        # 排空剩余任务
-        while execution_state.pending_futures:
-            done, _ = wait(set(execution_state.pending_futures), return_when=FIRST_COMPLETED)
-            drain_completed_futures(
-                completed_futures=list(done),
-                execution_state=execution_state,
-                args=args,
-                settings_fingerprint=settings_fingerprint,
-                template_library_fingerprint=template_library_fingerprint,
-                run_config=run_config,
-                runtime_state=runtime_state,
-            )
+                # 排空后实时保存状态
+                if state_file:
+                    completed_index = resumed_index + len(fields)
+                    save_pipeline_state(
+                        state_file,
+                        completed_field_index=completed_index,
+                        execution_state=execution_state,
+                        runtime_state=runtime_state,
+                        field_id=last_field_id,
+                    )
+        except KeyboardInterrupt:
+            # 用户中断时保存检查点（含待处理任务元数据）
+            if checkpoint_file:
+                save_checkpoint(
+                    checkpoint_file,
+                    execution_state=execution_state,
+                    runtime_state=runtime_state,
+                    field_id=last_field_id or "",
+                    remaining_fields=max(0, len(fields)),
+                    reason="KeyboardInterrupt",
+                )
+            raise
+        except Exception:
+            # 异常时保存崩溃检查点
+            if checkpoint_file:
+                save_checkpoint(
+                    checkpoint_file,
+                    execution_state=execution_state,
+                    runtime_state=runtime_state,
+                    field_id=last_field_id or "",
+                    remaining_fields=max(0, len(fields)),
+                    reason="Exception",
+                )
+            raise
 
     logger.info(
         "[done] 测试完成：tested=%d submittable=%d errors=%d",
@@ -557,7 +630,11 @@ def main() -> int:
         runtime_state=runtime_state,
         create_semaphore=create_semaphore,
         run_config=run_config,
+        run_paths=run_paths,
     )
+
+    # 运行完成，清理中间状态文件
+    delete_pipeline_state(getattr(run_paths, "state_file", ""))
 
     return 0
 

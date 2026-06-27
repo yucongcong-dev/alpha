@@ -551,7 +551,7 @@ def normalize_args_paths(args: argparse.Namespace) -> RunPaths:
     output_stem = Path(output_file).stem
     output_dir = Path(output_file).parent
     state_file = str(output_dir / f"{output_stem}_state.json")
-    checkpoint_file = str(output_dir / f"{output_stem}_checkpoint.pkl")
+    checkpoint_file = str(output_dir / f"{output_stem}_checkpoint.json")
 
     return RunPaths(
         results_dir=results_dir,
