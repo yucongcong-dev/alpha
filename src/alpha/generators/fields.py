@@ -18,44 +18,12 @@ API 调用次数，提高运行效率。
 import json
 import logging
 import os
-import tempfile
-from contextlib import suppress
 from typing import Any, Dict, List, Sequence
 
+from ..io.output import atomic_write_json
 from ..utils.helpers import first_non_empty
 
 logger = logging.getLogger(__name__)
-
-
-def atomic_write_json(path: str, payload: Any) -> None:
-    """
-    以原子方式写入 JSON 文件。
-
-    先写入临时文件，然后原子性地替换目标文件，
-    避免中断运行导致状态文件损坏。
-
-    Args:
-        path (str): 目标 JSON 文件的路径。
-        payload (Any): 要写入的 JSON 数据。
-
-    Note:
-        此函数会自动创建父目录（如果不存在）。
-        使用临时文件确保写入操作的原子性。
-    """
-    # Write to a temporary file first, then atomically replace the target.
-    if not path:
-        return
-    directory = os.path.dirname(os.path.abspath(path)) or "."
-    os.makedirs(directory, exist_ok=True)
-    fd, temp_path = tempfile.mkstemp(prefix=".tmp_", suffix=".json", dir=directory)
-    try:
-        with os.fdopen(fd, "w", encoding="utf-8") as handle:
-            json.dump(payload, handle, ensure_ascii=False, indent=2)
-        os.replace(temp_path, path)
-    finally:
-        if os.path.exists(temp_path):
-            with suppress(OSError):
-                os.remove(temp_path)
 
 
 def load_fields_cache(

@@ -27,12 +27,11 @@ import getpass
 import json
 import logging
 import os
-import tempfile
-from contextlib import suppress
 from pathlib import Path
 from typing import Any, Dict, Optional, Tuple
 
 from ..exceptions import BrainAPIError
+from ..io.output import atomic_write_json
 
 logger = logging.getLogger(__name__)
 
@@ -72,42 +71,6 @@ def ensure_parent_dir(path: str) -> None:
         使用 parents=True 确保创建所有缺失的父目录层级。
     """
     Path(path).expanduser().resolve().parent.mkdir(parents=True, exist_ok=True)
-
-
-def atomic_write_json(path: str, payload: Any) -> None:
-    """
-    以原子方式写入 JSON 文件，避免中断运行破坏文件。
-
-    采用"写入临时文件，然后原子替换"的策略，确保即使在写入过程中
-    程序被中断或崩溃，也不会破坏原有的文件内容。
-
-    Args:
-        path: 目标 JSON 文件的路径。
-        payload: 要写入的 Python 对象，会被序列化为 JSON 格式。
-
-    Example:
-        >>> data = {"name": "test", "value": 42}
-        >>> atomic_write_json("/path/to/config.json", data)
-
-    Note:
-        - 临时文件与目标文件位于同一目录，确保原子替换操作有效
-        - 如果写入失败，临时文件会被自动清理
-        - JSON 输出使用 UTF-8 编码，保留非 ASCII 字符，缩进为 2 空格
-    """
-    # 先写入临时文件，然后原子性替换目标文件
-    if not path:
-        return
-    directory = os.path.dirname(os.path.abspath(path)) or "."
-    os.makedirs(directory, exist_ok=True)
-    fd, temp_path = tempfile.mkstemp(prefix=".tmp_", suffix=".json", dir=directory)
-    try:
-        with os.fdopen(fd, "w", encoding="utf-8") as handle:
-            json.dump(payload, handle, ensure_ascii=False, indent=2)
-        os.replace(temp_path, path)
-    finally:
-        if os.path.exists(temp_path):
-            with suppress(OSError):
-                os.remove(temp_path)
 
 
 # ============================================================================
