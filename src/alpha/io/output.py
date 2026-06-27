@@ -192,7 +192,7 @@ def build_dataset_scoped_paths(dataset_id: str) -> dict[str, str]:
         dataset_id: 数据集标识符字符串。
 
     Returns:
-        Dict[str, str]: 包含以下键的路径字典：
+        dict[str, str]: 包含以下键的路径字典：
             - template_library_file: 模板库文件路径
             - fields_cache_file: 字段缓存文件路径
             - output: 结果输出文件路径
@@ -235,7 +235,7 @@ def build_output_sidecar_paths(output_path: str) -> dict[str, str]:
         output_path: 主结果文件的绝对路径。
 
     Returns:
-        Dict[str, str]: 包含以下键的路径字典：
+        dict[str, str]: 包含以下键的路径字典：
             - analysis: 分析文件路径（{basename}_analysis.json）
             - run_log: 运行日志文件路径（{basename}_{date}_run.log）
 
@@ -372,7 +372,7 @@ def dump_results(
     queue_timeout_count = 0
     
     for result in results:
-        d = result.__dict__
+        d = result.to_dict()
         results_dicts.append(d)
         field_ids.add(result.field_id)
         

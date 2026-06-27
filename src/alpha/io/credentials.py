@@ -86,7 +86,7 @@ def load_crypto_dependencies() -> tuple[Any, Any]:
     如果依赖库未安装，会抛出包含安装提示的 BrainAPIError 异常。
 
     Returns:
-        Tuple[Any, Any]: 返回一个元组，包含两个元素：
+        tuple[Any, Any]: 返回一个元组，包含两个元素：
             - Fernet: Fernet 对称加密类
             - InvalidToken: 解密失败时抛出的异常类
 
@@ -202,7 +202,7 @@ def encrypt_credentials_payload(
         key_path: 加密密钥文件的路径。
 
     Returns:
-        Dict[str, Any]: 包含以下字段的字典：
+        dict[str, Any]: 包含以下字段的字典：
             - version (int): 凭证存储格式版本号
             - storage (str): 存储类型标识
             - ciphertext (str): 加密后的凭证内容（base64 编码）

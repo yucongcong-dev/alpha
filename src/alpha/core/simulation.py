@@ -145,7 +145,7 @@ def extract_alpha_id(payload: dict[str, Any]) -> str | None:
         payload: 模拟任务的响应 JSON 字典。
 
     Returns:
-        Optional[str]: Alpha ID 字符串，如果未找到则返回 None。
+        str | None: Alpha ID 字符串，如果未找到则返回 None。
 
     Example:
         >>> payload = {"alpha": "alpha_123"}
@@ -214,7 +214,7 @@ def extract_checks(alpha_payload: dict[str, Any]) -> list[dict[str, Any]]:
         alpha_payload: Alpha 详情的 JSON 字典。
 
     Returns:
-        List[Dict[str, Any]]: 检查项列表，如果未找到则返回空列表。
+        list[dict[str, Any]]: 检查项列表，如果未找到则返回空列表。
 
     Example:
         >>> payload = {"is": {"checks": [{"name": "LOW_SHARPE", "result": "FAIL"}]}}
@@ -252,7 +252,7 @@ def extract_failed_checks(alpha_payload: dict[str, Any]) -> list[dict[str, Any]]
         alpha_payload: Alpha 详情的 JSON 字典。
 
     Returns:
-        List[Dict[str, Any]]: 失败检查项的紧凑列表，包含：
+        list[dict[str, Any]]: 失败检查项的紧凑列表，包含：
             - name: 检查项名称
             - result: 检查结果（FAIL）
             - value: 实际值
@@ -298,7 +298,7 @@ def is_submittable_from_checks(checks: list[dict[str, Any]]) -> bool | None:
         checks: 检查项列表。
 
     Returns:
-        Optional[bool]: 可提交状态，True 表示可提交，
+        bool | None: 可提交状态，True 表示可提交，
             False 表示不可提交，None 表示检查信息不可用。
 
     Example:
@@ -483,7 +483,7 @@ def create_simulation_with_retry(
         retries: 最大重试次数。
 
     Returns:
-        Tuple[str, str]: 返回一个元组，包含两个元素：
+        tuple[str, str]: 返回一个元组，包含两个元素：
             - simulation_location: 模拟任务的 Location URL
             - simulation_id: 可读的模拟 ID（从 URL 中提取）
 
@@ -541,7 +541,7 @@ def poll_simulation_with_retry(
         max_queue_seconds: 最大队列等待时间（秒）。
 
     Returns:
-        Dict[str, Any]: 模拟完成的响应 JSON 字典。
+        dict[str, Any]: 模拟完成的响应 JSON 字典。
 
     Raises:
         BrainAPIError: 当超出轮询或等待限制时抛出。
@@ -594,7 +594,7 @@ def checksubmit_with_retry(
         retries: 最大重试次数。
 
     Returns:
-        Tuple[Optional[bool], str, List[Dict[str, Any]]]: 返回一个元组，包含三个元素：
+        tuple[bool | None, str, list[dict[str, Any]]]: 返回一个元组，包含三个元素：
             - submittable: 可提交状态（True/False/None）
             - message: 结果消息
             - failed_checks: 失败检查项列表
@@ -998,17 +998,17 @@ def run_field_test(
         - 使用信号量控制并发创建，避免速率限制
         - 三个顶层阶段各自由子函数实现，便于测试和调试
     """
-    # 输入验证
+    # Input validation
     if not expression or not expression.strip():
-        raise ValueError("expression 不能为空")
+        raise ValueError("expression cannot be empty")
     if not template_name or not template_name.strip():
-        raise ValueError("template_name 不能为空")
+        raise ValueError("template_name cannot be empty")
     if "id" not in field:
-        raise ValueError("field 必须包含 'id' 键")
+        raise ValueError("field must contain 'id' key")
     if not settings_fingerprint:
-        raise ValueError("settings_fingerprint 不能为空")
+        raise ValueError("settings_fingerprint cannot be empty")
     if not template_library_fingerprint:
-        raise ValueError("template_library_fingerprint 不能为空")
+        raise ValueError("template_library_fingerprint cannot be empty")
     ctx = FieldTestContext(
         field_id=str(first_non_empty(field.get("id"), SENTINEL_UNKNOWN)),
         field_type=choose_field_type(field),

@@ -171,7 +171,7 @@ def is_template_disabled(
 
     Args:
         template_name (str): 模板名称。
-        template_stats (Dict[str, Dict[str, int]]): 模板统计字典，
+        template_stats (dict[str, dict[str, int]]): 模板统计字典，
             包含 attempted、submittable、simulated、low_sharpe 等字段。
         disable_after (int): 禁用阈值，尝试次数超过此值且无成功时禁用。
             如果 <= 0，不启用禁用逻辑。
@@ -320,7 +320,7 @@ def should_keep_template_for_feedback(
         template_name (str): 模板名称。
         expression (str): Alpha 表达式。
         priority (int): 模板的当前优先级分数。
-        field_feedback (Optional[Dict[str, Any]]): 字段反馈字典。
+        field_feedback (dict[str, Any] | None): 字段反馈字典。
 
     Returns:
         bool: 如果应该保留模板返回 True，否则返回 False。

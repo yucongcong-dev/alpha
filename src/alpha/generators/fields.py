@@ -51,7 +51,7 @@ def load_fields_cache(
         delay (int): 延迟天数。
 
     Returns:
-        List[Dict[str, Any]]: 缓存的字段列表。如果文件不存在、
+        list[dict[str, Any]]: 缓存的字段列表。如果文件不存在、
             格式错误或上下文不匹配，返回空列表。
 
     Example:
@@ -116,7 +116,7 @@ def save_fields_cache(
         universe (str): 宇宙代码。
         instrument_type (str): 工具类型。
         delay (int): 延迟天数。
-        fields (Sequence[Dict[str, Any]]): 要保存的字段列表。
+        fields (Sequence[dict[str, Any]]): 要保存的字段列表。
 
     Example:
         >>> save_fields_cache(

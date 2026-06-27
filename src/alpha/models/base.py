@@ -160,6 +160,40 @@ class FieldTestResult:
         """
         return self.submittable is True
 
+    def to_dict(self) -> dict[str, Any]:
+        """
+        将结果对象转换为字典，用于 JSON 序列化。
+
+        使用此方法替代直接访问 __dict__，确保未来如果改用 __slots__
+        或其他存储方式时不会破坏序列化逻辑。
+
+        Returns:
+            dict[str, Any]: 包含所有字段值的字典。
+
+        Example:
+            >>> result = FieldTestResult(field_id="sales", ...)
+            >>> data = result.to_dict()
+            >>> print(data["field_id"])
+            sales
+        """
+        return {
+            "field_id": self.field_id,
+            "field_type": self.field_type,
+            "field_name": self.field_name,
+            "template_name": self.template_name,
+            "simulation_id": self.simulation_id,
+            "alpha_id": self.alpha_id,
+            "status": self.status,
+            "submittable": self.submittable,
+            "submitted": self.submitted,
+            "message": self.message,
+            "expression": self.expression,
+            "settings_fingerprint": self.settings_fingerprint,
+            "template_library_fingerprint": self.template_library_fingerprint,
+            "failed_stage": self.failed_stage,
+            "failed_checks": self.failed_checks,
+        }
+
     def __str__(self) -> str:
         """
         返回结果的字符串表示。

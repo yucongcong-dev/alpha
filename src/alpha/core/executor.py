@@ -77,7 +77,7 @@ def build_pending_templates_for_field(
         prior_results: 历史测试结果列表。
 
     Returns:
-        Tuple[List[Tuple[str, str, int, SettingsVariant, str]], int, int]: 返回一个元组，包含：
+        tuple[list[tuple[str, str, int, SettingsVariant, str]], int, int]: 返回一个元组，包含：
             - pending_templates: 待执行模板列表
             - disabled_templates: 禁用模板数量
             - template_count: 原始模板总数

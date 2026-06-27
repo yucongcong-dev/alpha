@@ -71,7 +71,7 @@ def handle_completed_future(
         pending_contexts: 待处理上下文字典（会被修改）。
 
     Returns:
-        Tuple[Dict[str, Dict[str, int]], bool, Optional[str]]: 返回一个元组，包含：
+        tuple[dict[str, dict[str, int]], bool, str | None]: 返回一个元组，包含：
             - template_stats: 更新后的模板统计数据
             - congestion_detected: 是否检测到拥塞
             - queue_busy_field_id: 队列拥塞的字段 ID（如果有）
@@ -304,7 +304,7 @@ def drain_completed_futures(
         runtime_state: RuntimeConcurrencyState 实例（会被修改）。
 
     Returns:
-        Dict[str, Dict[str, int]]: 更新后的模板统计数据。
+        dict[str, dict[str, int]]: 更新后的模板统计数据。
 
     Note:
         - 对每个完成的 future 调用 handle_completed_future

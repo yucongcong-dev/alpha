@@ -249,7 +249,7 @@ def safe_json_bytes(content: bytes) -> dict[str, Any]:
         content: HTTP 响应的字节内容。
 
     Returns:
-        Dict[str, Any]: 解析结果字典。
+        dict[str, Any]: 解析结果字典。
             - 成功解析时：返回解析后的 JSON 字典
             - 解析非字典 JSON 时：返回 {"data": 解析结果}
             - 解析失败时：返回 {"text": 截断的原始文本}
@@ -376,7 +376,7 @@ def normalize_results(payload: dict[str, Any]) -> list[dict[str, Any]]:
         payload: API 响应的 JSON 字典。
 
     Returns:
-        List[Dict[str, Any]]: 结果列表，如果未找到则返回空列表。
+        list[dict[str, Any]]: 结果列表，如果未找到则返回空列表。
 
     Example:
         >>> payload = {"results": [{"id": 1}, {"id": 2}]}
@@ -722,7 +722,7 @@ class BrainClient:
             **kwargs: 其他传递给 raw_request 的参数（如 params, data）。
 
         Returns:
-            Tuple[int, Dict[str, str], bytes]: 返回一个元组，包含三个元素：
+            tuple[int, dict[str, str], bytes]: 返回一个元组，包含三个元素：
                 - status (int): HTTP 状态码
                 - response_headers (Dict[str, str]): 响应头字典
                 - content (bytes): 响应内容字节
@@ -835,7 +835,7 @@ class BrainClient:
                 非 bytes 数据会被编码为 UTF-8 字节串。
 
         Returns:
-            Tuple[int, Dict[str, str], bytes]: 返回一个元组，包含三个元素：
+            tuple[int, dict[str, str], bytes]: 返回一个元组，包含三个元素：
                 - status (int): HTTP 状态码
                 - response_headers (Dict[str, str]): 响应头字典
                 - content (bytes): 响应内容字节

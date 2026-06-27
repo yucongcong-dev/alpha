@@ -549,7 +549,7 @@ def adaptive_template_priority_adjustment(
     Args:
         template_name (str): 模板名称。
         expression (str): 表达式字符串。
-        field_feedback ( | Nonedict[str, Any]]): 字段反馈数据。
+        field_feedback (dict[str, Any] | None): 字段反馈数据。
         global_failed_check_counts (dict[str, int]): 全局失败检查计数。
 
     Returns:
@@ -607,7 +607,7 @@ def apply_adaptive_priority(
 
     Args:
         templates (Sequence[tuple[str, str, int]]): 模板列表。
-        field_feedback ( | Nonedict[str, Any]]): 字段反馈数据。
+        field_feedback (dict[str, Any] | None): 字段反馈数据。
         global_failed_check_counts (dict[str, int]): 全局失败检查计数。
 
     Returns:
@@ -1054,9 +1054,9 @@ def build_expression_candidates(
         max_templates_per_field (int): 每个字段的模板数量上限。
         max_templates_per_family (int): 每个家族的模板数量上限。
         legacy_similarity_penalty (int): legacy 家族的相似度惩罚。
-        all_fields ( | NoneSequence[dict[str, Any]]]): 所有可用字段列表。
-        field_feedback ( | Nonedict[str, Any]]): 字段反馈数据。
-        global_failed_check_counts ( | Nonedict[str, int]]): 全局失败检查计数。
+        all_fields (Sequence[dict[str, Any]] | None): 所有可用字段列表。
+        field_feedback (dict[str, Any] | None): 字段反馈数据。
+        global_failed_check_counts (dict[str, int] | None): 全局失败检查计数。
         use_dataset_heuristics (bool): 是否使用数据集启发式规则。
 
     Returns:

@@ -523,7 +523,7 @@ def score_failed_checks(failed_checks: Sequence[dict[str, Any]] | None) -> float
     分数越高表示越接近通过，用于优先处理接近成功的候选。
 
     Args:
-        failed_checks ( | NoneSequence[dict[str, Any]]]): 失败检查项序列，
+        failed_checks (Sequence[dict[str, Any]] | None): 失败检查项序列，
             每个检查项包含 name、value、limit 等字段。
 
     Returns:
