@@ -91,20 +91,30 @@ BACKFILL_WINDOW: int = 240
 # 反馈优化阈值常量
 # ============================================================================
 
-SETTINGS_VARIANT_BUDGET_HIGH: float = 0.45
-"""settings 变体预算高分阈值：best_score >= 此值时分配 3 个变体预算"""
+SETTINGS_VARIANT_BUDGET_HIGH: float = 0.35
+"""settings 变体预算高分阈值：best_score >= 此值时分配 3 个变体预算（降低以激进取策略）"""
 
-SETTINGS_VARIANT_BUDGET_MID: float = 0.15
-"""settings 变体预算中分阈值：best_score >= 此值时分配 2 个变体预算"""
+SETTINGS_VARIANT_BUDGET_MID: float = 0.10
+"""settings 变体预算中分阈值：best_score >= 此值时分配 2 个变体预算（降低以覆盖更多候选）"""
 
-FEEDBACK_MUTATION_NEARPASS_THRESHOLD: float = 0.12
-"""反馈变异生成 - 接近通过阈值：best_score >= 此值时生成额外的 delta/zscore 背景变异"""
+FEEDBACK_MUTATION_NEARPASS_THRESHOLD: float = 0.08
+"""反馈变异生成 - 接近通过阈值：best_score >= 此值时生成额外的 delta/zscore 背景变异（降低以扩大探索）"""
 
-FEEDBACK_MUTATION_HIGHSCORE_THRESHOLD: float = 0.35
-"""反馈变异生成 - 高分阈值：best_score >= 此值时生成 delta/decay 最佳表达式变体"""
+FEEDBACK_MUTATION_HIGHSCORE_THRESHOLD: float = 0.25
+"""反馈变异生成 - 高分阈值：best_score >= 此值时生成 delta/decay 最佳表达式变体（降低以提早激活）"""
 
-FEEDBACK_TEMPLATE_MIN_PRIORITY: int = 115
-"""反馈剪枝最低优先级：仅保留 priority >= 此值的模板候选"""
+FEEDBACK_TEMPLATE_MIN_PRIORITY: int = 105
+"""反馈剪枝最低优先级：仅保留 priority >= 此值的模板候选（降低以保留更多候选）"""
+
+# ============================================================================
+# Delta/Std 模板优化配置
+# ============================================================================
+
+DELTA_STD_PRIORITY_BOOST: int = 15
+"""delta/std 类模板额外优先级加成。历史数据显示 delta_over_std 模板 Sharpe 显著优于均值。"""
+
+DELTA_STD_MIN_WINDOWS: int = 6
+"""delta/std 比率模板的最小窗口变体数量"""
 
 
 # ============================================================================

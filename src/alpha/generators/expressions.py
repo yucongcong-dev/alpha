@@ -25,6 +25,7 @@ from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 from ..config import (
     BACKFILL_WINDOW,
+    DELTA_STD_PRIORITY_BOOST,
     NEGATIVE_RAW_FIELDS,
     POSITIVE_RAW_FIELDS,
     RATIO_KEYWORDS,
@@ -983,27 +984,37 @@ def build_expression_candidates(
                 (
                     "group_delta_over_std_subindustry_20_60",
                     f"group_rank(ts_delta(ts_backfill({field_name}, {bw}), 20) / ts_std_dev(ts_backfill({field_name}, {bw}), 60), subindustry)",
-                    174,
+                    174 + DELTA_STD_PRIORITY_BOOST,
                 ),
                 (
                     "group_delta_over_std_subindustry_15_40",
                     f"group_rank(ts_delta(ts_backfill({field_name}, {bw}), 15) / ts_std_dev(ts_backfill({field_name}, {bw}), 40), subindustry)",
-                    172,
+                    172 + DELTA_STD_PRIORITY_BOOST,
                 ),
                 (
                     "group_delta_over_std_subindustry_10_60",
                     f"group_rank(ts_delta(ts_backfill({field_name}, {bw}), 10) / ts_std_dev(ts_backfill({field_name}, {bw}), 60), subindustry)",
-                    170,
+                    170 + DELTA_STD_PRIORITY_BOOST,
                 ),
                 (
                     "group_delta_over_std_subindustry_25_90",
                     f"group_rank(ts_delta(ts_backfill({field_name}, {bw}), 25) / ts_std_dev(ts_backfill({field_name}, {bw}), 90), subindustry)",
-                    168,
+                    168 + DELTA_STD_PRIORITY_BOOST,
+                ),
+                (
+                    "group_delta_over_std_subindustry_5_20",
+                    f"group_rank(ts_delta(ts_backfill({field_name}, {bw}), 5) / ts_std_dev(ts_backfill({field_name}, {bw}), 20), subindustry)",
+                    176 + DELTA_STD_PRIORITY_BOOST,
+                ),
+                (
+                    "group_delta_over_std_subindustry_30_120",
+                    f"group_rank(ts_delta(ts_backfill({field_name}, {bw}), 30) / ts_std_dev(ts_backfill({field_name}, {bw}), 120), subindustry)",
+                    166 + DELTA_STD_PRIORITY_BOOST,
                 ),
                 (
                     "group_delta_over_std_industry_20_60",
                     f"group_rank(ts_delta(ts_backfill({field_name}, {bw}), 20) / ts_std_dev(ts_backfill({field_name}, {bw}), 60), industry)",
-                    166,
+                    166 + DELTA_STD_PRIORITY_BOOST,
                 ),
                 (
                     "group_short_long_mean_spread_subindustry_20_{bw}",
@@ -1062,37 +1073,47 @@ def build_expression_candidates(
                     (
                         f"group_ratio_delta_rank_3_{field_name}_over_{partner}",
                         f"group_rank(ts_delta(rank(ts_backfill({field_name}/{partner}, {bw})), 3), subindustry)",
-                        188,
+                        188 + DELTA_STD_PRIORITY_BOOST,
                     ),
                     (
                         f"group_ratio_delta_rank_5_{field_name}_over_{partner}",
                         f"group_rank(ts_delta(rank(ts_backfill({field_name}/{partner}, {bw})), 5), subindustry)",
-                        184,
+                        184 + DELTA_STD_PRIORITY_BOOST,
                     ),
                     (
                         f"group_ratio_delta_rank_10_{field_name}_over_{partner}",
                         f"group_rank(ts_delta(rank(ts_backfill({field_name}/{partner}, {bw})), 10), subindustry)",
-                        176,
+                        176 + DELTA_STD_PRIORITY_BOOST,
                     ),
                     (
                         f"group_ratio_delta_over_std_{field_name}_over_{partner}",
                         f"group_rank(ts_delta(ts_backfill({field_name}/{partner}, {bw}), 20) / ts_std_dev(ts_backfill({field_name}/{partner}, {bw}), 60), subindustry)",
-                        178,
+                        178 + DELTA_STD_PRIORITY_BOOST,
                     ),
                     (
                         f"group_ratio_delta_over_std_15_40_{field_name}_over_{partner}",
                         f"group_rank(ts_delta(ts_backfill({field_name}/{partner}, {bw}), 15) / ts_std_dev(ts_backfill({field_name}/{partner}, {bw}), 40), subindustry)",
-                        176,
+                        176 + DELTA_STD_PRIORITY_BOOST,
                     ),
                     (
                         f"group_ratio_delta_over_std_10_60_{field_name}_over_{partner}",
                         f"group_rank(ts_delta(ts_backfill({field_name}/{partner}, {bw}), 10) / ts_std_dev(ts_backfill({field_name}/{partner}, {bw}), 60), subindustry)",
-                        174,
+                        174 + DELTA_STD_PRIORITY_BOOST,
                     ),
                     (
                         f"group_ratio_delta_over_std_25_90_{field_name}_over_{partner}",
                         f"group_rank(ts_delta(ts_backfill({field_name}/{partner}, {bw}), 25) / ts_std_dev(ts_backfill({field_name}/{partner}, {bw}), 90), subindustry)",
-                        172,
+                        172 + DELTA_STD_PRIORITY_BOOST,
+                    ),
+                    (
+                        f"group_ratio_delta_over_std_5_20_{field_name}_over_{partner}",
+                        f"group_rank(ts_delta(ts_backfill({field_name}/{partner}, {bw}), 5) / ts_std_dev(ts_backfill({field_name}/{partner}, {bw}), 20), subindustry)",
+                        180 + DELTA_STD_PRIORITY_BOOST,
+                    ),
+                    (
+                        f"group_ratio_delta_over_std_30_120_{field_name}_over_{partner}",
+                        f"group_rank(ts_delta(ts_backfill({field_name}/{partner}, {bw}), 30) / ts_std_dev(ts_backfill({field_name}/{partner}, {bw}), 120), subindustry)",
+                        170 + DELTA_STD_PRIORITY_BOOST,
                     ),
                     (
                         f"group_ratio_zscore_{field_name}_over_{partner}",

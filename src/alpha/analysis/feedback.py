@@ -23,6 +23,7 @@ import argparse
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 from ..config import (
+    DELTA_STD_PRIORITY_BOOST,
     FEEDBACK_MUTATION_HIGHSCORE_THRESHOLD,
     FEEDBACK_MUTATION_NEARPASS_THRESHOLD,
     FEEDBACK_TEMPLATE_MIN_PRIORITY,
@@ -537,6 +538,8 @@ def should_keep_template_for_feedback(
         "rank_delta",
         "decayed_delta",
         "rank_spread",
+        "group_ratio_delta_over_std",
+        "group_ratio_delta",
     }
     if family in always_keep_families:
         return True
