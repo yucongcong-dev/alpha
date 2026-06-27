@@ -1,5 +1,3 @@
-
-from __future__ import annotations
 """
 模板库管理模块
 
@@ -11,6 +9,8 @@ Alpha 表达式。
     - default_template_library() -> TemplateLibrary: 返回内置默认模板库
     - load_template_library(path) -> TemplateLibrary: 从 JSON 文件加载模板库
 """
+
+from __future__ import annotations
 
 import json
 import os
@@ -66,17 +66,33 @@ def default_template_library() -> TemplateLibrary:
             {"name": "ts_mean_20", "expression": "rank(ts_mean({field}, 20))", "priority": 122},
             {"name": "ts_mean_60", "expression": "rank(ts_mean({field}, 60))", "priority": 120},
             {"name": "ts_mean_120", "expression": "rank(ts_mean({field}, 120))", "priority": 118},
-            {"name": f"backfill_{bw}", "expression": f"rank(ts_backfill({{field}}, {bw}))", "priority": 130},
-            {"name": "backfill_mean_60", "expression": f"rank(ts_mean(ts_backfill({{field}}, {bw}), 60))", "priority": 128},
+            {
+                "name": f"backfill_{bw}",
+                "expression": f"rank(ts_backfill({{field}}, {bw}))",
+                "priority": 130,
+            },
+            {
+                "name": "backfill_mean_60",
+                "expression": f"rank(ts_mean(ts_backfill({{field}}, {bw}), 60))",
+                "priority": 128,
+            },
             {"name": "ts_rank_60", "expression": "rank(ts_rank({field}, 60))", "priority": 115},
             {"name": "ts_rank_120", "expression": "rank(ts_rank({field}, 120))", "priority": 113},
             {"name": "ts_zscore_60", "expression": "rank(ts_zscore({field}, 60))", "priority": 128},
-            {"name": f"ts_zscore_{bw}", "expression": f"rank(ts_zscore(ts_backfill({{field}}, {bw}), {bw}))", "priority": 132},
+            {
+                "name": f"ts_zscore_{bw}",
+                "expression": f"rank(ts_zscore(ts_backfill({{field}}, {bw}), {bw}))",
+                "priority": 132,
+            },
             {"name": "zscore", "expression": "rank(zscore({field}))", "priority": 124},
             {"name": "scale", "expression": "rank(scale({field}))", "priority": 120},
             {"name": "delta_20", "expression": "rank(ts_delta({field}, 20))", "priority": 135},
             {"name": "delta_60", "expression": "rank(ts_delta({field}, 60))", "priority": 132},
-            {"name": "decay_20", "expression": f"rank(ts_decay_linear(ts_backfill({{field}}, {bw}), 20))", "priority": 122},
+            {
+                "name": "decay_20",
+                "expression": f"rank(ts_decay_linear(ts_backfill({{field}}, {bw}), 20))",
+                "priority": 122,
+            },
             {"name": "stddev_60", "expression": "rank(ts_std_dev({field}, 60))", "priority": 118},
             {"name": "sum_20", "expression": "rank(ts_sum({field}, 20))", "priority": 110},
             {"name": "argmax_60", "expression": "rank(ts_arg_max({field}, 60))", "priority": 108},
@@ -84,14 +100,46 @@ def default_template_library() -> TemplateLibrary:
         ],
         "VECTOR": [
             {"name": "vec_avg_rank", "expression": "rank(vec_avg({field}))", "priority": 115},
-            {"name": "vec_avg_ts_mean_20", "expression": "rank(ts_mean(vec_avg({field}), 20))", "priority": 112},
-            {"name": "vec_avg_ts_mean_60", "expression": "rank(ts_mean(vec_avg({field}), 60))", "priority": 110},
-            {"name": f"vec_avg_backfill_{bw}", "expression": f"rank(ts_backfill(vec_avg({{field}}), {bw}))", "priority": 116},
-            {"name": "vec_avg_ts_rank_60", "expression": "rank(ts_rank(vec_avg({field}), 60))", "priority": 108},
-            {"name": "vec_avg_ts_zscore_60", "expression": "rank(ts_zscore(vec_avg({field}), 60))", "priority": 114},
-            {"name": "vec_avg_zscore", "expression": "rank(zscore(vec_avg({field})))", "priority": 112},
-            {"name": "vec_avg_scale", "expression": "rank(scale(vec_avg({field})))", "priority": 108},
-            {"name": "vec_avg_delta_20", "expression": "rank(ts_delta(vec_avg({field}), 20))", "priority": 122},
+            {
+                "name": "vec_avg_ts_mean_20",
+                "expression": "rank(ts_mean(vec_avg({field}), 20))",
+                "priority": 112,
+            },
+            {
+                "name": "vec_avg_ts_mean_60",
+                "expression": "rank(ts_mean(vec_avg({field}), 60))",
+                "priority": 110,
+            },
+            {
+                "name": f"vec_avg_backfill_{bw}",
+                "expression": f"rank(ts_backfill(vec_avg({{field}}), {bw}))",
+                "priority": 116,
+            },
+            {
+                "name": "vec_avg_ts_rank_60",
+                "expression": "rank(ts_rank(vec_avg({field}), 60))",
+                "priority": 108,
+            },
+            {
+                "name": "vec_avg_ts_zscore_60",
+                "expression": "rank(ts_zscore(vec_avg({field}), 60))",
+                "priority": 114,
+            },
+            {
+                "name": "vec_avg_zscore",
+                "expression": "rank(zscore(vec_avg({field})))",
+                "priority": 112,
+            },
+            {
+                "name": "vec_avg_scale",
+                "expression": "rank(scale(vec_avg({field})))",
+                "priority": 108,
+            },
+            {
+                "name": "vec_avg_delta_20",
+                "expression": "rank(ts_delta(vec_avg({field}), 20))",
+                "priority": 122,
+            },
             {
                 "name": "vec_avg_decay_20",
                 "expression": f"rank(ts_decay_linear(ts_backfill(vec_avg({{field}}), {bw}), 20))",
@@ -100,15 +148,39 @@ def default_template_library() -> TemplateLibrary:
         ],
         "GROUP": [
             {"name": "vec_avg_rank", "expression": "rank(vec_avg({field}))", "priority": 115},
-            {"name": "vec_avg_ts_mean_20", "expression": "rank(ts_mean(vec_avg({field}), 20))", "priority": 112},
-            {"name": "vec_avg_ts_rank_60", "expression": "rank(ts_rank(vec_avg({field}), 60))", "priority": 108},
-            {"name": "vec_avg_ts_zscore_60", "expression": "rank(ts_zscore(vec_avg({field}), 60))", "priority": 114},
+            {
+                "name": "vec_avg_ts_mean_20",
+                "expression": "rank(ts_mean(vec_avg({field}), 20))",
+                "priority": 112,
+            },
+            {
+                "name": "vec_avg_ts_rank_60",
+                "expression": "rank(ts_rank(vec_avg({field}), 60))",
+                "priority": 108,
+            },
+            {
+                "name": "vec_avg_ts_zscore_60",
+                "expression": "rank(ts_zscore(vec_avg({field}), 60))",
+                "priority": 114,
+            },
         ],
         "SET": [
             {"name": "vec_avg_rank", "expression": "rank(vec_avg({field}))", "priority": 115},
-            {"name": "vec_avg_ts_mean_20", "expression": "rank(ts_mean(vec_avg({field}), 20))", "priority": 112},
-            {"name": "vec_avg_ts_rank_60", "expression": "rank(ts_rank(vec_avg({field}), 60))", "priority": 108},
-            {"name": "vec_avg_ts_zscore_60", "expression": "rank(ts_zscore(vec_avg({field}), 60))", "priority": 114},
+            {
+                "name": "vec_avg_ts_mean_20",
+                "expression": "rank(ts_mean(vec_avg({field}), 20))",
+                "priority": 112,
+            },
+            {
+                "name": "vec_avg_ts_rank_60",
+                "expression": "rank(ts_rank(vec_avg({field}), 60))",
+                "priority": 108,
+            },
+            {
+                "name": "vec_avg_ts_zscore_60",
+                "expression": "rank(ts_zscore(vec_avg({field}), 60))",
+                "priority": 114,
+            },
         ],
         "STRING": [
             {"name": "raw_field", "expression": "{field}", "priority": 105},
@@ -203,11 +275,15 @@ def load_template_library(path: str) -> TemplateLibrary:
             if not isinstance(item, dict):
                 raise BrainAPIError(f"模板 '{field_type}[{index}]' 必须是一个对象。")
             if "name" not in item or "expression" not in item:
-                raise BrainAPIError(f"模板 '{field_type}[{index}]' 必须包含 name 和 expression 字段。")
+                raise BrainAPIError(
+                    f"模板 '{field_type}[{index}]' 必须包含 name 和 expression 字段。"
+                )
             if not isinstance(item["name"], str) or not item["name"].strip():
                 raise BrainAPIError(f"模板 '{field_type}[{index}]' 的 name 必须是非空字符串。")
             if not isinstance(item["expression"], str) or not item["expression"].strip():
-                raise BrainAPIError(f"模板 '{field_type}[{index}]' 的 expression 必须是非空字符串。")
+                raise BrainAPIError(
+                    f"模板 '{field_type}[{index}]' 的 expression 必须是非空字符串。"
+                )
             priority = item.get("priority", 0)
             if not isinstance(priority, int):
                 raise BrainAPIError(f"模板 '{field_type}[{index}]' 的 priority 必须是整数。")

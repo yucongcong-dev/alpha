@@ -1,10 +1,10 @@
-
-from __future__ import annotations
 """
 数据模型包
 
 定义系统使用的各种数据类和类型别名。
 """
+
+from __future__ import annotations
 
 from .base import (
     ExecutionState,

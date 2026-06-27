@@ -72,8 +72,20 @@ exclude_lines = [
 ]
 
 [tool.ruff]
-target-version = "py38"
+target-version = "py310"
 line-length = 100
+src = ["src"]
+
+# 排除目录
+exclude = [
+    ".git",
+    ".mypy_cache",
+    ".pytest_cache",
+    "__pycache__",
+    "*.egg-info",
+    "build",
+    "dist",
+]
 
 [tool.ruff.lint]
 select = [
@@ -87,6 +99,9 @@ select = [
     "C4",     # flake8-comprehensions
     "SIM",    # flake8-simplify
     "RUF",    # ruff-specific rules
+    "PLE",    # pylint errors
+    "PLW",    # pylint warnings
+    "PERF",   # perflint
 ]
 ignore = [
     "E501",   # line-too-long (handled by formatter)
@@ -95,16 +110,28 @@ ignore = [
     "RUF001", # ambiguous-unicode-character-string (Chinese comments are legitimate)
     "RUF002", # ambiguous-unicode-character-docstring (Chinese docstrings are legitimate)
     "RUF003", # ambiguous-unicode-character-comment (Chinese comments are legitimate)
+    "SIM105", # use-contextlib-suppress (not always clearer)
+    "PERF203", # try-except-in-loop (micro-optimization)
 ]
 fixable = ["ALL"]
+unfixable = [
+    "F841",   # unused-variable (review manually)
+    "F401",   # unused-import (review manually)
+]
 
 [tool.ruff.lint.isort]
 known-first-party = ["alpha"]
+force-single-line = false
+force-sort-within-sections = true
+case-sensitive = false
 
 [tool.ruff.format]
 quote-style = "double"
 indent-style = "space"
 skip-magic-trailing-comma = false
+line-ending = "auto"
+docstring-code-format = true
+docstring-code-line-length = 80
 
 [tool.mypy]
 python_version = "3.10"

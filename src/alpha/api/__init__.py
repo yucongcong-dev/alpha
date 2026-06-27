@@ -1,5 +1,3 @@
-
-from __future__ import annotations
 """
 API 客户端包
 
@@ -8,3 +6,5 @@ API 客户端包
 子模块：
     - client: BrainClient 与 WorkerClientFactory
 """
+
+from __future__ import annotations

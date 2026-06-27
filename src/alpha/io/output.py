@@ -1,4 +1,3 @@
-
 """
 结果输出模块
 
@@ -14,16 +13,17 @@
     - 边车文件路径构建函数
     - 旧版边车文件清理函数
 """
+
 from __future__ import annotations
 
+from contextlib import suppress
 import json
 import logging
 import os
+from pathlib import Path
 import re
 import tempfile
 import time
-from contextlib import suppress
-from pathlib import Path
 from typing import Any
 
 # 分析函数统一从 stats 模块导入（避免重复定义）
@@ -60,6 +60,7 @@ DATA_DIR = PROJECT_ROOT / "data"
 # ============================================================================
 # 辅助函数
 # ============================================================================
+
 
 def atomic_write_json(path: str, payload: Any) -> None:
     """
@@ -101,6 +102,7 @@ def atomic_write_json(path: str, payload: Any) -> None:
 # ============================================================================
 # CLI 路径解析函数
 # ============================================================================
+
 
 def resolve_cli_path(path: str) -> str:
     """
@@ -145,6 +147,7 @@ def resolve_cli_path(path: str) -> str:
 # 文件名安全化函数
 # ============================================================================
 
+
 def sanitize_dataset_id_for_filename(dataset_id: str) -> str:
     """
     将 dataset_id 转成适合文件名的安全片段。
@@ -181,6 +184,7 @@ def sanitize_dataset_id_for_filename(dataset_id: str) -> str:
 # ============================================================================
 # 数据集范围路径构建函数
 # ============================================================================
+
 
 def build_dataset_scoped_paths(dataset_id: str) -> dict[str, str]:
     """
@@ -226,6 +230,7 @@ def build_dataset_scoped_paths(dataset_id: str) -> dict[str, str]:
 # 边车文件路径构建函数
 # ============================================================================
 
+
 def build_output_sidecar_paths(output_path: str) -> dict[str, str]:
     """
     生成主结果文件旁边的精简分析与日志路径。
@@ -264,6 +269,7 @@ def build_output_sidecar_paths(output_path: str) -> dict[str, str]:
 # ============================================================================
 # 旧版边车文件清理函数
 # ============================================================================
+
 
 def cleanup_legacy_sidecar_files(output_path: str, *, verbose: bool = False) -> None:
     """
@@ -318,6 +324,7 @@ def cleanup_legacy_sidecar_files(output_path: str, *, verbose: bool = False) -> 
 # 结果保存函数
 # ============================================================================
 
+
 def dump_results(
     path: str,
     dataset_id: str,
@@ -347,7 +354,7 @@ def dump_results(
         ...     "fundamental6",
         ...     results,
         ...     settings_fingerprint="abc123",
-        ...     template_library_fingerprint="def456"
+        ...     template_library_fingerprint="def456",
         ... )
         >>> # 文件已保存
 
@@ -388,12 +395,14 @@ def dump_results(
         if is_queue_timeout_result(result):
             queue_timeout_count += 1
         if result.failed_checks:
-            failed_checks_summary.append({
-                "field_id": result.field_id,
-                "template_name": result.template_name,
-                "expression": result.expression,
-                "failed_checks": result.failed_checks,
-            })
+            failed_checks_summary.append(
+                {
+                    "field_id": result.field_id,
+                    "template_name": result.template_name,
+                    "expression": result.expression,
+                    "failed_checks": result.failed_checks,
+                }
+            )
     template_performance_summary = compile_template_performance_summary(results)
     field_performance_summary = compile_field_performance_summary(results)
     failed_check_leaderboard = compile_failed_check_leaderboard(results)
@@ -435,12 +444,13 @@ def dump_results(
     atomic_write_json(sidecar_paths["analysis"], analysis)
     cleanup_legacy_sidecar_files(path)
     logger.info("[done] wrote results to %s", path)
-    logger.info("[done] wrote analysis to %s", sidecar_paths['analysis'])
+    logger.info("[done] wrote analysis to %s", sidecar_paths["analysis"])
 
 
 # ============================================================================
 # 分析文件同步函数
 # ============================================================================
+
 
 def ensure_analysis_synced(output_path: str) -> None:
     """
@@ -483,7 +493,8 @@ def ensure_analysis_synced(output_path: str) -> None:
             should_rebuild = (
                 analysis.get("tested") != summary.get("tested")
                 or analysis.get("settings_fingerprint") != summary.get("settings_fingerprint")
-                or analysis.get("template_library_fingerprint") != summary.get("template_library_fingerprint")
+                or analysis.get("template_library_fingerprint")
+                != summary.get("template_library_fingerprint")
             )
         except Exception:
             should_rebuild = True
@@ -500,4 +511,4 @@ def ensure_analysis_synced(output_path: str) -> None:
         template_library_fingerprint=str(summary.get("template_library_fingerprint", "")),
         run_config=summary.get("run_config") if isinstance(summary.get("run_config"), dict) else {},
     )
-    logger.info("[analysis] rebuilt analysis from main results: %s", sidecar_paths['analysis'])
+    logger.info("[analysis] rebuilt analysis from main results: %s", sidecar_paths["analysis"])

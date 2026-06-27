@@ -1,5 +1,3 @@
-
-from __future__ import annotations
 """
 命令行参数解析模块
 
@@ -14,8 +12,9 @@ from __future__ import annotations
     - setup_runtime_logging(log_path) -> None: 设置运行时日志
 """
 
+from __future__ import annotations
+
 import argparse
-import logging
 import os
 from pathlib import Path
 from typing import Any
@@ -71,6 +70,7 @@ DEFAULT_OUTPUT_FILE = str(RESULTS_DIR / "fundamental6_test_results.json")
 # ============================================================================
 # 命令行参数解析函数
 # ============================================================================
+
 
 def parse_args() -> argparse.Namespace:
     """
@@ -200,8 +200,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--neutralization", default="SUBINDUSTRY", help="中性化类型")
     parser.add_argument("--truncation", type=float, default=0.05, help="截断阈值")
     parser.add_argument("--nan-handling", default="ON", help="NaN 处理方式")
-    parser.add_argument("--start-date", default=None, help="模拟开始日期 (YYYY-MM-DD)，默认使用 config 中的值")
-    parser.add_argument("--end-date", default=None, help="模拟结束日期 (YYYY-MM-DD)，默认使用 config 中的值")
+    parser.add_argument(
+        "--start-date", default=None, help="模拟开始日期 (YYYY-MM-DD)，默认使用 config 中的值"
+    )
+    parser.add_argument(
+        "--end-date", default=None, help="模拟结束日期 (YYYY-MM-DD)，默认使用 config 中的值"
+    )
 
     # 运行模式（互斥）
     run_mode_group = parser.add_mutually_exclusive_group()
@@ -462,6 +466,7 @@ def parse_args() -> argparse.Namespace:
 # 路径标准化函数
 # ============================================================================
 
+
 def normalize_args_paths(args: argparse.Namespace) -> RunPaths:
     """
     标准化命令行参数中的文件路径，将相对路径转换为绝对路径。
@@ -516,8 +521,12 @@ def normalize_args_paths(args: argparse.Namespace) -> RunPaths:
     scoped_paths = build_dataset_scoped_paths(args.dataset_id)
 
     # 标准化所有文件路径
-    template_library_file = resolve_cli_path(args.template_library_file) or scoped_paths["template_library_file"]
-    fields_cache_file = resolve_cli_path(args.fields_cache_file) or scoped_paths["fields_cache_file"]
+    template_library_file = (
+        resolve_cli_path(args.template_library_file) or scoped_paths["template_library_file"]
+    )
+    fields_cache_file = (
+        resolve_cli_path(args.fields_cache_file) or scoped_paths["fields_cache_file"]
+    )
     output_file = resolve_cli_path(args.output) or scoped_paths["output"]
     feedback_output = resolve_cli_path(args.feedback_output) or output_file
     creds_file = resolve_cli_path(args.creds_file) or DEFAULT_CREDS_FILE
@@ -562,10 +571,8 @@ def normalize_args_paths(args: argparse.Namespace) -> RunPaths:
 # 运行配置快照函数
 # ============================================================================
 
-def build_run_config_snapshot(
-    args: argparse.Namespace,
-    run_paths: RunPaths
-) -> dict[str, Any]:
+
+def build_run_config_snapshot(args: argparse.Namespace, run_paths: RunPaths) -> dict[str, Any]:
     """
     构建运行配置快照，记录所有影响结果的配置参数。
 
@@ -648,10 +655,16 @@ def build_run_config_snapshot(
             "stop_after_submittable": args.stop_after_submittable,
         },
         "paths": {
-            "template_library_file": run_paths.template_library_file if hasattr(run_paths, 'template_library_file') else "",
-            "fields_cache_file": run_paths.fields_cache_file if hasattr(run_paths, 'fields_cache_file') else "",
-            "output": run_paths.output if hasattr(run_paths, 'output') else "",
-            "feedback_output": run_paths.feedback_output if hasattr(run_paths, 'feedback_output') else "",
+            "template_library_file": run_paths.template_library_file
+            if hasattr(run_paths, "template_library_file")
+            else "",
+            "fields_cache_file": run_paths.fields_cache_file
+            if hasattr(run_paths, "fields_cache_file")
+            else "",
+            "output": run_paths.output if hasattr(run_paths, "output") else "",
+            "feedback_output": run_paths.feedback_output
+            if hasattr(run_paths, "feedback_output")
+            else "",
         },
         "runtime": {
             "submit": args.submit,

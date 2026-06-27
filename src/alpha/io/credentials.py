@@ -1,4 +1,3 @@
-
 """
 凭证管理模块
 
@@ -22,14 +21,15 @@
     - prompt_and_store_credentials: 交互式凭证输入
     - load_credentials: 加载凭证
 """
+
 from __future__ import annotations
 
 import argparse
+from contextlib import suppress
 import getpass
 import json
 import logging
 import os
-from contextlib import suppress
 from pathlib import Path
 from typing import Any
 
@@ -55,6 +55,7 @@ CREDENTIALS_STORAGE_VERSION: int = 4
 # 辅助函数
 # ============================================================================
 
+
 def ensure_parent_dir(path: str) -> None:
     """
     按需创建目标文件的父目录。
@@ -79,6 +80,7 @@ def ensure_parent_dir(path: str) -> None:
 # ============================================================================
 # 加密相关函数
 # ============================================================================
+
 
 def load_crypto_dependencies() -> tuple[Any, Any]:
     """
@@ -187,11 +189,8 @@ def read_or_create_credentials_key(key_path: str) -> bytes:
 # 凭证加密与解密
 # ============================================================================
 
-def encrypt_credentials_payload(
-    email: str,
-    password: str,
-    key_path: str
-) -> dict[str, Any]:
+
+def encrypt_credentials_payload(email: str, password: str, key_path: str) -> dict[str, Any]:
     """
     生成只包含密文的本地凭证 JSON 负载。
 
@@ -211,9 +210,7 @@ def encrypt_credentials_payload(
 
     Example:
         >>> payload = encrypt_credentials_payload(
-        ...     "user@example.com",
-        ...     "my_password",
-        ...     "~/.wqb/credentials.key"
+        ...     "user@example.com", "my_password", "~/.wqb/credentials.key"
         ... )
         >>> print(payload["version"])
         4
@@ -227,9 +224,7 @@ def encrypt_credentials_payload(
     fernet_cls, _ = load_crypto_dependencies()
     key = read_or_create_credentials_key(key_path)
     plaintext = json.dumps(
-        {"email": email, "password": password},
-        ensure_ascii=False,
-        separators=(",", ":")
+        {"email": email, "password": password}, ensure_ascii=False, separators=(",", ":")
     )
     return {
         "version": CREDENTIALS_STORAGE_VERSION,
@@ -239,8 +234,7 @@ def encrypt_credentials_payload(
 
 
 def decrypt_credentials_payload(
-    payload: dict[str, Any],
-    key_path: str
+    payload: dict[str, Any], key_path: str
 ) -> tuple[str | None, str | None]:
     """
     解密本地凭证 JSON 负载并返回账号密码。
@@ -265,8 +259,7 @@ def decrypt_credentials_payload(
 
     Example:
         >>> email, password = decrypt_credentials_payload(
-        ...     encrypted_payload,
-        ...     "~/.wqb/credentials.key"
+        ...     encrypted_payload, "~/.wqb/credentials.key"
         ... )
         >>> print(email)
         user@example.com
@@ -285,9 +278,7 @@ def decrypt_credentials_payload(
         )
     key = read_or_create_credentials_key(key_path)
     try:
-        plaintext = fernet_cls(key).decrypt(
-            ciphertext.strip().encode("ascii")
-        ).decode("utf-8")
+        plaintext = fernet_cls(key).decrypt(ciphertext.strip().encode("ascii")).decode("utf-8")
     except invalid_token_cls as exc:
         raise BrainAPIError(
             "Failed to decrypt credentials. The local credentials key file may not match."
@@ -295,9 +286,7 @@ def decrypt_credentials_payload(
     try:
         decoded = json.loads(plaintext)
     except Exception as exc:
-        raise BrainAPIError(
-            f"Failed to parse decrypted credentials: {exc}"
-        ) from exc
+        raise BrainAPIError(f"Failed to parse decrypted credentials: {exc}") from exc
     if not isinstance(decoded, dict):
         raise BrainAPIError("Decrypted credentials payload must be a JSON object.")
     return decoded.get("email"), decoded.get("password")
@@ -339,12 +328,8 @@ def is_encrypted_credentials_payload(payload: dict[str, Any]) -> bool:
 # 凭证文件操作
 # ============================================================================
 
-def write_credentials_file(
-    path: str,
-    key_path: str,
-    email: str,
-    password: str
-) -> None:
+
+def write_credentials_file(path: str, key_path: str, email: str, password: str) -> None:
     """
     将 WorldQuant 凭证加密写入本地 JSON 文件。
 
@@ -362,7 +347,7 @@ def write_credentials_file(
         ...     "~/.wqb/credentials.json",
         ...     "~/.wqb/credentials.key",
         ...     "user@example.com",
-        ...     "my_password"
+        ...     "my_password",
         ... )
 
     Note:
@@ -371,16 +356,10 @@ def write_credentials_file(
         - 凭证会被加密存储，不会以明文形式保存
     """
     ensure_parent_dir(path)
-    atomic_write_json(
-        path,
-        encrypt_credentials_payload(email, password, key_path)
-    )
+    atomic_write_json(path, encrypt_credentials_payload(email, password, key_path))
 
 
-def prompt_and_store_credentials(
-    path: str,
-    key_path: str
-) -> tuple[str, str]:
+def prompt_and_store_credentials(path: str, key_path: str) -> tuple[str, str]:
     """
     交互式读取凭证并加密保存，供后续运行复用。
 
@@ -401,8 +380,7 @@ def prompt_and_store_credentials(
 
     Example:
         >>> email, password = prompt_and_store_credentials(
-        ...     "~/.wqb/credentials.json",
-        ...     "~/.wqb/credentials.key"
+        ...     "~/.wqb/credentials.json", "~/.wqb/credentials.key"
         ... )
         WorldQuant BRAIN email: user@example.com
         WorldQuant BRAIN password: [输入密码时不显示]
@@ -420,9 +398,7 @@ def prompt_and_store_credentials(
     email = input("WorldQuant BRAIN email: ").strip()
     password = getpass.getpass("WorldQuant BRAIN password: ").strip()
     if not email or not password:
-        raise BrainAPIError(
-            "Credentials were empty; aborted without saving credentials file."
-        )
+        raise BrainAPIError("Credentials were empty; aborted without saving credentials file.")
     write_credentials_file(path, key_path, email, password)
     logger.info("[creds] encrypted credentials saved to %s", path)
     return email, password
@@ -461,7 +437,7 @@ def load_credentials(args: argparse.Namespace) -> tuple[str | None, str | None]:
         ...     email=None,
         ...     password=None,
         ...     creds_file="~/.wqb/credentials.json",
-        ...     creds_key_file="~/.wqb/credentials.key"
+        ...     creds_key_file="~/.wqb/credentials.key",
         ... )
         >>> email, password = load_credentials(args)
         >>> print(f"Loaded: {email}")
@@ -491,26 +467,18 @@ def load_credentials(args: argparse.Namespace) -> tuple[str | None, str | None]:
         with open(creds_file, encoding="utf-8") as handle:
             payload = json.load(handle)
     except Exception as exc:
-        raise BrainAPIError(
-            f"Failed to read credentials file {creds_file}: {exc}"
-        ) from exc
+        raise BrainAPIError(f"Failed to read credentials file {creds_file}: {exc}") from exc
 
     if is_encrypted_credentials_payload(payload):
-        file_email, file_password = decrypt_credentials_payload(
-            payload, creds_key_file
-        )
+        file_email, file_password = decrypt_credentials_payload(payload, creds_key_file)
     else:
         file_email = payload.get("email")
         file_password = payload.get("password")
         if file_email and file_password:
-            write_credentials_file(
-                creds_file,
-                creds_key_file,
-                str(file_email),
-                str(file_password)
-            )
+            write_credentials_file(creds_file, creds_key_file, str(file_email), str(file_password))
             logger.info(
-                "[creds] migrated plaintext credentials to encrypted storage: %s", creds_file,
+                "[creds] migrated plaintext credentials to encrypted storage: %s",
+                creds_file,
             )
         elif payload.get("ciphertext"):
             logger.info(

@@ -1,5 +1,3 @@
-
-from __future__ import annotations
 """
 配置常量模块
 
@@ -13,7 +11,7 @@ from __future__ import annotations
     - 辅助判断函数
 """
 
-from typing import Any
+from __future__ import annotations
 
 # ============================================================================
 # API 端点配置
@@ -394,6 +392,7 @@ NEGATIVE_RAW_FIELDS: set = {
 # ============================================================================
 # 辅助函数
 # ============================================================================
+
 
 def use_fundamental6_heuristics(dataset_id: str = "fundamental6") -> bool:
     """

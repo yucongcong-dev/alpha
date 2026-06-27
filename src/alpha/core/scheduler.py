@@ -1,4 +1,3 @@
-
 """
 并发调度与拥塞控制模块
 
@@ -12,13 +11,15 @@
     - 任务节流函数
     - 批量结果消费函数
 """
+
 from __future__ import annotations
 
 import argparse
+from collections.abc import Sequence
+from dataclasses import dataclass
 import logging
 import time
-from dataclasses import dataclass
-from typing import Any, Sequence
+from typing import Any
 
 from ..analysis.stats import (
     compile_template_stats,
@@ -41,13 +42,16 @@ logger = logging.getLogger(__name__)
 @dataclass
 class DrainResult:
     """批量结果消费的结果对象（不可变）"""
+
     template_stats: dict[str, dict[str, int]]
     congestion_detected: bool
     queue_busy_field_id: str | None
 
+
 # ============================================================================
 # 已完成任务处理函数
 # ============================================================================
+
 
 def handle_completed_future(
     future,
@@ -110,7 +114,12 @@ def handle_completed_future(
     template_stats = compile_template_stats(results)
     logger.info(
         "[result] field=%s template=%s status=%s submittable=%s submitted=%s message=%s",
-        result.field_id, result.template_name, result.status, result.submittable, result.submitted, result.message,
+        result.field_id,
+        result.template_name,
+        result.status,
+        result.submittable,
+        result.submitted,
+        result.message,
     )
     dump_results(
         args.output,
@@ -125,7 +134,11 @@ def handle_completed_future(
         congestion_detected = True
     if isinstance(result.message, str) and "queued too long" in result.message.lower():
         congestion_detected = True
-    if result.failed_stage == "simulation" and isinstance(result.message, str) and "rate limited" in result.message.lower():
+    if (
+        result.failed_stage == "simulation"
+        and isinstance(result.message, str)
+        and "rate limited" in result.message.lower()
+    ):
         congestion_detected = True
     queue_busy_field_id = None
     if result.failed_stage == "simulation" and isinstance(result.message, str):
@@ -139,6 +152,7 @@ def handle_completed_future(
 # 并发度动态调整函数
 # ============================================================================
 
+
 def maybe_restore_runtime_concurrency(state: RuntimeConcurrencyState) -> None:
     """
     在拥塞冷却结束后恢复正常并发度。
@@ -149,7 +163,9 @@ def maybe_restore_runtime_concurrency(state: RuntimeConcurrencyState) -> None:
         state: RuntimeConcurrencyState 实例（会被修改）。
 
     Example:
-        >>> state = RuntimeConcurrencyState(max_workers=5, runtime_max_workers=1, cooldown_until=100.0)
+        >>> state = RuntimeConcurrencyState(
+        ...     max_workers=5, runtime_max_workers=1, cooldown_until=100.0
+        ... )
         >>> # 时间已超过冷却时间
         >>> maybe_restore_runtime_concurrency(state)
         >>> print(state.runtime_max_workers)
@@ -159,11 +175,16 @@ def maybe_restore_runtime_concurrency(state: RuntimeConcurrencyState) -> None:
         - 使用单调时钟判断冷却时间
         - 恢复后会打印日志消息
     """
-    if state.cooldown_until and time.monotonic() >= state.cooldown_until and state.runtime_max_workers != state.max_workers:
+    if (
+        state.cooldown_until
+        and time.monotonic() >= state.cooldown_until
+        and state.runtime_max_workers != state.max_workers
+    ):
         state.runtime_max_workers = state.max_workers
         state.cooldown_until = 0.0
         logger.info(
-            "[cooldown] restored runtime concurrency to %d", state.runtime_max_workers,
+            "[cooldown] restored runtime concurrency to %d",
+            state.runtime_max_workers,
         )
 
 
@@ -202,6 +223,7 @@ def apply_congestion_cooldown(args: argparse.Namespace, state: RuntimeConcurrenc
 # 队列拥塞跟踪函数
 # ============================================================================
 
+
 def register_queue_busy_field(
     field_id: str | None,
     args: argparse.Namespace,
@@ -223,7 +245,9 @@ def register_queue_busy_field(
         >>> args.field_queue_busy_skip_after = 2
         >>> field_queue_busy_counts = {}
         >>> skipped_fields_due_to_queue = set()
-        >>> register_queue_busy_field("field_1", args, field_queue_busy_counts, skipped_fields_due_to_queue)
+        >>> register_queue_busy_field(
+        ...     "field_1", args, field_queue_busy_counts, skipped_fields_due_to_queue
+        ... )
         >>> print(field_queue_busy_counts)
         {'field_1': 1}
 
@@ -238,13 +262,16 @@ def register_queue_busy_field(
         skipped_fields_due_to_queue.add(field_id)
         logger.info(
             "[skip] field=%s hit queue-busy limit %d/%d",
-            field_id, field_queue_busy_counts[field_id], args.field_queue_busy_skip_after,
+            field_id,
+            field_queue_busy_counts[field_id],
+            args.field_queue_busy_skip_after,
         )
 
 
 # ============================================================================
 # 任务节流函数
 # ============================================================================
+
 
 def throttle_before_submission(args: argparse.Namespace, execution_state: ExecutionState) -> None:
     """
@@ -280,6 +307,7 @@ def throttle_before_submission(args: argparse.Namespace, execution_state: Execut
 # ============================================================================
 # 批量结果消费函数
 # ============================================================================
+
 
 def drain_completed_futures(
     *,
@@ -320,13 +348,15 @@ def drain_completed_futures(
         run_config=run_config,
     )
     for done_future in completed_futures:
-        execution_state.template_stats, congestion_detected, queue_busy_field_id = handle_completed_future(
-            done_future,
-            completion_ctx=completion_ctx,
-            results=execution_state.results,
-            attempted_keys=execution_state.attempted_keys,
-            template_stats=execution_state.template_stats,
-            pending_contexts=execution_state.pending_futures,
+        execution_state.template_stats, congestion_detected, queue_busy_field_id = (
+            handle_completed_future(
+                done_future,
+                completion_ctx=completion_ctx,
+                results=execution_state.results,
+                attempted_keys=execution_state.attempted_keys,
+                template_stats=execution_state.template_stats,
+                pending_contexts=execution_state.pending_futures,
+            )
         )
         register_queue_busy_field(
             queue_busy_field_id,

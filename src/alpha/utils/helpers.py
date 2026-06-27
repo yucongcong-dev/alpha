@@ -1,5 +1,3 @@
-
-from __future__ import annotations
 """
 公共工具模块
 
@@ -11,6 +9,8 @@ from __future__ import annotations
     - choose_field_name(): 从异构字段元数据中解析标准字段名
     - choose_field_type(): 将字段类型标准化为统一的大写标签
 """
+
+from __future__ import annotations
 
 from typing import Any
 

@@ -1,5 +1,3 @@
-
-from __future__ import annotations
 """
 Alpha 生成器包
 
@@ -11,3 +9,5 @@ Alpha 生成器包
     - fields: 字段缓存与配对发现
     - settings: 参数变体构建
 """
+
+from __future__ import annotations

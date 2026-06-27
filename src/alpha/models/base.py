@@ -17,9 +17,10 @@
 
 from __future__ import annotations
 
-import time
+from collections.abc import Sequence
 from dataclasses import dataclass, field
-from typing import Any, Sequence
+import time
+from typing import Any
 
 # ============================================================================
 # 类型别名定义
@@ -62,6 +63,7 @@ Example:
 # 数据类定义
 # ============================================================================
 
+
 @dataclass
 class FieldTestResult:
     """
@@ -101,7 +103,7 @@ class FieldTestResult:
         ...     submitted=False,
         ...     message="LOW_SHARPE",
         ...     expression="rank(ts_mean(sales, 20))",
-        ...     failed_checks=[{"name": "LOW_SHARPE", "value": 0.8, "limit": 1.0}]
+        ...     failed_checks=[{"name": "LOW_SHARPE", "value": 0.8, "limit": 1.0}],
         ... )
         >>> print(result.field_name)
         sales
@@ -387,7 +389,7 @@ class RunPaths:
         ...     include_fields_file="",
         ...     exclude_fields_file="",
         ...     include_templates_file="",
-        ...     exclude_templates_file=""
+        ...     exclude_templates_file="",
         ... )
     """
 
@@ -474,9 +476,9 @@ class RuntimeConcurrencyState:
     def can_restore_concurrency(self) -> bool:
         """判断是否可以恢复正常的并发度（冷却已结束且当前并发不等于最大并发）。"""
         return (
-            self.cooldown_until > 0 and
-            time.monotonic() >= self.cooldown_until and
-            self.runtime_max_workers != self.max_workers
+            self.cooldown_until > 0
+            and time.monotonic() >= self.cooldown_until
+            and self.runtime_max_workers != self.max_workers
         )
 
 
@@ -569,7 +571,7 @@ class HistoricalRunState:
         ...     attempted_keys={("field1", "template1", "expr1", "settings1")},
         ...     template_stats={"template1": {"attempted": 5, "submittable": 2}},
         ...     field_feedback={"field1": {"best_score": 0.5}},
-        ...     global_failed_check_counts={"LOW_SHARPE": 10}
+        ...     global_failed_check_counts={"LOW_SHARPE": 10},
         ... )
     """
 

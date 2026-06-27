@@ -1,4 +1,3 @@
-
 """
 模拟生命周期管理模块
 
@@ -14,15 +13,16 @@
     - 结果构建函数
     - 字段测试核心执行函数
 """
+
 from __future__ import annotations
 
 # pyright: reportExplicitAny=false, reportAny=false
 import argparse
+from dataclasses import dataclass
 import json
 import logging
 import re
 import threading
-from dataclasses import dataclass
 from typing import Any, cast
 
 from ..api.client import (
@@ -76,6 +76,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class PrecheckConfig:
     """本地预检配置（不可变）"""
+
     min_sharpe: float = PRECHECK_FALLBACK_MIN_SHARPE
     min_fitness: float = PRECHECK_FALLBACK_MIN_FITNESS
     min_turnover: float = PRECHECK_FALLBACK_MIN_TURNOVER
@@ -92,6 +93,7 @@ class PrecheckConfig:
             max_turnover=getattr(args, "max_turnover", cls.max_turnover),
             max_weight=getattr(args, "max_weight", cls.max_weight),
         )
+
 
 # ============================================================================
 # 模块级常量（API 响应 JSON 键名）
@@ -133,6 +135,7 @@ _TYPE_ALPHA: str = "ALPHA"
 # ============================================================================
 # Alpha ID 提取与解析函数
 # ============================================================================
+
 
 def extract_alpha_id(payload: dict[str, Any]) -> str | None:
     """
@@ -203,6 +206,7 @@ def extract_alpha_id(payload: dict[str, Any]) -> str | None:
 # 检查项提取与分析函数
 # ============================================================================
 
+
 def extract_checks(alpha_payload: dict[str, Any]) -> list[dict[str, Any]]:
     """
     从嵌套或顶层 Alpha 结构中提取 check-submit 检查项。
@@ -259,10 +263,12 @@ def extract_failed_checks(alpha_payload: dict[str, Any]) -> list[dict[str, Any]]
             - limit: 阈值限制
 
     Example:
-        >>> payload = {"checks": [
-        ...     {"name": "LOW_SHARPE", "result": "FAIL", "value": 0.8, "limit": 1.0},
-        ...     {"name": "LOW_FITNESS", "result": "PASS", "value": 1.2, "limit": 1.0}
-        ... ]}
+        >>> payload = {
+        ...     "checks": [
+        ...         {"name": "LOW_SHARPE", "result": "FAIL", "value": 0.8, "limit": 1.0},
+        ...         {"name": "LOW_FITNESS", "result": "PASS", "value": 1.2, "limit": 1.0},
+        ...     ]
+        ... }
         >>> extract_failed_checks(payload)
         [{'name': 'LOW_SHARPE', 'result': 'FAIL', 'value': 0.8, 'limit': 1.0}]
 
@@ -327,6 +333,7 @@ def is_submittable_from_checks(checks: list[dict[str, Any]]) -> bool | None:
 # 模拟指标预检函数
 # ============================================================================
 
+
 def precheck_simulation_metrics(
     simulation_result: dict[str, Any],
     *,
@@ -379,12 +386,14 @@ def precheck_simulation_metrics(
     failures: list[dict[str, Any]] = []
 
     def _add_failure(check_name: str, v: int | float, limit: float) -> None:
-        failures.append({
-            _KEY_NAME: check_name,
-            _KEY_RESULT: _RESULT_FAIL,
-            _KEY_VALUE: float(v),
-            _KEY_LIMIT: limit,
-        })
+        failures.append(
+            {
+                _KEY_NAME: check_name,
+                _KEY_RESULT: _RESULT_FAIL,
+                _KEY_VALUE: float(v),
+                _KEY_LIMIT: limit,
+            }
+        )
 
     if isinstance(sharpe, (int, float)) and sharpe < min_sharpe:
         _add_failure(CHECK_LOW_SHARPE, sharpe, min_sharpe)
@@ -402,8 +411,7 @@ def precheck_simulation_metrics(
         return True, "", []
 
     reason_parts = [
-        f"{f[_KEY_NAME].lower()}: {f[_KEY_VALUE]:.4f} vs limit {f[_KEY_LIMIT]}"
-        for f in failures
+        f"{f[_KEY_NAME].lower()}: {f[_KEY_VALUE]:.4f} vs limit {f[_KEY_LIMIT]}" for f in failures
     ]
     return False, "; ".join(reason_parts), failures
 
@@ -411,6 +419,7 @@ def precheck_simulation_metrics(
 # ============================================================================
 # 失败摘要函数
 # ============================================================================
+
 
 def summarize_failure(payload: dict[str, Any]) -> str:
     """
@@ -455,7 +464,8 @@ def summarize_failure(payload: dict[str, Any]) -> str:
     failed = [check for check in checks if str(check.get(_KEY_RESULT, "")).upper() == _RESULT_FAIL]
     if failed:
         names = ", ".join(
-            str(check.get(_KEY_NAME, SENTINEL_UNKNOWN_CHECK)) for check in failed[:MAX_FAILED_CHECK_NAMES]
+            str(check.get(_KEY_NAME, SENTINEL_UNKNOWN_CHECK))
+            for check in failed[:MAX_FAILED_CHECK_NAMES]
         )
         return f"failed checks: {names}"
 
@@ -467,10 +477,9 @@ def summarize_failure(payload: dict[str, Any]) -> str:
 # simulation 阶段函数 (创建 + 轮询)
 # ============================================================================
 
+
 def create_simulation_with_retry(
-    client: BrainClient,
-    payload: dict[str, Any],
-    retries: int
+    client: BrainClient, payload: dict[str, Any], retries: int
 ) -> tuple[str, str]:
     """
     创建模拟任务，并返回轮询地址与可读 simulation ID。
@@ -511,7 +520,9 @@ def create_simulation_with_retry(
     simulation_id_match = re.search(_SIM_ID_REGEX, simulation_location)
     simulation_id = simulation_id_match.group(1) if simulation_id_match else simulation_location
     logger.info(
-        "[simulation] created simulation_id=%s location=%s", simulation_id, simulation_location,
+        "[simulation] created simulation_id=%s location=%s",
+        simulation_id,
+        simulation_location,
     )
     return simulation_location, simulation_id
 
@@ -549,9 +560,13 @@ def poll_simulation_with_retry(
 
     Example:
         >>> result = poll_simulation_with_retry(
-        ...     client, location, 3,
-        ...     max_polls=100, max_wait_seconds=600,
-        ...     max_pending_cycles=10, max_queue_seconds=60
+        ...     client,
+        ...     location,
+        ...     3,
+        ...     max_polls=100,
+        ...     max_wait_seconds=600,
+        ...     max_pending_cycles=10,
+        ...     max_queue_seconds=60,
         ... )
         >>> print(result["status"])
         COMPLETED
@@ -578,6 +593,7 @@ def poll_simulation_with_retry(
 # checksubmit & submit 阶段函数
 # ============================================================================
 
+
 def checksubmit_with_retry(
     client: BrainClient,
     alpha_id: str,
@@ -603,7 +619,9 @@ def checksubmit_with_retry(
         BrainAPIError: 当所有重试都失败时抛出。
 
     Example:
-        >>> submittable, message, failed_checks = checksubmit_with_retry(client, "alpha_123", 3)
+        >>> submittable, message, failed_checks = checksubmit_with_retry(
+        ...     client, "alpha_123", 3
+        ... )
         >>> print(submittable)
         True
         >>> print(message)
@@ -622,9 +640,18 @@ def checksubmit_with_retry(
     checks = extract_checks(alpha_detail)
     submittable = is_submittable_from_checks(checks)
     failed_checks = extract_failed_checks(alpha_detail)
-    message = "checks unavailable" if submittable is None else "checks passed" if submittable else "checks failed"
+    message = (
+        "checks unavailable"
+        if submittable is None
+        else "checks passed"
+        if submittable
+        else "checks failed"
+    )
     logger.info(
-        "[checksubmit] alpha_id=%s submittable=%s message=%s", alpha_id, submittable, message,
+        "[checksubmit] alpha_id=%s submittable=%s message=%s",
+        alpha_id,
+        submittable,
+        message,
     )
     return submittable, message, failed_checks
 
@@ -669,6 +696,7 @@ def submit_with_retry(client: BrainClient, alpha_id: str, retries: int) -> str:
 # ============================================================================
 # 结果构建函数
 # ============================================================================
+
 
 def build_failure_result(
     *,
@@ -722,7 +750,7 @@ def build_failure_result(
         ...     settings_fingerprint="abc123",
         ...     template_library_fingerprint="def456",
         ...     failed_stage="simulation",
-        ...     message="Network error"
+        ...     message="Network error",
         ... )
         >>> print(result.status)
         error
@@ -754,6 +782,7 @@ def build_failure_result(
 # simulation / checksubmit / submit 三阶段子函数
 # ============================================================================
 
+
 def _handle_stage_error(
     ctx: FieldTestContext,
     failed_stage: str,
@@ -768,7 +797,7 @@ def _handle_stage_error(
     SystemExit 直接向上传播，保证 Ctrl+C 能正常中断运行。
     """
     if isinstance(exc, (KeyboardInterrupt, SystemExit)):
-        raise
+        raise  # noqa: PLE0704  # Bare raise is intentional to re-raise the caught exception
     return ctx.failure(
         failed_stage=failed_stage,
         message=str(exc),
@@ -798,7 +827,8 @@ def _run_simulation_create(
         if create_semaphore is not None:
             logger.info(
                 "[simulation] waiting for create slot field=%s template=%s",
-                ctx.field_id, ctx.template_name,
+                ctx.field_id,
+                ctx.template_name,
             )
             _ = create_semaphore.acquire()
         try:
@@ -852,7 +882,9 @@ def _run_simulation_poll(
         )
         logger.info(
             "[simulation] completed simulation_id=%s simulation_location=%s progress=%s",
-            simulation_id, simulation_location, progress,
+            simulation_id,
+            simulation_location,
+            progress,
         )
         alpha_id = extract_alpha_id(simulation_result)
         if not alpha_id:
@@ -865,7 +897,9 @@ def _run_simulation_poll(
         return alpha_id, simulation_result
     except Exception as exc:
         return _handle_stage_error(
-            ctx, "simulation", exc,
+            ctx,
+            "simulation",
+            exc,
             simulation_id=simulation_id,
         )
 
@@ -903,7 +937,9 @@ def _run_checksubmit_stage(
         if not passed:
             logger.info(
                 "[checksubmit-precheck] alpha_id=%s simulation_id=%s precheck_failed=%s",
-                alpha_id, simulation_id, reason,
+                alpha_id,
+                simulation_id,
+                reason,
             )
             return False, f"precheck_failed: {reason}", precheck_failed_checks
 
@@ -912,7 +948,9 @@ def _run_checksubmit_stage(
         return checksubmit_with_retry(client, alpha_id, check_retries)
     except Exception as exc:
         return _handle_stage_error(
-            ctx, "checksubmit", exc,
+            ctx,
+            "checksubmit",
+            exc,
             simulation_id=simulation_id,
             alpha_id=alpha_id,
         )
@@ -940,14 +978,18 @@ def _run_submit_stage(
     try:
         logger.info(
             "[submit] eligible alpha_id=%s simulation_id=%s simulation_location=%s",
-            alpha_id, simulation_id, simulation_location,
+            alpha_id,
+            simulation_id,
+            simulation_location,
         )
         submit_retries: int = args.submit_retries
         message = submit_with_retry(client, alpha_id, submit_retries)
         return True, STATUS_SUBMITTED, message
     except Exception as exc:
         return _handle_stage_error(
-            ctx, "submit", exc,
+            ctx,
+            "submit",
+            exc,
             simulation_id=simulation_id,
             alpha_id=alpha_id,
         )
@@ -956,6 +998,7 @@ def _run_submit_stage(
 # ============================================================================
 # 字段测试核心执行函数
 # ============================================================================
+
 
 def run_field_test(
     client: BrainClient,
@@ -1021,12 +1064,17 @@ def run_field_test(
 
     logger.info(
         "[field] testing %s (%s) template=%s expression: %s",
-        ctx.field_id, ctx.field_type, template_name, expression,
+        ctx.field_id,
+        ctx.field_type,
+        template_name,
+        expression,
     )
 
     # simulation 阶段 (创建)
     create_result = _run_simulation_create(
-        ctx, client, args,
+        ctx,
+        client,
+        args,
         simulation_settings=simulation_settings,
         create_semaphore=create_semaphore,
     )
@@ -1036,7 +1084,9 @@ def run_field_test(
 
     # simulation 阶段 (轮询等待)
     poll_result = _run_simulation_poll(
-        ctx, client, args,
+        ctx,
+        client,
+        args,
         simulation_location=simulation_location,
         simulation_id=simulation_id,
     )
@@ -1046,7 +1096,9 @@ def run_field_test(
 
     # checksubmit 阶段（先本地预检指标，达标才调 checksubmit API）
     check_result = _run_checksubmit_stage(
-        ctx, client, args,
+        ctx,
+        client,
+        args,
         alpha_id=alpha_id,
         simulation_id=simulation_id,
         simulation_result=simulation_result,
@@ -1057,7 +1109,9 @@ def run_field_test(
 
     # submit 阶段（条件提交）
     submit_result = _run_submit_stage(
-        ctx, client, args,
+        ctx,
+        client,
+        args,
         alpha_id=alpha_id,
         simulation_id=simulation_id,
         simulation_location=simulation_location,
@@ -1072,7 +1126,9 @@ def run_field_test(
     if submittable:
         logger.info(
             "[submit] submittable alpha_id=%s simulation_id=%s simulation_location=%s",
-            alpha_id, simulation_id, simulation_location,
+            alpha_id,
+            simulation_id,
+            simulation_location,
         )
 
     return ctx.success(
@@ -1119,8 +1175,13 @@ def run_field_test_in_worker(
 
     Example:
         >>> result = run_field_test_in_worker(
-        ...     factory, args, field, "ts_mean_20",
-        ...     "rank(ts_mean(sales, 20))", "abc123", "def456"
+        ...     factory,
+        ...     args,
+        ...     field,
+        ...     "ts_mean_20",
+        ...     "rank(ts_mean(sales, 20))",
+        ...     "abc123",
+        ...     "def456",
         ... )
 
     Note:

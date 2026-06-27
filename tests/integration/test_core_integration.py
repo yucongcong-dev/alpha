@@ -10,7 +10,7 @@
 
 from __future__ import annotations
 
-from typing import ClassVar, Dict, List
+from typing import ClassVar
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -39,6 +39,7 @@ from tests.conftest import MockArgs
 # simulation ↔ scheduler 拥塞信号传递测试
 # ============================================================================
 
+
 class TestCongestionSignalPropagation:
     """
     测试 simulation 失败 → scheduler 拥塞检测 → 冷却应用的完整信号链。
@@ -47,7 +48,7 @@ class TestCongestionSignalPropagation:
     scheduler 应该能检测到并应用拥塞冷却。
     """
 
-    CONGESTION_MESSAGES: ClassVar[List[str]] = [
+    CONGESTION_MESSAGES: ClassVar[list[str]] = [
         "CONCURRENT_SIMULATION_LIMIT_EXCEEDED",
         "queued too long for resource",
         "rate limited - please slow down",
@@ -70,9 +71,9 @@ class TestCongestionSignalPropagation:
             message="queue budget exceeded",
             failed_stage="simulation",
         )
-        results: List[FieldTestResult] = []
+        results: list[FieldTestResult] = []
         attempted_keys: set[tuple[str, str, str, str]] = set()
-        template_stats: Dict[str, Dict[str, int]] = {}
+        template_stats: dict[str, dict[str, int]] = {}
 
         completion_ctx = FutureCompletionContext(
             args=scheduler_args,
@@ -91,8 +92,10 @@ class TestCongestionSignalPropagation:
             }
         }
 
-        with patch("alpha.core.scheduler.dump_results"), \
-             patch("alpha.core.scheduler.compile_template_stats", return_value={}):
+        with (
+            patch("alpha.core.scheduler.dump_results"),
+            patch("alpha.core.scheduler.compile_template_stats", return_value={}),
+        ):
             _stats, congestion_detected, queue_busy_field_id = handle_completed_future(
                 future,
                 completion_ctx=completion_ctx,
@@ -128,9 +131,9 @@ class TestCongestionSignalPropagation:
             failed_stage="simulation",
         )
 
-        results: List[FieldTestResult] = []
+        results: list[FieldTestResult] = []
         attempted_keys: set[tuple[str, str, str, str]] = set()
-        template_stats: Dict[str, Dict[str, int]] = {}
+        template_stats: dict[str, dict[str, int]] = {}
 
         completion_ctx = FutureCompletionContext(
             args=scheduler_args,
@@ -150,8 +153,10 @@ class TestCongestionSignalPropagation:
             }
         }
 
-        with patch("alpha.core.scheduler.dump_results"), \
-             patch("alpha.core.scheduler.compile_template_stats", return_value={}):
+        with (
+            patch("alpha.core.scheduler.dump_results"),
+            patch("alpha.core.scheduler.compile_template_stats", return_value={}),
+        ):
             _stats, congestion_detected, _queue_busy_field_id = handle_completed_future(
                 future,
                 completion_ctx=completion_ctx,
@@ -179,7 +184,7 @@ class TestQueueBusyFieldRegistration:
         runtime_state_max_workers_5: RuntimeConcurrencyState,
     ) -> None:
         """字段反复拥塞 → 加入跳过集合 → 应用冷却。"""
-        counts: Dict[str, int] = {}
+        counts: dict[str, int] = {}
         skipped: set[str] = set()
 
         # 反复注册同一字段
@@ -199,7 +204,7 @@ class TestQueueBusyFieldRegistration:
         scheduler_args: MockArgs,
     ) -> None:
         """不同字段的拥塞计数互不影响。"""
-        counts: Dict[str, int] = {}
+        counts: dict[str, int] = {}
         skipped: set[str] = set()
 
         args = MockArgs(
@@ -223,6 +228,7 @@ class TestQueueBusyFieldRegistration:
 # executor ↔ simulation 历史跳过集成测试
 # ============================================================================
 
+
 class TestHistorySkipIntegration:
     """
     测试 executor 的历史跳过逻辑与 simulation 结果的集成。
@@ -236,7 +242,9 @@ class TestHistorySkipIntegration:
     ) -> None:
         """LOW_SHARPE 和 LOW_FITNESS 都为负数时应跳过。"""
         assert should_skip_expression_by_history(
-            "sales", "ts_mean_20", "rank(ts_mean(sales, 20))",
+            "sales",
+            "ts_mean_20",
+            "rank(ts_mean(sales, 20))",
             [failed_field_test_result],
         )
 
@@ -246,7 +254,9 @@ class TestHistorySkipIntegration:
     ) -> None:
         """历史上已有可提交结果时不跳过。"""
         assert not should_skip_expression_by_history(
-            "sales", "ts_mean_20", "rank(ts_mean(sales, 20))",
+            "sales",
+            "ts_mean_20",
+            "rank(ts_mean(sales, 20))",
             [sample_field_test_result],
         )
 
@@ -265,7 +275,9 @@ class TestHistorySkipIntegration:
             ],
         )
         assert not should_skip_expression_by_history(
-            "sales", "ts_mean_20", "rank(ts_mean(sales, 20))",
+            "sales",
+            "ts_mean_20",
+            "rank(ts_mean(sales, 20))",
             [result],
         )
 
@@ -284,7 +296,9 @@ class TestHistorySkipIntegration:
             ],
         )
         assert should_skip_expression_by_history(
-            "sales", "ts_mean_20", "rank(ts_mean(sales, 20))",
+            "sales",
+            "ts_mean_20",
+            "rank(ts_mean(sales, 20))",
             [result],
         )
 
@@ -326,6 +340,7 @@ class TestFieldSkipIntegration:
 # drain_completed_futures 编排流程测试
 # ============================================================================
 
+
 class TestDrainCompletedFuturesFlow:
     """
     测试 drain_completed_futures 的完整编排流程。
@@ -364,10 +379,15 @@ class TestDrainCompletedFuturesFlow:
             }
         }
 
-        with patch("alpha.core.scheduler.dump_results"), \
-             patch("alpha.core.scheduler.compile_template_stats", return_value={}), \
-             patch("alpha.core.scheduler.is_informative_result", return_value=True), \
-             patch("alpha.core.scheduler.result_identity", return_value=("f1", "tpl", "rank(test)", "abc")):
+        with (
+            patch("alpha.core.scheduler.dump_results"),
+            patch("alpha.core.scheduler.compile_template_stats", return_value={}),
+            patch("alpha.core.scheduler.is_informative_result", return_value=True),
+            patch(
+                "alpha.core.scheduler.result_identity",
+                return_value=("f1", "tpl", "rank(test)", "abc"),
+            ),
+        ):
             _stats = drain_completed_futures(
                 completed_futures=[future],
                 execution_state=empty_execution_state,
@@ -414,9 +434,11 @@ class TestDrainCompletedFuturesFlow:
             }
         }
 
-        with patch("alpha.core.scheduler.dump_results"), \
-             patch("alpha.core.scheduler.compile_template_stats", return_value={}), \
-             patch("alpha.core.scheduler.is_informative_result", return_value=False):
+        with (
+            patch("alpha.core.scheduler.dump_results"),
+            patch("alpha.core.scheduler.compile_template_stats", return_value={}),
+            patch("alpha.core.scheduler.is_informative_result", return_value=False),
+        ):
             drain_completed_futures(
                 completed_futures=[future],
                 execution_state=empty_execution_state,
@@ -451,9 +473,11 @@ class TestDrainCompletedFuturesFlow:
             }
         }
 
-        with patch("alpha.core.scheduler.dump_results"), \
-             patch("alpha.core.scheduler.compile_template_stats", return_value={}), \
-             patch("alpha.core.scheduler.is_informative_result", return_value=False):
+        with (
+            patch("alpha.core.scheduler.dump_results"),
+            patch("alpha.core.scheduler.compile_template_stats", return_value={}),
+            patch("alpha.core.scheduler.is_informative_result", return_value=False),
+        ):
             drain_completed_futures(
                 completed_futures=[future],
                 execution_state=empty_execution_state,
@@ -474,6 +498,7 @@ class TestDrainCompletedFuturesFlow:
 # 数据类跨模块一致性测试
 # ============================================================================
 
+
 class TestContextConsistency:
     """
     测试上下文数据类在跨模块场景中的一致性。
@@ -488,7 +513,8 @@ class TestContextConsistency:
     ) -> None:
         """failure() → success() 链：上下文字段在两种路径下保持一致。"""
         fail_result = basic_test_context.failure(
-            failed_stage="simulation", message="Network error",
+            failed_stage="simulation",
+            message="Network error",
         )
         assert fail_result.field_id == "sales"
         assert fail_result.field_type == "MATRIX"
@@ -540,6 +566,7 @@ class TestContextConsistency:
 # ============================================================================
 # 端到端场景：summarize_failure → build_failure_result 链路
 # ============================================================================
+
 
 class TestFailureReportingPipeline:
     """
@@ -608,6 +635,7 @@ class TestFailureReportingPipeline:
 # ============================================================================
 # first_non_empty 在跨模块上下文中的一致性测试
 # ============================================================================
+
 
 class TestFirstNonEmptyCrossModule:
     """

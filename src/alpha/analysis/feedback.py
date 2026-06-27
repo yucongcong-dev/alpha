@@ -1,4 +1,3 @@
-
 """
 历史迭代优化模块
 
@@ -17,10 +16,12 @@
     - should_keep_template_for_feedback(template_name, expression, ...) -> bool: 判断模板是否应保留
     - should_skip_field_template_family(field_id, template_name, ...) -> bool: 判断字段-模板组合是否应跳过
 """
+
 from __future__ import annotations
 
 import argparse
-from typing import Any, Sequence
+from collections.abc import Sequence
+from typing import Any
 
 from ..config import (
     CHECK_CONCENTRATED_WEIGHT,
@@ -56,6 +57,7 @@ from .stats import (
 # 历史状态构建函数
 # ============================================================================
 
+
 def build_historical_run_state(output_path: str, feedback_output_path: str) -> HistoricalRunState:
     """
     加载历史结果并构建续跑与反馈所需的状态对象。
@@ -86,7 +88,11 @@ def build_historical_run_state(output_path: str, feedback_output_path: str) -> H
     existing_results = load_existing_results(output_path)
     attempted_keys = attempted_template_keys(existing_results)
     template_stats = compile_template_stats(existing_results)
-    feedback_results = existing_results if feedback_output_path == output_path else load_existing_results(feedback_output_path)
+    feedback_results = (
+        existing_results
+        if feedback_output_path == output_path
+        else load_existing_results(feedback_output_path)
+    )
     field_feedback = compile_field_feedback(feedback_results)
     global_failed_check_counts = compile_global_failed_check_counts(feedback_results)
     return HistoricalRunState(
@@ -132,7 +138,9 @@ def choose_settings_variant_budget(field_feedback: dict[str, Any] | None) -> int
     return 1
 
 
-def should_stop_after_submittable(args: argparse.Namespace, results: Sequence[FieldTestResult]) -> bool:
+def should_stop_after_submittable(
+    args: argparse.Namespace, results: Sequence[FieldTestResult]
+) -> bool:
     """
     判断当前运行是否已达到要求的可提交数量上限。
 
@@ -167,6 +175,7 @@ def should_stop_after_submittable(args: argparse.Namespace, results: Sequence[Fi
 # ============================================================================
 # 模板禁用判断函数
 # ============================================================================
+
 
 def is_template_disabled(
     template_name: str,
@@ -210,7 +219,11 @@ def is_template_disabled(
         stat.get("simulated", 0) >= 3
         and stat.get("submittable", 0) == 0
         and (
-            ("mean_spread" in template_name and stat.get("low_sharpe", 0) >= 3 and stat.get("low_fitness", 0) >= 3)
+            (
+                "mean_spread" in template_name
+                and stat.get("low_sharpe", 0) >= 3
+                and stat.get("low_fitness", 0) >= 3
+            )
             or stat.get("concentrated_weight", 0) >= 2
         )
     ):
@@ -287,32 +300,59 @@ _SLOW_TEMPLATE_NAMES: set = {"zscore", "scale", "rank_raw", "raw_field", "rank_r
 
 # 权重集中 / 低子宇宙夏普时会被剪掉的家族与模板前缀
 _CONCENTRATED_WEAK_FAMILIES: set = {
-    "legacy_level", "legacy_group_level", "legacy_ratio", "legacy_neg_ratio", "group_ratio_level",
+    "legacy_level",
+    "legacy_group_level",
+    "legacy_ratio",
+    "legacy_neg_ratio",
+    "group_ratio_level",
 }
-_CONCENTRATED_WEAK_PREFIXES: tuple[str, ...] = ("raw_ratio_", "ratio_", "rank_ratio_", "group_rank_ratio_")
+_CONCENTRATED_WEAK_PREFIXES: tuple[str, ...] = (
+    "raw_ratio_",
+    "ratio_",
+    "rank_ratio_",
+    "group_rank_ratio_",
+)
 _CONCENTRATED_WEAK_NAMES: set = {"argmax_60", "argmin_60"}
 
 # LOW_SHARPE >= 2 时被剪掉的 ratio 家族
 _LOW_SHARPE_WEAK_RATIO_FAMILIES: set = {"legacy_ratio", "legacy_neg_ratio", "group_ratio_level"}
-_LOW_SHARPE_WEAK_RATIO_PREFIXES: tuple[str, ...] = ("raw_ratio_", "ratio_", "rank_ratio_", "group_rank_ratio_")
+_LOW_SHARPE_WEAK_RATIO_PREFIXES: tuple[str, ...] = (
+    "raw_ratio_",
+    "ratio_",
+    "rank_ratio_",
+    "group_rank_ratio_",
+)
 
 # 字段级剪枝：mean_spread / rank_spread 家族中表现弱的字段
 _WEAK_MEAN_SPREAD_FIELDS: set = {"assets", "assets_curr"}
 
 # 字段级剪枝：zscore+spread 组合中表现差的字段
 _BROKEN_ZSCORE_SPREAD_FIELDS: set = {
-    "assets", "assets_curr", "cash", "capex", "bookvalue_ps", "cashflow",
+    "assets",
+    "assets_curr",
+    "cash",
+    "capex",
+    "bookvalue_ps",
+    "cashflow",
 }
 
 # 字段级剪枝：standalone ratio 收益低的字段
 _WEAK_RATIO_STANDALONE_FIELDS: set = {
-    "assets", "cash", "cash_st", "capex", "cashflow", "cashflow_op",
-    "bookvalue_ps", "ebit", "ebitda",
+    "assets",
+    "cash",
+    "cash_st",
+    "capex",
+    "cashflow",
+    "cashflow_op",
+    "bookvalue_ps",
+    "ebit",
+    "ebitda",
 }
 
 # ============================================================================
 # 模板保留判断函数
 # ============================================================================
+
 
 def should_keep_template_for_feedback(
     template_name: str,
@@ -372,11 +412,18 @@ def should_keep_template_for_feedback(
             return False
         if "ts_mean(" in lower_expr and "-" not in lower_expr and "/" not in lower_expr:
             return False
-        if "ts_backfill(" in lower_expr and "ts_delta" not in lower_expr and "ts_zscore" not in lower_expr:
+        if (
+            "ts_backfill(" in lower_expr
+            and "ts_delta" not in lower_expr
+            and "ts_zscore" not in lower_expr
+        ):
             return False
 
     # These shapes have repeatedly concentrated or broken sub-universe quality.
-    if CHECK_LOW_SUB_UNIVERSE_SHARPE in dominant_names or CHECK_CONCENTRATED_WEIGHT in dominant_names:
+    if (
+        CHECK_LOW_SUB_UNIVERSE_SHARPE in dominant_names
+        or CHECK_CONCENTRATED_WEIGHT in dominant_names
+    ):
         if family in _CONCENTRATED_WEAK_FAMILIES:
             return False
         if lower_name.startswith(_CONCENTRATED_WEAK_PREFIXES):
@@ -389,14 +436,18 @@ def should_keep_template_for_feedback(
     field_low_sharpe = int(dominant_counts.get(CHECK_LOW_SHARPE, 0))
     if field_low_sharpe >= 2 and family in _LOW_SHARPE_WEAK_RATIO_FAMILIES:
         return False
-    if lower_name.startswith(_LOW_SHARPE_WEAK_RATIO_PREFIXES):
-        if field_low_sharpe >= 2:
-            return False
+    if lower_name.startswith(_LOW_SHARPE_WEAK_RATIO_PREFIXES) and field_low_sharpe >= 2:
+        return False
 
     # Spread-type templates with severe HIGH_TURNOVER + CONCENTRATED_WEIGHT are doomed.
-    if CHECK_HIGH_TURNOVER in dominant_names and CHECK_CONCENTRATED_WEIGHT in dominant_names:
-        if family in {"rank_spread", "mean_spread"} and "zscore" in lower_name and "spread" in lower_name:
-            return False
+    if (
+        CHECK_HIGH_TURNOVER in dominant_names
+        and CHECK_CONCENTRATED_WEIGHT in dominant_names
+        and family in {"rank_spread", "mean_spread"}
+        and "zscore" in lower_name
+        and "spread" in lower_name
+    ):
+        return False
 
     # In focused mode, keep only reasonably strong candidates.
     return priority >= FEEDBACK_TEMPLATE_MIN_PRIORITY
@@ -432,17 +483,26 @@ def should_skip_field_template_family(
           （如 assets、assets_curr 在 zscore 家族效果不佳）
 
     Example:
-        >>> if should_skip_field_template_family("assets", "mean_spread_5_20", "...", use_dataset_heuristics=True):
+        >>> if should_skip_field_template_family(
+        ...     "assets", "mean_spread_5_20", "...", use_dataset_heuristics=True
+        ... ):
         ...     print("跳过此字段-模板组合")
     """
     if not use_dataset_heuristics:
         return False
     family = classify_expression_family(template_name, expression)
 
-    if field_name in _WEAK_MEAN_SPREAD_FIELDS and family in {"group_mean_spread", "mean_spread", "rank_spread"}:
+    if field_name in _WEAK_MEAN_SPREAD_FIELDS and family in {
+        "group_mean_spread",
+        "mean_spread",
+        "rank_spread",
+    }:
         return True
-    if field_name in _BROKEN_ZSCORE_SPREAD_FIELDS and "zscore" in template_name.lower() and "spread" in template_name.lower():
-        return True
-    if field_name in _WEAK_RATIO_STANDALONE_FIELDS and family in {"legacy_ratio", "legacy_neg_ratio", "group_ratio_level"}:
-        return True
-    return False
+    return (
+        field_name in _BROKEN_ZSCORE_SPREAD_FIELDS
+        and "zscore" in template_name.lower()
+        and "spread" in template_name.lower()
+    ) or (
+        field_name in _WEAK_RATIO_STANDALONE_FIELDS
+        and family in {"legacy_ratio", "legacy_neg_ratio", "group_ratio_level"}
+    )

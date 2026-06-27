@@ -1,5 +1,3 @@
-
-from __future__ import annotations
 """
 表达式构建模块
 
@@ -22,8 +20,11 @@ from __future__ import annotations
     - build_expression_candidates(): 构建表达式候选
 """
 
+from __future__ import annotations
+
+from collections.abc import Sequence
 import re
-from typing import Any, Sequence
+from typing import Any
 
 from ..config import (
     BACKFILL_WINDOW,
@@ -131,7 +132,15 @@ def score_partner_candidate(field_name: str, partner_name: str) -> int:
     for token in field_tokens:
         if token and token in partner_name:
             score += 5
-    if partner_name in {"assets", "equity", "debt", "liabilities", "cash", "enterprise_value", "cap"}:
+    if partner_name in {
+        "assets",
+        "equity",
+        "debt",
+        "liabilities",
+        "cash",
+        "enterprise_value",
+        "cap",
+    }:
         score += 15
     if partner_name in {"fnd6_mkvalt", "fnd6_mkvaltq", "liabilities_curr"}:
         score += 25
@@ -164,7 +173,7 @@ def discover_partner_fields(
         >>> fields = [
         ...     {"name": "cap", "type": "MATRIX"},
         ...     {"name": "assets", "type": "MATRIX"},
-        ...     {"name": "sales", "type": "MATRIX"}
+        ...     {"name": "sales", "type": "MATRIX"},
         ... ]
         >>> partners = discover_partner_fields("debt", fields, limit=2)
         >>> print(partners)
@@ -175,9 +184,7 @@ def discover_partner_fields(
 
     candidates: list[tuple[int, str]] = []
     available_by_name = {
-        choose_field_name(item): item
-        for item in all_fields
-        if choose_field_type(item) == "MATRIX"
+        choose_field_name(item): item for item in all_fields if choose_field_type(item) == "MATRIX"
     }
 
     # Seed the candidate list with curated pairings first so extremely
@@ -210,7 +217,7 @@ def discover_partner_fields(
 
 
 def sort_templates_by_priority(
-    templates: Sequence[tuple[str, str, int]]
+    templates: Sequence[tuple[str, str, int]],
 ) -> list[tuple[str, str, int]]:
     """
     按有效优先级从高到低排序候选模板。
@@ -226,11 +233,7 @@ def sort_templates_by_priority(
         list[tuple[str, str, int]]: 排序后的模板列表。
 
     Example:
-        >>> templates = [
-        ...     ("low", "expr1", 10),
-        ...     ("high", "expr2", 100),
-        ...     ("mid", "expr3", 50)
-        ... ]
+        >>> templates = [("low", "expr1", 10), ("high", "expr2", 100), ("mid", "expr3", 50)]
         >>> sorted_templates = sort_templates_by_priority(templates)
         >>> print(sorted_templates[0][0])
         'high'
@@ -303,7 +306,9 @@ def classify_expression_family(template_name: str, expression: str) -> str:
         - 其他: 使用模板名称的前缀作为家族名
 
     Example:
-        >>> family = classify_expression_family("group_rank_delta", "group_rank(ts_delta(rank(close), 20), subindustry)")
+        >>> family = classify_expression_family(
+        ...     "group_rank_delta", "group_rank(ts_delta(rank(close), 20), subindustry)"
+        ... )
         >>> print(family)
         'group_rank_delta'
     """
@@ -373,7 +378,9 @@ def is_legacy_family(template_name: str, expression: str) -> bool:
         >>> print(is_legacy)
         True
 
-        >>> is_legacy = is_legacy_family("group_zscore", "group_rank(ts_zscore(close, 60), subindustry)")
+        >>> is_legacy = is_legacy_family(
+        ...     "group_zscore", "group_rank(ts_zscore(close, 60), subindustry)"
+        ... )
         >>> print(is_legacy)
         False
     """
@@ -495,43 +502,69 @@ def merge_failed_check_counts(*count_maps: dict[str, Any]) -> dict[str, int]:
 # 自适应优先级调整 - 家族分类集合（表驱动辅助）
 # ---------------------------------------------------------------------------
 
-_GROUP_FAMILIES = {"group_rank_delta", "group_zscore", "group_mean_spread", "group_vol_scaled_delta"}
-_SIGNAL_FAMILIES = {"zscore_time", "rank_spread", "mean_spread", "vol_scaled_delta", "rank_delta", "decayed_delta"}
-_LEGACY_FAMILIES = {"legacy_level", "legacy_group_level", "legacy_ratio", "legacy_neg_ratio", "group_ratio_level"}
+_GROUP_FAMILIES = {
+    "group_rank_delta",
+    "group_zscore",
+    "group_mean_spread",
+    "group_vol_scaled_delta",
+}
+_SIGNAL_FAMILIES = {
+    "zscore_time",
+    "rank_spread",
+    "mean_spread",
+    "vol_scaled_delta",
+    "rank_delta",
+    "decayed_delta",
+}
+_LEGACY_FAMILIES = {
+    "legacy_level",
+    "legacy_group_level",
+    "legacy_ratio",
+    "legacy_neg_ratio",
+    "group_ratio_level",
+}
 _LEGACY_BASIC = {"legacy_level", "legacy_group_level"}
 
 # (trigger_check_names, condition(family, lower_name) → bool, adjustment)
 # 当任意 trigger 出现在 dominant_names 中且 condition 成立时应用 adjustment。
 _PRIORITY_RULES: list[tuple[set[str], Any, int]] = [
     # --- LOW_SHARPE / LOW_SUB_UNIVERSE_SHARPE ---
-    ({CHECK_LOW_SHARPE, CHECK_LOW_SUB_UNIVERSE_SHARPE},
-     lambda f, n: f.startswith("group_") or f in _GROUP_FAMILIES, 28),
-    ({CHECK_LOW_SHARPE, CHECK_LOW_SUB_UNIVERSE_SHARPE},
-     lambda f, n: f in _SIGNAL_FAMILIES, 18),
-    ({CHECK_LOW_SHARPE, CHECK_LOW_SUB_UNIVERSE_SHARPE},
-     lambda f, n: f in _LEGACY_FAMILIES, -35),
+    (
+        {CHECK_LOW_SHARPE, CHECK_LOW_SUB_UNIVERSE_SHARPE},
+        lambda f, n: f.startswith("group_") or f in _GROUP_FAMILIES,
+        28,
+    ),
+    ({CHECK_LOW_SHARPE, CHECK_LOW_SUB_UNIVERSE_SHARPE}, lambda f, n: f in _SIGNAL_FAMILIES, 18),
+    ({CHECK_LOW_SHARPE, CHECK_LOW_SUB_UNIVERSE_SHARPE}, lambda f, n: f in _LEGACY_FAMILIES, -35),
     # --- LOW_FITNESS ---
-    ({CHECK_LOW_FITNESS},
-     lambda f, n: "delta" in f or "spread" in f or n.startswith("iter_"), 22),
-    ({CHECK_LOW_FITNESS},
-     lambda f, n: f in _LEGACY_BASIC, -25),
-    ({CHECK_LOW_FITNESS},
-     lambda f, n: f in {"group_vol_scaled_delta", "vol_scaled_delta"}, 15),
+    ({CHECK_LOW_FITNESS}, lambda f, n: "delta" in f or "spread" in f or n.startswith("iter_"), 22),
+    ({CHECK_LOW_FITNESS}, lambda f, n: f in _LEGACY_BASIC, -25),
+    ({CHECK_LOW_FITNESS}, lambda f, n: f in {"group_vol_scaled_delta", "vol_scaled_delta"}, 15),
     # --- LOW_TURNOVER ---
-    ({CHECK_LOW_TURNOVER},
-     lambda f, n: "delta" in f or n.startswith(("iter_rank_delta", "iter_rank_then_delta")), 30),
-    ({CHECK_LOW_TURNOVER},
-     lambda f, n: f in {"legacy_level", "legacy_group_level", "mean_spread"}, -18),
+    (
+        {CHECK_LOW_TURNOVER},
+        lambda f, n: "delta" in f or n.startswith(("iter_rank_delta", "iter_rank_then_delta")),
+        30,
+    ),
+    (
+        {CHECK_LOW_TURNOVER},
+        lambda f, n: f in {"legacy_level", "legacy_group_level", "mean_spread"},
+        -18,
+    ),
     # --- HIGH_TURNOVER ---
-    ({CHECK_HIGH_TURNOVER},
-     lambda f, n: f in {"mean_spread", "decayed_delta", "decayed_ratio"}, 20),
-    ({CHECK_HIGH_TURNOVER},
-     lambda f, n: "delta" in f, -20),
+    (
+        {CHECK_HIGH_TURNOVER},
+        lambda f, n: f in {"mean_spread", "decayed_delta", "decayed_ratio"},
+        20,
+    ),
+    ({CHECK_HIGH_TURNOVER}, lambda f, n: "delta" in f, -20),
     # --- CONCENTRATED_WEIGHT ---
-    ({CHECK_CONCENTRATED_WEIGHT},
-     lambda f, n: f.startswith("group_"), 24),
-    ({CHECK_CONCENTRATED_WEIGHT},
-     lambda f, n: f in {"legacy_ratio", "legacy_neg_ratio", "group_ratio_level"}, -30),
+    ({CHECK_CONCENTRATED_WEIGHT}, lambda f, n: f.startswith("group_"), 24),
+    (
+        {CHECK_CONCENTRATED_WEIGHT},
+        lambda f, n: f in {"legacy_ratio", "legacy_neg_ratio", "group_ratio_level"},
+        -30,
+    ),
 ]
 
 
@@ -560,7 +593,9 @@ def adaptive_template_priority_adjustment(
     调整规则由 _PRIORITY_RULES 表驱动，外加字段反馈和组合惩罚两个特殊处理。
     """
     field_counts = field_feedback.get("failed_check_counts", {}) if field_feedback else {}
-    dominant_names = dominant_failed_check_names(merge_failed_check_counts(global_failed_check_counts, field_counts))
+    dominant_names = dominant_failed_check_names(
+        merge_failed_check_counts(global_failed_check_counts, field_counts)
+    )
     family = classify_expression_family(template_name, expression)
     lower_name = template_name.lower()
     adjustment = 0
@@ -586,7 +621,11 @@ def adaptive_template_priority_adjustment(
             adjustment += 18
         if best_score >= EXPR_RATIO_PENALTY_THRESHOLD and family in _LEGACY_FAMILIES:
             adjustment -= 40
-        if best_score >= EXPR_NEARPASS_BOOST_THRESHOLD and family == "group_rank_delta" and "nearpass" in lower_name:
+        if (
+            best_score >= EXPR_NEARPASS_BOOST_THRESHOLD
+            and family == "group_rank_delta"
+            and "nearpass" in lower_name
+        ):
             adjustment += 20
         if family in {"group_vol_scaled_delta", "vol_scaled_delta"}:
             adjustment += 25
@@ -620,7 +659,7 @@ def apply_adaptive_priority(
         >>> adjusted = apply_adaptive_priority(
         ...     templates,
         ...     field_feedback=None,
-        ...     global_failed_check_counts={"LOW_SHARPE": 10}
+        ...     global_failed_check_counts={"LOW_SHARPE": 10},
         ... )
         >>> print(adjusted[0][2])
         128  # 加上调整值 28
@@ -664,7 +703,7 @@ def cap_templates_per_family(
         ...     ("group_zscore1", "expr1", 100),
         ...     ("group_zscore2", "expr2", 90),
         ...     ("group_zscore3", "expr3", 80),
-        ...     ("rank_delta1", "expr4", 70)
+        ...     ("rank_delta1", "expr4", 70),
         ... ]
         >>> capped = cap_templates_per_family(templates, max_templates_per_family=2)
         >>> print(len(capped))
@@ -704,8 +743,7 @@ def build_feedback_mutations(
 
     Example:
         >>> mutations = build_feedback_mutations(
-        ...     "sales",
-        ...     {"failed_check_counts": {"LOW_TURNOVER": 5}}
+        ...     "sales", {"failed_check_counts": {"LOW_TURNOVER": 5}}
         ... )
         >>> print(len(mutations))
         8  # 包含基础变异和 LOW_TURNOVER 针对性变异
@@ -716,8 +754,11 @@ def build_feedback_mutations(
 
     # --- std-normalized delta templates (vol-scaled) ---
     # (delta, std, priority) 窗口配置
-    _VOL_SCALED_WINDOWS: list[tuple[int, int, int]] = [
-        (20, 60, 192), (15, 40, 190), (10, 60, 188), (25, 90, 186),
+    _vol_scaled_windows: list[tuple[int, int, int]] = [
+        (20, 60, 192),
+        (15, 40, 190),
+        (10, 60, 188),
+        (25, 90, 186),
     ]
     mutations: list[tuple[str, str, int]] = [
         (
@@ -732,33 +773,39 @@ def build_feedback_mutations(
         ),
     ]
     # 动态生成 vol-scaled delta 变体
-    for delta, std, pri in _VOL_SCALED_WINDOWS:
-        mutations.append((
-            f"iter_group_vol_scaled_delta_{delta}_{std}",
-            f"group_rank(ts_delta(ts_backfill({field_name}, {bw}), {delta}) / ts_std_dev(ts_backfill({field_name}, {bw}), {std}), subindustry)",
-            pri,
-        ))
+    for delta, std, pri in _vol_scaled_windows:
+        mutations.append(
+            (
+                f"iter_group_vol_scaled_delta_{delta}_{std}",
+                f"group_rank(ts_delta(ts_backfill({field_name}, {bw}), {delta}) / ts_std_dev(ts_backfill({field_name}, {bw}), {std}), subindustry)",
+                pri,
+            )
+        )
 
     # backfill window variants for vol-scaled
     for bf_window, pri in [(180, 184), (260, 182)]:
-        mutations.append((
-            f"iter_group_vol_scaled_delta_20_60_bf{bf_window}",
-            f"group_rank(ts_delta(ts_backfill({field_name}, {bf_window}), 20) / ts_std_dev(ts_backfill({field_name}, {bf_window}), 60), subindustry)",
-            pri,
-        ))
+        mutations.append(
+            (
+                f"iter_group_vol_scaled_delta_20_60_bf{bf_window}",
+                f"group_rank(ts_delta(ts_backfill({field_name}, {bf_window}), 20) / ts_std_dev(ts_backfill({field_name}, {bf_window}), 60), subindustry)",
+                pri,
+            )
+        )
 
-    mutations.extend([
-        (
-            "iter_group_mean_spread_over_std_5_20_20",
-            f"group_rank((ts_mean(ts_backfill({field_name}, {bw}), 5) - ts_mean(ts_backfill({field_name}, {bw}), 20)) / ts_std_dev(ts_backfill({field_name}, {bw}), 20), subindustry)",
-            178,
-        ),
-        (
-            "iter_rank_mean_spread_over_std_5_20_20",
-            f"rank((ts_mean(ts_backfill({field_name}, {bw}), 5) - ts_mean(ts_backfill({field_name}, {bw}), 20)) / ts_std_dev(ts_backfill({field_name}, {bw}), 20))",
-            176,
-        ),
-    ])
+    mutations.extend(
+        [
+            (
+                "iter_group_mean_spread_over_std_5_20_20",
+                f"group_rank((ts_mean(ts_backfill({field_name}, {bw}), 5) - ts_mean(ts_backfill({field_name}, {bw}), 20)) / ts_std_dev(ts_backfill({field_name}, {bw}), 20), subindustry)",
+                178,
+            ),
+            (
+                "iter_rank_mean_spread_over_std_5_20_20",
+                f"rank((ts_mean(ts_backfill({field_name}, {bw}), 5) - ts_mean(ts_backfill({field_name}, {bw}), 20)) / ts_std_dev(ts_backfill({field_name}, {bw}), 20))",
+                176,
+            ),
+        ]
+    )
 
     if not field_feedback:
         return mutations
@@ -797,34 +844,50 @@ def build_feedback_mutations(
     # Near-pass on vol-scaled: generate fine-tuned backfill/delta window variants
     if best_score >= EXPR_NEARPASS_BOOST_THRESHOLD:
         # (delta, std, backfill_window | None, priority) — None = use default bw
-        _NEARPASS_VOL_SCALED_CONFIGS: list[tuple[int, int, int | None, int]] = [
-            (15, 40, 180, 198), (20, 60, 180, 196),
-            (10, 40, None, 195), (15, 60, None, 194),
-            (25, 60, None, 193), (20, 90, None, 192),
+        _nearpass_vol_scaled_configs: list[tuple[int, int, int | None, int]] = [
+            (15, 40, 180, 198),
+            (20, 60, 180, 196),
+            (10, 40, None, 195),
+            (15, 60, None, 194),
+            (25, 60, None, 193),
+            (20, 90, None, 192),
             (20, 60, 260, 191),
         ]
-        for delta, std, bf, pri in _NEARPASS_VOL_SCALED_CONFIGS:
+        for delta, std, bf, pri in _nearpass_vol_scaled_configs:
             bf_val = bf if bf is not None else bw
             bf_suffix = f"_bf{bf_val}" if bf is not None else ""
-            mutations.append((
-                f"iter_nearpass_vol_scaled_{delta}_{std}{bf_suffix}",
-                f"group_rank(ts_delta(ts_backfill({field_name}, {bf_val}), {delta}) / ts_std_dev(ts_backfill({field_name}, {bf_val}), {std}), subindustry)",
-                pri,
-            ))
+            mutations.append(
+                (
+                    f"iter_nearpass_vol_scaled_{delta}_{std}{bf_suffix}",
+                    f"group_rank(ts_delta(ts_backfill({field_name}, {bf_val}), {delta}) / ts_std_dev(ts_backfill({field_name}, {bf_val}), {std}), subindustry)",
+                    pri,
+                )
+            )
 
     if CHECK_LOW_TURNOVER in dominant_names:
         mutations.extend(
             [
                 ("iter_rank_delta_3", f"rank(ts_delta(ts_backfill({field_name}, {bw}), 3))", 186),
                 ("iter_rank_delta_5", f"rank(ts_delta(ts_backfill({field_name}, {bw}), 5))", 184),
-                ("iter_rank_then_delta_3", f"rank(ts_delta(rank(ts_backfill({field_name}, {bw})), 3))", 183),
+                (
+                    "iter_rank_then_delta_3",
+                    f"rank(ts_delta(rank(ts_backfill({field_name}, {bw})), 3))",
+                    183,
+                ),
             ]
         )
 
-    if CHECK_LOW_SUB_UNIVERSE_SHARPE in dominant_names or CHECK_CONCENTRATED_WEIGHT in dominant_names:
+    if (
+        CHECK_LOW_SUB_UNIVERSE_SHARPE in dominant_names
+        or CHECK_CONCENTRATED_WEIGHT in dominant_names
+    ):
         mutations.extend(
             [
-                ("iter_group_zscore_20", f"group_rank(ts_zscore(ts_backfill({field_name}, {bw}), 20), subindustry)", 185),
+                (
+                    "iter_group_zscore_20",
+                    f"group_rank(ts_zscore(ts_backfill({field_name}, {bw}), 20), subindustry)",
+                    185,
+                ),
                 (
                     "iter_group_zscore_spread_5_20",
                     f"group_rank(ts_zscore(ts_backfill({field_name}, {bw}), 5) - ts_zscore(ts_backfill({field_name}, {bw}), 20), subindustry)",
@@ -837,8 +900,16 @@ def build_feedback_mutations(
         mutations.extend(
             [
                 ("iter_flip_best", invert_expression(best_expression), 172),
-                ("iter_group_flip_best", f"group_rank({invert_expression(best_expression)}, subindustry)", 174),
-                ("iter_group_decay_best_5", f"group_rank(ts_decay_linear(ts_backfill({best_expression}, {bw}), 5), subindustry)", 170),
+                (
+                    "iter_group_flip_best",
+                    f"group_rank({invert_expression(best_expression)}, subindustry)",
+                    174,
+                ),
+                (
+                    "iter_group_decay_best_5",
+                    f"group_rank(ts_decay_linear(ts_backfill({best_expression}, {bw}), 5), subindustry)",
+                    170,
+                ),
             ]
         )
         if best_score >= FEEDBACK_MUTATION_HIGHSCORE_THRESHOLD:
@@ -905,51 +976,59 @@ def _build_matrix_templates(
         (diversified_templates, legacy_templates) 两个列表。
     """
     # delta_over_std 模板的窗口配置: (delta, std, priority)
-    _DELTA_OVER_STD_WINDOWS: list[tuple[int, int, int]] = [
-        (5, 20, 176), (15, 40, 172), (10, 60, 170),
-        (20, 60, 174), (25, 90, 168), (30, 120, 166),
+    _delta_over_std_windows: list[tuple[int, int, int]] = [
+        (5, 20, 176),
+        (15, 40, 172),
+        (10, 60, 170),
+        (20, 60, 174),
+        (25, 90, 168),
+        (30, 120, 166),
     ]
 
     diversified: list[tuple[str, str, int]] = []
-    for delta, std, pri in _DELTA_OVER_STD_WINDOWS:
-        diversified.append((
-            f"group_delta_over_std_subindustry_{delta}_{std}",
-            f"group_rank(ts_delta(ts_backfill({field_name}, {bw}), {delta}) / ts_std_dev(ts_backfill({field_name}, {bw}), {std}), subindustry)",
-            pri + DELTA_STD_PRIORITY_BOOST,
-        ))
+    for delta, std, pri in _delta_over_std_windows:
+        diversified.append(
+            (
+                f"group_delta_over_std_subindustry_{delta}_{std}",
+                f"group_rank(ts_delta(ts_backfill({field_name}, {bw}), {delta}) / ts_std_dev(ts_backfill({field_name}, {bw}), {std}), subindustry)",
+                pri + DELTA_STD_PRIORITY_BOOST,
+            )
+        )
 
-    diversified.extend([
-        (
-            "group_delta_over_std_industry_20_60",
-            f"group_rank(ts_delta(ts_backfill({field_name}, {bw}), 20) / ts_std_dev(ts_backfill({field_name}, {bw}), 60), industry)",
-            166 + DELTA_STD_PRIORITY_BOOST,
-        ),
-        (
-            f"group_short_long_mean_spread_subindustry_20_{bw}",
-            f"group_rank(ts_mean(ts_backfill({field_name}, {bw}), 20) - ts_mean(ts_backfill({field_name}, {bw}), {bw}), subindustry)",
-            164,
-        ),
-        (
-            "group_zscore_subindustry_60",
-            f"group_rank(ts_zscore(ts_backfill({field_name}, {bw}), 60), subindustry)",
-            161,
-        ),
-        (
-            f"rank_mean_spread_over_std_20_{bw}_60",
-            f"rank((ts_mean(ts_backfill({field_name}, {bw}), 20) - ts_mean(ts_backfill({field_name}, {bw}), {bw})) / ts_std_dev(ts_backfill({field_name}, {bw}), 60))",
-            158,
-        ),
-        (
-            f"rank_zscore_spread_20_{bw}",
-            f"rank(ts_zscore(ts_backfill({field_name}, {bw}), 20) - ts_zscore(ts_backfill({field_name}, {bw}), {bw}))",
-            154,
-        ),
-        (
-            "group_rank_delta_of_rank_20",
-            f"group_rank(ts_delta(rank(ts_backfill({field_name}, {bw})), 20), subindustry)",
-            150,
-        ),
-    ])
+    diversified.extend(
+        [
+            (
+                "group_delta_over_std_industry_20_60",
+                f"group_rank(ts_delta(ts_backfill({field_name}, {bw}), 20) / ts_std_dev(ts_backfill({field_name}, {bw}), 60), industry)",
+                166 + DELTA_STD_PRIORITY_BOOST,
+            ),
+            (
+                f"group_short_long_mean_spread_subindustry_20_{bw}",
+                f"group_rank(ts_mean(ts_backfill({field_name}, {bw}), 20) - ts_mean(ts_backfill({field_name}, {bw}), {bw}), subindustry)",
+                164,
+            ),
+            (
+                "group_zscore_subindustry_60",
+                f"group_rank(ts_zscore(ts_backfill({field_name}, {bw}), 60), subindustry)",
+                161,
+            ),
+            (
+                f"rank_mean_spread_over_std_20_{bw}_60",
+                f"rank((ts_mean(ts_backfill({field_name}, {bw}), 20) - ts_mean(ts_backfill({field_name}, {bw}), {bw})) / ts_std_dev(ts_backfill({field_name}, {bw}), 60))",
+                158,
+            ),
+            (
+                f"rank_zscore_spread_20_{bw}",
+                f"rank(ts_zscore(ts_backfill({field_name}, {bw}), 20) - ts_zscore(ts_backfill({field_name}, {bw}), {bw}))",
+                154,
+            ),
+            (
+                "group_rank_delta_of_rank_20",
+                f"group_rank(ts_delta(rank(ts_backfill({field_name}, {bw})), 20), subindustry)",
+                150,
+            ),
+        ]
+    )
 
     legacy: list[tuple[str, str, int]] = [
         ("raw_field", field_name, 145),
@@ -967,15 +1046,25 @@ def _build_matrix_templates(
     # 比率配对模板
     fields_by_name = {choose_field_name(item): item for item in all_fields}
     partner_names = discover_partner_fields(
-        field_name, all_fields,
-        limit=4, use_curated_heuristics=use_dataset_heuristics,
+        field_name,
+        all_fields,
+        limit=4,
+        use_curated_heuristics=use_dataset_heuristics,
     )
 
     # 比率配对模板窗口配置: (delta, std, priority)
-    _RATIO_DELTA_RANK_WINDOWS: list[tuple[int, None, int]] = [(3, None, 188), (5, None, 184), (10, None, 176)]
-    _RATIO_DELTA_OVER_STD_WINDOWS: list[tuple[int, int, int]] = [
-        (5, 20, 180), (15, 40, 176), (10, 60, 174),
-        (20, 60, 178), (25, 90, 172), (30, 120, 170),
+    _ratio_delta_rank_windows: list[tuple[int, None, int]] = [
+        (3, None, 188),
+        (5, None, 184),
+        (10, None, 176),
+    ]
+    _ratio_delta_over_std_windows: list[tuple[int, int, int]] = [
+        (5, 20, 180),
+        (15, 40, 176),
+        (10, 60, 174),
+        (20, 60, 178),
+        (25, 90, 172),
+        (30, 120, 170),
     ]
 
     for partner in partner_names:
@@ -985,50 +1074,58 @@ def _build_matrix_templates(
         ratio_label = f"{field_name}_over_{partner}"
 
         # Delta rank 变体
-        for delta, _, pri in _RATIO_DELTA_RANK_WINDOWS:
-            diversified.append((
-                f"group_ratio_delta_rank_{delta}_{ratio_label}",
-                f"group_rank(ts_delta(rank(ts_backfill({ratio_expr}, {bw})), {delta}), subindustry)",
-                pri + DELTA_STD_PRIORITY_BOOST,
-            ))
+        for delta, _, pri in _ratio_delta_rank_windows:
+            diversified.append(
+                (
+                    f"group_ratio_delta_rank_{delta}_{ratio_label}",
+                    f"group_rank(ts_delta(rank(ts_backfill({ratio_expr}, {bw})), {delta}), subindustry)",
+                    pri + DELTA_STD_PRIORITY_BOOST,
+                )
+            )
 
         # Delta over std 变体
-        for delta, std, pri in _RATIO_DELTA_OVER_STD_WINDOWS:
-            diversified.append((
-                f"group_ratio_delta_over_std_{delta}_{std}_{ratio_label}",
-                f"group_rank(ts_delta(ts_backfill({ratio_expr}, {bw}), {delta}) / ts_std_dev(ts_backfill({ratio_expr}, {bw}), {std}), subindustry)",
-                pri + DELTA_STD_PRIORITY_BOOST,
-            ))
+        for delta, std, pri in _ratio_delta_over_std_windows:
+            diversified.append(
+                (
+                    f"group_ratio_delta_over_std_{delta}_{std}_{ratio_label}",
+                    f"group_rank(ts_delta(ts_backfill({ratio_expr}, {bw}), {delta}) / ts_std_dev(ts_backfill({ratio_expr}, {bw}), {std}), subindustry)",
+                    pri + DELTA_STD_PRIORITY_BOOST,
+                )
+            )
 
-        diversified.extend([
-            (
-                f"group_ratio_zscore_{ratio_label}",
-                f"group_rank(ts_zscore(ts_backfill({ratio_expr}, {bw}), 60), subindustry)",
-                160,
-            ),
-            (
-                f"ratio_mean_spread_over_std_{ratio_label}",
-                f"rank((ts_mean(ts_backfill({ratio_expr}, {bw}), 20) - ts_mean(ts_backfill({ratio_expr}, {bw}), {bw})) / ts_std_dev(ts_backfill({ratio_expr}, {bw}), 60))",
-                156,
-            ),
-            (
-                f"ratio_zscore_spread_{ratio_label}",
-                f"rank(ts_zscore(ts_backfill({ratio_expr}, {bw}), 20) - ts_zscore(ts_backfill({ratio_expr}, {bw}), {bw}))",
-                152,
-            ),
-        ])
+        diversified.extend(
+            [
+                (
+                    f"group_ratio_zscore_{ratio_label}",
+                    f"group_rank(ts_zscore(ts_backfill({ratio_expr}, {bw}), 60), subindustry)",
+                    160,
+                ),
+                (
+                    f"ratio_mean_spread_over_std_{ratio_label}",
+                    f"rank((ts_mean(ts_backfill({ratio_expr}, {bw}), 20) - ts_mean(ts_backfill({ratio_expr}, {bw}), {bw})) / ts_std_dev(ts_backfill({ratio_expr}, {bw}), 60))",
+                    156,
+                ),
+                (
+                    f"ratio_zscore_spread_{ratio_label}",
+                    f"rank(ts_zscore(ts_backfill({ratio_expr}, {bw}), 20) - ts_zscore(ts_backfill({ratio_expr}, {bw}), {bw}))",
+                    152,
+                ),
+            ]
+        )
 
-        legacy.extend([
-            (f"raw_ratio_{ratio_label}", ratio_expr, 154),
-            (f"group_rank_ratio_{ratio_label}", f"group_rank({ratio_expr}, subindustry)", 152),
-            (f"ratio_{ratio_label}", f"rank({ratio_expr})", 148),
-            (f"rank_ratio_{ratio_label}", f"rank({ratio_expr})", 138),
-            (
-                f"decay_ratio_{ratio_label}",
-                f"rank(ts_decay_linear(ts_backfill({ratio_expr}, {bw}), 10))",
-                126,
-            ),
-        ])
+        legacy.extend(
+            [
+                (f"raw_ratio_{ratio_label}", ratio_expr, 154),
+                (f"group_rank_ratio_{ratio_label}", f"group_rank({ratio_expr}, subindustry)", 152),
+                (f"ratio_{ratio_label}", f"rank({ratio_expr})", 148),
+                (f"rank_ratio_{ratio_label}", f"rank({ratio_expr})", 138),
+                (
+                    f"decay_ratio_{ratio_label}",
+                    f"rank(ts_decay_linear(ts_backfill({ratio_expr}, {bw}), 10))",
+                    126,
+                ),
+            ]
+        )
 
     return diversified, legacy
 
@@ -1085,7 +1182,7 @@ def build_expression_candidates(
         ...     max_templates_per_family=10,
         ...     legacy_similarity_penalty=30,
         ...     all_fields=[{"id": "cap", "type": "MATRIX"}],
-        ...     use_dataset_heuristics=True
+        ...     use_dataset_heuristics=True,
         ... )
         >>> print(len(candidates))
         50  # 限制后最多 50 个候选
@@ -1112,7 +1209,10 @@ def build_expression_candidates(
 
     if field_type == "MATRIX":
         diversified, legacy = _build_matrix_templates(
-            field_name, bw, all_fields, use_dataset_heuristics,
+            field_name,
+            bw,
+            all_fields,
+            use_dataset_heuristics,
         )
         templates.extend(diversified)
         templates.extend(legacy)

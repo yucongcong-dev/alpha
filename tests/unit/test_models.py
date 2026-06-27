@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-import time
 from dataclasses import FrozenInstanceError
+import time
 
 import pytest
 
@@ -16,10 +16,10 @@ from alpha.models.base import (
     RuntimeConcurrencyState,
 )
 
-
 # ============================================================================
 # RuntimeConcurrencyState 测试
 # ============================================================================
+
 
 class TestRuntimeConcurrencyState:
     """测试运行时并发状态"""
@@ -40,9 +40,7 @@ class TestRuntimeConcurrencyState:
         assert not state.is_cooling_down()
 
     def test_can_restore_concurrency_yes(self) -> None:
-        state = RuntimeConcurrencyState(
-            max_workers=5, runtime_max_workers=1, cooldown_until=100.0
-        )
+        state = RuntimeConcurrencyState(max_workers=5, runtime_max_workers=1, cooldown_until=100.0)
         assert state.can_restore_concurrency()
 
     def test_can_restore_concurrency_no_when_cooling(self) -> None:
@@ -54,15 +52,14 @@ class TestRuntimeConcurrencyState:
         assert not state.can_restore_concurrency()
 
     def test_can_restore_concurrency_no_same_workers(self) -> None:
-        state = RuntimeConcurrencyState(
-            max_workers=5, runtime_max_workers=5, cooldown_until=100.0
-        )
+        state = RuntimeConcurrencyState(max_workers=5, runtime_max_workers=5, cooldown_until=100.0)
         assert not state.can_restore_concurrency()
 
 
 # ============================================================================
 # ExecutionState 测试
 # ============================================================================
+
 
 class TestExecutionState:
     """测试执行状态"""
@@ -106,6 +103,7 @@ class TestExecutionState:
 # FieldTestResult 测试
 # ============================================================================
 
+
 class TestFieldTestResult:
     """测试字段测试结果"""
 
@@ -144,6 +142,7 @@ class TestFieldTestResult:
 # FieldTestContext 测试
 # ============================================================================
 
+
 class TestFieldTestContext:
     """测试字段测试上下文"""
 
@@ -178,6 +177,7 @@ class TestFieldTestContext:
 # HistoricalRunState 测试
 # ============================================================================
 
+
 class TestHistoricalRunState:
     """测试历史运行状态"""
 
@@ -203,6 +203,7 @@ class TestHistoricalRunState:
 # ============================================================================
 # RunFilters 测试
 # ============================================================================
+
 
 class TestRunFilters:
     """测试运行过滤器（不可变）"""

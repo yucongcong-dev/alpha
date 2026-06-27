@@ -1,5 +1,3 @@
-
-from __future__ import annotations
 """
 字段缓存管理模块
 
@@ -17,10 +15,13 @@ API 调用次数，提高运行效率。
     - choose_field_type() (→ utils.helpers): 标准化字段类型
 """
 
+from __future__ import annotations
+
+from collections.abc import Sequence
 import json
 import logging
 import os
-from typing import Any, Sequence
+from typing import Any
 
 from ..io.output import atomic_write_json
 from ..utils.helpers import first_non_empty
@@ -63,7 +64,7 @@ def load_fields_cache(
         ...     region="USA",
         ...     universe="TOP3000",
         ...     instrument_type="EQUITY",
-        ...     delay=1
+        ...     delay=1,
         ... )
         >>> print(len(fields))
         500
@@ -128,7 +129,7 @@ def save_fields_cache(
         ...     universe="TOP3000",
         ...     instrument_type="EQUITY",
         ...     delay=1,
-        ...     fields=[{"id": "sales", "name": "Sales", "type": "MATRIX"}]
+        ...     fields=[{"id": "sales", "name": "Sales", "type": "MATRIX"}],
         ... )
 
     Note:
@@ -187,7 +188,7 @@ def fields_cache_refresh_reason(
         ...     cached_fields=[{"id": "sales"}],
         ...     requested_limit=100,
         ...     requested_offset=0,
-        ...     force_refresh=False
+        ...     force_refresh=False,
         ... )
         >>> print(reason)
         'cache has 1 fields but current limit requests 100'
@@ -206,8 +207,7 @@ def fields_cache_refresh_reason(
 
 
 def merge_fields_by_id(
-    existing_fields: Sequence[dict[str, Any]],
-    new_fields: Sequence[dict[str, Any]]
+    existing_fields: Sequence[dict[str, Any]], new_fields: Sequence[dict[str, Any]]
 ) -> list[dict[str, Any]]:
     """
     按字段 ID 合并缓存和新拉取字段，保持原始顺序并去重。
@@ -278,7 +278,7 @@ def fetch_fields_with_cache(
         ...     args=args,
         ...     fields_cache_file="/path/to/cache.json",
         ...     cached_fields=[{"id": "sales"}],
-        ...     cache_refresh_reason="cache has 1 fields but limit requests 100"
+        ...     cache_refresh_reason="cache has 1 fields but limit requests 100",
         ... )
         >>> print(len(fields))
         100
@@ -304,7 +304,10 @@ def fetch_fields_with_cache(
     if append_to_cache:
         logger.info(
             "[cache] 从 %d 扩展缓存到 %d，使用 offset=%d limit=%d",
-            len(cached_fields), args.limit, fetch_offset, fetch_limit,
+            len(cached_fields),
+            args.limit,
+            fetch_offset,
+            fetch_limit,
         )
 
     # Fetching the field list is also wrapped so temporary API instability
@@ -319,7 +322,9 @@ def fetch_fields_with_cache(
         instrument_type=args.instrument_type,
         delay=args.delay,
     )
-    fields = merge_fields_by_id(cached_fields, fetched_fields) if append_to_cache else fetched_fields
+    fields = (
+        merge_fields_by_id(cached_fields, fetched_fields) if append_to_cache else fetched_fields
+    )
     save_fields_cache(
         fields_cache_file,
         dataset_id=args.dataset_id,

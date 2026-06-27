@@ -1,4 +1,3 @@
-
 """
 Alpha 测试系统命令行入口模块
 
@@ -57,12 +56,12 @@ def run_pv1_optimization() -> int:
 
     加载并执行 scripts/run_pv1_optimization 中的优化脚本。
     """
+    from pathlib import Path
     import subprocess
     import sys
-    from pathlib import Path
 
     script = Path(__file__).parent.parent.parent / "scripts" / "run_pv1_optimization.py"
-    result = subprocess.run([sys.executable, str(script)])
+    result = subprocess.run([sys.executable, str(script)], check=False)
     return result.returncode
 
 

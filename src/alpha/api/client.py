@@ -27,12 +27,13 @@ from __future__ import annotations
 
 import argparse
 import base64
+from collections.abc import Callable, Iterable
+from http.cookiejar import CookieJar
 import json
 import logging
 import threading
 import time
-from http.cookiejar import CookieJar
-from typing import Any, Callable, Iterable, TypeVar
+from typing import Any, TypeVar
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
 from urllib.request import HTTPCookieProcessor, ProxyHandler, Request, build_opener
@@ -69,6 +70,7 @@ logger = logging.getLogger(__name__)
 # ============================================================================
 # 辅助函数 - 时间与等待
 # ============================================================================
+
 
 def wait_seconds(seconds: float, reason: str, verbose: bool = True) -> None:
     """
@@ -110,10 +112,7 @@ def wait_seconds(seconds: float, reason: str, verbose: bool = True) -> None:
         time.sleep(seconds)
 
 
-def extract_retry_after(
-    headers: dict[str, str],
-    default: float = 5.0
-) -> float:
+def extract_retry_after(headers: dict[str, str], default: float = 5.0) -> float:
     """
     将 Retry-After HTTP 头解析为秒数，失败时使用保守默认值。
 
@@ -157,10 +156,7 @@ def extract_retry_after(
         return default
 
 
-def doubled_retry_after(
-    headers: dict[str, str],
-    default: float = 5.0
-) -> float:
+def doubled_retry_after(headers: dict[str, str], default: float = 5.0) -> float:
     """
     将服务端给出的等待时间翻倍，采用更保守的退避窗口。
 
@@ -194,9 +190,7 @@ def doubled_retry_after(
 
 
 def polling_retry_after(
-    headers: dict[str, str],
-    default: float = 5.0,
-    buffer_seconds: float = POLLING_RETRY_BUFFER
+    headers: dict[str, str], default: float = 5.0, buffer_seconds: float = POLLING_RETRY_BUFFER
 ) -> float:
     """
     按服务端 Retry-After 轮询异步任务，并添加小缓冲时间。
@@ -259,11 +253,11 @@ def safe_json_bytes(content: bytes) -> dict[str, Any]:
         >>> safe_json_bytes(content)
         {'status': 'ok'}
 
-        >>> content = b'[1, 2, 3]'
+        >>> content = b"[1, 2, 3]"
         >>> safe_json_bytes(content)
         {'data': [1, 2, 3]}
 
-        >>> content = b'invalid json'
+        >>> content = b"invalid json"
         >>> safe_json_bytes(content)
         {'text': 'invalid json'}
 
@@ -283,9 +277,7 @@ def safe_json_bytes(content: bytes) -> dict[str, Any]:
         return {"text": content.decode("utf-8", errors="replace")[:500]}
 
 
-def simulation_payload_is_pending(
-    payload: dict[str, Any]
-) -> tuple[bool, str, Any]:
+def simulation_payload_is_pending(payload: dict[str, Any]) -> tuple[bool, str, Any]:
     """
     从 simulation 响应体判断任务是否仍在等待。
 
@@ -319,9 +311,7 @@ def simulation_payload_is_pending(
         - 可能使用 progress 或 stage 字段表示进度
         - 状态字符串会被转换为大写进行比较
     """
-    status = str(
-        first_non_empty(payload.get("status"), payload.get("state"), "")
-    ).upper()
+    status = str(first_non_empty(payload.get("status"), payload.get("state"), "")).upper()
     progress = first_non_empty(payload.get("progress"), payload.get("stage"), "")
     return status in {"PENDING", "RUNNING", "QUEUED"}, status, progress
 
@@ -460,7 +450,11 @@ def retry_operation(
         except BrainRateLimitError as exc:
             last_error = exc
             logger.warning(
-                "[retry] %s rate limited on attempt %d/%d: %s", name, attempt, retries, exc,
+                "[retry] %s rate limited on attempt %d/%d: %s",
+                name,
+                attempt,
+                retries,
+                exc,
             )
             # 当内层 API 调用已耗尽自身的速率限制重试时，
             # 立即跳过当前模板而不是重新运行整个阶段
@@ -468,7 +462,11 @@ def retry_operation(
         except BrainQueueBusyError as exc:
             last_error = exc
             logger.warning(
-                "[retry] %s queue busy on attempt %d/%d: %s", name, attempt, retries, exc,
+                "[retry] %s queue busy on attempt %d/%d: %s",
+                name,
+                attempt,
+                retries,
+                exc,
             )
             # 队列拥塞也应立即跳过当前模板，
             # 让主循环可以降低运行时并发并冷却
@@ -478,13 +476,21 @@ def retry_operation(
             # 不应再次重试整个阶段（否则有效超时成倍增长）
             last_error = exc
             logger.warning(
-                "[retry] %s exhausted on attempt %d/%d: %s", name, attempt, retries, exc,
+                "[retry] %s exhausted on attempt %d/%d: %s",
+                name,
+                attempt,
+                retries,
+                exc,
             )
             break
         except Exception as exc:
             last_error = exc
             logger.warning(
-                "[retry] %s failed on attempt %d/%d: %s", name, attempt, retries, exc,
+                "[retry] %s failed on attempt %d/%d: %s",
+                name,
+                attempt,
+                retries,
+                exc,
             )
             if attempt < retries:
                 wait_seconds(retry_wait_seconds, f"retry {name}")
@@ -569,6 +575,7 @@ def login_with_retry(client: BrainClient, retries: int) -> None:
 # BrainClient 类
 # ============================================================================
 
+
 class BrainClient:
     """
     面向 WorldQuant Brain 认证与 Alpha 接口的轻量 HTTP 客户端。
@@ -591,11 +598,7 @@ class BrainClient:
         opener: urllib 的 opener 对象，用于发送请求。
 
     Example:
-        >>> client = BrainClient(
-        ...     "user@example.com",
-        ...     "password",
-        ...     min_request_interval=0.5
-        ... )
+        >>> client = BrainClient("user@example.com", "password", min_request_interval=0.5)
         >>> client.login()
         [auth] login success
         >>> # 使用客户端进行 API 操作
@@ -636,7 +639,7 @@ class BrainClient:
             ...     "user@example.com",
             ...     "password",
             ...     min_request_interval=0.5,
-            ...     rate_limit_max_retries=3
+            ...     rate_limit_max_retries=3,
             ... )
 
         Note:
@@ -676,9 +679,7 @@ class BrainClient:
             - 认证成功后，会话 Cookie 会自动存储
             - 登录失败会抛出异常，包含详细错误信息
         """
-        token = base64.b64encode(
-            f"{self.email}:{self.password}".encode()
-        ).decode("ascii")
+        token = base64.b64encode(f"{self.email}:{self.password}".encode()).decode("ascii")
         status, _, content = self.raw_request(
             "POST",
             AUTH_URL,
@@ -733,7 +734,7 @@ class BrainClient:
             ...     "GET",
             ...     "https://api.example.com/data",
             ...     expected={200},
-            ...     headers={"X-Custom": "value"}
+            ...     headers={"X-Custom": "value"},
             ... )
             >>> print(status)
             200
@@ -755,11 +756,7 @@ class BrainClient:
         merged_headers = dict(DEFAULT_HEADERS)
         if headers:
             merged_headers.update(headers)
-        retries = (
-            self.rate_limit_max_retries
-            if retries is None
-            else max(retries, 1)
-        )
+        retries = self.rate_limit_max_retries if retries is None else max(retries, 1)
 
         last_response: tuple[int, dict[str, str], bytes] | None = None
         for attempt in range(1, retries + 1):
@@ -770,7 +767,11 @@ class BrainClient:
             if status == 429:
                 logger.warning(
                     "[rate-limit] %s %s attempt=%d/%d retry_after=%s",
-                    method, url, attempt, retries, response_headers.get('Retry-After'),
+                    method,
+                    url,
+                    attempt,
+                    retries,
+                    response_headers.get("Retry-After"),
                 )
                 wait_seconds(
                     doubled_retry_after(response_headers, default=RATE_LIMIT_DEFAULT_WAIT),
@@ -780,14 +781,15 @@ class BrainClient:
             if status == 401 and attempt < retries:
                 logger.warning(
                     "[auth] session expired on %s %s, re-logging in...",
-                    method, url,
+                    method,
+                    url,
                 )
                 self.login()
                 continue
             if status in (500, 502, 503, 504):
                 wait_seconds(
                     min(SERVER_ERROR_BACKOFF_MAX, attempt * SERVER_ERROR_BACKOFF_STEP),
-                    f"server error {status}"
+                    f"server error {status}",
                 )
                 continue
             if expected is None or status in expected:
@@ -842,9 +844,7 @@ class BrainClient:
 
         Example:
             >>> status, headers, content = client.raw_request(
-            ...     "GET",
-            ...     "https://api.example.com/data",
-            ...     params={"limit": 10, "offset": 0}
+            ...     "GET", "https://api.example.com/data", params={"limit": 10, "offset": 0}
             ... )
             >>> print(status)
             200
@@ -935,7 +935,7 @@ class BrainClient:
             ...     region="USA",
             ...     universe="TOP3000",
             ...     instrument_type="EQUITY",
-            ...     delay=1
+            ...     delay=1,
             ... )
             >>> print(len(fields))
             100
@@ -1022,7 +1022,7 @@ class BrainClient:
             ...     region="USA",
             ...     universe="TOP3000",
             ...     instrument_type="EQUITY",
-            ...     delay=1
+            ...     delay=1,
             ... )
             >>> print(payload["results"])
             [...]
@@ -1097,12 +1097,12 @@ class BrainClient:
             except BrainAPIError as exc:
                 last_error = exc
                 logger.warning(
-                    "[data] data-fields query rejected: %s -> %s", params, exc,
+                    "[data] data-fields query rejected: %s -> %s",
+                    params,
+                    exc,
                 )
 
-        raise BrainAPIError(
-            f"Unable to fetch dataset fields for {dataset_id}: {last_error}"
-        )
+        raise BrainAPIError(f"Unable to fetch dataset fields for {dataset_id}: {last_error}")
 
     def create_simulation(self, payload: dict[str, Any]) -> str:
         """
@@ -1121,10 +1121,7 @@ class BrainClient:
             BrainAPIError: 当创建成功但 Location 头缺失时抛出。
 
         Example:
-            >>> payload = {
-            ...     "code": "rank(close)",
-            ...     "settings": {"region": "USA", "delay": 1}
-            ... }
+            >>> payload = {"code": "rank(close)", "settings": {"region": "USA", "delay": 1}}
             >>> location = client.create_simulation(payload)
             >>> print(location)
             https://api.worldquantbrain.com/simulations/abc123
@@ -1210,7 +1207,7 @@ class BrainClient:
             ...     max_polls=100,
             ...     max_wait_seconds=600,
             ...     max_pending_cycles=10,
-            ...     max_queue_seconds=60
+            ...     max_queue_seconds=60,
             ... )
             >>> print(result["status"])
             COMPLETED
@@ -1221,11 +1218,7 @@ class BrainClient:
             - 响应体是完成状态的真相来源
             - 队列状态（PENDING/QUEUED）会跟踪等待时间和周期数
         """
-        url = (
-            location
-            if location.startswith("http")
-            else f"{API_BASE}{location}"
-        )
+        url = location if location.startswith("http") else f"{API_BASE}{location}"
         poll_count = 0
         pending_cycles = 0
         started_at = time.monotonic()
@@ -1257,12 +1250,18 @@ class BrainClient:
                     pending_started_at = time.monotonic()
                 pending_cycles += 1
                 self._check_pending_limits(
-                    pending_cycles, max_pending_cycles,
-                    max_queue_seconds, pending_started_at, url,
+                    pending_cycles,
+                    max_pending_cycles,
+                    max_queue_seconds,
+                    pending_started_at,
+                    url,
                 )
                 logger.info(
                     "[simulation] pending location=%s status=%s progress=%s retry_after=%s",
-                    url, status, progress, response_headers.get('Retry-After'),
+                    url,
+                    status,
+                    progress,
+                    response_headers.get("Retry-After"),
                 )
                 if response_headers.get("Retry-After"):
                     wait_seconds(
@@ -1271,7 +1270,9 @@ class BrainClient:
                         verbose=False,  # 常规轮询等待不打印 INFO 日志
                     )
                 else:
-                    wait_seconds(POLLING_NO_RETRY_AFTER_WAIT, f"simulation {status.lower()}", verbose=False)
+                    wait_seconds(
+                        POLLING_NO_RETRY_AFTER_WAIT, f"simulation {status.lower()}", verbose=False
+                    )
                 continue
 
             # 一些 API 响应仅暴露 Retry-After 而省略明确的等待状态。
@@ -1279,9 +1280,7 @@ class BrainClient:
             # 才将这些视为等待状态。
             if response_headers.get("Retry-After"):
                 body_status = str(
-                    first_non_empty(
-                        payload.get("status"), payload.get("state"), ""
-                    )
+                    first_non_empty(payload.get("status"), payload.get("state"), "")
                 ).upper()
                 # 如果 response body 已经是终态，直接返回，
                 # 不被 Retry-After 头误导继续等待
@@ -1296,18 +1295,24 @@ class BrainClient:
                 if body_status in {"", "NONE"} and pending_cycles == 0:
                     logger.info(
                         "[simulation] status is null/empty, body_keys=%s body_preview=%.200s",
-                        sorted(payload.keys()), str(payload),
+                        sorted(payload.keys()),
+                        str(payload),
                     )
                 if pending_started_at is None:
                     pending_started_at = time.monotonic()
                 pending_cycles += 1
                 self._check_pending_limits(
-                    pending_cycles, max_pending_cycles,
-                    max_queue_seconds, pending_started_at, url,
+                    pending_cycles,
+                    max_pending_cycles,
+                    max_queue_seconds,
+                    pending_started_at,
+                    url,
                 )
                 logger.info(
                     "[simulation] pending location=%s body_status=%s retry_after=%s",
-                    url, body_status or 'unknown', response_headers.get('Retry-After'),
+                    url,
+                    body_status or "unknown",
+                    response_headers.get("Retry-After"),
                 )
                 wait_seconds(
                     polling_retry_after(response_headers, default=POLLING_DEFAULT_WAIT),
@@ -1386,7 +1391,9 @@ class BrainClient:
             if retry_after:
                 logger.info(
                     "[submit] pending alpha_id=%s method=%s retry_after=%s",
-                    alpha_id, method, retry_after,
+                    alpha_id,
+                    method,
+                    retry_after,
                 )
                 wait_seconds(
                     polling_retry_after(response_headers, default=POLLING_DEFAULT_WAIT),
@@ -1400,6 +1407,7 @@ class BrainClient:
 # ============================================================================
 # WorkerClientFactory 类
 # ============================================================================
+
 
 class WorkerClientFactory:
     """
@@ -1417,9 +1425,7 @@ class WorkerClientFactory:
     Example:
         >>> import argparse
         >>> args = argparse.Namespace(
-        ...     min_request_interval=0.5,
-        ...     rate_limit_max_retries=3,
-        ...     login_retries=2
+        ...     min_request_interval=0.5, rate_limit_max_retries=3, login_retries=2
         ... )
         >>> factory = WorkerClientFactory(args, "user@example.com", "password")
         >>> # 在工作线程中
@@ -1433,12 +1439,7 @@ class WorkerClientFactory:
         - 客户端创建时会使用 args 中的配置参数
     """
 
-    def __init__(
-        self,
-        args: argparse.Namespace,
-        email: str,
-        password: str
-    ) -> None:
+    def __init__(self, args: argparse.Namespace, email: str, password: str) -> None:
         """
         记录线程级客户端创建所需的参数与凭证。
 
@@ -1455,9 +1456,7 @@ class WorkerClientFactory:
         Example:
             >>> import argparse
             >>> args = argparse.Namespace(
-            ...     min_request_interval=0.5,
-            ...     rate_limit_max_retries=3,
-            ...     login_retries=2
+            ...     min_request_interval=0.5, rate_limit_max_retries=3, login_retries=2
             ... )
             >>> factory = WorkerClientFactory(args, "user@example.com", "password")
         """

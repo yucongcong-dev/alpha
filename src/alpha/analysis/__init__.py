@@ -1,5 +1,3 @@
-
-from __future__ import annotations
 """
 分析与优化包
 
@@ -9,3 +7,5 @@ from __future__ import annotations
     - stats: 结果统计与分析
     - feedback: 历史反馈与迭代优化
 """
+
+from __future__ import annotations

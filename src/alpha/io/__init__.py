@@ -1,5 +1,3 @@
-
-from __future__ import annotations
 """
 输入输出包
 
@@ -9,3 +7,5 @@ from __future__ import annotations
     - credentials: 凭证管理
     - output: 结果输出
 """
+
+from __future__ import annotations

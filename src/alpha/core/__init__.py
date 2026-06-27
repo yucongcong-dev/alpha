@@ -1,5 +1,3 @@
-
-from __future__ import annotations
 """
 核心执行业务包
 
@@ -8,6 +6,8 @@ from __future__ import annotations
 - simulation: 模拟生命周期管理，负责单个模拟任务的创建、轮询、检查和提交
 - scheduler: 并发调度与拥塞控制，负责动态调整并发数和任务节流
 """
+
+from __future__ import annotations
 
 from .executor import (
     build_pending_templates_for_field,

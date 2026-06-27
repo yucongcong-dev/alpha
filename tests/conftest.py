@@ -7,7 +7,7 @@ pytest 共享 fixtures 和配置。
 from __future__ import annotations
 
 import time
-from typing import Any, Dict, Tuple
+from typing import Any
 
 import pytest
 
@@ -42,6 +42,7 @@ FAILED_CHECKS_DISPLAY_CAP = 5
 # Mock args 工厂
 # ============================================================================
 
+
 class MockArgs:
     """
     带类型约束的 argparse.Namespace 替代品。
@@ -60,8 +61,7 @@ class MockArgs:
             object.__setattr__(self, name, value)
         else:
             raise AttributeError(
-                f"MockArgs does not accept attribute '{name}'. "
-                f"Allowed: {sorted(self._allowed)}"
+                f"MockArgs does not accept attribute '{name}'. Allowed: {sorted(self._allowed)}"
             )
 
 
@@ -89,6 +89,7 @@ def scheduler_args() -> MockArgs:
 # ============================================================================
 # 状态对象 fixtures
 # ============================================================================
+
 
 def _make_execution_state(last_submission_at: float = 0.0) -> ExecutionState:
     """ExecutionState 工厂：除 last_submission_at 外其他字段均为空。"""
@@ -151,6 +152,7 @@ def runtime_state_cooldown_expired() -> RuntimeConcurrencyState:
 # FieldTestContext fixtures
 # ============================================================================
 
+
 @pytest.fixture
 def basic_test_context() -> FieldTestContext:
     """标准 MATRIX 字段的 FieldTestContext。"""
@@ -180,6 +182,7 @@ def minimal_test_context() -> FieldTestContext:
 # ============================================================================
 # FieldTestResult fixtures
 # ============================================================================
+
 
 @pytest.fixture
 def sample_field_test_result() -> FieldTestResult:
@@ -216,7 +219,8 @@ def failed_field_test_result() -> FieldTestResult:
 # 计数/集合 fixtures
 # ============================================================================
 
+
 @pytest.fixture
-def empty_counts_and_skipped() -> Tuple[Dict[str, int], set[str]]:
+def empty_counts_and_skipped() -> tuple[dict[str, int], set[str]]:
     """空的 field_queue_busy_counts 和 skipped_fields_due_to_queue。"""
     return {}, set()

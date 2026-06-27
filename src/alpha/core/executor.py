@@ -1,4 +1,3 @@
-
 """
 测试执行流程模块
 
@@ -14,11 +13,13 @@
     - 字段跳过判断函数
     - 干运行计划打印函数
 """
+
 from __future__ import annotations
 
 import argparse
+from collections.abc import Sequence
 import logging
-from typing import Any, Sequence
+from typing import Any
 
 from ..analysis.feedback import (
     choose_settings_variant_budget,
@@ -55,6 +56,7 @@ logger = logging.getLogger(__name__)
 # ============================================================================
 # 模板队列构建函数
 # ============================================================================
+
 
 def build_pending_templates_for_field(
     build_ctx: TemplateBuildContext,
@@ -133,14 +135,24 @@ def build_pending_templates_for_field(
         if should_skip_expression_by_history(field_id, template_name, expression, prior_results):
             disabled_templates += 1
             continue
-        effective_priority = priority + historical_template_priority_bonus(template_name, template_stats)
+        effective_priority = priority + historical_template_priority_bonus(
+            template_name, template_stats
+        )
         for settings_variant in build_setting_variants(
             args, template_name, expression, field_feedback=field_feedback
         )[:max_setting_variants]:
             variant_fingerprint = build_settings_fingerprint_from_payload(settings_variant)
             if (field_id, template_name, expression, variant_fingerprint) in attempted_keys:
                 continue
-            pending_templates.append((template_name, expression, effective_priority, settings_variant, variant_fingerprint))
+            pending_templates.append(
+                (
+                    template_name,
+                    expression,
+                    effective_priority,
+                    settings_variant,
+                    variant_fingerprint,
+                )
+            )
     pending_templates.sort(key=lambda item: (-item[2], item[0], item[1], item[4]))
     return pending_templates, disabled_templates, len(templates)
 
@@ -169,15 +181,19 @@ def should_skip_expression_by_history(
     Example:
         >>> results = [
         ...     FieldTestResult(
-        ...         field_id="sales", template_name="ts_mean_20",
+        ...         field_id="sales",
+        ...         template_name="ts_mean_20",
         ...         expression="rank(ts_mean(sales, 20))",
-        ...         submittable=False, failed_checks=[
+        ...         submittable=False,
+        ...         failed_checks=[
         ...             {"name": "LOW_SHARPE", "value": -0.1},
-        ...             {"name": "LOW_FITNESS", "value": -0.2}
-        ...         ]
+        ...             {"name": "LOW_FITNESS", "value": -0.2},
+        ...         ],
         ...     )
         ... ]
-        >>> should_skip_expression_by_history("sales", "ts_mean_20", "rank(ts_mean(sales, 20))", results)
+        >>> should_skip_expression_by_history(
+        ...     "sales", "ts_mean_20", "rank(ts_mean(sales, 20))", results
+        ... )
         True
 
     Note:
@@ -186,7 +202,11 @@ def should_skip_expression_by_history(
         - 如果同时有 CONCENTRATED_WEIGHT 和 LOW_SUB_UNIVERSE_SHARPE，跳过
     """
     for result in prior_results:
-        if result.field_id != field_id or result.template_name != template_name or result.expression != expression:
+        if (
+            result.field_id != field_id
+            or result.template_name != template_name
+            or result.expression != expression
+        ):
             continue
         if result.submittable:
             return False
@@ -196,7 +216,12 @@ def should_skip_expression_by_history(
         values = {str(check.get("name")): check.get("value") for check in failed_checks}
         low_sharpe = values.get(CHECK_LOW_SHARPE)
         low_fitness = values.get(CHECK_LOW_FITNESS)
-        if isinstance(low_sharpe, (int, float)) and isinstance(low_fitness, (int, float)) and low_sharpe < 0.0 and low_fitness < 0.0:
+        if (
+            isinstance(low_sharpe, (int, float))
+            and isinstance(low_fitness, (int, float))
+            and low_sharpe < 0.0
+            and low_fitness < 0.0
+        ):
             return True
         if CHECK_CONCENTRATED_WEIGHT in values and CHECK_LOW_SUB_UNIVERSE_SHARPE in values:
             return True
@@ -225,8 +250,10 @@ def should_skip_field(
 
     Example:
         >>> filters = RunFilters(
-        ...     include_fields=set(), exclude_fields=set(),
-        ...     include_templates=set(), exclude_templates=set()
+        ...     include_fields=set(),
+        ...     exclude_fields=set(),
+        ...     include_templates=set(),
+        ...     exclude_templates=set(),
         ... )
         >>> should_skip_field("sales", "sales", filters, set())
         False
@@ -243,7 +270,11 @@ def should_skip_field(
     if field_id in skipped_fields_due_to_queue:
         logger.info("[skip] field=%s skipped after repeated queue-busy simulations", field_id)
         return True
-    if filters.include_fields and field_id not in filters.include_fields and field_name not in filters.include_fields:
+    if (
+        filters.include_fields
+        and field_id not in filters.include_fields
+        and field_name not in filters.include_fields
+    ):
         logger.info("[skip] field=%s excluded by include-fields filter", field_id)
         return True
     if field_id in filters.exclude_fields or field_name in filters.exclude_fields:
@@ -255,6 +286,7 @@ def should_skip_field(
 # ============================================================================
 # 干运行计划打印函数
 # ============================================================================
+
 
 def print_dry_run_plan(
     *,
@@ -285,9 +317,13 @@ def print_dry_run_plan(
 
     Example:
         >>> print_dry_run_plan(
-        ...     args=args, fields=fields, filters=filters,
-        ...     template_library=library, historical_state=history,
-        ...     execution_state=state, use_dataset_heuristics=True
+        ...     args=args,
+        ...     fields=fields,
+        ...     filters=filters,
+        ...     template_library=library,
+        ...     historical_state=history,
+        ...     execution_state=state,
+        ...     use_dataset_heuristics=True,
         ... )
 
     Note:
@@ -314,7 +350,9 @@ def print_dry_run_plan(
     for field in fields:
         field_id = str(first_non_empty(field.get("id"), SENTINEL_UNKNOWN))
         field_name = choose_field_name(field)
-        if should_skip_field(field_id, field_name, filters, execution_state.skipped_fields_due_to_queue):
+        if should_skip_field(
+            field_id, field_name, filters, execution_state.skipped_fields_due_to_queue
+        ):
             continue
         pending_templates, disabled_count, template_count = build_pending_templates_for_field(
             build_ctx,
@@ -328,7 +366,13 @@ def print_dry_run_plan(
         planned_fields += 1
         planned_templates += len(pending_templates)
         disabled_templates += disabled_count
-        for template_name, expression, priority, _settings_variant, variant_fingerprint in pending_templates:
+        for (
+            template_name,
+            expression,
+            priority,
+            _settings_variant,
+            variant_fingerprint,
+        ) in pending_templates:
             if len(samples) >= sample_limit:
                 break
             samples.append(
@@ -351,6 +395,11 @@ def print_dry_run_plan(
     for index, sample in enumerate(samples, start=1):
         logger.info(
             "[dry-run] sample %d/%d field=%s template=%s priority=%d settings=%s expression=%s",
-            index, len(samples), sample['field_id'], sample['template_name'],
-            sample['priority'], sample['settings'], sample['expression'],
+            index,
+            len(samples),
+            sample["field_id"],
+            sample["template_name"],
+            sample["priority"],
+            sample["settings"],
+            sample["expression"],
         )

@@ -12,6 +12,7 @@ from alpha.utils import choose_field_name, choose_field_type, first_non_empty
 # first_non_empty 测试
 # ============================================================================
 
+
 class TestFirstNonEmpty:
     """first_non_empty 函数测试用例"""
 
@@ -61,6 +62,7 @@ class TestFirstNonEmpty:
 # choose_field_name 测试
 # ============================================================================
 
+
 class TestChooseFieldName:
     """choose_field_name 函数测试用例"""
 
@@ -104,6 +106,7 @@ class TestChooseFieldName:
 # ============================================================================
 # choose_field_type 测试
 # ============================================================================
+
 
 class TestChooseFieldType:
     """choose_field_type 函数测试用例"""

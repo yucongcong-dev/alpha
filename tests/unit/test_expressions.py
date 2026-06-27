@@ -37,23 +37,17 @@ class TestClassifyExpressionFamily:
         assert family == "zscore_time"
 
     def test_vol_scaled_delta(self) -> None:
-        family = classify_expression_family(
-            "test", "ts_delta(sales, 5) / ts_std_dev(sales, 20)"
-        )
+        family = classify_expression_family("test", "ts_delta(sales, 5) / ts_std_dev(sales, 20)")
         assert family == "vol_scaled_delta"
 
     def test_mean_spread(self) -> None:
-        family = classify_expression_family(
-            "test", "ts_mean(sales, 5) - ts_mean(sales, 20)"
-        )
+        family = classify_expression_family("test", "ts_mean(sales, 5) - ts_mean(sales, 20)")
         assert family == "mean_spread"
 
     # ---- 补充边界测试 ----
     def test_unknown_template_falls_back(self) -> None:
         """未知模板名回退到表达式分类。"""
-        family = classify_expression_family(
-            "completely_unknown_template", "ts_zscore(sales, 60)"
-        )
+        family = classify_expression_family("completely_unknown_template", "ts_zscore(sales, 60)")
         assert family == "zscore_time"
 
     def test_empty_expression(self) -> None:
@@ -82,8 +76,7 @@ class TestIsLegacyFamily:
 
     def test_group_rank_delta_not_legacy(self) -> None:
         assert (
-            is_legacy_family("test", "group_rank(ts_delta(rank(sales), 5), subindustry)")
-            is False
+            is_legacy_family("test", "group_rank(ts_delta(rank(sales), 5), subindustry)") is False
         )
 
     def test_zscore_not_legacy(self) -> None:

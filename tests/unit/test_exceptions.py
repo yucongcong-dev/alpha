@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from alpha.exceptions import BrainAPIError, BrainRateLimitError, BrainQueueBusyError
+from alpha.exceptions import BrainAPIError, BrainQueueBusyError, BrainRateLimitError
 
 
 class TestBrainAPIError:

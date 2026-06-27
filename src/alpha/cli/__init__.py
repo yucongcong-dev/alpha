@@ -1,5 +1,3 @@
-
-from __future__ import annotations
 """
 命令行接口包
 
@@ -8,3 +6,5 @@ from __future__ import annotations
 子模块：
     - parser: 参数解析
 """
+
+from __future__ import annotations

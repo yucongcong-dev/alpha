@@ -1,5 +1,3 @@
-
-from __future__ import annotations
 """
 WorldQuant BRAIN Alpha 自动生成与提交工具包。
 
@@ -27,6 +25,8 @@ WorldQuant BRAIN Alpha 自动生成与提交工具包。
     python -m alpha --dry-run-plan
     python -m alpha --limit 50 --submit
 """
+
+from __future__ import annotations
 
 from .config import (
     ALPHAS_URL,

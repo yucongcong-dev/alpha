@@ -1,5 +1,3 @@
-
-from __future__ import annotations
 """
 主入口模块
 
@@ -23,11 +21,13 @@ from __future__ import annotations
     12. 打印汇总统计
 """
 
+from __future__ import annotations
+
 import argparse
+from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
 import logging
 import threading
 import time
-from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
 from typing import Any
 
 # 导入历史迭代优化
@@ -113,10 +113,9 @@ logger = logging.getLogger(__name__)
 # 客户端创建和登录函数
 # ============================================================================
 
+
 def create_and_login_client(
-    email: str,
-    password: str,
-    args: argparse.Namespace
+    email: str, password: str, args: argparse.Namespace
 ) -> tuple[BrainClient, WorkerClientFactory]:
     """
     创建 Brain API 客户端并完成登录，同时创建工作线程客户端工厂。
@@ -170,6 +169,7 @@ def create_and_login_client(
 # 初始化函数：设置凭证、客户端、模板、字段与历史状态
 # ============================================================================
 
+
 def _initialize(
     args: argparse.Namespace,
     run_paths: Any,
@@ -181,8 +181,8 @@ def _initialize(
     Returns:
         tuple or None: 成功时为包含所有状态变量的元组，失败时为 None。
     """
-    output_file = getattr(run_paths, 'output', None) or args.output
-    log_file = getattr(run_paths, 'log_file', None)
+    output_file = getattr(run_paths, "output", None) or args.output
+    log_file = getattr(run_paths, "log_file", None)
     if log_file:
         setup_runtime_logging(log_file)
 
@@ -199,13 +199,15 @@ def _initialize(
 
     bootstrap_client, client_factory = create_and_login_client(email, password, args)
 
-    template_library_file = getattr(run_paths, 'template_library_file', None) or args.template_library_file
+    template_library_file = (
+        getattr(run_paths, "template_library_file", None) or args.template_library_file
+    )
     template_library = load_template_library(template_library_file)
     filters_dict = load_run_filters_extended(run_paths)
     use_dataset_heuristics = use_fundamental6_heuristics(args.dataset_id)
     template_library_fingerprint = stable_fingerprint(template_library)
     settings_fingerprint = build_settings_fingerprint(args)
-    feedback_output = getattr(run_paths, 'feedback_output', None) or output_file
+    feedback_output = getattr(run_paths, "feedback_output", None) or output_file
     historical_state = build_historical_run_state(output_file, feedback_output)
 
     # --- 字段加载与排序 ---
@@ -225,7 +227,11 @@ def _initialize(
         force_refresh=args.refresh_fields_cache,
     )
     fields = fetch_fields_with_cache(
-        bootstrap_client, args, fields_cache_file, cached_fields, cache_refresh_reason,
+        bootstrap_client,
+        args,
+        fields_cache_file,
+        cached_fields,
+        cache_refresh_reason,
     )
     if not fields:
         logger.error("[error] 数据集 %s 未返回任何字段", args.dataset_id)
@@ -258,7 +264,8 @@ def _initialize(
     if historical_state.existing_results:
         logger.info(
             "[resume] 从 %s 加载 %d 个历史结果",
-            output_file, len(historical_state.existing_results),
+            output_file,
+            len(historical_state.existing_results),
         )
 
     # --- 执行状态初始化 ---
@@ -284,18 +291,30 @@ def _initialize(
     logger.info("[config] simulation_max_pending_cycles=%d", args.simulation_max_pending_cycles)
 
     return (
-        email, password, bootstrap_client, client_factory,
-        template_library, filters_dict, use_dataset_heuristics,
-        template_library_fingerprint, settings_fingerprint,
-        feedback_output, historical_state, fields,
-        execution_state, runtime_state, create_semaphore,
-        run_config, output_file,
+        email,
+        password,
+        bootstrap_client,
+        client_factory,
+        template_library,
+        filters_dict,
+        use_dataset_heuristics,
+        template_library_fingerprint,
+        settings_fingerprint,
+        feedback_output,
+        historical_state,
+        fields,
+        execution_state,
+        runtime_state,
+        create_semaphore,
+        run_config,
+        output_file,
     )
 
 
 # ============================================================================
 # 执行循环：线程池 + 字段遍历 + 结果持久化
 # ============================================================================
+
 
 def _run_field_test_loop(
     args: argparse.Namespace,
@@ -348,7 +367,8 @@ def _run_field_test_loop(
         for field_index, field in enumerate(fields, start=1):
             if should_stop_after_submittable(args, execution_state.results):
                 logger.info(
-                    "[stop] 达到 stop-after-submittable=%d", args.stop_after_submittable,
+                    "[stop] 达到 stop-after-submittable=%d",
+                    args.stop_after_submittable,
                 )
                 break
 
@@ -357,29 +377,44 @@ def _run_field_test_loop(
             field_type = choose_field_type(field)
 
             if should_skip_field(
-                field_id, field_name, filters_dict,
+                field_id,
+                field_name,
+                filters_dict,
                 execution_state.skipped_fields_due_to_queue,
             ):
                 continue
 
-            pending_templates, disabled_templates, template_count = build_pending_templates_for_field(
-                template_build_ctx,
-                field,
-                template_stats=execution_state.template_stats,
-                attempted_keys=execution_state.attempted_keys,
-                prior_results=execution_state.results,
+            pending_templates, disabled_templates, template_count = (
+                build_pending_templates_for_field(
+                    template_build_ctx,
+                    field,
+                    template_stats=execution_state.template_stats,
+                    attempted_keys=execution_state.attempted_keys,
+                    prior_results=execution_state.results,
+                )
             )
 
             logger.info(
                 "[progress] 字段 %d/%d field_id=%s templates=%d pending=%d disabled=%d",
-                field_index, len(fields), field_id, template_count,
-                len(pending_templates), disabled_templates,
+                field_index,
+                len(fields),
+                field_id,
+                template_count,
+                len(pending_templates),
+                disabled_templates,
             )
 
-            for template_index, (template_name, expression, priority, settings_variant, variant_fingerprint) in enumerate(pending_templates, start=1):
+            for template_index, (
+                template_name,
+                expression,
+                priority,
+                settings_variant,
+                variant_fingerprint,
+            ) in enumerate(pending_templates, start=1):
                 if should_stop_after_submittable(args, execution_state.results):
                     logger.info(
-                        "[stop] 达到 stop-after-submittable=%d", args.stop_after_submittable,
+                        "[stop] 达到 stop-after-submittable=%d",
+                        args.stop_after_submittable,
                     )
                     break
 
@@ -390,7 +425,9 @@ def _run_field_test_loop(
                 maybe_restore_runtime_concurrency(runtime_state)
 
                 while len(execution_state.pending_futures) >= runtime_state.runtime_max_workers:
-                    done, _ = wait(set(execution_state.pending_futures), return_when=FIRST_COMPLETED)
+                    done, _ = wait(
+                        set(execution_state.pending_futures), return_when=FIRST_COMPLETED
+                    )
                     drain_completed_futures(
                         completed_futures=list(done),
                         execution_state=execution_state,
@@ -405,9 +442,14 @@ def _run_field_test_loop(
 
                 logger.info(
                     "[progress] field=%s template %d/%d name=%s priority=%d queued=%d/%d settings=%s",
-                    field_id, template_index, len(pending_templates), template_name,
-                    priority, len(execution_state.pending_futures) + 1,
-                    runtime_state.runtime_max_workers, variant_fingerprint,
+                    field_id,
+                    template_index,
+                    len(pending_templates),
+                    template_name,
+                    priority,
+                    len(execution_state.pending_futures) + 1,
+                    runtime_state.runtime_max_workers,
+                    variant_fingerprint,
                 )
 
                 throttle_before_submission(args, execution_state)
@@ -452,15 +494,14 @@ def _run_field_test_loop(
         "[done] 测试完成：tested=%d submittable=%d errors=%d",
         len(execution_state.results),
         current_submittable_count(execution_state.results),
-        sum(1 for r in execution_state.results if r.status == 'error'),
+        sum(1 for r in execution_state.results if r.status == "error"),
     )
-
-
 
 
 # ============================================================================
 # 主入口函数
 # ============================================================================
+
 
 def main() -> int:
     """
@@ -481,12 +522,23 @@ def main() -> int:
         return 1
 
     (
-        email, password, bootstrap_client, client_factory,
-        template_library, filters_dict, use_dataset_heuristics,
-        template_library_fingerprint, settings_fingerprint,
-        feedback_output, historical_state, fields,
-        execution_state, runtime_state, create_semaphore,
-        run_config, output_file,
+        _email,
+        _password,
+        _bootstrap_client,
+        client_factory,
+        template_library,
+        filters_dict,
+        use_dataset_heuristics,
+        template_library_fingerprint,
+        settings_fingerprint,
+        _feedback_output,
+        historical_state,
+        fields,
+        execution_state,
+        runtime_state,
+        create_semaphore,
+        run_config,
+        _output_file,
     ) = init_result
 
     _run_field_test_loop(

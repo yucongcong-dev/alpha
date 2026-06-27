@@ -1,4 +1,3 @@
-
 """
 结果分析统计模块
 
@@ -29,11 +28,13 @@
     - field_priority(field_id, field_feedback) -> float: 字段优先级分数
     - current_submittable_count(results) -> int: 当前可提交数量计数
 """
+
 from __future__ import annotations
 
+from collections.abc import Sequence
 import json
 import os
-from typing import Any, Sequence
+from typing import Any
 
 from ..config import (
     API_KEY_MESSAGE,
@@ -381,7 +382,9 @@ def historical_template_priority_bonus(
     return 0
 
 
-def compile_template_performance_summary(results: Sequence[FieldTestResult]) -> list[dict[str, Any]]:
+def compile_template_performance_summary(
+    results: Sequence[FieldTestResult],
+) -> list[dict[str, Any]]:
     """
     构建适合写入 JSON 的模板层表现汇总。
 
@@ -437,15 +440,25 @@ def compile_template_performance_summary(results: Sequence[FieldTestResult]) -> 
             summary[STAT_FIELD_ERRORS] += 1
         for check in result.failed_checks or []:
             name = str(check.get("name", SENTINEL_UNKNOWN_CHECK))
-            summary[STAT_FIELD_FAILED_CHECK_COUNTS][name] = summary[STAT_FIELD_FAILED_CHECK_COUNTS].get(name, 0) + 1
+            summary[STAT_FIELD_FAILED_CHECK_COUNTS][name] = (
+                summary[STAT_FIELD_FAILED_CHECK_COUNTS].get(name, 0) + 1
+            )
 
     rows = list(grouped.values())
     for row in rows:
         counts = row[STAT_FIELD_FAILED_CHECK_COUNTS]
-        row[STAT_FIELD_TOP_FAILED_CHECKS] = sorted(counts.items(), key=lambda item: (-item[1], item[0]))[:STATS_PERFORMANCE_TOP_N]
-    return sorted(rows, key=lambda row: (
-        -row[STAT_FIELD_SUBMITTABLE], -row[STAT_FIELD_SUBMITTED], -row[STAT_FIELD_ATTEMPTED], row[STAT_FIELD_TEMPLATE_NAME],
-    ))
+        row[STAT_FIELD_TOP_FAILED_CHECKS] = sorted(
+            counts.items(), key=lambda item: (-item[1], item[0])
+        )[:STATS_PERFORMANCE_TOP_N]
+    return sorted(
+        rows,
+        key=lambda row: (
+            -row[STAT_FIELD_SUBMITTABLE],
+            -row[STAT_FIELD_SUBMITTED],
+            -row[STAT_FIELD_ATTEMPTED],
+            row[STAT_FIELD_TEMPLATE_NAME],
+        ),
+    )
 
 
 def compile_field_performance_summary(results: Sequence[FieldTestResult]) -> list[dict[str, Any]]:
@@ -508,15 +521,25 @@ def compile_field_performance_summary(results: Sequence[FieldTestResult]) -> lis
             summary[STAT_FIELD_ERRORS] += 1
         for check in result.failed_checks or []:
             name = str(check.get("name", SENTINEL_UNKNOWN_CHECK))
-            summary[STAT_FIELD_FAILED_CHECK_COUNTS][name] = summary[STAT_FIELD_FAILED_CHECK_COUNTS].get(name, 0) + 1
+            summary[STAT_FIELD_FAILED_CHECK_COUNTS][name] = (
+                summary[STAT_FIELD_FAILED_CHECK_COUNTS].get(name, 0) + 1
+            )
 
     rows = list(grouped.values())
     for row in rows:
         counts = row[STAT_FIELD_FAILED_CHECK_COUNTS]
-        row[STAT_FIELD_TOP_FAILED_CHECKS] = sorted(counts.items(), key=lambda item: (-item[1], item[0]))[:STATS_PERFORMANCE_TOP_N]
-    return sorted(rows, key=lambda row: (
-        -row[STAT_FIELD_SUBMITTABLE], -row[STAT_FIELD_SUBMITTED], -row[STAT_FIELD_ATTEMPTED_TEMPLATES], row[STAT_FIELD_FIELD_ID],
-    ))
+        row[STAT_FIELD_TOP_FAILED_CHECKS] = sorted(
+            counts.items(), key=lambda item: (-item[1], item[0])
+        )[:STATS_PERFORMANCE_TOP_N]
+    return sorted(
+        rows,
+        key=lambda row: (
+            -row[STAT_FIELD_SUBMITTABLE],
+            -row[STAT_FIELD_SUBMITTED],
+            -row[STAT_FIELD_ATTEMPTED_TEMPLATES],
+            row[STAT_FIELD_FIELD_ID],
+        ),
+    )
 
 
 def score_failed_checks(failed_checks: Sequence[dict[str, Any]] | None) -> float:
@@ -656,7 +679,9 @@ def summarize_failed_check(check: dict[str, Any]) -> dict[str, Any]:
             - closeness: 接近度分数
 
     Example:
-        >>> summary = summarize_failed_check({"name": "LOW_SHARPE", "value": 0.9, "limit": 1.0})
+        >>> summary = summarize_failed_check(
+        ...     {"name": "LOW_SHARPE", "value": 0.9, "limit": 1.0}
+        ... )
         >>> print(summary)
         {'name': 'LOW_SHARPE', 'value': 0.9, 'limit': 1.0, 'gap': 0.1, 'closeness': 0.9}
     """
@@ -728,7 +753,11 @@ def compile_failed_check_leaderboard(results: Sequence[FieldTestResult]) -> list
                 row["gaps"].append(gap)
             if closeness is not None:
                 row["closeness_scores"].append(closeness)
-            if result.alpha_id and result.alpha_id not in row["example_alpha_ids"] and len(row["example_alpha_ids"]) < 5:
+            if (
+                result.alpha_id
+                and result.alpha_id not in row["example_alpha_ids"]
+                and len(row["example_alpha_ids"]) < 5
+            ):
                 row["example_alpha_ids"].append(result.alpha_id)
 
     leaderboard: list[dict[str, Any]] = []
@@ -740,12 +769,23 @@ def compile_failed_check_leaderboard(results: Sequence[FieldTestResult]) -> list
         row["avg_value"] = sum(values) / len(values) if values else None
         row["avg_limit"] = sum(limits) / len(limits) if limits else None
         row["avg_gap"] = sum(gaps) / len(gaps) if gaps else None
-        row["avg_closeness"] = sum(closeness_scores) / len(closeness_scores) if closeness_scores else None
+        row["avg_closeness"] = (
+            sum(closeness_scores) / len(closeness_scores) if closeness_scores else None
+        )
         leaderboard.append(row)
-    return sorted(leaderboard, key=lambda row: (-row["count"], -(row["avg_closeness"] or STATS_DEFAULT_SCORE), row["name"]))
+    return sorted(
+        leaderboard,
+        key=lambda row: (
+            -row["count"],
+            -(row["avg_closeness"] or STATS_DEFAULT_SCORE),
+            row["name"],
+        ),
+    )
 
 
-def compile_near_pass_summary(results: Sequence[FieldTestResult], limit: int = STATS_NEARPASS_SUMMARY_LIMIT) -> list[dict[str, Any]]:
+def compile_near_pass_summary(
+    results: Sequence[FieldTestResult], limit: int = STATS_NEARPASS_SUMMARY_LIMIT
+) -> list[dict[str, Any]]:
     """
     列出最接近通过检查的 Alpha，用于指导下一轮变体搜索。
 
@@ -793,10 +833,14 @@ def compile_near_pass_summary(results: Sequence[FieldTestResult], limit: int = S
                 "alpha_id": result.alpha_id,
                 "expression": result.expression,
                 "message": result.message,
-                "failed_checks": [summarize_failed_check(check) for check in result.failed_checks or []],
+                "failed_checks": [
+                    summarize_failed_check(check) for check in result.failed_checks or []
+                ],
             }
         )
-    return sorted(rows, key=lambda row: (-row["score"], row["field_id"], row["template_name"]))[:limit]
+    return sorted(rows, key=lambda row: (-row["score"], row["field_id"], row["template_name"]))[
+        :limit
+    ]
 
 
 def compile_optimization_hints(
@@ -843,7 +887,9 @@ def compile_optimization_hints(
     if CHECK_HIGH_TURNOVER in dominant_names:
         hints.append("换手率过高；尝试更长的窗口、更高的衰减或更平滑的 ts_mean/ts_decay 结构。")
     if CHECK_CONCENTRATED_WEIGHT in dominant_names:
-        hints.append("权重集中度过高；优先使用 group_rank/group_zscore 变体，避免原始比率或稀疏级别信号。")
+        hints.append(
+            "权重集中度过高；优先使用 group_rank/group_zscore 变体，避免原始比率或稀疏级别信号。"
+        )
     if near_pass_summary:
         best = near_pass_summary[0]
         hints.append(
@@ -890,7 +936,9 @@ def compile_field_feedback(results: Sequence[FieldTestResult]) -> dict[str, dict
         )
         for check in result.failed_checks or []:
             name = str(check.get("name", SENTINEL_UNKNOWN_CHECK))
-            summary[STAT_FIELD_FAILED_CHECK_COUNTS][name] = summary[STAT_FIELD_FAILED_CHECK_COUNTS].get(name, 0) + 1
+            summary[STAT_FIELD_FAILED_CHECK_COUNTS][name] = (
+                summary[STAT_FIELD_FAILED_CHECK_COUNTS].get(name, 0) + 1
+            )
         if result.status != STATUS_SIMULATED or not result.failed_checks:
             continue
         score = score_failed_checks(result.failed_checks)

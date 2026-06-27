@@ -21,6 +21,7 @@ from alpha.models.base import FieldTestContext, FieldTestResult
 # extract_alpha_id 测试
 # ============================================================================
 
+
 class TestExtractAlphaId:
     """extract_alpha_id 函数测试"""
 
@@ -94,6 +95,7 @@ class TestExtractAlphaId:
 # extract_checks 测试
 # ============================================================================
 
+
 class TestExtractChecks:
     """extract_checks 函数测试"""
 
@@ -131,6 +133,7 @@ class TestExtractChecks:
 # extract_failed_checks 测试
 # ============================================================================
 
+
 class TestExtractFailedChecks:
     """extract_failed_checks 函数测试"""
 
@@ -146,9 +149,7 @@ class TestExtractFailedChecks:
         assert result[0]["name"] == "LOW_SHARPE"
 
     def test_all_pass(self) -> None:
-        payload = {
-            "checks": [{"name": "LOW_SHARPE", "result": "PASS", "value": 1.5, "limit": 1.0}]
-        }
+        payload = {"checks": [{"name": "LOW_SHARPE", "result": "PASS", "value": 1.5, "limit": 1.0}]}
         assert extract_failed_checks(payload) == []
 
     def test_case_insensitive_fail(self) -> None:
@@ -182,6 +183,7 @@ class TestExtractFailedChecks:
 # is_submittable_from_checks 测试
 # ============================================================================
 
+
 class TestIsSubmittableFromChecks:
     """is_submittable_from_checks 函数测试"""
 
@@ -190,10 +192,12 @@ class TestIsSubmittableFromChecks:
 
     def test_any_fail(self) -> None:
         assert (
-            is_submittable_from_checks([
-                {"name": "LOW_SHARPE", "result": "PASS"},
-                {"name": "LOW_FITNESS", "result": "FAIL"},
-            ])
+            is_submittable_from_checks(
+                [
+                    {"name": "LOW_SHARPE", "result": "PASS"},
+                    {"name": "LOW_FITNESS", "result": "FAIL"},
+                ]
+            )
             is False
         )
 
@@ -205,20 +209,24 @@ class TestIsSubmittableFromChecks:
 
     def test_multiple_fail_first_wins(self) -> None:
         assert (
-            is_submittable_from_checks([
-                {"name": "A", "result": "FAIL"},
-                {"name": "B", "result": "PASS"},
-            ])
+            is_submittable_from_checks(
+                [
+                    {"name": "A", "result": "FAIL"},
+                    {"name": "B", "result": "PASS"},
+                ]
+            )
             is False
         )
 
     def test_missing_result_field_treated_as_pass(self) -> None:
         """缺少 result 字段的检查项视为通过。"""
         assert (
-            is_submittable_from_checks([
-                {"name": "A", "result": "PASS"},
-                {"name": "B"},  # no result field
-            ])
+            is_submittable_from_checks(
+                [
+                    {"name": "A", "result": "PASS"},
+                    {"name": "B"},  # no result field
+                ]
+            )
             is True
         )
 
@@ -226,6 +234,7 @@ class TestIsSubmittableFromChecks:
 # ============================================================================
 # summarize_failure 测试
 # ============================================================================
+
 
 class TestSummarizeFailure:
     """summarize_failure 函数测试"""
@@ -246,12 +255,14 @@ class TestSummarizeFailure:
     # ---- 失败检查摘要 ----
     def test_failed_checks_summary(self) -> None:
         assert (
-            summarize_failure({
-                "checks": [
-                    {"name": "LOW_SHARPE", "result": "FAIL"},
-                    {"name": "LOW_FITNESS", "result": "FAIL"},
-                ]
-            })
+            summarize_failure(
+                {
+                    "checks": [
+                        {"name": "LOW_SHARPE", "result": "FAIL"},
+                        {"name": "LOW_FITNESS", "result": "FAIL"},
+                    ]
+                }
+            )
             == "failed checks: LOW_SHARPE, LOW_FITNESS"
         )
 
@@ -265,12 +276,14 @@ class TestSummarizeFailure:
 
     def test_mixed_pass_fail_checks(self) -> None:
         """混合 PASS/FAIL 时只列出 FAIL 的检查项。"""
-        result = summarize_failure({
-            "checks": [
-                {"name": "LOW_SHARPE", "result": "FAIL"},
-                {"name": "LOW_FITNESS", "result": "PASS"},
-            ]
-        })
+        result = summarize_failure(
+            {
+                "checks": [
+                    {"name": "LOW_SHARPE", "result": "FAIL"},
+                    {"name": "LOW_FITNESS", "result": "PASS"},
+                ]
+            }
+        )
         assert "LOW_SHARPE" in result
         assert "LOW_FITNESS" not in result
 
@@ -290,15 +303,14 @@ class TestSummarizeFailure:
 
     def test_unknown_check_name_defaults(self) -> None:
         """无 name 字段的检查项使用 UNKNOWN 替代。"""
-        result = summarize_failure({
-            "checks": [{"result": "FAIL"}]
-        })
+        result = summarize_failure({"checks": [{"result": "FAIL"}]})
         assert "UNKNOWN" in result
 
 
 # ============================================================================
 # build_failure_result 测试
 # ============================================================================
+
 
 class TestBuildFailureResult:
     """build_failure_result 函数测试"""
@@ -386,6 +398,7 @@ class TestBuildFailureResult:
 # FieldTestContext 测试
 # ============================================================================
 
+
 class TestFieldTestContext:
     """FieldTestContext 数据类测试"""
 
@@ -409,9 +422,7 @@ class TestFieldTestContext:
         assert result.submitted is True
         assert result.status == "submitted"
 
-    def test_failure_with_optional_fields(
-        self, minimal_test_context: FieldTestContext
-    ) -> None:
+    def test_failure_with_optional_fields(self, minimal_test_context: FieldTestContext) -> None:
         result = minimal_test_context.failure(
             failed_stage="submit",
             message="err",
@@ -423,9 +434,7 @@ class TestFieldTestContext:
         assert result.alpha_id == "alpha_1"
         assert result.status == "submit_failed"
 
-    def test_failure_default_status_is_error(
-        self, minimal_test_context: FieldTestContext
-    ) -> None:
+    def test_failure_default_status_is_error(self, minimal_test_context: FieldTestContext) -> None:
         result = minimal_test_context.failure(failed_stage="simulation", message="err")
         assert result.status == "error"
 
@@ -441,9 +450,7 @@ class TestFieldTestContext:
         )
         assert result.status == "simulated"
 
-    def test_failure_with_failed_checks(
-        self, basic_test_context: FieldTestContext
-    ) -> None:
+    def test_failure_with_failed_checks(self, basic_test_context: FieldTestContext) -> None:
         checks = [{"name": "LOW_SHARPE", "value": 0.5, "limit": 1.0}]
         result = basic_test_context.failure(
             failed_stage="checksubmit",
@@ -455,12 +462,18 @@ class TestFieldTestContext:
     def test_context_fields_independent(self) -> None:
         """不同 context 实例的字段相互独立。"""
         ctx1 = FieldTestContext(
-            field_id="a", field_type="MATRIX", field_name="a",
-            template_name="ta", expression="ea",
+            field_id="a",
+            field_type="MATRIX",
+            field_name="a",
+            template_name="ta",
+            expression="ea",
         )
         ctx2 = FieldTestContext(
-            field_id="b", field_type="VECTOR", field_name="b",
-            template_name="tb", expression="eb",
+            field_id="b",
+            field_type="VECTOR",
+            field_name="b",
+            template_name="tb",
+            expression="eb",
         )
         r1 = ctx1.failure(failed_stage="simulation", message="e1")
         r2 = ctx2.failure(failed_stage="simulation", message="e2")

@@ -1,5 +1,3 @@
-
-from __future__ import annotations
 """
 参数变体模块
 
@@ -13,6 +11,8 @@ from __future__ import annotations
     - build_settings_fingerprint_from_payload(): 从 payload 生成指纹
     - build_setting_variants(): 构建设置变体列表
 """
+
+from __future__ import annotations
 
 import hashlib
 import json
@@ -180,84 +180,181 @@ def build_settings_fingerprint_from_payload(payload: dict[str, Any]) -> str:
 
 _VARIANT_SPECS: list[tuple[tuple[str, ...], str, dict[str, Any]]] = [
     # --- group_vol_scaled_delta / group_mean_spread / group_zscore ---
-    (("group_vol_scaled_delta", "group_mean_spread", "group_zscore"), "always",
-     {"decay": 0, "truncation": 0.05, "nanHandling": "ON", "neutralization": "SUBINDUSTRY"}),
-    (("group_vol_scaled_delta", "group_mean_spread", "group_zscore"), "always",
-     {"decay": 3, "truncation": 0.08, "nanHandling": "ON", "neutralization": "SUBINDUSTRY"}),
-    (("group_vol_scaled_delta", "group_mean_spread", "group_zscore"), "always",
-     {"decay": 0, "truncation": 0.12, "nanHandling": "ON", "neutralization": "INDUSTRY"}),
-    (("group_vol_scaled_delta", "group_mean_spread", "group_zscore"), "near_pass",
-     {"decay": 3, "truncation": 0.05, "nanHandling": "ON", "neutralization": "MARKET"}),
-    (("group_vol_scaled_delta", "group_mean_spread", "group_zscore"), "near_pass",
-     {"decay": 0, "truncation": 0.08, "nanHandling": "ON", "neutralization": "MARKET"}),
-    (("group_vol_scaled_delta", "group_mean_spread", "group_zscore"), "close",
-     {"decay": 7, "truncation": 0.05, "nanHandling": "ON", "neutralization": "SUBINDUSTRY"}),
-    (("group_vol_scaled_delta", "group_mean_spread", "group_zscore"), "close",
-     {"decay": 3, "truncation": 0.05, "nanHandling": "ON", "neutralization": "INDUSTRY"}),
-
+    (
+        ("group_vol_scaled_delta", "group_mean_spread", "group_zscore"),
+        "always",
+        {"decay": 0, "truncation": 0.05, "nanHandling": "ON", "neutralization": "SUBINDUSTRY"},
+    ),
+    (
+        ("group_vol_scaled_delta", "group_mean_spread", "group_zscore"),
+        "always",
+        {"decay": 3, "truncation": 0.08, "nanHandling": "ON", "neutralization": "SUBINDUSTRY"},
+    ),
+    (
+        ("group_vol_scaled_delta", "group_mean_spread", "group_zscore"),
+        "always",
+        {"decay": 0, "truncation": 0.12, "nanHandling": "ON", "neutralization": "INDUSTRY"},
+    ),
+    (
+        ("group_vol_scaled_delta", "group_mean_spread", "group_zscore"),
+        "near_pass",
+        {"decay": 3, "truncation": 0.05, "nanHandling": "ON", "neutralization": "MARKET"},
+    ),
+    (
+        ("group_vol_scaled_delta", "group_mean_spread", "group_zscore"),
+        "near_pass",
+        {"decay": 0, "truncation": 0.08, "nanHandling": "ON", "neutralization": "MARKET"},
+    ),
+    (
+        ("group_vol_scaled_delta", "group_mean_spread", "group_zscore"),
+        "close",
+        {"decay": 7, "truncation": 0.05, "nanHandling": "ON", "neutralization": "SUBINDUSTRY"},
+    ),
+    (
+        ("group_vol_scaled_delta", "group_mean_spread", "group_zscore"),
+        "close",
+        {"decay": 3, "truncation": 0.05, "nanHandling": "ON", "neutralization": "INDUSTRY"},
+    ),
     # --- group_vol_scaled_delta 额外变体（best performing family） ---
-    (("group_vol_scaled_delta",), "always",
-     {"decay": 2, "truncation": 0.03, "nanHandling": "ON", "neutralization": "SUBINDUSTRY"}),
-    (("group_vol_scaled_delta",), "always",
-     {"decay": 5, "truncation": 0.05, "nanHandling": "ON", "neutralization": "SUBINDUSTRY"}),
-    (("group_vol_scaled_delta",), "always",
-     {"decay": 0, "truncation": 0.05, "nanHandling": "OFF", "neutralization": "SUBINDUSTRY"}),
-    (("group_vol_scaled_delta",), "always",
-     {"decay": 3, "truncation": 0.05, "nanHandling": "ON", "neutralization": "INDUSTRY"}),
-    (("group_vol_scaled_delta",), "near_pass",
-     {"decay": 2, "truncation": 0.03, "nanHandling": "ON", "neutralization": "MARKET"}),
-    (("group_vol_scaled_delta",), "near_pass",
-     {"decay": 5, "truncation": 0.03, "nanHandling": "ON", "neutralization": "MARKET"}),
-    (("group_vol_scaled_delta",), "near_pass",
-     {"decay": 0, "truncation": 0.03, "nanHandling": "ON", "neutralization": "SUBINDUSTRY"}),
-    (("group_vol_scaled_delta",), "near_pass",
-     {"decay": 7, "truncation": 0.05, "nanHandling": "ON", "neutralization": "MARKET"}),
-    (("group_vol_scaled_delta",), "close",
-     {"decay": 2, "truncation": 0.02, "nanHandling": "ON", "neutralization": "SUBINDUSTRY"}),
-    (("group_vol_scaled_delta",), "close",
-     {"decay": 3, "truncation": 0.02, "nanHandling": "ON", "neutralization": "MARKET"}),
-    (("group_vol_scaled_delta",), "close",
-     {"decay": 5, "truncation": 0.02, "nanHandling": "ON", "neutralization": "INDUSTRY"}),
-
+    (
+        ("group_vol_scaled_delta",),
+        "always",
+        {"decay": 2, "truncation": 0.03, "nanHandling": "ON", "neutralization": "SUBINDUSTRY"},
+    ),
+    (
+        ("group_vol_scaled_delta",),
+        "always",
+        {"decay": 5, "truncation": 0.05, "nanHandling": "ON", "neutralization": "SUBINDUSTRY"},
+    ),
+    (
+        ("group_vol_scaled_delta",),
+        "always",
+        {"decay": 0, "truncation": 0.05, "nanHandling": "OFF", "neutralization": "SUBINDUSTRY"},
+    ),
+    (
+        ("group_vol_scaled_delta",),
+        "always",
+        {"decay": 3, "truncation": 0.05, "nanHandling": "ON", "neutralization": "INDUSTRY"},
+    ),
+    (
+        ("group_vol_scaled_delta",),
+        "near_pass",
+        {"decay": 2, "truncation": 0.03, "nanHandling": "ON", "neutralization": "MARKET"},
+    ),
+    (
+        ("group_vol_scaled_delta",),
+        "near_pass",
+        {"decay": 5, "truncation": 0.03, "nanHandling": "ON", "neutralization": "MARKET"},
+    ),
+    (
+        ("group_vol_scaled_delta",),
+        "near_pass",
+        {"decay": 0, "truncation": 0.03, "nanHandling": "ON", "neutralization": "SUBINDUSTRY"},
+    ),
+    (
+        ("group_vol_scaled_delta",),
+        "near_pass",
+        {"decay": 7, "truncation": 0.05, "nanHandling": "ON", "neutralization": "MARKET"},
+    ),
+    (
+        ("group_vol_scaled_delta",),
+        "close",
+        {"decay": 2, "truncation": 0.02, "nanHandling": "ON", "neutralization": "SUBINDUSTRY"},
+    ),
+    (
+        ("group_vol_scaled_delta",),
+        "close",
+        {"decay": 3, "truncation": 0.02, "nanHandling": "ON", "neutralization": "MARKET"},
+    ),
+    (
+        ("group_vol_scaled_delta",),
+        "close",
+        {"decay": 5, "truncation": 0.02, "nanHandling": "ON", "neutralization": "INDUSTRY"},
+    ),
     # --- vol_scaled_delta / mean_spread / zscore_time / rank_delta / decayed_delta ---
-    (("vol_scaled_delta", "mean_spread", "zscore_time", "rank_delta", "decayed_delta"), "always",
-     {"decay": 0, "truncation": 0.05, "nanHandling": "ON", "neutralization": "SUBINDUSTRY"}),
-    (("vol_scaled_delta", "mean_spread", "zscore_time", "rank_delta", "decayed_delta"), "always",
-     {"decay": 5, "truncation": 0.08, "nanHandling": "OFF", "neutralization": "SUBINDUSTRY"}),
-    (("vol_scaled_delta", "mean_spread", "zscore_time", "rank_delta", "decayed_delta"), "always",
-     {"decay": 0, "truncation": 0.12, "nanHandling": "ON", "neutralization": "INDUSTRY"}),
-    (("vol_scaled_delta", "mean_spread", "zscore_time", "rank_delta", "decayed_delta"), "near_pass",
-     {"decay": 3, "truncation": 0.05, "nanHandling": "ON", "neutralization": "MARKET"}),
-    (("vol_scaled_delta", "mean_spread", "zscore_time", "rank_delta", "decayed_delta"), "near_pass",
-     {"decay": 0, "truncation": 0.08, "nanHandling": "ON", "neutralization": "MARKET"}),
-    (("vol_scaled_delta", "mean_spread", "zscore_time", "rank_delta", "decayed_delta"), "close",
-     {"decay": 7, "truncation": 0.05, "nanHandling": "ON", "neutralization": "SUBINDUSTRY"}),
-
+    (
+        ("vol_scaled_delta", "mean_spread", "zscore_time", "rank_delta", "decayed_delta"),
+        "always",
+        {"decay": 0, "truncation": 0.05, "nanHandling": "ON", "neutralization": "SUBINDUSTRY"},
+    ),
+    (
+        ("vol_scaled_delta", "mean_spread", "zscore_time", "rank_delta", "decayed_delta"),
+        "always",
+        {"decay": 5, "truncation": 0.08, "nanHandling": "OFF", "neutralization": "SUBINDUSTRY"},
+    ),
+    (
+        ("vol_scaled_delta", "mean_spread", "zscore_time", "rank_delta", "decayed_delta"),
+        "always",
+        {"decay": 0, "truncation": 0.12, "nanHandling": "ON", "neutralization": "INDUSTRY"},
+    ),
+    (
+        ("vol_scaled_delta", "mean_spread", "zscore_time", "rank_delta", "decayed_delta"),
+        "near_pass",
+        {"decay": 3, "truncation": 0.05, "nanHandling": "ON", "neutralization": "MARKET"},
+    ),
+    (
+        ("vol_scaled_delta", "mean_spread", "zscore_time", "rank_delta", "decayed_delta"),
+        "near_pass",
+        {"decay": 0, "truncation": 0.08, "nanHandling": "ON", "neutralization": "MARKET"},
+    ),
+    (
+        ("vol_scaled_delta", "mean_spread", "zscore_time", "rank_delta", "decayed_delta"),
+        "close",
+        {"decay": 7, "truncation": 0.05, "nanHandling": "ON", "neutralization": "SUBINDUSTRY"},
+    ),
     # --- vol_scaled_delta 额外变体 ---
-    (("vol_scaled_delta",), "always",
-     {"decay": 2, "truncation": 0.03, "nanHandling": "ON", "neutralization": "SUBINDUSTRY"}),
-    (("vol_scaled_delta",), "always",
-     {"decay": 3, "truncation": 0.05, "nanHandling": "ON", "neutralization": "INDUSTRY"}),
-    (("vol_scaled_delta",), "near_pass",
-     {"decay": 2, "truncation": 0.03, "nanHandling": "ON", "neutralization": "MARKET"}),
-    (("vol_scaled_delta",), "near_pass",
-     {"decay": 0, "truncation": 0.03, "nanHandling": "ON", "neutralization": "SUBINDUSTRY"}),
-
+    (
+        ("vol_scaled_delta",),
+        "always",
+        {"decay": 2, "truncation": 0.03, "nanHandling": "ON", "neutralization": "SUBINDUSTRY"},
+    ),
+    (
+        ("vol_scaled_delta",),
+        "always",
+        {"decay": 3, "truncation": 0.05, "nanHandling": "ON", "neutralization": "INDUSTRY"},
+    ),
+    (
+        ("vol_scaled_delta",),
+        "near_pass",
+        {"decay": 2, "truncation": 0.03, "nanHandling": "ON", "neutralization": "MARKET"},
+    ),
+    (
+        ("vol_scaled_delta",),
+        "near_pass",
+        {"decay": 0, "truncation": 0.03, "nanHandling": "ON", "neutralization": "SUBINDUSTRY"},
+    ),
     # --- group_ratio_level / legacy_ratio ---
-    (("group_ratio_level", "legacy_ratio"), "always",
-     {"decay": 5, "truncation": 0.08, "nanHandling": "OFF", "neutralization": "SUBINDUSTRY"}),
-    (("group_ratio_level", "legacy_ratio"), "always",
-     {"decay": 7, "truncation": 0.08, "nanHandling": "OFF", "neutralization": "SUBINDUSTRY"}),
-    (("group_ratio_level", "legacy_ratio"), "always",
-     {"decay": 0, "truncation": 0.05, "nanHandling": "ON", "neutralization": "SUBINDUSTRY"}),
-
+    (
+        ("group_ratio_level", "legacy_ratio"),
+        "always",
+        {"decay": 5, "truncation": 0.08, "nanHandling": "OFF", "neutralization": "SUBINDUSTRY"},
+    ),
+    (
+        ("group_ratio_level", "legacy_ratio"),
+        "always",
+        {"decay": 7, "truncation": 0.08, "nanHandling": "OFF", "neutralization": "SUBINDUSTRY"},
+    ),
+    (
+        ("group_ratio_level", "legacy_ratio"),
+        "always",
+        {"decay": 0, "truncation": 0.05, "nanHandling": "ON", "neutralization": "SUBINDUSTRY"},
+    ),
     # --- legacy_level / legacy_group_level ---
-    (("legacy_level", "legacy_group_level"), "always",
-     {"decay": 0, "truncation": 0.05, "nanHandling": "ON", "neutralization": "SUBINDUSTRY"}),
-    (("legacy_level", "legacy_group_level"), "always",
-     {"decay": 5, "truncation": 0.08, "nanHandling": "OFF", "neutralization": "SUBINDUSTRY"}),
-    (("legacy_level", "legacy_group_level"), "always",
-     {"decay": 0, "truncation": 0.12, "nanHandling": "ON", "neutralization": "INDUSTRY"}),
+    (
+        ("legacy_level", "legacy_group_level"),
+        "always",
+        {"decay": 0, "truncation": 0.05, "nanHandling": "ON", "neutralization": "SUBINDUSTRY"},
+    ),
+    (
+        ("legacy_level", "legacy_group_level"),
+        "always",
+        {"decay": 5, "truncation": 0.08, "nanHandling": "OFF", "neutralization": "SUBINDUSTRY"},
+    ),
+    (
+        ("legacy_level", "legacy_group_level"),
+        "always",
+        {"decay": 0, "truncation": 0.12, "nanHandling": "ON", "neutralization": "INDUSTRY"},
+    ),
 ]
 
 
@@ -286,7 +383,11 @@ def build_setting_variants(
     variants: list[SettingsVariant] = []
     family = classify_expression_family(template_name, expression)
 
-    best_score = float(field_feedback.get("best_score", STATS_DEFAULT_SCORE)) if field_feedback else STATS_DEFAULT_SCORE
+    best_score = (
+        float(field_feedback.get("best_score", STATS_DEFAULT_SCORE))
+        if field_feedback
+        else STATS_DEFAULT_SCORE
+    )
     is_near_pass = best_score >= SETTINGS_NEARPASS_THRESHOLD
     is_close = best_score >= SETTINGS_CLOSE_THRESHOLD
 
