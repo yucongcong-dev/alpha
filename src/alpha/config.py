@@ -75,10 +75,6 @@ SUBMIT_MAX_TURNOVER: float = 0.75
 SUBMIT_MAX_WEIGHT: float = 0.13
 """提交要求的单股最大权重上限（13%）。防止权重过度集中在少数股票上。"""
 
-SUBMIT_MAX_SELF_CORRELATION: float = 0.75
-"""提交要求的最大自相关性。与已提交 Alpha 相关性超过此值会被拒绝。"""
-
-
 # ============================================================================
 # 表达式生成器配置
 # ============================================================================
@@ -113,8 +109,27 @@ FEEDBACK_TEMPLATE_MIN_PRIORITY: int = 105
 DELTA_STD_PRIORITY_BOOST: int = 15
 """delta/std 类模板额外优先级加成。历史数据显示 delta_over_std 模板 Sharpe 显著优于均值。"""
 
-DELTA_STD_MIN_WINDOWS: int = 6
-"""delta/std 比率模板的最小窗口变体数量"""
+# ============================================================================
+# 检查项名称常量（避免字符串硬编码）
+# ============================================================================
+
+CHECK_LOW_SHARPE: str = "LOW_SHARPE"
+"""夏普比率未达标检查项名称"""
+
+CHECK_LOW_TURNOVER: str = "LOW_TURNOVER"
+"""换手率过低检查项名称"""
+
+CHECK_LOW_FITNESS: str = "LOW_FITNESS"
+"""综合适应性未达标检查项名称"""
+
+CHECK_LOW_SUB_UNIVERSE_SHARPE: str = "LOW_SUB_UNIVERSE_SHARPE"
+"""子宇宙夏普比率未达标检查项名称"""
+
+CHECK_CONCENTRATED_WEIGHT: str = "CONCENTRATED_WEIGHT"
+"""权重集中度检查项名称"""
+
+CHECK_HIGH_TURNOVER: str = "HIGH_TURNOVER"
+"""换手率过高检查项名称"""
 
 
 # ============================================================================
@@ -126,23 +141,6 @@ SETTINGS_NEARPASS_THRESHOLD: float = 0.45
 
 SETTINGS_CLOSE_THRESHOLD: float = 0.65
 """settings 变体生成 - 接近成功阈值：best_score >= 此值时生成更多微调变体"""
-
-
-# ============================================================================
-# Settings 变体参数候选值（decay / truncation / neutralization）
-# ============================================================================
-
-SETTINGS_DECAY_CANDIDATES: tuple = (0, 2, 3, 5, 7)
-"""settings 变体中可用的 decay 候选值列表"""
-
-SETTINGS_TRUNCATION_CANDIDATES: tuple = (0.02, 0.03, 0.05, 0.08, 0.12)
-"""settings 变体中可用的 truncation 候选值列表"""
-
-SETTINGS_NEUTRALIZATION_CANDIDATES: tuple = ("SUBINDUSTRY", "INDUSTRY", "MARKET")
-"""settings 变体中可用的 neutralization 候选值列表"""
-
-SETTINGS_NAN_HANDLING_CANDIDATES: tuple = ("ON", "OFF")
-"""settings 变体中可用的 nanHandling 候选值列表"""
 
 
 # ============================================================================
@@ -228,20 +226,6 @@ STATS_PERFORMANCE_TOP_N: int = 10
 # ============================================================================
 # 数据字段分类配置
 # ============================================================================
-
-RATIO_KEYWORDS_IN_NAME: List[str] = [
-    "ratio",
-    "margin",
-    "yield",
-    "return",
-    "turnover",
-]
-"""
-比率类型字段的识别关键词列表
-
-当字段名称包含这些关键词时，系统可以判断该字段可能已经是比率类型，
-从而在构建新的 Alpha 表达式时避免不必要的比率计算。
-"""
 
 RATIO_PARTNER_CANDIDATES: Dict[str, Tuple[str, ...]] = {
     "debt": ("cap", "fnd6_mkvalt", "fnd6_mkvaltq", "assets", "equity", "enterprise_value"),

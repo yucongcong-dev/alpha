@@ -25,6 +25,7 @@ from ..analysis.feedback import (
     should_skip_field_template_family,
 )
 from ..analysis.stats import historical_template_priority_bonus
+from ..config import CHECK_CONCENTRATED_WEIGHT, CHECK_LOW_FITNESS, CHECK_LOW_SHARPE, CHECK_LOW_SUB_UNIVERSE_SHARPE
 from ..generators.expressions import build_expression_candidates
 from ..generators.settings import (
     build_setting_variants,
@@ -185,11 +186,11 @@ def should_skip_expression_by_history(
         if not failed_checks:
             continue
         values = {str(check.get("name")): check.get("value") for check in failed_checks}
-        low_sharpe = values.get("LOW_SHARPE")
-        low_fitness = values.get("LOW_FITNESS")
+        low_sharpe = values.get(CHECK_LOW_SHARPE)
+        low_fitness = values.get(CHECK_LOW_FITNESS)
         if isinstance(low_sharpe, (int, float)) and isinstance(low_fitness, (int, float)) and low_sharpe < 0.0 and low_fitness < 0.0:
             return True
-        if "CONCENTRATED_WEIGHT" in values and "LOW_SUB_UNIVERSE_SHARPE" in values:
+        if CHECK_CONCENTRATED_WEIGHT in values and CHECK_LOW_SUB_UNIVERSE_SHARPE in values:
             return True
     return False
 

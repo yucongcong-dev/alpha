@@ -23,6 +23,11 @@ import argparse
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 from ..config import (
+    CHECK_CONCENTRATED_WEIGHT,
+    CHECK_HIGH_TURNOVER,
+    CHECK_LOW_SHARPE,
+    CHECK_LOW_SUB_UNIVERSE_SHARPE,
+    CHECK_LOW_TURNOVER,
     DELTA_STD_PRIORITY_BOOST,
     FEEDBACK_MUTATION_HIGHSCORE_THRESHOLD,
     FEEDBACK_MUTATION_NEARPASS_THRESHOLD,
@@ -417,7 +422,7 @@ def build_feedback_mutations(
             ]
         )
 
-    if "LOW_TURNOVER" in dominant_names:
+    if CHECK_LOW_TURNOVER in dominant_names:
         mutations.extend(
             [
                 ("iter_rank_delta_3", f"rank(ts_delta(ts_backfill({field_name}, 240), 3))", 186),
@@ -426,7 +431,7 @@ def build_feedback_mutations(
             ]
         )
 
-    if "LOW_SUB_UNIVERSE_SHARPE" in dominant_names or "CONCENTRATED_WEIGHT" in dominant_names:
+    if CHECK_LOW_SUB_UNIVERSE_SHARPE in dominant_names or CHECK_CONCENTRATED_WEIGHT in dominant_names:
         mutations.extend(
             [
                 ("iter_group_zscore_20", f"group_rank(ts_zscore(ts_backfill({field_name}, 240), 20), subindustry)", 185),
@@ -548,7 +553,7 @@ def should_keep_template_for_feedback(
         return True
 
     # Historical results show these shapes are repeatedly too slow.
-    if "LOW_TURNOVER" in dominant_names:
+    if CHECK_LOW_TURNOVER in dominant_names:
         if lower_name.startswith(("ts_mean_", "backfill_", "sum_", "stddev_")):
             return False
         if lower_name in {"zscore", "scale", "rank_raw", "raw_field", "rank_raw_field"}:
@@ -559,7 +564,7 @@ def should_keep_template_for_feedback(
             return False
 
     # These shapes have repeatedly concentrated or broken sub-universe quality.
-    if "LOW_SUB_UNIVERSE_SHARPE" in dominant_names or "CONCENTRATED_WEIGHT" in dominant_names:
+    if CHECK_LOW_SUB_UNIVERSE_SHARPE in dominant_names or CHECK_CONCENTRATED_WEIGHT in dominant_names:
         if family in {"legacy_level", "legacy_group_level", "legacy_ratio", "legacy_neg_ratio", "group_ratio_level"}:
             return False
         if lower_name.startswith(("raw_ratio_", "ratio_", "rank_ratio_", "group_rank_ratio_")):
@@ -569,7 +574,7 @@ def should_keep_template_for_feedback(
 
     # Ratio-based templates consistently waste queue budget on fundamental6.
     # Once we have even 2+ simulated results showing LOW_SHARPE, cut all ratio families.
-    field_low_sharpe = int(dominant_counts.get("LOW_SHARPE", 0))
+    field_low_sharpe = int(dominant_counts.get(CHECK_LOW_SHARPE, 0))
     if field_low_sharpe >= 2 and family in {"legacy_ratio", "legacy_neg_ratio", "group_ratio_level"}:
         return False
     if lower_name.startswith(("raw_ratio_", "ratio_", "rank_ratio_", "group_rank_ratio_")):
@@ -577,7 +582,7 @@ def should_keep_template_for_feedback(
             return False
 
     # Spread-type templates with severe HIGH_TURNOVER + CONCENTRATED_WEIGHT are doomed.
-    if "HIGH_TURNOVER" in dominant_names and "CONCENTRATED_WEIGHT" in dominant_names:
+    if CHECK_HIGH_TURNOVER in dominant_names and CHECK_CONCENTRATED_WEIGHT in dominant_names:
         if family in {"rank_spread", "mean_spread"} and "zscore" in lower_name and "spread" in lower_name:
             return False
 

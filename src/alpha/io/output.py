@@ -25,7 +25,15 @@ from contextlib import suppress
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Sequence
 
-from ..config import DEFAULT_DATASET_ID
+from ..config import (
+    CHECK_CONCENTRATED_WEIGHT,
+    CHECK_HIGH_TURNOVER,
+    CHECK_LOW_FITNESS,
+    CHECK_LOW_SHARPE,
+    CHECK_LOW_SUB_UNIVERSE_SHARPE,
+    CHECK_LOW_TURNOVER,
+    DEFAULT_DATASET_ID,
+)
 from ..exceptions import BrainAPIError
 from ..models.base import FieldTestResult
 
@@ -628,7 +636,7 @@ def score_failed_checks(failed_checks: Optional[Sequence[Dict[str, Any]]]) -> fl
         counted += 1
         if name.startswith("LOW_") and limit != 0:
             score += value / limit
-        elif name == "CONCENTRATED_WEIGHT":
+        elif name == CHECK_CONCENTRATED_WEIGHT:
             score += max(0.0, 1.0 - ((value - limit) / max(abs(limit), 1e-9)))
     if counted == 0:
         return -10.0
@@ -888,15 +896,15 @@ def compile_optimization_hints(
     hints: List[str] = []
     if not failed_check_leaderboard:
         return ["No failed checks recorded yet; run a wider exploration sample first."]
-    if "LOW_SHARPE" in dominant_names or "LOW_SUB_UNIVERSE_SHARPE" in dominant_names:
+    if CHECK_LOW_SHARPE in dominant_names or CHECK_LOW_SUB_UNIVERSE_SHARPE in dominant_names:
         hints.append("Sharpe is the dominant blocker; prioritize group-neutralized, zscore/spread, and less raw level-like templates.")
-    if "LOW_FITNESS" in dominant_names:
+    if CHECK_LOW_FITNESS in dominant_names:
         hints.append("Fitness is weak; prioritize expressions that improve both Sharpe and turnover instead of only smoothing levels.")
-    if "LOW_TURNOVER" in dominant_names:
+    if CHECK_LOW_TURNOVER in dominant_names:
         hints.append("Turnover is too low; try shorter delta windows, rank-then-delta variants, or lower decay.")
-    if "HIGH_TURNOVER" in dominant_names:
+    if CHECK_HIGH_TURNOVER in dominant_names:
         hints.append("Turnover is too high; try longer windows, higher decay, or smoother ts_mean/ts_decay structures.")
-    if "CONCENTRATED_WEIGHT" in dominant_names:
+    if CHECK_CONCENTRATED_WEIGHT in dominant_names:
         hints.append("Weight concentration is high; prefer group_rank/group_zscore variants and avoid raw ratios or sparse level signals.")
     if near_pass_summary:
         best = near_pass_summary[0]

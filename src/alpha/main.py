@@ -23,7 +23,6 @@
 
 import argparse
 import logging
-import sys
 import threading
 import time
 from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait

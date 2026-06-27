@@ -34,6 +34,12 @@ import os
 from typing import Any, Dict, List, Optional, Sequence, Set, Tuple
 
 from ..config import (
+    CHECK_CONCENTRATED_WEIGHT,
+    CHECK_HIGH_TURNOVER,
+    CHECK_LOW_FITNESS,
+    CHECK_LOW_SHARPE,
+    CHECK_LOW_SUB_UNIVERSE_SHARPE,
+    CHECK_LOW_TURNOVER,
     STATS_DEFAULT_SCORE,
     STATS_FAILED_CHECK_DEFAULT_SCORE,
     STATS_NEARPASS_SUMMARY_LIMIT,
@@ -286,13 +292,13 @@ def compile_template_stats(results: Sequence[FieldTestResult]) -> Dict[str, Dict
         if result.status == "error":
             stat["errors"] += 1
         failed_check_names = {str(check.get("name", "")) for check in result.failed_checks or []}
-        if "LOW_SHARPE" in failed_check_names:
+        if CHECK_LOW_SHARPE in failed_check_names:
             stat["low_sharpe"] += 1
-        if "LOW_FITNESS" in failed_check_names:
+        if CHECK_LOW_FITNESS in failed_check_names:
             stat["low_fitness"] += 1
-        if "CONCENTRATED_WEIGHT" in failed_check_names:
+        if CHECK_CONCENTRATED_WEIGHT in failed_check_names:
             stat["concentrated_weight"] += 1
-        if "LOW_SUB_UNIVERSE_SHARPE" in failed_check_names:
+        if CHECK_LOW_SUB_UNIVERSE_SHARPE in failed_check_names:
             stat["low_sub_universe_sharpe"] += 1
     return stats
 
@@ -524,7 +530,7 @@ def score_failed_checks(failed_checks: Optional[Sequence[Dict[str, Any]]]) -> fl
         counted += 1
         if name.startswith("LOW_") and limit != 0:
             score += value / limit
-        elif name == "CONCENTRATED_WEIGHT":
+        elif name == CHECK_CONCENTRATED_WEIGHT:
             score += max(0.0, 1.0 - ((value - limit) / max(abs(limit), 1e-9)))
     if counted == 0:
         return STATS_FAILED_CHECK_DEFAULT_SCORE
@@ -797,15 +803,15 @@ def compile_optimization_hints(
     hints: List[str] = []
     if not failed_check_leaderboard:
         return ["还没有失败检查记录；先运行更广泛的探索样本。"]
-    if "LOW_SHARPE" in dominant_names or "LOW_SUB_UNIVERSE_SHARPE" in dominant_names:
+    if CHECK_LOW_SHARPE in dominant_names or CHECK_LOW_SUB_UNIVERSE_SHARPE in dominant_names:
         hints.append("夏普比率是主要阻碍；优先使用组中性化、zscore/spread 和较少原始级别式的模板。")
-    if "LOW_FITNESS" in dominant_names:
+    if CHECK_LOW_FITNESS in dominant_names:
         hints.append("适应性较弱；优先使用能同时提升夏普和换手率的表达式，而不是仅平滑级别。")
-    if "LOW_TURNOVER" in dominant_names:
+    if CHECK_LOW_TURNOVER in dominant_names:
         hints.append("换手率过低；尝试更短的 delta 窗口、rank-then-delta 变体或更低的衰减。")
-    if "HIGH_TURNOVER" in dominant_names:
+    if CHECK_HIGH_TURNOVER in dominant_names:
         hints.append("换手率过高；尝试更长的窗口、更高的衰减或更平滑的 ts_mean/ts_decay 结构。")
-    if "CONCENTRATED_WEIGHT" in dominant_names:
+    if CHECK_CONCENTRATED_WEIGHT in dominant_names:
         hints.append("权重集中度过高；优先使用 group_rank/group_zscore 变体，避免原始比率或稀疏级别信号。")
     if near_pass_summary:
         best = near_pass_summary[0]

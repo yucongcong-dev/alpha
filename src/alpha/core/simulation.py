@@ -28,6 +28,11 @@ from ..api.client import (
     retry_operation,
 )
 from ..config import (
+    CHECK_CONCENTRATED_WEIGHT,
+    CHECK_HIGH_TURNOVER,
+    CHECK_LOW_FITNESS,
+    CHECK_LOW_SHARPE,
+    CHECK_LOW_TURNOVER,
     SIMULATION_RETRY_WAIT,
     SUBMIT_MAX_TURNOVER,
     SUBMIT_MAX_WEIGHT,
@@ -295,7 +300,7 @@ def precheck_simulation_metrics(
     if isinstance(sharpe, (int, float)) and sharpe < min_sharpe:
         failures.append(
             {
-                "name": "LOW_SHARPE",
+                "name": CHECK_LOW_SHARPE,
                 "result": "FAIL",
                 "value": float(sharpe),
                 "limit": min_sharpe,
@@ -304,7 +309,7 @@ def precheck_simulation_metrics(
     if isinstance(fitness, (int, float)) and fitness < min_fitness:
         failures.append(
             {
-                "name": "LOW_FITNESS",
+                "name": CHECK_LOW_FITNESS,
                 "result": "FAIL",
                 "value": float(fitness),
                 "limit": min_fitness,
@@ -314,7 +319,7 @@ def precheck_simulation_metrics(
         if turnover < min_turnover:
             failures.append(
                 {
-                    "name": "LOW_TURNOVER",
+                    "name": CHECK_LOW_TURNOVER,
                     "result": "FAIL",
                     "value": float(turnover),
                     "limit": min_turnover,
@@ -323,7 +328,7 @@ def precheck_simulation_metrics(
         elif turnover > max_turnover:
             failures.append(
                 {
-                    "name": "HIGH_TURNOVER",
+                    "name": CHECK_HIGH_TURNOVER,
                     "result": "FAIL",
                     "value": float(turnover),
                     "limit": max_turnover,
@@ -332,7 +337,7 @@ def precheck_simulation_metrics(
     if isinstance(max_stock_weight, (int, float)) and max_stock_weight > max_weight:
         failures.append(
             {
-                "name": "CONCENTRATED_WEIGHT",
+                "name": CHECK_CONCENTRATED_WEIGHT,
                 "result": "FAIL",
                 "value": float(max_stock_weight),
                 "limit": max_weight,

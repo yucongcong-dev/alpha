@@ -11,8 +11,8 @@ API 调用次数，提高运行效率。
     - fields_cache_refresh_reason(): 判断缓存是否需要刷新
     - merge_fields_by_id(): 按字段 ID 合并字段列表
     - fetch_fields_with_cache(): 根据缓存状态获取字段
-    - choose_field_name(): 解析标准字段名
-    - choose_field_type(): 标准化字段类型
+    - choose_field_name() (→ utils.helpers): 解析标准字段名
+    - choose_field_type() (→ utils.helpers): 标准化字段类型
 """
 
 import json

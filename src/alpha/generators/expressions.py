@@ -25,6 +25,12 @@ from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 from ..config import (
     BACKFILL_WINDOW,
+    CHECK_CONCENTRATED_WEIGHT,
+    CHECK_HIGH_TURNOVER,
+    CHECK_LOW_FITNESS,
+    CHECK_LOW_SHARPE,
+    CHECK_LOW_SUB_UNIVERSE_SHARPE,
+    CHECK_LOW_TURNOVER,
     DELTA_STD_PRIORITY_BOOST,
     EXPR_ITER_BOOST_THRESHOLD,
     EXPR_MUTATION_EXTEND_THRESHOLD,
@@ -535,7 +541,7 @@ def adaptive_template_priority_adjustment(
     lower_name = template_name.lower()
     adjustment = 0
 
-    if "LOW_SHARPE" in dominant_names or "LOW_SUB_UNIVERSE_SHARPE" in dominant_names:
+    if CHECK_LOW_SHARPE in dominant_names or CHECK_LOW_SUB_UNIVERSE_SHARPE in dominant_names:
         if family.startswith("group_") or family in {"group_rank_delta", "group_zscore", "group_mean_spread", "group_vol_scaled_delta"}:
             adjustment += 28
         if family in {"zscore_time", "rank_spread", "mean_spread", "vol_scaled_delta", "rank_delta", "decayed_delta"}:
@@ -543,7 +549,7 @@ def adaptive_template_priority_adjustment(
         if family in {"legacy_level", "legacy_group_level", "legacy_ratio", "legacy_neg_ratio", "group_ratio_level"}:
             adjustment -= 35
 
-    if "LOW_FITNESS" in dominant_names:
+    if CHECK_LOW_FITNESS in dominant_names:
         if "delta" in family or "spread" in family or lower_name.startswith("iter_"):
             adjustment += 22
         if family in {"legacy_level", "legacy_group_level"}:
@@ -552,19 +558,19 @@ def adaptive_template_priority_adjustment(
         if family in {"group_vol_scaled_delta", "vol_scaled_delta"}:
             adjustment += 15
 
-    if "LOW_TURNOVER" in dominant_names:
+    if CHECK_LOW_TURNOVER in dominant_names:
         if "delta" in family or lower_name.startswith(("iter_rank_delta", "iter_rank_then_delta")):
             adjustment += 30
         if family in {"legacy_level", "legacy_group_level", "mean_spread"}:
             adjustment -= 18
 
-    if "HIGH_TURNOVER" in dominant_names:
+    if CHECK_HIGH_TURNOVER in dominant_names:
         if family in {"mean_spread", "decayed_delta", "decayed_ratio"}:
             adjustment += 20
         if "delta" in family:
             adjustment -= 20
 
-    if "CONCENTRATED_WEIGHT" in dominant_names:
+    if CHECK_CONCENTRATED_WEIGHT in dominant_names:
         if family.startswith("group_"):
             adjustment += 24
         if family in {"legacy_ratio", "legacy_neg_ratio", "group_ratio_level"}:
@@ -573,7 +579,7 @@ def adaptive_template_priority_adjustment(
     # Results show rank_zscore_spread is fundamentally broken on fundamental6:
     # negative Sharpe, extreme turnover (0.86-0.99), concentrated weight (0.5).
     # Heavily penalize spread-type templates when both HIGH_TURNOVER + CONCENTRATED_WEIGHT fire.
-    if "HIGH_TURNOVER" in dominant_names and "CONCENTRATED_WEIGHT" in dominant_names:
+    if CHECK_HIGH_TURNOVER in dominant_names and CHECK_CONCENTRATED_WEIGHT in dominant_names:
         if family in {"rank_spread", "mean_spread"}:
             adjustment -= 50
         if "zscore" in lower_name and "spread" in lower_name:
@@ -855,7 +861,7 @@ def build_feedback_mutations(
             ]
         )
 
-    if "LOW_TURNOVER" in dominant_names:
+    if CHECK_LOW_TURNOVER in dominant_names:
         mutations.extend(
             [
                 ("iter_rank_delta_3", f"rank(ts_delta(ts_backfill({field_name}, {bw}), 3))", 186),
@@ -864,7 +870,7 @@ def build_feedback_mutations(
             ]
         )
 
-    if "LOW_SUB_UNIVERSE_SHARPE" in dominant_names or "CONCENTRATED_WEIGHT" in dominant_names:
+    if CHECK_LOW_SUB_UNIVERSE_SHARPE in dominant_names or CHECK_CONCENTRATED_WEIGHT in dominant_names:
         mutations.extend(
             [
                 ("iter_group_zscore_20", f"group_rank(ts_zscore(ts_backfill({field_name}, {bw}), 20), subindustry)", 185),
