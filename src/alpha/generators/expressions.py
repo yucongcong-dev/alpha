@@ -47,8 +47,12 @@ from ..config import (
 from ..models.base import TemplateLibrary
 from ..utils.helpers import choose_field_name, choose_field_type
 
+# 预编译正则表达式（性能优化）
+_TOKENIZE_REGEX: re.Pattern = re.compile(r"[^a-z0-9]+")
+"""字段名分词正则模式（预编译）"""
 
-def tokenize_field_name(field_name: str) -> List[str]:
+
+def tokenize_field_name(field_name: str) -> list[str]:
     """
     将字段名拆分为小写字母数字 token。
 
@@ -59,7 +63,7 @@ def tokenize_field_name(field_name: str) -> List[str]:
         field_name (str): 要拆分的字段名称。
 
     Returns:
-        List[str]: 拆分后的小写 token 列表，去除空 token。
+        list[str]: 拆分后的小写 token 列表，去除空 token。
 
     Example:
         >>> tokens = tokenize_field_name("sales_per_share")
@@ -70,7 +74,7 @@ def tokenize_field_name(field_name: str) -> List[str]:
         >>> print(tokens)
         ['ebitda', '2024']
     """
-    return [token for token in re.split(r"[^a-z0-9]+", field_name.lower()) if token]
+    return [token for token in _TOKENIZE_REGEX.split(field_name.lower()) if token]
 
 
 def score_partner_candidate(field_name: str, partner_name: str) -> int:
@@ -134,11 +138,11 @@ def score_partner_candidate(field_name: str, partner_name: str) -> int:
 
 def discover_partner_fields(
     field_name: str,
-    all_fields: Sequence[Dict[str, Any]],
+    all_fields: Sequence[dict[str, Any]],
     *,
     limit: int = 4,
     use_curated_heuristics: bool = True,
-) -> List[str]:
+) -> list[str]:
     """
     为比值类模板扩展寻找可能合适的配对字段。
 
@@ -147,12 +151,12 @@ def discover_partner_fields(
 
     Args:
         field_name (str): 主字段名称。
-        all_fields (Sequence[Dict[str, Any]]): 所有可用字段的列表。
+        all_fields (Sequence[dict[str, Any]]): 所有可用字段的列表。
         limit (int): 返回的配对字段数量上限。默认为 4。
         use_curated_heuristics (bool): 是否使用精选启发式规则。默认为 True。
 
     Returns:
-        List[str]: 配对字段名称列表，按得分排序。
+        list[str]: 配对字段名称列表，按得分排序。
 
     Example:
         >>> fields = [
@@ -167,7 +171,7 @@ def discover_partner_fields(
     if not use_curated_heuristics:
         return []
 
-    candidates: List[Tuple[int, str]] = []
+    candidates: list[tuple[int, str]] = []
     available_by_name = {
         choose_field_name(item): item
         for item in all_fields
@@ -192,7 +196,7 @@ def discover_partner_fields(
         candidates.append((score, partner_name))
     candidates.sort(key=lambda item: (-item[0], item[1]))
     seen: set = set()
-    result: List[str] = []
+    result: list[str] = []
     for _, partner_name in candidates:
         if partner_name in seen:
             continue
@@ -204,8 +208,8 @@ def discover_partner_fields(
 
 
 def sort_templates_by_priority(
-    templates: Sequence[Tuple[str, str, int]]
-) -> List[Tuple[str, str, int]]:
+    templates: Sequence[tuple[str, str, int]]
+) -> list[tuple[str, str, int]]:
     """
     按有效优先级从高到低排序候选模板。
 
@@ -213,11 +217,11 @@ def sort_templates_by_priority(
     这样可以让最可能成功的模板先运行，提高整体效率。
 
     Args:
-        templates (Sequence[Tuple[str, str, int]]): 模板列表，
+        templates (Sequence[tuple[str, str, int]]): 模板列表，
             每个元素为 (name, expression, priority) 元组。
 
     Returns:
-        List[Tuple[str, str, int]]: 排序后的模板列表。
+        list[tuple[str, str, int]]: 排序后的模板列表。
 
     Example:
         >>> templates = [
@@ -234,9 +238,9 @@ def sort_templates_by_priority(
 
 
 def limit_templates(
-    templates: List[Tuple[str, str, int]],
+    templates: list[tuple[str, str, int]],
     max_templates_per_field: int,
-) -> List[Tuple[str, str, int]]:
+) -> list[tuple[str, str, int]]:
     """
     在排序与多样化之后应用字段级模板数量上限。
 
@@ -244,12 +248,12 @@ def limit_templates(
     和资源消耗。
 
     Args:
-        templates (List[Tuple[str, str, int]]): 已排序的模板列表。
+        templates (list[tuple[str, str, int]]): 已排序的模板列表。
         max_templates_per_field (int): 每个字段的模板数量上限。
             如果为 0 或负数，不限制数量。
 
     Returns:
-        List[Tuple[str, str, int]]: 限制后的模板列表。
+        list[tuple[str, str, int]]: 限制后的模板列表。
 
     Example:
         >>> templates = [("t1", "e1", 10), ("t2", "e2", 20), ("t3", "e3", 30)]
@@ -381,7 +385,7 @@ def is_legacy_family(template_name: str, expression: str) -> bool:
 
 
 # 相似度惩罚偏移量：家族名 -> 惩罚减免值
-_SIMILARITY_PENALTY_OFFSETS: Dict[str, int] = {
+_SIMILARITY_PENALTY_OFFSETS: dict[str, int] = {
     "legacy_level": 0,
     "legacy_group_level": 6,
     "legacy_ratio": 10,
@@ -391,9 +395,9 @@ _SIMILARITY_PENALTY_OFFSETS: Dict[str, int] = {
 
 
 def apply_similarity_penalty(
-    templates: Sequence[Tuple[str, str, int]],
+    templates: Sequence[tuple[str, str, int]],
     legacy_similarity_penalty: int,
-) -> List[Tuple[str, str, int]]:
+) -> list[tuple[str, str, int]]:
     """
     对 legacy 形态模板施加相似度惩罚，让多样化候选优先运行。
 
@@ -401,11 +405,11 @@ def apply_similarity_penalty(
     避免 Alpha 过度集中在传统模式上。
 
     Args:
-        templates (Sequence[Tuple[str, str, int]]): 模板列表。
+        templates (Sequence[tuple[str, str, int]]): 模板列表。
         legacy_similarity_penalty (int): legacy 家族的惩罚分数。
 
     Returns:
-        List[Tuple[str, str, int]]: 应用惩罚后的模板列表。
+        list[tuple[str, str, int]]: 应用惩罚后的模板列表。
 
     惩罚规则（通过 _SIMILARITY_PENALTY_OFFSETS 表驱动）：
         - legacy_level: 全额惩罚
@@ -420,7 +424,7 @@ def apply_similarity_penalty(
         >>> print(penalized[0][2])  # raw 字段优先级降低
         70
     """
-    penalized: List[Tuple[str, str, int]] = []
+    penalized: list[tuple[str, str, int]] = []
     for name, expression, priority in templates:
         family = classify_expression_family(name, expression)
         offset = _SIMILARITY_PENALTY_OFFSETS.get(family)
@@ -429,7 +433,7 @@ def apply_similarity_penalty(
     return penalized
 
 
-def dominant_failed_check_names(counts: Dict[str, int], limit: int = 4) -> set:
+def dominant_failed_check_names(counts: dict[str, int], limit: int = 4) -> set:
     """
     返回失败检查计数最高的若干名称。
 
@@ -437,7 +441,7 @@ def dominant_failed_check_names(counts: Dict[str, int], limit: int = 4) -> set:
     用于指导模板优先级的自适应调整。
 
     Args:
-        counts (Dict[str, int]): 失败检查计数字典。
+        counts (dict[str, int]): 失败检查计数字典。
         limit (int): 返回的名称数量上限。默认为 4。
 
     Returns:
@@ -456,7 +460,7 @@ def dominant_failed_check_names(counts: Dict[str, int], limit: int = 4) -> set:
     }
 
 
-def merge_failed_check_counts(*count_maps: Dict[str, Any]) -> Dict[str, int]:
+def merge_failed_check_counts(*count_maps: dict[str, Any]) -> dict[str, int]:
     """
     合并多个失败检查计数字典。
 
@@ -467,7 +471,7 @@ def merge_failed_check_counts(*count_maps: Dict[str, Any]) -> Dict[str, int]:
         *count_maps: 可变数量的失败检查计数字典。
 
     Returns:
-        Dict[str, int]: 合并后的计数字典。
+        dict[str, int]: 合并后的计数字典。
 
     Example:
         >>> counts1 = {"LOW_SHARPE": 10}
@@ -476,7 +480,7 @@ def merge_failed_check_counts(*count_maps: Dict[str, Any]) -> Dict[str, int]:
         >>> print(merged["LOW_SHARPE"])
         13
     """
-    merged: Dict[str, int] = {}
+    merged: dict[str, int] = {}
     for count_map in count_maps:
         for name, count in count_map.items():
             if not isinstance(count, int):
@@ -496,7 +500,7 @@ _LEGACY_BASIC = {"legacy_level", "legacy_group_level"}
 
 # (trigger_check_names, condition(family, lower_name) → bool, adjustment)
 # 当任意 trigger 出现在 dominant_names 中且 condition 成立时应用 adjustment。
-_PRIORITY_RULES: List[Tuple[Set[str], Any, int]] = [
+_PRIORITY_RULES: list[tuple[set[str], Any, int]] = [
     # --- LOW_SHARPE / LOW_SUB_UNIVERSE_SHARPE ---
     ({CHECK_LOW_SHARPE, CHECK_LOW_SUB_UNIVERSE_SHARPE},
      lambda f, n: f.startswith("group_") or f in _GROUP_FAMILIES, 28),
@@ -533,8 +537,8 @@ def adaptive_template_priority_adjustment(
     template_name: str,
     expression: str,
     *,
-    field_feedback: Optional[Dict[str, Any]],
-    global_failed_check_counts: Dict[str, int],
+    field_feedback: dict[str, Any] | None,
+    global_failed_check_counts: dict[str, int],
 ) -> int:
     """
     根据字段与全局失败分布动态调整模板优先级（声明式规则表驱动）。
@@ -545,8 +549,8 @@ def adaptive_template_priority_adjustment(
     Args:
         template_name (str): 模板名称。
         expression (str): 表达式字符串。
-        field_feedback (Optional[Dict[str, Any]]): 字段反馈数据。
-        global_failed_check_counts (Dict[str, int]): 全局失败检查计数。
+        field_feedback ( | Nonedict[str, Any]]): 字段反馈数据。
+        global_failed_check_counts (dict[str, int]): 全局失败检查计数。
 
     Returns:
         int: 优先级调整值（可正可负）。
@@ -591,23 +595,23 @@ def adaptive_template_priority_adjustment(
 
 
 def apply_adaptive_priority(
-    templates: Sequence[Tuple[str, str, int]],
+    templates: Sequence[tuple[str, str, int]],
     *,
-    field_feedback: Optional[Dict[str, Any]],
-    global_failed_check_counts: Dict[str, int],
-) -> List[Tuple[str, str, int]]:
+    field_feedback: dict[str, Any] | None,
+    global_failed_check_counts: dict[str, int],
+) -> list[tuple[str, str, int]]:
     """
     对候选模板应用自适应优先级调整。
 
     批量应用自适应优先级调整，根据失败模式优化所有模板的优先级。
 
     Args:
-        templates (Sequence[Tuple[str, str, int]]): 模板列表。
-        field_feedback (Optional[Dict[str, Any]]): 字段反馈数据。
-        global_failed_check_counts (Dict[str, int]): 全局失败检查计数。
+        templates (Sequence[tuple[str, str, int]]): 模板列表。
+        field_feedback ( | Nonedict[str, Any]]): 字段反馈数据。
+        global_failed_check_counts (dict[str, int]): 全局失败检查计数。
 
     Returns:
-        List[Tuple[str, str, int]]: 调整后的模板列表。
+        list[tuple[str, str, int]]: 调整后的模板列表。
 
     Example:
         >>> templates = [("group_zscore", "expr", 100)]
@@ -636,9 +640,9 @@ def apply_adaptive_priority(
 
 
 def cap_templates_per_family(
-    templates: Sequence[Tuple[str, str, int]],
+    templates: Sequence[tuple[str, str, int]],
     max_templates_per_family: int,
-) -> List[Tuple[str, str, int]]:
+) -> list[tuple[str, str, int]]:
     """
     限制每个结构家族仅保留前 N 个候选模板。
 
@@ -646,12 +650,12 @@ def cap_templates_per_family(
     避免 Alpha 过度集中在某一类型。
 
     Args:
-        templates (Sequence[Tuple[str, str, int]]): 已排序的模板列表。
+        templates (Sequence[tuple[str, str, int]]): 已排序的模板列表。
         max_templates_per_family (int): 每个家族的模板数量上限。
             如果为 0 或负数，不限制数量。
 
     Returns:
-        List[Tuple[str, str, int]]: 限制后的模板列表。
+        list[tuple[str, str, int]]: 限制后的模板列表。
 
     Example:
         >>> templates = [
@@ -666,8 +670,8 @@ def cap_templates_per_family(
     """
     if max_templates_per_family <= 0:
         return list(templates)
-    kept: List[Tuple[str, str, int]] = []
-    family_counts: Dict[str, int] = {}
+    kept: list[tuple[str, str, int]] = []
+    family_counts: dict[str, int] = {}
     for name, expression, priority in templates:
         family = classify_expression_family(name, expression)
         used = family_counts.get(family, 0)
@@ -680,8 +684,8 @@ def cap_templates_per_family(
 
 def build_feedback_mutations(
     field_name: str,
-    field_feedback: Optional[Dict[str, Any]],
-) -> List[Tuple[str, str, int]]:
+    field_feedback: dict[str, Any] | None,
+) -> list[tuple[str, str, int]]:
     """
     基于历史失败检查结果生成额外的表达式变异候选。
 
@@ -690,11 +694,11 @@ def build_feedback_mutations(
 
     Args:
         field_name (str): 字段名称。
-        field_feedback (Optional[Dict[str, Any]]): 字段反馈数据，
+        field_feedback ( | Nonedict[str, Any]]): 字段反馈数据，
             包含 failed_check_counts、best_expression、best_score 等。
 
     Returns:
-        List[Tuple[str, str, int]]: 变异表达式列表。
+        list[tuple[str, str, int]]: 变异表达式列表。
 
     Example:
         >>> mutations = build_feedback_mutations(
@@ -710,10 +714,10 @@ def build_feedback_mutations(
 
     # --- std-normalized delta templates (vol-scaled) ---
     # (delta, std, priority) 窗口配置
-    _VOL_SCALED_WINDOWS: List[Tuple[int, int, int]] = [
+    _VOL_SCALED_WINDOWS: list[tuple[int, int, int]] = [
         (20, 60, 192), (15, 40, 190), (10, 60, 188), (25, 90, 186),
     ]
-    mutations: List[Tuple[str, str, int]] = [
+    mutations: list[tuple[str, str, int]] = [
         (
             "iter_group_rank_delta_of_rank_3",
             f"group_rank(ts_delta(rank(ts_backfill({field_name}, {bw})), 3), subindustry)",
@@ -791,7 +795,7 @@ def build_feedback_mutations(
     # Near-pass on vol-scaled: generate fine-tuned backfill/delta window variants
     if best_score >= EXPR_NEARPASS_BOOST_THRESHOLD:
         # (delta, std, backfill_window | None, priority) — None = use default bw
-        _NEARPASS_VOL_SCALED_CONFIGS: List[Tuple[int, int, Optional[int], int]] = [
+        _NEARPASS_VOL_SCALED_CONFIGS: list[tuple[int, int, int | None, int]] = [
             (15, 40, 180, 198), (20, 60, 180, 196),
             (10, 40, None, 195), (15, 60, None, 194),
             (25, 60, None, 193), (20, 90, None, 192),
@@ -890,21 +894,21 @@ def invert_expression(expression: str) -> str:
 def _build_matrix_templates(
     field_name: str,
     bw: int,
-    all_fields: Sequence[Dict[str, Any]],
+    all_fields: Sequence[dict[str, Any]],
     use_dataset_heuristics: bool,
-) -> Tuple[List[Tuple[str, str, int]], List[Tuple[str, str, int]]]:
+) -> tuple[list[tuple[str, str, int]], list[tuple[str, str, int]]]:
     """为 MATRIX 类型字段构建多样化和 legacy 模板候选。
 
     Returns:
         (diversified_templates, legacy_templates) 两个列表。
     """
     # delta_over_std 模板的窗口配置: (delta, std, priority)
-    _DELTA_OVER_STD_WINDOWS: List[Tuple[int, int, int]] = [
+    _DELTA_OVER_STD_WINDOWS: list[tuple[int, int, int]] = [
         (5, 20, 176), (15, 40, 172), (10, 60, 170),
         (20, 60, 174), (25, 90, 168), (30, 120, 166),
     ]
 
-    diversified: List[Tuple[str, str, int]] = []
+    diversified: list[tuple[str, str, int]] = []
     for delta, std, pri in _DELTA_OVER_STD_WINDOWS:
         diversified.append((
             f"group_delta_over_std_subindustry_{delta}_{std}",
@@ -945,7 +949,7 @@ def _build_matrix_templates(
         ),
     ])
 
-    legacy: List[Tuple[str, str, int]] = [
+    legacy: list[tuple[str, str, int]] = [
         ("raw_field", field_name, 145),
         ("group_rank_subindustry", f"group_rank({field_name}, subindustry)", 143),
         ("group_rank_industry", f"group_rank({field_name}, industry)", 141),
@@ -966,8 +970,8 @@ def _build_matrix_templates(
     )
 
     # 比率配对模板窗口配置: (delta, std, priority)
-    _RATIO_DELTA_RANK_WINDOWS: List[Tuple[int, None, int]] = [(3, None, 188), (5, None, 184), (10, None, 176)]
-    _RATIO_DELTA_OVER_STD_WINDOWS: List[Tuple[int, int, int]] = [
+    _RATIO_DELTA_RANK_WINDOWS: list[tuple[int, None, int]] = [(3, None, 188), (5, None, 184), (10, None, 176)]
+    _RATIO_DELTA_OVER_STD_WINDOWS: list[tuple[int, int, int]] = [
         (5, 20, 180), (15, 40, 176), (10, 60, 174),
         (20, 60, 178), (25, 90, 172), (30, 120, 170),
     ]
@@ -1028,16 +1032,16 @@ def _build_matrix_templates(
 
 
 def build_expression_candidates(
-    field: Dict[str, Any],
+    field: dict[str, Any],
     template_library: TemplateLibrary,
     max_templates_per_field: int,
     max_templates_per_family: int,
     legacy_similarity_penalty: int,
-    all_fields: Optional[Sequence[Dict[str, Any]]] = None,
-    field_feedback: Optional[Dict[str, Any]] = None,
-    global_failed_check_counts: Optional[Dict[str, int]] = None,
+    all_fields: Sequence[dict[str, Any]] | None = None,
+    field_feedback: dict[str, Any] | None = None,
+    global_failed_check_counts: dict[str, int] | None = None,
     use_dataset_heuristics: bool = True,
-) -> List[Tuple[str, str, int]]:
+) -> list[tuple[str, str, int]]:
     """
     为单个字段构建、变异、多样化并排序表达式候选。
 
@@ -1045,18 +1049,18 @@ def build_expression_candidates(
     优先级调整和数量限制等多个步骤。
 
     Args:
-        field (Dict[str, Any]): 字段元数据。
+        field (dict[str, Any]): 字段元数据。
         template_library (TemplateLibrary): 模板库字典。
         max_templates_per_field (int): 每个字段的模板数量上限。
         max_templates_per_family (int): 每个家族的模板数量上限。
         legacy_similarity_penalty (int): legacy 家族的相似度惩罚。
-        all_fields (Optional[Sequence[Dict[str, Any]]]): 所有可用字段列表。
-        field_feedback (Optional[Dict[str, Any]]): 字段反馈数据。
-        global_failed_check_counts (Optional[Dict[str, int]]): 全局失败检查计数。
+        all_fields ( | NoneSequence[dict[str, Any]]]): 所有可用字段列表。
+        field_feedback ( | Nonedict[str, Any]]): 字段反馈数据。
+        global_failed_check_counts ( | Nonedict[str, int]]): 全局失败检查计数。
         use_dataset_heuristics (bool): 是否使用数据集启发式规则。
 
     Returns:
-        List[Tuple[str, str, int]]: 最终的表达式候选列表，
+        list[tuple[str, str, int]]: 最终的表达式候选列表，
             每个元素为 (name, expression, priority) 元组。
 
     处理步骤：

@@ -15,6 +15,7 @@
 import argparse
 import logging
 import time
+from dataclasses import dataclass
 from typing import Any, Sequence
 
 from ..analysis.stats import (
@@ -33,6 +34,14 @@ from ..models.base import (
 from .simulation import build_failure_result
 
 logger = logging.getLogger(__name__)
+
+
+@dataclass
+class DrainResult:
+    """批量结果消费的结果对象（不可变）"""
+    template_stats: dict[str, dict[str, int]]
+    congestion_detected: bool
+    queue_busy_field_id: str | None
 
 # ============================================================================
 # 已完成任务处理函数

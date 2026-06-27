@@ -70,7 +70,7 @@ logger = logging.getLogger(__name__)
 # 辅助函数 - 时间与等待
 # ============================================================================
 
-def wait_seconds(seconds: float, reason: str) -> None:
+def wait_seconds(seconds: float, reason: str, verbose: bool = True) -> None:
     """
     带日志地休眠，使退避与等待行为在输出中可见。
 
@@ -80,6 +80,8 @@ def wait_seconds(seconds: float, reason: str) -> None:
     Args:
         seconds: 要休眠的秒数。如果小于等于 0，不会实际休眠。
         reason: 等待原因描述，会显示在日志消息中。
+        verbose: 是否打印 INFO 级别日志。默认为 True。
+            对于短等待（<10秒），建议设为 False 以减少日志噪音。
 
     Example:
         >>> wait_seconds(3.5, "rate limit")
@@ -88,15 +90,23 @@ def wait_seconds(seconds: float, reason: str) -> None:
         >>> wait_seconds(0, "no wait needed")
         # 不打印任何消息，不执行休眠
 
+        >>> wait_seconds(5.0, "routine poll", verbose=False)
+        # 不打印日志，但会执行休眠
+
     Note:
         - 秒数会自动调整为非负值
         - 只在秒数 > 0 时才打印日志和执行休眠
         - 使用 time.sleep 实现，休眠期间程序阻塞
+        - verbose=False 时仍会执行休眠，但不打印日志
     """
     # 集中化的休眠辅助函数，使每次暂停都在日志中可见
     seconds = max(seconds, 0.0)
     if seconds > 0:
-        logger.info("[wait] %s: sleeping %.1fs", reason, seconds)
+        # 短等待使用 DEBUG 级别，长等待使用 INFO 级别
+        if verbose or seconds >= 10.0:
+            logger.info("[wait] %s: sleeping %.1fs", reason, seconds)
+        else:
+            logger.debug("[wait] %s: sleeping %.1fs", reason, seconds)
         time.sleep(seconds)
 
 
@@ -899,7 +909,7 @@ class BrainClient:
         universe: str,
         instrument_type: str,
         delay: int,
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """
         按分页拉取某个数据集的字段元数据。
 
@@ -1222,7 +1232,7 @@ class BrainClient:
         poll_count = 0
         pending_cycles = 0
         started_at = time.monotonic()
-        pending_started_at: Optional[float] = None
+        pending_started_at: float | None = None
         while True:
             poll_count += 1
             if poll_count > max_polls:
@@ -1261,9 +1271,10 @@ class BrainClient:
                     wait_seconds(
                         polling_retry_after(response_headers, default=POLLING_DEFAULT_WAIT),
                         "simulation pending",
+                        verbose=False,  # 常规轮询等待不打印 INFO 日志
                     )
                 else:
-                    wait_seconds(POLLING_NO_RETRY_AFTER_WAIT, f"simulation {status.lower()}")
+                    wait_seconds(POLLING_NO_RETRY_AFTER_WAIT, f"simulation {status.lower()}", verbose=False)
                 continue
 
             # 一些 API 响应仅暴露 Retry-After 而省略明确的等待状态。
@@ -1304,6 +1315,7 @@ class BrainClient:
                 wait_seconds(
                     polling_retry_after(response_headers, default=POLLING_DEFAULT_WAIT),
                     "simulation pending",
+                    verbose=False,  # 常规轮询等待不打印 INFO 日志
                 )
                 continue
             return payload

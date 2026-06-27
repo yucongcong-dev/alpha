@@ -237,9 +237,9 @@ def encrypt_credentials_payload(
 
 
 def decrypt_credentials_payload(
-    payload: Dict[str, Any],
+    payload: dict[str, Any],
     key_path: str
-) -> Tuple[Optional[str], Optional[str]]:
+) -> tuple[str | None, str | None]:
     """
     解密本地凭证 JSON 负载并返回账号密码。
 
@@ -250,9 +250,9 @@ def decrypt_credentials_payload(
         key_path: 加密密钥文件的路径。
 
     Returns:
-        Tuple[Optional[str], Optional[str]]: 返回一个元组，包含两个元素：
-            - email (Optional[str]): 解密后的邮箱地址，可能为 None
-            - password (Optional[str]): 解密后的密码，可能为 None
+        tuple[str | None, str | None]: 返回一个元组，包含两个元素：
+            - email (str | None): 解密后的邮箱地址，可能为 None
+            - password (str | None): 解密后的密码，可能为 None
 
     Raises:
         BrainAPIError: 当以下情况发生时抛出：
@@ -378,7 +378,7 @@ def write_credentials_file(
 def prompt_and_store_credentials(
     path: str,
     key_path: str
-) -> Tuple[str, str]:
+) -> tuple[str, str]:
     """
     交互式读取凭证并加密保存，供后续运行复用。
 
@@ -390,7 +390,7 @@ def prompt_and_store_credentials(
         key_path: 加密密钥文件的路径。
 
     Returns:
-        Tuple[str, str]: 返回一个元组，包含两个元素：
+        tuple[str, str]: 返回一个元组，包含两个元素：
             - email (str): 用户输入的邮箱地址
             - password (str): 用户输入的密码
 
@@ -443,9 +443,9 @@ def load_credentials(args: argparse.Namespace) -> tuple[str | None, str | None]:
             - creds_key_file: 密钥文件路径
 
     Returns:
-        Tuple[Optional[str], Optional[str]]: 返回一个元组，包含两个元素：
-            - email (Optional[str]): 加载的邮箱地址
-            - password (Optional[str]): 加载的密码
+        tuple[str | None, str | None]: 返回一个元组，包含两个元素：
+            - email (str | None): 加载的邮箱地址
+            - password (str | None): 加载的密码
 
     Raises:
         BrainAPIError: 当以下情况发生时抛出：

@@ -359,18 +359,40 @@ def dump_results(
     # 原始结果保存在主文件中用于续跑/去重
     # 分析保存在配套文件中使目录易于理解
     sidecar_paths = build_output_sidecar_paths(path)
-    submittable_results = [result.__dict__ for result in results if result.submittable]
-    submitted_results = [result.__dict__ for result in results if result.submitted]
-    failed_checks_summary = [
-        {
-            "field_id": result.field_id,
-            "template_name": result.template_name,
-            "expression": result.expression,
-            "failed_checks": result.failed_checks or [],
-        }
-        for result in results
-        if result.failed_checks
-    ]
+    
+    # 单次遍历构建所有需要的数据（性能优化）
+    results_dicts = []
+    submittable_results = []
+    submitted_results = []
+    failed_checks_summary = []
+    field_ids = set()
+    submittable_count = 0
+    submitted_count = 0
+    error_count = 0
+    queue_timeout_count = 0
+    
+    for result in results:
+        d = result.__dict__
+        results_dicts.append(d)
+        field_ids.add(result.field_id)
+        
+        if result.submittable:
+            submittable_count += 1
+            submittable_results.append(d)
+        if result.submitted:
+            submitted_count += 1
+            submitted_results.append(d)
+        if result.status == "error":
+            error_count += 1
+        if is_queue_timeout_result(result):
+            queue_timeout_count += 1
+        if result.failed_checks:
+            failed_checks_summary.append({
+                "field_id": result.field_id,
+                "template_name": result.template_name,
+                "expression": result.expression,
+                "failed_checks": result.failed_checks,
+            })
     template_performance_summary = compile_template_performance_summary(results)
     field_performance_summary = compile_field_performance_summary(results)
     failed_check_leaderboard = compile_failed_check_leaderboard(results)
@@ -382,12 +404,12 @@ def dump_results(
         "settings_fingerprint": settings_fingerprint,
         "template_library_fingerprint": template_library_fingerprint,
         "tested": len(results),
-        "unique_fields_tested": len({result.field_id for result in results}),
-        "submittable": sum(1 for result in results if result.submittable),
-        "submitted": sum(1 for result in results if result.submitted),
-        "errors": sum(1 for result in results if result.status == "error"),
-        "queue_timeouts": sum(1 for result in results if is_queue_timeout_result(result)),
-        "results": [result.__dict__ for result in results],
+        "unique_fields_tested": len(field_ids),
+        "submittable": submittable_count,
+        "submitted": submitted_count,
+        "errors": error_count,
+        "queue_timeouts": queue_timeout_count,
+        "results": results_dicts,
     }
     analysis = {
         "dataset_id": dataset_id,

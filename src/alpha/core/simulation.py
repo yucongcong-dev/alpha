@@ -21,6 +21,7 @@ import json
 import logging
 import re
 import threading
+from dataclasses import dataclass
 from typing import Any, cast
 
 from ..api.client import (
@@ -71,15 +72,36 @@ from ..utils.helpers import choose_field_type
 
 logger = logging.getLogger(__name__)
 
+
+@dataclass
+class PrecheckConfig:
+    """本地预检配置（不可变）"""
+    min_sharpe: float = PRECHECK_FALLBACK_MIN_SHARPE
+    min_fitness: float = PRECHECK_FALLBACK_MIN_FITNESS
+    min_turnover: float = PRECHECK_FALLBACK_MIN_TURNOVER
+    max_turnover: float = PRECHECK_FALLBACK_MAX_TURNOVER
+    max_weight: float = PRECHECK_FALLBACK_MAX_WEIGHT
+    
+    @classmethod
+    def from_args(cls, args: argparse.Namespace) -> "PrecheckConfig":
+        """从命令行参数构建配置"""
+        return cls(
+            min_sharpe=getattr(args, "min_sharpe", cls.min_sharpe),
+            min_fitness=getattr(args, "min_fitness", cls.min_fitness),
+            min_turnover=getattr(args, "min_turnover", cls.min_turnover),
+            max_turnover=getattr(args, "max_turnover", cls.max_turnover),
+            max_weight=getattr(args, "max_weight", cls.max_weight),
+        )
+
 # ============================================================================
 # 模块级常量（API 响应 JSON 键名）
 # ============================================================================
 
-_ALPHA_ID_REGEX: str = r"/alphas/([^/]+)"
-"""从 location URL 提取 alpha ID 的正则模式"""
+_ALPHA_ID_REGEX: re.Pattern = re.compile(r"/alphas/([^/]+)", re.IGNORECASE)
+"""从 location URL 提取 alpha ID 的正则模式（预编译）"""
 
-_SIM_ID_REGEX: str = r"/simulations/([^/]+)"
-"""从 location URL 提取 simulation ID 的正则模式"""
+_SIM_ID_REGEX: re.Pattern = re.compile(r"/simulations/([^/]+)", re.IGNORECASE)
+"""从 location URL 提取 simulation ID 的正则模式（预编译）"""
 
 _RESULT_FAIL: str = "FAIL"
 """check 结果字符串常量"""
@@ -869,18 +891,14 @@ def _run_checksubmit_stage(
     """
     # 本地预检：用模拟返回的原始指标判断是否值得提交
     if simulation_result:
-        min_s: float = getattr(args, "min_sharpe", PRECHECK_FALLBACK_MIN_SHARPE)
-        min_f: float = getattr(args, "min_fitness", PRECHECK_FALLBACK_MIN_FITNESS)
-        min_t: float = getattr(args, "min_turnover", PRECHECK_FALLBACK_MIN_TURNOVER)
-        max_t: float = getattr(args, "max_turnover", PRECHECK_FALLBACK_MAX_TURNOVER)
-        max_w: float = getattr(args, "max_weight", PRECHECK_FALLBACK_MAX_WEIGHT)
+        config = PrecheckConfig.from_args(args)
         passed, reason, precheck_failed_checks = precheck_simulation_metrics(
             simulation_result,
-            min_sharpe=min_s,
-            min_fitness=min_f,
-            min_turnover=min_t,
-            max_turnover=max_t,
-            max_weight=max_w,
+            min_sharpe=config.min_sharpe,
+            min_fitness=config.min_fitness,
+            min_turnover=config.min_turnover,
+            max_turnover=config.max_turnover,
+            max_weight=config.max_weight,
         )
         if not passed:
             logger.info(
@@ -972,11 +990,25 @@ def run_field_test(
     Returns:
         FieldTestResult: 测试结果对象，包含所有阶段的状态信息。
 
+    Raises:
+        ValueError: 当输入参数无效时抛出。
+
     Note:
         - 任一阶段失败都会立即返回失败结果，不阻塞后续字段
         - 使用信号量控制并发创建，避免速率限制
         - 三个顶层阶段各自由子函数实现，便于测试和调试
     """
+    # 输入验证
+    if not expression or not expression.strip():
+        raise ValueError("expression 不能为空")
+    if not template_name or not template_name.strip():
+        raise ValueError("template_name 不能为空")
+    if "id" not in field:
+        raise ValueError("field 必须包含 'id' 键")
+    if not settings_fingerprint:
+        raise ValueError("settings_fingerprint 不能为空")
+    if not template_library_fingerprint:
+        raise ValueError("template_library_fingerprint 不能为空")
     ctx = FieldTestContext(
         field_id=str(first_non_empty(field.get("id"), SENTINEL_UNKNOWN)),
         field_type=choose_field_type(field),

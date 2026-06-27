@@ -92,7 +92,7 @@ def build_historical_run_state(output_path: str, feedback_output_path: str) -> H
     )
 
 
-def choose_settings_variant_budget(field_feedback: Optional[Dict[str, Any]]) -> int:
+def choose_settings_variant_budget(field_feedback: dict[str, Any] | None) -> int:
     """
     根据字段历史反馈决定每个模板应该尝试多少个 settings 变体。
 
@@ -100,7 +100,7 @@ def choose_settings_variant_budget(field_feedback: Optional[Dict[str, Any]]) -> 
     分数越高表示字段越接近成功，应该投入更多变体尝试。
 
     Args:
-        field_feedback (Optional[Dict[str, Any]]): 字段反馈字典，
+        field_feedback (dict[str, Any] | None): 字段反馈字典，
             包含 best_score、best_expression 等字段。如果为 None，
             返回默认值 1。
 
@@ -160,7 +160,7 @@ def should_stop_after_submittable(args: argparse.Namespace, results: Sequence[Fi
 
 def is_template_disabled(
     template_name: str,
-    template_stats: Dict[str, Dict[str, int]],
+    template_stats: dict[str, dict[str, int]],
     disable_after: int,
 ) -> bool:
     """
@@ -211,7 +211,7 @@ def is_template_disabled(
 def is_legacy_family_disabled(
     template_name: str,
     expression: str,
-    template_stats: Dict[str, Dict[str, int]],
+    template_stats: dict[str, dict[str, int]],
     disable_after: int,
 ) -> bool:
     """
@@ -272,19 +272,19 @@ _ALWAYS_KEEP_FAMILIES: set = {
 }
 
 # LOW_TURNOVER 主导时会被剪掉的模板名/表达式模式
-_SLOW_TEMPLATE_PREFIXES: Tuple[str, ...] = ("ts_mean_", "backfill_", "sum_", "stddev_")
+_SLOW_TEMPLATE_PREFIXES: tuple[str, ...] = ("ts_mean_", "backfill_", "sum_", "stddev_")
 _SLOW_TEMPLATE_NAMES: set = {"zscore", "scale", "rank_raw", "raw_field", "rank_raw_field"}
 
 # 权重集中 / 低子宇宙夏普时会被剪掉的家族与模板前缀
 _CONCENTRATED_WEAK_FAMILIES: set = {
     "legacy_level", "legacy_group_level", "legacy_ratio", "legacy_neg_ratio", "group_ratio_level",
 }
-_CONCENTRATED_WEAK_PREFIXES: Tuple[str, ...] = ("raw_ratio_", "ratio_", "rank_ratio_", "group_rank_ratio_")
+_CONCENTRATED_WEAK_PREFIXES: tuple[str, ...] = ("raw_ratio_", "ratio_", "rank_ratio_", "group_rank_ratio_")
 _CONCENTRATED_WEAK_NAMES: set = {"argmax_60", "argmin_60"}
 
 # LOW_SHARPE >= 2 时被剪掉的 ratio 家族
 _LOW_SHARPE_WEAK_RATIO_FAMILIES: set = {"legacy_ratio", "legacy_neg_ratio", "group_ratio_level"}
-_LOW_SHARPE_WEAK_RATIO_PREFIXES: Tuple[str, ...] = ("raw_ratio_", "ratio_", "rank_ratio_", "group_rank_ratio_")
+_LOW_SHARPE_WEAK_RATIO_PREFIXES: tuple[str, ...] = ("raw_ratio_", "ratio_", "rank_ratio_", "group_rank_ratio_")
 
 # 字段级剪枝：mean_spread / rank_spread 家族中表现弱的字段
 _WEAK_MEAN_SPREAD_FIELDS: set = {"assets", "assets_curr"}
@@ -308,7 +308,7 @@ def should_keep_template_for_feedback(
     template_name: str,
     expression: str,
     priority: int,
-    field_feedback: Optional[Dict[str, Any]],
+    field_feedback: dict[str, Any] | None,
 ) -> bool:
     """
     在字段反馈足够后剪掉低信号、低价值的模板。
