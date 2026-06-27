@@ -88,10 +88,32 @@ def default_template_library() -> TemplateLibrary:
             {"name": "scale", "expression": "rank(scale({field}))", "priority": 120},
             {"name": "delta_20", "expression": "rank(ts_delta({field}, 20))", "priority": 135},
             {"name": "delta_60", "expression": "rank(ts_delta({field}, 60))", "priority": 132},
+            # decay_linear 窗口变体 — decay_20 在 pv1 adjfactor 上 Sharpe=1.22（阈值 1.25，仅差 2.4%）
+            {
+                "name": "decay_10",
+                "expression": f"rank(ts_decay_linear(ts_backfill({{field}}, {bw}), 10))",
+                "priority": 126,
+            },
             {
                 "name": "decay_20",
                 "expression": f"rank(ts_decay_linear(ts_backfill({{field}}, {bw}), 20))",
-                "priority": 122,
+                "priority": 130,
+            },
+            {
+                "name": "decay_30",
+                "expression": f"rank(ts_decay_linear(ts_backfill({{field}}, {bw}), 30))",
+                "priority": 128,
+            },
+            {
+                "name": "decay_40",
+                "expression": f"rank(ts_decay_linear(ts_backfill({{field}}, {bw}), 40))",
+                "priority": 124,
+            },
+            # group_decay_20: 中性化版，针对 LOW_SHARPE 检查
+            {
+                "name": "group_decay_20",
+                "expression": f"group_rank(ts_decay_linear(ts_backfill({{field}}, {bw}), 20), subindustry)",
+                "priority": 132,
             },
             {"name": "stddev_60", "expression": "rank(ts_std_dev({field}, 60))", "priority": 118},
             {"name": "sum_20", "expression": "rank(ts_sum({field}, 20))", "priority": 110},
@@ -141,8 +163,23 @@ def default_template_library() -> TemplateLibrary:
                 "priority": 122,
             },
             {
+                "name": "vec_avg_decay_10",
+                "expression": f"rank(ts_decay_linear(ts_backfill(vec_avg({{field}}), {bw}), 10))",
+                "priority": 120,
+            },
+            {
                 "name": "vec_avg_decay_20",
                 "expression": f"rank(ts_decay_linear(ts_backfill(vec_avg({{field}}), {bw}), 20))",
+                "priority": 124,
+            },
+            {
+                "name": "vec_avg_decay_30",
+                "expression": f"rank(ts_decay_linear(ts_backfill(vec_avg({{field}}), {bw}), 30))",
+                "priority": 122,
+            },
+            {
+                "name": "vec_avg_decay_40",
+                "expression": f"rank(ts_decay_linear(ts_backfill(vec_avg({{field}}), {bw}), 40))",
                 "priority": 118,
             },
         ],

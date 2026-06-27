@@ -390,6 +390,96 @@ NEGATIVE_RAW_FIELDS: set = {
 
 
 # ============================================================================
+# 数据集自适应配置 (Dataset Profiles)
+# ============================================================================
+# 每个数据集有不同的字段数、Value Score、限流风险，应有不同的运行参数。
+# 键名为 dataset_id，未匹配的数据集使用 DEFAULT_PROFILE。
+#
+# 字段说明:
+#   min_request_interval:       API 请求最小间隔（秒），字段多应增大
+#   sleep_between_fields:       字段间休眠（秒）
+#   max_concurrent_simulations: 最大并发模拟数
+#   max_templates_per_field:    每字段最大模板数（0=全部）
+#   simulation_max_wait_seconds:单个模拟最大等待时间（秒）
+#   simulation_max_queue_seconds:模拟排队最大等待时间（秒）
+#   queue_busy_cooldown_seconds: 队列繁忙冷却时间（秒）
+#   template_disable_after:     模板禁用阈值（0=不自动剪枝）
+
+from typing import Any
+
+DATASET_PROFILES: dict[str, dict[str, Any]] = {
+    # model51: 16 字段, Value Score=7, 预测力最强, 几乎无限流
+    "model51": {
+        "min_request_interval": 1.5,
+        "sleep_between_fields": 3.0,
+        "max_concurrent_simulations": 2,
+        "max_templates_per_field": 0,  # 全部模板
+        "simulation_max_wait_seconds": 600,
+        "simulation_max_queue_seconds": 300,
+        "queue_busy_cooldown_seconds": 60,
+        "template_disable_after": 0,  # 不剪枝，字段太少
+    },
+    # option: 138 字段, Value Score=6, 期权数据信号强
+    "option": {
+        "min_request_interval": 1.5,
+        "sleep_between_fields": 3.0,
+        "max_concurrent_simulations": 1,
+        "max_templates_per_field": 20,
+        "simulation_max_wait_seconds": 600,
+        "simulation_max_queue_seconds": 300,
+        "queue_busy_cooldown_seconds": 60,
+        "template_disable_after": 15,
+    },
+    # pv1: 202 字段, Value Score=2, 容易触发限流
+    "pv1": {
+        "min_request_interval": 2.5,
+        "sleep_between_fields": 5.0,
+        "max_concurrent_simulations": 1,
+        "max_templates_per_field": 15,
+        "simulation_max_wait_seconds": 900,
+        "simulation_max_queue_seconds": 600,
+        "queue_busy_cooldown_seconds": 300,  # pv1 限流需要更长冷却
+        "template_disable_after": 12,
+    },
+    # fundamental6: 1758 字段, Value Score=4, 字段量巨大需保守
+    "fundamental6": {
+        "min_request_interval": 2.0,
+        "sleep_between_fields": 5.0,
+        "max_concurrent_simulations": 1,
+        "max_templates_per_field": 8,
+        "simulation_max_wait_seconds": 900,
+        "simulation_max_queue_seconds": 600,
+        "queue_busy_cooldown_seconds": 120,
+        "template_disable_after": 12,
+    },
+}
+
+# 默认配置文件（未在 DATASET_PROFILES 中匹配时使用）
+DEFAULT_PROFILE: dict[str, Any] = {
+    "min_request_interval": 2.0,
+    "sleep_between_fields": 5.0,
+    "max_concurrent_simulations": 1,
+    "max_templates_per_field": 12,
+    "simulation_max_wait_seconds": 900,
+    "simulation_max_queue_seconds": 600,
+    "queue_busy_cooldown_seconds": 120,
+    "template_disable_after": 12,
+}
+
+
+def get_dataset_profile(dataset_id: str) -> dict[str, Any]:
+    """返回指定数据集的运行参数配置。
+
+    Args:
+        dataset_id: 数据集 ID，如 "model51", "pv1", "fundamental6"。
+
+    Returns:
+        dict: 该数据集的参数配置；未匹配时返回 DEFAULT_PROFILE。
+    """
+    return DATASET_PROFILES.get(dataset_id, DEFAULT_PROFILE)
+
+
+# ============================================================================
 # 辅助函数
 # ============================================================================
 

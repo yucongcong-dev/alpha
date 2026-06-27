@@ -19,7 +19,7 @@ import os
 from pathlib import Path
 from typing import Any
 
-from ..config import DEFAULT_DATASET_ID
+from ..config import DEFAULT_DATASET_ID, get_dataset_profile
 from ..io.output import (
     build_dataset_scoped_paths,
     build_output_sidecar_paths,
@@ -232,8 +232,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--sleep-between-fields",
         type=float,
-        default=2.0,
-        help="字段间的休眠时间",
+        default=5.0,
+        help="字段间的休眠时间（增大以降低 API 限流）",
     )
     parser.add_argument(
         "--max-templates-per-field",
@@ -331,8 +331,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--min-request-interval",
         type=float,
-        default=1.25,
-        help="请求间的最小间隔，用于降低速率限制",
+        default=2.5,
+        help="请求间的最小间隔，用于降低速率限制（增大以应对 API 429）",
     )
     parser.add_argument(
         "--rate-limit-max-retries",
@@ -346,8 +346,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--max-concurrent-simulations",
         type=int,
-        default=2,
-        help="并发模拟的最大数量",
+        default=1,
+        help="并发模拟的最大数量（降低以避免 API 限流）",
     )
     parser.add_argument(
         "--max-concurrent-creates",
@@ -382,8 +382,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--queue-busy-cooldown-seconds",
         type=float,
-        default=180.0,
-        help="队列拥塞后的冷却时间（秒）",
+        default=300.0,
+        help="队列拥塞后的冷却时间（秒，增大以避免重复触发限流）",
     )
     parser.add_argument(
         "--field-queue-busy-skip-after",
@@ -446,6 +446,22 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--log-file", default="", help="日志文件路径")
 
     args = parser.parse_args()
+
+    # 根据数据集自动适配运行参数（CLI 显式传参会覆盖）
+    profile = get_dataset_profile(args.dataset_id)
+    _dataset_profile_keys = (
+        "min_request_interval",
+        "sleep_between_fields",
+        "max_concurrent_simulations",
+        "max_templates_per_field",
+        "simulation_max_wait_seconds",
+        "simulation_max_queue_seconds",
+        "queue_busy_cooldown_seconds",
+        "template_disable_after",
+    )
+    for key in _dataset_profile_keys:
+        if key in profile:
+            setattr(args, key, profile[key])
 
     # 根据运行模式调整参数
     if args.smoke_test:
