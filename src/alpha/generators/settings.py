@@ -77,10 +77,6 @@ _WEBSITE_DEFAULTS: dict[str, Any] = {
     "pasteurization": "ON",
     "unitHandling": "VERIFY",
     "nanHandling": "OFF",
-    "maxTrade": "OFF",
-    "maxPosition": "OFF",
-    "lookback": "OFF",
-    "visualization": False,
 }
 
 # ---------------------------------------------------------------------------
@@ -91,8 +87,6 @@ _API_TO_ARGS: dict[str, str] = {
     "instrumentType": "instrument_type",
     "unitHandling": "unit_handling",
     "nanHandling": "nan_handling",
-    "maxTrade": "max_trade",
-    "maxPosition": "max_position",
     "startDate": "start_date",
     "endDate": "end_date",
 }
@@ -102,8 +96,7 @@ _CLI_DEFAULTS: dict[str, Any] = {
     "instrument_type": "EQUITY", "region": "USA", "universe": "TOP3000",
     "delay": 1, "decay": 4, "neutralization": "SUBINDUSTRY", "truncation": 0.08,
     "pasteurization": "ON", "unit_handling": "VERIFY", "nan_handling": "OFF",
-    "max_trade": "OFF", "max_position": "OFF", "language": "FASTEXPR",
-    "visualization": False, "lookback": "OFF",
+    "language": "FASTEXPR",
 }
 
 # TEST PERIOD 硬编码官网默认: 1Y 0M
@@ -213,13 +206,11 @@ def build_simulation_payload(args: Any, expression: str) -> dict[str, Any]:
     settings["startDate"] = start_date
     settings["endDate"] = end_date
 
-    # Brain API 不接受字符串 "OFF" 作为 bool/int 开关值，应省略该键
-    # lookback: 整数天数字段，"OFF" 无效 → 删除（可选字段）
-    # maxTrade/maxPosition: bool 字段，"OFF" 无效 → 删除（可选字段）
-    # nanHandling: 必填字段，API 接受 "OFF" → 保留
-    optional_off_keys = {"lookback", "maxTrade", "maxPosition"}
+    # 防御：删除值为 "OFF" 的非必填 switch 字段（API 要求省略而非传 "OFF"）
+    # 这些字段不从 _WEBSITE_DEFAULTS 生成，但设置变体可能注入
+    _non_required_off_keys = {"lookback", "maxTrade", "maxPosition"}
     for k in list(settings):
-        if k in optional_off_keys and settings[k] == "OFF":
+        if k in _non_required_off_keys and str(settings[k]).upper() == "OFF":
             del settings[k]
 
     return {

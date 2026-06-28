@@ -623,8 +623,6 @@ def apply_yaml_global_defaults(
         "instrumentType": "instrument_type",
         "unitHandling": "unit_handling",
         "nanHandling": "nan_handling",
-        "maxTrade": "max_trade",
-        "maxPosition": "max_position",
         "startDate": "start_date",
         "endDate": "end_date",
     }
@@ -634,10 +632,10 @@ def apply_yaml_global_defaults(
             if yaml_key in sim_section and hasattr(args, arg_key):
                 setattr(args, arg_key, sim_section[yaml_key])
     # 不需要映射的 key (region, universe, delay, decay, neutralization, truncation,
-    # pasteurization, language, visualization, lookback) — YAML key == args attr
+    # pasteurization, language) — YAML key == args attr
     _merge_section(args, sim_section, {
         "region", "universe", "delay", "decay", "neutralization",
-        "truncation", "pasteurization", "language", "visualization", "lookback",
+        "truncation", "pasteurization", "language",
     })
 
     # limits (字段筛选)

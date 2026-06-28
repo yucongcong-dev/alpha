@@ -81,11 +81,7 @@ global:
     testPeriodYears: 1
     testPeriodMonths: 0
 
-    # — 以下为官网 Settings 面板外的额外参数 (API 支持但 UI 默认隐藏) —
-    maxTrade: "OFF"               # Max Trade: OFF (不限制最大交易)
-    maxPosition: "OFF"            # Max Position: OFF (不限制最大持仓)
-    lookback: "OFF"               # Lookback: ON/OFF (风险因子回顾)
-    visualization: false           # Visualization: 是否生成可视化图表 (元数据)
+    # — 以下参数官网 Settings 面板不展示，由 API 使用服务端默认值 —
 
   # ==========================================================================
   # Operational — 运维参数（字段筛选、并发、重试、过滤、质量、HTTP、反馈）
