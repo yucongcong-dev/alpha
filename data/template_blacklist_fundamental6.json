@@ -2,7 +2,7 @@
   "_version": "v2",
   "_comment": "Template blacklist for fundamental6 — quarterly fundamental data (1758 fields, Value Score=4). Short windows (<63 days) don't work here.",
   "_created": "2026-06-28",
-  "_updated": "2026-06-28 19:50",
+  "_updated": "2026-06-28 21:47",
   "dataset_id": "fundamental6",
   "blacklisted_templates": [
     {
@@ -102,6 +102,134 @@
       "date_blacklisted": "2026-06-28",
       "avg_sharpe": 0.2,
       "avg_fitness": 0.5
+    },
+    {
+      "name": "3layer_zscore_subind_decay_63",
+      "dataset_id": "fundamental6",
+      "source": "auto_detected",
+      "field_type": "MATRIX",
+      "reason": "2个字段测试均不通过。平均 Sharpe 0.430。平均 Fitness 0.170。",
+      "fields_tested": [
+        "assets",
+        "assets_curr"
+      ],
+      "low_sharpe": 2,
+      "low_fitness": 2,
+      "date_blacklisted": "2026-06-28",
+      "avg_sharpe": 0.43,
+      "avg_fitness": 0.17
+    },
+    {
+      "name": "delta_over_std_63_126_subind",
+      "dataset_id": "fundamental6",
+      "source": "auto_detected",
+      "field_type": "MATRIX",
+      "reason": "2个字段测试均不通过。平均 Sharpe 0.055。平均 Fitness 0.005。",
+      "fields_tested": [
+        "assets",
+        "assets_curr"
+      ],
+      "low_sharpe": 2,
+      "low_fitness": 2,
+      "date_blacklisted": "2026-06-28",
+      "avg_sharpe": 0.055,
+      "avg_fitness": 0.005
+    },
+    {
+      "name": "group_zscore_63_subind",
+      "dataset_id": "fundamental6",
+      "source": "auto_detected",
+      "field_type": "MATRIX",
+      "reason": "2个字段测试均不通过。平均 Sharpe 0.545。平均 Fitness 0.220。",
+      "fields_tested": [
+        "assets",
+        "assets_curr"
+      ],
+      "low_sharpe": 2,
+      "low_fitness": 2,
+      "date_blacklisted": "2026-06-28",
+      "avg_sharpe": 0.545,
+      "avg_fitness": 0.22
+    },
+    {
+      "name": "decay_63_subind",
+      "dataset_id": "fundamental6",
+      "source": "auto_detected",
+      "field_type": "MATRIX",
+      "reason": "2个字段测试均不通过。平均 Sharpe 0.620。平均 Fitness 0.405。",
+      "fields_tested": [
+        "assets",
+        "assets_curr"
+      ],
+      "low_sharpe": 2,
+      "low_fitness": 2,
+      "date_blacklisted": "2026-06-28",
+      "avg_sharpe": 0.62,
+      "avg_fitness": 0.405
+    },
+    {
+      "name": "iter_group_rank_delta_of_rank_63",
+      "dataset_id": "fundamental6",
+      "source": "auto_detected",
+      "field_type": "MATRIX",
+      "reason": "2个字段测试均不通过。平均 Sharpe -0.060。平均 Fitness -0.020。",
+      "fields_tested": [
+        "assets",
+        "assets_curr"
+      ],
+      "low_sharpe": 2,
+      "low_fitness": 2,
+      "date_blacklisted": "2026-06-28",
+      "avg_sharpe": -0.06,
+      "avg_fitness": -0.02
+    },
+    {
+      "name": "rank_raw",
+      "dataset_id": "fundamental6",
+      "source": "auto_detected",
+      "field_type": "MATRIX",
+      "reason": "2个字段测试均不通过。平均 Sharpe 0.625。平均 Fitness 0.470。",
+      "fields_tested": [
+        "assets",
+        "assets_curr"
+      ],
+      "low_sharpe": 2,
+      "low_fitness": 2,
+      "date_blacklisted": "2026-06-28",
+      "avg_sharpe": 0.625,
+      "avg_fitness": 0.47
+    },
+    {
+      "name": "iter_rank_mean_spread_over_std_63_240_126",
+      "dataset_id": "fundamental6",
+      "source": "auto_detected",
+      "field_type": "MATRIX",
+      "reason": "2个字段测试均不通过。平均 Sharpe -0.325。平均 Fitness -0.145。",
+      "fields_tested": [
+        "bookvalue_ps",
+        "capex"
+      ],
+      "low_sharpe": 2,
+      "low_fitness": 2,
+      "date_blacklisted": "2026-06-28",
+      "avg_sharpe": -0.325,
+      "avg_fitness": -0.145
+    },
+    {
+      "name": "iter_group_mean_spread_over_std_63_240_126",
+      "dataset_id": "fundamental6",
+      "source": "auto_detected",
+      "field_type": "MATRIX",
+      "reason": "2个字段测试均不通过。平均 Sharpe -0.075。平均 Fitness -0.015。",
+      "fields_tested": [
+        "bookvalue_ps",
+        "capex"
+      ],
+      "low_sharpe": 2,
+      "low_fitness": 2,
+      "date_blacklisted": "2026-06-28",
+      "avg_sharpe": -0.075,
+      "avg_fitness": -0.015
     }
   ],
   "auto_avoid_rules": [
