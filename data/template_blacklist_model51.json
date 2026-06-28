@@ -1,9 +1,0 @@
-{
-  "_version": "v2",
-  "_comment": "Template blacklist for model51 — 16 fields, Value Score=7, daily data with strong predictive power. Short windows CAN work here.",
-  "_created": "2026-06-28",
-  "_updated": "2026-06-28 19:53",
-  "dataset_id": "model51",
-  "blacklisted_templates": [],
-  "auto_avoid_rules": []
-}

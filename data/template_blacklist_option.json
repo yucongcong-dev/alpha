@@ -1,9 +1,0 @@
-{
-  "_version": "v2",
-  "_comment": "Template blacklist for option — 138 fields, Value Score=6, options data. Templates TBD based on test results.",
-  "_created": "2026-06-28",
-  "_updated": "2026-06-28 19:53",
-  "dataset_id": "option",
-  "blacklisted_templates": [],
-  "auto_avoid_rules": []
-}
