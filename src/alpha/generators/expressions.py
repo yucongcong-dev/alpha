@@ -27,6 +27,7 @@ import re
 from typing import Any
 
 from ..config import (
+    BACKFILL_WINDOW,
     CHECK_CONCENTRATED_WEIGHT,
     CHECK_HIGH_TURNOVER,
     CHECK_LOW_FITNESS,
