@@ -618,13 +618,26 @@ def apply_yaml_global_defaults(
     if not isinstance(global_cfg, dict):
         return
 
-    # simulation settings —— 与官网 Simulation Settings 一一对应
-    _merge_section(args, global_cfg.get("simulation", {}), {
-        "region", "universe", "instrument_type", "delay",
-        "decay", "neutralization", "truncation", "nan_handling",
-        "pasteurization", "unit_handling", "max_trade", "max_position",
-        "language", "visualization", "lookback",
-        "start_date", "end_date",
+    # simulation settings —— YAML key 现在是 Brain API camelCase，需映射到 args snake_case
+    _SIM_KEY_MAP = {
+        "instrumentType": "instrument_type",
+        "unitHandling": "unit_handling",
+        "nanHandling": "nan_handling",
+        "maxTrade": "max_trade",
+        "maxPosition": "max_position",
+        "startDate": "start_date",
+        "endDate": "end_date",
+    }
+    sim_section = global_cfg.get("simulation", {})
+    if isinstance(sim_section, dict):
+        for yaml_key, arg_key in _SIM_KEY_MAP.items():
+            if yaml_key in sim_section and hasattr(args, arg_key):
+                setattr(args, arg_key, sim_section[yaml_key])
+    # 不需要映射的 key (region, universe, delay, decay, neutralization, truncation,
+    # pasteurization, language, visualization, lookback) — YAML key == args attr
+    _merge_section(args, sim_section, {
+        "region", "universe", "delay", "decay", "neutralization",
+        "truncation", "pasteurization", "language", "visualization", "lookback",
     })
 
     # limits (字段筛选)
@@ -862,6 +875,21 @@ def get_precheck_fallback_min_sharpe() -> float:
 def get_precheck_fallback_min_fitness() -> float:
     """预检 fallback Fitness。"""
     return float(_yaml_get("quality", "min_fitness", PRECHECK_FALLBACK_MIN_FITNESS))
+
+
+def get_precheck_fallback_min_turnover() -> float:
+    """预检 fallback 最小 Turnover。"""
+    return float(_yaml_get("quality", "min_turnover", PRECHECK_FALLBACK_MIN_TURNOVER))
+
+
+def get_precheck_fallback_max_turnover() -> float:
+    """预检 fallback 最大 Turnover。"""
+    return float(_yaml_get("quality", "max_turnover", PRECHECK_FALLBACK_MAX_TURNOVER))
+
+
+def get_precheck_fallback_max_weight() -> float:
+    """预检 fallback 最大权重。"""
+    return float(_yaml_get("quality", "max_weight", PRECHECK_FALLBACK_MAX_WEIGHT))
 
 
 def get_submit_min_sharpe() -> float:
