@@ -427,7 +427,7 @@ def precheck_simulation_metrics(
 # ============================================================================
 
 
-def summarize_failure(payload: dict[str, Any]) -> str:
+def summarize_failure(payload: dict[str, Any] | list[Any] | Any) -> str:  # pyright: ignore[reportExplicitAny]
     """
     将冗长的 API 失败负载压缩为简短的运维可读消息。
 
@@ -435,7 +435,7 @@ def summarize_failure(payload: dict[str, Any]) -> str:
     便于日志记录和结果持久化。
 
     Args:
-        payload: API 失败响应的 JSON 字典。
+        payload: API 失败响应的 JSON 字典，或意外返回的 list/其他类型。
 
     Returns:
         str: 简短的错误描述消息。
@@ -457,7 +457,13 @@ def summarize_failure(payload: dict[str, Any]) -> str:
         - 优先提取 detail、message、error 字段
         - 其次提取失败的检查项名称
         - 最后截断原始 JSON 文本（最多 300 字符）
+        - 非 dict 类型会被安全地转为字符串
     """
+    if not isinstance(payload, dict):
+        # API 可能返回 list 或其他非 dict 类型
+        text = json.dumps(payload, ensure_ascii=False)[:FAILURE_SUMMARY_MAX_LEN]
+        return text or "unknown error"
+
     detail = first_non_empty(
         payload.get(API_KEY_DETAIL),
         payload.get(API_KEY_MESSAGE),

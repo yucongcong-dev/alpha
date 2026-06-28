@@ -33,7 +33,9 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 import json
+import logging
 import os
+import time
 from typing import Any
 
 from ..config import (
@@ -76,6 +78,8 @@ from ..config import (
 from ..exceptions import BrainAPIError
 from ..models.base import FieldTestResult
 
+logger = logging.getLogger(__name__)
+
 
 def load_existing_results(path: str) -> list[FieldTestResult]:
     """
@@ -93,8 +97,10 @@ def load_existing_results(path: str) -> list[FieldTestResult]:
         list[FieldTestResult]: 加载的历史结果列表。每个结果包含
             字段信息、模板名称、模拟状态、失败检查等详细信息。
 
-    Raises:
-        BrainAPIError: 当读取文件失败时抛出。
+    Notes:
+        - 返回一个 FieldTestResult 对象列表
+        - 如果文件不存在，则返回空列表
+        - 文件损坏时自动重命名备份并从空结果重新开始
 
     Example:
         >>> results = load_existing_results("results.json")
@@ -117,7 +123,20 @@ def load_existing_results(path: str) -> list[FieldTestResult]:
         with open(path, encoding="utf-8") as handle:
             payload = json.load(handle)
     except Exception as exc:
-        raise BrainAPIError(f"读取现有结果文件失败 {path}: {exc}") from exc
+        # 文件损坏时重命名备份，从空结果重新开始
+        now = int(time.time())
+        backup_path = f"{path}.corrupted.{now}"
+        try:
+            os.rename(path, backup_path)
+            logger.warning(
+                "[recovery] renamed corrupted result file %s -> %s (error: %s)",
+                path, backup_path, exc,
+            )
+        except OSError:
+            logger.warning(
+                "[recovery] failed to rename corrupted result file %s: %s", path, exc
+            )
+        return []
 
     rows = payload.get("results")
     if not isinstance(rows, list):
