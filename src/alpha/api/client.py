@@ -68,6 +68,10 @@ from ..utils.helpers import first_non_empty
 
 logger = logging.getLogger(__name__)
 
+# 全局请求节流：所有 BrainClient 实例共享同一个时钟，避免多线程各自为政
+_request_throttle_lock = threading.Lock()
+_global_last_request_at: float = 0.0
+
 # ============================================================================
 # 辅助函数 - 时间与等待
 # ============================================================================
@@ -596,9 +600,8 @@ class BrainClient:
     Attributes:
         email (str): 用户邮箱地址。
         password (str): 用户密码。
-        min_request_interval (float): 最小请求间隔（秒）。
+        min_request_interval (float): 最小请求间隔（秒），全局共享节流时钟。
         rate_limit_max_retries (int): 速率限制时的最大重试次数。
-        last_request_started_at (float): 上次请求开始时间（单调时钟）。
         cookies (CookieJar): HTTP Cookie 存储容器。
         opener: urllib 的 opener 对象，用于发送请求。
 
@@ -648,7 +651,7 @@ class BrainClient:
             ... )
 
         Note:
-            - min_request_interval 使用单调时钟计算，不受系统时间调整影响
+            - min_request_interval 使用全局共享时钟，所有客户端实例协调节流
             - rate_limit_max_retries 至少为 1
             - opener 和 cookie 状态不适合跨线程共享
         """
@@ -660,7 +663,6 @@ class BrainClient:
         self.password = password
         self.min_request_interval = max(min_request_interval, 0.0)
         self.rate_limit_max_retries = max(rate_limit_max_retries, 1)
-        self.last_request_started_at = 0.0
         self.cookies = CookieJar()
         self.opener = build_opener(ProxyHandler({}), HTTPCookieProcessor(self.cookies))
 
@@ -861,14 +863,19 @@ class BrainClient:
             - 只有网络错误（URLError）才抛出异常
             - 请求超时设置为 90 秒
         """
-        # 保持 raw_request 简单，高层重试逻辑在 request() 中
+        # 跨所有客户端实例共享节流时钟，避免多线程各自为政导致限流
         if self.min_request_interval > 0:
-            now = time.monotonic()
-            elapsed = now - self.last_request_started_at
-            remaining = self.min_request_interval - elapsed
+            global _global_last_request_at
+            with _request_throttle_lock:
+                now = time.monotonic()
+                elapsed = now - _global_last_request_at
+                remaining = self.min_request_interval - elapsed
+                # 原子预留时间段：提前占位，防止后续线程零等待一拥而上
+                _global_last_request_at = max(
+                    now, _global_last_request_at + self.min_request_interval
+                )
             if remaining > 0:
                 wait_seconds(remaining, "global request throttle")
-            self.last_request_started_at = time.monotonic()
         if params:
             query = urlencode(params)
             separator = "&" if "?" in url else "?"
