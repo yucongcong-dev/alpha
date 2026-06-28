@@ -12,7 +12,7 @@ from pathlib import Path
 
 def main():
     # Analyze previous results
-    results_path = Path("results/pv1_test_results_analysis.json")
+    results_path = Path("results/pv1/test_results_analysis.json")
     
     if not results_path.exists():
         print("❌ No previous results found. Run initial exploration first:")

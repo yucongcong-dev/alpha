@@ -68,7 +68,7 @@ DEFAULT_TEMPLATE_LIBRARY_FILE = str(DATA_DIR / "worldquant_template_library.json
 DEFAULT_FIELDS_CACHE_FILE = str(CACHE_DIR / "fundamental6_fields_cache.json")
 """默认字段缓存文件路径"""
 
-DEFAULT_OUTPUT_FILE = str(RESULTS_DIR / "fundamental6_test_results.json")
+DEFAULT_OUTPUT_FILE = str(RESULTS_DIR / "fundamental6" / "test_results.json")
 """默认输出文件路径"""
 
 

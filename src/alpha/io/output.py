@@ -209,20 +209,20 @@ def build_dataset_scoped_paths(dataset_id: str) -> dict[str, str]:
 
         >>> paths = build_dataset_scoped_paths("my_dataset")
         >>> print(paths["output"])
-        /path/to/script_dir/my_dataset_test_results.json
+        /path/to/script_dir/results/my_dataset/test_results.json
 
     Note:
-        - 所有路径都相对于 SCRIPT_DIR
+        - 所有路径都相对于 PROJECT_ROOT
         - 文件名使用 sanitize_dataset_id_for_filename 安全化
-        - 模板库文件名格式：worldquant_template_library_{sanitized}.json
-        - 字段缓存文件名格式：{sanitized}_fields_cache.json
-        - 结果文件名格式：{sanitized}_test_results.json
+        - 模板库文件名格式：data/worldquant_template_library_{sanitized}.json
+        - 字段缓存文件名格式：cache/{sanitized}_fields_cache.json
+        - 结果文件路径格式：results/{sanitized}/test_results.json
     """
     dataset_key = sanitize_dataset_id_for_filename(dataset_id)
     return {
         "template_library_file": str(DATA_DIR / f"worldquant_template_library_{dataset_key}.json"),
         "fields_cache_file": str(CACHE_DIR / f"{dataset_key}_fields_cache.json"),
-        "output": str(RESULTS_DIR / f"{dataset_key}_test_results.json"),
+        "output": str(RESULTS_DIR / dataset_key / "test_results.json"),
     }
 
 
