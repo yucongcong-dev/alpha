@@ -213,6 +213,12 @@ def build_simulation_payload(args: Any, expression: str) -> dict[str, Any]:
     settings["startDate"] = start_date
     settings["endDate"] = end_date
 
+    # Brain API 不接受字符串 "OFF" 作为 bool/int 开关值，应省略该键
+    # 受影响的 key: lookback, maxTrade, maxPosition, nanHandling
+    off_keys = [k for k, v in settings.items() if v == "OFF"]
+    for k in off_keys:
+        del settings[k]
+
     return {
         "type": "REGULAR",
         "settings": settings,
