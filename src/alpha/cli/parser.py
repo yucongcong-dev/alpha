@@ -62,8 +62,8 @@ DEFAULT_CREDS_FILE = str(CREDS_DIR / "worldquant_brain_credentials.json")
 DEFAULT_CREDS_KEY_FILE = str(CREDS_DIR / "worldquant_brain_credentials.key")
 """默认凭证密钥文件路径"""
 
-DEFAULT_TEMPLATE_LIBRARY_FILE = str(DATA_DIR / "worldquant_template_library.json")
-"""默认模板库文件路径"""
+DEFAULT_TEMPLATE_LIBRARY_FILE = ""
+"""默认模板库文件路径 — 空字符串让 normalize_args_paths 通过 build_dataset_scoped_paths 按 dataset_id 自动分流"""
 
 DEFAULT_FIELDS_CACHE_FILE = str(CACHE_DIR / "fundamental6_fields_cache.json")
 """默认字段缓存文件路径"""
@@ -570,7 +570,9 @@ def normalize_args_paths(args: argparse.Namespace) -> RunPaths:
     
     # 同步更新 args 对象，确保后续代码（如 scheduler.py）能使用正确的路径
     args.output = output_file
-    
+    args.fields_cache_file = fields_cache_file
+    args.template_library_file = template_library_file
+
     feedback_output = resolve_cli_path(args.feedback_output) or output_file
     creds_file = resolve_cli_path(args.creds_file) or DEFAULT_CREDS_FILE
     creds_key_file = resolve_cli_path(args.creds_key_file) or DEFAULT_CREDS_KEY_FILE

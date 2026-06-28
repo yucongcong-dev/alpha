@@ -243,13 +243,13 @@ def build_output_sidecar_paths(output_path: str) -> dict[str, str]:
     Returns:
         dict[str, str]: 包含以下键的路径字典：
             - analysis: 分析文件路径（{basename}_analysis.json）
-            - run_log: 运行日志文件路径（{basename}_{date}_run.log）
+            - run_log: 运行日志文件路径（{basename}_{date}.log）
 
     Example:
         >>> paths = build_output_sidecar_paths("/path/to/results.json")
         >>> print(paths["analysis"])
         /path/to/results_analysis.json
-        >>> # run_log 包含日期，如 results_2024-01-01_run.log
+        >>> # run_log 包含日期，如 results_2024-01-01.log
 
     Note:
         - 分析文件名在主文件名后添加 _analysis
@@ -264,7 +264,7 @@ def build_output_sidecar_paths(output_path: str) -> dict[str, str]:
     log_date = time.strftime("%Y-%m-%d")
     return {
         "analysis": str(base_dir / f"{base_name}_analysis.json"),
-        "run_log": str(base_dir / f"{base_name}_{log_date}_run.log"),
+        "run_log": str(base_dir / f"{base_name}_{log_date}.log"),
     }
 
 

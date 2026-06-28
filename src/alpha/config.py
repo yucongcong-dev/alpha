@@ -277,7 +277,7 @@ RATE_LIMIT_DEFAULT_WAIT: float = 10.0
 POLLING_DEFAULT_WAIT: float = 5.0
 """模拟轮询默认等待间隔（秒）"""
 
-POLLING_NO_RETRY_AFTER_WAIT: float = 3.0
+POLLING_NO_RETRY_AFTER_WAIT: float = 1.5
 """无 Retry-After 头时的轮询等待间隔（秒）"""
 
 SERVER_ERROR_BACKOFF_MAX: float = 30.0
@@ -295,7 +295,7 @@ LOGIN_RETRY_WAIT: float = 3.0
 SIMULATION_RETRY_WAIT: float = 3.0
 """模拟各阶段重试等待间隔（秒），略高于默认值以应对 API 排队"""
 
-POLLING_RETRY_BUFFER: float = 1.0
+POLLING_RETRY_BUFFER: float = 0.5
 """轮询重试缓冲时间（秒），附加在 Retry-After 值上"""
 
 
@@ -521,13 +521,13 @@ DATASET_PROFILES: dict[str, dict[str, Any]] = {
     },
     # fundamental6: 1758 字段, Value Score=4, 字段量巨大需保守
     "fundamental6": {
-        "min_request_interval": 2.0,
-        "sleep_between_fields": 5.0,
-        "max_concurrent_simulations": 1,
+        "min_request_interval": 1.5,
+        "sleep_between_fields": 3.0,
+        "max_concurrent_simulations": 2,
         "max_templates_per_field": 8,
         "simulation_max_wait_seconds": 900,
         "simulation_max_queue_seconds": 600,
-        "queue_busy_cooldown_seconds": 120,
+        "queue_busy_cooldown_seconds": 60,
         "template_disable_after": 12,
     },
 }
