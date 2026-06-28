@@ -50,7 +50,7 @@ global:
     # 6. NEUTRALIZATION — 官网: Neutralization
     #    选项: SUBINDUSTRY, MARKET, SECTOR, NONE
     #    官网显示: Subindustry | Market | Sector | None
-    neutralization: "INDUSTRY"
+    neutralization: "MARKET"
 
     # 7. DECAY — 官网: Decay
     #    指数加权衰减天数, 0=无衰减, 官网默认=4
