@@ -77,6 +77,7 @@ _WEBSITE_DEFAULTS: dict[str, Any] = {
     "pasteurization": "ON",
     "unitHandling": "VERIFY",
     "nanHandling": "OFF",
+    "visualization": False,
 }
 
 # ---------------------------------------------------------------------------
