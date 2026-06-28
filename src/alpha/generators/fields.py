@@ -289,7 +289,7 @@ def fetch_fields_with_cache(
     """
     if not cache_refresh_reason:
         fields = list(cached_fields)
-        logger.info("[cache] 从 %s 加载 %d 个字段", fields_cache_file, len(fields))
+        logger.info("[cache] 从 %s 加载 %d 个字段", os.path.basename(fields_cache_file), len(fields))
         return fields
 
     logger.info("[cache] 刷新字段缓存: %s", cache_refresh_reason)
@@ -334,5 +334,5 @@ def fetch_fields_with_cache(
         delay=args.delay,
         fields=fields,
     )
-    logger.info("[cache] 保存 %d 个字段到 %s", len(fields), fields_cache_file)
+    logger.info("[cache] 保存 %d 个字段到 %s", len(fields), os.path.basename(fields_cache_file))
     return fields
