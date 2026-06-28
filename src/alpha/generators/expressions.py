@@ -60,55 +60,72 @@ _TOKENIZE_REGEX: re.Pattern = re.compile(r"[^a-z0-9]+")
 # ---- 模板黑名单（按 dataset_id 分层） ----
 _BLACKLIST_CACHE: dict[str, dict[str, Any]] = {}
 """按 dataset_id 缓存的黑名单数据（懒加载）。每个值为 {"names": set, "patterns": list}"""
-_BLACKLIST_FILE_LOADED: bool = False
-_BLACKLIST_RAW: dict[str, Any] = {}
-"""原始 JSON 数据（一次加载，按需查 dataset）"""
+_DEFAULT_AVOID_RULES_CACHE: list[dict[str, str]] | None = None
+"""跨数据集默认规避规则缓存（一次加载）。"""
 
 
-def _load_blacklist_file() -> None:
-    """懒加载黑名单 JSON 文件（仅一次）。"""
-    global _BLACKLIST_FILE_LOADED, _BLACKLIST_RAW
-    if _BLACKLIST_FILE_LOADED:
-        return
-    _BLACKLIST_FILE_LOADED = True
-    # 尝试多个可能的路径
-    candidates = []
+def _resolve_blacklist_project_root() -> str:
+    """查找项目根目录（与 data 目录同级的 src 目录所在路径）。"""
     current = os.path.dirname(os.path.abspath(__file__))
-    project_root = os.path.normpath(os.path.join(current, "..", "..", ".."))
-    candidates.append(os.path.join(project_root, "data", "template_blacklist.json"))
-    candidates.append(os.path.join(os.getcwd(), "data", "template_blacklist.json"))
+    return os.path.normpath(os.path.join(current, "..", "..", ".."))
+
+
+def _load_default_avoid_rules() -> list[dict[str, str]]:
+    """加载跨数据集默认规避规则 template_blacklist.json。"""
+    global _DEFAULT_AVOID_RULES_CACHE
+    if _DEFAULT_AVOID_RULES_CACHE is not None:
+        return _DEFAULT_AVOID_RULES_CACHE
+    candidates = [
+        os.path.join(_resolve_blacklist_project_root(), "data", "template_blacklist.json"),
+        os.path.join(os.getcwd(), "data", "template_blacklist.json"),
+    ]
     for path in candidates:
         if os.path.isfile(path):
             try:
                 with open(path, "r", encoding="utf-8") as fh:
-                    _BLACKLIST_RAW = json.load(fh)
-                return
+                    raw = json.load(fh)
+                _DEFAULT_AVOID_RULES_CACHE = raw.get("_default_auto_avoid_rules", [])
+                return _DEFAULT_AVOID_RULES_CACHE
             except (json.JSONDecodeError, OSError):
                 pass
+    _DEFAULT_AVOID_RULES_CACHE = []
+    return _DEFAULT_AVOID_RULES_CACHE
 
 
 def _load_blacklist(dataset_id: str) -> None:
-    """按 dataset_id 加载黑名单到缓存。"""
-    global _BLACKLIST_CACHE, _BLACKLIST_RAW
+    """按 dataset_id 加载专属黑名单文件 template_blacklist_{dataset_id}.json。"""
+    global _BLACKLIST_CACHE
     if dataset_id in _BLACKLIST_CACHE:
         return  # 已缓存
-    _load_blacklist_file()
+
     names: set[str] = set()
     patterns: list[str] = []
 
-    # 1. 加载数据集专属黑名单
-    datasets = _BLACKLIST_RAW.get("datasets", {})
-    ds_data = datasets.get(dataset_id, {}) if isinstance(datasets, dict) else {}
-    if isinstance(ds_data, dict):
-        for item in ds_data.get("blacklisted_templates", []):
-            if isinstance(item, dict) and item.get("name"):
-                names.add(item["name"])
-        for rule in ds_data.get("_auto_avoid_rules", []):
-            if isinstance(rule, dict) and rule.get("pattern"):
-                patterns.append(rule["pattern"])
+    # 1. 加载数据集专属黑名单文件
+    project_root = _resolve_blacklist_project_root()
+    filename = f"template_blacklist_{dataset_id}.json"
+    candidates = [
+        os.path.join(project_root, "data", filename),
+        os.path.join(os.getcwd(), "data", filename),
+    ]
+    for path in candidates:
+        if os.path.isfile(path):
+            try:
+                with open(path, "r", encoding="utf-8") as fh:
+                    ds_raw = json.load(fh)
+                if isinstance(ds_raw, dict):
+                    for item in ds_raw.get("blacklisted_templates", []):
+                        if isinstance(item, dict) and item.get("name"):
+                            names.add(item["name"])
+                    for rule in ds_raw.get("auto_avoid_rules", []):
+                        if isinstance(rule, dict) and rule.get("pattern"):
+                            patterns.append(rule["pattern"])
+            except (json.JSONDecodeError, OSError):
+                pass
+            break  # 找到文件即停
 
     # 2. 加载跨数据集默认规避规则（对所有数据集生效）
-    for rule in _BLACKLIST_RAW.get("_default_auto_avoid_rules", []):
+    for rule in _load_default_avoid_rules():
         if isinstance(rule, dict) and rule.get("pattern"):
             if rule["pattern"] not in patterns:
                 patterns.append(rule["pattern"])
@@ -140,8 +157,7 @@ def _is_blacklisted_template(template_name: str, expression: str = "", *, datase
             return True
     else:
         # 无 dataset_id：仅检查跨数据集默认规则
-        _load_blacklist_file()
-        for rule in _BLACKLIST_RAW.get("_default_auto_avoid_rules", []):
+        for rule in _load_default_avoid_rules():
             if isinstance(rule, dict) and rule.get("pattern", "") in expression:
                 return True
     return False

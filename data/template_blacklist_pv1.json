@@ -1,0 +1,9 @@
+{
+  "_version": "v2",
+  "_comment": "Template blacklist for pv1 — 202 fields, Value Score=2, frequent rate limiting. Templates TBD based on test results.",
+  "_created": "2026-06-28",
+  "_updated": "2026-06-28 19:53",
+  "dataset_id": "pv1",
+  "blacklisted_templates": [],
+  "auto_avoid_rules": []
+}

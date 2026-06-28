@@ -467,36 +467,29 @@ def dump_results(
 _BLACKLIST_PATH_CACHE: dict[str, str] = {}
 
 
-def _resolve_blacklist_path(data_dir: str = "") -> str:
-    """解析 template_blacklist.json 文件路径，支持多级回退。"""
+def _resolve_blacklist_path(dataset_id: str, *, data_dir: str = "") -> str:
+    """按数据集解析黑名单文件路径：template_blacklist_{dataset_id}.json"""
     global _BLACKLIST_PATH_CACHE
-    cache_key = data_dir or "_default"
+    cache_key = f"{dataset_id}|{data_dir}" if data_dir else dataset_id
     if cache_key in _BLACKLIST_PATH_CACHE:
         return _BLACKLIST_PATH_CACHE[cache_key]
     base = Path(data_dir) if data_dir else DATA_DIR
-    # 指定了 data_dir：只在那找/建
-    if data_dir:
-        resolved = str(base / "template_blacklist.json")
-        _BLACKLIST_PATH_CACHE[cache_key] = resolved
-        return resolved
-    # 默认情况：先在 DATA_DIR 找已有文件，不存在则建在 DATA_DIR
-    candidate = DATA_DIR / "template_blacklist.json"
-    if candidate.is_file():
-        _BLACKLIST_PATH_CACHE[cache_key] = str(candidate)
-    else:
-        _BLACKLIST_PATH_CACHE[cache_key] = str(candidate)
-    return _BLACKLIST_PATH_CACHE[cache_key]
+    filename = f"template_blacklist_{dataset_id}.json"
+    resolved = str(base / filename)
+    _BLACKLIST_PATH_CACHE[cache_key] = resolved
+    return resolved
 
 
-def _build_default_blacklist() -> dict[str, Any]:
-    """构建初始黑名单骨架结构。"""
+def _build_default_blacklist(dataset_id: str) -> dict[str, Any]:
+    """构建单个数据集的黑名单骨架结构。"""
     return {
         "_version": "v2",
-        "_comment": "Per-dataset template blacklists. Auto-populated from test results.",
+        "_comment": f"Template blacklist for {dataset_id} — auto-populated from test results.",
         "_created": time.strftime("%Y-%m-%d"),
         "_updated": time.strftime("%Y-%m-%d"),
-        "datasets": {},
-        "_default_auto_avoid_rules": [],
+        "dataset_id": dataset_id,
+        "blacklisted_templates": [],
+        "auto_avoid_rules": [],
     }
 
 
@@ -591,6 +584,7 @@ def auto_update_blacklist(
 
         entry: dict[str, Any] = {
             "name": tname,
+            "dataset_id": dataset_id,
             "source": "auto_detected",
             "field_type": tresults[0].field_type,
             "reason": "。".join(reason_parts) + "。",
@@ -611,42 +605,34 @@ def auto_update_blacklist(
     if not new_entries:
         return
 
-    # 4. 加载或创建黑名单文件
-    blacklist_path = _resolve_blacklist_path(data_dir)
+    # 4. 加载或创建数据集专属黑名单文件
+    blacklist_path = _resolve_blacklist_path(dataset_id, data_dir=data_dir)
     try:
         if os.path.isfile(blacklist_path):
             with open(blacklist_path, "r", encoding="utf-8") as fh:
                 bl_data = json.load(fh)
         else:
-            bl_data = _build_default_blacklist()
+            bl_data = _build_default_blacklist(dataset_id)
     except (json.JSONDecodeError, OSError):
-        bl_data = _build_default_blacklist()
+        bl_data = _build_default_blacklist(dataset_id)
 
     # 确保数据结构完整
     if not isinstance(bl_data, dict):
-        bl_data = _build_default_blacklist()
-    bl_data.setdefault("datasets", {})
-    datasets = bl_data["datasets"]
-    if not isinstance(datasets, dict):
-        datasets = {}
-        bl_data["datasets"] = datasets
-
-    ds_data = datasets.get(dataset_id)
-    if not isinstance(ds_data, dict):
-        ds_data = {"blacklisted_templates": [], "_auto_avoid_rules": []}
-        datasets[dataset_id] = ds_data
-    ds_data.setdefault("blacklisted_templates", [])
+        bl_data = _build_default_blacklist(dataset_id)
+    bl_data.setdefault("dataset_id", dataset_id)
+    bl_data.setdefault("blacklisted_templates", [])
+    bl_data.setdefault("auto_avoid_rules", [])
 
     # 5. 合并新条目（去重：同名模板已存在则跳过）
     existing_names = {
         item["name"]
-        for item in ds_data["blacklisted_templates"]
+        for item in bl_data["blacklisted_templates"]
         if isinstance(item, dict) and item.get("name")
     }
     added = 0
     for entry in new_entries:
         if entry["name"] not in existing_names:
-            ds_data["blacklisted_templates"].append(entry)
+            bl_data["blacklisted_templates"].append(entry)
             existing_names.add(entry["name"])
             added += 1
 
@@ -660,7 +646,7 @@ def auto_update_blacklist(
         "[blacklist] auto-updated %s: added %d new entries (total=%d)",
         blacklist_path,
         added,
-        len(ds_data["blacklisted_templates"]),
+        len(bl_data["blacklisted_templates"]),
     )
 
 
