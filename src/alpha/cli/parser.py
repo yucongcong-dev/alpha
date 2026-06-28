@@ -278,8 +278,8 @@ def parse_args() -> argparse.Namespace:
     # 模板参数
     parser.add_argument(
         "--template-library-file",
-        default=DEFAULT_TEMPLATE_LIBRARY_FILE,
-        help="本地 JSON 模板库文件路径",
+        default="",
+        help="本地 JSON 模板库文件路径；留空则根据 dataset_id 自动选择",
     )
     parser.add_argument(
         "--feedback-output",
