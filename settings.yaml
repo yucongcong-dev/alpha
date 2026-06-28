@@ -54,7 +54,7 @@ global:
 
     # 7. DECAY — 官网: Decay
     #    指数加权衰减天数, 0=无衰减, 官网默认=4
-    decay: 0
+    decay: 4
 
     # 8. TRUNCATION — 官网: Truncation
     #    截断阈值 0.0~1.0, 官网默认=0.08 (8%)
