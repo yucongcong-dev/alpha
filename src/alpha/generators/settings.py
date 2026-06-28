@@ -18,9 +18,13 @@ import hashlib
 import json
 from typing import Any
 
+import calendar
+from datetime import date
+
 from ..config import (
     get_simulation_default_end_date,
     get_simulation_default_start_date,
+    get_yaml_config,
 )
 from ..models.base import SettingsVariant
 
@@ -52,62 +56,166 @@ def stable_fingerprint(payload: Any) -> str:
     return hashlib.sha256(text.encode("utf-8")).hexdigest()[:16]
 
 
+# ---------------------------------------------------------------------------
+# 硬编码官网默认值 —— settings.yaml 不可用时回退
+# 与 Brain 官网 Settings 面板默认值严格一致:
+#   LANGUAGE=Fast Expression, INSTRUMENT TYPE=Equity, REGION=USA,
+#   UNIVERSE=TOP3000, DELAY=1, NEUTRALIZATION=Subindustry,
+#   DECAY=4, TRUNCATION=0.08, PASTEURIZATION=On,
+#   UNIT HANDLING=Verify, NAN HANDLING=Off, TEST PERIOD=1Y 0M
+# ---------------------------------------------------------------------------
+# key = Brain API 参数名 (camelCase)，与 settings.yaml 命名一致
+_WEBSITE_DEFAULTS: dict[str, Any] = {
+    "language": "FASTEXPR",
+    "instrumentType": "EQUITY",
+    "region": "USA",
+    "universe": "TOP3000",
+    "delay": 1,
+    "neutralization": "SUBINDUSTRY",
+    "decay": 4,
+    "truncation": 0.08,
+    "pasteurization": "ON",
+    "unitHandling": "VERIFY",
+    "nanHandling": "OFF",
+    "maxTrade": "OFF",
+    "maxPosition": "OFF",
+    "lookback": "OFF",
+    "visualization": False,
+}
+
+# ---------------------------------------------------------------------------
+# Brain API key (camelCase) → args attribute (snake_case) 映射
+# 仅当 YAML/API key 与 args 属性名不同时需要
+# ---------------------------------------------------------------------------
+_API_TO_ARGS: dict[str, str] = {
+    "instrumentType": "instrument_type",
+    "unitHandling": "unit_handling",
+    "nanHandling": "nan_handling",
+    "maxTrade": "max_trade",
+    "maxPosition": "max_position",
+    "startDate": "start_date",
+    "endDate": "end_date",
+}
+
+# argparse CLI 默认值 —— 用于判断用户是否主动传参
+_CLI_DEFAULTS: dict[str, Any] = {
+    "instrument_type": "EQUITY", "region": "USA", "universe": "TOP3000",
+    "delay": 1, "decay": 4, "neutralization": "SUBINDUSTRY", "truncation": 0.08,
+    "pasteurization": "ON", "unit_handling": "VERIFY", "nan_handling": "OFF",
+    "max_trade": "OFF", "max_position": "OFF", "language": "FASTEXPR",
+    "visualization": False, "lookback": "OFF",
+}
+
+# TEST PERIOD 硬编码官网默认: 1Y 0M
+_TEST_PERIOD_DEFAULTS = {"testPeriodYears": 1, "testPeriodMonths": 0}
+
+
+def _read_simulation_from_yaml() -> dict[str, Any] | None:
+    """从 settings.yaml 读取 global.simulation 节点，不可用时返回 None。"""
+    yaml_cfg = get_yaml_config()
+    if not yaml_cfg:
+        return None
+    global_cfg = yaml_cfg.get("global")
+    if not isinstance(global_cfg, dict):
+        return None
+    sim = global_cfg.get("simulation")
+    return sim if isinstance(sim, dict) else None
+
+
+def _resolve_setting(yaml_sim: dict[str, Any] | None, args: Any, api_key: str) -> Any:
+    """按 CLI > YAML > 官网默认 优先级解析单个设置参数。
+
+    api_key 即为 YAML key 和 Brain API payload key (camelCase)。
+    """
+    arg_key = _API_TO_ARGS.get(api_key, api_key)
+    cli_val = getattr(args, arg_key, None)
+    # 若 CLI 值与 argparse 默认值不同，说明用户主动传参，CLI 优先
+    if cli_val is not None and cli_val != _CLI_DEFAULTS.get(arg_key):
+        return cli_val
+    # YAML 次之
+    if yaml_sim and api_key in yaml_sim:
+        return yaml_sim[api_key]
+    # 官网默认兜底
+    return _WEBSITE_DEFAULTS.get(api_key, cli_val)
+
+
 def build_simulation_payload(args: Any, expression: str) -> dict[str, Any]:
     """
-    为单个表达式构建完整的模拟请求体。
+    从 settings.yaml 读取配置，构建模拟请求体。
 
-    创建符合 Brain API 规范的模拟请求体，包含所有必要的设置参数。
-    集中化的设置确保所有字段测试具有可比性。
+    优先级: CLI 参数 > settings.yaml > 硬编码官网默认值。
+    YAML key 即为 Brain API payload key (camelCase)，无需翻译。
 
     Args:
-        args: 命令行参数对象，包含以下属性：
-            - instrument_type: 工具类型（如 "EQUITY"）
-            - region: 地区代码（如 "USA"）
-            - universe: 宇宙代码（如 "TOP3000"）
-            - delay: 延迟天数
-            - decay: 衰减天数
-            - neutralization: 中性化类型
-            - truncation: 截断阈值
-            - nan_handling: NaN 处理方式
-        expression (str): Alpha 表达式字符串。
+        args: 命令行参数对象 (argparse.Namespace)。
+        expression: Alpha 表达式字符串。
 
     Returns:
-        Dict[str, Any]: 完整的模拟请求体，包含 type、settings 和 regular 字段。
-
-    Example:
-        >>> payload = build_simulation_payload(args, "rank(close)")
-        >>> print(payload["type"])
-        'REGULAR'
-        >>> print(payload["regular"])
-        'rank(close)'
-        >>> print(payload["settings"]["region"])
-        'USA'
-
-    Note:
-        所有 simulation settings 均可通过 settings.yaml 或 CLI 参数配置。
-        参数名与官网 Simulation Settings 页面一一对应。
+        Dict[str, Any]: 完整模拟请求体，包含 type、settings 和 regular 字段。
     """
-    # Keep simulation settings centralized so all field tests are comparable.
+    yaml_sim = _read_simulation_from_yaml()
+
+    settings: dict[str, Any] = {}
+    for api_key in _WEBSITE_DEFAULTS:
+        settings[api_key] = _resolve_setting(yaml_sim, args, api_key)
+
+    # --- startDate / endDate 解析: testPeriodYears/Months > startDate/endDate > CLI > 默认 ---
+    start_date = None
+    end_date = None
+
+    # 1. CLI 主动传参优先
+    cli_start = getattr(args, "start_date", None)
+    cli_end = getattr(args, "end_date", None)
+    cli_start_default = _CLI_DEFAULTS.get("start_date")
+    cli_end_default = _CLI_DEFAULTS.get("end_date")
+
+    if cli_start is not None and cli_start != cli_start_default:
+        start_date = cli_start
+    if cli_end is not None and cli_end != cli_end_default:
+        end_date = cli_end
+
+    # 2. YAML: testPeriodYears / testPeriodMonths (官网命名)
+    if (start_date is None or end_date is None) and yaml_sim:
+        years = yaml_sim.get("testPeriodYears")
+        months = yaml_sim.get("testPeriodMonths")
+        if not years:
+            years = _TEST_PERIOD_DEFAULTS["testPeriodYears"]
+        if not months:
+            months = _TEST_PERIOD_DEFAULTS["testPeriodMonths"]
+        total_months = (years or 0) * 12 + (months or 0)
+        if total_months > 0:
+            today = date.today()
+            # 往前推 total_months 个月，日期不超过目标月末
+            comp_months = today.year * 12 + today.month - 1  # 0-based
+            comp_months -= total_months
+            cy, cm = divmod(comp_months, 12)
+            cm += 1  # 1-based month
+            max_day = calendar.monthrange(cy, cm)[1]
+            computed = date(cy, cm, min(today.day, max_day))
+            if start_date is None:
+                start_date = computed.isoformat()
+            if end_date is None:
+                end_date = today.isoformat()
+
+    # 3. YAML: 固定 startDate / endDate (兼容手动指定历史区间)
+    if yaml_sim:
+        if start_date is None:
+            start_date = yaml_sim.get("startDate")
+        if end_date is None:
+            end_date = yaml_sim.get("endDate")
+
+    # 4. 兜底 config 默认值
+    if not start_date:
+        start_date = get_simulation_default_start_date()
+    if not end_date:
+        end_date = get_simulation_default_end_date()
+
+    settings["startDate"] = start_date
+    settings["endDate"] = end_date
+
     return {
         "type": "REGULAR",
-        "settings": {
-            "instrumentType": args.instrument_type,
-            "region": args.region,
-            "universe": args.universe,
-            "delay": args.delay,
-            "decay": args.decay,
-            "neutralization": args.neutralization,
-            "truncation": args.truncation,
-            "pasteurization": getattr(args, "pasteurization", "ON"),
-            "unitHandling": getattr(args, "unit_handling", "VERIFY"),
-            "nanHandling": getattr(args, "nan_handling", "ON"),
-            "maxTrade": getattr(args, "max_trade", "OFF"),
-            "maxPosition": getattr(args, "max_position", "OFF"),
-            "language": getattr(args, "language", "FASTEXPR"),
-            "visualization": getattr(args, "visualization", False),
-            "startDate": getattr(args, "start_date", None) or get_simulation_default_start_date(),
-            "endDate": getattr(args, "end_date", None) or get_simulation_default_end_date(),
-        },
+        "settings": settings,
         "regular": expression,
     }
 
@@ -158,37 +266,6 @@ def build_settings_fingerprint_from_payload(payload: dict[str, Any]) -> str:
     return stable_fingerprint(payload)
 
 
-# ---------------------------------------------------------------------------
-# 设置变体规则表
-# ---------------------------------------------------------------------------
-# 每条规则: (families, condition, overrides_dict)
-#   families: 适用的家族元组
-#   condition: "always" | "near_pass" | "close"
-#   overrides: 覆盖 base settings 的参数字典
-
-_VARIANT_SPECS: list[tuple[tuple[str, ...], str, dict[str, Any]]] = [
-    # --- 精简版：参照网站已通过 alpha 的 settings 规律 ---
-    # 核心规律：全部 SUBINDUSTRY 中性化，truncation=0.05/0.08，decay=0/5/7
-    #
-    # 适用于所有家族的基础变体 (always)
-    (
-        (),
-        "always",
-        {"decay": 0, "truncation": 0.05, "nanHandling": "ON", "neutralization": "SUBINDUSTRY"},
-    ),
-    (
-        (),
-        "always",
-        {"decay": 5, "truncation": 0.08, "nanHandling": "ON", "neutralization": "SUBINDUSTRY"},
-    ),
-    (
-        (),
-        "always",
-        {"decay": 7, "truncation": 0.08, "nanHandling": "ON", "neutralization": "SUBINDUSTRY"},
-    ),
-]
-
-
 def build_setting_variants(
     args: Any,
     template_name: str,
@@ -197,39 +274,19 @@ def build_setting_variants(
     field_feedback: dict[str, Any] | None = None,
 ) -> list[SettingsVariant]:
     """
-    为一个表达式生成固定 3 组 settings 变体（参照网站已通过 alpha 规律）。
+    从 settings.yaml 读取单一配置，返回仅含一组 settings 的列表。
 
-    所有表达式统一使用 decay=0/5/7, truncation=0.05/0.08, SUBINDUSTRY 中性化，
-    不再按表达式家族分类。
+    不再生成多参数变体：所有表达式共享 settings.yaml 中定义的统一配置。
+    优先级: CLI > YAML > 硬编码官网默认值。
 
     Args:
         args: 命令行参数对象。
-        template_name: 模板名称（未使用，保留兼容）。
-        expression: 表达式字符串。
-        field_feedback: 可选，字段历史反馈（未使用，保留兼容）。
+        template_name: 模板名称（保留兼容，未使用）。
+        expression: Alpha 表达式字符串。
+        field_feedback: 保留兼容，未使用。
 
     Returns:
-        List[SettingsVariant]: 固定 3 组去重后的设置变体列表。
+        List[SettingsVariant]: 包含唯一一组 settings 的列表。
     """
-    base = build_simulation_payload(args, expression)["settings"]
-    variants: list[SettingsVariant] = []
-
-    for families, condition, overrides in _VARIANT_SPECS:
-        merged = dict(base)
-        merged.update(overrides)
-        variants.append(merged)
-
-    # 兜底：无匹配规则时使用基础设置
-    if not variants:
-        variants.append(dict(base))
-
-    # 去重
-    deduped: list[SettingsVariant] = []
-    seen: set = set()
-    for variant in variants:
-        fingerprint = build_settings_fingerprint_from_payload(variant)
-        if fingerprint in seen:
-            continue
-        seen.add(fingerprint)
-        deduped.append(variant)
-    return deduped
+    settings = build_simulation_payload(args, expression)["settings"]
+    return [settings]

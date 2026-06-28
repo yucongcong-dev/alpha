@@ -18,26 +18,74 @@
 global:
 
   # ==========================================================================
-  # Simulation Settings —— 对应官网 Simulation Settings 页面所有参数
+  # Simulation Settings —— YAML key = Brain API 参数名，直接映射到请求体
+  # ==========================================================================
+  # 官网面板默认值 (登录后可见):
+  #   LANGUAGE=Fast Expression, INSTRUMENT TYPE=Equity, REGION=USA,
+  #   UNIVERSE=TOP3000, DELAY=1, NEUTRALIZATION=Subindustry,
+  #   DECAY=4, TRUNCATION=0.08, PASTEURIZATION=On,
+  #   UNIT HANDLING=Verify, NAN HANDLING=Off, TEST PERIOD=1Y 0M
   # ==========================================================================
   simulation:
-    instrument_type: "EQUITY"      # Instrument Type: EQUITY, FUTURES, ...
-    region: "USA"                  # Region: USA, CHN, JPN, EUR, ...
-    universe: "TOP3000"            # Universe: TOP3000, TOP2000, TOP1000, ...
-    language: "FASTEXPR"           # Language: FASTEXPR (Fast Expression)
-    decay: 0                       # Decay: 指数加权衰减天数 (0=无衰减)
-    delay: 1                       # Delay: 延迟天数 (0=无延迟, 1=隔日)
-    truncation: 0.05               # Truncation: 截断阈值 (0.05=5% 截断)
-    neutralization: "SUBINDUSTRY"  # Neutralization: SUBINDUSTRY, MARKET, SECTOR, NONE
-    pasteurization: "ON"           # Pasteurization: ON/OFF
-    unit_handling: "VERIFY"        # Unit Handling: VERIFY
-    nan_handling: "ON"             # NaN Handling: ON/OFF
-    max_trade: "OFF"               # Max Trade: OFF (不限制最大交易)
-    max_position: "OFF"            # Max Position: OFF (不限制最大持仓)
-    lookback: "OFF"                # Lookback: ON/OFF
-    visualization: false           # Visualization: 是否生成可视化图表
-    start_date: "2019-01-01"       # Start Date: 模拟开始日期 (YYYY-MM-DD)
-    end_date: "2023-12-31"         # End Date: 模拟结束日期 (YYYY-MM-DD)
+    # 1. LANGUAGE — 官网: Language
+    #    选项: FASTEXPR (Fast Expression)
+    language: "FASTEXPR"
+
+    # 2. INSTRUMENT TYPE — 官网: Instrument Type
+    #    选项: EQUITY, FUTURES
+    instrumentType: "EQUITY"
+
+    # 3. REGION — 官网: Region
+    #    选项: USA, CHN, JPN, EUR, GBR, ...
+    region: "USA"
+
+    # 4. UNIVERSE — 官网: Universe
+    #    选项: TOP3000, TOP2000, TOP1000, TOP500, ALL
+    universe: "TOP3000"
+
+    # 5. DELAY — 官网: Delay
+    #    0=当日, 1=隔日 (推荐), 2, 3, ...
+    delay: 1
+
+    # 6. NEUTRALIZATION — 官网: Neutralization
+    #    选项: SUBINDUSTRY, MARKET, SECTOR, NONE
+    #    官网显示: Subindustry | Market | Sector | None
+    neutralization: "SUBINDUSTRY"
+
+    # 7. DECAY — 官网: Decay
+    #    指数加权衰减天数, 0=无衰减, 官网默认=4
+    decay: 0
+
+    # 8. TRUNCATION — 官网: Truncation
+    #    截断阈值 0.0~1.0, 官网默认=0.08 (8%)
+    truncation: 0.08
+
+    # 9. PASTEURIZATION — 官网: Pasteurization
+    #    选项: ON | OFF
+    pasteurization: "ON"
+
+    # 10. UNIT HANDLING — 官网: Unit Handling
+    #    选项: VERIFY | OFF
+    #    官网显示: Verify | Off
+    unitHandling: "VERIFY"
+
+    # 11. NAN HANDLING — 官网: NaN Handling
+    #    选项: ON | OFF
+    #    官网默认=OFF
+    nanHandling: "OFF"
+
+    # 12. TEST PERIOD — 官网: Test Period → Years / Months
+    #    官网默认: 1 Year, 0 Months (当前日期往前推1年)
+    #    代码会自动换算为 startDate / endDate 发给 API
+    #    如需固定历史区间，可改用 startDate + endDate 覆盖（见注释）
+    testPeriodYears: 1
+    testPeriodMonths: 0
+
+    # — 以下为官网 Settings 面板外的额外参数 (API 支持但 UI 默认隐藏) —
+    maxTrade: "OFF"               # Max Trade: OFF (不限制最大交易)
+    maxPosition: "OFF"            # Max Position: OFF (不限制最大持仓)
+    lookback: "OFF"               # Lookback: ON/OFF (风险因子回顾)
+    visualization: false           # Visualization: 是否生成可视化图表 (元数据)
 
   # ==========================================================================
   # Operational — 运维参数（字段筛选、并发、重试、过滤、质量、HTTP、反馈）
