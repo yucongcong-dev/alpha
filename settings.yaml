@@ -104,7 +104,7 @@ global:
   # 并发控制 —— 对应 CLI --max-concurrent-simulations / --max-concurrent-creates
   # --------------------------------------------------------------------------
   concurrency:
-    max_concurrent_simulations: 1  # 同时进行的模拟数 (建议1，避免 429)
+    max_concurrent_simulations: 3  # 同时进行的模拟数
     max_concurrent_creates: 1      # 同时进行的创建请求数
 
   # --------------------------------------------------------------------------
@@ -199,7 +199,7 @@ global:
 # Dataset Profiles — 数据集自适应配置
 # ============================================================================
 # 运行时根据 --dataset-id 自动匹配。优先级:
-#   YAML dataset_profiles > 代码内 DATASET_PROFILES > global 默认值
+#   YAML dataset_profiles > DEFAULT_PROFILE（唯一配置来源）
 #
 # 字段说明:
 #   min_request_interval          API 请求最小间隔 (秒)，字段多应增大
@@ -218,7 +218,7 @@ dataset_profiles:
   model51:
     min_request_interval: 1.5
     sleep_between_fields: 3.0
-    max_concurrent_simulations: 1       # 建议1，避免并发限制
+    max_concurrent_simulations: 2
     max_concurrent_creates: 1
     max_templates_per_field: 0          # 测试全部模板
     simulation_max_wait_seconds: 600
@@ -252,15 +252,15 @@ dataset_profiles:
 
   # fundamental6: 1758 字段, Value Score=4, 社区推荐 #1 数据集, industry中性化黄金组合
   fundamental6:
-    min_request_interval: 3.0
-    sleep_between_fields: 5.0
-    max_concurrent_simulations: 1
+    min_request_interval: 1.5
+    sleep_between_fields: 3.0
+    max_concurrent_simulations: 3
     max_concurrent_creates: 1
-    max_templates_per_field: 15
+    max_templates_per_field: 8
     simulation_max_wait_seconds: 900
     simulation_max_queue_seconds: 600
-    queue_busy_cooldown_seconds: 120
-    template_disable_after: 15
+    queue_busy_cooldown_seconds: 60
+    template_disable_after: 12
 
   # 默认配置 — 未匹配到任何已知数据集时使用
   default_profile:

@@ -485,54 +485,12 @@ NEGATIVE_RAW_FIELDS: set = {
 
 from typing import Any
 
-DATASET_PROFILES: dict[str, dict[str, Any]] = {
-    # model51: 16 字段, Value Score=7, 预测力最强, 几乎无限流
-    "model51": {
-        "min_request_interval": 1.5,
-        "sleep_between_fields": 3.0,
-        "max_concurrent_simulations": 2,
-        "max_templates_per_field": 0,  # 全部模板
-        "simulation_max_wait_seconds": 600,
-        "simulation_max_queue_seconds": 300,
-        "queue_busy_cooldown_seconds": 60,
-        "template_disable_after": 0,  # 不剪枝，字段太少
-    },
-    # option: 138 字段, Value Score=6, 期权数据信号强
-    "option": {
-        "min_request_interval": 1.5,
-        "sleep_between_fields": 3.0,
-        "max_concurrent_simulations": 1,
-        "max_templates_per_field": 20,
-        "simulation_max_wait_seconds": 600,
-        "simulation_max_queue_seconds": 300,
-        "queue_busy_cooldown_seconds": 60,
-        "template_disable_after": 15,
-    },
-    # pv1: 202 字段, Value Score=2, 容易触发限流
-    "pv1": {
-        "min_request_interval": 2.5,
-        "sleep_between_fields": 5.0,
-        "max_concurrent_simulations": 1,
-        "max_templates_per_field": 15,
-        "simulation_max_wait_seconds": 900,
-        "simulation_max_queue_seconds": 600,
-        "queue_busy_cooldown_seconds": 300,  # pv1 限流需要更长冷却
-        "template_disable_after": 12,
-    },
-    # fundamental6: 1758 字段, Value Score=4, 字段量巨大需保守
-    "fundamental6": {
-        "min_request_interval": 1.5,
-        "sleep_between_fields": 3.0,
-        "max_concurrent_simulations": 2,
-        "max_templates_per_field": 8,
-        "simulation_max_wait_seconds": 900,
-        "simulation_max_queue_seconds": 600,
-        "queue_busy_cooldown_seconds": 60,
-        "template_disable_after": 12,
-    },
-}
+DATASET_PROFILES: dict[str, dict[str, Any]] = {}
+"""数据集专属配置已迁移至 settings.yaml (dataset_profiles 段)。
+此处保留空字典以确保向后兼容，代码仅从 YAML 读取。
+如需添加/修改数据集参数，请编辑 settings.yaml 而非此文件。"""
 
-# 默认配置文件（未在 DATASET_PROFILES 中匹配时使用）
+# 默认配置（未在 settings.yaml dataset_profiles 中匹配时使用）
 DEFAULT_PROFILE: dict[str, Any] = {
     "min_request_interval": 2.0,
     "sleep_between_fields": 5.0,
@@ -548,7 +506,8 @@ DEFAULT_PROFILE: dict[str, Any] = {
 def get_dataset_profile(dataset_id: str, yaml_config: dict[str, Any] | None = None) -> dict[str, Any]:
     """返回指定数据集的运行参数配置。
 
-    优先级：YAML dataset_profiles > 代码内 DATASET_PROFILES > DEFAULT_PROFILE
+    优先级：YAML dataset_profiles > DEFAULT_PROFILE
+    所有数据集专属参数统一在 settings.yaml 的 dataset_profiles 段维护。
 
     Args:
         dataset_id: 数据集 ID，如 "model51", "pv1", "fundamental6"。
@@ -559,12 +518,7 @@ def get_dataset_profile(dataset_id: str, yaml_config: dict[str, Any] | None = No
     """
     profile = dict(DEFAULT_PROFILE)
 
-    # 代码内 profile（作为 fallback）
-    code_profile = DATASET_PROFILES.get(dataset_id)
-    if code_profile:
-        profile.update(code_profile)
-
-    # YAML profile（最高优先级）
+    # 从 YAML 读取数据集专属配置（唯一来源）
     if yaml_config:
         yaml_profiles = yaml_config.get("dataset_profiles", {})
         if isinstance(yaml_profiles, dict):
