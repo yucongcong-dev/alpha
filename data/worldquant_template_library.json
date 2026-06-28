@@ -1,70 +1,135 @@
 {
-  "_comment": "默认模板库 — {field} 在运行时代替为字段名，{backfill_window} 替为 settings.yaml expression.backfill_window",
+  "_comment": "默认模板库 — 基于 WorldQuant 101 Alpha 操作符频率分析 + model51/pv1 实测反馈优化 (2026-06)",
+  "_comment_placeholders": "{field}=字段名, {backfill_window}=settings.yaml expression.backfill_window",
+  "_comment_tiers": "Tier 1(200+)=vol-scaled-delta(最高Sharpe) > Tier2=delta(35+次) > Tier3=group_delta(抗LOW_SHARPE) > Tier4=ts_rank(成熟因子) > Tier5=ts_zscore > Tier6=decay_linear(20+次) > Tier7=mean_reversion > Tier8=mean_diff(动量交叉) > Tier9=volatility+IR > Tier10=截面标准化 > Tier11=ts_mean(基础模块) > Tier12=sum+exotic(偏度/峰度) > Tier13=argmax/min(稀有,仅实验) > Tier14=STRING/TEXT/BOOL(原始字段)",
+
   "default": [
-    {"name": "delta_20",                                     "expression": "rank(ts_delta({field}, 20))",                                           "priority": 135},
-    {"name": "delta_60",                                     "expression": "rank(ts_delta({field}, 60))",                                           "priority": 133},
-    {"name": "ts_rank_60",                                   "expression": "rank(ts_rank({field}, 60))",                                            "priority": 132},
-    {"name": "ts_rank_120",                                  "expression": "rank(ts_rank({field}, 120))",                                           "priority": 130},
-    {"name": "ts_zscore_backfill",                           "expression": "rank(ts_zscore(ts_backfill({field}, {backfill_window}), {backfill_window}))", "priority": 128},
-    {"name": "group_decay_20",                               "expression": "group_rank(ts_decay_linear(ts_backfill({field}, {backfill_window}), 20), subindustry)", "priority": 126},
-    {"name": "decay_20",                                     "expression": "rank(ts_decay_linear(ts_backfill({field}, {backfill_window}), 20))",    "priority": 125},
-    {"name": "decay_10",                                     "expression": "rank(ts_decay_linear(ts_backfill({field}, {backfill_window}), 10))",    "priority": 124},
-    {"name": "decay_30",                                     "expression": "rank(ts_decay_linear(ts_backfill({field}, {backfill_window}), 30))",    "priority": 122},
-    {"name": "backfill",                                     "expression": "rank(ts_backfill({field}, {backfill_window}))",                          "priority": 120},
-    {"name": "backfill_mean_60",                             "expression": "rank(ts_mean(ts_backfill({field}, {backfill_window}), 60))",            "priority": 118},
-    {"name": "ts_zscore_60",                                 "expression": "rank(ts_zscore({field}, 60))",                                          "priority": 116},
-    {"name": "zscore",                                       "expression": "rank(zscore({field}))",                                                  "priority": 115},
-    {"name": "scale",                                        "expression": "rank(scale({field}))",                                                   "priority": 114},
-    {"name": "ts_mean_20",                                   "expression": "rank(ts_mean({field}, 20))",                                            "priority": 112},
-    {"name": "ts_mean_60",                                   "expression": "rank(ts_mean({field}, 60))",                                            "priority": 110},
-    {"name": "ts_mean_120",                                  "expression": "rank(ts_mean({field}, 120))",                                           "priority": 108},
-    {"name": "decay_40",                                     "expression": "rank(ts_decay_linear(ts_backfill({field}, {backfill_window}), 40))",    "priority": 107},
-    {"name": "stddev_60",                                    "expression": "rank(ts_std_dev({field}, 60))",                                         "priority": 106},
-    {"name": "sum_20",                                       "expression": "rank(ts_sum({field}, 20))",                                             "priority": 106},
-    {"name": "argmax_60",                                    "expression": "rank(ts_arg_max({field}, 60))",                                         "priority": 100},
-    {"name": "argmin_60",                                    "expression": "rank(ts_arg_min({field}, 60))",                                         "priority": 98}
+
+    {"_comment": "=== Tier 1 (195-200): vol-scaled delta — 实测最佳, model51+PV1 近通评分最高 ===",
+     "name": "vol_scaled_delta_5_20",  "expression": "group_rank(ts_delta(ts_backfill({field}, {backfill_window}), 5) / ts_std_dev(ts_backfill({field}, {backfill_window}), 20), subindustry)", "priority": 200},
+    {"name": "vol_scaled_delta_20_60", "expression": "group_rank(ts_delta(ts_backfill({field}, {backfill_window}), 20) / ts_std_dev(ts_backfill({field}, {backfill_window}), 60), subindustry)", "priority": 195},
+
+    {"_comment": "=== Tier 2 (188-194): delta — 101 Alpha 中出现 35+ 次, #3 常见操作符 ===",
+     "name": "delta_5",      "expression": "rank(ts_delta({field}, 5))",  "priority": 194},
+    {"name": "delta_20",     "expression": "rank(ts_delta({field}, 20))", "priority": 192},
+    {"name": "delta_60",     "expression": "rank(ts_delta({field}, 60))", "priority": 190},
+    {"name": "rank_delta_5", "expression": "rank(ts_delta(rank({field}), 5))", "priority": 188},
+
+    {"_comment": "=== Tier 3 (180-187): group delta — 分组中性化 delta, 对抗 LOW_SHARPE ===",
+     "name": "group_delta_5",  "expression": "group_rank(ts_delta({field}, 5), subindustry)",  "priority": 187},
+    {"name": "group_delta_20", "expression": "group_rank(ts_delta({field}, 20), subindustry)", "priority": 184},
+    {"name": "group_delta_60", "expression": "group_rank(ts_delta({field}, 60), subindustry)", "priority": 181},
+
+    {"_comment": "=== Tier 4 (172-179): ts_rank — 成熟因子, 直接输出 0~1 分布, 抗异常值 ===",
+     "name": "ts_rank_60",       "expression": "rank(ts_rank({field}, 60))",            "priority": 179},
+    {"name": "ts_rank_120",      "expression": "rank(ts_rank({field}, 120))",           "priority": 176},
+    {"name": "group_ts_rank_60", "expression": "group_rank(ts_rank({field}, 60), subindustry)", "priority": 173},
+
+    {"_comment": "=== Tier 5 (164-171): ts_zscore — 标准归一化, 添加 group 变体 ===",
+     "name": "ts_zscore_backfill", "expression": "rank(ts_zscore(ts_backfill({field}, {backfill_window}), {backfill_window}))", "priority": 171},
+    {"name": "ts_zscore_60",       "expression": "rank(ts_zscore({field}, 60))",                              "priority": 168},
+    {"name": "group_zscore_60",    "expression": "group_rank(ts_zscore({field}, 60), subindustry)",           "priority": 165},
+
+    {"_comment": "=== Tier 6 (157-163): ts_decay_linear — 101 Alpha 中出现 20+ 次, 强调近期数据 ===",
+     "name": "decay_20",       "expression": "rank(ts_decay_linear(ts_backfill({field}, {backfill_window}), 20))",               "priority": 163},
+    {"name": "decay_10",       "expression": "rank(ts_decay_linear(ts_backfill({field}, {backfill_window}), 10))",               "priority": 160},
+    {"name": "group_decay_20", "expression": "group_rank(ts_decay_linear(ts_backfill({field}, {backfill_window}), 20), subindustry)", "priority": 157},
+
+    {"_comment": "=== Tier 7 (150-156): mean reversion — 反转信号, PV1 中使用 ===",
+     "name": "mean_reversion_20", "expression": "group_rank(-1 * ts_zscore({field}, 20), subindustry)", "priority": 156},
+    {"name": "mean_reversion_60", "expression": "group_rank(-1 * ts_zscore({field}, 60), subindustry)", "priority": 152},
+
+    {"_comment": "=== Tier 8 (143-149): mean_diff — 动量交叉/价差, 捕捉趋势变化 ===",
+     "name": "mean_diff_5_20",  "expression": "rank(ts_mean({field}, 5) - ts_mean({field}, 20))",  "priority": 149},
+    {"name": "mean_diff_20_60", "expression": "rank(ts_mean({field}, 20) - ts_mean({field}, 60))", "priority": 145},
+
+    {"_comment": "=== Tier 9 (136-142): 波动率 & 信息比率 — std_dev ~10 次出现在 101 Alpha ===",
+     "name": "stddev_60", "expression": "rank(ts_std_dev({field}, 60))",                         "priority": 142},
+    {"name": "ir_60",    "expression": "rank(ts_mean({field}, 60) / ts_std_dev({field}, 60))", "priority": 138},
+
+    {"_comment": "=== Tier 10 (128-135): 截面标准化 & 基本预处理 ===",
+     "name": "zscore",   "expression": "rank(zscore({field}))",                                    "priority": 135},
+    {"name": "scale",    "expression": "rank(scale({field}))",                                     "priority": 132},
+    {"name": "backfill", "expression": "rank(ts_backfill({field}, {backfill_window}))",            "priority": 129},
+
+    {"_comment": "=== Tier 11 (115-127): ts_mean — 移动平均, 基础构建块 ===",
+     "name": "ts_mean_20",  "expression": "rank(ts_mean({field}, 20))",  "priority": 127},
+    {"name": "ts_mean_60",  "expression": "rank(ts_mean({field}, 60))",  "priority": 122},
+    {"name": "ts_mean_120", "expression": "rank(ts_mean({field}, 120))", "priority": 117},
+
+    {"_comment": "=== Tier 12 (105-114): sum + 偏度/峰度 — 低频但独特信号 ===",
+     "name": "sum_20",       "expression": "rank(ts_sum({field}, 20))",        "priority": 114},
+    {"name": "skewness_60",  "expression": "rank(ts_skewness({field}, 60))",   "priority": 110},
+    {"name": "kurtosis_60",  "expression": "rank(ts_kurtosis({field}, 60))",   "priority": 106},
+
+    {"_comment": "=== Tier 13 (95-104): arg_max/min — 101 Alpha 中几乎不单独出现, 仅实验保留 ===",
+     "name": "argmax_60", "expression": "rank(ts_arg_max({field}, 60))", "priority": 100},
+    {"name": "argmin_60", "expression": "rank(ts_arg_min({field}, 60))", "priority": 95}
+
   ],
+
   "VECTOR": [
-    {"name": "vec_avg_delta_20",                             "expression": "rank(ts_delta(vec_avg({field}), 20))",                                  "priority": 126},
-    {"name": "vec_avg_ts_rank_60",                           "expression": "rank(ts_rank(vec_avg({field}), 60))",                                   "priority": 122},
-    {"name": "vec_avg_ts_zscore_60",                         "expression": "rank(ts_zscore(vec_avg({field}), 60))",                                 "priority": 118},
-    {"name": "vec_avg_zscore",                               "expression": "rank(zscore(vec_avg({field})))",                                         "priority": 116},
-    {"name": "vec_avg_decay_20",                             "expression": "rank(ts_decay_linear(ts_backfill(vec_avg({field}), {backfill_window}), 20))", "priority": 114},
-    {"name": "vec_avg_decay_10",                             "expression": "rank(ts_decay_linear(ts_backfill(vec_avg({field}), {backfill_window}), 10))", "priority": 112},
-    {"name": "vec_avg_decay_30",                             "expression": "rank(ts_decay_linear(ts_backfill(vec_avg({field}), {backfill_window}), 30))", "priority": 110},
-    {"name": "vec_avg_decay_40",                             "expression": "rank(ts_decay_linear(ts_backfill(vec_avg({field}), {backfill_window}), 40))", "priority": 108},
-    {"name": "vec_avg_backfill",                             "expression": "rank(ts_backfill(vec_avg({field}), {backfill_window}))",                 "priority": 110},
-    {"name": "vec_avg_rank",                                 "expression": "rank(vec_avg({field}))",                                                 "priority": 106},
-    {"name": "vec_avg_ts_mean_20",                           "expression": "rank(ts_mean(vec_avg({field}), 20))",                                   "priority": 104},
-    {"name": "vec_avg_ts_mean_60",                           "expression": "rank(ts_mean(vec_avg({field}), 60))",                                   "priority": 102},
-    {"name": "vec_avg_scale",                                "expression": "rank(scale(vec_avg({field})))",                                          "priority": 100}
+
+    {"_comment": "=== VECTOR: vec_avg 聚合后再应用操作符, 新增 vol-scaled delta 和 rank-delta ===",
+     "name": "vec_avg_vol_scaled_delta_20_60", "expression": "rank(ts_delta(vec_avg({field}), 20) / ts_std_dev(vec_avg({field}), 60))", "priority": 168},
+    {"name": "vec_avg_delta_5",                "expression": "rank(ts_delta(vec_avg({field}), 5))",                                    "priority": 165},
+    {"name": "vec_avg_delta_20",               "expression": "rank(ts_delta(vec_avg({field}), 20))",                                   "priority": 162},
+    {"name": "vec_avg_rank_delta_5",           "expression": "rank(ts_delta(rank(vec_avg({field})), 5))",                               "priority": 158},
+    {"name": "vec_avg_ts_rank_60",             "expression": "rank(ts_rank(vec_avg({field}), 60))",                                     "priority": 155},
+    {"name": "vec_avg_ts_zscore_60",           "expression": "rank(ts_zscore(vec_avg({field}), 60))",                                   "priority": 150},
+    {"name": "vec_avg_zscore",                 "expression": "rank(zscore(vec_avg({field})))",                                           "priority": 146},
+    {"name": "vec_avg_decay_20",               "expression": "rank(ts_decay_linear(ts_backfill(vec_avg({field}), {backfill_window}), 20))", "priority": 142},
+    {"name": "vec_avg_decay_10",               "expression": "rank(ts_decay_linear(ts_backfill(vec_avg({field}), {backfill_window}), 10))", "priority": 138},
+    {"name": "vec_avg_backfill",               "expression": "rank(ts_backfill(vec_avg({field}), {backfill_window}))",                   "priority": 134},
+    {"name": "vec_avg_rank",                   "expression": "rank(vec_avg({field}))",                                                   "priority": 130},
+    {"name": "vec_avg_ts_mean_20",             "expression": "rank(ts_mean(vec_avg({field}), 20))",                                      "priority": 125},
+    {"name": "vec_avg_ts_mean_60",             "expression": "rank(ts_mean(vec_avg({field}), 60))",                                      "priority": 120},
+    {"name": "vec_avg_scale",                  "expression": "rank(scale(vec_avg({field})))",                                             "priority": 115}
+
   ],
+
   "GROUP": [
-    {"name": "vec_avg_ts_rank_60",                           "expression": "rank(ts_rank(vec_avg({field}), 60))",                                   "priority": 120},
-    {"name": "vec_avg_ts_zscore_60",                         "expression": "rank(ts_zscore(vec_avg({field}), 60))",                                 "priority": 116},
-    {"name": "vec_avg_ts_mean_20",                           "expression": "rank(ts_mean(vec_avg({field}), 20))",                                   "priority": 110},
-    {"name": "vec_avg_rank",                                 "expression": "rank(vec_avg({field}))",                                                 "priority": 106}
+
+    {"_comment": "=== GROUP: 新增 mean_diff, ts_rank_120 窗口 ===",
+     "name": "vec_avg_ts_rank_60",   "expression": "rank(ts_rank(vec_avg({field}), 60))",              "priority": 148},
+    {"name": "vec_avg_ts_rank_120",  "expression": "rank(ts_rank(vec_avg({field}), 120))",             "priority": 143},
+    {"name": "vec_avg_ts_zscore_60", "expression": "rank(ts_zscore(vec_avg({field}), 60))",            "priority": 138},
+    {"name": "vec_avg_mean_diff_5_20", "expression": "rank(ts_mean(vec_avg({field}), 5) - ts_mean(vec_avg({field}), 20))", "priority": 133},
+    {"name": "vec_avg_ts_mean_20",   "expression": "rank(ts_mean(vec_avg({field}), 20))",              "priority": 126},
+    {"name": "vec_avg_rank",         "expression": "rank(vec_avg({field}))",                            "priority": 118}
+
   ],
+
   "SET": [
-    {"name": "vec_avg_ts_rank_60",                           "expression": "rank(ts_rank(vec_avg({field}), 60))",                                   "priority": 120},
-    {"name": "vec_avg_ts_zscore_60",                         "expression": "rank(ts_zscore(vec_avg({field}), 60))",                                 "priority": 116},
-    {"name": "vec_avg_ts_mean_20",                           "expression": "rank(ts_mean(vec_avg({field}), 20))",                                   "priority": 110},
-    {"name": "vec_avg_rank",                                 "expression": "rank(vec_avg({field}))",                                                 "priority": 106}
+
+    {"_comment": "=== SET: 同 GROUP, 稍低优先级 ===",
+     "name": "vec_avg_ts_rank_60",   "expression": "rank(ts_rank(vec_avg({field}), 60))",              "priority": 145},
+    {"name": "vec_avg_ts_rank_120",  "expression": "rank(ts_rank(vec_avg({field}), 120))",             "priority": 140},
+    {"name": "vec_avg_ts_zscore_60", "expression": "rank(ts_zscore(vec_avg({field}), 60))",            "priority": 135},
+    {"name": "vec_avg_mean_diff_5_20", "expression": "rank(ts_mean(vec_avg({field}), 5) - ts_mean(vec_avg({field}), 20))", "priority": 130},
+    {"name": "vec_avg_ts_mean_20",   "expression": "rank(ts_mean(vec_avg({field}), 20))",              "priority": 124},
+    {"name": "vec_avg_rank",         "expression": "rank(vec_avg({field}))",                            "priority": 115}
+
   ],
+
   "STRING": [
-    {"name": "raw_field",                                    "expression": "{field}",                                                                "priority": 105},
-    {"name": "rank_raw_field",                               "expression": "rank({field})",                                                         "priority": 100}
+    {"name": "raw_field",      "expression": "{field}",       "priority": 105},
+    {"name": "rank_raw_field", "expression": "rank({field})", "priority": 100}
   ],
+
   "TEXT": [
-    {"name": "raw_field",                                    "expression": "{field}",                                                                "priority": 105},
-    {"name": "rank_raw_field",                               "expression": "rank({field})",                                                         "priority": 100}
+    {"name": "raw_field",      "expression": "{field}",       "priority": 105},
+    {"name": "rank_raw_field", "expression": "rank({field})", "priority": 100}
   ],
+
   "BOOL": [
-    {"name": "raw_field",                                    "expression": "{field}",                                                                "priority": 105},
-    {"name": "rank_raw_field",                               "expression": "rank({field})",                                                         "priority": 100}
+    {"name": "raw_field",      "expression": "{field}",       "priority": 105},
+    {"name": "rank_raw_field", "expression": "rank({field})", "priority": 100}
   ],
+
   "BOOLEAN": [
-    {"name": "raw_field",                                    "expression": "{field}",                                                                "priority": 105},
-    {"name": "rank_raw_field",                               "expression": "rank({field})",                                                         "priority": 100}
+    {"name": "raw_field",      "expression": "{field}",       "priority": 105},
+    {"name": "rank_raw_field", "expression": "rank({field})", "priority": 100}
   ]
+
 }

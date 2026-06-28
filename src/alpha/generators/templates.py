@@ -102,6 +102,9 @@ def load_template_library(path: str) -> TemplateLibrary:
 
     validated: TemplateLibrary = {}
     for field_type, templates in payload.items():
+        # 跳过元数据注释键（以 _comment 开头）
+        if field_type.startswith("_comment"):
+            continue
         if not isinstance(field_type, str):
             raise BrainAPIError("模板库的键必须是字符串。")
         if not isinstance(templates, list):

@@ -50,7 +50,7 @@ global:
     # 6. NEUTRALIZATION — 官网: Neutralization
     #    选项: SUBINDUSTRY, MARKET, SECTOR, NONE
     #    官网显示: Subindustry | Market | Sector | None
-    neutralization: "SUBINDUSTRY"
+    neutralization: "INDUSTRY"
 
     # 7. DECAY — 官网: Decay
     #    指数加权衰减天数, 0=无衰减, 官网默认=4
@@ -91,7 +91,7 @@ global:
   # 字段筛选 & 限制 —— 对应 CLI --limit / --offset / --page-size / ...
   # --------------------------------------------------------------------------
   limits:
-    limit: 50                      # 测试字段数量上限，0=不限制 (全部字段)
+    limit: 120                     # 测试字段数量上限，0=不限制 (全部字段)
     offset: 0                      # 字段起始偏移量 (跳过前 N 个)
     page_size: 50                  # API 分页大小 (每次请求字段数)
     sleep_between_fields: 3.0      # 字段间休眠 (秒)，增大以降低限流风险
@@ -250,17 +250,17 @@ dataset_profiles:
     queue_busy_cooldown_seconds: 300    # pv1 限流需要更长的冷却
     template_disable_after: 12
 
-  # fundamental6: 1758 字段, Value Score=4, 字段量巨大需保守策略
+  # fundamental6: 1758 字段, Value Score=4, 社区推荐 #1 数据集, industry中性化黄金组合
   fundamental6:
-    min_request_interval: 2.0
+    min_request_interval: 3.0
     sleep_between_fields: 5.0
     max_concurrent_simulations: 1
     max_concurrent_creates: 1
-    max_templates_per_field: 8
+    max_templates_per_field: 10
     simulation_max_wait_seconds: 900
     simulation_max_queue_seconds: 600
     queue_busy_cooldown_seconds: 120
-    template_disable_after: 12
+    template_disable_after: 15
 
   # 默认配置 — 未匹配到任何已知数据集时使用
   default_profile:
