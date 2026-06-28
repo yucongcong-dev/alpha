@@ -977,14 +977,24 @@ def _build_matrix_templates(
         (diversified_templates, legacy_templates) 两个列表。
     """
     # delta_over_std 模板的窗口配置: (delta, std, priority)
-    _delta_over_std_windows: list[tuple[int, int, int]] = [
-        (5, 20, 176),
-        (15, 40, 172),
-        (10, 60, 170),
-        (20, 60, 174),
-        (25, 90, 168),
-        (30, 120, 166),
-    ]
+    # fundamental6 用长窗口（季度更新数据），其他数据集用短窗口
+    if use_dataset_heuristics:
+        _delta_over_std_windows: list[tuple[int, int, int]] = [
+            (21, 63, 176),
+            (63, 126, 172),
+            (63, 252, 174),
+            (126, 252, 170),
+            (252, 504, 168),
+        ]
+    else:
+        _delta_over_std_windows: list[tuple[int, int, int]] = [
+            (5, 20, 176),
+            (15, 40, 172),
+            (10, 60, 170),
+            (20, 60, 174),
+            (25, 90, 168),
+            (30, 120, 166),
+        ]
 
     diversified: list[tuple[str, str, int]] = []
     for delta, std, pri in _delta_over_std_windows:
@@ -996,40 +1006,77 @@ def _build_matrix_templates(
             )
         )
 
-    diversified.extend(
-        [
-            (
-                "group_delta_over_std_industry_20_60",
-                f"group_rank(ts_delta(ts_backfill({field_name}, {bw}), 20) / ts_std_dev(ts_backfill({field_name}, {bw}), 60), industry)",
-                166 + DELTA_STD_PRIORITY_BOOST,
-            ),
-            (
-                f"group_short_long_mean_spread_subindustry_20_{bw}",
-                f"group_rank(ts_mean(ts_backfill({field_name}, {bw}), 20) - ts_mean(ts_backfill({field_name}, {bw}), {bw}), subindustry)",
-                164,
-            ),
-            (
-                "group_zscore_subindustry_60",
-                f"group_rank(ts_zscore(ts_backfill({field_name}, {bw}), 60), subindustry)",
-                161,
-            ),
-            (
-                f"rank_mean_spread_over_std_20_{bw}_60",
-                f"rank((ts_mean(ts_backfill({field_name}, {bw}), 20) - ts_mean(ts_backfill({field_name}, {bw}), {bw})) / ts_std_dev(ts_backfill({field_name}, {bw}), 60))",
-                158,
-            ),
-            (
-                f"rank_zscore_spread_20_{bw}",
-                f"rank(ts_zscore(ts_backfill({field_name}, {bw}), 20) - ts_zscore(ts_backfill({field_name}, {bw}), {bw}))",
-                154,
-            ),
-            (
-                "group_rank_delta_of_rank_20",
-                f"group_rank(ts_delta(rank(ts_backfill({field_name}, {bw})), 20), subindustry)",
-                150,
-            ),
-        ]
-    )
+    # 非比率单字段多样化模板 — fundamental6 用长窗口
+    if use_dataset_heuristics:
+        diversified.extend(
+            [
+                (
+                    "group_delta_over_std_industry_63_126",
+                    f"group_rank(ts_delta(ts_backfill({field_name}, {bw}), 63) / ts_std_dev(ts_backfill({field_name}, {bw}), 126), industry)",
+                    166 + DELTA_STD_PRIORITY_BOOST,
+                ),
+                (
+                    f"group_short_long_mean_spread_subindustry_63_{bw}",
+                    f"group_rank(ts_mean(ts_backfill({field_name}, {bw}), 63) - ts_mean(ts_backfill({field_name}, {bw}), {bw}), subindustry)",
+                    164,
+                ),
+                (
+                    "group_zscore_subindustry_63",
+                    f"group_rank(ts_zscore(ts_backfill({field_name}, {bw}), 63), subindustry)",
+                    161,
+                ),
+                (
+                    f"rank_mean_spread_over_std_63_{bw}_126",
+                    f"rank((ts_mean(ts_backfill({field_name}, {bw}), 63) - ts_mean(ts_backfill({field_name}, {bw}), {bw})) / ts_std_dev(ts_backfill({field_name}, {bw}), 126))",
+                    158,
+                ),
+                (
+                    f"rank_zscore_spread_63_{bw}",
+                    f"rank(ts_zscore(ts_backfill({field_name}, {bw}), 63) - ts_zscore(ts_backfill({field_name}, {bw}), {bw}))",
+                    154,
+                ),
+                (
+                    "group_rank_delta_of_rank_63",
+                    f"group_rank(ts_delta(rank(ts_backfill({field_name}, {bw})), 63), subindustry)",
+                    150,
+                ),
+            ]
+        )
+    else:
+        diversified.extend(
+            [
+                (
+                    "group_delta_over_std_industry_20_60",
+                    f"group_rank(ts_delta(ts_backfill({field_name}, {bw}), 20) / ts_std_dev(ts_backfill({field_name}, {bw}), 60), industry)",
+                    166 + DELTA_STD_PRIORITY_BOOST,
+                ),
+                (
+                    f"group_short_long_mean_spread_subindustry_20_{bw}",
+                    f"group_rank(ts_mean(ts_backfill({field_name}, {bw}), 20) - ts_mean(ts_backfill({field_name}, {bw}), {bw}), subindustry)",
+                    164,
+                ),
+                (
+                    "group_zscore_subindustry_60",
+                    f"group_rank(ts_zscore(ts_backfill({field_name}, {bw}), 60), subindustry)",
+                    161,
+                ),
+                (
+                    f"rank_mean_spread_over_std_20_{bw}_60",
+                    f"rank((ts_mean(ts_backfill({field_name}, {bw}), 20) - ts_mean(ts_backfill({field_name}, {bw}), {bw})) / ts_std_dev(ts_backfill({field_name}, {bw}), 60))",
+                    158,
+                ),
+                (
+                    f"rank_zscore_spread_20_{bw}",
+                    f"rank(ts_zscore(ts_backfill({field_name}, {bw}), 20) - ts_zscore(ts_backfill({field_name}, {bw}), {bw}))",
+                    154,
+                ),
+                (
+                    "group_rank_delta_of_rank_20",
+                    f"group_rank(ts_delta(rank(ts_backfill({field_name}, {bw})), 20), subindustry)",
+                    150,
+                ),
+            ]
+        )
 
     legacy: list[tuple[str, str, int]] = [
         ("raw_field", field_name, 145),
@@ -1054,19 +1101,33 @@ def _build_matrix_templates(
     )
 
     # 比率配对模板窗口配置: (delta, std, priority)
-    _ratio_delta_rank_windows: list[tuple[int, None, int]] = [
-        (3, None, 188),
-        (5, None, 184),
-        (10, None, 176),
-    ]
-    _ratio_delta_over_std_windows: list[tuple[int, int, int]] = [
-        (5, 20, 180),
-        (15, 40, 176),
-        (10, 60, 174),
-        (20, 60, 178),
-        (25, 90, 172),
-        (30, 120, 170),
-    ]
+    # fundamental6 用长窗口避免 quarterly 数据下短 delta 全为 0/NaN
+    if use_dataset_heuristics:
+        _ratio_delta_rank_windows: list[tuple[int, None, int]] = [
+            (63, None, 186),
+            (126, None, 180),
+            (252, None, 172),
+        ]
+        _ratio_delta_over_std_windows: list[tuple[int, int, int]] = [
+            (21, 63, 176),
+            (63, 126, 172),
+            (63, 252, 174),
+            (126, 252, 168),
+        ]
+    else:
+        _ratio_delta_rank_windows: list[tuple[int, None, int]] = [
+            (3, None, 188),
+            (5, None, 184),
+            (10, None, 176),
+        ]
+        _ratio_delta_over_std_windows: list[tuple[int, int, int]] = [
+            (5, 20, 180),
+            (15, 40, 176),
+            (10, 60, 174),
+            (20, 60, 178),
+            (25, 90, 172),
+            (30, 120, 170),
+        ]
 
     for partner in partner_names:
         if partner not in fields_by_name:
@@ -1094,35 +1155,56 @@ def _build_matrix_templates(
                 )
             )
 
-        diversified.extend(
-            [
-                (
-                    f"group_ratio_zscore_{ratio_label}",
-                    f"group_rank(ts_zscore(ts_backfill({ratio_expr}, {bw}), 60), subindustry)",
-                    160,
-                ),
-                (
-                    f"ratio_mean_spread_over_std_{ratio_label}",
-                    f"rank((ts_mean(ts_backfill({ratio_expr}, {bw}), 20) - ts_mean(ts_backfill({ratio_expr}, {bw}), {bw})) / ts_std_dev(ts_backfill({ratio_expr}, {bw}), 60))",
-                    156,
-                ),
-                (
-                    f"ratio_zscore_spread_{ratio_label}",
-                    f"rank(ts_zscore(ts_backfill({ratio_expr}, {bw}), 20) - ts_zscore(ts_backfill({ratio_expr}, {bw}), {bw}))",
-                    152,
-                ),
-            ]
-        )
+        # fundamental6 用长窗口, 其他数据集保留短窗口
+        if use_dataset_heuristics:
+            diversified.extend(
+                [
+                    (
+                        f"group_ratio_zscore_{ratio_label}",
+                        f"group_rank(ts_zscore(ts_backfill({ratio_expr}, {bw}), 63), subindustry)",
+                        160,
+                    ),
+                    (
+                        f"ratio_mean_spread_over_std_{ratio_label}",
+                        f"rank((ts_mean(ts_backfill({ratio_expr}, {bw}), 63) - ts_mean(ts_backfill({ratio_expr}, {bw}), {bw})) / ts_std_dev(ts_backfill({ratio_expr}, {bw}), 126))",
+                        156,
+                    ),
+                    (
+                        f"ratio_zscore_spread_{ratio_label}",
+                        f"rank(ts_zscore(ts_backfill({ratio_expr}, {bw}), 63) - ts_zscore(ts_backfill({ratio_expr}, {bw}), {bw}))",
+                        152,
+                    ),
+                ]
+            )
+        else:
+            diversified.extend(
+                [
+                    (
+                        f"group_ratio_zscore_{ratio_label}",
+                        f"group_rank(ts_zscore(ts_backfill({ratio_expr}, {bw}), 60), subindustry)",
+                        160,
+                    ),
+                    (
+                        f"ratio_mean_spread_over_std_{ratio_label}",
+                        f"rank((ts_mean(ts_backfill({ratio_expr}, {bw}), 20) - ts_mean(ts_backfill({ratio_expr}, {bw}), {bw})) / ts_std_dev(ts_backfill({ratio_expr}, {bw}), 60))",
+                        156,
+                    ),
+                    (
+                        f"ratio_zscore_spread_{ratio_label}",
+                        f"rank(ts_zscore(ts_backfill({ratio_expr}, {bw}), 20) - ts_zscore(ts_backfill({ratio_expr}, {bw}), {bw}))",
+                        152,
+                    ),
+                ]
+            )
 
         legacy.extend(
             [
                 (f"raw_ratio_{ratio_label}", ratio_expr, 154),
                 (f"group_rank_ratio_{ratio_label}", f"group_rank({ratio_expr}, subindustry)", 152),
                 (f"ratio_{ratio_label}", f"rank({ratio_expr})", 148),
-                (f"rank_ratio_{ratio_label}", f"rank({ratio_expr})", 138),
                 (
                     f"decay_ratio_{ratio_label}",
-                    f"rank(ts_decay_linear(ts_backfill({ratio_expr}, {bw}), 10))",
+                    f"rank(ts_decay_linear(ts_backfill({ratio_expr}, {bw}), 63))",
                     126,
                 ),
             ]
