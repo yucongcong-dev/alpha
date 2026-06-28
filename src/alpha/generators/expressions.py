@@ -1178,7 +1178,7 @@ def build_expression_candidates(
     Example:
         >>> candidates = build_expression_candidates(
         ...     field={"id": "sales", "type": "MATRIX"},
-        ...     template_library=default_template_library(),
+        ...     template_library=load_template_library(""),
         ...     max_templates_per_field=50,
         ...     max_templates_per_family=10,
         ...     legacy_similarity_penalty=30,
