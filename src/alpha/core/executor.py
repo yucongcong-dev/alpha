@@ -104,6 +104,7 @@ def build_pending_templates_for_field(
         field_feedback=field_feedback,
         global_failed_check_counts=build_ctx.global_failed_check_counts,
         use_dataset_heuristics=build_ctx.use_dataset_heuristics,
+        dataset_id=args.dataset_id,
     )
     pending_templates: list[tuple[str, str, int, SettingsVariant, str]] = []
     disabled_templates = 0
@@ -118,6 +119,7 @@ def build_pending_templates_for_field(
             template_name,
             expression,
             use_dataset_heuristics=build_ctx.use_dataset_heuristics,
+            dataset_id=args.dataset_id,
         ):
             disabled_templates += 1
             continue

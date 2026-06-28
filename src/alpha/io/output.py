@@ -456,6 +456,213 @@ def dump_results(
         sidecar_paths["analysis"],
     )
 
+    # 自动更新 template_blacklist.json（运行时累积失败模板）
+    auto_update_blacklist(results, dataset_id)
+
+
+# ============================================================================
+# 模板黑名单自动更新
+# ============================================================================
+
+_BLACKLIST_PATH_CACHE: dict[str, str] = {}
+
+
+def _resolve_blacklist_path(data_dir: str = "") -> str:
+    """解析 template_blacklist.json 文件路径，支持多级回退。"""
+    global _BLACKLIST_PATH_CACHE
+    cache_key = data_dir or "_default"
+    if cache_key in _BLACKLIST_PATH_CACHE:
+        return _BLACKLIST_PATH_CACHE[cache_key]
+    base = Path(data_dir) if data_dir else DATA_DIR
+    # 指定了 data_dir：只在那找/建
+    if data_dir:
+        resolved = str(base / "template_blacklist.json")
+        _BLACKLIST_PATH_CACHE[cache_key] = resolved
+        return resolved
+    # 默认情况：先在 DATA_DIR 找已有文件，不存在则建在 DATA_DIR
+    candidate = DATA_DIR / "template_blacklist.json"
+    if candidate.is_file():
+        _BLACKLIST_PATH_CACHE[cache_key] = str(candidate)
+    else:
+        _BLACKLIST_PATH_CACHE[cache_key] = str(candidate)
+    return _BLACKLIST_PATH_CACHE[cache_key]
+
+
+def _build_default_blacklist() -> dict[str, Any]:
+    """构建初始黑名单骨架结构。"""
+    return {
+        "_version": "v2",
+        "_comment": "Per-dataset template blacklists. Auto-populated from test results.",
+        "_created": time.strftime("%Y-%m-%d"),
+        "_updated": time.strftime("%Y-%m-%d"),
+        "datasets": {},
+        "_default_auto_avoid_rules": [],
+    }
+
+
+def auto_update_blacklist(
+    results: list[FieldTestResult],
+    dataset_id: str,
+    *,
+    data_dir: str = "",
+    min_fields_tested: int = 2,
+    min_fail_checks: int = 2,
+) -> None:
+    """
+    根据测试结果自动更新 template_blacklist.json 中的失败模板记录。
+
+    每次 dump_results 时调用。分析当前结果中按模板名聚合的质量反馈，
+    将一致不合格的模板追加到对应数据集的黑名单中，供后续运行跳过。
+
+    自动黑名单的条件（全部满足才加入）：
+        - 模板在至少 min_fields_tested 个不同字段上测试过
+        - 无任何 submittable=True 的结果（全败）
+        - 失败检查 (LOW_SHARPE / LOW_FITNESS) 累计 >= min_fail_checks
+
+    Args:
+        results: 当前运行的全部测试结果。
+        dataset_id: 数据集标识符（如 "fundamental6"）。
+        data_dir: 数据目录路径（默认使用内置 DATA_DIR）。
+        min_fields_tested: 最少测试字段数阈值。
+        min_fail_checks: 最少失败检查次数阈值。
+    """
+    if not dataset_id or not results:
+        return
+
+    # 1. 筛选有实际质量反馈的结果
+    from ..analysis.stats import is_informative_result
+
+    informative = [r for r in results if is_informative_result(r)]
+    if not informative:
+        return
+
+    # 2. 按模板名分组
+    by_template: dict[str, list[FieldTestResult]] = {}
+    for r in informative:
+        by_template.setdefault(r.template_name, []).append(r)
+
+    # 3. 找出符合条件的失败模板
+    from datetime import datetime
+
+    new_entries: list[dict[str, Any]] = []
+    for tname, tresults in by_template.items():
+        fields_tested = list(dict.fromkeys(r.field_name for r in tresults))  # 去重保序
+        if len(fields_tested) < min_fields_tested:
+            continue
+
+        submittable = sum(1 for r in tresults if r.submittable)
+        if submittable > 0:
+            continue  # 有成功结果，不加入黑名单
+
+        low_sharpe_count = 0
+        low_fitness_count = 0
+        concentrated_count = 0
+        sharpe_values: list[float] = []
+        fitness_values: list[float] = []
+
+        for r in tresults:
+            if r.failed_checks:
+                for check in r.failed_checks:
+                    name = str(check.get("name", ""))
+                    value = check.get("value")
+                    if name == "LOW_SHARPE":
+                        low_sharpe_count += 1
+                        if isinstance(value, (int, float)):
+                            sharpe_values.append(float(value))
+                    elif name == "LOW_FITNESS":
+                        low_fitness_count += 1
+                        if isinstance(value, (int, float)):
+                            fitness_values.append(float(value))
+                    elif name == "CONCENTRATED_WEIGHT":
+                        concentrated_count += 1
+
+        total_fails = low_sharpe_count + low_fitness_count
+        if total_fails < min_fail_checks:
+            continue
+
+        avg_sharpe = round(sum(sharpe_values) / len(sharpe_values), 3) if sharpe_values else None
+        avg_fitness = round(sum(fitness_values) / len(fitness_values), 3) if fitness_values else None
+
+        reason_parts = [f"{len(fields_tested)}个字段测试均不通过"]
+        if avg_sharpe is not None:
+            reason_parts.append(f"平均 Sharpe {avg_sharpe:.3f}")
+        if avg_fitness is not None:
+            reason_parts.append(f"平均 Fitness {avg_fitness:.3f}")
+
+        entry: dict[str, Any] = {
+            "name": tname,
+            "source": "auto_detected",
+            "field_type": tresults[0].field_type,
+            "reason": "。".join(reason_parts) + "。",
+            "fields_tested": fields_tested,
+            "low_sharpe": low_sharpe_count,
+            "low_fitness": low_fitness_count,
+            "date_blacklisted": datetime.now().strftime("%Y-%m-%d"),
+        }
+        if avg_sharpe is not None:
+            entry["avg_sharpe"] = avg_sharpe
+        if avg_fitness is not None:
+            entry["avg_fitness"] = avg_fitness
+        if concentrated_count:
+            entry["concentrated_weight"] = concentrated_count
+
+        new_entries.append(entry)
+
+    if not new_entries:
+        return
+
+    # 4. 加载或创建黑名单文件
+    blacklist_path = _resolve_blacklist_path(data_dir)
+    try:
+        if os.path.isfile(blacklist_path):
+            with open(blacklist_path, "r", encoding="utf-8") as fh:
+                bl_data = json.load(fh)
+        else:
+            bl_data = _build_default_blacklist()
+    except (json.JSONDecodeError, OSError):
+        bl_data = _build_default_blacklist()
+
+    # 确保数据结构完整
+    if not isinstance(bl_data, dict):
+        bl_data = _build_default_blacklist()
+    bl_data.setdefault("datasets", {})
+    datasets = bl_data["datasets"]
+    if not isinstance(datasets, dict):
+        datasets = {}
+        bl_data["datasets"] = datasets
+
+    ds_data = datasets.get(dataset_id)
+    if not isinstance(ds_data, dict):
+        ds_data = {"blacklisted_templates": [], "_auto_avoid_rules": []}
+        datasets[dataset_id] = ds_data
+    ds_data.setdefault("blacklisted_templates", [])
+
+    # 5. 合并新条目（去重：同名模板已存在则跳过）
+    existing_names = {
+        item["name"]
+        for item in ds_data["blacklisted_templates"]
+        if isinstance(item, dict) and item.get("name")
+    }
+    added = 0
+    for entry in new_entries:
+        if entry["name"] not in existing_names:
+            ds_data["blacklisted_templates"].append(entry)
+            existing_names.add(entry["name"])
+            added += 1
+
+    if added == 0:
+        return
+
+    # 6. 更新时间戳并写回
+    bl_data["_updated"] = datetime.now().strftime("%Y-%m-%d %H:%M")
+    atomic_write_json(blacklist_path, bl_data)
+    logger.info(
+        "[blacklist] auto-updated %s: added %d new entries (total=%d)",
+        blacklist_path,
+        added,
+        len(ds_data["blacklisted_templates"]),
+    )
+
 
 # ============================================================================
 # 分析文件同步函数

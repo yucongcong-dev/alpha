@@ -34,6 +34,7 @@ from ..config import (
 
 # 从 expressions 模块导入分类函数（唯一源）
 from ..generators.expressions import (
+    _is_blacklisted_template,
     classify_expression_family,
     dominant_failed_check_names,
     is_legacy_family,
@@ -438,6 +439,7 @@ def should_skip_field_template_family(
     expression: str,
     *,
     use_dataset_heuristics: bool,
+    dataset_id: str = "",
 ) -> bool:
     """
     对已经证明偏弱的字段-模板家族组合做先验剪枝。
@@ -450,6 +452,7 @@ def should_skip_field_template_family(
         template_name (str): 模板名称。
         expression (str): Alpha 表达式。
         use_dataset_heuristics (bool): 是否启用数据集启发式规则。
+        dataset_id (str): 数据集 ID，用于按数据集过滤黑名单。
 
     Returns:
         bool: 如果应该跳过返回 True，否则返回 False。
@@ -463,12 +466,18 @@ def should_skip_field_template_family(
 
     Example:
         >>> if should_skip_field_template_family(
-        ...     "assets", "mean_spread_5_20", "...", use_dataset_heuristics=True
+        ...     "assets", "mean_spread_5_20", "...", use_dataset_heuristics=True,
+        ...     dataset_id="fundamental6"
         ... ):
         ...     print("跳过此字段-模板组合")
     """
     if not use_dataset_heuristics:
         return False
+
+    # v5: 检查黑名单 — 已淘汰模板立即跳过（按 dataset 分层）
+    if _is_blacklisted_template(template_name, expression, dataset_id=dataset_id):
+        return True
+
     family = classify_expression_family(template_name, expression)
 
     if field_name in _WEAK_MEAN_SPREAD_FIELDS and family in {

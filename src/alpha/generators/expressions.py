@@ -23,6 +23,8 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
+import json
+import os
 import re
 from typing import Any
 
@@ -54,6 +56,95 @@ from ..utils.helpers import choose_field_name, choose_field_type
 # 预编译正则表达式（性能优化）
 _TOKENIZE_REGEX: re.Pattern = re.compile(r"[^a-z0-9]+")
 """字段名分词正则模式（预编译）"""
+
+# ---- 模板黑名单（按 dataset_id 分层） ----
+_BLACKLIST_CACHE: dict[str, dict[str, Any]] = {}
+"""按 dataset_id 缓存的黑名单数据（懒加载）。每个值为 {"names": set, "patterns": list}"""
+_BLACKLIST_FILE_LOADED: bool = False
+_BLACKLIST_RAW: dict[str, Any] = {}
+"""原始 JSON 数据（一次加载，按需查 dataset）"""
+
+
+def _load_blacklist_file() -> None:
+    """懒加载黑名单 JSON 文件（仅一次）。"""
+    global _BLACKLIST_FILE_LOADED, _BLACKLIST_RAW
+    if _BLACKLIST_FILE_LOADED:
+        return
+    _BLACKLIST_FILE_LOADED = True
+    # 尝试多个可能的路径
+    candidates = []
+    current = os.path.dirname(os.path.abspath(__file__))
+    project_root = os.path.normpath(os.path.join(current, "..", "..", ".."))
+    candidates.append(os.path.join(project_root, "data", "template_blacklist.json"))
+    candidates.append(os.path.join(os.getcwd(), "data", "template_blacklist.json"))
+    for path in candidates:
+        if os.path.isfile(path):
+            try:
+                with open(path, "r", encoding="utf-8") as fh:
+                    _BLACKLIST_RAW = json.load(fh)
+                return
+            except (json.JSONDecodeError, OSError):
+                pass
+
+
+def _load_blacklist(dataset_id: str) -> None:
+    """按 dataset_id 加载黑名单到缓存。"""
+    global _BLACKLIST_CACHE, _BLACKLIST_RAW
+    if dataset_id in _BLACKLIST_CACHE:
+        return  # 已缓存
+    _load_blacklist_file()
+    names: set[str] = set()
+    patterns: list[str] = []
+
+    # 1. 加载数据集专属黑名单
+    datasets = _BLACKLIST_RAW.get("datasets", {})
+    ds_data = datasets.get(dataset_id, {}) if isinstance(datasets, dict) else {}
+    if isinstance(ds_data, dict):
+        for item in ds_data.get("blacklisted_templates", []):
+            if isinstance(item, dict) and item.get("name"):
+                names.add(item["name"])
+        for rule in ds_data.get("_auto_avoid_rules", []):
+            if isinstance(rule, dict) and rule.get("pattern"):
+                patterns.append(rule["pattern"])
+
+    # 2. 加载跨数据集默认规避规则（对所有数据集生效）
+    for rule in _BLACKLIST_RAW.get("_default_auto_avoid_rules", []):
+        if isinstance(rule, dict) and rule.get("pattern"):
+            if rule["pattern"] not in patterns:
+                patterns.append(rule["pattern"])
+
+    _BLACKLIST_CACHE[dataset_id] = {"names": names, "patterns": patterns}
+
+
+def _is_blacklisted_template(template_name: str, expression: str = "", *, dataset_id: str = "") -> bool:
+    """检查模板名称或表达式是否在指定数据集的黑名单中。
+
+    Args:
+        template_name: 模板名称。
+        expression: 表达式文本（用于模式匹配）。
+        dataset_id: 数据集 ID。为空时仅检查跨数据集默认规则。
+
+    Returns:
+        bool: 在黑名单中返回 True。
+    """
+    if dataset_id:
+        _load_blacklist(dataset_id)
+        cached = _BLACKLIST_CACHE.get(dataset_id, {})
+        if template_name in cached.get("names", set()):
+            return True
+        for pattern in cached.get("patterns", []):
+            if pattern in expression:
+                return True
+        # fundamental6 特例：group_ratio_delta_rank 全系列黑名单
+        if dataset_id == "fundamental6" and "group_ratio_delta_rank" in template_name:
+            return True
+    else:
+        # 无 dataset_id：仅检查跨数据集默认规则
+        _load_blacklist_file()
+        for rule in _BLACKLIST_RAW.get("_default_auto_avoid_rules", []):
+            if isinstance(rule, dict) and rule.get("pattern", "") in expression:
+                return True
+    return False
 
 
 def tokenize_field_name(field_name: str) -> list[str]:
@@ -727,6 +818,8 @@ def cap_templates_per_family(
 def build_feedback_mutations(
     field_name: str,
     field_feedback: dict[str, Any] | None,
+    *,
+    dataset_id: str = "",
 ) -> list[tuple[str, str, int]]:
     """
     基于历史失败检查结果生成额外的表达式变异候选。
@@ -738,13 +831,15 @@ def build_feedback_mutations(
         field_name (str): 字段名称。
         field_feedback ( | Nonedict[str, Any]]): 字段反馈数据，
             包含 failed_check_counts、best_expression、best_score 等。
+        dataset_id (str): 数据集 ID，用于按数据集过滤黑名单模板。
 
     Returns:
         list[tuple[str, str, int]]: 变异表达式列表。
 
     Example:
         >>> mutations = build_feedback_mutations(
-        ...     "sales", {"failed_check_counts": {"LOW_TURNOVER": 5}}
+        ...     "sales", {"failed_check_counts": {"LOW_TURNOVER": 5}},
+        ...     dataset_id="model51"
         ... )
         >>> print(len(mutations))
         8  # 包含基础变异和 LOW_TURNOVER 针对性变异
@@ -755,54 +850,52 @@ def build_feedback_mutations(
 
     # --- std-normalized delta templates (vol-scaled) ---
     # (delta, std, priority) 窗口配置
+    # v5: 去掉短窗口 20/60 (已黑名单，Shapre均值 -0.013)，fundamental6用季度长窗口
     _vol_scaled_windows: list[tuple[int, int, int]] = [
-        (20, 60, 192),
-        (15, 40, 190),
-        (10, 60, 188),
-        (25, 90, 186),
+        (63, 126, 192),
+        (63, 252, 190),
+        (126, 252, 188),
+        (252, 504, 186),
     ]
     mutations: list[tuple[str, str, int]] = [
         (
-            "iter_group_rank_delta_of_rank_3",
-            f"group_rank(ts_delta(rank(ts_backfill({field_name}, {bw})), 3), subindustry)",
-            182,
+            "iter_group_rank_delta_of_rank_63",
+            f"group_rank(ts_delta(rank(ts_backfill({field_name}, {bw})), 63), subindustry)",
+            184,
         ),
         (
-            "iter_group_rank_delta_of_rank_5",
-            f"group_rank(ts_delta(rank(ts_backfill({field_name}, {bw})), 5), subindustry)",
-            180,
+            "iter_group_rank_delta_of_rank_126",
+            f"group_rank(ts_delta(rank(ts_backfill({field_name}, {bw})), 126), subindustry)",
+            182,
         ),
     ]
     # 动态生成 vol-scaled delta 变体
     for delta, std, pri in _vol_scaled_windows:
-        mutations.append(
-            (
-                f"iter_group_vol_scaled_delta_{delta}_{std}",
-                f"group_rank(ts_delta(ts_backfill({field_name}, {bw}), {delta}) / ts_std_dev(ts_backfill({field_name}, {bw}), {std}), subindustry)",
-                pri,
-            )
-        )
+        name = f"iter_group_vol_scaled_delta_{delta}_{std}"
+        expr = f"group_rank(ts_delta(ts_backfill({field_name}, {bw}), {delta}) / ts_std_dev(ts_backfill({field_name}, {bw}), {std}), subindustry)"
+        if not _is_blacklisted_template(name, expr, dataset_id=dataset_id):
+            mutations.append((name, expr, pri))
 
     # backfill window variants for vol-scaled
     for bf_window, pri in [(180, 184), (260, 182)]:
-        mutations.append(
-            (
-                f"iter_group_vol_scaled_delta_20_60_bf{bf_window}",
-                f"group_rank(ts_delta(ts_backfill({field_name}, {bf_window}), 20) / ts_std_dev(ts_backfill({field_name}, {bf_window}), 60), subindustry)",
-                pri,
-            )
-        )
+        name = f"iter_group_vol_scaled_delta_63_126_bf{bf_window}"
+        expr = f"group_rank(ts_delta(ts_backfill({field_name}, {bf_window}), 63) / ts_std_dev(ts_backfill({field_name}, {bf_window}), 126), subindustry)"
+        if not _is_blacklisted_template(name, expr, dataset_id=dataset_id):
+            mutations.append((name, expr, pri))
 
+    # v5: 去掉 iter_group_mean_spread_over_std_5_20_20 和 iter_rank_mean_spread_over_std_5_20_20
+    # (已黑名单，Sharpe全部为负 + CONCENTRATED_WEIGHT)
+    # 替换为长窗口季度版本
     mutations.extend(
         [
             (
-                "iter_group_mean_spread_over_std_5_20_20",
-                f"group_rank((ts_mean(ts_backfill({field_name}, {bw}), 5) - ts_mean(ts_backfill({field_name}, {bw}), 20)) / ts_std_dev(ts_backfill({field_name}, {bw}), 20), subindustry)",
+                "iter_group_mean_spread_over_std_63_240_126",
+                f"group_rank((ts_mean(ts_backfill({field_name}, {bw}), 63) - ts_mean(ts_backfill({field_name}, {bw}), {bw})) / ts_std_dev(ts_backfill({field_name}, {bw}), 126), subindustry)",
                 178,
             ),
             (
-                "iter_rank_mean_spread_over_std_5_20_20",
-                f"rank((ts_mean(ts_backfill({field_name}, {bw}), 5) - ts_mean(ts_backfill({field_name}, {bw}), 20)) / ts_std_dev(ts_backfill({field_name}, {bw}), 20))",
+                "iter_rank_mean_spread_over_std_63_240_126",
+                f"rank((ts_mean(ts_backfill({field_name}, {bw}), 63) - ts_mean(ts_backfill({field_name}, {bw}), {bw})) / ts_std_dev(ts_backfill({field_name}, {bw}), 126))",
                 176,
             ),
         ]
@@ -845,25 +938,23 @@ def build_feedback_mutations(
     # Near-pass on vol-scaled: generate fine-tuned backfill/delta window variants
     if best_score >= EXPR_NEARPASS_BOOST_THRESHOLD:
         # (delta, std, backfill_window | None, priority) — None = use default bw
+        # v5: fundamental6 专用长窗口配置
         _nearpass_vol_scaled_configs: list[tuple[int, int, int | None, int]] = [
-            (15, 40, 180, 198),
-            (20, 60, 180, 196),
-            (10, 40, None, 195),
-            (15, 60, None, 194),
-            (25, 60, None, 193),
-            (20, 90, None, 192),
-            (20, 60, 260, 191),
+            (63, 126, 180, 198),
+            (63, 252, 180, 196),
+            (126, 252, None, 195),
+            (63, 126, None, 194),
+            (126, 504, None, 193),
+            (252, 504, None, 192),
+            (63, 126, 260, 191),
         ]
         for delta, std, bf, pri in _nearpass_vol_scaled_configs:
             bf_val = bf if bf is not None else bw
             bf_suffix = f"_bf{bf_val}" if bf is not None else ""
-            mutations.append(
-                (
-                    f"iter_nearpass_vol_scaled_{delta}_{std}{bf_suffix}",
-                    f"group_rank(ts_delta(ts_backfill({field_name}, {bf_val}), {delta}) / ts_std_dev(ts_backfill({field_name}, {bf_val}), {std}), subindustry)",
-                    pri,
-                )
-            )
+            name = f"iter_nearpass_vol_scaled_{delta}_{std}{bf_suffix}"
+            expr = f"group_rank(ts_delta(ts_backfill({field_name}, {bf_val}), {delta}) / ts_std_dev(ts_backfill({field_name}, {bf_val}), {std}), subindustry)"
+            if not _is_blacklisted_template(name, expr, dataset_id=dataset_id):
+                mutations.append((name, expr, pri))
 
     if CHECK_LOW_TURNOVER in dominant_names:
         mutations.extend(
@@ -970,8 +1061,13 @@ def _build_matrix_templates(
     bw: int,
     all_fields: Sequence[dict[str, Any]],
     use_dataset_heuristics: bool,
+    *,
+    dataset_id: str = "",
 ) -> tuple[list[tuple[str, str, int]], list[tuple[str, str, int]]]:
     """为 MATRIX 类型字段构建多样化和 legacy 模板候选。
+
+    Args:
+        dataset_id: 数据集 ID，用于按数据集过滤黑名单模板。
 
     Returns:
         (diversified_templates, legacy_templates) 两个列表。
@@ -1137,13 +1233,10 @@ def _build_matrix_templates(
 
         # Delta rank 变体
         for delta, _, pri in _ratio_delta_rank_windows:
-            diversified.append(
-                (
-                    f"group_ratio_delta_rank_{delta}_{ratio_label}",
-                    f"group_rank(ts_delta(rank(ts_backfill({ratio_expr}, {bw})), {delta}), subindustry)",
-                    pri + DELTA_STD_PRIORITY_BOOST,
-                )
-            )
+            name = f"group_ratio_delta_rank_{delta}_{ratio_label}"
+            expr = f"group_rank(ts_delta(rank(ts_backfill({ratio_expr}, {bw})), {delta}), subindustry)"
+            if not _is_blacklisted_template(name, expr, dataset_id=dataset_id):
+                diversified.append((name, expr, pri + DELTA_STD_PRIORITY_BOOST))
 
         # Delta over std 变体
         for delta, std, pri in _ratio_delta_over_std_windows:
@@ -1223,6 +1316,8 @@ def build_expression_candidates(
     field_feedback: dict[str, Any] | None = None,
     global_failed_check_counts: dict[str, int] | None = None,
     use_dataset_heuristics: bool = True,
+    *,
+    dataset_id: str = "",
 ) -> list[tuple[str, str, int]]:
     """
     为单个字段构建、变异、多样化并排序表达式候选。
@@ -1240,6 +1335,7 @@ def build_expression_candidates(
         field_feedback (dict[str, Any] | None): 字段反馈数据。
         global_failed_check_counts (dict[str, int] | None): 全局失败检查计数。
         use_dataset_heuristics (bool): 是否使用数据集启发式规则。
+        dataset_id (str): 数据集 ID，用于按数据集过滤黑名单模板。
 
     Returns:
         list[tuple[str, str, int]]: 最终的表达式候选列表，
@@ -1286,9 +1382,12 @@ def build_expression_candidates(
             int(item.get("priority", 0)),
         )
         for item in raw_templates
-        if isinstance(item, dict) and "name" in item and "expression" in item
+        if isinstance(item, dict)
+        and "name" in item
+        and "expression" in item
+        and not _is_blacklisted_template(str(item["name"]), str(item["expression"]), dataset_id=dataset_id)
     ]
-    templates.extend(build_feedback_mutations(field_name, field_feedback))
+    templates.extend(build_feedback_mutations(field_name, field_feedback, dataset_id=dataset_id))
 
     if field_type == "MATRIX":
         diversified, legacy = _build_matrix_templates(
@@ -1296,6 +1395,7 @@ def build_expression_candidates(
             bw,
             all_fields,
             use_dataset_heuristics,
+            dataset_id=dataset_id,
         )
         templates.extend(diversified)
         templates.extend(legacy)
