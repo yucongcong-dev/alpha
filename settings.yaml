@@ -111,7 +111,7 @@ global:
   # 重试 & 超时 —— 对应 CLI --simulation-create-retries / --simulation-max-wait-seconds / ...
   # --------------------------------------------------------------------------
   retries:
-    min_request_interval: 1.5            # API 请求最小间隔 (秒)，防止被限流
+    min_request_interval: 3.0            # API 请求最小间隔 (秒)，防止被限流，并发 3 需 ≥3.0
     simulation_create_retries: 3         # 模拟创建重试次数
     simulation_poll_retries: 3           # 模拟轮询重试次数
     simulation_max_polls: 240            # 单模拟最大轮询次数
@@ -252,7 +252,6 @@ dataset_profiles:
 
   # fundamental6: 1758 字段, Value Score=4, 社区推荐 #1 数据集, industry中性化黄金组合
   fundamental6:
-    min_request_interval: 1.5
     sleep_between_fields: 3.0
     max_concurrent_simulations: 3
     max_concurrent_creates: 1

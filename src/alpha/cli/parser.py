@@ -468,8 +468,9 @@ def parse_args() -> argparse.Namespace:
     # 应用 YAML global 默认值（在 dataset profile 之前，profile 可覆盖）
     apply_yaml_global_defaults(args, yaml_config)
 
-    # 根据数据集自动适配运行参数（YAML > 代码 profile > DEFAULT）
-    # CLI 显式传参不会被此处覆盖，因为 profile 仅设置未覆盖的参数
+    # 根据数据集自动适配运行参数
+    # 优先级：YAML dataset_profiles > YAML global > DEFAULT_PROFILE
+    # 仅当 YAML dataset_profiles 显式设置了 key 时才覆盖 args
     profile = get_dataset_profile(args.dataset_id, yaml_config)
     _dataset_profile_keys = (
         "min_request_interval",
@@ -482,8 +483,11 @@ def parse_args() -> argparse.Namespace:
         "queue_busy_cooldown_seconds",
         "template_disable_after",
     )
+    # 只覆盖 YAML dataset_profiles 显式声明的 key（不覆盖 DEFAULT_PROFILE 自动填充的 key）
+    yaml_profiles = (yaml_config or {}).get("dataset_profiles", {})
+    yaml_dataset_cfg = yaml_profiles.get(args.dataset_id, {}) if isinstance(yaml_profiles, dict) else {}
     for key in _dataset_profile_keys:
-        if key in profile:
+        if key in yaml_dataset_cfg:
             setattr(args, key, profile[key])
 
     # 根据运行模式调整参数
