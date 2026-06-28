@@ -46,6 +46,7 @@ from ..config import (
     RATIO_PARTNER_CANDIDATES,
     STATS_DEFAULT_SCORE,
     UNKNOWN_FAMILY,
+    get_backfill_window,
 )
 from ..models.base import TemplateLibrary
 from ..utils.helpers import choose_field_name, choose_field_type
