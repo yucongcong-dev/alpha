@@ -206,13 +206,6 @@ def build_simulation_payload(args: Any, expression: str) -> dict[str, Any]:
     settings["startDate"] = start_date
     settings["endDate"] = end_date
 
-    # 防御：删除值为 "OFF" 的非必填 switch 字段（API 要求省略而非传 "OFF"）
-    # 这些字段不从 _WEBSITE_DEFAULTS 生成，但设置变体可能注入
-    _non_required_off_keys = {"lookback", "maxTrade", "maxPosition"}
-    for k in list(settings):
-        if k in _non_required_off_keys and str(settings[k]).upper() == "OFF":
-            del settings[k]
-
     return {
         "type": "REGULAR",
         "settings": settings,
