@@ -892,7 +892,7 @@ def _run_simulation_poll(
             simulation_result.get(API_KEY_STATUS),
             simulation_result.get(API_KEY_STATE),
         )
-        logger.warning(
+        logger.info(
             "[simulation] completed simulation_id=%s simulation_location=%s progress=%s",
             simulation_id,
             simulation_location,
