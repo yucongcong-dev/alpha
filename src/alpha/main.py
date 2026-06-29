@@ -95,7 +95,7 @@ from .generators.settings import (
 )
 
 # 导入模板库管理
-from .generators.templates import load_template_library
+from .generators.templates import ensure_dataset_template_library, load_template_library
 
 # 导入凭证管理
 from .io.credentials import load_credentials
@@ -104,6 +104,7 @@ from .io.credentials import load_credentials
 from .io.output import (
     cleanup_legacy_sidecar_files,
     ensure_analysis_synced,
+    ensure_template_blacklist_file,
 )
 from .models.base import (
     ExecutionState,
@@ -239,6 +240,12 @@ def _initialize(
     run_config = build_run_config_snapshot(args, run_paths)
     logger.info("[config] 运行配置将嵌入主结果文件")
 
+    template_library_file = (
+        getattr(run_paths, "template_library_file", None) or args.template_library_file
+    )
+    template_library_file = ensure_dataset_template_library(template_library_file, args.dataset_id)
+    ensure_template_blacklist_file(args.dataset_id)
+
     email, password = load_credentials(args)
     if not email or not password:
         logger.error("[error] 缺少凭证，无法继续")
@@ -246,9 +253,6 @@ def _initialize(
 
     bootstrap_client, client_factory = create_and_login_client(email, password, args)
 
-    template_library_file = (
-        getattr(run_paths, "template_library_file", None) or args.template_library_file
-    )
     template_library = load_template_library(template_library_file)
     filters_dict = load_run_filters_extended(run_paths)
     use_dataset_heuristics = use_fundamental6_heuristics(args.dataset_id)

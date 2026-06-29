@@ -496,6 +496,26 @@ def _build_default_blacklist(dataset_id: str) -> dict[str, Any]:
     }
 
 
+def ensure_template_blacklist_file(dataset_id: str, *, data_dir: str = "") -> str:
+    """
+    确保 dataset 专属模板黑名单文件存在，不存在时创建空骨架。
+
+    Args:
+        dataset_id: 数据集 ID，如 fundamental6。
+        data_dir: 可选数据目录，测试或自定义部署时使用。
+
+    Returns:
+        str: 黑名单文件路径。
+    """
+    blacklist_path = _resolve_blacklist_path(dataset_id, data_dir=data_dir)
+    if os.path.isfile(blacklist_path):
+        return blacklist_path
+
+    atomic_write_json(blacklist_path, _build_default_blacklist(dataset_id))
+    logger.info("[blacklist] created dataset blacklist file: %s", blacklist_path)
+    return blacklist_path
+
+
 def auto_update_blacklist(
     results: list[FieldTestResult],
     dataset_id: str,

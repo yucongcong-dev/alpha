@@ -528,7 +528,7 @@ def parse_args() -> argparse.Namespace:
         parser,
         "--auto-update-blacklist",
         dest="auto_update_blacklist",
-        help_enable="根据本次结果自动更新 data/template_blacklist_<dataset>.json（默认关闭，避免运行时修改仓库文件）",
+        help_enable="根据本次结果自动追加低质量模板到 data/template_blacklist_<dataset>.json",
         help_disable="不自动更新模板黑名单（覆盖 YAML runtime.auto_update_blacklist=true）",
     )
     parser.add_argument(
