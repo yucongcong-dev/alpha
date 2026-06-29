@@ -17,6 +17,7 @@ from __future__ import annotations
 import argparse
 import os
 from pathlib import Path
+import sys
 from typing import Any
 
 from ..config import (
@@ -75,6 +76,24 @@ DEFAULT_OUTPUT_FILE = str(RESULTS_DIR / "fundamental6" / "test_results.json")
 # ============================================================================
 # 命令行参数解析函数
 # ============================================================================
+
+
+def collect_explicit_cli_keys(parser: argparse.ArgumentParser, argv: list[str]) -> set[str]:
+    """收集命令行中显式传入的 argparse dest 名称。
+    Collect argparse destination names explicitly provided on the command line.
+    """
+    explicit_keys: set[str] = set()
+    option_to_dest = {
+        option: action.dest
+        for action in parser._actions  # noqa: SLF001 - argparse exposes no public action iterator.
+        for option in action.option_strings
+    }
+    for token in argv:
+        option = token.split("=", 1)[0]
+        dest = option_to_dest.get(option)
+        if dest:
+            explicit_keys.add(dest)
+    return explicit_keys
 
 
 def parse_args() -> argparse.Namespace:
@@ -460,13 +479,14 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--quiet", action="store_true", help="安静模式")
     parser.add_argument("--log-file", default="", help="日志文件路径")
 
+    explicit_cli_keys = collect_explicit_cli_keys(parser, sys.argv[1:])
     args = parser.parse_args()
 
     # 加载 YAML 配置文件（优先级：CLI --config > 自动搜索 > 无）
     yaml_config = get_yaml_config(args.config if args.config else "")
 
     # 应用 YAML global 默认值（在 dataset profile 之前，profile 可覆盖）
-    apply_yaml_global_defaults(args, yaml_config)
+    apply_yaml_global_defaults(args, yaml_config, explicit_cli_keys)
 
     # 根据数据集自动适配运行参数
     # 优先级：YAML dataset_profiles > YAML global > DEFAULT_PROFILE
@@ -487,7 +507,7 @@ def parse_args() -> argparse.Namespace:
     yaml_profiles = (yaml_config or {}).get("dataset_profiles", {})
     yaml_dataset_cfg = yaml_profiles.get(args.dataset_id, {}) if isinstance(yaml_profiles, dict) else {}
     for key in _dataset_profile_keys:
-        if key in yaml_dataset_cfg:
+        if key in yaml_dataset_cfg and key not in explicit_cli_keys:
             setattr(args, key, profile[key])
 
     # 根据运行模式调整参数

@@ -541,16 +541,20 @@ def get_yaml_config(config_path: str = "") -> dict[str, Any]:
         dict: 解析后的配置字典。
     """
     cache_attr = "_yaml_config_cache"
-    if hasattr(get_yaml_config, cache_attr):
-        return getattr(get_yaml_config, cache_attr)  # type: ignore[attr-defined]
+    cache_key = os.path.abspath(config_path) if config_path else "__auto__"
+    cache = getattr(get_yaml_config, cache_attr, {})  # type: ignore[attr-defined]
+    if cache_key in cache:
+        return cache[cache_key]
     data = load_yaml_config(config_path)
-    setattr(get_yaml_config, cache_attr, data)
+    cache[cache_key] = data
+    setattr(get_yaml_config, cache_attr, cache)
     return data
 
 
 def apply_yaml_global_defaults(
     args: Any,
     yaml_config: dict[str, Any] | None = None,
+    explicit_cli_keys: set[str] | None = None,
 ) -> None:
     """将 YAML global 默认值应用到 argparse namespace 上（CLI 未显式传参时）。
 
@@ -567,6 +571,7 @@ def apply_yaml_global_defaults(
     """
     if not yaml_config:
         return
+    explicit_cli_keys = explicit_cli_keys or set()
 
     global_cfg = yaml_config.get("global", {})
     if not isinstance(global_cfg, dict):
@@ -583,27 +588,27 @@ def apply_yaml_global_defaults(
     sim_section = global_cfg.get("simulation", {})
     if isinstance(sim_section, dict):
         for yaml_key, arg_key in _SIM_KEY_MAP.items():
-            if yaml_key in sim_section and hasattr(args, arg_key):
+            if yaml_key in sim_section and hasattr(args, arg_key) and arg_key not in explicit_cli_keys:
                 setattr(args, arg_key, sim_section[yaml_key])
     # 不需要映射的 key (region, universe, delay, decay, neutralization, truncation,
     # pasteurization, language) — YAML key == args attr
     _merge_section(args, sim_section, {
         "region", "universe", "delay", "decay", "neutralization",
         "truncation", "pasteurization", "language",
-    })
+    }, explicit_cli_keys)
 
     # limits (字段筛选)
     _merge_section(args, global_cfg.get("limits", {}), {
         "limit", "offset", "page_size", "sleep_between_fields",
         "max_templates_per_field", "max_templates_per_family",
         "legacy_similarity_penalty", "disable_legacy_after",
-    })
+    }, explicit_cli_keys)
 
     # concurrency (并发)
     _merge_section(args, global_cfg.get("concurrency", {}), {
         "max_concurrent_simulations",
         "max_concurrent_creates",
-    })
+    }, explicit_cli_keys)
 
     # retries (重试和超时)
     _merge_section(args, global_cfg.get("retries", {}), {
@@ -613,42 +618,44 @@ def apply_yaml_global_defaults(
         "queue_busy_cooldown_seconds", "field_queue_busy_skip_after",
         "check_submit_retries", "submit_retries",
         "rate_limit_max_retries", "login_retries", "min_request_interval",
-    })
+    }, explicit_cli_keys)
 
     # filters
     _merge_section(args, global_cfg.get("filters", {}), {
         "template_disable_after", "top_fields_by_feedback",
         "stop_after_submittable",
-    })
+    }, explicit_cli_keys)
 
     # quality (质量阈值)
     _merge_section(args, global_cfg.get("quality", {}), {
         "min_sharpe", "min_fitness", "min_turnover",
         "max_turnover", "max_weight",
-    })
+    }, explicit_cli_keys)
 
     # expression (表达式生成)
     _merge_section(args, global_cfg.get("expression", {}), {
         "backfill_window",
-    })
+    }, explicit_cli_keys)
 
     # runtime (运行时开关)
     _merge_section(args, global_cfg.get("runtime", {}), {
         "submit", "smoke_test", "dry_run_plan", "full_run",
         "verbose", "quiet",
-    })
+    }, explicit_cli_keys)
 
 
 def _merge_section(
     args: Any,
     section: dict[str, Any],
     keys: set[str],
+    explicit_cli_keys: set[str] | None = None,
 ) -> None:
     """将 YAML section 中的值合并到 args（仅当 key 在 section 中存在时）。"""
     if not isinstance(section, dict):
         return
+    explicit_cli_keys = explicit_cli_keys or set()
     for key in keys:
-        if key in section and hasattr(args, key):
+        if key in section and hasattr(args, key) and key not in explicit_cli_keys:
             setattr(args, key, section[key])
 
 
