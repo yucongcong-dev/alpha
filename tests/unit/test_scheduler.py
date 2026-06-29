@@ -44,7 +44,7 @@ class TestMaybeRestoreRuntimeConcurrency:
         self, runtime_state_max_workers_5: RuntimeConcurrencyState
     ) -> None:
         state = runtime_state_max_workers_5
-        state.cooldown_until = 100.0
+        state.cooldown_until = max(0.001, time.monotonic() / 2)
         maybe_restore_runtime_concurrency(state)
         assert state.runtime_max_workers == 5
 
@@ -57,7 +57,7 @@ class TestMaybeRestoreRuntimeConcurrency:
         state = RuntimeConcurrencyState(
             max_workers=10,
             runtime_max_workers=2,
-            cooldown_until=100.0,
+            cooldown_until=max(0.001, time.monotonic() / 2),
         )
         with patch("alpha.core.scheduler.logger") as mock_logger:
             maybe_restore_runtime_concurrency(state)

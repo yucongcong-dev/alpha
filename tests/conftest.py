@@ -113,7 +113,7 @@ def empty_execution_state() -> ExecutionState:
 @pytest.fixture
 def execution_state_after_submit() -> ExecutionState:
     """模拟已提交一次的 ExecutionState，last_submission_at 为 0.5 秒前。"""
-    return _make_execution_state(time.monotonic() - 0.5)
+    return _make_execution_state(max(0.001, time.monotonic() - 0.5))
 
 
 @pytest.fixture
@@ -141,10 +141,11 @@ def runtime_state_cooling_down() -> RuntimeConcurrencyState:
 @pytest.fixture
 def runtime_state_cooldown_expired() -> RuntimeConcurrencyState:
     """冷却已过期的 RuntimeConcurrencyState。"""
+    expired_positive_deadline = max(0.001, time.monotonic() / 2)
     return RuntimeConcurrencyState(
         max_workers=5,
         runtime_max_workers=1,
-        cooldown_until=100.0,
+        cooldown_until=expired_positive_deadline,
     )
 
 

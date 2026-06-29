@@ -40,7 +40,11 @@ class TestRuntimeConcurrencyState:
         assert not state.is_cooling_down()
 
     def test_can_restore_concurrency_yes(self) -> None:
-        state = RuntimeConcurrencyState(max_workers=5, runtime_max_workers=1, cooldown_until=100.0)
+        state = RuntimeConcurrencyState(
+            max_workers=5,
+            runtime_max_workers=1,
+            cooldown_until=max(0.001, time.monotonic() / 2),
+        )
         assert state.can_restore_concurrency()
 
     def test_can_restore_concurrency_no_when_cooling(self) -> None:
@@ -52,7 +56,11 @@ class TestRuntimeConcurrencyState:
         assert not state.can_restore_concurrency()
 
     def test_can_restore_concurrency_no_same_workers(self) -> None:
-        state = RuntimeConcurrencyState(max_workers=5, runtime_max_workers=5, cooldown_until=100.0)
+        state = RuntimeConcurrencyState(
+            max_workers=5,
+            runtime_max_workers=5,
+            cooldown_until=max(0.001, time.monotonic() / 2),
+        )
         assert not state.can_restore_concurrency()
 
 
