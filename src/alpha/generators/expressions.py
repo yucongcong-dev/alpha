@@ -73,11 +73,55 @@ _FUNDAMENTAL6_PROTECTED_TEMPLATES: set[str] = {
     "account_rank_backfill_504",
     "account_ir_60",
     "account_group_backfill_504_subindustry",
+    "account_group_zscore_60_subindustry",
     "account_group_ir_60_subindustry",
+    "account_ts_rank_60",
+    "account_group_decay_63_subindustry",
     "account_ir_60_decay_20",
     "account_backfill_zscore_decay_63_subindustry",
 }
 """fundamental6 上要持续保留探索的模板方向，即使曾被自动黑名单记录。"""
+_FUNDAMENTAL6_HIGH_CONVICTION_RATIO_PAIRS: set[tuple[str, str]] = {
+    ("cash", "assets"),
+    ("cash_st", "assets_curr"),
+    ("cash_st", "assets"),
+    ("debt", "assets"),
+    ("debt_lt", "assets"),
+    ("debt_st", "assets"),
+    ("cogs", "assets"),
+    ("capex", "assets"),
+    ("cashflow", "assets"),
+    ("cashflow_op", "assets"),
+    ("cashflow_op", "fnd6_mkvalt"),
+    ("cashflow_op", "fnd6_mkvaltq"),
+    ("cashflow_invst", "assets"),
+}
+"""fundamental6 上优先探索的高经济含义比值组合。"""
+
+
+def _fundamental6_template_priority_adjustment(template_name: str) -> int:
+    """压低 generic library 模板，给 account / ratio / long-window 方向让路。"""
+    lower_name = template_name.lower()
+    if lower_name in {
+        "vol_scaled_delta_20_60",
+        "vol_scaled_delta_20_60_market",
+        "vol_scaled_delta_20_60_industry",
+        "3layer_zscore_sector_decay",
+        "3layer_zscore_market_decay",
+        "3layer_rank_sector_decay",
+        "3layer_zscore_subind_decay",
+        "ts_corr_self_rank_60",
+        "ts_corr_self_60",
+        "ts_corr_self_rank_252",
+        "ts_corr_self_120",
+        "ts_corr_self_252",
+        "ts_rank_after_group_63",
+        "ts_zscore_after_group_63",
+    }:
+        return -820
+    if lower_name.startswith(("delta_", "group_delta_", "rank_delta_")):
+        return -760
+    return 0
 
 
 def _resolve_blacklist_project_root() -> str:
@@ -1336,7 +1380,7 @@ def _build_matrix_templates(
     partner_names = discover_partner_fields(
         field_name,
         all_fields,
-        limit=4,
+        limit=6 if use_dataset_heuristics else 4,
         use_curated_heuristics=use_dataset_heuristics,
     )
 
@@ -1374,13 +1418,16 @@ def _build_matrix_templates(
             continue
         ratio_expr = f"{field_name}/{partner}"
         ratio_label = f"{field_name}_over_{partner}"
+        ratio_priority_boost = 0
+        if use_dataset_heuristics and (field_name, partner) in _FUNDAMENTAL6_HIGH_CONVICTION_RATIO_PAIRS:
+            ratio_priority_boost = 18
 
         # Delta rank 变体
         for delta, _, pri in _ratio_delta_rank_windows:
             name = f"group_ratio_delta_rank_{delta}_{ratio_label}"
             expr = f"group_rank(ts_delta(rank(ts_backfill({ratio_expr}, {bw})), {delta}), subindustry)"
             if not _is_blacklisted_template(name, expr, dataset_id=dataset_id):
-                diversified.append((name, expr, pri + DELTA_STD_PRIORITY_BOOST))
+                diversified.append((name, expr, pri + DELTA_STD_PRIORITY_BOOST + ratio_priority_boost))
 
         # Delta over std 变体
         for delta, std, pri in _ratio_delta_over_std_windows:
@@ -1388,7 +1435,7 @@ def _build_matrix_templates(
                 (
                     f"group_ratio_delta_over_std_{delta}_{std}_{ratio_label}",
                     f"group_rank(ts_delta(ts_backfill({ratio_expr}, {bw}), {delta}) / ts_std_dev(ts_backfill({ratio_expr}, {bw}), {std}), subindustry)",
-                    pri + DELTA_STD_PRIORITY_BOOST,
+                    pri + DELTA_STD_PRIORITY_BOOST + ratio_priority_boost,
                 )
             )
 
@@ -1399,17 +1446,17 @@ def _build_matrix_templates(
                     (
                         f"group_ratio_zscore_{ratio_label}",
                         f"group_rank(ts_zscore(ts_backfill({ratio_expr}, {bw}), 63), subindustry)",
-                        160,
+                        160 + ratio_priority_boost,
                     ),
                     (
                         f"ratio_mean_spread_over_std_{ratio_label}",
                         f"rank((ts_mean(ts_backfill({ratio_expr}, {bw}), 63) - ts_mean(ts_backfill({ratio_expr}, {bw}), {bw})) / ts_std_dev(ts_backfill({ratio_expr}, {bw}), 126))",
-                        156,
+                        156 + ratio_priority_boost,
                     ),
                     (
                         f"ratio_zscore_spread_{ratio_label}",
                         f"rank(ts_zscore(ts_backfill({ratio_expr}, {bw}), 63) - ts_zscore(ts_backfill({ratio_expr}, {bw}), {bw}))",
-                        152,
+                        152 + ratio_priority_boost,
                     ),
                 ]
             )
@@ -1436,16 +1483,26 @@ def _build_matrix_templates(
 
         legacy.extend(
             [
-                (f"raw_ratio_{ratio_label}", ratio_expr, 154),
-                (f"group_rank_ratio_{ratio_label}", f"group_rank({ratio_expr}, subindustry)", 152),
-                (f"ratio_{ratio_label}", f"rank({ratio_expr})", 148),
+                (f"raw_ratio_{ratio_label}", ratio_expr, 154 + ratio_priority_boost),
+                (
+                    f"group_rank_ratio_{ratio_label}",
+                    f"group_rank({ratio_expr}, subindustry)",
+                    152 + ratio_priority_boost,
+                ),
+                (f"ratio_{ratio_label}", f"rank({ratio_expr})", 148 + ratio_priority_boost),
                 (
                     f"decay_ratio_{ratio_label}",
                     f"rank(ts_decay_linear(ts_backfill({ratio_expr}, {bw}), 63))",
-                    126,
+                    126 + ratio_priority_boost,
                 ),
             ]
         )
+
+    if use_dataset_heuristics:
+        diversified = [
+            (name, expr, pri + 820 if name.startswith("account_") else pri)
+            for name, expr, pri in diversified
+        ]
 
     return diversified, legacy
 
@@ -1523,7 +1580,12 @@ def build_expression_candidates(
         (
             str(item["name"]),
             str(item["expression"]).format(field=field_name),
-            int(item.get("priority", 0)),
+            int(item.get("priority", 0))
+            + (
+                _fundamental6_template_priority_adjustment(str(item["name"]))
+                if dataset_id == "fundamental6" and use_dataset_heuristics
+                else 0
+            ),
         )
         for item in raw_templates
         if isinstance(item, dict)

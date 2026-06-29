@@ -138,20 +138,20 @@ DEFAULT_RATE_LIMIT_MAX_RETRIES: int = 3
 # Alpha 提交质量标准常量 (USA TOP3000, delay=1)
 # ============================================================================
 
-SUBMIT_MIN_FITNESS: float = 0.50
-"""提交要求的最低 Fitness 值（放宽）。Fitness = Sharpe × Turnover 惩罚调整，综合衡量风险调整后收益。"""
+SUBMIT_MIN_FITNESS: float = 1.00
+"""提交要求的最低 Fitness 值（与 Brain 2026-06-29 的 Delay=1 用户门槛一致）。"""
 
-SUBMIT_MIN_SHARPE: float = 0.85
-"""提交要求的最低 Sharpe 值（放宽）。衡量单位风险带来的超额收益。"""
+SUBMIT_MIN_SHARPE: float = 1.25
+"""提交要求的最低 Sharpe 值（与 Brain 2026-06-29 的 Delay=1 用户门槛一致）。"""
 
-SUBMIT_MIN_TURNOVER: float = 0.005
-"""提交要求的最低 Turnover（0.5%）。换手率过低意味着信号过于稳定，缺乏交易机会。"""
+SUBMIT_MIN_TURNOVER: float = 0.01
+"""提交要求的最低 Turnover（1%）。换手率过低意味着信号过于稳定，缺乏交易机会。"""
 
 SUBMIT_MAX_TURNOVER: float = 0.75
 """提交要求的最高 Turnover（75%）。换手率过高意味着交易过于频繁，交易成本侵蚀收益。"""
 
-SUBMIT_MAX_WEIGHT: float = 0.13
-"""提交要求的单股最大权重上限（13%）。防止权重过度集中在少数股票上。"""
+SUBMIT_MAX_WEIGHT: float = 0.10
+"""提交要求的单股最大权重上限（10%）。防止权重过度集中在少数股票上。"""
 
 # ============================================================================
 # 表达式生成器配置
@@ -165,19 +165,19 @@ BACKFILL_WINDOW: int = 240
 # 模拟预检 fallback 阈值
 # ============================================================================
 
-PRECHECK_FALLBACK_MIN_SHARPE: float = 0.85
+PRECHECK_FALLBACK_MIN_SHARPE: float = 1.25
 """precheck_simulation_metrics 的最小 Sharpe fallback（当 CLI 未提供时）"""
 
-PRECHECK_FALLBACK_MIN_FITNESS: float = 0.50
+PRECHECK_FALLBACK_MIN_FITNESS: float = 1.00
 """precheck_simulation_metrics 的最小 Fitness fallback（当 CLI 未提供时）"""
 
-PRECHECK_FALLBACK_MIN_TURNOVER: float = 0.005
+PRECHECK_FALLBACK_MIN_TURNOVER: float = 0.01
 """precheck_simulation_metrics 的最小 Turnover fallback（当 CLI 未提供时）"""
 
 PRECHECK_FALLBACK_MAX_TURNOVER: float = 0.75
 """precheck_simulation_metrics 的最大 Turnover fallback（当 CLI 未提供时）"""
 
-PRECHECK_FALLBACK_MAX_WEIGHT: float = 0.13
+PRECHECK_FALLBACK_MAX_WEIGHT: float = 0.10
 """precheck_simulation_metrics 的单股最大权重 fallback（当 CLI 未提供时）"""
 
 MAX_FAILED_CHECK_NAMES: int = 5
@@ -391,13 +391,18 @@ RATIO_PARTNER_CANDIDATES: dict[str, tuple[str, ...]] = {
     "debt": ("cap", "fnd6_mkvalt", "fnd6_mkvaltq", "assets", "equity", "enterprise_value"),
     "debt_lt": ("fnd6_mkvalt", "fnd6_mkvaltq", "assets", "equity", "enterprise_value"),
     "debt_st": ("assets", "cash", "cash_st", "fnd6_mkvalt"),
+    "assets_curr": ("cash_st", "debt_st", "liabilities_curr"),
     "liabilities": ("assets", "equity", "fnd6_mkvalt", "fnd6_mkvaltq", "cap", "liabilities_curr"),
     "liabilities_curr": ("assets", "equity", "fnd6_mkvalt", "fnd6_mkvaltq"),
     "cash": ("assets", "debt", "liabilities"),
-    "cash_st": ("assets", "debt_st"),
-    "cashflow": ("assets", "enterprise_value"),
-    "cashflow_op": ("assets", "debt", "enterprise_value"),
-    "capex": ("assets", "cashflow_op"),
+    "cash_st": ("assets_curr", "assets", "debt_st"),
+    "cashflow": ("assets", "enterprise_value", "fnd6_mkvalt", "fnd6_mkvaltq"),
+    "cashflow_op": ("fnd6_mkvalt", "fnd6_mkvaltq", "assets", "debt", "enterprise_value"),
+    "cashflow_invst": ("assets", "enterprise_value", "capex"),
+    "cashflow_fin": ("assets", "debt", "equity"),
+    "capex": ("assets", "cashflow_op", "enterprise_value"),
+    "cogs": ("assets", "cash", "fnd6_mkvalt", "fnd6_mkvaltq"),
+    "current_ratio": ("cash_st", "debt_st", "liabilities_curr"),
     "ebit": ("assets", "enterprise_value"),
     "ebitda": ("assets", "enterprise_value"),
     "equity": ("assets", "enterprise_value"),
@@ -415,9 +420,13 @@ RATIO_KEYWORDS: dict[str, tuple[str, ...]] = {
     "debt": ("cap", "assets", "equity", "enterprise_value", "liabilities"),
     "liabilities": ("assets", "equity", "cap", "enterprise_value"),
     "cash": ("debt", "liabilities", "assets", "enterprise_value"),
+    "cash_st": ("assets_curr", "assets", "debt_st", "liabilities_curr"),
     "cashflow": ("assets", "enterprise_value", "debt"),
-    "cashflow_op": ("assets", "enterprise_value", "debt"),
-    "capex": ("cashflow_op", "assets", "enterprise_value"),
+    "cashflow_op": ("assets", "enterprise_value", "debt", "fnd6_mkvalt", "fnd6_mkvaltq"),
+    "cashflow_invst": ("assets", "enterprise_value", "capex"),
+    "cashflow_fin": ("assets", "debt", "equity"),
+    "capex": ("cashflow_op", "assets", "enterprise_value", "cashflow_invst"),
+    "cogs": ("assets", "cash", "enterprise_value"),
     "ebit": ("assets", "enterprise_value", "sales", "revenue"),
     "ebitda": ("assets", "enterprise_value", "sales", "revenue"),
     "equity": ("assets", "enterprise_value", "debt"),

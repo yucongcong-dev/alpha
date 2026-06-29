@@ -268,10 +268,11 @@ def build_setting_variants(
     field_feedback: dict[str, Any] | None = None,
 ) -> list[SettingsVariant]:
     """
-    从 settings.yaml 读取单一配置，返回仅含一组 settings 的列表。
+    基于统一基准配置生成少量高信号 settings 变体。
 
-    不再生成多参数变体：所有表达式共享 settings.yaml 中定义的统一配置。
-    优先级: CLI > YAML > 硬编码官网默认值。
+    默认返回 3 组以内的变体，围绕更严格的权重控制和更合适的中性化展开，
+    让接近门槛的表达式优先获得“去集中化/去重复中性化”的第二次机会。
+    优先级仍然是 CLI > YAML > 硬编码官网默认值，然后在此基础上生成少量派生配置。
 
     Args:
         args: 命令行参数对象。
@@ -280,7 +281,29 @@ def build_setting_variants(
         field_feedback: 保留兼容，未使用。
 
     Returns:
-        List[SettingsVariant]: 包含唯一一组 settings 的列表。
+        List[SettingsVariant]: 去重后的 settings 变体列表。
     """
-    settings = build_simulation_payload(args, expression)["settings"]
-    return [settings]
+    base_settings = build_simulation_payload(args, expression)["settings"]
+    variants: list[SettingsVariant] = [dict(base_settings)]
+    lower_expr = expression.lower()
+
+    def add_variant(**updates: Any) -> None:
+        candidate = dict(base_settings)
+        candidate.update(updates)
+        if candidate not in variants:
+            variants.append(candidate)
+
+    # 对容易集中持仓的表达式优先尝试更严格的 truncation。
+    add_variant(truncation=min(float(base_settings.get("truncation", 0.08)), 0.05))
+
+    # 如果表达式已经在公式里显式做了 group_neutralize，避免再用 settings 重复中性化。
+    if "group_neutralize(" in lower_expr:
+        add_variant(neutralization="NONE", truncation=min(float(base_settings.get("truncation", 0.08)), 0.05))
+    elif "subindustry" in lower_expr or "group_rank(" in lower_expr:
+        # 对强 subindustry 模板给一个更大颗粒度的 neutralization 备选，
+        # 有助于缓解 weight concentration / subuniverse fail。
+        add_variant(neutralization="INDUSTRY", truncation=min(float(base_settings.get("truncation", 0.08)), 0.05))
+    else:
+        add_variant(neutralization="MARKET")
+
+    return variants

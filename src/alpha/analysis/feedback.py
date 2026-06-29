@@ -274,6 +274,18 @@ _ALWAYS_KEEP_FAMILIES: set = {
     "group_ratio_delta",
 }
 
+_FUNDAMENTAL6_PROTECTED_TEMPLATES: set[str] = {
+    "account_rank_backfill_504",
+    "account_ir_60",
+    "account_group_backfill_504_subindustry",
+    "account_group_zscore_60_subindustry",
+    "account_group_ir_60_subindustry",
+    "account_ts_rank_60",
+    "account_group_decay_63_subindustry",
+    "account_ir_60_decay_20",
+    "account_backfill_zscore_decay_63_subindustry",
+}
+
 # LOW_TURNOVER 主导时会被剪掉的模板名/表达式模式
 _SLOW_TEMPLATE_PREFIXES: tuple[str, ...] = ("ts_mean_", "backfill_", "sum_", "stddev_")
 _SLOW_TEMPLATE_NAMES: set = {"zscore", "scale", "rank_raw", "raw_field", "rank_raw_field"}
@@ -319,15 +331,30 @@ _BROKEN_ZSCORE_SPREAD_FIELDS: set = {
 # 字段级剪枝：standalone ratio 收益低的字段
 _WEAK_RATIO_STANDALONE_FIELDS: set = {
     "assets",
-    "cash",
-    "cash_st",
-    "capex",
-    "cashflow",
-    "cashflow_op",
+    "assets_curr",
     "bookvalue_ps",
-    "ebit",
-    "ebitda",
 }
+
+
+def _is_high_conviction_fundamental6_ratio(expression: str) -> bool:
+    """识别 fundamental6 中值得继续探索的高经济含义比值方向。"""
+    lower_expr = expression.lower()
+    strong_pairs = (
+        "debt/assets",
+        "debt_lt/assets",
+        "debt_st/assets",
+        "cash/assets",
+        "cash_st/assets_curr",
+        "cash_st/assets",
+        "cogs/assets",
+        "capex/assets",
+        "cashflow/assets",
+        "cashflow_op/assets",
+        "cashflow_op/fnd6_mkvalt",
+        "cashflow_op/fnd6_mkvaltq",
+        "cashflow_invst/assets",
+    )
+    return any(pair in lower_expr for pair in strong_pairs)
 
 # ============================================================================
 # 模板保留判断函数
@@ -383,6 +410,11 @@ def should_keep_template_for_feedback(
         return True
     if lower_name.startswith("iter_"):
         return True
+    if dataset_id == "fundamental6" and template_name in _FUNDAMENTAL6_PROTECTED_TEMPLATES:
+        return True
+    protected_ratio = dataset_id == "fundamental6" and _is_high_conviction_fundamental6_ratio(
+        expression
+    )
 
     # Historical results show these shapes are repeatedly too slow.
     if CHECK_LOW_TURNOVER in dominant_names:
@@ -404,9 +436,9 @@ def should_keep_template_for_feedback(
         CHECK_LOW_SUB_UNIVERSE_SHARPE in dominant_names
         or CHECK_CONCENTRATED_WEIGHT in dominant_names
     ):
-        if family in _CONCENTRATED_WEAK_FAMILIES:
+        if family in _CONCENTRATED_WEAK_FAMILIES and not protected_ratio:
             return False
-        if lower_name.startswith(_CONCENTRATED_WEAK_PREFIXES):
+        if lower_name.startswith(_CONCENTRATED_WEAK_PREFIXES) and not protected_ratio:
             return False
         if lower_name in _CONCENTRATED_WEAK_NAMES:
             return False
@@ -414,9 +446,13 @@ def should_keep_template_for_feedback(
     # Ratio-based templates consistently waste queue budget on fundamental6.
     # Once we have even 2+ simulated results showing LOW_SHARPE, cut all ratio families.
     field_low_sharpe = int(dominant_counts.get(CHECK_LOW_SHARPE, 0))
-    if field_low_sharpe >= 2 and family in _LOW_SHARPE_WEAK_RATIO_FAMILIES:
+    if field_low_sharpe >= 4 and family in _LOW_SHARPE_WEAK_RATIO_FAMILIES and not protected_ratio:
         return False
-    if lower_name.startswith(_LOW_SHARPE_WEAK_RATIO_PREFIXES) and field_low_sharpe >= 2:
+    if (
+        lower_name.startswith(_LOW_SHARPE_WEAK_RATIO_PREFIXES)
+        and field_low_sharpe >= 4
+        and not protected_ratio
+    ):
         return False
 
     # Spread-type templates with severe HIGH_TURNOVER + CONCENTRATED_WEIGHT are doomed.

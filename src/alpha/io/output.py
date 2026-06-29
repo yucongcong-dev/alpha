@@ -551,7 +551,10 @@ def auto_update_blacklist(
             "account_rank_backfill_504",
             "account_ir_60",
             "account_group_backfill_504_subindustry",
+            "account_group_zscore_60_subindustry",
             "account_group_ir_60_subindustry",
+            "account_ts_rank_60",
+            "account_group_decay_63_subindustry",
             "account_ir_60_decay_20",
             "account_backfill_zscore_decay_63_subindustry",
         }
@@ -611,6 +614,17 @@ def auto_update_blacklist(
 
         avg_sharpe = round(sum(sharpe_values) / len(sharpe_values), 3) if sharpe_values else None
         avg_fitness = round(sum(fitness_values) / len(fitness_values), 3) if fitness_values else None
+
+        # fundamental6 上接近门槛的模板很稀缺，避免仅凭 2 个弱字段就把整族误杀。
+        if (
+            dataset_id == "fundamental6"
+            and len(fields_tested) < 4
+            and (
+                (avg_sharpe is not None and avg_sharpe >= 0.7)
+                or (avg_fitness is not None and avg_fitness >= 0.35)
+            )
+        ):
+            continue
 
         reason_parts = [f"{len(fields_tested)}个字段测试均不通过"]
         if avg_sharpe is not None:

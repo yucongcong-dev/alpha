@@ -304,20 +304,49 @@ def _initialize(
         logger.error("[error] 数据集 %s 未返回任何字段", args.dataset_id)
         return None
 
+    preferred_field_names = {
+        "cash_st",
+        "debt_lt",
+        "debt",
+        "debt_st",
+        "cogs",
+        "cashflow_invst",
+        "cashflow_op",
+        "cashflow",
+        "cashflow_fin",
+        "current_ratio",
+        "unsystematic_risk_last_360_days",
+        "unsystematic_risk_last_60_days",
+        "fnd6_cptnewqeventv110_apq",
+        "fnd6_cptnewqeventv110_lctq",
+        "fnd6_cptnewqeventv110_dpq",
+    }
+    overtested_field_names = {
+        "assets",
+        "assets_curr",
+        "bookvalue_ps",
+        "capex",
+    }
+
     def field_sort_key(item: dict[str, Any]) -> tuple[Any, ...]:
         field_id = str(first_non_empty(item.get("id"), SENTINEL_UNKNOWN))
+        field_name = choose_field_name(item)
         feedback = historical_state.field_feedback.get(field_id)
         priority = field_priority(field_id, historical_state.field_feedback)
         is_promising_seen = feedback is not None and priority >= 0.65
         is_unexplored = feedback is None
+        is_preferred_direction = field_name in preferred_field_names
+        is_overtested_weak = field_name in overtested_field_names and feedback is not None
         return (
             -int(is_promising_seen),
+            -int(is_preferred_direction),
             -int(is_unexplored),
+            int(is_overtested_weak),
             -priority,
             -_safe_float(item.get("coverage")),
             -_safe_int(item.get("alphaCount")),
             -_safe_int(item.get("userCount")),
-            choose_field_name(item),
+            field_name,
         )
 
     fields.sort(key=field_sort_key)
