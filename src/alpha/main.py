@@ -118,6 +118,22 @@ from .utils.helpers import choose_field_name, choose_field_type, first_non_empty
 logger = logging.getLogger(__name__)
 
 
+def _safe_int(value: Any) -> int:
+    """宽松地把字段元数据转为 int，失败时返回 0。"""
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return 0
+
+
+def _safe_float(value: Any) -> float:
+    """宽松地把字段元数据转为 float，失败时返回 0.0。"""
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return 0.0
+
+
 def clean_runtime_artifacts(
     args: argparse.Namespace,
     *,
@@ -288,15 +304,23 @@ def _initialize(
         logger.error("[error] 数据集 %s 未返回任何字段", args.dataset_id)
         return None
 
-    fields.sort(
-        key=lambda item: (
-            -field_priority(
-                str(first_non_empty(item.get("id"), SENTINEL_UNKNOWN)),
-                historical_state.field_feedback,
-            ),
+    def field_sort_key(item: dict[str, Any]) -> tuple[Any, ...]:
+        field_id = str(first_non_empty(item.get("id"), SENTINEL_UNKNOWN))
+        feedback = historical_state.field_feedback.get(field_id)
+        priority = field_priority(field_id, historical_state.field_feedback)
+        is_promising_seen = feedback is not None and priority >= 0.65
+        is_unexplored = feedback is None
+        return (
+            -int(is_promising_seen),
+            -int(is_unexplored),
+            -priority,
+            -_safe_float(item.get("coverage")),
+            -_safe_int(item.get("alphaCount")),
+            -_safe_int(item.get("userCount")),
             choose_field_name(item),
         )
-    )
+
+    fields.sort(key=field_sort_key)
     if args.top_fields_by_feedback > 0:
         focused_fields = [
             field
@@ -403,12 +427,11 @@ def _run_field_test_loop(
         )
         if resumed_index > 0:
             logger.info(
-                "[resume] 从字段索引 %d/%d 继续 (跳过 %d 个已完成字段)",
+                "[resume] 从字段索引 %d/%d 附近继续 (优先从该位置恢复，但不会丢掉更早字段)",
                 resumed_index + 1,
                 len(fields),
-                resumed_index,
             )
-            fields = fields[resumed_index:]
+            fields = fields[resumed_index:] + fields[:resumed_index]
 
     # 干运行检查
     if args.dry_run_plan:

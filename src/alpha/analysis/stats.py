@@ -950,8 +950,12 @@ def compile_field_feedback(results: Sequence[FieldTestResult]) -> dict[str, dict
                 "best_score": STATS_DEFAULT_SCORE,
                 "best_expression": "",
                 "best_template_name": "",
+                STAT_FIELD_ATTEMPTED_TEMPLATES: 0,
                 STAT_FIELD_FAILED_CHECK_COUNTS: {},
             },
+        )
+        summary[STAT_FIELD_ATTEMPTED_TEMPLATES] = (
+            int(summary.get(STAT_FIELD_ATTEMPTED_TEMPLATES, 0)) + 1
         )
         for check in result.failed_checks or []:
             name = str(check.get("name", SENTINEL_UNKNOWN_CHECK))
@@ -1072,7 +1076,14 @@ def field_priority(field_id: str, field_feedback: dict[str, dict[str, Any]]) -> 
     summary = field_feedback.get(field_id)
     if not summary:
         return STATS_DEFAULT_SCORE
-    return float(summary.get("best_score", STATS_DEFAULT_SCORE))
+    best_score = float(summary.get("best_score", STATS_DEFAULT_SCORE))
+    attempted_templates = int(summary.get(STAT_FIELD_ATTEMPTED_TEMPLATES, 0))
+    # 对已经尝试很多次但依然没有接近门槛的字段，让位给未探索字段。
+    if attempted_templates >= 8 and best_score < 0.70:
+        return STATS_DEFAULT_SCORE - float(attempted_templates)
+    if attempted_templates >= 5 and best_score < 0.40:
+        return STATS_DEFAULT_SCORE - float(attempted_templates)
+    return best_score
 
 
 def current_submittable_count(results: Sequence[FieldTestResult]) -> int:

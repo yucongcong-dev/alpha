@@ -61,6 +61,23 @@ _BLACKLIST_CACHE: dict[str, dict[str, Any]] = {}
 """按 dataset_id 缓存的黑名单数据（懒加载）。每个值为 {"names": set, "patterns": list}"""
 _DEFAULT_AVOID_RULES_CACHE: list[dict[str, str]] | None = None
 """跨数据集默认规避规则缓存（一次加载）。"""
+_FUNDAMENTAL6_DISABLED_TEMPLATES: set[str] = {
+    "vol_scaled_delta_5_20",
+    "vol_scaled_delta_5_20_MARKET",
+    "delta_5",
+    "group_delta_5",
+    "group_delta_5_MARKET",
+}
+"""fundamental6 上已反复触发集中度/低质量问题的模板，先临时停用。"""
+_FUNDAMENTAL6_PROTECTED_TEMPLATES: set[str] = {
+    "account_rank_backfill_504",
+    "account_ir_60",
+    "account_group_backfill_504_subindustry",
+    "account_group_ir_60_subindustry",
+    "account_ir_60_decay_20",
+    "account_backfill_zscore_decay_63_subindustry",
+}
+"""fundamental6 上要持续保留探索的模板方向，即使曾被自动黑名单记录。"""
 
 
 def _resolve_blacklist_project_root() -> str:
@@ -143,6 +160,8 @@ def _is_blacklisted_template(template_name: str, expression: str = "", *, datase
     Returns:
         bool: 在黑名单中返回 True。
     """
+    if dataset_id == "fundamental6" and template_name in _FUNDAMENTAL6_PROTECTED_TEMPLATES:
+        return False
     if dataset_id:
         _load_blacklist(dataset_id)
         cached = _BLACKLIST_CACHE.get(dataset_id, {})
@@ -655,7 +674,7 @@ _PRIORITY_RULES: list[tuple[set[str], Any, int]] = [
     # --- LOW_FITNESS ---
     ({CHECK_LOW_FITNESS}, lambda f, n: "delta" in f or "spread" in f or n.startswith("iter_"), 22),
     ({CHECK_LOW_FITNESS}, lambda f, n: f in _LEGACY_BASIC, -25),
-    ({CHECK_LOW_FITNESS}, lambda f, n: f in {"group_vol_scaled_delta", "vol_scaled_delta"}, 15),
+    ({CHECK_LOW_FITNESS}, lambda f, n: f in {"group_vol_scaled_delta", "vol_scaled_delta"}, -18),
     # --- LOW_TURNOVER ---
     (
         {CHECK_LOW_TURNOVER},
@@ -675,7 +694,12 @@ _PRIORITY_RULES: list[tuple[set[str], Any, int]] = [
     ),
     ({CHECK_HIGH_TURNOVER}, lambda f, n: "delta" in f, -20),
     # --- CONCENTRATED_WEIGHT ---
-    ({CHECK_CONCENTRATED_WEIGHT}, lambda f, n: f.startswith("group_"), 24),
+    (
+        {CHECK_CONCENTRATED_WEIGHT},
+        lambda f, n: f.startswith("group_") and f not in {"group_vol_scaled_delta", "vol_scaled_delta"},
+        24,
+    ),
+    ({CHECK_CONCENTRATED_WEIGHT}, lambda f, n: f in {"group_vol_scaled_delta", "vol_scaled_delta"}, -30),
     (
         {CHECK_CONCENTRATED_WEIGHT},
         lambda f, n: f in {"legacy_ratio", "legacy_neg_ratio", "group_ratio_level"},
@@ -744,9 +768,18 @@ def adaptive_template_priority_adjustment(
         ):
             adjustment += 20
         if family in {"group_vol_scaled_delta", "vol_scaled_delta"}:
-            adjustment += 25
+            adjustment -= 28
+            if CHECK_CONCENTRATED_WEIGHT in dominant_names:
+                adjustment -= 18
             if "nearpass" in lower_name:
-                adjustment += 15
+                adjustment -= 8
+        if (
+            lower_name.startswith("account_rank_backfill_")
+            or lower_name == "account_ir_60"
+            or lower_name.startswith("account_group_ir_60")
+            or lower_name.startswith("account_group_backfill_")
+        ):
+            adjustment += 22
 
     return adjustment
 
@@ -959,6 +992,33 @@ def build_feedback_mutations(
             ]
         )
 
+    best_template_name = str(field_feedback.get("best_template_name", "")).strip() if field_feedback else ""
+    if best_template_name in {"account_rank_backfill_504", "account_ir_60"} or best_score >= 0.45:
+        mutations.extend(
+            [
+                (
+                    "iter_account_group_backfill_504_subindustry",
+                    f"group_rank(ts_backfill({field_name}, {bw}), subindustry)",
+                    201,
+                ),
+                (
+                    "iter_account_backfill_zscore_decay_63_subindustry",
+                    f"group_rank(ts_decay_linear(ts_zscore(ts_backfill({field_name}, {bw}), 63), 20), subindustry)",
+                    199,
+                ),
+                (
+                    "iter_account_ir_60_decay_20",
+                    f"rank(ts_decay_linear(ts_mean({field_name}, 60) / ts_std_dev({field_name}, 60), 20))",
+                    197,
+                ),
+                (
+                    "iter_account_group_ir_60_subindustry",
+                    f"group_rank(ts_mean({field_name}, 60) / ts_std_dev({field_name}, 60), subindustry)",
+                    195,
+                ),
+            ]
+        )
+
     # Near-pass on vol-scaled: generate fine-tuned backfill/delta window variants
     if best_score >= EXPR_NEARPASS_BOOST_THRESHOLD:
         # (delta, std, backfill_window | None, priority) — None = use default bw
@@ -1128,6 +1188,11 @@ def _build_matrix_templates(
                     214,
                 ),
                 (
+                    "account_group_backfill_504_subindustry",
+                    f"group_rank(ts_backfill({field_name}, {bw}), subindustry)",
+                    207,
+                ),
+                (
                     "account_group_zscore_60_subindustry",
                     f"group_rank(ts_zscore({field_name}, 60), subindustry)",
                     210,
@@ -1138,6 +1203,11 @@ def _build_matrix_templates(
                     "account_rank_zscore_240",
                     f"rank(ts_zscore(ts_backfill({field_name}, 240), 240))",
                     202,
+                ),
+                (
+                    "account_backfill_zscore_decay_63_subindustry",
+                    f"group_rank(ts_decay_linear(ts_zscore(ts_backfill({field_name}, {bw}), 63), 20), subindustry)",
+                    205,
                 ),
                 (
                     f"account_rank_backfill_{bw}",
@@ -1153,6 +1223,16 @@ def _build_matrix_templates(
                     "account_ir_60",
                     f"rank(ts_mean({field_name}, 60) / ts_std_dev({field_name}, 60))",
                     196,
+                ),
+                (
+                    "account_group_ir_60_subindustry",
+                    f"group_rank(ts_mean({field_name}, 60) / ts_std_dev({field_name}, 60), subindustry)",
+                    204,
+                ),
+                (
+                    "account_ir_60_decay_20",
+                    f"rank(ts_decay_linear(ts_mean({field_name}, 60) / ts_std_dev({field_name}, 60), 20))",
+                    203,
                 ),
             ]
         )
@@ -1449,6 +1529,10 @@ def build_expression_candidates(
         if isinstance(item, dict)
         and "name" in item
         and "expression" in item
+        and not (
+            dataset_id == "fundamental6"
+            and str(item["name"]) in _FUNDAMENTAL6_DISABLED_TEMPLATES
+        )
         and not _is_blacklisted_template(str(item["name"]), str(item["expression"]), dataset_id=dataset_id)
     ]
     templates.extend(build_feedback_mutations(field_name, field_feedback, dataset_id=dataset_id))

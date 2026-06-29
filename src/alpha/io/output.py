@@ -545,6 +545,17 @@ def auto_update_blacklist(
     if not dataset_id or not results:
         return
 
+    protected_templates = set()
+    if dataset_id == "fundamental6":
+        protected_templates = {
+            "account_rank_backfill_504",
+            "account_ir_60",
+            "account_group_backfill_504_subindustry",
+            "account_group_ir_60_subindustry",
+            "account_ir_60_decay_20",
+            "account_backfill_zscore_decay_63_subindustry",
+        }
+
     # 1. 筛选有实际质量反馈的结果
     from ..analysis.stats import is_informative_result
 
@@ -562,6 +573,8 @@ def auto_update_blacklist(
 
     new_entries: list[dict[str, Any]] = []
     for tname, tresults in by_template.items():
+        if tname in protected_templates:
+            continue
         fields_tested = list(dict.fromkeys(r.field_name for r in tresults))  # 去重保序
         if len(fields_tested) < min_fields_tested:
             continue
