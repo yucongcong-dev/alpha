@@ -23,7 +23,7 @@ from ..models.base import TemplateLibrary
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_TEMPLATE_PRIORITY_START = 200
+DEFAULT_TEMPLATE_PRIORITY_START = 1000
 """模板文件缺省优先级起点；文件越靠前，自动补齐的 priority 越高。"""
 
 # 内置默认模板库 JSON 文件的路径回退
@@ -37,6 +37,14 @@ _BUILTIN_TEMPLATE_LIBRARY_FILE = os.path.join(
 def _default_priority_for_index(index: int) -> int:
     """按模板在同一分组内的顺序生成默认优先级，越靠前越高。"""
     return max(1, DEFAULT_TEMPLATE_PRIORITY_START - index)
+
+
+def _is_builtin_template_path(path: str) -> bool:
+    """判断路径是否指向受版本管理的基础模板库。"""
+    try:
+        return Path(path).resolve() == Path(_BUILTIN_TEMPLATE_LIBRARY_FILE).resolve()
+    except OSError:
+        return os.path.abspath(path) == os.path.abspath(_BUILTIN_TEMPLATE_LIBRARY_FILE)
 
 
 def _add_missing_template_priorities(payload: dict[str, object]) -> bool:
@@ -80,6 +88,8 @@ def ensure_dataset_template_library(path: str, dataset_id: str) -> str:
     """
     target_path = path or _BUILTIN_TEMPLATE_LIBRARY_FILE
     if os.path.exists(target_path):
+        if _is_builtin_template_path(target_path):
+            return target_path
         try:
             with open(target_path, encoding="utf-8") as handle:
                 existing_payload = json.load(handle)

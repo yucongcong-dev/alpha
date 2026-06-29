@@ -87,7 +87,24 @@ def test_ensure_dataset_template_library_fills_missing_priorities(
     ensure_dataset_template_library(str(target), "custom_ds")
 
     payload = json.loads(target.read_text(encoding="utf-8"))
-    assert [item["priority"] for item in payload["default"]] == [200, 999, 198]
+    assert [item["priority"] for item in payload["default"]] == [1000, 999, 998]
+
+
+def test_ensure_dataset_template_library_does_not_mutate_base_template(
+    monkeypatch, tmp_path
+) -> None:
+    """The tracked base template library should not be rewritten by priority filling."""
+    base = tmp_path / "worldquant_template_library.json"
+    base.write_text(
+        json.dumps({"default": [{"name": "base", "expression": "rank({field})"}]}),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(template_module, "_BUILTIN_TEMPLATE_LIBRARY_FILE", str(base))
+
+    ensure_dataset_template_library(str(base), "custom_ds")
+
+    payload = json.loads(base.read_text(encoding="utf-8"))
+    assert "priority" not in payload["default"][0]
 
 
 def test_ensure_template_blacklist_file_creates_empty_dataset_file(tmp_path) -> None:
