@@ -51,19 +51,5 @@ def main() -> int:
         return 1
 
 
-def run_pv1_optimization() -> int:
-    """PV1 optimization runner CLI 入口。
-
-    加载并执行 scripts/run_pv1_optimization 中的优化脚本。
-    """
-    from pathlib import Path
-    import subprocess
-    import sys
-
-    script = Path(__file__).parent.parent.parent / "scripts" / "run_pv1_optimization.py"
-    result = subprocess.run([sys.executable, str(script)], check=False)
-    return result.returncode
-
-
 if __name__ == "__main__":
     raise SystemExit(main())

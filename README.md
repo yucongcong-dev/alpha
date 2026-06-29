@@ -13,7 +13,10 @@ alpha/                     # 项目根目录
 │       ├── main.py        # 主流程编排
 │       │
 │       ├── core/          # 核心业务层
-│       │   └── executor.py
+│       │   ├── checkpoint.py
+│       │   ├── executor.py
+│       │   ├── scheduler.py
+│       │   └── simulation.py
 │       │
 │       ├── generators/    # Alpha 生成层
 │       │   ├── templates.py
@@ -26,6 +29,7 @@ alpha/                     # 项目根目录
 │       │   └── feedback.py
 │       │
 │       ├── api/           # API 客户端层
+│       │   ├── api_types.py
 │       │   └── client.py
 │       │
 │       ├── io/            # 输入输出层
@@ -33,6 +37,7 @@ alpha/                     # 项目根目录
 │       │   └── output.py
 │       │
 │       ├── cli/           # 命令行接口层
+│       │   ├── filters.py
 │       │   └── parser.py
 │       │
 │       ├── models/        # 数据模型层
@@ -51,6 +56,8 @@ alpha/                     # 项目根目录
 ├── README.md              # 项目说明
 ├── requirements.txt       # 依赖
 ├── pyproject.toml         # 项目配置
+├── settings.yaml          # 默认运行配置
+├── data/                  # 模板库和人工维护的黑名单
 └── .gitignore
 ```
 
@@ -161,8 +168,8 @@ python -m alpha --refresh-fields-cache
 
 | 文件 | 用途 |
 |------|------|
-| `*_results.json` | 原始结果（每个模拟的详细数据） |
-| `*_analysis.json` | 分析汇总（用于决策下一步） |
+| `results/<dataset>/test_results.json` | 原始结果（每个模拟的详细数据） |
+| `results/<dataset>/test_results_analysis.json` | 分析汇总（用于决策下一步） |
 
 ### 关键分析字段
 
@@ -190,11 +197,15 @@ python -m alpha --refresh-fields-cache
 运行单元测试：
 
 ```bash
-python -m unittest discover tests -v
+PYTHONPATH=src python -m pytest -q
+```
 
-# 或使用 pytest（需要安装）
-pip install pytest
-pytest tests/ -v
+如需运行 lint/format，请安装开发依赖：
+
+```bash
+pip install -e ".[dev]"
+ruff check .
+ruff format .
 ```
 
 ## 打包发布

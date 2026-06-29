@@ -91,7 +91,7 @@ global:
   # 字段筛选 & 限制 —— 对应 CLI --limit / --offset / --page-size / ...
   # --------------------------------------------------------------------------
   limits:
-    limit: 300                     # 测试字段数量上限，0=不限制 (全部字段)
+    limit: 50                      # 测试字段数量上限，0=不限制 (全部字段)
     offset: 0                      # 字段起始偏移量 (跳过前 N 个)
     page_size: 50                  # API 分页大小 (每次请求字段数)
     sleep_between_fields: 3.0      # 字段间休眠 (秒)，增大以降低限流风险
@@ -189,6 +189,7 @@ global:
   # --------------------------------------------------------------------------
   runtime:
     submit: false          # 是否自动提交通过预检的 Alpha
+    auto_update_blacklist: false  # 是否自动更新 data/template_blacklist_<dataset>.json；默认关闭避免运行时修改仓库文件
     smoke_test: false      # 冒烟测试模式 (1字段/1模板，快速验证)
     dry_run_plan: false    # 干运行模式 (仅打印计划，不创建模拟)
     full_run: false        # 全量运行模式 (所有字段/所有模板)

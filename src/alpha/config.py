@@ -639,7 +639,7 @@ def apply_yaml_global_defaults(
 
     # runtime (运行时开关)
     _merge_section(args, global_cfg.get("runtime", {}), {
-        "submit", "smoke_test", "dry_run_plan", "full_run",
+        "submit", "auto_update_blacklist", "smoke_test", "dry_run_plan", "full_run",
         "verbose", "quiet",
     }, explicit_cli_keys)
 

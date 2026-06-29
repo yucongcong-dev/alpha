@@ -335,6 +335,7 @@ def dump_results(
     settings_fingerprint: str,
     template_library_fingerprint: str,
     run_config: dict[str, Any] | None = None,
+    auto_update_template_blacklist: bool = False,
 ) -> None:
     """
     持久化完整运行结果，并写入一个统一分析文件。
@@ -349,6 +350,8 @@ def dump_results(
         settings_fingerprint: 设置配置指纹。
         template_library_fingerprint: 模板库指纹。
         run_config: 运行配置字典。默认为 None。
+        auto_update_template_blacklist: 是否根据运行结果自动写入模板黑名单。
+            默认为 False，避免普通运行修改仓库中受 Git 跟踪的 data/ 文件。
 
     Example:
         >>> dump_results(
@@ -456,8 +459,8 @@ def dump_results(
         sidecar_paths["analysis"],
     )
 
-    # 自动更新 template_blacklist.json（运行时累积失败模板）
-    auto_update_blacklist(results, dataset_id)
+    if auto_update_template_blacklist:
+        auto_update_blacklist(results, dataset_id)
 
 
 # ============================================================================

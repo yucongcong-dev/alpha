@@ -24,6 +24,7 @@ global:
     max_templates_per_field: 0
   runtime:
     smoke_test: false
+    auto_update_blacklist: true
 dataset_profiles:
   fundamental6:
     max_concurrent_simulations: 3
@@ -74,3 +75,38 @@ def test_cli_smoke_test_overrides_yaml_false(monkeypatch, tmp_path) -> None:
     assert args.limit == 1
     assert args.max_templates_per_field == 1
     assert args.max_concurrent_simulations == 1
+
+
+def test_yaml_can_enable_auto_update_blacklist(monkeypatch, tmp_path) -> None:
+    """YAML runtime.auto_update_blacklist should be applied when CLI is silent."""
+    clear_yaml_cache()
+    config_path = tmp_path / "settings.yaml"
+    write_config(config_path)
+    monkeypatch.setattr(sys, "argv", ["alpha", "--config", str(config_path)])
+
+    args = parse_args()
+
+    assert args.auto_update_blacklist is True
+
+
+def test_cli_auto_update_blacklist_flag(monkeypatch, tmp_path) -> None:
+    """--auto-update-blacklist should enable runtime blacklist updates explicitly."""
+    clear_yaml_cache()
+    config_path = tmp_path / "settings.yaml"
+    config_path.write_text(
+        """
+global:
+  runtime:
+    auto_update_blacklist: false
+""".strip(),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        ["alpha", "--config", str(config_path), "--auto-update-blacklist"],
+    )
+
+    args = parse_args()
+
+    assert args.auto_update_blacklist is True

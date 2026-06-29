@@ -147,6 +147,7 @@ def handle_completed_future(
         settings_fingerprint=completion_ctx.settings_fingerprint,
         template_library_fingerprint=completion_ctx.template_library_fingerprint,
         run_config=completion_ctx.run_config,
+        auto_update_template_blacklist=getattr(args, "auto_update_blacklist", False),
     )
     congestion_detected = False
     if "CONCURRENT_SIMULATION_LIMIT_EXCEEDED" in result.message:

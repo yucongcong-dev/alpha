@@ -469,6 +469,11 @@ def parse_args() -> argparse.Namespace:
     # 提交和输出参数
     parser.add_argument("--submit", action="store_true", help="检查通过时提交 Alpha")
     parser.add_argument(
+        "--auto-update-blacklist",
+        action="store_true",
+        help="根据本次结果自动更新 data/template_blacklist_<dataset>.json（默认关闭，避免运行时修改仓库文件）",
+    )
+    parser.add_argument(
         "--output",
         default="",
         help="结果 JSON 输出文件路径（留空则根据 dataset_id 自动生成）",
@@ -737,6 +742,7 @@ def build_run_config_snapshot(args: argparse.Namespace, run_paths: RunPaths) -> 
         },
         "runtime": {
             "submit": args.submit,
+            "auto_update_blacklist": args.auto_update_blacklist,
             "smoke_test": args.smoke_test,
             "dry_run_plan": args.dry_run_plan,
             "full_run": args.full_run,
