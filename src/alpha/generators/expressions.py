@@ -29,7 +29,6 @@ import re
 from typing import Any
 
 from ..config import (
-    BACKFILL_WINDOW,
     CHECK_CONCENTRATED_WEIGHT,
     CHECK_HIGH_TURNOVER,
     CHECK_LOW_FITNESS,
@@ -442,6 +441,12 @@ def classify_expression_family(template_name: str, expression: str) -> str:
         if "ts_mean" in lower_expr and "-" in lower_expr:
             return "group_mean_spread"
         return "legacy_group_level"
+    if "group_neutralize" in lower_expr and "ts_decay_linear" in lower_expr:
+        return "neutralize_decay"
+    if "ts_decay_linear" in lower_expr and "ts_delta" not in lower_expr and "/" not in lower_expr:
+        return "decay_level"
+    if "ts_rank" in lower_expr:
+        return "ts_rank"
     if "ts_delta" in lower_expr and "ts_std_dev" in lower_expr:
         return "vol_scaled_delta"
     if "ts_mean" in lower_expr and "-" in lower_expr:
@@ -617,7 +622,10 @@ _GROUP_FAMILIES = {
     "group_vol_scaled_delta",
 }
 _SIGNAL_FAMILIES = {
+    "neutralize_decay",
     "zscore_time",
+    "ts_rank",
+    "decay_level",
     "rank_spread",
     "mean_spread",
     "vol_scaled_delta",
@@ -1092,11 +1100,11 @@ def _build_matrix_templates(
     # fundamental6 用长窗口（季度更新数据），其他数据集用短窗口
     if use_dataset_heuristics:
         _delta_over_std_windows: list[tuple[int, int, int]] = [
-            (21, 63, 176),
-            (63, 126, 172),
-            (63, 252, 174),
-            (126, 252, 170),
-            (252, 504, 168),
+            (21, 63, 148),
+            (63, 126, 144),
+            (63, 252, 146),
+            (126, 252, 142),
+            (252, 504, 140),
         ]
     else:
         _delta_over_std_windows: list[tuple[int, int, int]] = [
@@ -1109,6 +1117,46 @@ def _build_matrix_templates(
         ]
 
     diversified: list[tuple[str, str, int]] = []
+    if use_dataset_heuristics:
+        # Account feedback from /users/self/alphas shows these families are
+        # materially stronger on fundamental6 than long-window delta/std.
+        diversified.extend(
+            [
+                (
+                    "account_neutralize_zscore_decay_63_industry",
+                    f"ts_decay_linear(group_neutralize(ts_zscore(ts_backfill({field_name}, 240), 63), industry), 20)",
+                    214,
+                ),
+                (
+                    "account_group_zscore_60_subindustry",
+                    f"group_rank(ts_zscore({field_name}, 60), subindustry)",
+                    210,
+                ),
+                ("account_ts_rank_60", f"rank(ts_rank({field_name}, 60))", 208),
+                ("account_ts_rank_200", f"rank(ts_rank({field_name}, 200))", 204),
+                (
+                    "account_rank_zscore_240",
+                    f"rank(ts_zscore(ts_backfill({field_name}, 240), 240))",
+                    202,
+                ),
+                (
+                    f"account_rank_backfill_{bw}",
+                    f"rank(ts_backfill({field_name}, {bw}))",
+                    200,
+                ),
+                (
+                    "account_group_decay_63_subindustry",
+                    f"group_rank(ts_decay_linear(ts_backfill({field_name}, {bw}), 63), subindustry)",
+                    198,
+                ),
+                (
+                    "account_ir_60",
+                    f"rank(ts_mean({field_name}, 60) / ts_std_dev({field_name}, 60))",
+                    196,
+                ),
+            ]
+        )
+
     for delta, std, pri in _delta_over_std_windows:
         diversified.append(
             (
@@ -1125,7 +1173,7 @@ def _build_matrix_templates(
                 (
                     "group_delta_over_std_industry_63_126",
                     f"group_rank(ts_delta(ts_backfill({field_name}, {bw}), 63) / ts_std_dev(ts_backfill({field_name}, {bw}), 126), industry)",
-                    166 + DELTA_STD_PRIORITY_BOOST,
+                    138 + DELTA_STD_PRIORITY_BOOST,
                 ),
                 (
                     f"group_short_long_mean_spread_subindustry_63_{bw}",
@@ -1386,7 +1434,7 @@ def build_expression_candidates(
     field_type = choose_field_type(field)
     all_fields = all_fields or []
     global_failed_check_counts = global_failed_check_counts or {}
-    bw = BACKFILL_WINDOW
+    bw = get_backfill_window()
 
     # Template selection is now driven by an externalizable library so we can
     # expand or shrink search coverage between runs without changing code.

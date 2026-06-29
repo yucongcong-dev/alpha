@@ -256,7 +256,7 @@ dataset_profiles:
     sleep_between_fields: 3.0
     max_concurrent_simulations: 3
     max_concurrent_creates: 1
-    max_templates_per_field: 8
+    max_templates_per_field: 10
     simulation_max_wait_seconds: 900
     simulation_max_queue_seconds: 600
     queue_busy_cooldown_seconds: 60
