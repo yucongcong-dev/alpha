@@ -9,7 +9,7 @@ alpha/                     # 项目根目录
 ├── src/                   # 源码目录
 │   └── alpha/             # 主包
 │       ├── __init__.py    # 包入口（导出基础公共 API）
-│       ├── __main__.py    # python -m alpha 入口
+│       ├── __main__.py    # python3 -m alpha / alpha 命令入口
 │       ├── main.py        # 主流程编排
 │       │
 │       ├── core/          # 核心业务层
@@ -65,11 +65,14 @@ alpha/                     # 项目根目录
 
 ```bash
 # 开发模式安装（推荐）
-pip install -e .
+python3 -m pip install -e .
+
+# 安装后可直接运行
+alpha --smoke-test
 
 # 或直接使用 PYTHONPATH 运行
 export PYTHONPATH=src
-python -m alpha --smoke-test
+python3 -m alpha --smoke-test
 ```
 
 ## 运行
@@ -81,7 +84,7 @@ Alpha 发现是一个**迭代优化**过程，建议按以下阶段执行：
 #### 阶段 1：环境验证（冒烟测试）
 
 ```bash
-python -m alpha --smoke-test
+python3 -m alpha --smoke-test
 ```
 
 验证：登录认证、API 连通性、模拟创建、401 重认证。
@@ -90,7 +93,7 @@ python -m alpha --smoke-test
 #### 阶段 2：广泛探索（发现候选字段）
 
 ```bash
-python -m alpha
+python3 -m alpha
 ```
 
 不传参时使用内置默认值（`--limit 50 --max-templates-per-field 8`）。
@@ -107,7 +110,7 @@ python -m alpha
 #### 阶段 3：聚焦深挖（针对高反馈字段）
 
 ```bash
-python -m alpha --top-fields-by-feedback 10 --max-templates-per-field 15
+python3 -m alpha --top-fields-by-feedback 10 --max-templates-per-field 15
 ```
 
 **目标**：对接近通过的候选进行精细搜索。
@@ -128,7 +131,7 @@ python -m alpha --top-fields-by-feedback 10 --max-templates-per-field 15
 #### 阶段 4：完整运行（可选）
 
 ```bash
-python -m alpha --full-run
+python3 -m alpha --full-run
 ```
 
 穷举所有字段和模板组合，适合：
@@ -153,13 +156,40 @@ python -m alpha --full-run
 预览下一次运行而不创建模拟任务：
 
 ```bash
-python -m alpha --dry-run-plan
+python3 -m alpha --dry-run-plan
 ```
 
 强制刷新本地字段缓存：
 
 ```bash
-python -m alpha --refresh-fields-cache
+python3 -m alpha --refresh-fields-cache
+```
+
+清理本地运行产物（默认保留 `.credentials/`）：
+
+```bash
+python3 -m alpha clean
+```
+
+预览清理内容，不实际删除：
+
+```bash
+python3 -m alpha clean --dry-run-clean
+```
+
+如确实需要同时删除本地加密凭据：
+
+```bash
+python3 -m alpha clean --include-credentials
+```
+
+### YAML 开关覆盖
+
+YAML 中打开的布尔开关可以用 `--no-*` 在命令行临时关闭：
+
+```bash
+python3 -m alpha --no-submit --no-auto-update-blacklist
+python3 -m alpha --no-smoke-test --no-full-run
 ```
 
 ## 结果解读
@@ -197,22 +227,36 @@ python -m alpha --refresh-fields-cache
 运行单元测试：
 
 ```bash
-PYTHONPATH=src python -m pytest -q
+PYTHONPATH=src python3 -m pytest -q
+```
+
+一键开发检查：
+
+```bash
+make check
+```
+
+也可以分步运行：
+
+```bash
+make test
+make help-check
+make scan-secrets
 ```
 
 如需运行 lint/format，请安装开发依赖：
 
 ```bash
-pip install -e ".[dev]"
-ruff check .
-ruff format .
+python3 -m pip install -e ".[dev]"
+python3 -m ruff check .
+python3 -m ruff format .
 ```
 
 ## 打包发布
 
 ```bash
-pip install build
-python -m build
+python3 -m pip install build
+python3 -m build
 ```
 
 生成的包在 `dist/` 目录下。

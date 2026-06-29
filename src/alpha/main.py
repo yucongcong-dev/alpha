@@ -26,6 +26,8 @@ from __future__ import annotations
 import argparse
 from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
 import logging
+from pathlib import Path
+import shutil
 import threading
 import time
 from typing import Any
@@ -55,6 +57,7 @@ from .cli.parser import (
     load_run_filters_extended,
     normalize_args_paths,
     parse_args,
+    PROJECT_ROOT,
     setup_runtime_logging,
 )
 
@@ -112,6 +115,46 @@ from .models.base import (
 from .utils.helpers import choose_field_name, choose_field_type, first_non_empty
 
 logger = logging.getLogger(__name__)
+
+
+def clean_runtime_artifacts(
+    args: argparse.Namespace,
+    *,
+    project_root: Path = PROJECT_ROOT,
+) -> int:
+    """清理本地运行产物，默认保留加密凭据。
+    Clean local runtime artifacts while preserving encrypted credentials by default.
+    """
+    targets: list[Path] = [
+        project_root / "cache",
+        project_root / "results",
+        project_root / ".pytest_cache",
+        project_root / ".mypy_cache",
+        project_root / ".ruff_cache",
+        project_root / ".coverage",
+        project_root / "htmlcov",
+    ]
+    if args.include_credentials:
+        targets.append(project_root / ".credentials")
+
+    existing_targets = [target for target in targets if target.exists()]
+    if not existing_targets:
+        print("[clean] no runtime artifacts found")
+        return 0
+
+    for target in existing_targets:
+        if args.dry_run_clean:
+            print(f"[clean] would remove {target}")
+            continue
+        if target.is_dir():
+            shutil.rmtree(target)
+        else:
+            target.unlink()
+        print(f"[clean] removed {target}")
+
+    if not args.include_credentials:
+        print("[clean] credentials preserved (.credentials/)")
+    return 0
 
 # ============================================================================
 # 客户端创建和登录函数
@@ -590,6 +633,10 @@ def main() -> int:
         int: 退出状态码（0=正常, 1=错误, 130=用户中断）。
     """
     args = parse_args()
+
+    if args.command == "clean":
+        return clean_runtime_artifacts(args)
+
     run_paths = normalize_args_paths(args)
 
     init_result = _initialize(args, run_paths)

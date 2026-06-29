@@ -96,6 +96,30 @@ def collect_explicit_cli_keys(parser: argparse.ArgumentParser, argv: list[str]) 
     return explicit_keys
 
 
+def add_bool_argument(
+    parser: argparse.ArgumentParser,
+    name: str,
+    *,
+    dest: str,
+    default: bool = False,
+    help_enable: str,
+    help_disable: str,
+) -> None:
+    """添加支持 --flag / --no-flag 的布尔参数。
+    Add a boolean CLI option pair that can both enable and disable YAML defaults.
+    """
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument(name, action="store_true", dest=dest, default=default, help=help_enable)
+    positive_name = name[2:] if name.startswith("--") else name
+    group.add_argument(
+        f"--no-{positive_name}",
+        action="store_false",
+        dest=dest,
+        default=default,
+        help=help_disable,
+    )
+
+
 def parse_args() -> argparse.Namespace:
     """
     解析命令行参数，包括数据集、搜索策略和本地文件配置。
@@ -195,10 +219,18 @@ def parse_args() -> argparse.Namespace:
         - 默认使用 fundamental6 数据集和 USA 地区
     """
     parser = argparse.ArgumentParser(
+        prog="alpha",
         description="测试 WorldQuant Brain 数据集中的所有字段并提交可提交的 Alpha。"
     )
 
     # 配置文件参数
+    parser.add_argument(
+        "command",
+        nargs="?",
+        choices=("run", "clean"),
+        default="run",
+        help="运行命令：run=执行 Alpha 流程（默认），clean=清理本地运行文件",
+    )
     parser.add_argument(
         "--config",
         default="",
@@ -246,12 +278,28 @@ def parse_args() -> argparse.Namespace:
     run_mode_group.add_argument(
         "--smoke-test",
         action="store_true",
+        default=False,
         help="运行冒烟测试（单字段/单模板），不用于 Alpha 发现",
     )
     run_mode_group.add_argument(
         "--full-run",
         action="store_true",
+        default=False,
         help="运行全量测试（所有字段和所有模板），可能很慢",
+    )
+    parser.add_argument(
+        "--no-smoke-test",
+        action="store_false",
+        dest="smoke_test",
+        default=False,
+        help="关闭冒烟测试模式（覆盖 YAML runtime.smoke_test=true）",
+    )
+    parser.add_argument(
+        "--no-full-run",
+        action="store_false",
+        dest="full_run",
+        default=False,
+        help="关闭全量运行模式（覆盖 YAML runtime.full_run=true）",
     )
 
     # 字段筛选参数
@@ -315,10 +363,12 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="强制刷新字段缓存",
     )
-    parser.add_argument(
+    add_bool_argument(
+        parser,
         "--dry-run-plan",
-        action="store_true",
-        help="仅打印计划，不创建模拟",
+        dest="dry_run_plan",
+        help_enable="仅打印计划，不创建模拟",
+        help_disable="关闭干运行模式（覆盖 YAML runtime.dry_run_plan=true）",
     )
 
     # 过滤器参数
@@ -467,11 +517,19 @@ def parse_args() -> argparse.Namespace:
     )
 
     # 提交和输出参数
-    parser.add_argument("--submit", action="store_true", help="检查通过时提交 Alpha")
-    parser.add_argument(
+    add_bool_argument(
+        parser,
+        "--submit",
+        dest="submit",
+        help_enable="检查通过时提交 Alpha",
+        help_disable="不提交 Alpha（覆盖 YAML runtime.submit=true）",
+    )
+    add_bool_argument(
+        parser,
         "--auto-update-blacklist",
-        action="store_true",
-        help="根据本次结果自动更新 data/template_blacklist_<dataset>.json（默认关闭，避免运行时修改仓库文件）",
+        dest="auto_update_blacklist",
+        help_enable="根据本次结果自动更新 data/template_blacklist_<dataset>.json（默认关闭，避免运行时修改仓库文件）",
+        help_disable="不自动更新模板黑名单（覆盖 YAML runtime.auto_update_blacklist=true）",
     )
     parser.add_argument(
         "--output",
@@ -480,9 +538,31 @@ def parse_args() -> argparse.Namespace:
     )
 
     # 日志参数
-    parser.add_argument("--verbose", action="store_true", help="详细日志模式")
-    parser.add_argument("--quiet", action="store_true", help="安静模式")
+    add_bool_argument(
+        parser,
+        "--verbose",
+        dest="verbose",
+        help_enable="详细日志模式",
+        help_disable="关闭详细日志模式（覆盖 YAML runtime.verbose=true）",
+    )
+    add_bool_argument(
+        parser,
+        "--quiet",
+        dest="quiet",
+        help_enable="安静模式",
+        help_disable="关闭安静模式（覆盖 YAML runtime.quiet=true）",
+    )
     parser.add_argument("--log-file", default="", help="日志文件路径")
+    parser.add_argument(
+        "--include-credentials",
+        action="store_true",
+        help="clean 命令同时删除 .credentials/（默认不会删除凭据）",
+    )
+    parser.add_argument(
+        "--dry-run-clean",
+        action="store_true",
+        help="预览 clean 命令会删除的路径，不实际删除",
+    )
 
     explicit_cli_keys = collect_explicit_cli_keys(parser, sys.argv[1:])
     args = parser.parse_args()
@@ -521,8 +601,8 @@ def parse_args() -> argparse.Namespace:
         args.max_templates_per_field = 1
         args.max_concurrent_simulations = 1
         args.max_concurrent_creates = 1
-        args.simulation_max_pending_cycles = min(args.simulation_max_pending_cycles, 30)
-        args.simulation_max_queue_seconds = min(args.simulation_max_queue_seconds, 180)
+        args.simulation_max_pending_cycles = min(args.simulation_max_pending_cycles, 60)
+        args.simulation_max_queue_seconds = min(args.simulation_max_queue_seconds, 300)
     elif args.full_run:
         args.limit = 0
         args.max_templates_per_field = 0

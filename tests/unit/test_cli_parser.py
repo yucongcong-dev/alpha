@@ -75,6 +75,8 @@ def test_cli_smoke_test_overrides_yaml_false(monkeypatch, tmp_path) -> None:
     assert args.limit == 1
     assert args.max_templates_per_field == 1
     assert args.max_concurrent_simulations == 1
+    assert args.simulation_max_pending_cycles == 60
+    assert args.simulation_max_queue_seconds == 300
 
 
 def test_yaml_can_enable_auto_update_blacklist(monkeypatch, tmp_path) -> None:
@@ -110,3 +112,79 @@ global:
     args = parse_args()
 
     assert args.auto_update_blacklist is True
+
+
+def test_cli_no_flag_overrides_yaml_true(monkeypatch, tmp_path) -> None:
+    """--no-* flags must be able to disable YAML-enabled booleans."""
+    clear_yaml_cache()
+    config_path = tmp_path / "settings.yaml"
+    config_path.write_text(
+        """
+global:
+  runtime:
+    submit: true
+    auto_update_blacklist: true
+    dry_run_plan: true
+    verbose: true
+    quiet: true
+""".strip(),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "alpha",
+            "--config",
+            str(config_path),
+            "--no-submit",
+            "--no-auto-update-blacklist",
+            "--no-dry-run-plan",
+            "--no-verbose",
+            "--no-quiet",
+        ],
+    )
+
+    args = parse_args()
+
+    assert args.submit is False
+    assert args.auto_update_blacklist is False
+    assert args.dry_run_plan is False
+    assert args.verbose is False
+    assert args.quiet is False
+
+
+def test_cli_no_run_mode_overrides_yaml_true(monkeypatch, tmp_path) -> None:
+    """Run-mode booleans should also support explicit disabling."""
+    clear_yaml_cache()
+    config_path = tmp_path / "settings.yaml"
+    config_path.write_text(
+        """
+global:
+  runtime:
+    smoke_test: true
+    full_run: true
+""".strip(),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        ["alpha", "--config", str(config_path), "--no-smoke-test", "--no-full-run"],
+    )
+
+    args = parse_args()
+
+    assert args.smoke_test is False
+    assert args.full_run is False
+
+
+def test_clean_command_parses(monkeypatch) -> None:
+    """The clean subcommand should parse without requiring run credentials."""
+    clear_yaml_cache()
+    monkeypatch.setattr(sys, "argv", ["alpha", "clean", "--dry-run-clean"])
+
+    args = parse_args()
+
+    assert args.command == "clean"
+    assert args.dry_run_clean is True

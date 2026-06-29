@@ -21,9 +21,9 @@ WorldQuant BRAIN Alpha 自动生成与提交工具包。
     main.py         主入口函数
 
 使用方式：
-    python -m alpha --smoke-test
-    python -m alpha --dry-run-plan
-    python -m alpha --limit 50 --submit
+    python3 -m alpha --smoke-test
+    python3 -m alpha --dry-run-plan
+    python3 -m alpha --limit 50 --submit
 """
 
 from __future__ import annotations
