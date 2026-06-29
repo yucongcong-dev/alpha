@@ -30,6 +30,20 @@ from ..config import (
     CHECK_LOW_SUB_UNIVERSE_SHARPE,
     CHECK_LOW_TURNOVER,
     FEEDBACK_TEMPLATE_MIN_PRIORITY,
+    FUNDAMENTAL6_ALWAYS_KEEP_FAMILIES,
+    FUNDAMENTAL6_BROKEN_ZSCORE_SPREAD_FIELDS,
+    FUNDAMENTAL6_CONCENTRATED_WEAK_FAMILIES,
+    FUNDAMENTAL6_CONCENTRATED_WEAK_NAMES,
+    FUNDAMENTAL6_CONCENTRATED_WEAK_PREFIXES,
+    FUNDAMENTAL6_HIGH_CONVICTION_RATIO_PAIRS,
+    FUNDAMENTAL6_LOW_SHARPE_RATIO_FAIL_THRESHOLD,
+    FUNDAMENTAL6_LOW_SHARPE_WEAK_RATIO_FAMILIES,
+    FUNDAMENTAL6_LOW_SHARPE_WEAK_RATIO_PREFIXES,
+    FUNDAMENTAL6_PROTECTED_TEMPLATES,
+    FUNDAMENTAL6_SLOW_TEMPLATE_NAMES,
+    FUNDAMENTAL6_SLOW_TEMPLATE_PREFIXES,
+    FUNDAMENTAL6_WEAK_MEAN_SPREAD_FIELDS,
+    FUNDAMENTAL6_WEAK_RATIO_STANDALONE_FIELDS,
 )
 
 # 从 expressions 模块导入分类函数（唯一源）
@@ -254,107 +268,10 @@ def is_legacy_family_disabled(
     return attempted >= disable_after and submittable == 0
 
 
-# ============================================================================
-# 模板保留/剪枝常量
-# ============================================================================
-
-# 反馈足够后始终保留的表达式家族集合
-_ALWAYS_KEEP_FAMILIES: set = {
-    "group_rank_delta",
-    "group_vol_scaled_delta",
-    "group_mean_spread",
-    "group_zscore",
-    "vol_scaled_delta",
-    "mean_spread",
-    "zscore_time",
-    "rank_delta",
-    "decayed_delta",
-    "rank_spread",
-    "group_ratio_delta_over_std",
-    "group_ratio_delta",
-}
-
-_FUNDAMENTAL6_PROTECTED_TEMPLATES: set[str] = {
-    "account_rank_backfill_504",
-    "account_ir_60",
-    "account_group_backfill_504_subindustry",
-    "account_group_zscore_60_subindustry",
-    "account_group_ir_60_subindustry",
-    "account_ts_rank_60",
-    "account_group_decay_63_subindustry",
-    "account_ir_60_decay_20",
-    "account_backfill_zscore_decay_63_subindustry",
-}
-
-# LOW_TURNOVER 主导时会被剪掉的模板名/表达式模式
-_SLOW_TEMPLATE_PREFIXES: tuple[str, ...] = ("ts_mean_", "backfill_", "sum_", "stddev_")
-_SLOW_TEMPLATE_NAMES: set = {"zscore", "scale", "rank_raw", "raw_field", "rank_raw_field"}
-
-# 权重集中 / 低子宇宙夏普时会被剪掉的家族与模板前缀
-_CONCENTRATED_WEAK_FAMILIES: set = {
-    "legacy_level",
-    "legacy_group_level",
-    "legacy_ratio",
-    "legacy_neg_ratio",
-    "group_ratio_level",
-}
-_CONCENTRATED_WEAK_PREFIXES: tuple[str, ...] = (
-    "raw_ratio_",
-    "ratio_",
-    "rank_ratio_",
-    "group_rank_ratio_",
-)
-_CONCENTRATED_WEAK_NAMES: set = {"argmax_60", "argmin_60"}
-
-# LOW_SHARPE >= 2 时被剪掉的 ratio 家族
-_LOW_SHARPE_WEAK_RATIO_FAMILIES: set = {"legacy_ratio", "legacy_neg_ratio", "group_ratio_level"}
-_LOW_SHARPE_WEAK_RATIO_PREFIXES: tuple[str, ...] = (
-    "raw_ratio_",
-    "ratio_",
-    "rank_ratio_",
-    "group_rank_ratio_",
-)
-
-# 字段级剪枝：mean_spread / rank_spread 家族中表现弱的字段
-_WEAK_MEAN_SPREAD_FIELDS: set = {"assets", "assets_curr"}
-
-# 字段级剪枝：zscore+spread 组合中表现差的字段
-_BROKEN_ZSCORE_SPREAD_FIELDS: set = {
-    "assets",
-    "assets_curr",
-    "cash",
-    "capex",
-    "bookvalue_ps",
-    "cashflow",
-}
-
-# 字段级剪枝：standalone ratio 收益低的字段
-_WEAK_RATIO_STANDALONE_FIELDS: set = {
-    "assets",
-    "assets_curr",
-    "bookvalue_ps",
-}
-
-
 def _is_high_conviction_fundamental6_ratio(expression: str) -> bool:
     """识别 fundamental6 中值得继续探索的高经济含义比值方向。"""
     lower_expr = expression.lower()
-    strong_pairs = (
-        "debt/assets",
-        "debt_lt/assets",
-        "debt_st/assets",
-        "cash/assets",
-        "cash_st/assets_curr",
-        "cash_st/assets",
-        "cogs/assets",
-        "capex/assets",
-        "cashflow/assets",
-        "cashflow_op/assets",
-        "cashflow_op/fnd6_mkvalt",
-        "cashflow_op/fnd6_mkvaltq",
-        "cashflow_invst/assets",
-    )
-    return any(pair in lower_expr for pair in strong_pairs)
+    return any(f"{left}/{right}" in lower_expr for left, right in FUNDAMENTAL6_HIGH_CONVICTION_RATIO_PAIRS)
 
 # ============================================================================
 # 模板保留判断函数
@@ -406,11 +323,11 @@ def should_keep_template_for_feedback(
     lower_name = template_name.lower()
     lower_expr = expression.lower()
 
-    if family in _ALWAYS_KEEP_FAMILIES:
+    if family in FUNDAMENTAL6_ALWAYS_KEEP_FAMILIES:
         return True
     if lower_name.startswith("iter_"):
         return True
-    if dataset_id == "fundamental6" and template_name in _FUNDAMENTAL6_PROTECTED_TEMPLATES:
+    if dataset_id == "fundamental6" and template_name in FUNDAMENTAL6_PROTECTED_TEMPLATES:
         return True
     protected_ratio = dataset_id == "fundamental6" and _is_high_conviction_fundamental6_ratio(
         expression
@@ -418,9 +335,9 @@ def should_keep_template_for_feedback(
 
     # Historical results show these shapes are repeatedly too slow.
     if CHECK_LOW_TURNOVER in dominant_names:
-        if lower_name.startswith(_SLOW_TEMPLATE_PREFIXES):
+        if lower_name.startswith(FUNDAMENTAL6_SLOW_TEMPLATE_PREFIXES):
             return False
-        if lower_name in _SLOW_TEMPLATE_NAMES:
+        if lower_name in FUNDAMENTAL6_SLOW_TEMPLATE_NAMES:
             return False
         if "ts_mean(" in lower_expr and "-" not in lower_expr and "/" not in lower_expr:
             return False
@@ -436,21 +353,25 @@ def should_keep_template_for_feedback(
         CHECK_LOW_SUB_UNIVERSE_SHARPE in dominant_names
         or CHECK_CONCENTRATED_WEIGHT in dominant_names
     ):
-        if family in _CONCENTRATED_WEAK_FAMILIES and not protected_ratio:
+        if family in FUNDAMENTAL6_CONCENTRATED_WEAK_FAMILIES and not protected_ratio:
             return False
-        if lower_name.startswith(_CONCENTRATED_WEAK_PREFIXES) and not protected_ratio:
+        if lower_name.startswith(FUNDAMENTAL6_CONCENTRATED_WEAK_PREFIXES) and not protected_ratio:
             return False
-        if lower_name in _CONCENTRATED_WEAK_NAMES:
+        if lower_name in FUNDAMENTAL6_CONCENTRATED_WEAK_NAMES:
             return False
 
     # Ratio-based templates consistently waste queue budget on fundamental6.
     # Once we have even 2+ simulated results showing LOW_SHARPE, cut all ratio families.
     field_low_sharpe = int(dominant_counts.get(CHECK_LOW_SHARPE, 0))
-    if field_low_sharpe >= 4 and family in _LOW_SHARPE_WEAK_RATIO_FAMILIES and not protected_ratio:
+    if (
+        field_low_sharpe >= FUNDAMENTAL6_LOW_SHARPE_RATIO_FAIL_THRESHOLD
+        and family in FUNDAMENTAL6_LOW_SHARPE_WEAK_RATIO_FAMILIES
+        and not protected_ratio
+    ):
         return False
     if (
-        lower_name.startswith(_LOW_SHARPE_WEAK_RATIO_PREFIXES)
-        and field_low_sharpe >= 4
+        lower_name.startswith(FUNDAMENTAL6_LOW_SHARPE_WEAK_RATIO_PREFIXES)
+        and field_low_sharpe >= FUNDAMENTAL6_LOW_SHARPE_RATIO_FAIL_THRESHOLD
         and not protected_ratio
     ):
         return False
@@ -516,17 +437,17 @@ def should_skip_field_template_family(
 
     family = classify_expression_family(template_name, expression)
 
-    if field_name in _WEAK_MEAN_SPREAD_FIELDS and family in {
+    if field_name in FUNDAMENTAL6_WEAK_MEAN_SPREAD_FIELDS and family in {
         "group_mean_spread",
         "mean_spread",
         "rank_spread",
     }:
         return True
     return (
-        field_name in _BROKEN_ZSCORE_SPREAD_FIELDS
+        field_name in FUNDAMENTAL6_BROKEN_ZSCORE_SPREAD_FIELDS
         and "zscore" in template_name.lower()
         and "spread" in template_name.lower()
     ) or (
-        field_name in _WEAK_RATIO_STANDALONE_FIELDS
+        field_name in FUNDAMENTAL6_WEAK_RATIO_STANDALONE_FIELDS
         and family in {"legacy_ratio", "legacy_neg_ratio", "group_ratio_level"}
     )

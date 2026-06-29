@@ -2,7 +2,7 @@
   "_version": "v2",
   "_comment": "Template blacklist for fundamental6 — quarterly fundamental data (1758 fields, Value Score=4). Short windows (<63 days) don't work here.",
   "_created": "2026-06-28",
-  "_updated": "2026-06-28 21:47",
+  "_updated": "2026-06-29 16:52",
   "dataset_id": "fundamental6",
   "blacklisted_templates": [
     {
@@ -230,6 +230,152 @@
       "date_blacklisted": "2026-06-28",
       "avg_sharpe": -0.075,
       "avg_fitness": -0.015
+    },
+    {
+      "name": "account_group_zscore_60_subindustry",
+      "dataset_id": "fundamental6",
+      "source": "auto_detected",
+      "field_type": "MATRIX",
+      "reason": "2个字段测试均不通过。平均 Sharpe 0.775。平均 Fitness 0.375。",
+      "fields_tested": [
+        "assets",
+        "assets_curr"
+      ],
+      "low_sharpe": 2,
+      "low_fitness": 2,
+      "date_blacklisted": "2026-06-29",
+      "avg_sharpe": 0.775,
+      "avg_fitness": 0.375
+    },
+    {
+      "name": "account_ts_rank_60",
+      "dataset_id": "fundamental6",
+      "source": "auto_detected",
+      "field_type": "MATRIX",
+      "reason": "2个字段测试均不通过。平均 Sharpe 0.740。平均 Fitness 0.350。",
+      "fields_tested": [
+        "assets",
+        "assets_curr"
+      ],
+      "low_sharpe": 2,
+      "low_fitness": 2,
+      "date_blacklisted": "2026-06-29",
+      "avg_sharpe": 0.74,
+      "avg_fitness": 0.35
+    },
+    {
+      "name": "account_neutralize_zscore_decay_63_industry",
+      "dataset_id": "fundamental6",
+      "source": "auto_detected",
+      "field_type": "MATRIX",
+      "reason": "2个字段测试均不通过。平均 Sharpe 0.445。平均 Fitness 0.170。",
+      "fields_tested": [
+        "assets",
+        "assets_curr"
+      ],
+      "low_sharpe": 2,
+      "low_fitness": 2,
+      "date_blacklisted": "2026-06-29",
+      "avg_sharpe": 0.445,
+      "avg_fitness": 0.17
+    },
+    {
+      "name": "account_rank_zscore_240",
+      "dataset_id": "fundamental6",
+      "source": "auto_detected",
+      "field_type": "MATRIX",
+      "reason": "2个字段测试均不通过。平均 Sharpe -0.005。平均 Fitness 0.000。",
+      "fields_tested": [
+        "assets",
+        "assets_curr"
+      ],
+      "low_sharpe": 2,
+      "low_fitness": 2,
+      "date_blacklisted": "2026-06-29",
+      "avg_sharpe": -0.005,
+      "avg_fitness": 0.0
+    },
+    {
+      "name": "account_rank_backfill_504",
+      "dataset_id": "fundamental6",
+      "source": "auto_detected",
+      "field_type": "MATRIX",
+      "reason": "2个字段测试均不通过。平均 Sharpe 0.625。平均 Fitness 0.470。",
+      "fields_tested": [
+        "assets",
+        "assets_curr"
+      ],
+      "low_sharpe": 2,
+      "low_fitness": 2,
+      "date_blacklisted": "2026-06-29",
+      "avg_sharpe": 0.625,
+      "avg_fitness": 0.47
+    },
+    {
+      "name": "account_ir_60",
+      "dataset_id": "fundamental6",
+      "source": "auto_detected",
+      "field_type": "MATRIX",
+      "reason": "2个字段测试均不通过。平均 Sharpe 0.395。平均 Fitness 0.170。",
+      "fields_tested": [
+        "assets",
+        "assets_curr"
+      ],
+      "low_sharpe": 2,
+      "low_fitness": 2,
+      "date_blacklisted": "2026-06-29",
+      "avg_sharpe": 0.395,
+      "avg_fitness": 0.17
+    },
+    {
+      "name": "vol_scaled_delta_5_20",
+      "dataset_id": "fundamental6",
+      "source": "auto_detected",
+      "field_type": "MATRIX",
+      "reason": "2个字段测试均不通过。平均 Sharpe -0.130。平均 Fitness -0.040。",
+      "fields_tested": [
+        "assets",
+        "assets_curr"
+      ],
+      "low_sharpe": 2,
+      "low_fitness": 2,
+      "date_blacklisted": "2026-06-29",
+      "avg_sharpe": -0.13,
+      "avg_fitness": -0.04,
+      "concentrated_weight": 2
+    },
+    {
+      "name": "delta_5",
+      "dataset_id": "fundamental6",
+      "source": "auto_detected",
+      "field_type": "MATRIX",
+      "reason": "2个字段测试均不通过。平均 Sharpe 0.065。平均 Fitness 0.015。",
+      "fields_tested": [
+        "assets",
+        "assets_curr"
+      ],
+      "low_sharpe": 2,
+      "low_fitness": 2,
+      "date_blacklisted": "2026-06-29",
+      "avg_sharpe": 0.065,
+      "avg_fitness": 0.015,
+      "concentrated_weight": 1
+    },
+    {
+      "name": "rank_delta_5",
+      "dataset_id": "fundamental6",
+      "source": "auto_detected",
+      "field_type": "MATRIX",
+      "reason": "2个字段测试均不通过。平均 Sharpe 0.405。平均 Fitness 0.100。",
+      "fields_tested": [
+        "assets",
+        "assets_curr"
+      ],
+      "low_sharpe": 2,
+      "low_fitness": 2,
+      "date_blacklisted": "2026-06-29",
+      "avg_sharpe": 0.405,
+      "avg_fitness": 0.1
     }
   ],
   "auto_avoid_rules": [

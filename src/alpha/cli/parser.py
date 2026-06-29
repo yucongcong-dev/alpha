@@ -482,19 +482,19 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--min-sharpe",
         type=float,
-        default=0.85,
+        default=1.25,
         help="本地预检最低 Sharpe 阈值",
     )
     parser.add_argument(
         "--min-fitness",
         type=float,
-        default=0.50,
+        default=1.00,
         help="本地预检最低 Fitness 阈值",
     )
     parser.add_argument(
         "--min-turnover",
         type=float,
-        default=0.005,
+        default=0.01,
         help="本地预检最低 Turnover 阈值",
     )
     parser.add_argument(
@@ -506,7 +506,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--max-weight",
         type=float,
-        default=0.13,
+        default=0.10,
         help="本地预检单股最大权重阈值",
     )
     parser.add_argument(

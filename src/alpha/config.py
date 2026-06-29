@@ -389,7 +389,7 @@ UNKNOWN_FAMILY: str = "other"
 
 RATIO_PARTNER_CANDIDATES: dict[str, tuple[str, ...]] = {
     "debt": ("cap", "fnd6_mkvalt", "fnd6_mkvaltq", "assets", "equity", "enterprise_value"),
-    "debt_lt": ("fnd6_mkvalt", "fnd6_mkvaltq", "assets", "equity", "enterprise_value"),
+    "debt_lt": ("cap", "fnd6_mkvalt", "fnd6_mkvaltq", "assets", "equity", "enterprise_value"),
     "debt_st": ("assets", "cash", "cash_st", "fnd6_mkvalt"),
     "assets_curr": ("cash_st", "debt_st", "liabilities_curr"),
     "liabilities": ("assets", "equity", "fnd6_mkvalt", "fnd6_mkvaltq", "cap", "liabilities_curr"),
@@ -397,7 +397,7 @@ RATIO_PARTNER_CANDIDATES: dict[str, tuple[str, ...]] = {
     "cash": ("assets", "debt", "liabilities"),
     "cash_st": ("assets_curr", "assets", "debt_st"),
     "cashflow": ("assets", "enterprise_value", "fnd6_mkvalt", "fnd6_mkvaltq"),
-    "cashflow_op": ("fnd6_mkvalt", "fnd6_mkvaltq", "assets", "debt", "enterprise_value"),
+    "cashflow_op": ("cap", "fnd6_mkvalt", "fnd6_mkvaltq", "assets", "debt", "enterprise_value"),
     "cashflow_invst": ("assets", "enterprise_value", "capex"),
     "cashflow_fin": ("assets", "debt", "equity"),
     "capex": ("assets", "cashflow_op", "enterprise_value"),
@@ -422,7 +422,7 @@ RATIO_KEYWORDS: dict[str, tuple[str, ...]] = {
     "cash": ("debt", "liabilities", "assets", "enterprise_value"),
     "cash_st": ("assets_curr", "assets", "debt_st", "liabilities_curr"),
     "cashflow": ("assets", "enterprise_value", "debt"),
-    "cashflow_op": ("assets", "enterprise_value", "debt", "fnd6_mkvalt", "fnd6_mkvaltq"),
+    "cashflow_op": ("cap", "assets", "enterprise_value", "debt", "fnd6_mkvalt", "fnd6_mkvaltq"),
     "cashflow_invst": ("assets", "enterprise_value", "capex"),
     "cashflow_fin": ("assets", "debt", "equity"),
     "capex": ("cashflow_op", "assets", "enterprise_value", "cashflow_invst"),
@@ -474,6 +474,173 @@ NEGATIVE_RAW_FIELDS: set = {
 这些字段在正常情况下为负值（如成本、负债等）。
 在构建 Alpha 表达式时可能需要特殊处理。
 """
+
+FUNDAMENTAL6_DISABLED_TEMPLATES: set[str] = {
+    "vol_scaled_delta_5_20",
+    "vol_scaled_delta_5_20_MARKET",
+    "delta_5",
+    "group_delta_5",
+    "group_delta_5_MARKET",
+}
+"""fundamental6 上已明确偏弱、可直接停用的模板。"""
+
+FUNDAMENTAL6_PROTECTED_TEMPLATES: set[str] = {
+    "account_rank_backfill_504",
+    "account_ir_60",
+    "account_group_backfill_504_subindustry",
+    "account_group_zscore_60_subindustry",
+    "account_group_ir_60_subindustry",
+    "account_ts_rank_60",
+    "account_group_decay_63_subindustry",
+    "account_ir_60_decay_20",
+    "account_backfill_zscore_decay_63_subindustry",
+}
+"""fundamental6 上应持续保留探索的模板方向。"""
+
+FUNDAMENTAL6_HIGH_CONVICTION_RATIO_PAIRS: set[tuple[str, str]] = {
+    ("cash", "assets"),
+    ("cash_st", "assets_curr"),
+    ("cash_st", "assets"),
+    ("debt", "assets"),
+    ("debt_lt", "assets"),
+    ("debt_st", "assets"),
+    ("cogs", "assets"),
+    ("capex", "assets"),
+    ("cashflow", "assets"),
+    ("cashflow_op", "cap"),
+    ("cashflow_op", "assets"),
+    ("cashflow_op", "fnd6_mkvalt"),
+    ("cashflow_op", "fnd6_mkvaltq"),
+    ("cashflow_invst", "assets"),
+}
+"""fundamental6 上优先探索的高经济含义比值组合。"""
+
+ALLOWED_EXTERNAL_RATIO_PARTNERS: set[str] = {"cap"}
+"""允许在当前 dataset 字段缓存之外直接生成的跨数据基础字段。"""
+
+FUNDAMENTAL6_TEMPLATE_PRIORITY_PENALTIES: dict[str, int] = {
+    "vol_scaled_delta_20_60": -820,
+    "vol_scaled_delta_20_60_market": -820,
+    "vol_scaled_delta_20_60_industry": -820,
+    "3layer_zscore_sector_decay": -820,
+    "3layer_zscore_market_decay": -820,
+    "3layer_rank_sector_decay": -820,
+    "3layer_zscore_subind_decay": -820,
+    "ts_corr_self_rank_60": -820,
+    "ts_corr_self_60": -820,
+    "ts_corr_self_rank_252": -820,
+    "ts_corr_self_120": -820,
+    "ts_corr_self_252": -820,
+    "ts_rank_after_group_63": -820,
+    "ts_zscore_after_group_63": -820,
+}
+"""fundamental6 上需要强制降权的 generic 模板。"""
+
+FUNDAMENTAL6_TEMPLATE_PREFIX_PENALTIES: dict[tuple[str, ...], int] = {
+    ("delta_", "group_delta_", "rank_delta_"): -760,
+}
+"""fundamental6 上按模板名前缀降权的规则。"""
+
+FUNDAMENTAL6_ACCOUNT_TEMPLATE_BOOST: int = 820
+"""fundamental6 上 account_* 模板的统一优先级加成。"""
+
+FUNDAMENTAL6_PREFERRED_FIELD_ORDER: dict[str, int] = {
+    "cash_st": 0,
+    "debt_lt": 1,
+    "cogs": 2,
+    "cashflow_invst": 3,
+    "cashflow_op": 4,
+    "debt": 5,
+    "debt_st": 6,
+    "cashflow": 7,
+    "cashflow_fin": 8,
+    "current_ratio": 9,
+    "unsystematic_risk_last_360_days": 10,
+    "unsystematic_risk_last_60_days": 11,
+    "fnd6_cptnewqeventv110_apq": 12,
+    "fnd6_cptnewqeventv110_lctq": 13,
+    "fnd6_cptnewqeventv110_dpq": 14,
+}
+"""fundamental6 续跑时的字段优先顺序。"""
+
+FUNDAMENTAL6_OVERTESTED_WEAK_FIELDS: set[str] = {
+    "assets",
+    "assets_curr",
+    "bookvalue_ps",
+    "capex",
+}
+"""fundamental6 上已被过度测试且整体偏弱的字段。"""
+
+FUNDAMENTAL6_ALWAYS_KEEP_FAMILIES: set[str] = {
+    "group_rank_delta",
+    "group_vol_scaled_delta",
+    "group_mean_spread",
+    "group_zscore",
+    "vol_scaled_delta",
+    "mean_spread",
+    "zscore_time",
+    "rank_delta",
+    "decayed_delta",
+    "rank_spread",
+    "group_ratio_delta_over_std",
+    "group_ratio_delta",
+}
+"""fundamental6 反馈剪枝时始终保留的表达式家族。"""
+
+FUNDAMENTAL6_SLOW_TEMPLATE_PREFIXES: tuple[str, ...] = ("ts_mean_", "backfill_", "sum_", "stddev_")
+FUNDAMENTAL6_SLOW_TEMPLATE_NAMES: set[str] = {
+    "zscore",
+    "scale",
+    "rank_raw",
+    "raw_field",
+    "rank_raw_field",
+}
+FUNDAMENTAL6_CONCENTRATED_WEAK_FAMILIES: set[str] = {
+    "legacy_level",
+    "legacy_group_level",
+    "legacy_ratio",
+    "legacy_neg_ratio",
+    "group_ratio_level",
+}
+FUNDAMENTAL6_CONCENTRATED_WEAK_PREFIXES: tuple[str, ...] = (
+    "raw_ratio_",
+    "ratio_",
+    "rank_ratio_",
+    "group_rank_ratio_",
+)
+FUNDAMENTAL6_CONCENTRATED_WEAK_NAMES: set[str] = {"argmax_60", "argmin_60"}
+FUNDAMENTAL6_LOW_SHARPE_WEAK_RATIO_FAMILIES: set[str] = {
+    "legacy_ratio",
+    "legacy_neg_ratio",
+    "group_ratio_level",
+}
+FUNDAMENTAL6_LOW_SHARPE_WEAK_RATIO_PREFIXES: tuple[str, ...] = (
+    "raw_ratio_",
+    "ratio_",
+    "rank_ratio_",
+    "group_rank_ratio_",
+)
+FUNDAMENTAL6_WEAK_MEAN_SPREAD_FIELDS: set[str] = {"assets", "assets_curr"}
+FUNDAMENTAL6_BROKEN_ZSCORE_SPREAD_FIELDS: set[str] = {
+    "assets",
+    "assets_curr",
+    "cash",
+    "capex",
+    "bookvalue_ps",
+    "cashflow",
+}
+FUNDAMENTAL6_WEAK_RATIO_STANDALONE_FIELDS: set[str] = {
+    "assets",
+    "assets_curr",
+    "bookvalue_ps",
+}
+FUNDAMENTAL6_LOW_SHARPE_RATIO_FAIL_THRESHOLD: int = 4
+"""fundamental6 上 ratio 家族触发全局降权前所需的 LOW_SHARPE 次数。"""
+
+FUNDAMENTAL6_BLACKLIST_MIN_FIELDS_FOR_NEARPASS: int = 4
+FUNDAMENTAL6_BLACKLIST_PROTECTED_MIN_AVG_SHARPE: float = 0.70
+FUNDAMENTAL6_BLACKLIST_PROTECTED_MIN_AVG_FITNESS: float = 0.35
+"""fundamental6 自动黑名单在 near-pass 模板上的保护阈值。"""
 
 
 # ============================================================================

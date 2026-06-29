@@ -29,6 +29,7 @@ import re
 from typing import Any
 
 from ..config import (
+    ALLOWED_EXTERNAL_RATIO_PARTNERS,
     CHECK_CONCENTRATED_WEIGHT,
     CHECK_HIGH_TURNOVER,
     CHECK_LOW_FITNESS,
@@ -41,6 +42,12 @@ from ..config import (
     EXPR_NEARPASS_BOOST_THRESHOLD,
     EXPR_RATIO_PENALTY_THRESHOLD,
     FEEDBACK_MUTATION_HIGHSCORE_THRESHOLD,
+    FUNDAMENTAL6_ACCOUNT_TEMPLATE_BOOST,
+    FUNDAMENTAL6_DISABLED_TEMPLATES,
+    FUNDAMENTAL6_HIGH_CONVICTION_RATIO_PAIRS,
+    FUNDAMENTAL6_PROTECTED_TEMPLATES,
+    FUNDAMENTAL6_TEMPLATE_PREFIX_PENALTIES,
+    FUNDAMENTAL6_TEMPLATE_PRIORITY_PENALTIES,
     NEGATIVE_RAW_FIELDS,
     POSITIVE_RAW_FIELDS,
     RATIO_KEYWORDS,
@@ -61,66 +68,14 @@ _BLACKLIST_CACHE: dict[str, dict[str, Any]] = {}
 """按 dataset_id 缓存的黑名单数据（懒加载）。每个值为 {"names": set, "patterns": list}"""
 _DEFAULT_AVOID_RULES_CACHE: list[dict[str, str]] | None = None
 """跨数据集默认规避规则缓存（一次加载）。"""
-_FUNDAMENTAL6_DISABLED_TEMPLATES: set[str] = {
-    "vol_scaled_delta_5_20",
-    "vol_scaled_delta_5_20_MARKET",
-    "delta_5",
-    "group_delta_5",
-    "group_delta_5_MARKET",
-}
-"""fundamental6 上已反复触发集中度/低质量问题的模板，先临时停用。"""
-_FUNDAMENTAL6_PROTECTED_TEMPLATES: set[str] = {
-    "account_rank_backfill_504",
-    "account_ir_60",
-    "account_group_backfill_504_subindustry",
-    "account_group_zscore_60_subindustry",
-    "account_group_ir_60_subindustry",
-    "account_ts_rank_60",
-    "account_group_decay_63_subindustry",
-    "account_ir_60_decay_20",
-    "account_backfill_zscore_decay_63_subindustry",
-}
-"""fundamental6 上要持续保留探索的模板方向，即使曾被自动黑名单记录。"""
-_FUNDAMENTAL6_HIGH_CONVICTION_RATIO_PAIRS: set[tuple[str, str]] = {
-    ("cash", "assets"),
-    ("cash_st", "assets_curr"),
-    ("cash_st", "assets"),
-    ("debt", "assets"),
-    ("debt_lt", "assets"),
-    ("debt_st", "assets"),
-    ("cogs", "assets"),
-    ("capex", "assets"),
-    ("cashflow", "assets"),
-    ("cashflow_op", "assets"),
-    ("cashflow_op", "fnd6_mkvalt"),
-    ("cashflow_op", "fnd6_mkvaltq"),
-    ("cashflow_invst", "assets"),
-}
-"""fundamental6 上优先探索的高经济含义比值组合。"""
-
-
 def _fundamental6_template_priority_adjustment(template_name: str) -> int:
     """压低 generic library 模板，给 account / ratio / long-window 方向让路。"""
     lower_name = template_name.lower()
-    if lower_name in {
-        "vol_scaled_delta_20_60",
-        "vol_scaled_delta_20_60_market",
-        "vol_scaled_delta_20_60_industry",
-        "3layer_zscore_sector_decay",
-        "3layer_zscore_market_decay",
-        "3layer_rank_sector_decay",
-        "3layer_zscore_subind_decay",
-        "ts_corr_self_rank_60",
-        "ts_corr_self_60",
-        "ts_corr_self_rank_252",
-        "ts_corr_self_120",
-        "ts_corr_self_252",
-        "ts_rank_after_group_63",
-        "ts_zscore_after_group_63",
-    }:
-        return -820
-    if lower_name.startswith(("delta_", "group_delta_", "rank_delta_")):
-        return -760
+    if lower_name in FUNDAMENTAL6_TEMPLATE_PRIORITY_PENALTIES:
+        return FUNDAMENTAL6_TEMPLATE_PRIORITY_PENALTIES[lower_name]
+    for prefixes, penalty in FUNDAMENTAL6_TEMPLATE_PREFIX_PENALTIES.items():
+        if lower_name.startswith(prefixes):
+            return penalty
     return 0
 
 
@@ -204,7 +159,7 @@ def _is_blacklisted_template(template_name: str, expression: str = "", *, datase
     Returns:
         bool: 在黑名单中返回 True。
     """
-    if dataset_id == "fundamental6" and template_name in _FUNDAMENTAL6_PROTECTED_TEMPLATES:
+    if dataset_id == "fundamental6" and template_name in FUNDAMENTAL6_PROTECTED_TEMPLATES:
         return False
     if dataset_id:
         _load_blacklist(dataset_id)
@@ -360,7 +315,9 @@ def discover_partner_fields(
     # Seed the candidate list with curated pairings first so extremely
     # important ratios like debt/cap are never crowded out by weaker matches.
     for partner_name in RATIO_PARTNER_CANDIDATES.get(field_name, ()):
-        if partner_name == field_name or partner_name not in available_by_name:
+        if partner_name == field_name:
+            continue
+        if partner_name not in available_by_name and partner_name not in ALLOWED_EXTERNAL_RATIO_PARTNERS:
             continue
         candidates.append((10_000 - len(candidates), partner_name))
 
@@ -1414,12 +1371,12 @@ def _build_matrix_templates(
         ]
 
     for partner in partner_names:
-        if partner not in fields_by_name:
+        if partner not in fields_by_name and partner not in ALLOWED_EXTERNAL_RATIO_PARTNERS:
             continue
         ratio_expr = f"{field_name}/{partner}"
         ratio_label = f"{field_name}_over_{partner}"
         ratio_priority_boost = 0
-        if use_dataset_heuristics and (field_name, partner) in _FUNDAMENTAL6_HIGH_CONVICTION_RATIO_PAIRS:
+        if use_dataset_heuristics and (field_name, partner) in FUNDAMENTAL6_HIGH_CONVICTION_RATIO_PAIRS:
             ratio_priority_boost = 18
 
         # Delta rank 变体
@@ -1500,7 +1457,11 @@ def _build_matrix_templates(
 
     if use_dataset_heuristics:
         diversified = [
-            (name, expr, pri + 820 if name.startswith("account_") else pri)
+            (
+                name,
+                expr,
+                pri + FUNDAMENTAL6_ACCOUNT_TEMPLATE_BOOST if name.startswith("account_") else pri,
+            )
             for name, expr, pri in diversified
         ]
 
@@ -1593,7 +1554,7 @@ def build_expression_candidates(
         and "expression" in item
         and not (
             dataset_id == "fundamental6"
-            and str(item["name"]) in _FUNDAMENTAL6_DISABLED_TEMPLATES
+            and str(item["name"]) in FUNDAMENTAL6_DISABLED_TEMPLATES
         )
         and not _is_blacklisted_template(str(item["name"]), str(item["expression"]), dataset_id=dataset_id)
     ]

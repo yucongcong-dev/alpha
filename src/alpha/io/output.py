@@ -36,7 +36,13 @@ from ..analysis.stats import (
     is_queue_timeout_result,
     load_existing_results,
 )
-from ..config import DEFAULT_DATASET_ID
+from ..config import (
+    DEFAULT_DATASET_ID,
+    FUNDAMENTAL6_BLACKLIST_MIN_FIELDS_FOR_NEARPASS,
+    FUNDAMENTAL6_BLACKLIST_PROTECTED_MIN_AVG_FITNESS,
+    FUNDAMENTAL6_BLACKLIST_PROTECTED_MIN_AVG_SHARPE,
+    FUNDAMENTAL6_PROTECTED_TEMPLATES,
+)
 from ..models.base import FieldTestResult
 
 logger = logging.getLogger(__name__)
@@ -545,19 +551,7 @@ def auto_update_blacklist(
     if not dataset_id or not results:
         return
 
-    protected_templates = set()
-    if dataset_id == "fundamental6":
-        protected_templates = {
-            "account_rank_backfill_504",
-            "account_ir_60",
-            "account_group_backfill_504_subindustry",
-            "account_group_zscore_60_subindustry",
-            "account_group_ir_60_subindustry",
-            "account_ts_rank_60",
-            "account_group_decay_63_subindustry",
-            "account_ir_60_decay_20",
-            "account_backfill_zscore_decay_63_subindustry",
-        }
+    protected_templates = FUNDAMENTAL6_PROTECTED_TEMPLATES if dataset_id == "fundamental6" else set()
 
     # 1. 筛选有实际质量反馈的结果
     from ..analysis.stats import is_informative_result
@@ -618,10 +612,16 @@ def auto_update_blacklist(
         # fundamental6 上接近门槛的模板很稀缺，避免仅凭 2 个弱字段就把整族误杀。
         if (
             dataset_id == "fundamental6"
-            and len(fields_tested) < 4
+            and len(fields_tested) < FUNDAMENTAL6_BLACKLIST_MIN_FIELDS_FOR_NEARPASS
             and (
-                (avg_sharpe is not None and avg_sharpe >= 0.7)
-                or (avg_fitness is not None and avg_fitness >= 0.35)
+                (
+                    avg_sharpe is not None
+                    and avg_sharpe >= FUNDAMENTAL6_BLACKLIST_PROTECTED_MIN_AVG_SHARPE
+                )
+                or (
+                    avg_fitness is not None
+                    and avg_fitness >= FUNDAMENTAL6_BLACKLIST_PROTECTED_MIN_AVG_FITNESS
+                )
             )
         ):
             continue
