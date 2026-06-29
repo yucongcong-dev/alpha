@@ -122,7 +122,7 @@ python3 -m alpha --top-fields-by-feedback 10 --max-templates-per-field 15
 - 为 vol-scaled delta 家族生成更多 settings 变体
 
 **反馈循环**：
-- 默认读取同一输出文件（`results/fundamental6_test_results.json`）
+- 默认读取同一输出文件（`results/fundamental6/test_results.json`）
 - 阶段 2 的结果会自动用于字段优先级排序
 - 可多次运行，每次自动续跑（不重复已完成的组合）
 

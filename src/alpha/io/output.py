@@ -211,11 +211,11 @@ def build_dataset_scoped_paths(dataset_id: str) -> dict[str, str]:
     Example:
         >>> paths = build_dataset_scoped_paths("fundamental6")
         >>> print(paths["fields_cache_file"])
-        /path/to/script_dir/fundamental6_fields_cache.json
+        /path/to/project_root/cache/fundamental6_fields_cache.json
 
         >>> paths = build_dataset_scoped_paths("my_dataset")
         >>> print(paths["output"])
-        /path/to/script_dir/results/my_dataset/test_results.json
+        /path/to/project_root/results/my_dataset/test_results.json
 
     Note:
         - 所有路径都相对于 PROJECT_ROOT
