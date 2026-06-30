@@ -959,6 +959,7 @@ class BrainClient:
         """
         fields: list[dict[str, Any]] = []
         current_offset = offset
+        announced_total: int | None = None
 
         while True:
             batch_size = page_size
@@ -987,10 +988,43 @@ class BrainClient:
             current_offset += len(batch)
 
             total = extract_total(payload)
+            if total is not None and total >= 0:
+                announced_total = total
+                logger.info(
+                    "[cache] fetched %d/%d fields for dataset=%s (%s/%s/%s delay=%s)",
+                    len(fields),
+                    total,
+                    dataset_id,
+                    region,
+                    universe,
+                    instrument_type,
+                    delay,
+                )
+            else:
+                logger.info(
+                    "[cache] fetched %d fields for dataset=%s (%s/%s/%s delay=%s)",
+                    len(fields),
+                    dataset_id,
+                    region,
+                    universe,
+                    instrument_type,
+                    delay,
+                )
             if len(batch) < batch_size:
                 break
             if total is not None and current_offset >= total:
                 break
+
+        if fields and announced_total is None:
+            logger.info(
+                "[cache] fetched %d fields total for dataset=%s (%s/%s/%s delay=%s)",
+                len(fields),
+                dataset_id,
+                region,
+                universe,
+                instrument_type,
+                delay,
+            )
 
         return fields
 
