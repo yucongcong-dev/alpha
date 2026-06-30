@@ -864,6 +864,69 @@
       "priority": 999
     }
   ],
+  "DATASET_FUNDAMENTAL6_MATRIX": [
+    {
+      "_comment": "fundamental6 高优先级长窗/近门槛模板，优先服务 cash_st、debt_lt、cogs、cashflow_op 等季度字段",
+      "name": "account_neutralize_zscore_decay_63_industry",
+      "expression": "ts_decay_linear(group_neutralize(ts_zscore(ts_backfill({field}, 240), 63), industry), 20)",
+      "priority": 214
+    },
+    {
+      "name": "account_group_zscore_60_subindustry",
+      "expression": "group_rank(ts_zscore({field}, 60), subindustry)",
+      "priority": 210
+    },
+    {
+      "name": "account_ts_rank_60",
+      "expression": "rank(ts_rank({field}, 60))",
+      "priority": 208
+    },
+    {
+      "name": "account_group_backfill_504_subindustry",
+      "expression": "group_rank(ts_backfill({field}, {backfill_window}), subindustry)",
+      "priority": 207
+    },
+    {
+      "name": "account_backfill_zscore_decay_63_subindustry",
+      "expression": "group_rank(ts_decay_linear(ts_zscore(ts_backfill({field}, {backfill_window}), 63), 20), subindustry)",
+      "priority": 205
+    },
+    {
+      "name": "account_group_ir_60_subindustry",
+      "expression": "group_rank(ts_mean({field}, 60) / ts_std_dev({field}, 60), subindustry)",
+      "priority": 204
+    },
+    {
+      "name": "account_ts_rank_200",
+      "expression": "rank(ts_rank({field}, 200))",
+      "priority": 204
+    },
+    {
+      "name": "account_ir_60_decay_20",
+      "expression": "rank(ts_decay_linear(ts_mean({field}, 60) / ts_std_dev({field}, 60), 20))",
+      "priority": 203
+    },
+    {
+      "name": "account_rank_zscore_240",
+      "expression": "rank(ts_zscore(ts_backfill({field}, 240), 240))",
+      "priority": 202
+    },
+    {
+      "name": "account_rank_backfill_504",
+      "expression": "rank(ts_backfill({field}, {backfill_window}))",
+      "priority": 200
+    },
+    {
+      "name": "account_group_decay_63_subindustry",
+      "expression": "group_rank(ts_decay_linear(ts_backfill({field}, {backfill_window}), 63), subindustry)",
+      "priority": 198
+    },
+    {
+      "name": "account_ir_60",
+      "expression": "rank(ts_mean({field}, 60) / ts_std_dev({field}, 60))",
+      "priority": 196
+    }
+  ],
   "_generated_from": "worldquant_template_library.json",
   "_dataset_id": "fundamental6",
   "_comment_dataset_template": "Auto-generated dataset-specific template library. Edit this file for dataset-level template tuning; base templates remain unchanged."

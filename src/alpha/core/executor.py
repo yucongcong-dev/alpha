@@ -34,6 +34,7 @@ from ..config import (
     CHECK_LOW_SHARPE,
     CHECK_LOW_SUB_UNIVERSE_SHARPE,
     SENTINEL_UNKNOWN,
+    get_dataset_expression_policy,
 )
 from ..generators.expressions import build_expression_candidates
 from ..generators.settings import (
@@ -105,6 +106,7 @@ def build_pending_templates_for_field(
         global_failed_check_counts=build_ctx.global_failed_check_counts,
         use_dataset_heuristics=build_ctx.use_dataset_heuristics,
         dataset_id=args.dataset_id,
+        expression_policy=build_ctx.expression_policy,
     )
     pending_templates: list[tuple[str, str, int, SettingsVariant, str]] = []
     disabled_templates = 0
@@ -118,8 +120,7 @@ def build_pending_templates_for_field(
             field_name,
             template_name,
             expression,
-            use_dataset_heuristics=build_ctx.use_dataset_heuristics,
-            dataset_id=args.dataset_id,
+            expression_policy=build_ctx.expression_policy,
         ):
             disabled_templates += 1
             continue
@@ -347,6 +348,10 @@ def print_dry_run_plan(
         include_templates=filters.include_templates,
         exclude_templates=filters.exclude_templates,
         use_dataset_heuristics=use_dataset_heuristics,
+        expression_policy=get_dataset_expression_policy(
+            args.dataset_id,
+            use_curated_heuristics=use_dataset_heuristics,
+        ),
     )
 
     for field in fields:

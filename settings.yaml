@@ -138,11 +138,11 @@ global:
   # --------------------------------------------------------------------------
   # 模拟完成后本地预检: 低于阈值的 Alpha 不会被提交。
   quality:
-    min_sharpe: 0.85                # 最低 Sharpe 比率 (风险调整后收益)
-    min_fitness: 0.50               # 最低 Fitness (Sharpe × Turnover 惩罚调整)
-    min_turnover: 0.005             # 最低换手率 (0.5%)
-    max_turnover: 0.75              # 最高换手率 (75%)
-    max_weight: 0.13                # 单股最大权重 (13%)
+    min_sharpe: 1.25                # 最低 Sharpe 比率 (风险调整后收益)
+    min_fitness: 1.00               # 最低 Fitness (Sharpe × Turnover 惩罚调整)
+    min_turnover: 0.01              # 最低换手率 (1%)
+    max_turnover: 0.70              # 最高换手率 (70%)
+    max_weight: 0.10                # 单股最大权重 (10%)
 
   # --------------------------------------------------------------------------
   # HTTP 客户端参数 —— 无对应 CLI，仅 YAML 可配

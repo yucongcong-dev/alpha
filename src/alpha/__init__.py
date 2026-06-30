@@ -38,7 +38,6 @@ from .config import (
     SIM_ACCEPT_HEADER,
     SIMULATIONS_URL,
     VERSION_HEADER,
-    use_fundamental6_heuristics,
 )
 from .exceptions import (
     BrainAPIError,
@@ -46,6 +45,7 @@ from .exceptions import (
     BrainRateLimitError,
 )
 from .models import (
+    DatasetExpressionPolicy,
     ExecutionState,
     FieldTestResult,
     HistoricalRunState,
@@ -74,6 +74,7 @@ __all__ = [
     "BrainQueueBusyError",
     "BrainRateLimitError",
     "ExecutionState",
+    "DatasetExpressionPolicy",
     "FieldTestResult",
     "HistoricalRunState",
     "RunFilters",
@@ -86,5 +87,4 @@ __all__ = [
     "choose_field_name",
     "choose_field_type",
     "first_non_empty",
-    "use_fundamental6_heuristics",
 ]

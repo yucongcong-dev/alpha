@@ -7,6 +7,7 @@
 from __future__ import annotations
 
 from .base import (
+    DatasetExpressionPolicy,
     ExecutionState,
     FieldTestContext,
     FieldTestResult,
@@ -22,6 +23,7 @@ from .base import (
 
 __all__ = [
     "ExecutionState",
+    "DatasetExpressionPolicy",
     "FieldTestContext",
     "FieldTestResult",
     "FutureCompletionContext",

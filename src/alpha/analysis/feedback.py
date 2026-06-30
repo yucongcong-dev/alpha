@@ -29,21 +29,9 @@ from ..config import (
     CHECK_LOW_SHARPE,
     CHECK_LOW_SUB_UNIVERSE_SHARPE,
     CHECK_LOW_TURNOVER,
+    DatasetExpressionPolicy,
     FEEDBACK_TEMPLATE_MIN_PRIORITY,
-    FUNDAMENTAL6_ALWAYS_KEEP_FAMILIES,
-    FUNDAMENTAL6_BROKEN_ZSCORE_SPREAD_FIELDS,
-    FUNDAMENTAL6_CONCENTRATED_WEAK_FAMILIES,
-    FUNDAMENTAL6_CONCENTRATED_WEAK_NAMES,
-    FUNDAMENTAL6_CONCENTRATED_WEAK_PREFIXES,
-    FUNDAMENTAL6_HIGH_CONVICTION_RATIO_PAIRS,
-    FUNDAMENTAL6_LOW_SHARPE_RATIO_FAIL_THRESHOLD,
-    FUNDAMENTAL6_LOW_SHARPE_WEAK_RATIO_FAMILIES,
-    FUNDAMENTAL6_LOW_SHARPE_WEAK_RATIO_PREFIXES,
-    FUNDAMENTAL6_PROTECTED_TEMPLATES,
-    FUNDAMENTAL6_SLOW_TEMPLATE_NAMES,
-    FUNDAMENTAL6_SLOW_TEMPLATE_PREFIXES,
-    FUNDAMENTAL6_WEAK_MEAN_SPREAD_FIELDS,
-    FUNDAMENTAL6_WEAK_RATIO_STANDALONE_FIELDS,
+    get_dataset_expression_policy,
 )
 
 # 从 expressions 模块导入分类函数（唯一源）
@@ -268,10 +256,10 @@ def is_legacy_family_disabled(
     return attempted >= disable_after and submittable == 0
 
 
-def _is_high_conviction_fundamental6_ratio(expression: str) -> bool:
-    """识别 fundamental6 中值得继续探索的高经济含义比值方向。"""
+def _is_high_conviction_ratio(expression: str, policy: DatasetExpressionPolicy) -> bool:
+    """识别策略中值得继续探索的高经济含义比值方向。"""
     lower_expr = expression.lower()
-    return any(f"{left}/{right}" in lower_expr for left, right in FUNDAMENTAL6_HIGH_CONVICTION_RATIO_PAIRS)
+    return any(f"{left}/{right}" in lower_expr for left, right in policy.high_conviction_ratio_pairs)
 
 # ============================================================================
 # 模板保留判断函数
@@ -283,6 +271,9 @@ def should_keep_template_for_feedback(
     expression: str,
     priority: int,
     field_feedback: dict[str, Any] | None,
+    *,
+    dataset_id: str = "",
+    expression_policy: DatasetExpressionPolicy | None = None,
 ) -> bool:
     """
     在字段反馈足够后剪掉低信号、低价值的模板。
@@ -316,6 +307,7 @@ def should_keep_template_for_feedback(
     # actually move Sharpe/fitness.
     if not field_feedback:
         return True
+    policy = expression_policy or get_dataset_expression_policy(dataset_id)
 
     dominant_counts = field_feedback.get("failed_check_counts", {})
     dominant_names = dominant_failed_check_names(dominant_counts, limit=4)
@@ -323,21 +315,19 @@ def should_keep_template_for_feedback(
     lower_name = template_name.lower()
     lower_expr = expression.lower()
 
-    if family in FUNDAMENTAL6_ALWAYS_KEEP_FAMILIES:
+    if family in policy.always_keep_families:
         return True
     if lower_name.startswith("iter_"):
         return True
-    if dataset_id == "fundamental6" and template_name in FUNDAMENTAL6_PROTECTED_TEMPLATES:
+    if template_name in policy.protected_templates:
         return True
-    protected_ratio = dataset_id == "fundamental6" and _is_high_conviction_fundamental6_ratio(
-        expression
-    )
+    protected_ratio = _is_high_conviction_ratio(expression, policy)
 
     # Historical results show these shapes are repeatedly too slow.
     if CHECK_LOW_TURNOVER in dominant_names:
-        if lower_name.startswith(FUNDAMENTAL6_SLOW_TEMPLATE_PREFIXES):
+        if lower_name.startswith(policy.slow_template_prefixes):
             return False
-        if lower_name in FUNDAMENTAL6_SLOW_TEMPLATE_NAMES:
+        if lower_name in policy.slow_template_names:
             return False
         if "ts_mean(" in lower_expr and "-" not in lower_expr and "/" not in lower_expr:
             return False
@@ -353,25 +343,25 @@ def should_keep_template_for_feedback(
         CHECK_LOW_SUB_UNIVERSE_SHARPE in dominant_names
         or CHECK_CONCENTRATED_WEIGHT in dominant_names
     ):
-        if family in FUNDAMENTAL6_CONCENTRATED_WEAK_FAMILIES and not protected_ratio:
+        if family in policy.concentrated_weak_families and not protected_ratio:
             return False
-        if lower_name.startswith(FUNDAMENTAL6_CONCENTRATED_WEAK_PREFIXES) and not protected_ratio:
+        if lower_name.startswith(policy.concentrated_weak_prefixes) and not protected_ratio:
             return False
-        if lower_name in FUNDAMENTAL6_CONCENTRATED_WEAK_NAMES:
+        if lower_name in policy.concentrated_weak_names:
             return False
 
     # Ratio-based templates consistently waste queue budget on fundamental6.
     # Once we have even 2+ simulated results showing LOW_SHARPE, cut all ratio families.
     field_low_sharpe = int(dominant_counts.get(CHECK_LOW_SHARPE, 0))
     if (
-        field_low_sharpe >= FUNDAMENTAL6_LOW_SHARPE_RATIO_FAIL_THRESHOLD
-        and family in FUNDAMENTAL6_LOW_SHARPE_WEAK_RATIO_FAMILIES
+        field_low_sharpe >= policy.low_sharpe_ratio_fail_threshold
+        and family in policy.low_sharpe_weak_ratio_families
         and not protected_ratio
     ):
         return False
     if (
-        lower_name.startswith(FUNDAMENTAL6_LOW_SHARPE_WEAK_RATIO_PREFIXES)
-        and field_low_sharpe >= FUNDAMENTAL6_LOW_SHARPE_RATIO_FAIL_THRESHOLD
+        lower_name.startswith(policy.low_sharpe_weak_ratio_prefixes)
+        and field_low_sharpe >= policy.low_sharpe_ratio_fail_threshold
         and not protected_ratio
     ):
         return False
@@ -395,8 +385,9 @@ def should_skip_field_template_family(
     template_name: str,
     expression: str,
     *,
-    use_dataset_heuristics: bool,
+    use_dataset_heuristics: bool | None = None,
     dataset_id: str = "",
+    expression_policy: DatasetExpressionPolicy | None = None,
 ) -> bool:
     """
     对已经证明偏弱的字段-模板家族组合做先验剪枝。
@@ -428,26 +419,30 @@ def should_skip_field_template_family(
         ... ):
         ...     print("跳过此字段-模板组合")
     """
-    if not use_dataset_heuristics:
+    policy = expression_policy or get_dataset_expression_policy(
+        dataset_id,
+        use_curated_heuristics=use_dataset_heuristics,
+    )
+    if not policy.use_curated_heuristics:
         return False
 
     # v5: 检查黑名单 — 已淘汰模板立即跳过（按 dataset 分层）
-    if _is_blacklisted_template(template_name, expression, dataset_id=dataset_id):
+    if _is_blacklisted_template(template_name, expression, policy=policy):
         return True
 
     family = classify_expression_family(template_name, expression)
 
-    if field_name in FUNDAMENTAL6_WEAK_MEAN_SPREAD_FIELDS and family in {
+    if field_name in policy.weak_mean_spread_fields and family in {
         "group_mean_spread",
         "mean_spread",
         "rank_spread",
     }:
         return True
     return (
-        field_name in FUNDAMENTAL6_BROKEN_ZSCORE_SPREAD_FIELDS
+        field_name in policy.broken_zscore_spread_fields
         and "zscore" in template_name.lower()
         and "spread" in template_name.lower()
     ) or (
-        field_name in FUNDAMENTAL6_WEAK_RATIO_STANDALONE_FIELDS
+        field_name in policy.weak_ratio_standalone_fields
         and family in {"legacy_ratio", "legacy_neg_ratio", "group_ratio_level"}
     )

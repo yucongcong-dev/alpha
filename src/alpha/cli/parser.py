@@ -506,7 +506,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--max-turnover",
         type=float,
-        default=0.75,
+        default=0.70,
         help="本地预检最高 Turnover 阈值",
     )
     parser.add_argument(

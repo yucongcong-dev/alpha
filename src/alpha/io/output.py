@@ -38,10 +38,8 @@ from ..analysis.stats import (
 )
 from ..config import (
     DEFAULT_DATASET_ID,
-    FUNDAMENTAL6_BLACKLIST_MIN_FIELDS_FOR_NEARPASS,
-    FUNDAMENTAL6_BLACKLIST_PROTECTED_MIN_AVG_FITNESS,
-    FUNDAMENTAL6_BLACKLIST_PROTECTED_MIN_AVG_SHARPE,
-    FUNDAMENTAL6_PROTECTED_TEMPLATES,
+    DatasetExpressionPolicy,
+    get_dataset_expression_policy,
 )
 from ..models.base import FieldTestResult
 
@@ -529,6 +527,7 @@ def auto_update_blacklist(
     data_dir: str = "",
     min_fields_tested: int = 2,
     min_fail_checks: int = 2,
+    expression_policy: DatasetExpressionPolicy | None = None,
 ) -> None:
     """
     根据测试结果自动更新 template_blacklist.json 中的失败模板记录。
@@ -550,8 +549,9 @@ def auto_update_blacklist(
     """
     if not dataset_id or not results:
         return
+    policy = expression_policy or get_dataset_expression_policy(dataset_id)
 
-    protected_templates = FUNDAMENTAL6_PROTECTED_TEMPLATES if dataset_id == "fundamental6" else set()
+    protected_templates = policy.protected_templates
 
     # 1. 筛选有实际质量反馈的结果
     from ..analysis.stats import is_informative_result
@@ -611,16 +611,16 @@ def auto_update_blacklist(
 
         # fundamental6 上接近门槛的模板很稀缺，避免仅凭 2 个弱字段就把整族误杀。
         if (
-            dataset_id == "fundamental6"
-            and len(fields_tested) < FUNDAMENTAL6_BLACKLIST_MIN_FIELDS_FOR_NEARPASS
+            policy.blacklist_min_fields_for_nearpass > 0
+            and len(fields_tested) < policy.blacklist_min_fields_for_nearpass
             and (
                 (
                     avg_sharpe is not None
-                    and avg_sharpe >= FUNDAMENTAL6_BLACKLIST_PROTECTED_MIN_AVG_SHARPE
+                    and avg_sharpe >= policy.blacklist_protected_min_avg_sharpe
                 )
                 or (
                     avg_fitness is not None
-                    and avg_fitness >= FUNDAMENTAL6_BLACKLIST_PROTECTED_MIN_AVG_FITNESS
+                    and avg_fitness >= policy.blacklist_protected_min_avg_fitness
                 )
             )
         ):

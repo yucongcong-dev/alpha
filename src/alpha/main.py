@@ -63,10 +63,8 @@ from .cli.parser import (
 
 # 导入配置和模型
 from .config import (
-    FUNDAMENTAL6_OVERTESTED_WEAK_FIELDS,
-    FUNDAMENTAL6_PREFERRED_FIELD_ORDER,
     SENTINEL_UNKNOWN,
-    use_fundamental6_heuristics,
+    get_dataset_expression_policy,
 )
 
 # 导入执行器
@@ -276,7 +274,8 @@ def _initialize(
 
     template_library = load_template_library(template_library_file)
     filters_dict = load_run_filters_extended(run_paths)
-    use_dataset_heuristics = use_fundamental6_heuristics(args.dataset_id)
+    expression_policy = get_dataset_expression_policy(args.dataset_id)
+    use_dataset_heuristics = expression_policy.use_curated_heuristics
     template_library_fingerprint = stable_fingerprint(template_library)
     settings_fingerprint = build_settings_fingerprint(args)
     feedback_output = getattr(run_paths, "feedback_output", None) or output_file
@@ -309,16 +308,22 @@ def _initialize(
         logger.error("[error] 数据集 %s 未返回任何字段", args.dataset_id)
         return None
 
+    cached_field_count = len(fields)
+
     def field_sort_key(item: dict[str, Any]) -> tuple[Any, ...]:
         field_id = str(first_non_empty(item.get("id"), SENTINEL_UNKNOWN))
         field_name = choose_field_name(item)
         feedback = historical_state.field_feedback.get(field_id)
         priority = field_priority(field_id, historical_state.field_feedback)
-        is_promising_seen = feedback is not None and priority >= 0.65
+        is_promising_seen = (
+            feedback is not None and priority >= expression_policy.promising_field_min_priority
+        )
         is_unexplored = feedback is None
-        preferred_rank = FUNDAMENTAL6_PREFERRED_FIELD_ORDER.get(field_name, 999)
+        preferred_rank = expression_policy.preferred_field_order.get(field_name, 999)
         is_preferred_direction = preferred_rank < 999
-        is_overtested_weak = field_name in FUNDAMENTAL6_OVERTESTED_WEAK_FIELDS and feedback is not None
+        is_overtested_weak = (
+            field_name in expression_policy.overtested_weak_fields and feedback is not None
+        )
         return (
             -int(is_promising_seen),
             -int(is_preferred_direction),
@@ -345,6 +350,28 @@ def _initialize(
         ]
         fields = focused_fields[: args.top_fields_by_feedback]
         logger.info("[focus] 限制运行到按反馈排序的前 %d 个字段", len(fields))
+
+    ranked_field_count = len(fields)
+    if args.offset > 0:
+        fields = fields[args.offset :]
+    if args.limit > 0:
+        fields = fields[: args.limit]
+    logger.info(
+        "[data] 当前上下文缓存共 %d 个字段，优先级排序后共 %d 个字段，本次按 offset=%d limit=%d 取 %d 个字段",
+        cached_field_count,
+        ranked_field_count,
+        args.offset,
+        args.limit,
+        len(fields),
+    )
+    if not fields:
+        logger.error(
+            "[error] 数据集 %s 在优先级排序后 offset=%d limit=%d 下没有可运行字段",
+            args.dataset_id,
+            args.offset,
+            args.limit,
+        )
+        return None
 
     logger.info("[data] 从数据集 %s 获取 %d 个字段", args.dataset_id, len(fields))
 
@@ -384,6 +411,7 @@ def _initialize(
         client_factory,
         template_library,
         filters_dict,
+        expression_policy,
         use_dataset_heuristics,
         template_library_fingerprint,
         settings_fingerprint,
@@ -408,6 +436,7 @@ def _run_field_test_loop(
     client_factory: WorkerClientFactory,
     template_library: Any,
     filters_dict: Any,
+    expression_policy: Any,
     use_dataset_heuristics: bool,
     template_library_fingerprint: str,
     settings_fingerprint: str,
@@ -469,6 +498,7 @@ def _run_field_test_loop(
         include_templates=filters_dict.include_templates,
         exclude_templates=filters_dict.exclude_templates,
         use_dataset_heuristics=use_dataset_heuristics,
+        expression_policy=expression_policy,
     )
 
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
@@ -726,6 +756,7 @@ def main() -> int:
         client_factory,
         template_library,
         filters_dict,
+        expression_policy,
         use_dataset_heuristics,
         template_library_fingerprint,
         settings_fingerprint,
@@ -744,6 +775,7 @@ def main() -> int:
         client_factory=client_factory,
         template_library=template_library,
         filters_dict=filters_dict,
+        expression_policy=expression_policy,
         use_dataset_heuristics=use_dataset_heuristics,
         template_library_fingerprint=template_library_fingerprint,
         settings_fingerprint=settings_fingerprint,

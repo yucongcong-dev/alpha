@@ -255,12 +255,12 @@ def fetch_fields_with_cache(
     cache_refresh_reason: str,
 ) -> list[dict[str, Any]]:
     """
-    根据缓存状态拉取字段；能补齐时补齐，必要时才覆盖刷新。
+    根据缓存状态拉取字段；默认补齐并缓存当前上下文下的全量字段。
 
     此函数实现了智能的字段获取策略：
-    - 如果缓存有效且满足需求，直接使用缓存
-    - 如果缓存不足但可补齐，追加获取缺失的字段
-    - 如果需要完全刷新，重新获取所有字段
+    - 如果缓存有效且满足当前上下文，直接使用缓存
+    - 如果缓存不完整，默认补齐为当前上下文下的全量字段
+    - 如果需要完全刷新，重新获取并缓存所有字段
 
     Args:
         client: Brain API 客户端实例，需要实现 fetch_dataset_fields 方法。
@@ -270,7 +270,7 @@ def fetch_fields_with_cache(
         cache_refresh_reason (str): 刷新原因字符串。如果为空，表示无需刷新。
 
     Returns:
-        List[Dict[str, Any]]: 最终的字段列表。
+        List[Dict[str, Any]]: 当前上下文下的完整字段列表。
 
     Example:
         >>> fields = fetch_fields_with_cache(
@@ -280,11 +280,11 @@ def fetch_fields_with_cache(
         ...     cached_fields=[{"id": "sales"}],
         ...     cache_refresh_reason="cache has 1 fields but limit requests 100",
         ... )
-        >>> print(len(fields))
-        100
+        >>> print(len(fields)) >= 100
+        True
 
     Note:
-        此函数会自动保存更新后的缓存文件。
+        此函数会自动保存更新后的缓存文件，并尽量保持缓存为全量字段列表。
         使用重试机制处理临时 API 不稳定性。
     """
     if not cache_refresh_reason:
@@ -293,22 +293,18 @@ def fetch_fields_with_cache(
         return fields
 
     logger.info("[cache] 刷新字段缓存: %s", cache_refresh_reason)
-    append_to_cache = (
-        bool(cached_fields)
-        and not args.refresh_fields_cache
-        and args.offset == 0
-        and args.limit > len(cached_fields)
-    )
-    fetch_offset = len(cached_fields) if append_to_cache else args.offset
-    fetch_limit = args.limit - len(cached_fields) if append_to_cache else args.limit
+    append_to_cache = bool(cached_fields) and not args.refresh_fields_cache
+    fetch_offset = len(cached_fields) if append_to_cache else 0
+    fetch_limit = 0
     if append_to_cache:
         logger.info(
-            "[cache] 从 %d 扩展缓存到 %d，使用 offset=%d limit=%d",
+            "[cache] 从 %d 继续补齐全量字段，使用 offset=%d limit=%d",
             len(cached_fields),
-            args.limit,
             fetch_offset,
             fetch_limit,
         )
+    else:
+        logger.info("[cache] 重新拉取当前上下文下的全量字段")
 
     # Fetching the field list is also wrapped so temporary API instability
     # does not abort the whole batch before it starts.

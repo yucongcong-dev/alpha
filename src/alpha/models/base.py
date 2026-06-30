@@ -42,6 +42,9 @@ Example:
     }
 """
 
+DatasetExpressionPolicy = Any
+"""数据集表达式策略对象类型别名。由 config.get_dataset_expression_policy 生成。"""
+
 SettingsVariant = dict[str, Any]
 """
 设置变体类型别名。
@@ -324,6 +327,7 @@ class TemplateBuildContext:
     include_templates: set[str] = field(default_factory=set)
     exclude_templates: set[str] = field(default_factory=set)
     use_dataset_heuristics: bool = False
+    expression_policy: Any = None
 
 
 @dataclass

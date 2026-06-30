@@ -42,18 +42,10 @@ from ..config import (
     EXPR_NEARPASS_BOOST_THRESHOLD,
     EXPR_RATIO_PENALTY_THRESHOLD,
     FEEDBACK_MUTATION_HIGHSCORE_THRESHOLD,
-    FUNDAMENTAL6_ACCOUNT_TEMPLATE_BOOST,
-    FUNDAMENTAL6_DISABLED_TEMPLATES,
-    FUNDAMENTAL6_HIGH_CONVICTION_RATIO_PAIRS,
-    FUNDAMENTAL6_PROTECTED_TEMPLATES,
-    FUNDAMENTAL6_TEMPLATE_PREFIX_PENALTIES,
-    FUNDAMENTAL6_TEMPLATE_PRIORITY_PENALTIES,
-    NEGATIVE_RAW_FIELDS,
-    POSITIVE_RAW_FIELDS,
-    RATIO_KEYWORDS,
-    RATIO_PARTNER_CANDIDATES,
+    DatasetExpressionPolicy,
     STATS_DEFAULT_SCORE,
     UNKNOWN_FAMILY,
+    get_dataset_expression_policy,
     get_backfill_window,
 )
 from ..models.base import TemplateLibrary
@@ -68,15 +60,65 @@ _BLACKLIST_CACHE: dict[str, dict[str, Any]] = {}
 """按 dataset_id 缓存的黑名单数据（懒加载）。每个值为 {"names": set, "patterns": list}"""
 _DEFAULT_AVOID_RULES_CACHE: list[dict[str, str]] | None = None
 """跨数据集默认规避规则缓存（一次加载）。"""
-def _fundamental6_template_priority_adjustment(template_name: str) -> int:
-    """压低 generic library 模板，给 account / ratio / long-window 方向让路。"""
+def _policy_template_priority_adjustment(
+    template_name: str,
+    policy: DatasetExpressionPolicy,
+) -> int:
+    """按数据集策略调整模板优先级。"""
     lower_name = template_name.lower()
-    if lower_name in FUNDAMENTAL6_TEMPLATE_PRIORITY_PENALTIES:
-        return FUNDAMENTAL6_TEMPLATE_PRIORITY_PENALTIES[lower_name]
-    for prefixes, penalty in FUNDAMENTAL6_TEMPLATE_PREFIX_PENALTIES.items():
+    adjustment = policy.account_template_boost if lower_name.startswith("account_") else 0
+    if lower_name in policy.template_priority_penalties:
+        adjustment += policy.template_priority_penalties[lower_name]
+        return adjustment
+    for prefixes, penalty in policy.template_prefix_penalties.items():
         if lower_name.startswith(prefixes):
-            return penalty
-    return 0
+            adjustment += penalty
+            return adjustment
+    return adjustment
+
+
+def _dataset_template_keys(field_type: str, dataset_id: str) -> list[str]:
+    """返回模板库检索键，支持数据集专属模板分层。"""
+    keys = ["default"]
+    if field_type:
+        keys.append(field_type)
+    if dataset_id:
+        dataset_key = dataset_id.upper()
+        keys.append(f"DATASET_{dataset_key}")
+        if field_type:
+            keys.append(f"DATASET_{dataset_key}_{field_type}")
+    return keys
+
+
+def _select_template_items(
+    template_library: TemplateLibrary,
+    field_type: str,
+    dataset_id: str,
+) -> list[dict[str, Any]]:
+    """合并基础模板、字段类型模板和数据集专属模板，后者可覆盖前者。"""
+    merged: dict[str, dict[str, Any]] = {}
+    for key in _dataset_template_keys(field_type, dataset_id):
+        for item in template_library.get(key, []):
+            if isinstance(item, dict) and "name" in item and "expression" in item:
+                merged[str(item["name"])] = item
+    return list(merged.values())
+
+
+def _render_template_specs(
+    specs: Sequence[tuple[str, str, int]],
+    **placeholders: Any,
+) -> list[tuple[str, str, int]]:
+    """将配置中的模板规格渲染为 (name, expression, priority) 列表。"""
+    rendered: list[tuple[str, str, int]] = []
+    for name_template, expr_template, priority in specs:
+        rendered.append(
+            (
+                name_template.format(**placeholders),
+                expr_template.format(**placeholders),
+                priority,
+            )
+        )
+    return rendered
 
 
 def _resolve_blacklist_project_root() -> str:
@@ -148,7 +190,13 @@ def _load_blacklist(dataset_id: str) -> None:
     _BLACKLIST_CACHE[dataset_id] = {"names": names, "patterns": patterns}
 
 
-def _is_blacklisted_template(template_name: str, expression: str = "", *, dataset_id: str = "") -> bool:
+def _is_blacklisted_template(
+    template_name: str,
+    expression: str = "",
+    *,
+    dataset_id: str = "",
+    policy: DatasetExpressionPolicy | None = None,
+) -> bool:
     """检查模板名称或表达式是否在指定数据集的黑名单中。
 
     Args:
@@ -159,19 +207,24 @@ def _is_blacklisted_template(template_name: str, expression: str = "", *, datase
     Returns:
         bool: 在黑名单中返回 True。
     """
-    if dataset_id == "fundamental6" and template_name in FUNDAMENTAL6_PROTECTED_TEMPLATES:
+    effective_dataset_id = policy.dataset_id if policy is not None else dataset_id
+    protected_templates = policy.protected_templates if policy is not None else set()
+    blocked_name_substrings = (
+        policy.blacklisted_template_name_substrings if policy is not None else ()
+    )
+    if template_name in protected_templates:
         return False
-    if dataset_id:
-        _load_blacklist(dataset_id)
-        cached = _BLACKLIST_CACHE.get(dataset_id, {})
+    if effective_dataset_id:
+        _load_blacklist(effective_dataset_id)
+        cached = _BLACKLIST_CACHE.get(effective_dataset_id, {})
         if template_name in cached.get("names", set()):
             return True
         for pattern in cached.get("patterns", []):
             if pattern in expression:
                 return True
-        # fundamental6 特例：group_ratio_delta_rank 全系列黑名单
-        if dataset_id == "fundamental6" and "group_ratio_delta_rank" in template_name:
-            return True
+        for blocked_substring in blocked_name_substrings:
+            if blocked_substring and blocked_substring in template_name:
+                return True
     else:
         # 无 dataset_id：仅检查跨数据集默认规则
         for rule in _load_default_avoid_rules():
@@ -205,7 +258,11 @@ def tokenize_field_name(field_name: str) -> list[str]:
     return [token for token in _TOKENIZE_REGEX.split(field_name.lower()) if token]
 
 
-def score_partner_candidate(field_name: str, partner_name: str) -> int:
+def score_partner_candidate(
+    field_name: str,
+    partner_name: str,
+    policy: DatasetExpressionPolicy,
+) -> int:
     """
     启发式打分两个字段是否适合作为比值配对。
 
@@ -243,41 +300,30 @@ def score_partner_candidate(field_name: str, partner_name: str) -> int:
     score = 0
     # Hard-code a few high-conviction ratio pairings so the search prefers
     # combinations already hinted by this account's submitted alpha history.
-    preferred_partners = RATIO_PARTNER_CANDIDATES.get(field_name, ())
+    preferred_partners = policy.ratio_partner_candidates.get(field_name, ())
     if partner_name in preferred_partners:
         score += 180
         preferred_rank = preferred_partners.index(partner_name)
         score += max(0, 30 - preferred_rank * 5)
-    if partner_name in RATIO_KEYWORDS.get(field_name, ()):
+    if partner_name in policy.ratio_keywords.get(field_name, ()):
         score += 100
-    if field_name in RATIO_KEYWORDS.get(partner_name, ()):
+    if field_name in policy.ratio_keywords.get(partner_name, ()):
         score += 80
     if field_tokens & partner_tokens:
         score += 10 * len(field_tokens & partner_tokens)
     for token in field_tokens:
         if token and token in partner_name:
             score += 5
-    if partner_name in {
-        "assets",
-        "equity",
-        "debt",
-        "liabilities",
-        "cash",
-        "enterprise_value",
-        "cap",
-    }:
-        score += 15
-    if partner_name in {"fnd6_mkvalt", "fnd6_mkvaltq", "liabilities_curr"}:
-        score += 25
+    score += int(policy.preferred_partner_score_bonuses.get(partner_name, 0))
     return score
 
 
 def discover_partner_fields(
     field_name: str,
     all_fields: Sequence[dict[str, Any]],
+    policy: DatasetExpressionPolicy,
     *,
     limit: int = 4,
-    use_curated_heuristics: bool = True,
 ) -> list[str]:
     """
     为比值类模板扩展寻找可能合适的配对字段。
@@ -304,7 +350,7 @@ def discover_partner_fields(
         >>> print(partners)
         ['cap', 'assets']
     """
-    if not use_curated_heuristics:
+    if not policy.use_curated_heuristics:
         return []
 
     candidates: list[tuple[int, str]] = []
@@ -314,7 +360,7 @@ def discover_partner_fields(
 
     # Seed the candidate list with curated pairings first so extremely
     # important ratios like debt/cap are never crowded out by weaker matches.
-    for partner_name in RATIO_PARTNER_CANDIDATES.get(field_name, ()):
+    for partner_name in policy.ratio_partner_candidates.get(field_name, ()):
         if partner_name == field_name:
             continue
         if partner_name not in available_by_name and partner_name not in ALLOWED_EXTERNAL_RATIO_PARTNERS:
@@ -326,7 +372,7 @@ def discover_partner_fields(
         partner_type = choose_field_type(item)
         if partner_name == field_name or partner_type != "MATRIX":
             continue
-        score = score_partner_candidate(field_name, partner_name)
+        score = score_partner_candidate(field_name, partner_name, policy)
         if score <= 0:
             continue
         candidates.append((score, partner_name))
@@ -877,7 +923,7 @@ def build_feedback_mutations(
     field_name: str,
     field_feedback: dict[str, Any] | None,
     *,
-    dataset_id: str = "",
+    expression_policy: DatasetExpressionPolicy | None = None,
 ) -> list[tuple[str, str, int]]:
     """
     基于历史失败检查结果生成额外的表达式变异候选。
@@ -889,7 +935,7 @@ def build_feedback_mutations(
         field_name (str): 字段名称。
         field_feedback ( | Nonedict[str, Any]]): 字段反馈数据，
             包含 failed_check_counts、best_expression、best_score 等。
-        dataset_id (str): 数据集 ID，用于按数据集过滤黑名单模板。
+        expression_policy: 数据集表达式策略，用于按数据集过滤黑名单模板。
 
     Returns:
         list[tuple[str, str, int]]: 变异表达式列表。
@@ -931,14 +977,14 @@ def build_feedback_mutations(
     for delta, std, pri in _vol_scaled_windows:
         name = f"iter_group_vol_scaled_delta_{delta}_{std}"
         expr = f"group_rank(ts_delta(ts_backfill({field_name}, {bw}), {delta}) / ts_std_dev(ts_backfill({field_name}, {bw}), {std}), subindustry)"
-        if not _is_blacklisted_template(name, expr, dataset_id=dataset_id):
+        if not _is_blacklisted_template(name, expr, policy=expression_policy):
             mutations.append((name, expr, pri))
 
     # backfill window variants for vol-scaled
     for bf_window, pri in [(180, 184), (260, 182)]:
         name = f"iter_group_vol_scaled_delta_63_126_bf{bf_window}"
         expr = f"group_rank(ts_delta(ts_backfill({field_name}, {bf_window}), 63) / ts_std_dev(ts_backfill({field_name}, {bf_window}), 126), subindustry)"
-        if not _is_blacklisted_template(name, expr, dataset_id=dataset_id):
+        if not _is_blacklisted_template(name, expr, policy=expression_policy):
             mutations.append((name, expr, pri))
 
     # v5: 去掉 iter_group_mean_spread_over_std_5_20_20 和 iter_rank_mean_spread_over_std_5_20_20
@@ -1038,7 +1084,7 @@ def build_feedback_mutations(
             bf_suffix = f"_bf{bf_val}" if bf is not None else ""
             name = f"iter_nearpass_vol_scaled_{delta}_{std}{bf_suffix}"
             expr = f"group_rank(ts_delta(ts_backfill({field_name}, {bf_val}), {delta}) / ts_std_dev(ts_backfill({field_name}, {bf_val}), {std}), subindustry)"
-            if not _is_blacklisted_template(name, expr, dataset_id=dataset_id):
+            if not _is_blacklisted_template(name, expr, policy=expression_policy):
                 mutations.append((name, expr, pri))
 
     if CHECK_LOW_TURNOVER in dominant_names:
@@ -1145,100 +1191,17 @@ def _build_matrix_templates(
     field_name: str,
     bw: int,
     all_fields: Sequence[dict[str, Any]],
-    use_dataset_heuristics: bool,
-    *,
-    dataset_id: str = "",
+    expression_policy: DatasetExpressionPolicy,
 ) -> tuple[list[tuple[str, str, int]], list[tuple[str, str, int]]]:
     """为 MATRIX 类型字段构建多样化和 legacy 模板候选。
-
-    Args:
-        dataset_id: 数据集 ID，用于按数据集过滤黑名单模板。
 
     Returns:
         (diversified_templates, legacy_templates) 两个列表。
     """
-    # delta_over_std 模板的窗口配置: (delta, std, priority)
-    # fundamental6 用长窗口（季度更新数据），其他数据集用短窗口
-    if use_dataset_heuristics:
-        _delta_over_std_windows: list[tuple[int, int, int]] = [
-            (21, 63, 148),
-            (63, 126, 144),
-            (63, 252, 146),
-            (126, 252, 142),
-            (252, 504, 140),
-        ]
-    else:
-        _delta_over_std_windows: list[tuple[int, int, int]] = [
-            (5, 20, 176),
-            (15, 40, 172),
-            (10, 60, 170),
-            (20, 60, 174),
-            (25, 90, 168),
-            (30, 120, 166),
-        ]
+    delta_over_std_windows = expression_policy.matrix_delta_over_std_windows
 
     diversified: list[tuple[str, str, int]] = []
-    if use_dataset_heuristics:
-        # Account feedback from /users/self/alphas shows these families are
-        # materially stronger on fundamental6 than long-window delta/std.
-        diversified.extend(
-            [
-                (
-                    "account_neutralize_zscore_decay_63_industry",
-                    f"ts_decay_linear(group_neutralize(ts_zscore(ts_backfill({field_name}, 240), 63), industry), 20)",
-                    214,
-                ),
-                (
-                    "account_group_backfill_504_subindustry",
-                    f"group_rank(ts_backfill({field_name}, {bw}), subindustry)",
-                    207,
-                ),
-                (
-                    "account_group_zscore_60_subindustry",
-                    f"group_rank(ts_zscore({field_name}, 60), subindustry)",
-                    210,
-                ),
-                ("account_ts_rank_60", f"rank(ts_rank({field_name}, 60))", 208),
-                ("account_ts_rank_200", f"rank(ts_rank({field_name}, 200))", 204),
-                (
-                    "account_rank_zscore_240",
-                    f"rank(ts_zscore(ts_backfill({field_name}, 240), 240))",
-                    202,
-                ),
-                (
-                    "account_backfill_zscore_decay_63_subindustry",
-                    f"group_rank(ts_decay_linear(ts_zscore(ts_backfill({field_name}, {bw}), 63), 20), subindustry)",
-                    205,
-                ),
-                (
-                    f"account_rank_backfill_{bw}",
-                    f"rank(ts_backfill({field_name}, {bw}))",
-                    200,
-                ),
-                (
-                    "account_group_decay_63_subindustry",
-                    f"group_rank(ts_decay_linear(ts_backfill({field_name}, {bw}), 63), subindustry)",
-                    198,
-                ),
-                (
-                    "account_ir_60",
-                    f"rank(ts_mean({field_name}, 60) / ts_std_dev({field_name}, 60))",
-                    196,
-                ),
-                (
-                    "account_group_ir_60_subindustry",
-                    f"group_rank(ts_mean({field_name}, 60) / ts_std_dev({field_name}, 60), subindustry)",
-                    204,
-                ),
-                (
-                    "account_ir_60_decay_20",
-                    f"rank(ts_decay_linear(ts_mean({field_name}, 60) / ts_std_dev({field_name}, 60), 20))",
-                    203,
-                ),
-            ]
-        )
-
-    for delta, std, pri in _delta_over_std_windows:
+    for delta, std, pri in delta_over_std_windows:
         diversified.append(
             (
                 f"group_delta_over_std_subindustry_{delta}_{std}",
@@ -1247,77 +1210,23 @@ def _build_matrix_templates(
             )
         )
 
-    # 非比率单字段多样化模板 — fundamental6 用长窗口
-    if use_dataset_heuristics:
-        diversified.extend(
-            [
-                (
-                    "group_delta_over_std_industry_63_126",
-                    f"group_rank(ts_delta(ts_backfill({field_name}, {bw}), 63) / ts_std_dev(ts_backfill({field_name}, {bw}), 126), industry)",
-                    138 + DELTA_STD_PRIORITY_BOOST,
-                ),
-                (
-                    f"group_short_long_mean_spread_subindustry_63_{bw}",
-                    f"group_rank(ts_mean(ts_backfill({field_name}, {bw}), 63) - ts_mean(ts_backfill({field_name}, {bw}), {bw}), subindustry)",
-                    164,
-                ),
-                (
-                    "group_zscore_subindustry_63",
-                    f"group_rank(ts_zscore(ts_backfill({field_name}, {bw}), 63), subindustry)",
-                    161,
-                ),
-                (
-                    f"rank_mean_spread_over_std_63_{bw}_126",
-                    f"rank((ts_mean(ts_backfill({field_name}, {bw}), 63) - ts_mean(ts_backfill({field_name}, {bw}), {bw})) / ts_std_dev(ts_backfill({field_name}, {bw}), 126))",
-                    158,
-                ),
-                (
-                    f"rank_zscore_spread_63_{bw}",
-                    f"rank(ts_zscore(ts_backfill({field_name}, {bw}), 63) - ts_zscore(ts_backfill({field_name}, {bw}), {bw}))",
-                    154,
-                ),
-                (
-                    "group_rank_delta_of_rank_63",
-                    f"group_rank(ts_delta(rank(ts_backfill({field_name}, {bw})), 63), subindustry)",
-                    150,
-                ),
-            ]
-        )
-    else:
-        diversified.extend(
-            [
-                (
-                    "group_delta_over_std_industry_20_60",
-                    f"group_rank(ts_delta(ts_backfill({field_name}, {bw}), 20) / ts_std_dev(ts_backfill({field_name}, {bw}), 60), industry)",
-                    166 + DELTA_STD_PRIORITY_BOOST,
-                ),
-                (
-                    f"group_short_long_mean_spread_subindustry_20_{bw}",
-                    f"group_rank(ts_mean(ts_backfill({field_name}, {bw}), 20) - ts_mean(ts_backfill({field_name}, {bw}), {bw}), subindustry)",
-                    164,
-                ),
-                (
-                    "group_zscore_subindustry_60",
-                    f"group_rank(ts_zscore(ts_backfill({field_name}, {bw}), 60), subindustry)",
-                    161,
-                ),
-                (
-                    f"rank_mean_spread_over_std_20_{bw}_60",
-                    f"rank((ts_mean(ts_backfill({field_name}, {bw}), 20) - ts_mean(ts_backfill({field_name}, {bw}), {bw})) / ts_std_dev(ts_backfill({field_name}, {bw}), 60))",
-                    158,
-                ),
-                (
-                    f"rank_zscore_spread_20_{bw}",
-                    f"rank(ts_zscore(ts_backfill({field_name}, {bw}), 20) - ts_zscore(ts_backfill({field_name}, {bw}), {bw}))",
-                    154,
-                ),
-                (
-                    "group_rank_delta_of_rank_20",
-                    f"group_rank(ts_delta(rank(ts_backfill({field_name}, {bw})), 20), subindustry)",
-                    150,
-                ),
-            ]
-        )
+    diversified_specs = expression_policy.matrix_diversified_template_specs
+    diversified.extend(
+        [
+            (
+                name,
+                expr,
+                pri + DELTA_STD_PRIORITY_BOOST
+                if "delta_over_std" in name
+                else pri,
+            )
+            for name, expr, pri in _render_template_specs(
+                diversified_specs,
+                field=field_name,
+                backfill_window=bw,
+            )
+        ]
+    )
 
     legacy: list[tuple[str, str, int]] = [
         ("raw_field", field_name, 145),
@@ -1325,11 +1234,11 @@ def _build_matrix_templates(
         ("group_rank_industry", f"group_rank({field_name}, industry)", 141),
         ("rank_raw_field", f"rank({field_name})", 118),
     ]
-    if use_dataset_heuristics and field_name in POSITIVE_RAW_FIELDS:
+    if expression_policy.use_curated_heuristics and field_name in expression_policy.positive_raw_fields:
         legacy.append(("neg_raw_field", f"-{field_name}", 132))
-    elif use_dataset_heuristics and field_name in NEGATIVE_RAW_FIELDS:
+    elif expression_policy.use_curated_heuristics and field_name in expression_policy.negative_raw_fields:
         legacy.append(("neg_raw_field", f"-{field_name}", 144))
-    elif use_dataset_heuristics:
+    elif expression_policy.use_curated_heuristics:
         legacy.append(("neg_raw_field", f"-{field_name}", 128))
 
     # 比率配对模板
@@ -1337,38 +1246,12 @@ def _build_matrix_templates(
     partner_names = discover_partner_fields(
         field_name,
         all_fields,
-        limit=6 if use_dataset_heuristics else 4,
-        use_curated_heuristics=use_dataset_heuristics,
+        expression_policy,
+        limit=expression_policy.partner_limit,
     )
 
-    # 比率配对模板窗口配置: (delta, std, priority)
-    # fundamental6 用长窗口避免 quarterly 数据下短 delta 全为 0/NaN
-    if use_dataset_heuristics:
-        _ratio_delta_rank_windows: list[tuple[int, None, int]] = [
-            (63, None, 186),
-            (126, None, 180),
-            (252, None, 172),
-        ]
-        _ratio_delta_over_std_windows: list[tuple[int, int, int]] = [
-            (21, 63, 176),
-            (63, 126, 172),
-            (63, 252, 174),
-            (126, 252, 168),
-        ]
-    else:
-        _ratio_delta_rank_windows: list[tuple[int, None, int]] = [
-            (3, None, 188),
-            (5, None, 184),
-            (10, None, 176),
-        ]
-        _ratio_delta_over_std_windows: list[tuple[int, int, int]] = [
-            (5, 20, 180),
-            (15, 40, 176),
-            (10, 60, 174),
-            (20, 60, 178),
-            (25, 90, 172),
-            (30, 120, 170),
-        ]
+    ratio_delta_rank_windows = expression_policy.ratio_delta_rank_windows
+    ratio_delta_over_std_windows = expression_policy.ratio_delta_over_std_windows
 
     for partner in partner_names:
         if partner not in fields_by_name and partner not in ALLOWED_EXTERNAL_RATIO_PARTNERS:
@@ -1376,18 +1259,18 @@ def _build_matrix_templates(
         ratio_expr = f"{field_name}/{partner}"
         ratio_label = f"{field_name}_over_{partner}"
         ratio_priority_boost = 0
-        if use_dataset_heuristics and (field_name, partner) in FUNDAMENTAL6_HIGH_CONVICTION_RATIO_PAIRS:
-            ratio_priority_boost = 18
+        if (field_name, partner) in expression_policy.high_conviction_ratio_pairs:
+            ratio_priority_boost = expression_policy.high_conviction_ratio_priority_boost
 
         # Delta rank 变体
-        for delta, _, pri in _ratio_delta_rank_windows:
+        for delta, pri in ratio_delta_rank_windows:
             name = f"group_ratio_delta_rank_{delta}_{ratio_label}"
             expr = f"group_rank(ts_delta(rank(ts_backfill({ratio_expr}, {bw})), {delta}), subindustry)"
-            if not _is_blacklisted_template(name, expr, dataset_id=dataset_id):
+            if not _is_blacklisted_template(name, expr, policy=expression_policy):
                 diversified.append((name, expr, pri + DELTA_STD_PRIORITY_BOOST + ratio_priority_boost))
 
         # Delta over std 变体
-        for delta, std, pri in _ratio_delta_over_std_windows:
+        for delta, std, pri in ratio_delta_over_std_windows:
             diversified.append(
                 (
                     f"group_ratio_delta_over_std_{delta}_{std}_{ratio_label}",
@@ -1396,74 +1279,30 @@ def _build_matrix_templates(
                 )
             )
 
-        # fundamental6 用长窗口, 其他数据集保留短窗口
-        if use_dataset_heuristics:
-            diversified.extend(
-                [
-                    (
-                        f"group_ratio_zscore_{ratio_label}",
-                        f"group_rank(ts_zscore(ts_backfill({ratio_expr}, {bw}), 63), subindustry)",
-                        160 + ratio_priority_boost,
-                    ),
-                    (
-                        f"ratio_mean_spread_over_std_{ratio_label}",
-                        f"rank((ts_mean(ts_backfill({ratio_expr}, {bw}), 63) - ts_mean(ts_backfill({ratio_expr}, {bw}), {bw})) / ts_std_dev(ts_backfill({ratio_expr}, {bw}), 126))",
-                        156 + ratio_priority_boost,
-                    ),
-                    (
-                        f"ratio_zscore_spread_{ratio_label}",
-                        f"rank(ts_zscore(ts_backfill({ratio_expr}, {bw}), 63) - ts_zscore(ts_backfill({ratio_expr}, {bw}), {bw}))",
-                        152 + ratio_priority_boost,
-                    ),
-                ]
-            )
-        else:
-            diversified.extend(
-                [
-                    (
-                        f"group_ratio_zscore_{ratio_label}",
-                        f"group_rank(ts_zscore(ts_backfill({ratio_expr}, {bw}), 60), subindustry)",
-                        160,
-                    ),
-                    (
-                        f"ratio_mean_spread_over_std_{ratio_label}",
-                        f"rank((ts_mean(ts_backfill({ratio_expr}, {bw}), 20) - ts_mean(ts_backfill({ratio_expr}, {bw}), {bw})) / ts_std_dev(ts_backfill({ratio_expr}, {bw}), 60))",
-                        156,
-                    ),
-                    (
-                        f"ratio_zscore_spread_{ratio_label}",
-                        f"rank(ts_zscore(ts_backfill({ratio_expr}, {bw}), 20) - ts_zscore(ts_backfill({ratio_expr}, {bw}), {bw}))",
-                        152,
-                    ),
-                ]
-            )
-
-        legacy.extend(
+        ratio_diversified_specs = expression_policy.ratio_diversified_template_specs
+        diversified.extend(
             [
-                (f"raw_ratio_{ratio_label}", ratio_expr, 154 + ratio_priority_boost),
-                (
-                    f"group_rank_ratio_{ratio_label}",
-                    f"group_rank({ratio_expr}, subindustry)",
-                    152 + ratio_priority_boost,
-                ),
-                (f"ratio_{ratio_label}", f"rank({ratio_expr})", 148 + ratio_priority_boost),
-                (
-                    f"decay_ratio_{ratio_label}",
-                    f"rank(ts_decay_linear(ts_backfill({ratio_expr}, {bw}), 63))",
-                    126 + ratio_priority_boost,
-                ),
+                (name, expr, pri + ratio_priority_boost)
+                for name, expr, pri in _render_template_specs(
+                    ratio_diversified_specs,
+                    ratio_expr=ratio_expr,
+                    ratio_label=ratio_label,
+                    backfill_window=bw,
+                )
             ]
         )
 
-    if use_dataset_heuristics:
-        diversified = [
-            (
-                name,
-                expr,
-                pri + FUNDAMENTAL6_ACCOUNT_TEMPLATE_BOOST if name.startswith("account_") else pri,
-            )
-            for name, expr, pri in diversified
-        ]
+        legacy.extend(
+            [
+                (name, expr, pri + ratio_priority_boost)
+                for name, expr, pri in _render_template_specs(
+                    expression_policy.ratio_legacy_template_specs,
+                    ratio_expr=ratio_expr,
+                    ratio_label=ratio_label,
+                    backfill_window=bw,
+                )
+            ]
+        )
 
     return diversified, legacy
 
@@ -1480,6 +1319,7 @@ def build_expression_candidates(
     use_dataset_heuristics: bool = True,
     *,
     dataset_id: str = "",
+    expression_policy: DatasetExpressionPolicy | None = None,
 ) -> list[tuple[str, str, int]]:
     """
     为单个字段构建、变异、多样化并排序表达式候选。
@@ -1497,7 +1337,8 @@ def build_expression_candidates(
         field_feedback (dict[str, Any] | None): 字段反馈数据。
         global_failed_check_counts (dict[str, int] | None): 全局失败检查计数。
         use_dataset_heuristics (bool): 是否使用数据集启发式规则。
-        dataset_id (str): 数据集 ID，用于按数据集过滤黑名单模板。
+        dataset_id (str): 兼容保留；未显式传 expression_policy 时用于生成策略。
+        expression_policy: 数据集表达式策略；推荐由调用方显式传入。
 
     Returns:
         list[tuple[str, str, int]]: 最终的表达式候选列表，
@@ -1533,40 +1374,42 @@ def build_expression_candidates(
     all_fields = all_fields or []
     global_failed_check_counts = global_failed_check_counts or {}
     bw = get_backfill_window()
+    policy = expression_policy or get_dataset_expression_policy(
+        dataset_id,
+        use_curated_heuristics=use_dataset_heuristics,
+    )
 
     # Template selection is now driven by an externalizable library so we can
     # expand or shrink search coverage between runs without changing code.
-    raw_templates = template_library.get(field_type) or template_library.get("default", [])
+    raw_templates = _select_template_items(template_library, field_type, policy.dataset_id)
     templates = [
         (
             str(item["name"]),
             str(item["expression"]).format(field=field_name),
             int(item.get("priority", 0))
-            + (
-                _fundamental6_template_priority_adjustment(str(item["name"]))
-                if dataset_id == "fundamental6" and use_dataset_heuristics
-                else 0
-            ),
+            + _policy_template_priority_adjustment(str(item["name"]), policy),
         )
         for item in raw_templates
         if isinstance(item, dict)
         and "name" in item
         and "expression" in item
-        and not (
-            dataset_id == "fundamental6"
-            and str(item["name"]) in FUNDAMENTAL6_DISABLED_TEMPLATES
-        )
-        and not _is_blacklisted_template(str(item["name"]), str(item["expression"]), dataset_id=dataset_id)
+        and str(item["name"]) not in policy.disabled_templates
+        and not _is_blacklisted_template(str(item["name"]), str(item["expression"]), policy=policy)
     ]
-    templates.extend(build_feedback_mutations(field_name, field_feedback, dataset_id=dataset_id))
+    templates.extend(
+        build_feedback_mutations(
+            field_name,
+            field_feedback,
+            expression_policy=policy,
+        )
+    )
 
     if field_type == "MATRIX":
         diversified, legacy = _build_matrix_templates(
             field_name,
             bw,
             all_fields,
-            use_dataset_heuristics,
-            dataset_id=dataset_id,
+            policy,
         )
         templates.extend(diversified)
         templates.extend(legacy)
