@@ -25,6 +25,7 @@ from ..analysis.feedback import (
     choose_settings_variant_budget,
     is_legacy_family_disabled,
     is_template_disabled,
+    should_keep_template_for_feedback,
     should_skip_field_template_family,
 )
 from ..analysis.stats import historical_template_priority_bonus
@@ -36,7 +37,7 @@ from ..config import (
     SENTINEL_UNKNOWN,
     get_dataset_expression_policy,
 )
-from ..generators.expressions import classify_expression_family
+from ..generators.expressions import classify_expression_family, classify_template_stage
 from ..generators.expressions import (
     build_expression_candidates,
     build_template_metadata_index,
@@ -72,7 +73,7 @@ def build_pending_templates_for_field(
     template_stats: dict[str, dict[str, int]],
     attempted_keys: set[tuple[str, str, str, str]],
     prior_results: Sequence[FieldTestResult],
-) -> tuple[list[tuple[str, str, str, int, SettingsVariant, str]], int, int]:
+) -> tuple[list[tuple[str, str, str, str, int, SettingsVariant, str]], int, int]:
     """
     为单个字段构建真正可执行的模板与 settings 队列。
 
@@ -121,9 +122,12 @@ def build_pending_templates_for_field(
         dataset_id=args.dataset_id,
         expression_policy=build_ctx.expression_policy,
     )
-    pending_templates: list[tuple[str, str, str, int, SettingsVariant, str]] = []
+    pending_templates: list[tuple[str, str, str, str, int, SettingsVariant, str]] = []
     disabled_templates = 0
-    max_setting_variants = choose_settings_variant_budget(field_feedback)
+    max_setting_variants = choose_settings_variant_budget(
+        field_feedback,
+        expression_policy=build_ctx.expression_policy,
+    )
     for template_name, expression, priority in templates:
         template_metadata = get_template_metadata(template_name, expression, metadata_by_key)
         template_family = classify_expression_family(
@@ -131,9 +135,24 @@ def build_pending_templates_for_field(
             expression,
             template_metadata,
         )
+        template_stage = classify_template_stage(
+            template_name,
+            expression,
+            template_metadata,
+        )
         if build_ctx.include_templates and template_name not in build_ctx.include_templates:
             continue
         if template_name in build_ctx.exclude_templates:
+            continue
+        if not should_keep_template_for_feedback(
+            template_name,
+            expression,
+            priority,
+            field_feedback,
+            expression_policy=build_ctx.expression_policy,
+            template_metadata=template_metadata,
+        ):
+            disabled_templates += 1
             continue
         if should_skip_field_template_family(
             field_name,
@@ -172,13 +191,14 @@ def build_pending_templates_for_field(
                 (
                     template_name,
                     template_family,
+                    template_stage,
                     expression,
                     effective_priority,
                     settings_variant,
                     variant_fingerprint,
                 )
             )
-    pending_templates.sort(key=lambda item: (-item[3], item[0], item[2], item[5]))
+    pending_templates.sort(key=lambda item: (-item[4], item[0], item[3], item[6]))
     return pending_templates, disabled_templates, len(templates)
 
 
@@ -398,6 +418,7 @@ def print_dry_run_plan(
         for (
             template_name,
             _template_family,
+            _template_stage,
             expression,
             priority,
             _settings_variant,

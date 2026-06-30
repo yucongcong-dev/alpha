@@ -717,6 +717,7 @@ def build_failure_result(
     field_name: str,
     template_name: str,
     template_family: str = "",
+    template_stage: str = "",
     simulation_id: str | None,
     alpha_id: str | None,
     expression: str,
@@ -739,6 +740,7 @@ def build_failure_result(
         field_name: 字段名称。
         template_name: 模板名称。
         template_family: 模板家族。
+        template_stage: 模板层级。
         simulation_id: 模拟任务 ID（可能为 None）。
         alpha_id: Alpha ID（可能为 None）。
         expression: Alpha 表达式。
@@ -779,6 +781,7 @@ def build_failure_result(
         field_name=field_name,
         template_name=template_name,
         template_family=template_family,
+        template_stage=template_stage,
         simulation_id=simulation_id,
         alpha_id=alpha_id,
         status=status,
@@ -1073,6 +1076,7 @@ def run_field_test(
         field_name=str(first_non_empty(field.get("name"), field.get("id"), SENTINEL_UNKNOWN)),
         template_name=template_name,
         template_family=str(first_non_empty(field.get("template_family"), "")),
+        template_stage=str(first_non_empty(field.get("template_stage"), "")),
         expression=expression,
         settings_fingerprint=settings_fingerprint,
         template_library_fingerprint=template_library_fingerprint,

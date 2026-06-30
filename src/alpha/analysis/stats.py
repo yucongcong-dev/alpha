@@ -154,6 +154,7 @@ def load_existing_results(path: str) -> list[FieldTestResult]:
                     field_name=str(row.get(STAT_FIELD_FIELD_NAME, SENTINEL_UNKNOWN)),
                     template_name=str(row.get(STAT_FIELD_TEMPLATE_NAME, "")),
                     template_family=str(row.get("template_family", "")),
+                    template_stage=str(row.get("template_stage", "")),
                     simulation_id=row.get("simulation_id"),
                     alpha_id=row.get("alpha_id"),
                     status=str(row.get(API_KEY_STATUS, SENTINEL_UNKNOWN_STATUS)),
@@ -949,6 +950,8 @@ def compile_field_feedback(results: Sequence[FieldTestResult]) -> dict[str, dict
                 "best_score": STATS_DEFAULT_SCORE,
                 "best_expression": "",
                 "best_template_name": "",
+                "best_template_family": "",
+                "best_template_stage": "",
                 STAT_FIELD_ATTEMPTED_TEMPLATES: 0,
                 STAT_FIELD_FAILED_CHECK_COUNTS: {},
             },
@@ -968,6 +971,8 @@ def compile_field_feedback(results: Sequence[FieldTestResult]) -> dict[str, dict
             summary["best_score"] = score
             summary["best_expression"] = result.expression
             summary["best_template_name"] = result.template_name
+            summary["best_template_family"] = result.template_family
+            summary["best_template_stage"] = result.template_stage
     return feedback
 
 

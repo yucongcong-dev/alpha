@@ -28,6 +28,7 @@ DEFAULT_TEMPLATE_PRIORITY_START = 1000
 _OPTIONAL_TEMPLATE_METADATA_KEYS = (
     "family",
     "layer",
+    "stage",
     "requires_partner_field",
     "field_kinds",
     "dataset_tags",
@@ -40,6 +41,25 @@ _BUILTIN_TEMPLATE_LIBRARY_FILE = os.path.join(
     "data",
     "worldquant_template_library.json",
 )
+
+
+def _infer_template_stage(item: dict[str, object]) -> str:
+    """为未显式标注 stage 的模板推断搜索层级。"""
+    explicit_stage = str(item.get("stage", "")).strip().lower()
+    if explicit_stage:
+        return explicit_stage
+    layer = str(item.get("layer", "")).strip().lower()
+    name = str(item.get("name", "")).strip().lower()
+    dataset_tags = item.get("dataset_tags")
+    if isinstance(dataset_tags, list):
+        lowered_tags = {str(tag).strip().lower() for tag in dataset_tags}
+    else:
+        lowered_tags = set()
+    if "event" in layer or "event" in name or any("event" in tag for tag in lowered_tags):
+        return "event_conditioned"
+    if layer in {"group", "composite", "set", "account"}:
+        return "group_second_order"
+    return "first_order"
 
 
 def _default_priority_for_index(index: int) -> int:
@@ -251,11 +271,12 @@ def load_template_library(path: str) -> TemplateLibrary:
                         "name": item["name"].strip(),
                         "expression": resolved_expression,
                         "priority": priority,
+                        "stage": _infer_template_stage(item),
                     },
                     **{
                         key: item[key]
                         for key in _OPTIONAL_TEMPLATE_METADATA_KEYS
-                        if key in item
+                        if key in item and key != "stage"
                     },
                 )
             )

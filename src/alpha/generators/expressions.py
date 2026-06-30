@@ -42,11 +42,18 @@ from ..config import (
     EXPR_NEARPASS_BOOST_THRESHOLD,
     EXPR_RATIO_PENALTY_THRESHOLD,
     FEEDBACK_MUTATION_HIGHSCORE_THRESHOLD,
+    FEEDBACK_STAGE_GENERATE,
+    FEEDBACK_STAGE_PRUNE,
+    FEEDBACK_STAGE_RESIMULATE,
     DatasetExpressionPolicy,
     STATS_DEFAULT_SCORE,
+    TEMPLATE_STAGE_EVENT_CONDITIONED,
+    TEMPLATE_STAGE_FIRST_ORDER,
+    TEMPLATE_STAGE_GROUP_SECOND_ORDER,
     UNKNOWN_FAMILY,
     get_dataset_expression_policy,
     get_backfill_window,
+    resolve_feedback_stage,
 )
 from ..generators.field_transforms import build_field_view, build_ratio_expression
 from ..models.base import TemplateLibrary
@@ -74,7 +81,7 @@ def _runtime_template_metadata(item: dict[str, Any]) -> dict[str, Any]:
     """提取运行时需要的模板元数据。"""
     return {
         key: item[key]
-        for key in ("family", "layer", "requires_partner_field", "field_kinds", "dataset_tags")
+        for key in ("family", "layer", "stage", "requires_partner_field", "field_kinds", "dataset_tags")
         if key in item
     }
 
@@ -592,6 +599,41 @@ def classify_expression_family(
     return prefix or UNKNOWN_FAMILY
 
 
+def classify_template_stage(
+    template_name: str,
+    expression: str,
+    metadata: dict[str, Any] | None = None,
+) -> str:
+    """将模板归类到 first_order / group_second_order / event_conditioned 三层。"""
+    if metadata:
+        explicit_stage = str(metadata.get("stage", "")).strip().lower()
+        if explicit_stage:
+            return explicit_stage
+        layer = str(metadata.get("layer", "")).strip().lower()
+        if layer in {"group", "composite", "set", "account"}:
+            return TEMPLATE_STAGE_GROUP_SECOND_ORDER
+        if "event" in layer:
+            return TEMPLATE_STAGE_EVENT_CONDITIONED
+    lower_name = template_name.lower()
+    lower_expr = expression.lower()
+    if "event" in lower_name or "event" in lower_expr:
+        return TEMPLATE_STAGE_EVENT_CONDITIONED
+    family = classify_expression_family(template_name, expression, metadata)
+    if family in {
+        "group_rank_delta",
+        "group_vol_scaled_delta",
+        "group_mean_spread",
+        "group_zscore",
+        "group_ratio_level",
+        "legacy_group_level",
+        "neutralize_decay",
+    }:
+        return TEMPLATE_STAGE_GROUP_SECOND_ORDER
+    if "group_rank(" in lower_expr or "group_neutralize(" in lower_expr:
+        return TEMPLATE_STAGE_GROUP_SECOND_ORDER
+    return TEMPLATE_STAGE_FIRST_ORDER
+
+
 def is_legacy_family(
     template_name: str,
     expression: str,
@@ -1004,6 +1046,7 @@ def build_feedback_mutations(
     field_feedback: dict[str, Any] | None,
     *,
     expression_policy: DatasetExpressionPolicy | None = None,
+    feedback_stage: str = FEEDBACK_STAGE_GENERATE,
 ) -> list[tuple[str, str, int]]:
     """
     基于历史失败检查结果生成额外的表达式变异候选。
@@ -1041,7 +1084,7 @@ def build_feedback_mutations(
         (126, 252, 188),
         (252, 504, 186),
     ]
-    mutations: list[tuple[str, str, int]] = [
+    base_mutations: list[tuple[str, str, int]] = [
         (
             "iter_group_rank_delta_of_rank_63",
             f"group_rank(ts_delta(rank(ts_backfill({field_name}, {bw})), 63), subindustry)",
@@ -1058,19 +1101,19 @@ def build_feedback_mutations(
         name = f"iter_group_vol_scaled_delta_{delta}_{std}"
         expr = f"group_rank(ts_delta(ts_backfill({field_name}, {bw}), {delta}) / ts_std_dev(ts_backfill({field_name}, {bw}), {std}), subindustry)"
         if not _is_blacklisted_template(name, expr, policy=expression_policy):
-            mutations.append((name, expr, pri))
+            base_mutations.append((name, expr, pri))
 
     # backfill window variants for vol-scaled
     for bf_window, pri in [(180, 184), (260, 182)]:
         name = f"iter_group_vol_scaled_delta_63_126_bf{bf_window}"
         expr = f"group_rank(ts_delta(ts_backfill({field_name}, {bf_window}), 63) / ts_std_dev(ts_backfill({field_name}, {bf_window}), 126), subindustry)"
         if not _is_blacklisted_template(name, expr, policy=expression_policy):
-            mutations.append((name, expr, pri))
+            base_mutations.append((name, expr, pri))
 
     # v5: 去掉 iter_group_mean_spread_over_std_5_20_20 和 iter_rank_mean_spread_over_std_5_20_20
     # (已黑名单，Sharpe全部为负 + CONCENTRATED_WEIGHT)
     # 替换为长窗口季度版本
-    mutations.extend(
+    base_mutations.extend(
         [
             (
                 "iter_group_mean_spread_over_std_63_240_126",
@@ -1086,14 +1129,19 @@ def build_feedback_mutations(
     )
 
     if not field_feedback:
-        return mutations
+        return base_mutations if feedback_stage == FEEDBACK_STAGE_GENERATE else []
+
+    mutations = list(base_mutations)
 
     failed_counts = field_feedback.get("failed_check_counts", {})
     dominant_names = dominant_failed_check_names(failed_counts, limit=3)
     best_expression = str(field_feedback.get("best_expression", "")).strip()
     best_score = float(field_feedback.get("best_score", STATS_DEFAULT_SCORE))
 
-    if best_score >= EXPR_MUTATION_EXTEND_THRESHOLD:
+    if (
+        feedback_stage == FEEDBACK_STAGE_RESIMULATE
+        and best_score >= EXPR_MUTATION_EXTEND_THRESHOLD
+    ):
         mutations.extend(
             [
                 (
@@ -1120,7 +1168,13 @@ def build_feedback_mutations(
         )
 
     best_template_name = str(field_feedback.get("best_template_name", "")).strip() if field_feedback else ""
-    if best_template_name in {"account_rank_backfill_504", "account_ir_60"} or best_score >= 0.45:
+    if (
+        feedback_stage == FEEDBACK_STAGE_RESIMULATE
+        and (
+            best_template_name in {"account_rank_backfill_504", "account_ir_60"}
+            or best_score >= 0.45
+        )
+    ):
         mutations.extend(
             [
                 (
@@ -1147,7 +1201,7 @@ def build_feedback_mutations(
         )
 
     # Near-pass on vol-scaled: generate fine-tuned backfill/delta window variants
-    if best_score >= EXPR_NEARPASS_BOOST_THRESHOLD:
+    if feedback_stage == FEEDBACK_STAGE_RESIMULATE and best_score >= EXPR_NEARPASS_BOOST_THRESHOLD:
         # (delta, std, backfill_window | None, priority) — None = use default bw
         # v5: fundamental6 专用长窗口配置
         _nearpass_vol_scaled_configs: list[tuple[int, int, int | None, int]] = [
@@ -1167,7 +1221,7 @@ def build_feedback_mutations(
             if not _is_blacklisted_template(name, expr, policy=expression_policy):
                 mutations.append((name, expr, pri))
 
-    if CHECK_LOW_TURNOVER in dominant_names:
+    if feedback_stage != FEEDBACK_STAGE_GENERATE and CHECK_LOW_TURNOVER in dominant_names:
         mutations.extend(
             [
                 ("iter_rank_delta_3", f"rank(ts_delta(ts_backfill({field_name}, {bw}), 3))", 186),
@@ -1180,7 +1234,7 @@ def build_feedback_mutations(
             ]
         )
 
-    if (
+    if feedback_stage != FEEDBACK_STAGE_GENERATE and (
         CHECK_LOW_SUB_UNIVERSE_SHARPE in dominant_names
         or CHECK_CONCENTRATED_WEIGHT in dominant_names
     ):
@@ -1199,7 +1253,7 @@ def build_feedback_mutations(
             ]
         )
 
-    if best_expression:
+    if feedback_stage == FEEDBACK_STAGE_RESIMULATE and best_expression:
         mutations.extend(
             [
                 ("iter_flip_best", invert_expression(best_expression), 172),
@@ -1471,6 +1525,7 @@ def build_expression_candidates(
         dataset_id,
         use_curated_heuristics=use_dataset_heuristics,
     )
+    feedback_stage = resolve_feedback_stage(field_feedback, policy.feedback_loop_policy)
     field_view = build_field_view(field, policy)
 
     # Template selection is now driven by an externalizable library so we can
@@ -1507,6 +1562,7 @@ def build_expression_candidates(
             field_name,
             field_feedback,
             expression_policy=policy,
+            feedback_stage=feedback_stage,
         )
     )
 

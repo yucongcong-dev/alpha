@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from alpha.config import FieldTransformSpec, get_dataset_expression_policy
+from alpha.config import FieldTransformSpec, FieldTransformStage, get_dataset_expression_policy
 from alpha.generators.expressions import build_expression_candidates
-from alpha.generators.field_transforms import apply_transform_pipeline, build_field_view
+from alpha.generators.field_transforms import apply_transform_pipeline, build_field_view, iter_transform_stages
 
 
 def test_apply_transform_pipeline_backfill_then_winsorize() -> None:
@@ -11,6 +11,21 @@ def test_apply_transform_pipeline_backfill_then_winsorize() -> None:
         apply_transform_pipeline("cash_st", spec)
         == "winsorize(ts_backfill(cash_st, 120), std=4)"
     )
+
+
+def test_iter_transform_stages_prefers_explicit_stage_list() -> None:
+    spec = FieldTransformSpec(
+        stages=(
+            FieldTransformStage(kind="backfill", window=63),
+            FieldTransformStage(kind="winsorize", std=4.0),
+        ),
+        backfill_window=120,
+    )
+
+    stages = iter_transform_stages(spec)
+
+    assert [stage.kind for stage in stages] == ["backfill", "winsorize"]
+    assert stages[0].window == 63
 
 
 def test_build_field_view_uses_vec_avg_for_vector_fields() -> None:

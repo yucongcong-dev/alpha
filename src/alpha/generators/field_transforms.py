@@ -4,19 +4,37 @@ from __future__ import annotations
 
 from typing import Any
 
-from ..config import DatasetExpressionPolicy, FieldTransformSpec
+from ..config import DatasetExpressionPolicy, FieldTransformSpec, FieldTransformStage
 from ..models.base import FieldView
 from ..utils.helpers import choose_field_name, choose_field_type
+
+
+def iter_transform_stages(transform_spec: FieldTransformSpec) -> tuple[FieldTransformStage, ...]:
+    """返回字段预处理的 stage 列表，兼容旧 backfill/winsorize 配置。"""
+    if transform_spec.stages:
+        return transform_spec.stages
+    stages: list[FieldTransformStage] = []
+    if transform_spec.backfill_window > 0:
+        stages.append(FieldTransformStage(kind="backfill", window=transform_spec.backfill_window))
+    if transform_spec.winsorize_std is not None:
+        stages.append(FieldTransformStage(kind="winsorize", std=transform_spec.winsorize_std))
+    return tuple(stages)
+
+
+def apply_transform_stage(expression: str, stage: FieldTransformStage) -> str:
+    """应用单个字段预处理 stage。"""
+    if stage.kind == "backfill" and stage.window > 0:
+        return f"ts_backfill({expression}, {stage.window})"
+    if stage.kind == "winsorize" and stage.std is not None:
+        return f"winsorize({expression}, std={stage.std:g})"
+    return expression
 
 
 def apply_transform_pipeline(expression: str, transform_spec: FieldTransformSpec) -> str:
     """按配置顺序应用字段级预处理。"""
     output = expression
-    if transform_spec.backfill_window > 0:
-        output = f"ts_backfill({output}, {transform_spec.backfill_window})"
-    if transform_spec.winsorize_std is not None:
-        winsorize_std = transform_spec.winsorize_std
-        output = f"winsorize({output}, std={winsorize_std:g})"
+    for stage in iter_transform_stages(transform_spec):
+        output = apply_transform_stage(output, stage)
     return output
 
 

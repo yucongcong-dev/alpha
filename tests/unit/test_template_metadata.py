@@ -4,6 +4,7 @@ from alpha.generators.expressions import (
     apply_similarity_penalty,
     cap_templates_per_family,
     classify_expression_family,
+    classify_template_stage,
 )
 
 
@@ -45,3 +46,22 @@ def test_cap_templates_per_family_uses_metadata_family() -> None:
     )
 
     assert [name for name, _, _ in capped] == ["template_a", "template_b"]
+
+
+def test_classify_template_stage_prefers_explicit_metadata() -> None:
+    stage = classify_template_stage(
+        "custom_template",
+        "rank(close)",
+        {"stage": "event_conditioned"},
+    )
+
+    assert stage == "event_conditioned"
+
+
+def test_classify_template_stage_maps_group_expression_to_group_second_order() -> None:
+    stage = classify_template_stage(
+        "group_template",
+        "group_rank(ts_zscore(close, 60), subindustry)",
+    )
+
+    assert stage == "group_second_order"

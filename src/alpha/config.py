@@ -163,6 +163,15 @@ BACKFILL_WINDOW: int = 240
 
 
 @dataclass(frozen=True)
+class FieldTransformStage:
+    """字段预处理单个 stage 的配置。"""
+
+    kind: str
+    window: int = 0
+    std: float | None = None
+
+
+@dataclass(frozen=True)
 class FieldTransformSpec:
     """字段预处理流水线配置。
 
@@ -170,8 +179,30 @@ class FieldTransformSpec:
     backfill / winsorize 等字段级转换规则。
     """
 
+    stages: tuple[FieldTransformStage, ...] = ()
     backfill_window: int = 0
     winsorize_std: float | None = None
+
+
+@dataclass(frozen=True)
+class FeedbackPhasePolicy:
+    """单个 feedback 阶段的预算与门槛。"""
+
+    min_attempted_templates: int = 0
+    min_best_score: float = -999.0
+    settings_variant_budget: int = 3
+    enable_template_pruning: bool = False
+    enable_resimulation_mutations: bool = False
+    preferred_template_stages: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True)
+class FeedbackLoopPolicy:
+    """表达式搜索反馈闭环：generate -> prune -> resimulate。"""
+
+    generate: FeedbackPhasePolicy = field(default_factory=FeedbackPhasePolicy)
+    prune: FeedbackPhasePolicy = field(default_factory=FeedbackPhasePolicy)
+    resimulate: FeedbackPhasePolicy = field(default_factory=FeedbackPhasePolicy)
 
 
 @dataclass(frozen=True)
@@ -240,6 +271,7 @@ class DatasetExpressionPolicy:
     vector_field_transform: FieldTransformSpec = field(default_factory=FieldTransformSpec)
     ratio_numerator_transform: FieldTransformSpec = field(default_factory=FieldTransformSpec)
     ratio_denominator_transform: FieldTransformSpec = field(default_factory=FieldTransformSpec)
+    feedback_loop_policy: FeedbackLoopPolicy = field(default_factory=FeedbackLoopPolicy)
 
 
 # ============================================================================
@@ -462,6 +494,14 @@ STAT_FIELD_ATTEMPTED_TEMPLATES: str = "attempted_templates"
 
 UNKNOWN_FAMILY: str = "other"
 """classify_expression_family 中无法匹配任何已知模式时的默认家族名"""
+
+TEMPLATE_STAGE_FIRST_ORDER: str = "first_order"
+TEMPLATE_STAGE_GROUP_SECOND_ORDER: str = "group_second_order"
+TEMPLATE_STAGE_EVENT_CONDITIONED: str = "event_conditioned"
+
+FEEDBACK_STAGE_GENERATE: str = "generate"
+FEEDBACK_STAGE_PRUNE: str = "prune"
+FEEDBACK_STAGE_RESIMULATE: str = "resimulate"
 
 
 # ============================================================================
@@ -1085,9 +1125,42 @@ def get_dataset_expression_policy(
     expressions.py 只消费该策略对象，不再直接硬编码 fundamental6 细节。
     """
     default_transform = FieldTransformSpec()
-    matrix_transform = FieldTransformSpec(backfill_window=BACKFILL_WINDOW)
-    vector_transform = FieldTransformSpec(backfill_window=BACKFILL_WINDOW)
-    ratio_transform = FieldTransformSpec(backfill_window=BACKFILL_WINDOW)
+    matrix_transform = FieldTransformSpec(
+        stages=(FieldTransformStage(kind="backfill", window=BACKFILL_WINDOW),),
+        backfill_window=BACKFILL_WINDOW,
+    )
+    vector_transform = FieldTransformSpec(
+        stages=(FieldTransformStage(kind="backfill", window=BACKFILL_WINDOW),),
+        backfill_window=BACKFILL_WINDOW,
+    )
+    ratio_transform = FieldTransformSpec(
+        stages=(FieldTransformStage(kind="backfill", window=BACKFILL_WINDOW),),
+        backfill_window=BACKFILL_WINDOW,
+    )
+    default_feedback_loop_policy = FeedbackLoopPolicy(
+        generate=FeedbackPhasePolicy(
+            min_attempted_templates=0,
+            min_best_score=STATS_DEFAULT_SCORE,
+            settings_variant_budget=1,
+        ),
+        prune=FeedbackPhasePolicy(
+            min_attempted_templates=2,
+            min_best_score=STATS_DEFAULT_SCORE,
+            settings_variant_budget=2,
+            enable_template_pruning=True,
+        ),
+        resimulate=FeedbackPhasePolicy(
+            min_attempted_templates=3,
+            min_best_score=FEEDBACK_MUTATION_HIGHSCORE_THRESHOLD,
+            settings_variant_budget=3,
+            enable_template_pruning=True,
+            enable_resimulation_mutations=True,
+            preferred_template_stages=(
+                TEMPLATE_STAGE_GROUP_SECOND_ORDER,
+                TEMPLATE_STAGE_EVENT_CONDITIONED,
+            ),
+        ),
+    )
 
     if use_curated_heuristics is None:
         use_curated_heuristics = dataset_id == "fundamental6"
@@ -1111,6 +1184,7 @@ def get_dataset_expression_policy(
             vector_field_transform=vector_transform,
             ratio_numerator_transform=ratio_transform,
             ratio_denominator_transform=ratio_transform,
+            feedback_loop_policy=default_feedback_loop_policy,
         )
 
     if dataset_id == "fundamental6":
@@ -1173,6 +1247,7 @@ def get_dataset_expression_policy(
             vector_field_transform=vector_transform,
             ratio_numerator_transform=ratio_transform,
             ratio_denominator_transform=ratio_transform,
+            feedback_loop_policy=default_feedback_loop_policy,
         )
 
     return DatasetExpressionPolicy(
@@ -1193,7 +1268,30 @@ def get_dataset_expression_policy(
         vector_field_transform=vector_transform,
         ratio_numerator_transform=ratio_transform,
         ratio_denominator_transform=ratio_transform,
+        feedback_loop_policy=default_feedback_loop_policy,
     )
+
+
+def resolve_feedback_stage(
+    field_feedback: dict[str, Any] | None,
+    loop_policy: FeedbackLoopPolicy,
+) -> str:
+    """根据历史反馈判断字段当前处于 generate / prune / resimulate 哪一阶段。"""
+    if not field_feedback:
+        return FEEDBACK_STAGE_GENERATE
+    attempted = int(field_feedback.get(STAT_FIELD_ATTEMPTED_TEMPLATES, 0))
+    best_score = float(field_feedback.get("best_score", STATS_DEFAULT_SCORE))
+    if (
+        attempted >= loop_policy.resimulate.min_attempted_templates
+        and best_score >= loop_policy.resimulate.min_best_score
+    ):
+        return FEEDBACK_STAGE_RESIMULATE
+    if (
+        attempted >= loop_policy.prune.min_attempted_templates
+        and best_score >= loop_policy.prune.min_best_score
+    ):
+        return FEEDBACK_STAGE_PRUNE
+    return FEEDBACK_STAGE_GENERATE
 
 
 def apply_yaml_global_defaults(

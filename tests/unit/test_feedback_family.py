@@ -5,11 +5,12 @@ from __future__ import annotations
 import json
 
 from alpha.analysis.feedback import (
+    choose_settings_variant_budget,
     is_legacy_family_disabled,
     should_skip_field_template_family,
 )
 from alpha.analysis.stats import load_existing_results
-from alpha.config import get_dataset_expression_policy
+from alpha.config import get_dataset_expression_policy, resolve_feedback_stage
 
 
 def test_should_skip_field_template_family_prefers_metadata_family() -> None:
@@ -61,6 +62,7 @@ def test_load_existing_results_reads_template_family(tmp_path) -> None:
                         "field_name": "cash_st",
                         "template_name": "ts_rank_60",
                         "template_family": "ts_rank",
+                        "template_stage": "first_order",
                         "status": "simulated",
                         "submittable": False,
                         "submitted": False,
@@ -80,3 +82,31 @@ def test_load_existing_results_reads_template_family(tmp_path) -> None:
 
     assert len(results) == 1
     assert results[0].template_family == "ts_rank"
+    assert results[0].template_stage == "first_order"
+
+
+def test_feedback_stage_advances_to_resimulate_for_nearpass_fields() -> None:
+    policy = get_dataset_expression_policy("fundamental6")
+    field_feedback = {
+        "best_score": 0.30,
+        "attempted_templates": 4,
+    }
+
+    stage = resolve_feedback_stage(field_feedback, policy.feedback_loop_policy)
+
+    assert stage == "resimulate"
+
+
+def test_choose_settings_variant_budget_uses_feedback_stage_policy() -> None:
+    policy = get_dataset_expression_policy("fundamental6")
+    generate_budget = choose_settings_variant_budget(None, expression_policy=policy)
+    resimulate_budget = choose_settings_variant_budget(
+        {
+            "best_score": 0.30,
+            "attempted_templates": 4,
+        },
+        expression_policy=policy,
+    )
+
+    assert generate_budget == 1
+    assert resimulate_budget == 3

@@ -76,6 +76,7 @@ def test_load_template_library_preserves_optional_metadata(tmp_path) -> None:
                         "priority": 100,
                         "family": "custom_family",
                         "layer": "ratio",
+                        "stage": "first_order",
                         "requires_partner_field": False,
                     }
                 ]
@@ -88,7 +89,31 @@ def test_load_template_library_preserves_optional_metadata(tmp_path) -> None:
 
     assert library["default"][0]["family"] == "custom_family"
     assert library["default"][0]["layer"] == "ratio"
+    assert library["default"][0]["stage"] == "first_order"
     assert library["default"][0]["requires_partner_field"] is False
+
+
+def test_load_template_library_infers_stage_from_layer(tmp_path) -> None:
+    template_file = tmp_path / "library.json"
+    template_file.write_text(
+        json.dumps(
+            {
+                "default": [
+                    {
+                        "name": "group_custom",
+                        "expression": "group_rank({field}, subindustry)",
+                        "priority": 100,
+                        "layer": "group",
+                    }
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    library = load_template_library(str(template_file))
+
+    assert library["default"][0]["stage"] == "group_second_order"
 
 
 def test_ensure_dataset_template_library_fills_missing_priorities(

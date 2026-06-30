@@ -30,14 +30,19 @@ from ..config import (
     CHECK_LOW_SUB_UNIVERSE_SHARPE,
     CHECK_LOW_TURNOVER,
     DatasetExpressionPolicy,
+    FEEDBACK_STAGE_GENERATE,
+    FEEDBACK_STAGE_PRUNE,
+    FEEDBACK_STAGE_RESIMULATE,
     FEEDBACK_TEMPLATE_MIN_PRIORITY,
     get_dataset_expression_policy,
+    resolve_feedback_stage,
 )
 
 # 从 expressions 模块导入分类函数（唯一源）
 from ..generators.expressions import (
     _is_blacklisted_template,
     classify_expression_family,
+    classify_template_stage,
     dominant_failed_check_names,
     is_legacy_family,
 )
@@ -104,20 +109,28 @@ def build_historical_run_state(output_path: str, feedback_output_path: str) -> H
     )
 
 
-def choose_settings_variant_budget(field_feedback: dict[str, Any] | None) -> int:
+def choose_settings_variant_budget(
+    field_feedback: dict[str, Any] | None,
+    *,
+    expression_policy: DatasetExpressionPolicy | None = None,
+    dataset_id: str = "",
+) -> int:
     """
-    固定返回 3 组 settings 变体（精简后只有 3 组 always 变体）。
-
-    参照网站已通过 alpha 的 settings 规律，不再需要评分驱动的预算决策。
-    每个表达式固定尝试 decay=0/5/7, truncation=0.05/0.08, SUBINDUSTRY 的 3 组变体。
+    根据反馈阶段分配 settings 变体预算。
 
     Args:
         field_feedback (dict[str, Any] | None): 字段反馈字典（未使用，保留兼容）。
 
     Returns:
-        int: 固定返回 3。
+        int: 当前阶段允许的 settings 变体数量。
     """
-    return 3
+    policy = expression_policy or get_dataset_expression_policy(dataset_id)
+    stage = resolve_feedback_stage(field_feedback, policy.feedback_loop_policy)
+    if stage == FEEDBACK_STAGE_RESIMULATE:
+        return policy.feedback_loop_policy.resimulate.settings_variant_budget
+    if stage == FEEDBACK_STAGE_PRUNE:
+        return policy.feedback_loop_policy.prune.settings_variant_budget
+    return policy.feedback_loop_policy.generate.settings_variant_budget
 
 
 def should_stop_after_submittable(
@@ -315,10 +328,21 @@ def should_keep_template_for_feedback(
     if not field_feedback:
         return True
     policy = expression_policy or get_dataset_expression_policy(dataset_id)
+    feedback_stage = resolve_feedback_stage(field_feedback, policy.feedback_loop_policy)
+    stage_policy = (
+        policy.feedback_loop_policy.resimulate
+        if feedback_stage == FEEDBACK_STAGE_RESIMULATE
+        else policy.feedback_loop_policy.prune
+        if feedback_stage == FEEDBACK_STAGE_PRUNE
+        else policy.feedback_loop_policy.generate
+    )
+    if not stage_policy.enable_template_pruning:
+        return True
 
     dominant_counts = field_feedback.get("failed_check_counts", {})
     dominant_names = dominant_failed_check_names(dominant_counts, limit=4)
     family = classify_expression_family(template_name, expression, template_metadata)
+    template_stage = classify_template_stage(template_name, expression, template_metadata)
     lower_name = template_name.lower()
     lower_expr = expression.lower()
 
@@ -328,6 +352,12 @@ def should_keep_template_for_feedback(
         return True
     if template_name in policy.protected_templates:
         return True
+    if (
+        feedback_stage == FEEDBACK_STAGE_RESIMULATE
+        and stage_policy.preferred_template_stages
+        and template_stage not in stage_policy.preferred_template_stages
+    ):
+        return False
     protected_ratio = _is_high_conviction_ratio(expression, policy)
 
     # Historical results show these shapes are repeatedly too slow.

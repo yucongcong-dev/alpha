@@ -129,6 +129,9 @@ class FieldTestResult:
     template_family: str = ""
     """模板家族；优先使用模板元数据，缺失时留空并允许下游回退推断。"""
 
+    template_stage: str = ""
+    """模板搜索层级；如 first_order/group_second_order/event_conditioned。"""
+
     simulation_id: str | None = None
     """模拟任务的 ID"""
 
@@ -193,6 +196,7 @@ class FieldTestResult:
             "field_name": self.field_name,
             "template_name": self.template_name,
             "template_family": self.template_family,
+            "template_stage": self.template_stage,
             "simulation_id": self.simulation_id,
             "alpha_id": self.alpha_id,
             "status": self.status,
@@ -261,6 +265,7 @@ class FieldTestContext:
     template_name: str
     expression: str
     template_family: str = ""
+    template_stage: str = ""
     settings_fingerprint: str = ""
     template_library_fingerprint: str = ""
 
@@ -281,6 +286,7 @@ class FieldTestContext:
             field_name=self.field_name,
             template_name=self.template_name,
             template_family=self.template_family,
+            template_stage=self.template_stage,
             simulation_id=simulation_id,
             alpha_id=alpha_id,
             status=status,
@@ -312,6 +318,7 @@ class FieldTestContext:
             field_name=self.field_name,
             template_name=self.template_name,
             template_family=self.template_family,
+            template_stage=self.template_stage,
             simulation_id=simulation_id,
             alpha_id=alpha_id,
             status=status,

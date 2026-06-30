@@ -661,6 +661,7 @@ def auto_update_blacklist(
             "source": "auto_detected",
             "field_type": tresults[0].field_type,
             "template_family": tresults[0].template_family,
+            "template_stage": tresults[0].template_stage,
             "reason": "。".join(reason_parts) + "。",
             "fields_tested": fields_tested,
             "low_sharpe": low_sharpe_count,
