@@ -578,9 +578,9 @@ def score_failed_checks(failed_checks: Sequence[dict[str, Any]] | None) -> float
             - 如果没有有效检查项，返回 -10.0
 
     计算规则：
-        - 对于 LOW_ 开头的检查（如 LOW_SHARPE）: value / limit
-        - 对于 CONCENTRATED_WEIGHT: 1.0 - ((value - limit) / max(|limit|, 1e-9))
-        - 最终分数为所有检查项分数的平均值
+        - 使用统一“closeness”分数衡量离阈值有多近
+        - 对负阈值（如部分 LOW_SUB_UNIVERSE_SHARPE）也保持可比较
+        - 最终分数为所有检查项 closeness 的平均值
 
     Example:
         >>> failed_checks = [{"name": "LOW_SHARPE", "value": 0.9, "limit": 1.0}]
@@ -595,16 +595,11 @@ def score_failed_checks(failed_checks: Sequence[dict[str, Any]] | None) -> float
     score = 0.0
     counted = 0
     for check in checks:
-        name = str(check.get("name", SENTINEL_UNKNOWN_CHECK))
-        value = check.get("value")
-        limit = check.get("limit")
-        if not isinstance(value, (int, float)) or not isinstance(limit, (int, float)):
+        closeness = failed_check_closeness(check)
+        if closeness is None:
             continue
         counted += 1
-        if name.startswith("LOW_") and limit != 0:
-            score += value / limit
-        elif name == CHECK_CONCENTRATED_WEIGHT:
-            score += max(0.0, 1.0 - ((value - limit) / max(abs(limit), 1e-9)))
+        score += closeness
     if counted == 0:
         return STATS_FAILED_CHECK_DEFAULT_SCORE
     return score / counted
@@ -624,8 +619,9 @@ def failed_check_closeness(check: dict[str, Any]) -> float | None:
             - 如果无法计算，返回 None
 
     计算规则：
-        - 对于 LOW_ 开头的检查: value / limit
-        - 对于其他检查: limit / value（如果 value != 0）
+        - 统一按 gap / |limit| 归一化，避免负阈值时排序失真
+        - gap 越小，closeness 越接近 1
+        - 明显离阈值很远时可降到 0
 
     Example:
         >>> check = {"name": "LOW_SHARPE", "value": 0.9, "limit": 1.0}
@@ -636,13 +632,13 @@ def failed_check_closeness(check: dict[str, Any]) -> float | None:
     name = str(check.get("name", SENTINEL_UNKNOWN_CHECK))
     value = check.get("value")
     limit = check.get("limit")
-    if not isinstance(value, (int, float)) or not isinstance(limit, (int, float)) or limit == 0:
+    if not isinstance(value, (int, float)) or not isinstance(limit, (int, float)):
         return None
-    if name.startswith("LOW_"):
-        return value / limit
-    if value == 0:
+    gap = failed_check_gap(check)
+    scale = max(abs(limit), 1e-9)
+    if gap is None:
         return None
-    return limit / value
+    return max(0.0, 1.0 - (gap / scale))
 
 
 def failed_check_gap(check: dict[str, Any]) -> float | None:

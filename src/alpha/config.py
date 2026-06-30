@@ -481,6 +481,10 @@ FUNDAMENTAL6_DISABLED_TEMPLATES: set[str] = {
     "delta_5",
     "group_delta_5",
     "group_delta_5_MARKET",
+    "mean_diff_5_20",
+    "iter_group_vol_scaled_delta_63_126",
+    "iter_group_vol_scaled_delta_63_126_bf180",
+    "iter_group_vol_scaled_delta_63_126_bf260",
 }
 """fundamental6 上已明确偏弱、可直接停用的模板。"""
 
@@ -522,6 +526,8 @@ FUNDAMENTAL6_TEMPLATE_PRIORITY_PENALTIES: dict[str, int] = {
     "vol_scaled_delta_20_60": -820,
     "vol_scaled_delta_20_60_market": -820,
     "vol_scaled_delta_20_60_industry": -820,
+    "vec_avg_ts_corr_self_60": -820,
+    "vec_avg_3layer_zs_sector_decay": -820,
     "3layer_zscore_sector_decay": -820,
     "3layer_zscore_market_decay": -820,
     "3layer_rank_sector_decay": -820,
