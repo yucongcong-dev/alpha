@@ -56,7 +56,7 @@ from ..config import (
     resolve_feedback_stage,
 )
 from ..generators.field_transforms import build_field_view, build_ratio_expression
-from ..models.base import TemplateLibrary
+from ..models.base import TemplateCandidate, TemplateLibrary
 from ..utils.helpers import choose_field_name, choose_field_type
 
 # 预编译正则表达式（性能优化）
@@ -70,6 +70,9 @@ _DEFAULT_AVOID_RULES_CACHE: list[dict[str, str]] | None = None
 """跨数据集默认规避规则缓存（一次加载）。"""
 TemplateMetadataMap = dict[tuple[str, str], dict[str, Any]]
 """表达式构建阶段使用的模板元数据映射。key=(template_name, expression)"""
+
+TemplateSpec = tuple[str, str, int]
+"""配置模板规格：(name_template, expression_template, priority)。"""
 
 
 def _template_key(template_name: str, expression: str) -> tuple[str, str]:
@@ -164,18 +167,92 @@ def _select_template_items(
     return list(merged.values())
 
 
+def _candidate_metadata(
+    *,
+    family: str = "",
+    layer: str = "",
+    stage: str = "",
+    requires_partner_field: bool | None = None,
+) -> dict[str, Any]:
+    """构造候选模板的运行时元数据。"""
+    metadata: dict[str, Any] = {}
+    if family:
+        metadata["family"] = family
+    if layer:
+        metadata["layer"] = layer
+    if stage:
+        metadata["stage"] = stage
+    if requires_partner_field is not None:
+        metadata["requires_partner_field"] = requires_partner_field
+    return metadata
+
+
+def _enrich_candidate_metadata(
+    name: str,
+    expression: str,
+    metadata: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """补齐 family/stage/layer 等运行时元数据。"""
+    enriched = dict(metadata or {})
+    if not enriched.get("family"):
+        enriched["family"] = classify_expression_family(name, expression, enriched)
+    if not enriched.get("stage"):
+        enriched["stage"] = classify_template_stage(name, expression, enriched)
+    if not enriched.get("layer"):
+        enriched["layer"] = (
+            "group"
+            if enriched["stage"] == TEMPLATE_STAGE_GROUP_SECOND_ORDER
+            else "event"
+            if enriched["stage"] == TEMPLATE_STAGE_EVENT_CONDITIONED
+            else "first_order"
+        )
+    return enriched
+
+
+def _make_template_candidate(
+    name: str,
+    expression: str,
+    priority: int,
+    *,
+    metadata: dict[str, Any] | None = None,
+) -> TemplateCandidate:
+    """创建统一模板候选对象。"""
+    return TemplateCandidate(
+        name=name,
+        expression=expression,
+        priority=priority,
+        metadata=_enrich_candidate_metadata(name, expression, metadata),
+    )
+
+
+def _coerce_template_candidate(
+    template: TemplateCandidate | tuple[str, str, int],
+    *,
+    metadata_by_key: TemplateMetadataMap | None = None,
+) -> TemplateCandidate:
+    """兼容旧三元组模板输入，统一转换为 TemplateCandidate。"""
+    if isinstance(template, TemplateCandidate):
+        return template
+    name, expression, priority = template
+    metadata = (metadata_by_key or {}).get(_template_key(name, expression), {})
+    return _make_template_candidate(name, expression, priority, metadata=metadata)
+
+
 def _render_template_specs(
-    specs: Sequence[tuple[str, str, int]],
+    specs: Sequence[TemplateSpec],
+    *,
+    metadata: dict[str, Any] | None = None,
     **placeholders: Any,
-) -> list[tuple[str, str, int]]:
-    """将配置中的模板规格渲染为 (name, expression, priority) 列表。"""
-    rendered: list[tuple[str, str, int]] = []
+) -> list[TemplateCandidate]:
+    """将配置中的模板规格渲染为结构化模板候选。"""
+    rendered: list[TemplateCandidate] = []
     for name_template, expr_template, priority in specs:
         rendered.append(
-            (
+            _make_template_candidate(
                 name_template.format(**placeholders),
                 expr_template.format(**placeholders),
                 priority,
+                metadata=metadata,
             )
         )
     return rendered
@@ -209,6 +286,33 @@ def _load_default_avoid_rules() -> list[dict[str, str]]:
     return _DEFAULT_AVOID_RULES_CACHE
 
 
+def _normalize_pattern_rule(rule: dict[str, Any]) -> dict[str, str] | None:
+    """规范化黑名单 pattern 规则。"""
+    pattern = str(rule.get("pattern", "")).strip()
+    if not pattern:
+        return None
+    match_type = str(rule.get("type", "contains")).strip().lower() or "contains"
+    if match_type not in {"contains", "exact", "regex"}:
+        match_type = "contains"
+    return {"pattern": pattern, "type": match_type}
+
+
+def _match_pattern_rule(expression: str, rule: dict[str, str]) -> bool:
+    """按规则类型匹配表达式黑名单。"""
+    pattern = rule.get("pattern", "")
+    match_type = rule.get("type", "contains")
+    if not pattern:
+        return False
+    if match_type == "exact":
+        return expression.strip() == pattern
+    if match_type == "regex":
+        try:
+            return re.search(pattern, expression) is not None
+        except re.error:
+            return False
+    return pattern in expression
+
+
 def _load_blacklist(dataset_id: str) -> None:
     """按 dataset_id 加载专属黑名单文件 template_blacklist_{dataset_id}.json。"""
     global _BLACKLIST_CACHE
@@ -216,7 +320,8 @@ def _load_blacklist(dataset_id: str) -> None:
         return  # 已缓存
 
     names: set[str] = set()
-    patterns: list[str] = []
+    pattern_rules: list[dict[str, str]] = []
+    entries: list[dict[str, str]] = []
 
     # 1. 加载数据集专属黑名单文件
     project_root = _resolve_blacklist_project_root()
@@ -234,29 +339,64 @@ def _load_blacklist(dataset_id: str) -> None:
                     for item in ds_raw.get("blacklisted_templates", []):
                         if isinstance(item, dict) and item.get("name"):
                             names.add(item["name"])
+                            entries.append(
+                                {
+                                    "name": str(item.get("name", "")).strip(),
+                                    "template_stage": str(item.get("template_stage", "")).strip().lower(),
+                                    "template_family": str(item.get("template_family", "")).strip().lower(),
+                                }
+                            )
                     for rule in ds_raw.get("auto_avoid_rules", []):
-                        if isinstance(rule, dict) and rule.get("pattern"):
-                            patterns.append(rule["pattern"])
+                        if isinstance(rule, dict):
+                            normalized_rule = _normalize_pattern_rule(rule)
+                            if normalized_rule is not None:
+                                pattern_rules.append(normalized_rule)
             except (json.JSONDecodeError, OSError):
                 pass
             break  # 找到文件即停
 
     # 2. 加载跨数据集默认规避规则（对所有数据集生效）
     for rule in _load_default_avoid_rules():
-        if isinstance(rule, dict) and rule.get("pattern"):
-            if rule["pattern"] not in patterns:
-                patterns.append(rule["pattern"])
+        if isinstance(rule, dict):
+            normalized_rule = _normalize_pattern_rule(rule)
+            if normalized_rule is not None and normalized_rule not in pattern_rules:
+                pattern_rules.append(normalized_rule)
 
-    _BLACKLIST_CACHE[dataset_id] = {"names": names, "patterns": patterns}
+    _BLACKLIST_CACHE[dataset_id] = {
+        "names": names,
+        "pattern_rules": pattern_rules,
+        "entries": entries,
+    }
 
 
 def _is_blacklisted_template(
     template_name: str,
     expression: str = "",
     *,
+    template_metadata: dict[str, Any] | None = None,
     dataset_id: str = "",
     policy: DatasetExpressionPolicy | None = None,
 ) -> bool:
+    return (
+        _blacklist_match_reason(
+            template_name,
+            expression,
+            template_metadata=template_metadata,
+            dataset_id=dataset_id,
+            policy=policy,
+        )
+        is not None
+    )
+
+
+def _blacklist_match_reason(
+    template_name: str,
+    expression: str = "",
+    *,
+    template_metadata: dict[str, Any] | None = None,
+    dataset_id: str = "",
+    policy: DatasetExpressionPolicy | None = None,
+) -> str | None:
     """检查模板名称或表达式是否在指定数据集的黑名单中。
 
     Args:
@@ -273,24 +413,44 @@ def _is_blacklisted_template(
         policy.blacklisted_template_name_substrings if policy is not None else ()
     )
     if template_name in protected_templates:
-        return False
+        return None
+    current_family = classify_expression_family(template_name, expression, template_metadata)
+    current_stage = classify_template_stage(template_name, expression, template_metadata)
     if effective_dataset_id:
         _load_blacklist(effective_dataset_id)
         cached = _BLACKLIST_CACHE.get(effective_dataset_id, {})
-        if template_name in cached.get("names", set()):
-            return True
-        for pattern in cached.get("patterns", []):
-            if pattern in expression:
-                return True
+        matched_legacy_name = False
+        for entry in cached.get("entries", []):
+            if not isinstance(entry, dict) or entry.get("name") != template_name:
+                continue
+            entry_stage = str(entry.get("template_stage", "")).strip().lower()
+            entry_family = str(entry.get("template_family", "")).strip().lower()
+            if entry_stage:
+                if current_stage != entry_stage:
+                    continue
+                if entry_family and current_family and current_family != entry_family:
+                    continue
+                return f"name+stage{'+family' if entry_family else ''}"
+            if entry_family:
+                if current_family and current_family == entry_family:
+                    return "name+family"
+                continue
+            matched_legacy_name = True
+        if matched_legacy_name and not template_metadata and not expression:
+            return "legacy_name_only"
+        for rule in cached.get("pattern_rules", []):
+            if isinstance(rule, dict) and _match_pattern_rule(expression, rule):
+                return f"pattern:{rule.get('type', 'contains')}"
         for blocked_substring in blocked_name_substrings:
             if blocked_substring and blocked_substring in template_name:
-                return True
+                return "policy_name_substring"
     else:
         # 无 dataset_id：仅检查跨数据集默认规则
         for rule in _load_default_avoid_rules():
-            if isinstance(rule, dict) and rule.get("pattern", "") in expression:
-                return True
-    return False
+            normalized_rule = _normalize_pattern_rule(rule) if isinstance(rule, dict) else None
+            if normalized_rule and _match_pattern_rule(expression, normalized_rule):
+                return f"default_pattern:{normalized_rule.get('type', 'contains')}"
+    return None
 
 
 def tokenize_field_name(field_name: str) -> list[str]:
@@ -450,8 +610,8 @@ def discover_partner_fields(
 
 
 def sort_templates_by_priority(
-    templates: Sequence[tuple[str, str, int]],
-) -> list[tuple[str, str, int]]:
+    templates: Sequence[TemplateCandidate | tuple[str, str, int]],
+) -> list[TemplateCandidate]:
     """
     按有效优先级从高到低排序候选模板。
 
@@ -472,13 +632,14 @@ def sort_templates_by_priority(
         'high'
     """
     # Higher-priority templates run first so likely winners are tested earlier.
-    return sorted(templates, key=lambda item: (-item[2], item[0], item[1]))
+    normalized = [_coerce_template_candidate(template) for template in templates]
+    return sorted(normalized, key=lambda item: (-item.priority, item.name, item.expression))
 
 
 def limit_templates(
-    templates: list[tuple[str, str, int]],
+    templates: list[TemplateCandidate | tuple[str, str, int]],
     max_templates_per_field: int,
-) -> list[tuple[str, str, int]]:
+) -> list[TemplateCandidate]:
     """
     在排序与多样化之后应用字段级模板数量上限。
 
@@ -499,9 +660,10 @@ def limit_templates(
         >>> print(len(limited))
         2
     """
+    normalized = [_coerce_template_candidate(template) for template in templates]
     if max_templates_per_field <= 0:
-        return templates
-    return templates[:max_templates_per_field]
+        return normalized
+    return normalized[:max_templates_per_field]
 
 
 def classify_expression_family(
@@ -690,11 +852,11 @@ _SIMILARITY_PENALTY_OFFSETS: dict[str, int] = {
 
 
 def apply_similarity_penalty(
-    templates: Sequence[tuple[str, str, int]],
+    templates: Sequence[TemplateCandidate | tuple[str, str, int]],
     legacy_similarity_penalty: int,
     *,
     metadata_by_key: TemplateMetadataMap | None = None,
-) -> list[tuple[str, str, int]]:
+) -> list[TemplateCandidate]:
     """
     对 legacy 形态模板施加相似度惩罚，让多样化候选优先运行。
 
@@ -721,16 +883,24 @@ def apply_similarity_penalty(
         >>> print(penalized[0][2])  # raw 字段优先级降低
         70
     """
-    penalized: list[tuple[str, str, int]] = []
-    for name, expression, priority in templates:
+    penalized: list[TemplateCandidate] = []
+    for raw_template in templates:
+        template = _coerce_template_candidate(raw_template, metadata_by_key=metadata_by_key)
         family = classify_expression_family(
-            name,
-            expression,
-            (metadata_by_key or {}).get(_template_key(name, expression)),
+            template.name,
+            template.expression,
+            template.metadata,
         )
         offset = _SIMILARITY_PENALTY_OFFSETS.get(family)
         penalty = max(legacy_similarity_penalty - offset, 0) if offset is not None else 0
-        penalized.append((name, expression, priority - penalty))
+        penalized.append(
+            _make_template_candidate(
+                template.name,
+                template.expression,
+                template.priority - penalty,
+                metadata=template.metadata,
+            )
+        )
     return penalized
 
 
@@ -946,12 +1116,12 @@ def adaptive_template_priority_adjustment(
 
 
 def apply_adaptive_priority(
-    templates: Sequence[tuple[str, str, int]],
+    templates: Sequence[TemplateCandidate | tuple[str, str, int]],
     *,
     field_feedback: dict[str, Any] | None,
     global_failed_check_counts: dict[str, int],
     metadata_by_key: TemplateMetadataMap | None = None,
-) -> list[tuple[str, str, int]]:
+) -> list[TemplateCandidate]:
     """
     对候选模板应用自适应优先级调整。
 
@@ -976,28 +1146,32 @@ def apply_adaptive_priority(
         128  # 加上调整值 28
     """
     return [
-        (
-            name,
-            expression,
-            priority
+        _make_template_candidate(
+            template.name,
+            template.expression,
+            template.priority
             + adaptive_template_priority_adjustment(
-                name,
-                expression,
+                template.name,
+                template.expression,
                 field_feedback=field_feedback,
                 global_failed_check_counts=global_failed_check_counts,
-                metadata=(metadata_by_key or {}).get(_template_key(name, expression)),
+                metadata=template.metadata,
             ),
+            metadata=template.metadata,
         )
-        for name, expression, priority in templates
+        for template in (
+            _coerce_template_candidate(raw_template, metadata_by_key=metadata_by_key)
+            for raw_template in templates
+        )
     ]
 
 
 def cap_templates_per_family(
-    templates: Sequence[tuple[str, str, int]],
+    templates: Sequence[TemplateCandidate | tuple[str, str, int]],
     max_templates_per_family: int,
     *,
     metadata_by_key: TemplateMetadataMap | None = None,
-) -> list[tuple[str, str, int]]:
+) -> list[TemplateCandidate]:
     """
     限制每个结构家族仅保留前 N 个候选模板。
 
@@ -1024,19 +1198,23 @@ def cap_templates_per_family(
         3  # group_zscore 家族保留 2 个，rank_delta 家族保留 1 个
     """
     if max_templates_per_family <= 0:
-        return list(templates)
-    kept: list[tuple[str, str, int]] = []
+        return [
+            _coerce_template_candidate(template, metadata_by_key=metadata_by_key)
+            for template in templates
+        ]
+    kept: list[TemplateCandidate] = []
     family_counts: dict[str, int] = {}
-    for name, expression, priority in templates:
+    for raw_template in templates:
+        template = _coerce_template_candidate(raw_template, metadata_by_key=metadata_by_key)
         family = classify_expression_family(
-            name,
-            expression,
-            (metadata_by_key or {}).get(_template_key(name, expression)),
+            template.name,
+            template.expression,
+            template.metadata,
         )
         used = family_counts.get(family, 0)
         if used >= max_templates_per_family:
             continue
-        kept.append((name, expression, priority))
+        kept.append(template)
         family_counts[family] = used + 1
     return kept
 
@@ -1047,7 +1225,7 @@ def build_feedback_mutations(
     *,
     expression_policy: DatasetExpressionPolicy | None = None,
     feedback_stage: str = FEEDBACK_STAGE_GENERATE,
-) -> list[tuple[str, str, int]]:
+) -> list[TemplateCandidate]:
     """
     基于历史失败检查结果生成额外的表达式变异候选。
 
@@ -1084,16 +1262,26 @@ def build_feedback_mutations(
         (126, 252, 188),
         (252, 504, 186),
     ]
-    base_mutations: list[tuple[str, str, int]] = [
-        (
+    base_mutations: list[TemplateCandidate] = [
+        _make_template_candidate(
             "iter_group_rank_delta_of_rank_63",
             f"group_rank(ts_delta(rank(ts_backfill({field_name}, {bw})), 63), subindustry)",
             184,
+            metadata=_candidate_metadata(
+                family="group_rank_delta",
+                layer="group",
+                stage=TEMPLATE_STAGE_GROUP_SECOND_ORDER,
+            ),
         ),
-        (
+        _make_template_candidate(
             "iter_group_rank_delta_of_rank_126",
             f"group_rank(ts_delta(rank(ts_backfill({field_name}, {bw})), 126), subindustry)",
             182,
+            metadata=_candidate_metadata(
+                family="group_rank_delta",
+                layer="group",
+                stage=TEMPLATE_STAGE_GROUP_SECOND_ORDER,
+            ),
         ),
     ]
     # 动态生成 vol-scaled delta 变体
@@ -1101,29 +1289,61 @@ def build_feedback_mutations(
         name = f"iter_group_vol_scaled_delta_{delta}_{std}"
         expr = f"group_rank(ts_delta(ts_backfill({field_name}, {bw}), {delta}) / ts_std_dev(ts_backfill({field_name}, {bw}), {std}), subindustry)"
         if not _is_blacklisted_template(name, expr, policy=expression_policy):
-            base_mutations.append((name, expr, pri))
+            base_mutations.append(
+                _make_template_candidate(
+                    name,
+                    expr,
+                    pri,
+                    metadata=_candidate_metadata(
+                        family="group_vol_scaled_delta",
+                        layer="group",
+                        stage=TEMPLATE_STAGE_GROUP_SECOND_ORDER,
+                    ),
+                )
+            )
 
     # backfill window variants for vol-scaled
     for bf_window, pri in [(180, 184), (260, 182)]:
         name = f"iter_group_vol_scaled_delta_63_126_bf{bf_window}"
         expr = f"group_rank(ts_delta(ts_backfill({field_name}, {bf_window}), 63) / ts_std_dev(ts_backfill({field_name}, {bf_window}), 126), subindustry)"
         if not _is_blacklisted_template(name, expr, policy=expression_policy):
-            base_mutations.append((name, expr, pri))
+            base_mutations.append(
+                _make_template_candidate(
+                    name,
+                    expr,
+                    pri,
+                    metadata=_candidate_metadata(
+                        family="group_vol_scaled_delta",
+                        layer="group",
+                        stage=TEMPLATE_STAGE_GROUP_SECOND_ORDER,
+                    ),
+                )
+            )
 
     # v5: 去掉 iter_group_mean_spread_over_std_5_20_20 和 iter_rank_mean_spread_over_std_5_20_20
     # (已黑名单，Sharpe全部为负 + CONCENTRATED_WEIGHT)
     # 替换为长窗口季度版本
     base_mutations.extend(
         [
-            (
+            _make_template_candidate(
                 "iter_group_mean_spread_over_std_63_240_126",
                 f"group_rank((ts_mean(ts_backfill({field_name}, {bw}), 63) - ts_mean(ts_backfill({field_name}, {bw}), {bw})) / ts_std_dev(ts_backfill({field_name}, {bw}), 126), subindustry)",
                 178,
+                metadata=_candidate_metadata(
+                    family="group_mean_spread",
+                    layer="group",
+                    stage=TEMPLATE_STAGE_GROUP_SECOND_ORDER,
+                ),
             ),
-            (
+            _make_template_candidate(
                 "iter_rank_mean_spread_over_std_63_240_126",
                 f"rank((ts_mean(ts_backfill({field_name}, {bw}), 63) - ts_mean(ts_backfill({field_name}, {bw}), {bw})) / ts_std_dev(ts_backfill({field_name}, {bw}), 126))",
                 176,
+                metadata=_candidate_metadata(
+                    family="mean_spread",
+                    layer="signal",
+                    stage=TEMPLATE_STAGE_FIRST_ORDER,
+                ),
             ),
         ]
     )
@@ -1144,25 +1364,45 @@ def build_feedback_mutations(
     ):
         mutations.extend(
             [
-                (
+                _make_template_candidate(
                     "iter_nearpass_group_rank_delta_of_rank_10",
                     f"group_rank(ts_delta(rank(ts_backfill({field_name}, {bw})), 10), subindustry)",
                     194,
+                    metadata=_candidate_metadata(
+                        family="group_rank_delta",
+                        layer="group",
+                        stage=TEMPLATE_STAGE_GROUP_SECOND_ORDER,
+                    ),
                 ),
-                (
+                _make_template_candidate(
                     "iter_nearpass_group_rank_delta_of_rank_20",
                     f"group_rank(ts_delta(rank(ts_backfill({field_name}, {bw})), 20), subindustry)",
                     190,
+                    metadata=_candidate_metadata(
+                        family="group_rank_delta",
+                        layer="group",
+                        stage=TEMPLATE_STAGE_GROUP_SECOND_ORDER,
+                    ),
                 ),
-                (
+                _make_template_candidate(
                     "iter_nearpass_group_delta_zscore_5_60",
                     f"group_rank(ts_delta(ts_zscore(ts_backfill({field_name}, {bw}), 60), 5), subindustry)",
                     188,
+                    metadata=_candidate_metadata(
+                        family="group_rank_delta",
+                        layer="group",
+                        stage=TEMPLATE_STAGE_GROUP_SECOND_ORDER,
+                    ),
                 ),
-                (
+                _make_template_candidate(
                     "iter_nearpass_group_delta_zscore_10_60",
                     f"group_rank(ts_delta(ts_zscore(ts_backfill({field_name}, {bw}), 60), 10), subindustry)",
                     186,
+                    metadata=_candidate_metadata(
+                        family="group_rank_delta",
+                        layer="group",
+                        stage=TEMPLATE_STAGE_GROUP_SECOND_ORDER,
+                    ),
                 ),
             ]
         )
@@ -1177,25 +1417,45 @@ def build_feedback_mutations(
     ):
         mutations.extend(
             [
-                (
+                _make_template_candidate(
                     "iter_account_group_backfill_504_subindustry",
                     f"group_rank(ts_backfill({field_name}, {bw}), subindustry)",
                     201,
+                    metadata=_candidate_metadata(
+                        family="legacy_group_level",
+                        layer="account",
+                        stage=TEMPLATE_STAGE_GROUP_SECOND_ORDER,
+                    ),
                 ),
-                (
+                _make_template_candidate(
                     "iter_account_backfill_zscore_decay_63_subindustry",
                     f"group_rank(ts_decay_linear(ts_zscore(ts_backfill({field_name}, {bw}), 63), 20), subindustry)",
                     199,
+                    metadata=_candidate_metadata(
+                        family="group_zscore",
+                        layer="account",
+                        stage=TEMPLATE_STAGE_GROUP_SECOND_ORDER,
+                    ),
                 ),
-                (
+                _make_template_candidate(
                     "iter_account_ir_60_decay_20",
                     f"rank(ts_decay_linear(ts_mean({field_name}, 60) / ts_std_dev({field_name}, 60), 20))",
                     197,
+                    metadata=_candidate_metadata(
+                        family="decay_level",
+                        layer="account",
+                        stage=TEMPLATE_STAGE_FIRST_ORDER,
+                    ),
                 ),
-                (
+                _make_template_candidate(
                     "iter_account_group_ir_60_subindustry",
                     f"group_rank(ts_mean({field_name}, 60) / ts_std_dev({field_name}, 60), subindustry)",
                     195,
+                    metadata=_candidate_metadata(
+                        family="legacy_group_level",
+                        layer="account",
+                        stage=TEMPLATE_STAGE_GROUP_SECOND_ORDER,
+                    ),
                 ),
             ]
         )
@@ -1219,17 +1479,51 @@ def build_feedback_mutations(
             name = f"iter_nearpass_vol_scaled_{delta}_{std}{bf_suffix}"
             expr = f"group_rank(ts_delta(ts_backfill({field_name}, {bf_val}), {delta}) / ts_std_dev(ts_backfill({field_name}, {bf_val}), {std}), subindustry)"
             if not _is_blacklisted_template(name, expr, policy=expression_policy):
-                mutations.append((name, expr, pri))
+                mutations.append(
+                    _make_template_candidate(
+                        name,
+                        expr,
+                        pri,
+                        metadata=_candidate_metadata(
+                            family="group_vol_scaled_delta",
+                            layer="group",
+                            stage=TEMPLATE_STAGE_GROUP_SECOND_ORDER,
+                        ),
+                    )
+                )
 
     if feedback_stage != FEEDBACK_STAGE_GENERATE and CHECK_LOW_TURNOVER in dominant_names:
         mutations.extend(
             [
-                ("iter_rank_delta_3", f"rank(ts_delta(ts_backfill({field_name}, {bw}), 3))", 186),
-                ("iter_rank_delta_5", f"rank(ts_delta(ts_backfill({field_name}, {bw}), 5))", 184),
-                (
+                _make_template_candidate(
+                    "iter_rank_delta_3",
+                    f"rank(ts_delta(ts_backfill({field_name}, {bw}), 3))",
+                    186,
+                    metadata=_candidate_metadata(
+                        family="rank_delta",
+                        layer="signal",
+                        stage=TEMPLATE_STAGE_FIRST_ORDER,
+                    ),
+                ),
+                _make_template_candidate(
+                    "iter_rank_delta_5",
+                    f"rank(ts_delta(ts_backfill({field_name}, {bw}), 5))",
+                    184,
+                    metadata=_candidate_metadata(
+                        family="rank_delta",
+                        layer="signal",
+                        stage=TEMPLATE_STAGE_FIRST_ORDER,
+                    ),
+                ),
+                _make_template_candidate(
                     "iter_rank_then_delta_3",
                     f"rank(ts_delta(rank(ts_backfill({field_name}, {bw})), 3))",
                     183,
+                    metadata=_candidate_metadata(
+                        family="rank_delta",
+                        layer="signal",
+                        stage=TEMPLATE_STAGE_FIRST_ORDER,
+                    ),
                 ),
             ]
         )
@@ -1240,15 +1534,25 @@ def build_feedback_mutations(
     ):
         mutations.extend(
             [
-                (
+                _make_template_candidate(
                     "iter_group_zscore_20",
                     f"group_rank(ts_zscore(ts_backfill({field_name}, {bw}), 20), subindustry)",
                     185,
+                    metadata=_candidate_metadata(
+                        family="group_zscore",
+                        layer="group",
+                        stage=TEMPLATE_STAGE_GROUP_SECOND_ORDER,
+                    ),
                 ),
-                (
+                _make_template_candidate(
                     "iter_group_zscore_spread_5_20",
                     f"group_rank(ts_zscore(ts_backfill({field_name}, {bw}), 5) - ts_zscore(ts_backfill({field_name}, {bw}), 20), subindustry)",
                     183,
+                    metadata=_candidate_metadata(
+                        family="group_zscore",
+                        layer="group",
+                        stage=TEMPLATE_STAGE_GROUP_SECOND_ORDER,
+                    ),
                 ),
             ]
         )
@@ -1256,16 +1560,30 @@ def build_feedback_mutations(
     if feedback_stage == FEEDBACK_STAGE_RESIMULATE and best_expression:
         mutations.extend(
             [
-                ("iter_flip_best", invert_expression(best_expression), 172),
-                (
+                _make_template_candidate(
+                    "iter_flip_best",
+                    invert_expression(best_expression),
+                    172,
+                    metadata=_candidate_metadata(stage=TEMPLATE_STAGE_FIRST_ORDER),
+                ),
+                _make_template_candidate(
                     "iter_group_flip_best",
                     f"group_rank({invert_expression(best_expression)}, subindustry)",
                     174,
+                    metadata=_candidate_metadata(
+                        layer="group",
+                        stage=TEMPLATE_STAGE_GROUP_SECOND_ORDER,
+                    ),
                 ),
-                (
+                _make_template_candidate(
                     "iter_group_decay_best_5",
                     f"group_rank(ts_decay_linear(ts_backfill({best_expression}, {bw}), 5), subindustry)",
                     170,
+                    metadata=_candidate_metadata(
+                        family="neutralize_decay",
+                        layer="group",
+                        stage=TEMPLATE_STAGE_GROUP_SECOND_ORDER,
+                    ),
                 ),
             ]
         )
@@ -1273,24 +1591,39 @@ def build_feedback_mutations(
             for window in (3, 5, 10):
                 mutations.extend(
                     [
-                        (
+                        _make_template_candidate(
                             f"iter_nearpass_delta_best_{window}",
                             f"rank(ts_delta({best_expression}, {window}))",
                             188 - window,
+                            metadata=_candidate_metadata(
+                                family="rank_delta",
+                                layer="signal",
+                                stage=TEMPLATE_STAGE_FIRST_ORDER,
+                            ),
                         ),
-                        (
+                        _make_template_candidate(
                             f"iter_nearpass_group_delta_best_{window}",
                             f"group_rank(ts_delta({best_expression}, {window}), subindustry)",
                             192 - window,
+                            metadata=_candidate_metadata(
+                                family="group_rank_delta",
+                                layer="group",
+                                stage=TEMPLATE_STAGE_GROUP_SECOND_ORDER,
+                            ),
                         ),
                     ]
                 )
             mutations.extend(
                 [
-                    (
+                    _make_template_candidate(
                         f"iter_nearpass_decay_best_{decay}",
                         f"rank(ts_decay_linear({best_expression}, {decay}))",
                         184 - decay,
+                        metadata=_candidate_metadata(
+                            family="decay_level",
+                            layer="signal",
+                            stage=TEMPLATE_STAGE_FIRST_ORDER,
+                        ),
                     )
                     for decay in (3, 5, 8)
                 ]
@@ -1325,7 +1658,7 @@ def _build_matrix_templates(
     field_view: Any,
     all_fields: Sequence[dict[str, Any]],
     expression_policy: DatasetExpressionPolicy,
-) -> tuple[list[tuple[str, str, int]], list[tuple[str, str, int]]]:
+) -> tuple[list[TemplateCandidate], list[TemplateCandidate]]:
     """为 MATRIX 类型字段构建多样化和 legacy 模板候选。
 
     Returns:
@@ -1336,27 +1669,33 @@ def _build_matrix_templates(
     backfill_window = expression_policy.matrix_field_transform.backfill_window or get_backfill_window()
     delta_over_std_windows = expression_policy.matrix_delta_over_std_windows
 
-    diversified: list[tuple[str, str, int]] = []
+    diversified: list[TemplateCandidate] = []
     for delta, std, pri in delta_over_std_windows:
         diversified.append(
-            (
+            _make_template_candidate(
                 f"group_delta_over_std_subindustry_{delta}_{std}",
                 f"group_rank(ts_delta({preprocessed_expression}, {delta}) / ts_std_dev({preprocessed_expression}, {std}), subindustry)",
                 pri + DELTA_STD_PRIORITY_BOOST,
+                metadata=_candidate_metadata(
+                    family="group_vol_scaled_delta",
+                    layer="group",
+                    stage=TEMPLATE_STAGE_GROUP_SECOND_ORDER,
+                ),
             )
         )
 
     diversified_specs = expression_policy.matrix_diversified_template_specs
     diversified.extend(
         [
-            (
-                name,
-                expr,
-                pri + DELTA_STD_PRIORITY_BOOST
-                if "delta_over_std" in name
-                else pri,
+            _make_template_candidate(
+                candidate.name,
+                candidate.expression,
+                candidate.priority + DELTA_STD_PRIORITY_BOOST
+                if "delta_over_std" in candidate.name
+                else candidate.priority,
+                metadata=candidate.metadata,
             )
-            for name, expr, pri in _render_template_specs(
+            for candidate in _render_template_specs(
                 diversified_specs,
                 field=field_name,
                 field_preprocessed=preprocessed_expression,
@@ -1365,18 +1704,87 @@ def _build_matrix_templates(
         ]
     )
 
-    legacy: list[tuple[str, str, int]] = [
-        ("raw_field", preprocessed_expression, 145),
-        ("group_rank_subindustry", f"group_rank({preprocessed_expression}, subindustry)", 143),
-        ("group_rank_industry", f"group_rank({preprocessed_expression}, industry)", 141),
-        ("rank_raw_field", f"rank({preprocessed_expression})", 118),
+    legacy: list[TemplateCandidate] = [
+        _make_template_candidate(
+            "raw_field",
+            preprocessed_expression,
+            145,
+            metadata=_candidate_metadata(
+                family="legacy_level",
+                layer="first_order",
+                stage=TEMPLATE_STAGE_FIRST_ORDER,
+            ),
+        ),
+        _make_template_candidate(
+            "group_rank_subindustry",
+            f"group_rank({preprocessed_expression}, subindustry)",
+            143,
+            metadata=_candidate_metadata(
+                family="legacy_group_level",
+                layer="group",
+                stage=TEMPLATE_STAGE_GROUP_SECOND_ORDER,
+            ),
+        ),
+        _make_template_candidate(
+            "group_rank_industry",
+            f"group_rank({preprocessed_expression}, industry)",
+            141,
+            metadata=_candidate_metadata(
+                family="legacy_group_level",
+                layer="group",
+                stage=TEMPLATE_STAGE_GROUP_SECOND_ORDER,
+            ),
+        ),
+        _make_template_candidate(
+            "rank_raw_field",
+            f"rank({preprocessed_expression})",
+            118,
+            metadata=_candidate_metadata(
+                family="legacy_level",
+                layer="first_order",
+                stage=TEMPLATE_STAGE_FIRST_ORDER,
+            ),
+        ),
     ]
     if expression_policy.use_curated_heuristics and field_name in expression_policy.positive_raw_fields:
-        legacy.append(("neg_raw_field", f"-{preprocessed_expression}", 132))
+        legacy.append(
+            _make_template_candidate(
+                "neg_raw_field",
+                f"-{preprocessed_expression}",
+                132,
+                metadata=_candidate_metadata(
+                    family="legacy_level",
+                    layer="first_order",
+                    stage=TEMPLATE_STAGE_FIRST_ORDER,
+                ),
+            )
+        )
     elif expression_policy.use_curated_heuristics and field_name in expression_policy.negative_raw_fields:
-        legacy.append(("neg_raw_field", f"-{preprocessed_expression}", 144))
+        legacy.append(
+            _make_template_candidate(
+                "neg_raw_field",
+                f"-{preprocessed_expression}",
+                144,
+                metadata=_candidate_metadata(
+                    family="legacy_level",
+                    layer="first_order",
+                    stage=TEMPLATE_STAGE_FIRST_ORDER,
+                ),
+            )
+        )
     elif expression_policy.use_curated_heuristics:
-        legacy.append(("neg_raw_field", f"-{preprocessed_expression}", 128))
+        legacy.append(
+            _make_template_candidate(
+                "neg_raw_field",
+                f"-{preprocessed_expression}",
+                128,
+                metadata=_candidate_metadata(
+                    family="legacy_level",
+                    layer="first_order",
+                    stage=TEMPLATE_STAGE_FIRST_ORDER,
+                ),
+            )
+        )
 
     # 比率配对模板
     fields_by_name = {choose_field_name(item): item for item in all_fields}
@@ -1413,23 +1821,49 @@ def _build_matrix_templates(
             name = f"group_ratio_delta_rank_{delta}_{ratio_label}"
             expr = f"group_rank(ts_delta(rank({ratio_expr}), {delta}), subindustry)"
             if not _is_blacklisted_template(name, expr, policy=expression_policy):
-                diversified.append((name, expr, pri + DELTA_STD_PRIORITY_BOOST + ratio_priority_boost))
+                diversified.append(
+                    _make_template_candidate(
+                        name,
+                        expr,
+                        pri + DELTA_STD_PRIORITY_BOOST + ratio_priority_boost,
+                        metadata=_candidate_metadata(
+                            family="group_ratio_level",
+                            layer="group",
+                            stage=TEMPLATE_STAGE_GROUP_SECOND_ORDER,
+                            requires_partner_field=True,
+                        ),
+                    )
+                )
 
         # Delta over std 变体
         for delta, std, pri in ratio_delta_over_std_windows:
             diversified.append(
-                (
+                _make_template_candidate(
                     f"group_ratio_delta_over_std_{delta}_{std}_{ratio_label}",
                     f"group_rank(ts_delta({ratio_expr}, {delta}) / ts_std_dev({ratio_expr}, {std}), subindustry)",
                     pri + DELTA_STD_PRIORITY_BOOST + ratio_priority_boost,
+                    metadata=_candidate_metadata(
+                        family="group_vol_scaled_delta",
+                        layer="group",
+                        stage=TEMPLATE_STAGE_GROUP_SECOND_ORDER,
+                        requires_partner_field=True,
+                    ),
                 )
             )
 
         ratio_diversified_specs = expression_policy.ratio_diversified_template_specs
         diversified.extend(
             [
-                (name, expr, pri + ratio_priority_boost)
-                for name, expr, pri in _render_template_specs(
+                _make_template_candidate(
+                    candidate.name,
+                    candidate.expression,
+                    candidate.priority + ratio_priority_boost,
+                    metadata={
+                        **candidate.metadata,
+                        "requires_partner_field": True,
+                    },
+                )
+                for candidate in _render_template_specs(
                     ratio_diversified_specs,
                     ratio_expr=ratio_expr,
                     ratio_label=ratio_label,
@@ -1441,8 +1875,16 @@ def _build_matrix_templates(
 
         legacy.extend(
             [
-                (name, expr, pri + ratio_priority_boost)
-                for name, expr, pri in _render_template_specs(
+                _make_template_candidate(
+                    candidate.name,
+                    candidate.expression,
+                    candidate.priority + ratio_priority_boost,
+                    metadata={
+                        **candidate.metadata,
+                        "requires_partner_field": True,
+                    },
+                )
+                for candidate in _render_template_specs(
                     expression_policy.ratio_legacy_template_specs,
                     ratio_expr=ratio_expr,
                     ratio_label=ratio_label,
@@ -1468,7 +1910,7 @@ def build_expression_candidates(
     *,
     dataset_id: str = "",
     expression_policy: DatasetExpressionPolicy | None = None,
-) -> list[tuple[str, str, int]]:
+) -> list[TemplateCandidate]:
     """
     为单个字段构建、变异、多样化并排序表达式候选。
 
@@ -1531,14 +1973,8 @@ def build_expression_candidates(
     # Template selection is now driven by an externalizable library so we can
     # expand or shrink search coverage between runs without changing code.
     raw_templates = _select_template_items(template_library, field_type, policy.dataset_id)
-    metadata_by_key = build_template_metadata_index(
-        field_view,
-        template_library,
-        field_type,
-        policy.dataset_id,
-    )
     templates = [
-        (
+        _make_template_candidate(
             str(item["name"]),
             str(item["expression"]).format(
                 field=field_view.raw_expression,
@@ -1549,13 +1985,19 @@ def build_expression_candidates(
             ),
             int(item.get("priority", 0))
             + _policy_template_priority_adjustment(str(item["name"]), policy),
+            metadata=_runtime_template_metadata(item),
         )
         for item in raw_templates
         if isinstance(item, dict)
         and "name" in item
         and "expression" in item
         and str(item["name"]) not in policy.disabled_templates
-        and not _is_blacklisted_template(str(item["name"]), str(item["expression"]), policy=policy)
+        and not _is_blacklisted_template(
+            str(item["name"]),
+            str(item["expression"]),
+            template_metadata=_runtime_template_metadata(item),
+            policy=policy,
+        )
     ]
     templates.extend(
         build_feedback_mutations(
@@ -1578,20 +2020,17 @@ def build_expression_candidates(
     templates = apply_similarity_penalty(
         templates,
         legacy_similarity_penalty,
-        metadata_by_key=metadata_by_key,
     )
     templates = apply_adaptive_priority(
         templates,
         field_feedback=field_feedback,
         global_failed_check_counts=global_failed_check_counts,
-        metadata_by_key=metadata_by_key,
     )
     templates = sort_templates_by_priority(templates)
     return limit_templates(
         cap_templates_per_family(
             templates,
             max_templates_per_family,
-            metadata_by_key=metadata_by_key,
         ),
         max_templates_per_field,
     )

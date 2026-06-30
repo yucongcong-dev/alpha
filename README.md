@@ -118,6 +118,11 @@ python3 -m alpha
 - `dateCreated`：较新的字段有轻微加分
 - `themes`：主题标签数量仅作很弱的辅助加分
 
+**表达式策略配置**：
+- 数据集级表达式搜索策略可在 `settings.yaml` 的 `expression_policies.<dataset_id>` 下覆盖
+- 适合放这里的参数包括：`partner_limit`、模板加成/降权、弱模板名单、字段质量阈值
+- 未在 YAML 中声明的键继续使用代码内置默认值
+
 **输出**：`*_analysis.json` 中的关键字段：
 - `near_pass_summary`：接近通过的候选（按 score 排序）
 - `failed_check_leaderboard`：主要失败原因分布

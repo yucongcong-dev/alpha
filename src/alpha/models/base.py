@@ -239,6 +239,30 @@ class FieldView:
     metadata: dict[str, Any] = field(default_factory=dict)
 
 
+@dataclass(frozen=True)
+class TemplateCandidate:
+    """统一的模板候选结构。
+
+    用于承载名称、表达式、优先级和运行时元数据，避免模板生成阶段
+    反复在 `(name, expression, priority)` 与独立 metadata 索引之间来回切换。
+    """
+
+    name: str
+    expression: str
+    priority: int
+    metadata: dict[str, Any] = field(default_factory=dict)
+
+    def __iter__(self):
+        """兼容旧代码把模板候选当作三元组解包。"""
+        yield self.name
+        yield self.expression
+        yield self.priority
+
+    def __getitem__(self, index: int):
+        """兼容旧代码使用 candidate[0/1/2] 访问三元组字段。"""
+        return (self.name, self.expression, self.priority)[index]
+
+
 @dataclass
 class FieldTestContext:
     """

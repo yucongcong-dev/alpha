@@ -8,7 +8,13 @@ from __future__ import annotations
 
 import pytest
 
-from alpha.generators.expressions import classify_expression_family, is_legacy_family
+from alpha.config import get_dataset_expression_policy
+from alpha.generators.expressions import (
+    build_expression_candidates,
+    build_feedback_mutations,
+    classify_expression_family,
+    is_legacy_family,
+)
 
 
 class TestClassifyExpressionFamily:
@@ -94,3 +100,31 @@ class TestIsLegacyFamily:
     def test_ratio_with_suffix_is_legacy(self) -> None:
         """ratio_ 前缀的变体也应视为 legacy。"""
         assert is_legacy_family("ratio_profit_margin", "profit/cost") is True
+
+
+def test_build_feedback_mutations_attach_runtime_metadata() -> None:
+    mutations = build_feedback_mutations("cash_st", None)
+
+    candidate = next(item for item in mutations if item.name == "iter_group_rank_delta_of_rank_63")
+    assert candidate.metadata["family"] == "group_rank_delta"
+    assert candidate.metadata["stage"] == "group_second_order"
+
+
+def test_build_expression_candidates_preserve_generated_metadata() -> None:
+    policy = get_dataset_expression_policy("fundamental6")
+    field = {"id": "cash_st", "type": "MATRIX"}
+    template_library = {"default": []}
+
+    candidates = build_expression_candidates(
+        field,
+        template_library,
+        max_templates_per_field=0,
+        max_templates_per_family=0,
+        legacy_similarity_penalty=0,
+        all_fields=[field],
+        expression_policy=policy,
+    )
+
+    candidate = next(item for item in candidates if item.name == "raw_field")
+    assert candidate.metadata["family"] == "legacy_level"
+    assert candidate.metadata["stage"] == "first_order"

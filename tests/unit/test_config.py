@@ -12,6 +12,7 @@ from alpha.config import (
     DEFAULT_DATASET_ID,
     SIM_ACCEPT_HEADER,
     VERSION_HEADER,
+    get_dataset_expression_policy,
     use_fundamental6_heuristics,
 )
 
@@ -81,3 +82,38 @@ class TestUseFundamental6Heuristics:
     def test_similar_but_different_dataset(self) -> None:
         """类似但不包含 fundamental6 的数据集名称不匹配。"""
         assert use_fundamental6_heuristics("price6") is False
+
+
+def test_expression_policy_can_be_overridden_from_yaml(monkeypatch) -> None:
+    monkeypatch.setattr(
+        "alpha.config.get_yaml_config",
+        lambda config_path="": {
+            "expression_policies": {
+                "fundamental6": {
+                    "partner_limit": 9,
+                    "blacklisted_template_name_substrings": ["custom_block"],
+                    "disabled_templates": ["weak_template"],
+                    "template_prefix_penalties": [
+                        {"prefixes": ["delta_", "group_delta_"], "penalty": -500}
+                    ],
+                }
+            }
+        },
+    )
+
+    policy = get_dataset_expression_policy("fundamental6")
+
+    assert policy.partner_limit == 9
+    assert policy.blacklisted_template_name_substrings == ("custom_block",)
+    assert "weak_template" in policy.disabled_templates
+    assert policy.template_prefix_penalties == {("delta_", "group_delta_"): -500}
+
+
+def test_fundamental6_default_policy_is_loaded_from_settings_yaml() -> None:
+    policy = get_dataset_expression_policy("fundamental6")
+
+    assert policy.partner_limit == 6
+    assert "account_rank_backfill_504" in policy.protected_templates
+    assert ("cashflow_op", "fnd6_mkvalt") in policy.high_conviction_ratio_pairs
+    assert policy.field_min_coverage == 0.10
+    assert policy.field_min_alpha_count == 25

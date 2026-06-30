@@ -346,18 +346,19 @@ def should_keep_template_for_feedback(
     lower_name = template_name.lower()
     lower_expr = expression.lower()
 
+    if (
+        feedback_stage == FEEDBACK_STAGE_RESIMULATE
+        and stage_policy.preferred_template_stages
+        and template_stage not in stage_policy.preferred_template_stages
+        and template_name not in policy.protected_templates
+    ):
+        return False
     if family in policy.always_keep_families:
         return True
     if lower_name.startswith("iter_"):
         return True
     if template_name in policy.protected_templates:
         return True
-    if (
-        feedback_stage == FEEDBACK_STAGE_RESIMULATE
-        and stage_policy.preferred_template_stages
-        and template_stage not in stage_policy.preferred_template_stages
-    ):
-        return False
     protected_ratio = _is_high_conviction_ratio(expression, policy)
 
     # Historical results show these shapes are repeatedly too slow.
@@ -465,7 +466,12 @@ def should_skip_field_template_family(
         return False
 
     # v5: 检查黑名单 — 已淘汰模板立即跳过（按 dataset 分层）
-    if _is_blacklisted_template(template_name, expression, policy=policy):
+    if _is_blacklisted_template(
+        template_name,
+        expression,
+        template_metadata=template_metadata,
+        policy=policy,
+    ):
         return True
 
     family = classify_expression_family(template_name, expression, template_metadata)

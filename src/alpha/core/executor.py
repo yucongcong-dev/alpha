@@ -40,10 +40,7 @@ from ..config import (
 from ..generators.expressions import classify_expression_family, classify_template_stage
 from ..generators.expressions import (
     build_expression_candidates,
-    build_template_metadata_index,
-    get_template_metadata,
 )
-from ..generators.field_transforms import build_field_view
 from ..generators.settings import (
     build_setting_variants,
     build_settings_fingerprint_from_payload,
@@ -102,13 +99,6 @@ def build_pending_templates_for_field(
     field_id = str(first_non_empty(field.get("id"), SENTINEL_UNKNOWN))
     field_name = choose_field_name(field)
     field_feedback = build_ctx.field_feedback.get(field_id)
-    field_view = build_field_view(field, build_ctx.expression_policy)
-    metadata_by_key = build_template_metadata_index(
-        field_view,
-        build_ctx.template_library,
-        str(field.get("type", "")),
-        build_ctx.expression_policy.dataset_id,
-    )
     templates = build_expression_candidates(
         field,
         build_ctx.template_library,
@@ -128,8 +118,11 @@ def build_pending_templates_for_field(
         field_feedback,
         expression_policy=build_ctx.expression_policy,
     )
-    for template_name, expression, priority in templates:
-        template_metadata = get_template_metadata(template_name, expression, metadata_by_key)
+    for template in templates:
+        template_name = template.name
+        expression = template.expression
+        priority = template.priority
+        template_metadata = template.metadata
         template_family = classify_expression_family(
             template_name,
             expression,

@@ -6,6 +6,7 @@ import json
 from pathlib import Path
 
 from alpha.generators import templates as template_module
+from alpha.generators.expressions import _BLACKLIST_CACHE, _is_blacklisted_template
 from alpha.generators.templates import ensure_dataset_template_library, load_template_library
 from alpha.io.output import auto_update_blacklist, ensure_template_blacklist_file
 from alpha.models.base import FieldTestResult
@@ -228,3 +229,88 @@ def test_fundamental6_template_library_has_family_and_layer_metadata() -> None:
                 missing.append((section, item["name"]))
 
     assert missing == []
+
+
+def test_blacklist_prefers_name_and_stage_over_name_only(monkeypatch, tmp_path) -> None:
+    data_dir = tmp_path / "data"
+    data_dir.mkdir()
+    (data_dir / "template_blacklist_custom_ds.json").write_text(
+        json.dumps(
+            {
+                "dataset_id": "custom_ds",
+                "blacklisted_templates": [
+                    {
+                        "name": "weak_template",
+                        "template_stage": "group_second_order",
+                        "template_family": "group_zscore",
+                    }
+                ],
+                "auto_avoid_rules": [],
+            }
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.chdir(tmp_path)
+    _BLACKLIST_CACHE.clear()
+
+    assert _is_blacklisted_template(
+        "weak_template",
+        "group_rank(ts_zscore(close, 60), subindustry)",
+        template_metadata={"stage": "group_second_order", "family": "group_zscore"},
+        dataset_id="custom_ds",
+    )
+    assert not _is_blacklisted_template(
+        "weak_template",
+        "rank(ts_zscore(close, 60))",
+        template_metadata={"stage": "first_order", "family": "zscore_time"},
+        dataset_id="custom_ds",
+    )
+
+
+def test_legacy_blacklist_name_only_only_applies_without_runtime_metadata(monkeypatch, tmp_path) -> None:
+    data_dir = tmp_path / "data"
+    data_dir.mkdir()
+    (data_dir / "template_blacklist_custom_ds.json").write_text(
+        json.dumps(
+            {
+                "dataset_id": "custom_ds",
+                "blacklisted_templates": [{"name": "legacy_template"}],
+                "auto_avoid_rules": [],
+            }
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.chdir(tmp_path)
+    _BLACKLIST_CACHE.clear()
+
+    assert _is_blacklisted_template("legacy_template", dataset_id="custom_ds")
+    assert not _is_blacklisted_template(
+        "legacy_template",
+        "rank(close)",
+        template_metadata={"stage": "first_order", "family": "legacy_level"},
+        dataset_id="custom_ds",
+    )
+
+
+def test_blacklist_pattern_rules_support_exact_and_regex(monkeypatch, tmp_path) -> None:
+    data_dir = tmp_path / "data"
+    data_dir.mkdir()
+    (data_dir / "template_blacklist_custom_ds.json").write_text(
+        json.dumps(
+            {
+                "dataset_id": "custom_ds",
+                "blacklisted_templates": [],
+                "auto_avoid_rules": [
+                    {"type": "exact", "pattern": "rank(close)"},
+                    {"type": "regex", "pattern": r"ts_delta\(.*?, 5\)"},
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.chdir(tmp_path)
+    _BLACKLIST_CACHE.clear()
+
+    assert _is_blacklisted_template("t1", "rank(close)", dataset_id="custom_ds")
+    assert _is_blacklisted_template("t2", "rank(ts_delta(close, 5))", dataset_id="custom_ds")
+    assert not _is_blacklisted_template("t3", "rank(close) + 1", dataset_id="custom_ds")

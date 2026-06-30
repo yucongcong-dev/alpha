@@ -13,7 +13,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 import os
 from pathlib import Path
 from typing import Any, Optional
@@ -272,6 +272,212 @@ class DatasetExpressionPolicy:
     ratio_numerator_transform: FieldTransformSpec = field(default_factory=FieldTransformSpec)
     ratio_denominator_transform: FieldTransformSpec = field(default_factory=FieldTransformSpec)
     feedback_loop_policy: FeedbackLoopPolicy = field(default_factory=FeedbackLoopPolicy)
+
+
+def _tuple_tuple_int(value: Any, width: int) -> tuple[tuple[int, ...], ...]:
+    """把 YAML 中的二维数值列表转换为 tuple[tuple[int, ...], ...]。"""
+    if not isinstance(value, (list, tuple)):
+        return ()
+    rows: list[tuple[int, ...]] = []
+    for item in value:
+        if not isinstance(item, (list, tuple)) or len(item) != width:
+            continue
+        try:
+            rows.append(tuple(int(part) for part in item))
+        except (TypeError, ValueError):
+            continue
+    return tuple(rows)
+
+
+def _tuple_tuple_str_int(value: Any) -> tuple[tuple[str, str, int], ...]:
+    """把 YAML 中的模板规格列表转换为 tuple[str, str, int] 序列。"""
+    if not isinstance(value, (list, tuple)):
+        return ()
+    rows: list[tuple[str, str, int]] = []
+    for item in value:
+        if not isinstance(item, (list, tuple)) or len(item) != 3:
+            continue
+        name, expression, priority = item
+        if not isinstance(name, str) or not isinstance(expression, str):
+            continue
+        try:
+            rows.append((name, expression, int(priority)))
+        except (TypeError, ValueError):
+            continue
+    return tuple(rows)
+
+
+def _policy_config_for_dataset(
+    dataset_id: str,
+    yaml_config: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """读取数据集表达式策略的 YAML 覆盖项。"""
+    config = yaml_config or get_yaml_config()
+    section = config.get("expression_policies", {})
+    if not isinstance(section, dict):
+        return {}
+    dataset_cfg = section.get(dataset_id, {})
+    return dataset_cfg if isinstance(dataset_cfg, dict) else {}
+
+
+def _apply_yaml_expression_policy_overrides(
+    policy: DatasetExpressionPolicy,
+    *,
+    dataset_id: str,
+    yaml_config: dict[str, Any] | None = None,
+) -> DatasetExpressionPolicy:
+    """把 settings.yaml 中的 expression_policies 覆盖项应用到策略对象。"""
+    overrides = _policy_config_for_dataset(dataset_id, yaml_config)
+    if not overrides:
+        return policy
+
+    update_map: dict[str, Any] = {}
+    set_fields = {
+        "disabled_templates",
+        "protected_templates",
+        "positive_raw_fields",
+        "negative_raw_fields",
+        "overtested_weak_fields",
+        "always_keep_families",
+        "slow_template_names",
+        "concentrated_weak_families",
+        "concentrated_weak_names",
+        "low_sharpe_weak_ratio_families",
+        "weak_mean_spread_fields",
+        "broken_zscore_spread_fields",
+        "weak_ratio_standalone_fields",
+    }
+    tuple_fields = {
+        "blacklisted_template_name_substrings",
+        "slow_template_prefixes",
+        "concentrated_weak_prefixes",
+        "low_sharpe_weak_ratio_prefixes",
+    }
+    dict_tuple_fields = {"ratio_partner_candidates", "ratio_keywords"}
+    dict_int_fields = {
+        "template_priority_penalties",
+        "preferred_partner_score_bonuses",
+        "preferred_field_order",
+    }
+    tuple_pair_fields = {"high_conviction_ratio_pairs"}
+    tuple_window3_fields = {"matrix_delta_over_std_windows", "ratio_delta_over_std_windows"}
+    tuple_window2_fields = {"ratio_delta_rank_windows"}
+    template_spec_fields = {
+        "matrix_diversified_template_specs",
+        "ratio_diversified_template_specs",
+        "ratio_legacy_template_specs",
+    }
+
+    for key, value in overrides.items():
+        if not hasattr(policy, key):
+            continue
+        if key in set_fields and isinstance(value, (list, tuple, set)):
+            update_map[key] = {str(item) for item in value}
+        elif key in tuple_fields and isinstance(value, (list, tuple)):
+            update_map[key] = tuple(str(item) for item in value)
+        elif key in dict_tuple_fields and isinstance(value, dict):
+            update_map[key] = {
+                str(name): tuple(str(item) for item in items)
+                for name, items in value.items()
+                if isinstance(items, (list, tuple))
+            }
+        elif key in dict_int_fields and isinstance(value, dict):
+            coerced: dict[Any, int] = {}
+            for name, score in value.items():
+                try:
+                    coerced[name] = int(score)
+                except (TypeError, ValueError):
+                    continue
+            update_map[key] = coerced
+        elif key == "template_prefix_penalties":
+            coerced_prefix_penalties: dict[tuple[str, ...], int] = {}
+            if isinstance(value, dict):
+                for prefixes, score in value.items():
+                    if isinstance(prefixes, str):
+                        parsed_prefixes = tuple(
+                            part.strip() for part in prefixes.split("|") if part.strip()
+                        )
+                    elif isinstance(prefixes, (list, tuple)):
+                        parsed_prefixes = tuple(str(part).strip() for part in prefixes if str(part).strip())
+                    else:
+                        continue
+                    if not parsed_prefixes:
+                        continue
+                    try:
+                        coerced_prefix_penalties[parsed_prefixes] = int(score)
+                    except (TypeError, ValueError):
+                        continue
+            elif isinstance(value, (list, tuple)):
+                for item in value:
+                    if not isinstance(item, dict):
+                        continue
+                    prefixes = item.get("prefixes", ())
+                    penalty = item.get("penalty")
+                    if isinstance(prefixes, str):
+                        parsed_prefixes = tuple(
+                            part.strip() for part in prefixes.split("|") if part.strip()
+                        )
+                    elif isinstance(prefixes, (list, tuple)):
+                        parsed_prefixes = tuple(str(part).strip() for part in prefixes if str(part).strip())
+                    else:
+                        continue
+                    if not parsed_prefixes:
+                        continue
+                    try:
+                        coerced_prefix_penalties[parsed_prefixes] = int(penalty)
+                    except (TypeError, ValueError):
+                        continue
+            update_map[key] = coerced_prefix_penalties
+        elif key in tuple_pair_fields and isinstance(value, (list, tuple)):
+            update_map[key] = {
+                (str(item[0]), str(item[1]))
+                for item in value
+                if isinstance(item, (list, tuple)) and len(item) == 2
+            }
+        elif key in tuple_window3_fields:
+            update_map[key] = _tuple_tuple_int(value, 3)
+        elif key in tuple_window2_fields:
+            update_map[key] = _tuple_tuple_int(value, 2)
+        elif key in template_spec_fields:
+            update_map[key] = _tuple_tuple_str_int(value)
+        else:
+            update_map[key] = value
+
+    return replace(policy, **update_map)
+
+
+def _base_curated_expression_policy(
+    dataset_id: str,
+    *,
+    default_transform: FieldTransformSpec,
+    matrix_transform: FieldTransformSpec,
+    vector_transform: FieldTransformSpec,
+    ratio_transform: FieldTransformSpec,
+    feedback_loop_policy: FeedbackLoopPolicy,
+) -> DatasetExpressionPolicy:
+    """构建通用 curated policy，再由 YAML 注入数据集差异。"""
+    return DatasetExpressionPolicy(
+        dataset_id=dataset_id,
+        use_curated_heuristics=True,
+        partner_limit=4,
+        matrix_delta_over_std_windows=DEFAULT_MATRIX_DELTA_OVER_STD_WINDOWS,
+        matrix_diversified_template_specs=DEFAULT_MATRIX_DIVERSIFIED_TEMPLATE_SPECS,
+        ratio_delta_rank_windows=DEFAULT_RATIO_DELTA_RANK_WINDOWS,
+        ratio_delta_over_std_windows=DEFAULT_RATIO_DELTA_OVER_STD_WINDOWS,
+        ratio_diversified_template_specs=DEFAULT_RATIO_DIVERSIFIED_TEMPLATE_SPECS,
+        ratio_legacy_template_specs=RATIO_LEGACY_TEMPLATE_SPECS,
+        positive_raw_fields=set(POSITIVE_RAW_FIELDS),
+        negative_raw_fields=set(NEGATIVE_RAW_FIELDS),
+        ratio_partner_candidates=dict(RATIO_PARTNER_CANDIDATES),
+        ratio_keywords=dict(RATIO_KEYWORDS),
+        preferred_partner_score_bonuses=dict(DEFAULT_PREFERRED_PARTNER_SCORE_BONUSES),
+        default_field_transform=default_transform,
+        matrix_field_transform=matrix_transform,
+        vector_field_transform=vector_transform,
+        ratio_numerator_transform=ratio_transform,
+        ratio_denominator_transform=ratio_transform,
+        feedback_loop_policy=feedback_loop_policy,
+    )
 
 
 # ============================================================================
@@ -560,25 +766,6 @@ RATIO_KEYWORDS: dict[str, tuple[str, ...]] = {
 用于在字段名称中查找关键词时，推荐相关的配对字段。
 """
 
-FUNDAMENTAL6_RATIO_PARTNER_CANDIDATES: dict[str, tuple[str, ...]] = {
-    **RATIO_PARTNER_CANDIDATES,
-    "debt": ("cap", "fnd6_mkvalt", "fnd6_mkvaltq", "assets", "equity", "enterprise_value"),
-    "debt_lt": ("cap", "fnd6_mkvalt", "fnd6_mkvaltq", "assets", "equity", "enterprise_value"),
-    "debt_st": ("assets", "cash", "cash_st", "fnd6_mkvalt"),
-    "liabilities": ("assets", "equity", "fnd6_mkvalt", "fnd6_mkvaltq", "cap", "liabilities_curr"),
-    "liabilities_curr": ("assets", "equity", "fnd6_mkvalt", "fnd6_mkvaltq"),
-    "cashflow": ("assets", "enterprise_value", "fnd6_mkvalt", "fnd6_mkvaltq"),
-    "cashflow_op": ("cap", "fnd6_mkvalt", "fnd6_mkvaltq", "assets", "debt", "enterprise_value"),
-    "cogs": ("assets", "cash", "fnd6_mkvalt", "fnd6_mkvaltq"),
-}
-"""fundamental6 专属的 ratio 候选配对映射。"""
-
-FUNDAMENTAL6_RATIO_KEYWORDS: dict[str, tuple[str, ...]] = {
-    **RATIO_KEYWORDS,
-    "cashflow_op": ("cap", "assets", "enterprise_value", "debt", "fnd6_mkvalt", "fnd6_mkvaltq"),
-}
-"""fundamental6 专属的 ratio 关键词映射。"""
-
 POSITIVE_RAW_FIELDS: set = {
     "assets",
     "assets_curr",
@@ -615,50 +802,6 @@ NEGATIVE_RAW_FIELDS: set = {
 在构建 Alpha 表达式时可能需要特殊处理。
 """
 
-FUNDAMENTAL6_DISABLED_TEMPLATES: set[str] = {
-    "vol_scaled_delta_5_20",
-    "vol_scaled_delta_5_20_MARKET",
-    "delta_5",
-    "group_delta_5",
-    "group_delta_5_MARKET",
-    "mean_diff_5_20",
-    "iter_group_vol_scaled_delta_63_126",
-    "iter_group_vol_scaled_delta_63_126_bf180",
-    "iter_group_vol_scaled_delta_63_126_bf260",
-}
-"""fundamental6 上已明确偏弱、可直接停用的模板。"""
-
-FUNDAMENTAL6_PROTECTED_TEMPLATES: set[str] = {
-    "account_rank_backfill_504",
-    "account_ir_60",
-    "account_group_backfill_504_subindustry",
-    "account_group_zscore_60_subindustry",
-    "account_group_ir_60_subindustry",
-    "account_ts_rank_60",
-    "account_group_decay_63_subindustry",
-    "account_ir_60_decay_20",
-    "account_backfill_zscore_decay_63_subindustry",
-}
-"""fundamental6 上应持续保留探索的模板方向。"""
-
-FUNDAMENTAL6_HIGH_CONVICTION_RATIO_PAIRS: set[tuple[str, str]] = {
-    ("cash", "assets"),
-    ("cash_st", "assets_curr"),
-    ("cash_st", "assets"),
-    ("debt", "assets"),
-    ("debt_lt", "assets"),
-    ("debt_st", "assets"),
-    ("cogs", "assets"),
-    ("capex", "assets"),
-    ("cashflow", "assets"),
-    ("cashflow_op", "cap"),
-    ("cashflow_op", "assets"),
-    ("cashflow_op", "fnd6_mkvalt"),
-    ("cashflow_op", "fnd6_mkvaltq"),
-    ("cashflow_invst", "assets"),
-}
-"""fundamental6 上优先探索的高经济含义比值组合。"""
-
 ALLOWED_EXTERNAL_RATIO_PARTNERS: set[str] = {"cap"}
 """允许在当前 dataset 字段缓存之外直接生成的跨数据基础字段。"""
 
@@ -673,78 +816,6 @@ DEFAULT_PREFERRED_PARTNER_SCORE_BONUSES: dict[str, int] = {
 }
 """通用 partner discovery 额外加分项。"""
 
-FUNDAMENTAL6_PREFERRED_PARTNER_SCORE_BONUSES: dict[str, int] = {
-    **DEFAULT_PREFERRED_PARTNER_SCORE_BONUSES,
-    "fnd6_mkvalt": 25,
-    "fnd6_mkvaltq": 25,
-    "liabilities_curr": 25,
-}
-"""fundamental6 专属 partner discovery 额外加分项。"""
-
-FUNDAMENTAL6_TEMPLATE_PRIORITY_PENALTIES: dict[str, int] = {
-    "account_neutralize_zscore_decay_63_industry": -220,
-    "vol_scaled_delta_20_60": -820,
-    "vol_scaled_delta_20_60_market": -820,
-    "vol_scaled_delta_20_60_industry": -820,
-    "vec_avg_ts_corr_self_60": -820,
-    "vec_avg_3layer_zs_sector_decay": -820,
-    "3layer_zscore_sector_decay": -820,
-    "3layer_zscore_market_decay": -820,
-    "3layer_rank_sector_decay": -820,
-    "3layer_zscore_subind_decay": -820,
-    "ts_corr_self_rank_60": -820,
-    "ts_corr_self_60": -820,
-    "ts_corr_self_rank_252": -820,
-    "ts_corr_self_120": -820,
-    "ts_corr_self_252": -820,
-    "ts_rank_after_group_63": -820,
-    "ts_zscore_after_group_63": -820,
-    "ts_rank_60": -260,
-    "ts_rank_63": -240,
-    "group_ts_rank_60": -240,
-    "ts_zscore_backfill": -240,
-    "ts_zscore_63": -240,
-    "ts_zscore_66": -220,
-    "ts_zscore_60": -220,
-    "group_zscore_60": -220,
-    "group_zscore_63_sector": -220,
-    "group_zscore_63_market": -220,
-    "decay_20": -220,
-    "decay_10": -220,
-    "decay_22": -200,
-    "group_decay_20": -200,
-    "resid_group_mean_decay_20": -220,
-    "mean_diff_22_66": -240,
-    "mean_diff_20_60": -240,
-    "mean_diff_21_63": -220,
-    "stddev_60": -240,
-    "stddev_63": -240,
-    "stddev_22": -220,
-    "ir_60": -220,
-    "vec_avg_ts_rank_60": -260,
-    "vec_avg_ts_rank_63": -240,
-    "vec_avg_ts_zscore_63": -240,
-    "vec_avg_ts_zscore_60": -220,
-    "vec_avg_decay_20": -220,
-    "vec_avg_decay_10": -220,
-    "vec_avg_mean_diff_22_66": -240,
-    "vec_avg_mean_diff_21_63": -220,
-}
-"""fundamental6 上需要强制降权的 generic 模板。"""
-
-FUNDAMENTAL6_TEMPLATE_PREFIX_PENALTIES: dict[tuple[str, ...], int] = {
-    ("delta_", "group_delta_", "rank_delta_"): -760,
-    ("mean_diff_", "vec_avg_mean_diff_"): -180,
-    ("stddev_",): -180,
-}
-"""fundamental6 上按模板名前缀降权的规则。"""
-
-FUNDAMENTAL6_ACCOUNT_TEMPLATE_BOOST: int = 820
-"""fundamental6 上 account_* 模板的统一优先级加成。"""
-
-FUNDAMENTAL6_HIGH_CONVICTION_RATIO_PRIORITY_BOOST: int = 780
-"""fundamental6 上高经济含义 ratio 组合的统一优先级加成。"""
-
 DEFAULT_MATRIX_DELTA_OVER_STD_WINDOWS: tuple[tuple[int, int, int], ...] = (
     (5, 20, 176),
     (15, 40, 172),
@@ -754,15 +825,6 @@ DEFAULT_MATRIX_DELTA_OVER_STD_WINDOWS: tuple[tuple[int, int, int], ...] = (
     (30, 120, 166),
 )
 """非 fundamental6 数据集的 matrix delta/std 模板窗口。"""
-
-FUNDAMENTAL6_MATRIX_DELTA_OVER_STD_WINDOWS: tuple[tuple[int, int, int], ...] = (
-    (21, 63, 148),
-    (63, 126, 144),
-    (63, 252, 146),
-    (126, 252, 142),
-    (252, 504, 140),
-)
-"""fundamental6 的 matrix delta/std 模板窗口。"""
 
 DEFAULT_MATRIX_DIVERSIFIED_TEMPLATE_SPECS: tuple[tuple[str, str, int], ...] = (
     (
@@ -798,53 +860,12 @@ DEFAULT_MATRIX_DIVERSIFIED_TEMPLATE_SPECS: tuple[tuple[str, str, int], ...] = (
 )
 """非 fundamental6 数据集的额外 matrix diversified 模板。"""
 
-FUNDAMENTAL6_MATRIX_DIVERSIFIED_TEMPLATE_SPECS: tuple[tuple[str, str, int], ...] = (
-    (
-        "group_delta_over_std_industry_63_126",
-        "group_rank(ts_delta(ts_backfill({field}, {backfill_window}), 63) / ts_std_dev(ts_backfill({field}, {backfill_window}), 126), industry)",
-        138,
-    ),
-    (
-        "group_short_long_mean_spread_subindustry_63_{backfill_window}",
-        "group_rank(ts_mean(ts_backfill({field}, {backfill_window}), 63) - ts_mean(ts_backfill({field}, {backfill_window}), {backfill_window}), subindustry)",
-        164,
-    ),
-    (
-        "group_zscore_subindustry_63",
-        "group_rank(ts_zscore(ts_backfill({field}, {backfill_window}), 63), subindustry)",
-        161,
-    ),
-    (
-        "rank_mean_spread_over_std_63_{backfill_window}_126",
-        "rank((ts_mean(ts_backfill({field}, {backfill_window}), 63) - ts_mean(ts_backfill({field}, {backfill_window}), {backfill_window})) / ts_std_dev(ts_backfill({field}, {backfill_window}), 126))",
-        158,
-    ),
-    (
-        "rank_zscore_spread_63_{backfill_window}",
-        "rank(ts_zscore(ts_backfill({field}, {backfill_window}), 63) - ts_zscore(ts_backfill({field}, {backfill_window}), {backfill_window}))",
-        154,
-    ),
-    (
-        "group_rank_delta_of_rank_63",
-        "group_rank(ts_delta(rank(ts_backfill({field}, {backfill_window})), 63), subindustry)",
-        150,
-    ),
-)
-"""fundamental6 的额外 matrix diversified 模板。"""
-
 DEFAULT_RATIO_DELTA_RANK_WINDOWS: tuple[tuple[int, int], ...] = (
     (3, 188),
     (5, 184),
     (10, 176),
 )
 """非 fundamental6 数据集的 ratio delta-rank 窗口。"""
-
-FUNDAMENTAL6_RATIO_DELTA_RANK_WINDOWS: tuple[tuple[int, int], ...] = (
-    (63, 186),
-    (126, 180),
-    (252, 172),
-)
-"""fundamental6 的 ratio delta-rank 窗口。"""
 
 DEFAULT_RATIO_DELTA_OVER_STD_WINDOWS: tuple[tuple[int, int, int], ...] = (
     (5, 20, 180),
@@ -855,14 +876,6 @@ DEFAULT_RATIO_DELTA_OVER_STD_WINDOWS: tuple[tuple[int, int, int], ...] = (
     (30, 120, 170),
 )
 """非 fundamental6 数据集的 ratio delta/std 窗口。"""
-
-FUNDAMENTAL6_RATIO_DELTA_OVER_STD_WINDOWS: tuple[tuple[int, int, int], ...] = (
-    (21, 63, 176),
-    (63, 126, 172),
-    (63, 252, 174),
-    (126, 252, 168),
-)
-"""fundamental6 的 ratio delta/std 窗口。"""
 
 DEFAULT_RATIO_DIVERSIFIED_TEMPLATE_SPECS: tuple[tuple[str, str, int], ...] = (
     (
@@ -883,25 +896,6 @@ DEFAULT_RATIO_DIVERSIFIED_TEMPLATE_SPECS: tuple[tuple[str, str, int], ...] = (
 )
 """非 fundamental6 数据集的 ratio diversified 模板。"""
 
-FUNDAMENTAL6_RATIO_DIVERSIFIED_TEMPLATE_SPECS: tuple[tuple[str, str, int], ...] = (
-    (
-        "group_ratio_zscore_{ratio_label}",
-        "group_rank(ts_zscore(ts_backfill({ratio_expr}, {backfill_window}), 63), subindustry)",
-        160,
-    ),
-    (
-        "ratio_mean_spread_over_std_{ratio_label}",
-        "rank((ts_mean(ts_backfill({ratio_expr}, {backfill_window}), 63) - ts_mean(ts_backfill({ratio_expr}, {backfill_window}), {backfill_window})) / ts_std_dev(ts_backfill({ratio_expr}, {backfill_window}), 126))",
-        156,
-    ),
-    (
-        "ratio_zscore_spread_{ratio_label}",
-        "rank(ts_zscore(ts_backfill({ratio_expr}, {backfill_window}), 63) - ts_zscore(ts_backfill({ratio_expr}, {backfill_window}), {backfill_window}))",
-        152,
-    ),
-)
-"""fundamental6 的 ratio diversified 模板。"""
-
 RATIO_LEGACY_TEMPLATE_SPECS: tuple[tuple[str, str, int], ...] = (
     ("raw_ratio_{ratio_label}", "{ratio_expr}", 154),
     (
@@ -917,119 +911,6 @@ RATIO_LEGACY_TEMPLATE_SPECS: tuple[tuple[str, str, int], ...] = (
     ),
 )
 """所有数据集通用的 ratio legacy 模板。"""
-
-FUNDAMENTAL6_PREFERRED_FIELD_ORDER: dict[str, int] = {
-    "cash_st": 0,
-    "debt_lt": 1,
-    "cogs": 2,
-    "cashflow_invst": 3,
-    "cashflow_op": 4,
-    "debt": 5,
-    "debt_st": 6,
-    "cashflow": 7,
-    "cashflow_fin": 8,
-    "current_ratio": 9,
-    "unsystematic_risk_last_360_days": 10,
-    "unsystematic_risk_last_60_days": 11,
-    "fnd6_cptnewqeventv110_apq": 12,
-    "fnd6_cptnewqeventv110_lctq": 13,
-    "fnd6_cptnewqeventv110_dpq": 14,
-}
-"""fundamental6 续跑时的字段优先顺序。"""
-
-FUNDAMENTAL6_OVERTESTED_WEAK_FIELDS: set[str] = {
-    "assets",
-    "assets_curr",
-    "bookvalue_ps",
-    "capex",
-}
-"""fundamental6 上已被过度测试且整体偏弱的字段。"""
-
-FUNDAMENTAL6_FIELD_MIN_COVERAGE: float = 0.10
-FUNDAMENTAL6_FIELD_MIN_DATE_COVERAGE: float = 0.95
-FUNDAMENTAL6_FIELD_MIN_ALPHA_COUNT: int = 25
-FUNDAMENTAL6_FIELD_MIN_USER_COUNT: int = 5
-FUNDAMENTAL6_FIELD_COVERAGE_WEIGHT: float = 0.35
-FUNDAMENTAL6_FIELD_DATE_COVERAGE_WEIGHT: float = 0.30
-FUNDAMENTAL6_FIELD_ALPHA_VALIDATION_WEIGHT: float = 0.12
-FUNDAMENTAL6_FIELD_USER_VALIDATION_WEIGHT: float = 0.08
-FUNDAMENTAL6_FIELD_ALPHA_CROWDING_PENALTY_WEIGHT: float = 0.10
-FUNDAMENTAL6_FIELD_USER_CROWDING_PENALTY_WEIGHT: float = 0.08
-FUNDAMENTAL6_FIELD_RECENCY_WEIGHT: float = 0.05
-FUNDAMENTAL6_FIELD_THEME_BONUS_WEIGHT: float = 0.02
-FUNDAMENTAL6_FIELD_PREFERRED_UNEXPLORED_BONUS: float = 0.08
-
-FUNDAMENTAL6_ALWAYS_KEEP_FAMILIES: set[str] = {
-    "group_rank_delta",
-    "group_vol_scaled_delta",
-    "group_mean_spread",
-    "group_zscore",
-    "vol_scaled_delta",
-    "mean_spread",
-    "zscore_time",
-    "rank_delta",
-    "decayed_delta",
-    "rank_spread",
-    "group_ratio_delta_over_std",
-    "group_ratio_delta",
-}
-"""fundamental6 反馈剪枝时始终保留的表达式家族。"""
-
-FUNDAMENTAL6_SLOW_TEMPLATE_PREFIXES: tuple[str, ...] = ("ts_mean_", "backfill_", "sum_", "stddev_")
-FUNDAMENTAL6_SLOW_TEMPLATE_NAMES: set[str] = {
-    "zscore",
-    "scale",
-    "rank_raw",
-    "raw_field",
-    "rank_raw_field",
-}
-FUNDAMENTAL6_CONCENTRATED_WEAK_FAMILIES: set[str] = {
-    "legacy_level",
-    "legacy_group_level",
-    "legacy_ratio",
-    "legacy_neg_ratio",
-    "group_ratio_level",
-}
-FUNDAMENTAL6_CONCENTRATED_WEAK_PREFIXES: tuple[str, ...] = (
-    "raw_ratio_",
-    "ratio_",
-    "rank_ratio_",
-    "group_rank_ratio_",
-)
-FUNDAMENTAL6_CONCENTRATED_WEAK_NAMES: set[str] = {"argmax_60", "argmin_60"}
-FUNDAMENTAL6_LOW_SHARPE_WEAK_RATIO_FAMILIES: set[str] = {
-    "legacy_ratio",
-    "legacy_neg_ratio",
-    "group_ratio_level",
-}
-FUNDAMENTAL6_LOW_SHARPE_WEAK_RATIO_PREFIXES: tuple[str, ...] = (
-    "raw_ratio_",
-    "ratio_",
-    "rank_ratio_",
-    "group_rank_ratio_",
-)
-FUNDAMENTAL6_WEAK_MEAN_SPREAD_FIELDS: set[str] = {"assets", "assets_curr"}
-FUNDAMENTAL6_BROKEN_ZSCORE_SPREAD_FIELDS: set[str] = {
-    "assets",
-    "assets_curr",
-    "cash",
-    "capex",
-    "bookvalue_ps",
-    "cashflow",
-}
-FUNDAMENTAL6_WEAK_RATIO_STANDALONE_FIELDS: set[str] = {
-    "assets",
-    "assets_curr",
-    "bookvalue_ps",
-}
-FUNDAMENTAL6_LOW_SHARPE_RATIO_FAIL_THRESHOLD: int = 4
-"""fundamental6 上 ratio 家族触发全局降权前所需的 LOW_SHARPE 次数。"""
-
-FUNDAMENTAL6_BLACKLIST_MIN_FIELDS_FOR_NEARPASS: int = 4
-FUNDAMENTAL6_BLACKLIST_PROTECTED_MIN_AVG_SHARPE: float = 0.70
-FUNDAMENTAL6_BLACKLIST_PROTECTED_MIN_AVG_FITNESS: float = 0.35
-"""fundamental6 自动黑名单在 near-pass 模板上的保护阈值。"""
-
 
 # ============================================================================
 # 数据集自适应配置 (Dataset Profiles)
@@ -1166,109 +1047,40 @@ def get_dataset_expression_policy(
         use_curated_heuristics = dataset_id == "fundamental6"
 
     if not use_curated_heuristics:
-        return DatasetExpressionPolicy(
+        return _apply_yaml_expression_policy_overrides(
+            DatasetExpressionPolicy(
+                dataset_id=dataset_id,
+                use_curated_heuristics=False,
+                partner_limit=4,
+                matrix_delta_over_std_windows=DEFAULT_MATRIX_DELTA_OVER_STD_WINDOWS,
+                matrix_diversified_template_specs=DEFAULT_MATRIX_DIVERSIFIED_TEMPLATE_SPECS,
+                ratio_delta_rank_windows=DEFAULT_RATIO_DELTA_RANK_WINDOWS,
+                ratio_delta_over_std_windows=DEFAULT_RATIO_DELTA_OVER_STD_WINDOWS,
+                ratio_diversified_template_specs=DEFAULT_RATIO_DIVERSIFIED_TEMPLATE_SPECS,
+                ratio_legacy_template_specs=RATIO_LEGACY_TEMPLATE_SPECS,
+                ratio_partner_candidates=dict(RATIO_PARTNER_CANDIDATES),
+                ratio_keywords=dict(RATIO_KEYWORDS),
+                preferred_partner_score_bonuses=dict(DEFAULT_PREFERRED_PARTNER_SCORE_BONUSES),
+                default_field_transform=default_transform,
+                matrix_field_transform=matrix_transform,
+                vector_field_transform=vector_transform,
+                ratio_numerator_transform=ratio_transform,
+                ratio_denominator_transform=ratio_transform,
+                feedback_loop_policy=default_feedback_loop_policy,
+            ),
             dataset_id=dataset_id,
-            use_curated_heuristics=False,
-            partner_limit=4,
-            matrix_delta_over_std_windows=DEFAULT_MATRIX_DELTA_OVER_STD_WINDOWS,
-            matrix_diversified_template_specs=DEFAULT_MATRIX_DIVERSIFIED_TEMPLATE_SPECS,
-            ratio_delta_rank_windows=DEFAULT_RATIO_DELTA_RANK_WINDOWS,
-            ratio_delta_over_std_windows=DEFAULT_RATIO_DELTA_OVER_STD_WINDOWS,
-            ratio_diversified_template_specs=DEFAULT_RATIO_DIVERSIFIED_TEMPLATE_SPECS,
-            ratio_legacy_template_specs=RATIO_LEGACY_TEMPLATE_SPECS,
-            ratio_partner_candidates=dict(RATIO_PARTNER_CANDIDATES),
-            ratio_keywords=dict(RATIO_KEYWORDS),
-            preferred_partner_score_bonuses=dict(DEFAULT_PREFERRED_PARTNER_SCORE_BONUSES),
-            default_field_transform=default_transform,
-            matrix_field_transform=matrix_transform,
-            vector_field_transform=vector_transform,
-            ratio_numerator_transform=ratio_transform,
-            ratio_denominator_transform=ratio_transform,
-            feedback_loop_policy=default_feedback_loop_policy,
         )
 
-    if dataset_id == "fundamental6":
-        return DatasetExpressionPolicy(
-            dataset_id=dataset_id,
-            use_curated_heuristics=True,
-            partner_limit=6,
-            account_template_boost=FUNDAMENTAL6_ACCOUNT_TEMPLATE_BOOST,
-            high_conviction_ratio_priority_boost=FUNDAMENTAL6_HIGH_CONVICTION_RATIO_PRIORITY_BOOST,
-            disabled_templates=set(FUNDAMENTAL6_DISABLED_TEMPLATES),
-            protected_templates=set(FUNDAMENTAL6_PROTECTED_TEMPLATES),
-            high_conviction_ratio_pairs=set(FUNDAMENTAL6_HIGH_CONVICTION_RATIO_PAIRS),
-            template_priority_penalties=dict(FUNDAMENTAL6_TEMPLATE_PRIORITY_PENALTIES),
-            template_prefix_penalties=dict(FUNDAMENTAL6_TEMPLATE_PREFIX_PENALTIES),
-            matrix_delta_over_std_windows=FUNDAMENTAL6_MATRIX_DELTA_OVER_STD_WINDOWS,
-            matrix_diversified_template_specs=FUNDAMENTAL6_MATRIX_DIVERSIFIED_TEMPLATE_SPECS,
-            ratio_delta_rank_windows=FUNDAMENTAL6_RATIO_DELTA_RANK_WINDOWS,
-            ratio_delta_over_std_windows=FUNDAMENTAL6_RATIO_DELTA_OVER_STD_WINDOWS,
-            ratio_diversified_template_specs=FUNDAMENTAL6_RATIO_DIVERSIFIED_TEMPLATE_SPECS,
-            ratio_legacy_template_specs=RATIO_LEGACY_TEMPLATE_SPECS,
-            positive_raw_fields=set(POSITIVE_RAW_FIELDS),
-            negative_raw_fields=set(NEGATIVE_RAW_FIELDS),
-            blacklisted_template_name_substrings=("group_ratio_delta_rank",),
-            ratio_partner_candidates=dict(FUNDAMENTAL6_RATIO_PARTNER_CANDIDATES),
-            ratio_keywords=dict(FUNDAMENTAL6_RATIO_KEYWORDS),
-            preferred_partner_score_bonuses=dict(FUNDAMENTAL6_PREFERRED_PARTNER_SCORE_BONUSES),
-            preferred_field_order=dict(FUNDAMENTAL6_PREFERRED_FIELD_ORDER),
-            overtested_weak_fields=set(FUNDAMENTAL6_OVERTESTED_WEAK_FIELDS),
-            promising_field_min_priority=0.65,
-            always_keep_families=set(FUNDAMENTAL6_ALWAYS_KEEP_FAMILIES),
-            slow_template_prefixes=FUNDAMENTAL6_SLOW_TEMPLATE_PREFIXES,
-            slow_template_names=set(FUNDAMENTAL6_SLOW_TEMPLATE_NAMES),
-            concentrated_weak_families=set(FUNDAMENTAL6_CONCENTRATED_WEAK_FAMILIES),
-            concentrated_weak_prefixes=FUNDAMENTAL6_CONCENTRATED_WEAK_PREFIXES,
-            concentrated_weak_names=set(FUNDAMENTAL6_CONCENTRATED_WEAK_NAMES),
-            low_sharpe_weak_ratio_families=set(FUNDAMENTAL6_LOW_SHARPE_WEAK_RATIO_FAMILIES),
-            low_sharpe_weak_ratio_prefixes=FUNDAMENTAL6_LOW_SHARPE_WEAK_RATIO_PREFIXES,
-            weak_mean_spread_fields=set(FUNDAMENTAL6_WEAK_MEAN_SPREAD_FIELDS),
-            broken_zscore_spread_fields=set(FUNDAMENTAL6_BROKEN_ZSCORE_SPREAD_FIELDS),
-            weak_ratio_standalone_fields=set(FUNDAMENTAL6_WEAK_RATIO_STANDALONE_FIELDS),
-            low_sharpe_ratio_fail_threshold=FUNDAMENTAL6_LOW_SHARPE_RATIO_FAIL_THRESHOLD,
-            blacklist_min_fields_for_nearpass=FUNDAMENTAL6_BLACKLIST_MIN_FIELDS_FOR_NEARPASS,
-            blacklist_protected_min_avg_sharpe=FUNDAMENTAL6_BLACKLIST_PROTECTED_MIN_AVG_SHARPE,
-            blacklist_protected_min_avg_fitness=FUNDAMENTAL6_BLACKLIST_PROTECTED_MIN_AVG_FITNESS,
-            field_min_coverage=FUNDAMENTAL6_FIELD_MIN_COVERAGE,
-            field_min_date_coverage=FUNDAMENTAL6_FIELD_MIN_DATE_COVERAGE,
-            field_min_alpha_count=FUNDAMENTAL6_FIELD_MIN_ALPHA_COUNT,
-            field_min_user_count=FUNDAMENTAL6_FIELD_MIN_USER_COUNT,
-            field_coverage_weight=FUNDAMENTAL6_FIELD_COVERAGE_WEIGHT,
-            field_date_coverage_weight=FUNDAMENTAL6_FIELD_DATE_COVERAGE_WEIGHT,
-            field_alpha_validation_weight=FUNDAMENTAL6_FIELD_ALPHA_VALIDATION_WEIGHT,
-            field_user_validation_weight=FUNDAMENTAL6_FIELD_USER_VALIDATION_WEIGHT,
-            field_alpha_crowding_penalty_weight=FUNDAMENTAL6_FIELD_ALPHA_CROWDING_PENALTY_WEIGHT,
-            field_user_crowding_penalty_weight=FUNDAMENTAL6_FIELD_USER_CROWDING_PENALTY_WEIGHT,
-            field_recency_weight=FUNDAMENTAL6_FIELD_RECENCY_WEIGHT,
-            field_theme_bonus_weight=FUNDAMENTAL6_FIELD_THEME_BONUS_WEIGHT,
-            field_preferred_unexplored_bonus=FUNDAMENTAL6_FIELD_PREFERRED_UNEXPLORED_BONUS,
-            default_field_transform=default_transform,
-            matrix_field_transform=matrix_transform,
-            vector_field_transform=vector_transform,
-            ratio_numerator_transform=ratio_transform,
-            ratio_denominator_transform=ratio_transform,
+    return _apply_yaml_expression_policy_overrides(
+        _base_curated_expression_policy(
+            dataset_id,
+            default_transform=default_transform,
+            matrix_transform=matrix_transform,
+            vector_transform=vector_transform,
+            ratio_transform=ratio_transform,
             feedback_loop_policy=default_feedback_loop_policy,
-        )
-
-    return DatasetExpressionPolicy(
+        ),
         dataset_id=dataset_id,
-        use_curated_heuristics=True,
-        partner_limit=4,
-        matrix_delta_over_std_windows=DEFAULT_MATRIX_DELTA_OVER_STD_WINDOWS,
-        matrix_diversified_template_specs=DEFAULT_MATRIX_DIVERSIFIED_TEMPLATE_SPECS,
-        ratio_delta_rank_windows=DEFAULT_RATIO_DELTA_RANK_WINDOWS,
-        ratio_delta_over_std_windows=DEFAULT_RATIO_DELTA_OVER_STD_WINDOWS,
-        ratio_diversified_template_specs=DEFAULT_RATIO_DIVERSIFIED_TEMPLATE_SPECS,
-        ratio_legacy_template_specs=RATIO_LEGACY_TEMPLATE_SPECS,
-        ratio_partner_candidates=dict(RATIO_PARTNER_CANDIDATES),
-        ratio_keywords=dict(RATIO_KEYWORDS),
-        preferred_partner_score_bonuses=dict(DEFAULT_PREFERRED_PARTNER_SCORE_BONUSES),
-        default_field_transform=default_transform,
-        matrix_field_transform=matrix_transform,
-        vector_field_transform=vector_transform,
-        ratio_numerator_transform=ratio_transform,
-        ratio_denominator_transform=ratio_transform,
-        feedback_loop_policy=default_feedback_loop_policy,
     )
 
 

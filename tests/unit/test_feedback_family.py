@@ -7,6 +7,7 @@ import json
 from alpha.analysis.feedback import (
     choose_settings_variant_budget,
     is_legacy_family_disabled,
+    should_keep_template_for_feedback,
     should_skip_field_template_family,
 )
 from alpha.analysis.stats import load_existing_results
@@ -110,3 +111,22 @@ def test_choose_settings_variant_budget_uses_feedback_stage_policy() -> None:
 
     assert generate_budget == 1
     assert resimulate_budget == 3
+
+
+def test_resimulate_stage_blocks_iter_templates_outside_preferred_stages() -> None:
+    policy = get_dataset_expression_policy("fundamental6")
+
+    keep = should_keep_template_for_feedback(
+        "iter_rank_delta_5",
+        "rank(ts_delta(ts_backfill(cash_st, 240), 5))",
+        200,
+        {
+            "best_score": 0.30,
+            "attempted_templates": 4,
+            "failed_check_counts": {},
+        },
+        expression_policy=policy,
+        template_metadata={"family": "rank_delta", "stage": "first_order"},
+    )
+
+    assert keep is False
