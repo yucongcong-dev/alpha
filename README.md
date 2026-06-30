@@ -96,7 +96,7 @@ python3 -m alpha --smoke-test
 python3 -m alpha
 ```
 
-不传参时使用内置默认值（`--limit 50 --max-templates-per-field 8`）。
+不传参时使用内置默认值（`--limit 200 --max-templates-per-field 6 --field-template-batch-size 2`）。
 首次运行会先按当前数据集上下文全量拉取字段并写入 `cache/<dataset>_fields_cache.json`，
 后续同一 `dataset_id + region + universe + instrument_type + delay` 组合直接复用缓存。
 
@@ -107,6 +107,7 @@ python3 -m alpha
 - 再用官网返回的字段元数据做基础过滤：`coverage`、`dateCoverage`、`alphaCount`、`userCount`
 - 然后联合历史反馈与官网指标排序
 - 最后才应用 `offset` / `limit`
+- 默认启用 breadth-first 调度：前 200 个字段先各试 2 个高优模板，再在后续轮次逐步补深
 
 **官网字段指标使用方式**：
 - `coverage`：横截面覆盖率，正向质量信号
@@ -121,7 +122,7 @@ python3 -m alpha
 - `failed_check_leaderboard`：主要失败原因分布
 - `optimization_hints`：自动生成的优化建议
 
-**预估时间**：25-50 分钟（50 字段 × 8 模板 ≈ 400 模拟）
+**预估时间**：30-70 分钟（默认先覆盖 200 字段，但每轮每字段只浅试少量高优模板）
 
 #### 阶段 3：聚焦深挖（针对高反馈字段）
 

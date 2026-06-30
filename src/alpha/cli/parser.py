@@ -304,7 +304,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--limit",
         type=int,
-        default=50,
+        default=200,
         help="要获取/测试的字段数量；0 表示所有字段",
     )
     parser.add_argument("--offset", type=int, default=0, help="字段偏移量")
@@ -318,7 +318,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--max-templates-per-field",
         type=int,
-        default=8,
+        default=6,
         help="每个字段测试的最大模板数；0 表示所有内置模板",
     )
     parser.add_argument(
@@ -330,8 +330,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--field-template-batch-size",
         type=int,
-        default=0,
-        help="每轮每个字段最多发出的模板/setting 组合数；0 表示保持单字段一次跑满的旧行为",
+        default=2,
+        help="每轮每个字段最多发出的模板/setting 组合数；默认 2，启用 breadth-first 浅层轮转",
     )
     parser.add_argument(
         "--legacy-similarity-penalty",

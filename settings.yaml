@@ -91,12 +91,13 @@ global:
   # 字段筛选 & 限制 —— 对应 CLI --limit / --offset / --page-size / ...
   # --------------------------------------------------------------------------
   limits:
-    limit: 50                      # 测试字段数量上限，0=不限制 (全部字段)
+    limit: 200                     # 默认先覆盖更广的排序后字段，0=不限制 (全部字段)
     offset: 0                      # 字段起始偏移量 (跳过前 N 个)
     page_size: 50                  # API 分页大小 (每次请求字段数)
     sleep_between_fields: 3.0      # 字段间休眠 (秒)，增大以降低限流风险
-    max_templates_per_field: 0     # 每字段最大模板数，0=不限制
+    max_templates_per_field: 6     # 每字段先测试少量高优模板，后续轮次再继续补
     max_templates_per_family: 1    # 每表达式家族保留的最大候选数
+    field_template_batch_size: 2   # 默认开启 breadth-first：每轮每字段仅发出少量模板
     legacy_similarity_penalty: 42  # legacy 模板族优先级惩罚值
     disable_legacy_after: 8        # N 次零可提交后禁用 legacy，0=不启用
 
