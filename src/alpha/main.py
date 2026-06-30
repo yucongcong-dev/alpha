@@ -113,12 +113,14 @@ from .io.credentials import load_credentials
 
 # 导入输出模块
 from .io.output import (
+    build_blacklist_runtime_stats,
     cleanup_legacy_sidecar_files,
     dump_results,
     dump_results_incremental,
     ensure_analysis_synced,
     ensure_template_blacklist_file,
     initialize_results_journal,
+    load_blacklisted_template_names,
 )
 from .models.base import (
     ExecutionState,
@@ -626,6 +628,10 @@ def _initialize(
         output_file,
         execution_state.results,
     )
+    execution_state.blacklist_runtime_stats = build_blacklist_runtime_stats(
+        execution_state.results,
+    )
+    execution_state.blacklisted_template_names = load_blacklisted_template_names(args.dataset_id)
     execution_state.persisted_result_count = dump_results_incremental(
         output_file,
         args.dataset_id,

@@ -672,6 +672,8 @@ class ExecutionState:
         error_count (int): 当前 error 状态结果数。
         queue_timeout_count (int): 当前队列超时结果数。
         persisted_result_count (int): 已增量落盘到 journal 的结果数。
+        blacklist_runtime_stats (Dict[str, Dict[str, Any]]): 模板黑名单增量聚合状态。
+        blacklisted_template_names (set[str]): 已持久化黑名单模板名集合。
         last_submission_at (float): 上次提交时间（单调时钟）。默认为 0.0。
 
     Example:
@@ -720,6 +722,12 @@ class ExecutionState:
 
     persisted_result_count: int = 0
     """已增量落盘到 journal 的结果数"""
+
+    blacklist_runtime_stats: dict[str, dict[str, Any]] = field(default_factory=dict)
+    """模板黑名单增量聚合状态"""
+
+    blacklisted_template_names: set[str] = field(default_factory=set)
+    """已持久化黑名单模板名集合"""
 
     last_submission_at: float = 0.0
     """上次提交时间（单调时钟）"""

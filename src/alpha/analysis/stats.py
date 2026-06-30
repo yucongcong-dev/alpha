@@ -89,6 +89,19 @@ def _default_results_journal_path(path: str) -> str:
     return str(output.parent / f"{base_name}_results.jsonl")
 
 
+def _recover_results_from_journal(path: str) -> list[FieldTestResult]:
+    """从默认 journal 恢复结果，失败时返回空列表。"""
+    journal_path = _default_results_journal_path(path)
+    if not os.path.exists(journal_path):
+        return []
+    try:
+        rows = _load_results_rows_from_journal(journal_path)
+    except Exception as exc:
+        logger.warning("[recovery] failed to read orphaned results journal %s: %s", journal_path, exc)
+        return []
+    return _rows_to_results(rows)
+
+
 def load_existing_results(path: str) -> list[FieldTestResult]:
     """
     加载历史运行结果，以便续跑和复用反馈信息。
@@ -124,8 +137,10 @@ def load_existing_results(path: str) -> list[FieldTestResult]:
         该字段是一个包含多个结果对象的列表。每个结果对象
         至少应包含 field_id、field_type、field_name 等字段。
     """
-    if not path or not os.path.exists(path):
+    if not path:
         return []
+    if not os.path.exists(path):
+        return _recover_results_from_journal(path)
 
     try:
         with open(path, encoding="utf-8") as handle:
@@ -144,7 +159,26 @@ def load_existing_results(path: str) -> list[FieldTestResult]:
             logger.warning(
                 "[recovery] failed to rename corrupted result file %s: %s", path, exc
             )
-        return []
+        return _recover_results_from_journal(path)
+
+    if not isinstance(payload, dict):
+        now = int(time.time())
+        backup_path = f"{path}.invalid.{now}"
+        try:
+            os.rename(path, backup_path)
+            logger.warning(
+                "[recovery] renamed invalid result file %s -> %s (unexpected JSON type: %s)",
+                path,
+                backup_path,
+                type(payload).__name__,
+            )
+        except OSError:
+            logger.warning(
+                "[recovery] failed to rename invalid result file %s (unexpected JSON type: %s)",
+                path,
+                type(payload).__name__,
+            )
+        return _recover_results_from_journal(path)
 
     rows: list[Any] | None = None
     if payload.get("results_embedded", True):
@@ -159,22 +193,30 @@ def load_existing_results(path: str) -> list[FieldTestResult]:
             if isinstance(journal_path_value, str) and journal_path_value
             else _default_results_journal_path(path)
         )
-        if not os.path.exists(journal_path):
-            return []
-        rows = []
         try:
-            with open(journal_path, encoding="utf-8") as handle:
-                for line in handle:
-                    line = line.strip()
-                    if not line:
-                        continue
-                    row = json.loads(line)
-                    if isinstance(row, dict):
-                        rows.append(row)
+            rows = _load_results_rows_from_journal(journal_path)
         except Exception as exc:
             logger.warning("[recovery] failed to read results journal %s: %s", journal_path, exc)
             return []
+    return _rows_to_results(rows)
 
+
+def _load_results_rows_from_journal(journal_path: str) -> list[dict[str, Any]]:
+    """从结果 journal 读取原始结果行。"""
+    rows: list[dict[str, Any]] = []
+    with open(journal_path, encoding="utf-8") as handle:
+        for line in handle:
+            line = line.strip()
+            if not line:
+                continue
+            row = json.loads(line)
+            if isinstance(row, dict):
+                rows.append(row)
+    return rows
+
+
+def _rows_to_results(rows: list[Any]) -> list[FieldTestResult]:
+    """把原始结果字典列表转换为 FieldTestResult 列表。"""
     results: list[FieldTestResult] = []
     for row in rows:
         if not isinstance(row, dict):

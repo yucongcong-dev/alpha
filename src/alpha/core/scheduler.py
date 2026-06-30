@@ -28,7 +28,11 @@ from ..analysis.stats import (
     update_template_stats_with_result,
 )
 from ..api.client import wait_seconds
-from ..io.output import dump_results_incremental
+from ..io.output import (
+    auto_update_blacklist_incremental,
+    build_blacklist_runtime_stats,
+    dump_results_incremental,
+)
 from ..models.base import (
     ExecutionState,
     FieldTestResult,
@@ -147,6 +151,17 @@ def handle_completed_future(
             result.submitted,
             result.message,
         )
+    if getattr(args, "auto_update_blacklist", False):
+        if not execution_state.blacklist_runtime_stats and len(execution_state.results) > 1:
+            execution_state.blacklist_runtime_stats = build_blacklist_runtime_stats(
+                execution_state.results[:-1]
+            )
+        auto_update_blacklist_incremental(
+            execution_state.blacklist_runtime_stats,
+            execution_state.blacklisted_template_names,
+            result,
+            args.dataset_id,
+        )
     execution_state.persisted_result_count = dump_results_incremental(
         args.output,
         args.dataset_id,
@@ -161,8 +176,6 @@ def handle_completed_future(
         settings_fingerprint=completion_ctx.settings_fingerprint,
         template_library_fingerprint=completion_ctx.template_library_fingerprint,
         run_config=completion_ctx.run_config,
-        auto_update_template_blacklist=getattr(args, "auto_update_blacklist", False),
-        all_results=execution_state.results,
     )
     congestion_detected = False
     if "CONCURRENT_SIMULATION_LIMIT_EXCEEDED" in result.message:
