@@ -25,21 +25,28 @@ from ..analysis.feedback import (
     choose_settings_variant_budget,
     is_legacy_family_disabled,
     is_template_disabled,
+    select_nearpass_candidates,
     should_keep_template_for_feedback,
     should_skip_field_template_family,
 )
 from ..analysis.stats import historical_template_priority_bonus
 from ..config import (
     CHECK_CONCENTRATED_WEIGHT,
+    FEEDBACK_STAGE_RESIMULATE,
     CHECK_LOW_FITNESS,
     CHECK_LOW_SHARPE,
     CHECK_LOW_SUB_UNIVERSE_SHARPE,
     SENTINEL_UNKNOWN,
     get_dataset_expression_policy,
+    resolve_feedback_stage,
 )
 from ..generators.expressions import classify_expression_family, classify_template_stage
 from ..generators.expressions import (
+    build_refine_templates,
     build_expression_candidates,
+    cap_templates_per_family,
+    limit_templates,
+    sort_templates_by_priority,
 )
 from ..generators.settings import (
     build_setting_variants,
@@ -49,6 +56,7 @@ from ..models.base import (
     ExecutionState,
     FieldTestResult,
     HistoricalRunState,
+    NearPassCandidate,
     RunFilters,
     SettingsVariant,
     TemplateBuildContext,
@@ -99,19 +107,47 @@ def build_pending_templates_for_field(
     field_id = str(first_non_empty(field.get("id"), SENTINEL_UNKNOWN))
     field_name = choose_field_name(field)
     field_feedback = build_ctx.field_feedback.get(field_id)
-    templates = build_expression_candidates(
-        field,
-        build_ctx.template_library,
-        args.max_templates_per_field,
-        args.max_templates_per_family,
-        args.legacy_similarity_penalty,
-        all_fields=build_ctx.all_fields,
-        field_feedback=field_feedback,
-        global_failed_check_counts=build_ctx.global_failed_check_counts,
-        use_dataset_heuristics=build_ctx.use_dataset_heuristics,
-        dataset_id=args.dataset_id,
-        expression_policy=build_ctx.expression_policy,
+    expression_policy = build_ctx.expression_policy or get_dataset_expression_policy(args.dataset_id)
+    feedback_stage = resolve_feedback_stage(
+        field_feedback,
+        expression_policy.feedback_loop_policy,
     )
+    nearpass_candidates = (
+        select_nearpass_candidates(
+            field_id,
+            prior_results,
+            expression_policy=expression_policy,
+        )
+        if feedback_stage == FEEDBACK_STAGE_RESIMULATE
+        else []
+    )
+    if nearpass_candidates:
+        templates = build_refine_templates(
+            field_name,
+            nearpass_candidates,
+            expression_policy=expression_policy,
+        )
+        templates = limit_templates(
+            cap_templates_per_family(
+                sort_templates_by_priority(templates),
+                args.max_templates_per_family,
+            ),
+            args.max_templates_per_field,
+        )
+    else:
+        templates = build_expression_candidates(
+            field,
+            build_ctx.template_library,
+            args.max_templates_per_field,
+            args.max_templates_per_family,
+            args.legacy_similarity_penalty,
+            all_fields=build_ctx.all_fields,
+            field_feedback=field_feedback,
+            global_failed_check_counts=build_ctx.global_failed_check_counts,
+            use_dataset_heuristics=build_ctx.use_dataset_heuristics,
+            dataset_id=args.dataset_id,
+            expression_policy=expression_policy,
+        )
     pending_templates: list[tuple[str, str, str, str, int, SettingsVariant, str]] = []
     disabled_templates = 0
     max_setting_variants = choose_settings_variant_budget(
@@ -142,7 +178,7 @@ def build_pending_templates_for_field(
             expression,
             priority,
             field_feedback,
-            expression_policy=build_ctx.expression_policy,
+            expression_policy=expression_policy,
             template_metadata=template_metadata,
         ):
             disabled_templates += 1
@@ -152,7 +188,7 @@ def build_pending_templates_for_field(
             template_name,
             expression,
             template_metadata=template_metadata,
-            expression_policy=build_ctx.expression_policy,
+            expression_policy=expression_policy,
         ):
             disabled_templates += 1
             continue
@@ -174,8 +210,27 @@ def build_pending_templates_for_field(
         effective_priority = priority + historical_template_priority_bonus(
             template_name, template_stats
         )
+        refine_candidate = None
+        refine_failed_checks = template_metadata.get("refine_failed_checks")
+        if isinstance(refine_failed_checks, list):
+            refine_candidate = NearPassCandidate(
+                field_id=field_id,
+                field_name=field_name,
+                template_name=template_name,
+                expression=expression,
+                template_family=template_family,
+                template_stage=template_stage,
+                score=float(template_metadata.get("refine_score", 0.0) or 0.0),
+                failed_checks=[
+                    check for check in refine_failed_checks if isinstance(check, dict)
+                ],
+            )
         for settings_variant in build_setting_variants(
-            args, template_name, expression, field_feedback=field_feedback
+            args,
+            template_name,
+            expression,
+            field_feedback=field_feedback,
+            refine_candidate=refine_candidate,
         )[:max_setting_variants]:
             variant_fingerprint = build_settings_fingerprint_from_payload(settings_variant)
             if (field_id, template_name, expression, variant_fingerprint) in attempted_keys:

@@ -26,7 +26,7 @@ from ..config import (
     get_simulation_default_start_date,
     get_yaml_config,
 )
-from ..models.base import SettingsVariant
+from ..models.base import NearPassCandidate, SettingsVariant
 
 
 def stable_fingerprint(payload: Any) -> str:
@@ -266,6 +266,7 @@ def build_setting_variants(
     expression: str,
     *,
     field_feedback: dict[str, Any] | None = None,
+    refine_candidate: NearPassCandidate | None = None,
 ) -> list[SettingsVariant]:
     """
     基于统一基准配置生成少量高信号 settings 变体。
@@ -293,17 +294,35 @@ def build_setting_variants(
         if candidate not in variants:
             variants.append(candidate)
 
+    nearpass_failed_names = {
+        str(check.get("name", "")).strip()
+        for check in (refine_candidate.failed_checks if refine_candidate else [])
+    }
+    tighter_truncation = min(float(base_settings.get("truncation", 0.08)), 0.05)
+
     # 对容易集中持仓的表达式优先尝试更严格的 truncation。
-    add_variant(truncation=min(float(base_settings.get("truncation", 0.08)), 0.05))
+    add_variant(truncation=tighter_truncation)
 
     # 如果表达式已经在公式里显式做了 group_neutralize，避免再用 settings 重复中性化。
     if "group_neutralize(" in lower_expr:
-        add_variant(neutralization="NONE", truncation=min(float(base_settings.get("truncation", 0.08)), 0.05))
+        add_variant(neutralization="NONE", truncation=tighter_truncation)
     elif "subindustry" in lower_expr or "group_rank(" in lower_expr:
         # 对强 subindustry 模板给一个更大颗粒度的 neutralization 备选，
         # 有助于缓解 weight concentration / subuniverse fail。
-        add_variant(neutralization="INDUSTRY", truncation=min(float(base_settings.get("truncation", 0.08)), 0.05))
+        add_variant(neutralization="INDUSTRY", truncation=tighter_truncation)
     else:
         add_variant(neutralization="MARKET")
+
+    if refine_candidate is not None:
+        if {"CONCENTRATED_WEIGHT", "LOW_SUB_UNIVERSE_SHARPE"} & nearpass_failed_names:
+            add_variant(neutralization="INDUSTRY", truncation=tighter_truncation)
+            add_variant(neutralization="MARKET", truncation=tighter_truncation)
+        if "LOW_TURNOVER" in nearpass_failed_names:
+            add_variant(decay=2, truncation=tighter_truncation)
+        elif "HIGH_TURNOVER" in nearpass_failed_names:
+            add_variant(decay=6, truncation=tighter_truncation)
+        else:
+            add_variant(decay=2)
+            add_variant(decay=6, truncation=tighter_truncation)
 
     return variants

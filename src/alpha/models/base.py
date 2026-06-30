@@ -263,6 +263,24 @@ class TemplateCandidate:
         return (self.name, self.expression, self.priority)[index]
 
 
+@dataclass(frozen=True)
+class NearPassCandidate:
+    """阶段 3 refine 使用的近门槛候选。
+
+    将历史结果里“接近通过但仍失败”的候选显式结构化，避免 refine
+    阶段继续依赖松散 dict / 字符串启发式。
+    """
+
+    field_id: str
+    field_name: str
+    template_name: str
+    expression: str
+    template_family: str = ""
+    template_stage: str = ""
+    score: float = 0.0
+    failed_checks: list[dict[str, Any]] = field(default_factory=list)
+
+
 @dataclass
 class FieldTestContext:
     """

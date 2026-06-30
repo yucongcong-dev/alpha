@@ -46,16 +46,18 @@ from ..generators.expressions import (
     dominant_failed_check_names,
     is_legacy_family,
 )
-from ..models.base import FieldTestResult, HistoricalRunState
+from ..models.base import FieldTestResult, HistoricalRunState, NearPassCandidate
 
 # 从 analysis 模块导入分析函数
 from .stats import (
     attempted_template_keys,
     compile_field_feedback,
     compile_global_failed_check_counts,
+    failed_check_gap,
     compile_template_stats,
     current_submittable_count,
     load_existing_results,
+    score_failed_checks,
 )
 
 # ============================================================================
@@ -131,6 +133,70 @@ def choose_settings_variant_budget(
     if stage == FEEDBACK_STAGE_PRUNE:
         return policy.feedback_loop_policy.prune.settings_variant_budget
     return policy.feedback_loop_policy.generate.settings_variant_budget
+
+
+def _nearpass_penalty(failed_checks: Sequence[dict[str, Any]] | None) -> float:
+    """对明显不适合继续 refine 的失败模式施加惩罚。"""
+    penalty = 0.0
+    for check in failed_checks or []:
+        name = str(check.get("name", "")).strip()
+        gap = failed_check_gap(check)
+        if name == CHECK_CONCENTRATED_WEIGHT:
+            penalty += 0.35
+            if isinstance(gap, (int, float)) and gap >= 0.20:
+                penalty += 0.55
+        elif name == CHECK_LOW_TURNOVER:
+            penalty += 0.10
+        elif name == CHECK_LOW_SUB_UNIVERSE_SHARPE:
+            penalty += 0.05
+    return penalty
+
+
+def select_nearpass_candidates(
+    field_id: str,
+    prior_results: Sequence[FieldTestResult],
+    *,
+    dataset_id: str = "",
+    expression_policy: DatasetExpressionPolicy | None = None,
+    limit: int = 3,
+) -> list[NearPassCandidate]:
+    """为单个字段挑选最值得进入 stage-3 refine 的近门槛候选。"""
+    if limit <= 0:
+        return []
+    policy = expression_policy or get_dataset_expression_policy(dataset_id)
+    min_score = policy.feedback_loop_policy.resimulate.min_best_score
+    best_by_key: dict[tuple[str, str], NearPassCandidate] = {}
+    rank_by_key: dict[tuple[str, str], tuple[float, int, str]] = {}
+    for result in prior_results:
+        if result.field_id != field_id or result.submittable:
+            continue
+        if result.status != "simulated" or not result.failed_checks:
+            continue
+        score = score_failed_checks(result.failed_checks)
+        if score < min_score:
+            continue
+        key = (result.template_name, result.expression)
+        candidate = NearPassCandidate(
+            field_id=result.field_id,
+            field_name=result.field_name,
+            template_name=result.template_name,
+            expression=result.expression,
+            template_family=result.template_family,
+            template_stage=result.template_stage,
+            score=score,
+            failed_checks=list(result.failed_checks),
+        )
+        rank = (
+            score - _nearpass_penalty(result.failed_checks),
+            -len(result.failed_checks or []),
+            result.template_name,
+        )
+        current_rank = rank_by_key.get(key)
+        if current_rank is None or rank > current_rank:
+            best_by_key[key] = candidate
+            rank_by_key[key] = rank
+    ordered_keys = sorted(rank_by_key, key=rank_by_key.get, reverse=True)
+    return [best_by_key[key] for key in ordered_keys[:limit]]
 
 
 def should_stop_after_submittable(

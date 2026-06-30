@@ -136,20 +136,33 @@ python3 -m alpha
 python3 -m alpha --top-fields-by-feedback 10 --max-templates-per-field 15
 ```
 
-**目标**：对接近通过的候选进行精细搜索。
+**目标**：对接近通过的候选进行精修，而不是继续做一轮广泛模板扩张。
 
 **机制**：
-- 自动根据历史反馈调整模板优先级
-- 优先探索 **delta/std 比率模板**（如 `delta_over_std`、`ratio_delta_over_std`），历史数据显示该家族 Sharpe 显著优于均值
-- 为 high-score 字段生成更多 near-pass 变体
-- 为 vol-scaled delta 家族生成更多 settings 变体
+- 当字段进入 `resimulate` 阶段后，执行器会优先从历史结果中选择近门槛候选，而不是回退到整套 broad template 枚举
+- 当前 refine 候选按历史 `failed_checks` 的接近度排序，同时会对明显不适合继续追的 `CONCENTRATED_WEIGHT` 候选降权
+- refine 只做局部、可解释的表达式变异，例如：
+  - `subindustry -> industry`
+  - `ts_zscore(..., 60) -> 63 / 126 / 200`
+  - `ts_rank(..., 60) -> 126 / 200`
+  - `trade_when(...)` 事件包裹
+  - 轻度 `ts_decay_linear(...)` 平滑
+- settings 变体也会结合候选的失败原因定向展开，而不是统一撒网：
+  - 优先尝试更严格的 `truncation=0.05`
+  - 对集中持仓或子宇宙问题尝试 `INDUSTRY / MARKET / NONE`
+  - 对换手问题尝试更快或更慢的 `decay`
 
 **反馈循环**：
 - 默认读取同一输出文件（`results/fundamental6/test_results.json`）
-- 阶段 2 的结果会自动用于字段优先级排序
+- 阶段 2 的结果会自动用于字段优先级排序和 near-pass 候选筛选
 - 可多次运行，每次自动续跑（不重复已完成的组合）
 
-**预估时间**：30-60 分钟（10 字段 × 15 模板 ≈ 150 模拟，含变体）
+**当前实现状态**：
+- 阶段 1：环境验证
+- 阶段 2：breadth-first 广泛探索
+- 阶段 3：candidate-centric refine / resimulate
+
+**预估时间**：通常短于阶段 2，因为会把预算收缩到少数 near-pass 候选，而不是继续全模板铺开
 
 #### 阶段 4：完整运行（可选）
 

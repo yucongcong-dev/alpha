@@ -501,6 +501,80 @@ def test_legacy_blacklist_name_only_only_applies_without_runtime_metadata(monkey
     )
 
 
+def test_resimulate_stage_prefers_refine_templates_over_broad_generation(monkeypatch) -> None:
+    monkeypatch.setattr(
+        "alpha.core.executor.build_setting_variants",
+        lambda *args, **kwargs: [{"neutralization": "SUBINDUSTRY", "truncation": 0.08}],
+    )
+    args = Namespace(
+        dataset_id="fundamental6",
+        template_disable_after=0,
+        disable_legacy_after=0,
+        max_templates_per_field=6,
+        max_templates_per_family=3,
+        legacy_similarity_penalty=0,
+    )
+    build_ctx = TemplateBuildContext(
+        args=args,
+        all_fields=[{"id": "cash_st", "type": "MATRIX", "name": "cash_st"}],
+        template_library={
+            "default": [
+                {
+                    "name": "broad_template",
+                    "expression": "rank(ts_backfill({field}, {backfill_window}))",
+                    "priority": 9999,
+                    "family": "legacy_level",
+                    "stage": "first_order",
+                }
+            ]
+        },
+        field_feedback={
+            "cash_st": {
+                "field_name": "cash_st",
+                "best_score": 0.30,
+                "best_expression": "group_rank(ts_zscore(ts_backfill(cash_st, 504), 60), subindustry)",
+                "best_template_name": "account_group_zscore_60_subindustry",
+                "best_template_family": "group_zscore",
+                "best_template_stage": "group_second_order",
+                "attempted_templates": 4,
+                "failed_check_counts": {"LOW_SHARPE": 1, "LOW_FITNESS": 1},
+            }
+        },
+        use_dataset_heuristics=False,
+    )
+    prior_results = [
+        FieldTestResult(
+            field_id="cash_st",
+            field_type="MATRIX",
+            field_name="cash_st",
+            template_name="account_group_zscore_60_subindustry",
+            template_family="group_zscore",
+            template_stage="group_second_order",
+            status="simulated",
+            submittable=False,
+            expression="group_rank(ts_zscore(ts_backfill(cash_st, 504), 60), subindustry)",
+            failed_checks=[
+                {"name": "LOW_SHARPE", "value": 1.21, "limit": 1.25},
+                {"name": "LOW_FITNESS", "value": 0.64, "limit": 1.0},
+            ],
+        )
+    ]
+
+    pending, disabled, total = build_pending_templates_for_field(
+        build_ctx,
+        {"id": "cash_st", "type": "MATRIX", "name": "cash_st"},
+        template_stats={},
+        attempted_keys=set(),
+        prior_results=prior_results,
+    )
+
+    assert total > 0
+    assert disabled == 0
+    assert pending
+    assert pending[0][0].startswith("refine_")
+    assert all(template_name != "broad_template" for template_name, *_ in pending)
+
+
 def test_blacklist_pattern_rules_support_exact_and_regex(monkeypatch, tmp_path) -> None:
     data_dir = tmp_path / "data"
     data_dir.mkdir()
