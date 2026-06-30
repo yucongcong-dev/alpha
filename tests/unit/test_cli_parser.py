@@ -237,3 +237,44 @@ def test_normalize_args_paths_resolves_relative_files_from_cwd(monkeypatch, tmp_
     paths = normalize_args_paths(args)
 
     assert paths.include_fields_file == str((tmp_path / "tmp_priority_fields_round1.txt").resolve())
+
+
+def test_default_profile_applies_when_dataset_profile_is_missing(monkeypatch, tmp_path) -> None:
+    """Missing dataset_profiles entries should still fall back to DEFAULT_PROFILE."""
+    clear_yaml_cache()
+    config_path = tmp_path / "settings.yaml"
+    config_path.write_text("global:\n  runtime:\n    verbose: false\n", encoding="utf-8")
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        ["alpha", "--config", str(config_path), "--dataset-id", "custom_ds"],
+    )
+
+    args = parse_args()
+
+    assert args.max_templates_per_field == 12
+
+
+def test_yaml_global_still_beats_default_profile_when_dataset_profile_is_missing(
+    monkeypatch, tmp_path
+) -> None:
+    """DEFAULT_PROFILE must not override YAML global defaults for unknown datasets."""
+    clear_yaml_cache()
+    config_path = tmp_path / "settings.yaml"
+    config_path.write_text(
+        """
+global:
+  limits:
+    max_templates_per_field: 9
+""".strip(),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        ["alpha", "--config", str(config_path), "--dataset-id", "custom_ds"],
+    )
+
+    args = parse_args()
+
+    assert args.max_templates_per_field == 9

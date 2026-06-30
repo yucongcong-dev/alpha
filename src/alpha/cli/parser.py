@@ -78,6 +78,17 @@ DEFAULT_OUTPUT_FILE = ""
 # ============================================================================
 
 
+def collect_parser_defaults(parser: argparse.ArgumentParser) -> dict[str, Any]:
+    """收集 argparse dest -> 默认值映射。"""
+    defaults: dict[str, Any] = {}
+    for action in parser._actions:  # noqa: SLF001 - argparse exposes no public action iterator.
+        dest = getattr(action, "dest", None)
+        if not dest or dest == "help":
+            continue
+        defaults[dest] = action.default
+    return defaults
+
+
 def collect_explicit_cli_keys(parser: argparse.ArgumentParser, argv: list[str]) -> set[str]:
     """收集命令行中显式传入的 argparse dest 名称。
     Collect argparse destination names explicitly provided on the command line.
@@ -563,6 +574,7 @@ def parse_args() -> argparse.Namespace:
         help="预览 clean 命令会删除的路径，不实际删除",
     )
 
+    parser_defaults = collect_parser_defaults(parser)
     explicit_cli_keys = collect_explicit_cli_keys(parser, sys.argv[1:])
     args = parser.parse_args()
 
@@ -573,8 +585,7 @@ def parse_args() -> argparse.Namespace:
     apply_yaml_global_defaults(args, yaml_config, explicit_cli_keys)
 
     # 根据数据集自动适配运行参数
-    # 优先级：YAML dataset_profiles > YAML global > DEFAULT_PROFILE
-    # 仅当 YAML dataset_profiles 显式设置了 key 时才覆盖 args
+    # 优先级：CLI > YAML dataset_profiles > YAML global > DEFAULT_PROFILE > argparse
     profile = get_dataset_profile(args.dataset_id, yaml_config)
     _dataset_profile_keys = (
         "min_request_interval",
@@ -588,11 +599,17 @@ def parse_args() -> argparse.Namespace:
         "queue_busy_cooldown_seconds",
         "template_disable_after",
     )
-    # 只覆盖 YAML dataset_profiles 显式声明的 key（不覆盖 DEFAULT_PROFILE 自动填充的 key）
+    # dataset_profiles 显式键始终覆盖 YAML global；其余情况下仅当 args 仍为 argparse 默认值时，
+    # 才让 DEFAULT_PROFILE / profile 回退值生效，避免覆盖 YAML global。
     yaml_profiles = (yaml_config or {}).get("dataset_profiles", {})
     yaml_dataset_cfg = yaml_profiles.get(args.dataset_id, {}) if isinstance(yaml_profiles, dict) else {}
     for key in _dataset_profile_keys:
-        if key in yaml_dataset_cfg and key not in explicit_cli_keys:
+        if key in explicit_cli_keys or key not in profile:
+            continue
+        if key in yaml_dataset_cfg:
+            setattr(args, key, profile[key])
+            continue
+        if getattr(args, key, None) == parser_defaults.get(key):
             setattr(args, key, profile[key])
 
     # 根据运行模式调整参数

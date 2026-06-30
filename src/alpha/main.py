@@ -42,6 +42,8 @@ from .analysis.feedback import (
 
 # 导入分析模块
 from .analysis.stats import (
+    compile_field_feedback,
+    compile_global_failed_check_counts,
     current_submittable_count,
     field_priority,
 )
@@ -114,6 +116,7 @@ from .io.output import (
 )
 from .models.base import (
     ExecutionState,
+    FieldTestResult,
     HistoricalRunState,
     InitializedRunContext,
     RunFilters,
@@ -125,6 +128,22 @@ from .models.base import (
 from .utils.helpers import choose_field_name, choose_field_type, first_non_empty
 
 logger = logging.getLogger(__name__)
+
+
+def refresh_runtime_feedback(
+    template_build_ctx: TemplateBuildContext,
+    results: list[FieldTestResult],
+    *,
+    force: bool = False,
+) -> None:
+    """把当前进程内已产生的结果回灌到模板构建上下文。"""
+    result_count = len(results)
+    cached_count = getattr(template_build_ctx, "_feedback_result_count", -1)
+    if not force and cached_count == result_count:
+        return
+    template_build_ctx.field_feedback = compile_field_feedback(results)
+    template_build_ctx.global_failed_check_counts = compile_global_failed_check_counts(results)
+    setattr(template_build_ctx, "_feedback_result_count", result_count)
 
 
 def _safe_int(value: Any) -> int:
@@ -649,6 +668,11 @@ def _run_field_test_loop(
         use_dataset_heuristics=run_ctx.use_dataset_heuristics,
         expression_policy=run_ctx.expression_policy,
     )
+    refresh_runtime_feedback(
+        template_build_ctx,
+        execution_state.results,
+        force=True,
+    )
 
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
         last_field_id = ""
@@ -676,6 +700,7 @@ def _run_field_test_loop(
                     last_field_id = field_id
                     field_name = choose_field_name(field)
                     field_type = choose_field_type(field)
+                    refresh_runtime_feedback(template_build_ctx, execution_state.results)
 
                     if should_skip_field(
                         field_id,

@@ -5,8 +5,8 @@ from __future__ import annotations
 from argparse import Namespace
 
 from alpha.config import get_dataset_expression_policy
-from alpha.main import prepare_fields_for_execution
-from alpha.models.base import HistoricalRunState, RunFilters
+from alpha.main import prepare_fields_for_execution, refresh_runtime_feedback
+from alpha.models.base import FieldTestResult, HistoricalRunState, RunFilters, TemplateBuildContext
 
 
 def test_prepare_fields_for_execution_filters_before_limit() -> None:
@@ -86,3 +86,28 @@ def test_prepare_fields_for_execution_applies_metadata_filters() -> None:
     assert [row["id"] for row in selected] == ["cash_st"]
     assert stats["low_coverage_count"] == 1
     assert stats["filtered_field_count"] == 1
+
+
+def test_refresh_runtime_feedback_rebuilds_feedback_from_current_results() -> None:
+    """Same-process results should be converted into fresh field/global feedback."""
+    build_ctx = TemplateBuildContext()
+    results = [
+        FieldTestResult(
+            field_id="cash_st",
+            field_type="MATRIX",
+            field_name="cash_st",
+            template_name="group_zscore_subindustry_60",
+            template_family="group_zscore",
+            template_stage="group_second_order",
+            status="simulated",
+            submittable=False,
+            expression="group_rank(ts_zscore(cash_st, 60), subindustry)",
+            failed_checks=[{"name": "LOW_SHARPE", "value": 0.9, "limit": 1.25}],
+        )
+    ]
+
+    refresh_runtime_feedback(build_ctx, results, force=True)
+
+    assert build_ctx.field_feedback["cash_st"]["attempted_templates"] == 1
+    assert build_ctx.field_feedback["cash_st"]["best_template_stage"] == "group_second_order"
+    assert build_ctx.global_failed_check_counts["LOW_SHARPE"] == 1
