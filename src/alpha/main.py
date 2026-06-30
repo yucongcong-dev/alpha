@@ -25,7 +25,9 @@ from __future__ import annotations
 
 import argparse
 from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
+from datetime import date
 import logging
+from math import log1p
 from pathlib import Path
 import shutil
 import threading
@@ -135,6 +137,28 @@ def _safe_float(value: Any) -> float:
         return float(value)
     except (TypeError, ValueError):
         return 0.0
+
+
+def _safe_date_ordinal(value: Any) -> int:
+    """把 YYYY-MM-DD 形式的日期字符串转换为 ordinal，失败时返回 0。"""
+    if not value:
+        return 0
+    try:
+        return date.fromisoformat(str(value)).toordinal()
+    except (TypeError, ValueError):
+        return 0
+
+
+def _normalize_range(values: list[float]) -> list[float]:
+    """对一组数做 min-max 归一化；常数列返回全 0。"""
+    if not values:
+        return []
+    low = min(values)
+    high = max(values)
+    if high <= low:
+        return [0.0 for _ in values]
+    span = high - low
+    return [(value - low) / span for value in values]
 
 
 def clean_runtime_artifacts(
@@ -304,6 +328,10 @@ def _initialize(
     cached_field_count = len(fields)
     filtered_fields: list[dict[str, Any]] = []
     prefiltered_count = 0
+    low_coverage_count = 0
+    low_date_coverage_count = 0
+    low_alpha_count = 0
+    low_user_count = 0
     for field in fields:
         field_id = str(first_non_empty(field.get("id"), SENTINEL_UNKNOWN))
         field_name = choose_field_name(field)
@@ -320,13 +348,68 @@ def _initialize(
         ):
             prefiltered_count += 1
             continue
+        if _safe_float(field.get("coverage")) < expression_policy.field_min_coverage:
+            low_coverage_count += 1
+            continue
+        if _safe_float(field.get("dateCoverage")) < expression_policy.field_min_date_coverage:
+            low_date_coverage_count += 1
+            continue
+        if _safe_int(field.get("alphaCount")) < expression_policy.field_min_alpha_count:
+            low_alpha_count += 1
+            continue
+        if _safe_int(field.get("userCount")) < expression_policy.field_min_user_count:
+            low_user_count += 1
+            continue
         filtered_fields.append(field)
     fields = filtered_fields
     if prefiltered_count > 0:
         logger.info("[filter] 排序前因 include/exclude 规则过滤 %d 个字段", prefiltered_count)
+    metadata_filtered_count = (
+        low_coverage_count + low_date_coverage_count + low_alpha_count + low_user_count
+    )
+    if metadata_filtered_count > 0:
+        logger.info(
+            "[filter] 排序前因官网字段指标过滤 %d 个字段 (coverage=%d, dateCoverage=%d, alphaCount=%d, userCount=%d)",
+            metadata_filtered_count,
+            low_coverage_count,
+            low_date_coverage_count,
+            low_alpha_count,
+            low_user_count,
+        )
     if not fields:
         logger.error("[error] 数据集 %s 在字段过滤后没有可运行字段", args.dataset_id)
         return None
+
+    coverage_values = [_safe_float(field.get("coverage")) for field in fields]
+    date_coverage_values = [_safe_float(field.get("dateCoverage")) for field in fields]
+    alpha_validation_values = [log1p(_safe_int(field.get("alphaCount"))) for field in fields]
+    user_validation_values = [log1p(_safe_int(field.get("userCount"))) for field in fields]
+    recency_values = [_safe_date_ordinal(field.get("dateCreated")) for field in fields]
+    theme_values = [float(len(field.get("themes") or [])) for field in fields]
+
+    norm_coverage_values = _normalize_range(coverage_values)
+    norm_date_coverage_values = _normalize_range(date_coverage_values)
+    norm_alpha_validation_values = _normalize_range(alpha_validation_values)
+    norm_user_validation_values = _normalize_range(user_validation_values)
+    norm_recency_values = _normalize_range([float(value) for value in recency_values])
+    norm_theme_values = _normalize_range(theme_values)
+
+    field_metadata_scores: dict[str, float] = {}
+    for idx, field in enumerate(fields):
+        field_id = str(first_non_empty(field.get("id"), SENTINEL_UNKNOWN))
+        validation_score = (
+            expression_policy.field_coverage_weight * norm_coverage_values[idx]
+            + expression_policy.field_date_coverage_weight * norm_date_coverage_values[idx]
+            + expression_policy.field_alpha_validation_weight * norm_alpha_validation_values[idx]
+            + expression_policy.field_user_validation_weight * norm_user_validation_values[idx]
+            + expression_policy.field_recency_weight * norm_recency_values[idx]
+            + expression_policy.field_theme_bonus_weight * norm_theme_values[idx]
+        )
+        crowding_penalty = (
+            expression_policy.field_alpha_crowding_penalty_weight * norm_alpha_validation_values[idx]
+            + expression_policy.field_user_crowding_penalty_weight * norm_user_validation_values[idx]
+        )
+        field_metadata_scores[field_id] = validation_score - crowding_penalty
 
     def field_sort_key(item: dict[str, Any]) -> tuple[Any, ...]:
         field_id = str(first_non_empty(item.get("id"), SENTINEL_UNKNOWN))
@@ -342,14 +425,25 @@ def _initialize(
         is_overtested_weak = (
             field_name in expression_policy.overtested_weak_fields and feedback is not None
         )
+        metadata_score = field_metadata_scores.get(field_id, 0.0)
         effective_priority = priority
         if is_unexplored:
-            # Preferred unexplored fields stay visible, but historical winners still dominate.
             effective_priority = (
-                expression_policy.promising_field_min_priority - 0.01
-                if is_preferred_direction
-                else STATS_DEFAULT_SCORE
+                min(
+                    expression_policy.promising_field_min_priority - 0.01,
+                    max(
+                        metadata_score
+                        + (
+                            expression_policy.field_preferred_unexplored_bonus
+                            if is_preferred_direction
+                            else 0.0
+                        ),
+                        STATS_DEFAULT_SCORE,
+                    ),
+                )
             )
+        elif priority > STATS_DEFAULT_SCORE:
+            effective_priority = priority + metadata_score
         return (
             -int(is_promising_seen),
             int(is_overtested_weak),
@@ -357,9 +451,9 @@ def _initialize(
             -int(is_preferred_direction),
             preferred_rank,
             -int(is_unexplored),
+            -metadata_score,
             -_safe_float(item.get("coverage")),
-            -_safe_int(item.get("alphaCount")),
-            -_safe_int(item.get("userCount")),
+            -_safe_float(item.get("dateCoverage")),
             field_name,
         )
 

@@ -210,6 +210,19 @@ class DatasetExpressionPolicy:
     blacklist_min_fields_for_nearpass: int = 0
     blacklist_protected_min_avg_sharpe: float = 0.0
     blacklist_protected_min_avg_fitness: float = 0.0
+    field_min_coverage: float = 0.0
+    field_min_date_coverage: float = 0.0
+    field_min_alpha_count: int = 0
+    field_min_user_count: int = 0
+    field_coverage_weight: float = 0.0
+    field_date_coverage_weight: float = 0.0
+    field_alpha_validation_weight: float = 0.0
+    field_user_validation_weight: float = 0.0
+    field_alpha_crowding_penalty_weight: float = 0.0
+    field_user_crowding_penalty_weight: float = 0.0
+    field_recency_weight: float = 0.0
+    field_theme_bonus_weight: float = 0.0
+    field_preferred_unexplored_bonus: float = 0.0
 
 
 # ============================================================================
@@ -875,6 +888,20 @@ FUNDAMENTAL6_OVERTESTED_WEAK_FIELDS: set[str] = {
 }
 """fundamental6 上已被过度测试且整体偏弱的字段。"""
 
+FUNDAMENTAL6_FIELD_MIN_COVERAGE: float = 0.10
+FUNDAMENTAL6_FIELD_MIN_DATE_COVERAGE: float = 0.95
+FUNDAMENTAL6_FIELD_MIN_ALPHA_COUNT: int = 25
+FUNDAMENTAL6_FIELD_MIN_USER_COUNT: int = 5
+FUNDAMENTAL6_FIELD_COVERAGE_WEIGHT: float = 0.35
+FUNDAMENTAL6_FIELD_DATE_COVERAGE_WEIGHT: float = 0.30
+FUNDAMENTAL6_FIELD_ALPHA_VALIDATION_WEIGHT: float = 0.12
+FUNDAMENTAL6_FIELD_USER_VALIDATION_WEIGHT: float = 0.08
+FUNDAMENTAL6_FIELD_ALPHA_CROWDING_PENALTY_WEIGHT: float = 0.10
+FUNDAMENTAL6_FIELD_USER_CROWDING_PENALTY_WEIGHT: float = 0.08
+FUNDAMENTAL6_FIELD_RECENCY_WEIGHT: float = 0.05
+FUNDAMENTAL6_FIELD_THEME_BONUS_WEIGHT: float = 0.02
+FUNDAMENTAL6_FIELD_PREFERRED_UNEXPLORED_BONUS: float = 0.08
+
 FUNDAMENTAL6_ALWAYS_KEEP_FAMILIES: set[str] = {
     "group_rank_delta",
     "group_vol_scaled_delta",
@@ -1101,6 +1128,19 @@ def get_dataset_expression_policy(
             blacklist_min_fields_for_nearpass=FUNDAMENTAL6_BLACKLIST_MIN_FIELDS_FOR_NEARPASS,
             blacklist_protected_min_avg_sharpe=FUNDAMENTAL6_BLACKLIST_PROTECTED_MIN_AVG_SHARPE,
             blacklist_protected_min_avg_fitness=FUNDAMENTAL6_BLACKLIST_PROTECTED_MIN_AVG_FITNESS,
+            field_min_coverage=FUNDAMENTAL6_FIELD_MIN_COVERAGE,
+            field_min_date_coverage=FUNDAMENTAL6_FIELD_MIN_DATE_COVERAGE,
+            field_min_alpha_count=FUNDAMENTAL6_FIELD_MIN_ALPHA_COUNT,
+            field_min_user_count=FUNDAMENTAL6_FIELD_MIN_USER_COUNT,
+            field_coverage_weight=FUNDAMENTAL6_FIELD_COVERAGE_WEIGHT,
+            field_date_coverage_weight=FUNDAMENTAL6_FIELD_DATE_COVERAGE_WEIGHT,
+            field_alpha_validation_weight=FUNDAMENTAL6_FIELD_ALPHA_VALIDATION_WEIGHT,
+            field_user_validation_weight=FUNDAMENTAL6_FIELD_USER_VALIDATION_WEIGHT,
+            field_alpha_crowding_penalty_weight=FUNDAMENTAL6_FIELD_ALPHA_CROWDING_PENALTY_WEIGHT,
+            field_user_crowding_penalty_weight=FUNDAMENTAL6_FIELD_USER_CROWDING_PENALTY_WEIGHT,
+            field_recency_weight=FUNDAMENTAL6_FIELD_RECENCY_WEIGHT,
+            field_theme_bonus_weight=FUNDAMENTAL6_FIELD_THEME_BONUS_WEIGHT,
+            field_preferred_unexplored_bonus=FUNDAMENTAL6_FIELD_PREFERRED_UNEXPLORED_BONUS,
         )
 
     return DatasetExpressionPolicy(

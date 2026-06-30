@@ -97,8 +97,24 @@ python3 -m alpha
 ```
 
 不传参时使用内置默认值（`--limit 50 --max-templates-per-field 8`）。
+首次运行会先按当前数据集上下文全量拉取字段并写入 `cache/<dataset>_fields_cache.json`，
+后续同一 `dataset_id + region + universe + instrument_type + delay` 组合直接复用缓存。
 
 **目标**：从数据集中找出有潜力的字段和模板家族。
+
+**字段筛选与排序**：
+- 先应用 `include_fields` / `exclude_fields`
+- 再用官网返回的字段元数据做基础过滤：`coverage`、`dateCoverage`、`alphaCount`、`userCount`
+- 然后联合历史反馈与官网指标排序
+- 最后才应用 `offset` / `limit`
+
+**官网字段指标使用方式**：
+- `coverage`：横截面覆盖率，正向质量信号
+- `dateCoverage`：时间覆盖率，正向质量信号
+- `alphaCount`：历史 alpha 使用量，兼作弱验证信号和拥挤度惩罚
+- `userCount`：历史用户使用量，兼作弱验证信号和拥挤度惩罚
+- `dateCreated`：较新的字段有轻微加分
+- `themes`：主题标签数量仅作很弱的辅助加分
 
 **输出**：`*_analysis.json` 中的关键字段：
 - `near_pass_summary`：接近通过的候选（按 score 排序）
@@ -159,7 +175,7 @@ python3 -m alpha --full-run
 python3 -m alpha --dry-run-plan
 ```
 
-强制刷新本地字段缓存：
+首次生成或复用本地字段缓存：
 
 ```bash
 python3 -m alpha
