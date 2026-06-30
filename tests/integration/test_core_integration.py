@@ -71,43 +71,42 @@ class TestCongestionSignalPropagation:
             message="queue budget exceeded",
             failed_stage="simulation",
         )
-        results: list[FieldTestResult] = []
-        attempted_keys: set[tuple[str, str, str, str]] = set()
-        template_stats: dict[str, dict[str, int]] = {}
-
         completion_ctx = FutureCompletionContext(
             args=scheduler_args,
             settings_fingerprint="abc",
             template_library_fingerprint="def",
             run_config={"key": "val"},
         )
-        pending_contexts = {
-            future: {
-                "field_id": "test_field",
-                "field_type": "MATRIX",
-                "field_name": "test",
-                "template_name": "test_tpl",
-                "expression": "rank(test)",
-                "settings_fingerprint": "abc",
-            }
-        }
+        execution_state = ExecutionState(
+            results=[],
+            attempted_keys=set(),
+            template_stats={},
+            pending_futures={
+                future: {
+                    "field_id": "test_field",
+                    "field_type": "MATRIX",
+                    "field_name": "test",
+                    "template_name": "test_tpl",
+                    "expression": "rank(test)",
+                    "settings_fingerprint": "abc",
+                }
+            },
+            field_queue_busy_counts={},
+            skipped_fields_due_to_queue=set(),
+        )
 
         with (
-            patch("alpha.core.scheduler.dump_results"),
-            patch("alpha.core.scheduler.compile_template_stats", return_value={}),
+            patch("alpha.core.scheduler.dump_results_incremental"),
         ):
             _stats, congestion_detected, queue_busy_field_id = handle_completed_future(
                 future,
                 completion_ctx=completion_ctx,
-                results=results,
-                attempted_keys=attempted_keys,
-                template_stats=template_stats,
-                pending_contexts=pending_contexts,
+                execution_state=execution_state,
             )
 
         assert congestion_detected is False
         assert queue_busy_field_id == "test_field"
-        assert len(results) == 1
+        assert len(execution_state.results) == 1
 
     @pytest.mark.parametrize("congestion_msg", CONGESTION_MESSAGES)
     def test_congestion_detected_from_failure_message(
@@ -131,10 +130,6 @@ class TestCongestionSignalPropagation:
             failed_stage="simulation",
         )
 
-        results: list[FieldTestResult] = []
-        attempted_keys: set[tuple[str, str, str, str]] = set()
-        template_stats: dict[str, dict[str, int]] = {}
-
         completion_ctx = FutureCompletionContext(
             args=scheduler_args,
             settings_fingerprint="abc",
@@ -142,32 +137,35 @@ class TestCongestionSignalPropagation:
             run_config={"key": "val"},
         )
 
-        pending_contexts = {
-            future: {
-                "field_id": "test_field",
-                "field_type": "MATRIX",
-                "field_name": "test",
-                "template_name": "test_tpl",
-                "expression": "rank(test)",
-                "settings_fingerprint": "abc",
-            }
-        }
+        execution_state = ExecutionState(
+            results=[],
+            attempted_keys=set(),
+            template_stats={},
+            pending_futures={
+                future: {
+                    "field_id": "test_field",
+                    "field_type": "MATRIX",
+                    "field_name": "test",
+                    "template_name": "test_tpl",
+                    "expression": "rank(test)",
+                    "settings_fingerprint": "abc",
+                }
+            },
+            field_queue_busy_counts={},
+            skipped_fields_due_to_queue=set(),
+        )
 
         with (
-            patch("alpha.core.scheduler.dump_results"),
-            patch("alpha.core.scheduler.compile_template_stats", return_value={}),
+            patch("alpha.core.scheduler.dump_results_incremental"),
         ):
             _stats, congestion_detected, _queue_busy_field_id = handle_completed_future(
                 future,
                 completion_ctx=completion_ctx,
-                results=results,
-                attempted_keys=attempted_keys,
-                template_stats=template_stats,
-                pending_contexts=pending_contexts,
+                execution_state=execution_state,
             )
 
         assert congestion_detected is True
-        assert len(results) == 1
+        assert len(execution_state.results) == 1
 
 
 class TestQueueBusyFieldRegistration:
@@ -380,8 +378,7 @@ class TestDrainCompletedFuturesFlow:
         }
 
         with (
-            patch("alpha.core.scheduler.dump_results"),
-            patch("alpha.core.scheduler.compile_template_stats", return_value={}),
+            patch("alpha.core.scheduler.dump_results_incremental"),
             patch("alpha.core.scheduler.is_informative_result", return_value=True),
             patch(
                 "alpha.core.scheduler.result_identity",
@@ -435,8 +432,7 @@ class TestDrainCompletedFuturesFlow:
         }
 
         with (
-            patch("alpha.core.scheduler.dump_results"),
-            patch("alpha.core.scheduler.compile_template_stats", return_value={}),
+            patch("alpha.core.scheduler.dump_results_incremental"),
             patch("alpha.core.scheduler.is_informative_result", return_value=False),
         ):
             drain_completed_futures(
@@ -474,8 +470,7 @@ class TestDrainCompletedFuturesFlow:
         }
 
         with (
-            patch("alpha.core.scheduler.dump_results"),
-            patch("alpha.core.scheduler.compile_template_stats", return_value={}),
+            patch("alpha.core.scheduler.dump_results_incremental"),
             patch("alpha.core.scheduler.is_informative_result", return_value=False),
         ):
             drain_completed_futures(

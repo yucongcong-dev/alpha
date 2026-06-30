@@ -35,6 +35,7 @@ from collections.abc import Sequence
 import json
 import logging
 import os
+from pathlib import Path
 import time
 from typing import Any
 
@@ -79,6 +80,13 @@ from ..exceptions import BrainAPIError
 from ..models.base import FieldTestResult
 
 logger = logging.getLogger(__name__)
+
+
+def _default_results_journal_path(path: str) -> str:
+    """为主结果文件派生默认 journal 路径。"""
+    output = Path(path)
+    base_name = output.stem or output.name or "results"
+    return str(output.parent / f"{base_name}_results.jsonl")
 
 
 def load_existing_results(path: str) -> list[FieldTestResult]:
@@ -138,9 +146,34 @@ def load_existing_results(path: str) -> list[FieldTestResult]:
             )
         return []
 
-    rows = payload.get("results")
-    if not isinstance(rows, list):
-        return []
+    rows: list[Any] | None = None
+    if payload.get("results_embedded", True):
+        payload_rows = payload.get("results")
+        if isinstance(payload_rows, list):
+            rows = payload_rows
+
+    if rows is None:
+        journal_path_value = payload.get("results_journal")
+        journal_path = (
+            str(journal_path_value)
+            if isinstance(journal_path_value, str) and journal_path_value
+            else _default_results_journal_path(path)
+        )
+        if not os.path.exists(journal_path):
+            return []
+        rows = []
+        try:
+            with open(journal_path, encoding="utf-8") as handle:
+                for line in handle:
+                    line = line.strip()
+                    if not line:
+                        continue
+                    row = json.loads(line)
+                    if isinstance(row, dict):
+                        rows.append(row)
+        except Exception as exc:
+            logger.warning("[recovery] failed to read results journal %s: %s", journal_path, exc)
+            return []
 
     results: list[FieldTestResult] = []
     for row in rows:
@@ -313,44 +346,53 @@ def compile_template_stats(results: Sequence[FieldTestResult]) -> dict[str, dict
     """
     stats: dict[str, dict[str, int]] = {}
     for result in results:
-        stat = stats.setdefault(
-            result.template_name,
-            {
-                STAT_FIELD_ATTEMPTED: 0,
-                STAT_FIELD_SUBMITTABLE: 0,
-                STAT_FIELD_SUBMITTED: 0,
-                STAT_FIELD_ERRORS: 0,
-                STAT_FIELD_SIMULATED: 0,
-                STAT_FIELD_QUEUE_TIMEOUTS: 0,
-                STAT_FIELD_LOW_SHARPE: 0,
-                STAT_FIELD_LOW_FITNESS: 0,
-                STAT_FIELD_CONCENTRATED_WEIGHT: 0,
-                STAT_FIELD_LOW_SUB_UNIVERSE_SHARPE: 0,
-            },
-        )
-        if result.template_family and "template_family" not in stat:
-            stat["template_family"] = result.template_family
-        if is_queue_timeout_result(result):
-            stat[STAT_FIELD_QUEUE_TIMEOUTS] += 1
-            continue
-        stat[STAT_FIELD_ATTEMPTED] += 1
-        if result.submittable:
-            stat[STAT_FIELD_SUBMITTABLE] += 1
-        if result.submitted:
-            stat[STAT_FIELD_SUBMITTED] += 1
-        if result.status in {STATUS_SIMULATED, STATUS_SUBMITTED}:
-            stat[STAT_FIELD_SIMULATED] += 1
-        if result.status == STATUS_ERROR:
-            stat[STAT_FIELD_ERRORS] += 1
-        failed_check_names = {str(check.get("name", "")) for check in result.failed_checks or []}
-        if CHECK_LOW_SHARPE in failed_check_names:
-            stat[STAT_FIELD_LOW_SHARPE] += 1
-        if CHECK_LOW_FITNESS in failed_check_names:
-            stat[STAT_FIELD_LOW_FITNESS] += 1
-        if CHECK_CONCENTRATED_WEIGHT in failed_check_names:
-            stat[STAT_FIELD_CONCENTRATED_WEIGHT] += 1
-        if CHECK_LOW_SUB_UNIVERSE_SHARPE in failed_check_names:
-            stat[STAT_FIELD_LOW_SUB_UNIVERSE_SHARPE] += 1
+        update_template_stats_with_result(stats, result)
+    return stats
+
+
+def update_template_stats_with_result(
+    stats: dict[str, dict[str, int]],
+    result: FieldTestResult,
+) -> dict[str, dict[str, int]]:
+    """将单条结果增量合并到模板统计中。"""
+    stat = stats.setdefault(
+        result.template_name,
+        {
+            STAT_FIELD_ATTEMPTED: 0,
+            STAT_FIELD_SUBMITTABLE: 0,
+            STAT_FIELD_SUBMITTED: 0,
+            STAT_FIELD_ERRORS: 0,
+            STAT_FIELD_SIMULATED: 0,
+            STAT_FIELD_QUEUE_TIMEOUTS: 0,
+            STAT_FIELD_LOW_SHARPE: 0,
+            STAT_FIELD_LOW_FITNESS: 0,
+            STAT_FIELD_CONCENTRATED_WEIGHT: 0,
+            STAT_FIELD_LOW_SUB_UNIVERSE_SHARPE: 0,
+        },
+    )
+    if result.template_family and "template_family" not in stat:
+        stat["template_family"] = result.template_family
+    if is_queue_timeout_result(result):
+        stat[STAT_FIELD_QUEUE_TIMEOUTS] += 1
+        return stats
+    stat[STAT_FIELD_ATTEMPTED] += 1
+    if result.submittable:
+        stat[STAT_FIELD_SUBMITTABLE] += 1
+    if result.submitted:
+        stat[STAT_FIELD_SUBMITTED] += 1
+    if result.status in {STATUS_SIMULATED, STATUS_SUBMITTED}:
+        stat[STAT_FIELD_SIMULATED] += 1
+    if result.status == STATUS_ERROR:
+        stat[STAT_FIELD_ERRORS] += 1
+    failed_check_names = {str(check.get("name", "")) for check in result.failed_checks or []}
+    if CHECK_LOW_SHARPE in failed_check_names:
+        stat[STAT_FIELD_LOW_SHARPE] += 1
+    if CHECK_LOW_FITNESS in failed_check_names:
+        stat[STAT_FIELD_LOW_FITNESS] += 1
+    if CHECK_CONCENTRATED_WEIGHT in failed_check_names:
+        stat[STAT_FIELD_CONCENTRATED_WEIGHT] += 1
+    if CHECK_LOW_SUB_UNIVERSE_SHARPE in failed_check_names:
+        stat[STAT_FIELD_LOW_SUB_UNIVERSE_SHARPE] += 1
     return stats
 
 
@@ -943,36 +985,45 @@ def compile_field_feedback(results: Sequence[FieldTestResult]) -> dict[str, dict
     """
     feedback: dict[str, dict[str, Any]] = {}
     for result in results:
-        summary = feedback.setdefault(
-            result.field_id,
-            {
-                STAT_FIELD_FIELD_NAME: result.field_name,
-                "best_score": STATS_DEFAULT_SCORE,
-                "best_expression": "",
-                "best_template_name": "",
-                "best_template_family": "",
-                "best_template_stage": "",
-                STAT_FIELD_ATTEMPTED_TEMPLATES: 0,
-                STAT_FIELD_FAILED_CHECK_COUNTS: {},
-            },
+        update_field_feedback_with_result(feedback, result)
+    return feedback
+
+
+def update_field_feedback_with_result(
+    feedback: dict[str, dict[str, Any]],
+    result: FieldTestResult,
+) -> dict[str, dict[str, Any]]:
+    """将单条结果增量合并到字段反馈画像中。"""
+    summary = feedback.setdefault(
+        result.field_id,
+        {
+            STAT_FIELD_FIELD_NAME: result.field_name,
+            "best_score": STATS_DEFAULT_SCORE,
+            "best_expression": "",
+            "best_template_name": "",
+            "best_template_family": "",
+            "best_template_stage": "",
+            STAT_FIELD_ATTEMPTED_TEMPLATES: 0,
+            STAT_FIELD_FAILED_CHECK_COUNTS: {},
+        },
+    )
+    summary[STAT_FIELD_ATTEMPTED_TEMPLATES] = (
+        int(summary.get(STAT_FIELD_ATTEMPTED_TEMPLATES, 0)) + 1
+    )
+    for check in result.failed_checks or []:
+        name = str(check.get("name", SENTINEL_UNKNOWN_CHECK))
+        summary[STAT_FIELD_FAILED_CHECK_COUNTS][name] = (
+            summary[STAT_FIELD_FAILED_CHECK_COUNTS].get(name, 0) + 1
         )
-        summary[STAT_FIELD_ATTEMPTED_TEMPLATES] = (
-            int(summary.get(STAT_FIELD_ATTEMPTED_TEMPLATES, 0)) + 1
-        )
-        for check in result.failed_checks or []:
-            name = str(check.get("name", SENTINEL_UNKNOWN_CHECK))
-            summary[STAT_FIELD_FAILED_CHECK_COUNTS][name] = (
-                summary[STAT_FIELD_FAILED_CHECK_COUNTS].get(name, 0) + 1
-            )
-        if result.status != STATUS_SIMULATED or not result.failed_checks:
-            continue
-        score = score_failed_checks(result.failed_checks)
-        if score > summary["best_score"]:
-            summary["best_score"] = score
-            summary["best_expression"] = result.expression
-            summary["best_template_name"] = result.template_name
-            summary["best_template_family"] = result.template_family
-            summary["best_template_stage"] = result.template_stage
+    if result.status != STATUS_SIMULATED or not result.failed_checks:
+        return feedback
+    score = score_failed_checks(result.failed_checks)
+    if score > summary["best_score"]:
+        summary["best_score"] = score
+        summary["best_expression"] = result.expression
+        summary["best_template_name"] = result.template_name
+        summary["best_template_family"] = result.template_family
+        summary["best_template_stage"] = result.template_stage
     return feedback
 
 
@@ -997,11 +1048,20 @@ def compile_global_failed_check_counts(results: Sequence[FieldTestResult]) -> di
     """
     counts: dict[str, int] = {}
     for result in results:
-        if is_queue_timeout_result(result):
-            continue
-        for check in result.failed_checks or []:
-            name = str(check.get("name", SENTINEL_UNKNOWN_CHECK))
-            counts[name] = counts.get(name, 0) + 1
+        update_global_failed_check_counts_with_result(counts, result)
+    return counts
+
+
+def update_global_failed_check_counts_with_result(
+    counts: dict[str, int],
+    result: FieldTestResult,
+) -> dict[str, int]:
+    """将单条结果增量合并到全局失败检查计数中。"""
+    if is_queue_timeout_result(result):
+        return counts
+    for check in result.failed_checks or []:
+        name = str(check.get("name", SENTINEL_UNKNOWN_CHECK))
+        counts[name] = counts.get(name, 0) + 1
     return counts
 
 

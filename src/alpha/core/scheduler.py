@@ -22,12 +22,13 @@ import time
 from typing import Any
 
 from ..analysis.stats import (
-    compile_template_stats,
     is_informative_result,
+    is_queue_timeout_result,
     result_identity,
+    update_template_stats_with_result,
 )
 from ..api.client import wait_seconds
-from ..io.output import dump_results
+from ..io.output import dump_results_incremental
 from ..models.base import (
     ExecutionState,
     FieldTestResult,
@@ -57,10 +58,7 @@ def handle_completed_future(
     future,
     *,
     completion_ctx: FutureCompletionContext,
-    results: list[FieldTestResult],
-    attempted_keys: set[tuple[str, str, str, str]],
-    template_stats: dict[str, dict[str, int]],
-    pending_contexts: dict[Any, dict[str, Any]],
+    execution_state: ExecutionState,
 ) -> tuple[dict[str, dict[str, int]], bool, str | None]:
     """
     收尾一个 worker future，落盘结果并回传拥塞信号。
@@ -71,10 +69,7 @@ def handle_completed_future(
     Args:
         future: 已完成的 Future 对象。
         completion_ctx: 包含 args、settings_fingerprint、template_library_fingerprint、run_config 的上下文。
-        results: 结果列表（会被修改）。
-        attempted_keys: 已尝试的键集合（会被修改）。
-        template_stats: 模板统计数据（会被修改）。
-        pending_contexts: 待处理上下文字典（会被修改）。
+        execution_state: 执行状态对象（会被修改）。
 
     Returns:
         tuple[dict[str, dict[str, int]], bool, str | None]: 返回一个元组，包含：
@@ -87,7 +82,7 @@ def handle_completed_future(
         - 检测拥塞信号并返回给调用方
     """
     args = completion_ctx.args
-    context = pending_contexts.pop(future)
+    context = execution_state.pending_futures.pop(future)
     field_id = context["field_id"]
     template_name = context["template_name"]
 
@@ -110,11 +105,21 @@ def handle_completed_future(
             message=str(exc),
         )
 
-    results.append(result)
+    execution_state.results.append(result)
+    execution_state.unique_field_ids.add(result.field_id)
+    if result.submittable:
+        execution_state.submittable_count += 1
+    if result.submitted:
+        execution_state.submitted_count += 1
+    if result.status == "error":
+        execution_state.error_count += 1
+    if is_queue_timeout_result(result):
+        execution_state.queue_timeout_count += 1
     if is_informative_result(result):
-        attempted_keys.add(result_identity(result))
-    template_stats = compile_template_stats(results)
-    
+        execution_state.attempted_keys.add(result_identity(result))
+    template_stats = update_template_stats_with_result(execution_state.template_stats, result)
+    execution_state.template_stats = template_stats
+
     # 根据结果状态使用不同日志级别
     if result.status == "error":
         logger.error(
@@ -142,14 +147,22 @@ def handle_completed_future(
             result.submitted,
             result.message,
         )
-    dump_results(
+    execution_state.persisted_result_count = dump_results_incremental(
         args.output,
         args.dataset_id,
-        results,
+        [result],
+        persisted_result_count=execution_state.persisted_result_count,
+        tested=len(execution_state.results),
+        unique_fields_tested=len(execution_state.unique_field_ids),
+        submittable_count=execution_state.submittable_count,
+        submitted_count=execution_state.submitted_count,
+        error_count=execution_state.error_count,
+        queue_timeout_count=execution_state.queue_timeout_count,
         settings_fingerprint=completion_ctx.settings_fingerprint,
         template_library_fingerprint=completion_ctx.template_library_fingerprint,
         run_config=completion_ctx.run_config,
         auto_update_template_blacklist=getattr(args, "auto_update_blacklist", False),
+        all_results=execution_state.results,
     )
     congestion_detected = False
     if "CONCURRENT_SIMULATION_LIMIT_EXCEEDED" in result.message:
@@ -383,10 +396,7 @@ def drain_completed_futures(
             handle_completed_future(
                 done_future,
                 completion_ctx=completion_ctx,
-                results=execution_state.results,
-                attempted_keys=execution_state.attempted_keys,
-                template_stats=execution_state.template_stats,
-                pending_contexts=execution_state.pending_futures,
+                execution_state=execution_state,
             )
         )
         register_queue_busy_field(

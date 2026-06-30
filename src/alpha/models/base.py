@@ -666,6 +666,12 @@ class ExecutionState:
         pending_futures (Dict[Future[FieldTestResult], Dict[str, Any]]): 待处理的异步任务字典。
         field_queue_busy_counts (Dict[str, int]): 字段队列拥塞计数。
         skipped_fields_due_to_queue (set[str]): 因队列拥塞而跳过的字段集合。
+        unique_field_ids (set[str]): 已见过的字段 ID 集合，用于增量统计唯一字段数。
+        submittable_count (int): 当前可提交结果数。
+        submitted_count (int): 当前已提交结果数。
+        error_count (int): 当前 error 状态结果数。
+        queue_timeout_count (int): 当前队列超时结果数。
+        persisted_result_count (int): 已增量落盘到 journal 的结果数。
         last_submission_at (float): 上次提交时间（单调时钟）。默认为 0.0。
 
     Example:
@@ -696,6 +702,24 @@ class ExecutionState:
 
     skipped_fields_due_to_queue: set[str]
     """因队列拥塞而跳过的字段集合"""
+
+    unique_field_ids: set[str] = field(default_factory=set)
+    """已见过的字段 ID 集合"""
+
+    submittable_count: int = 0
+    """当前可提交结果数"""
+
+    submitted_count: int = 0
+    """当前已提交结果数"""
+
+    error_count: int = 0
+    """当前 error 状态结果数"""
+
+    queue_timeout_count: int = 0
+    """当前队列超时结果数"""
+
+    persisted_result_count: int = 0
+    """已增量落盘到 journal 的结果数"""
 
     last_submission_at: float = 0.0
     """上次提交时间（单调时钟）"""

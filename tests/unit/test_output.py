@@ -2,9 +2,18 @@
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
-from alpha.io.output import build_dataset_scoped_paths, dump_results, resolve_cli_path
+from alpha.analysis.stats import load_existing_results
+from alpha.models.base import FieldTestResult
+from alpha.io.output import (
+    build_dataset_scoped_paths,
+    dump_results,
+    dump_results_incremental,
+    initialize_results_journal,
+    resolve_cli_path,
+)
 
 
 def test_dump_results_does_not_update_blacklist_by_default(monkeypatch, tmp_path) -> None:
@@ -38,6 +47,93 @@ def test_dump_results_updates_blacklist_when_enabled(monkeypatch, tmp_path) -> N
     )
 
     assert len(calls) == 1
+
+
+def test_dump_results_can_skip_analysis_sidecar_for_intermediate_flushes(tmp_path) -> None:
+    """Intermediate flushes should be able to persist raw results without full analysis rebuild."""
+    output_path = tmp_path / "results.json"
+
+    dump_results(
+        str(output_path),
+        "fundamental6",
+        [],
+        settings_fingerprint="settings",
+        template_library_fingerprint="templates",
+        include_analysis=False,
+    )
+
+    assert output_path.exists()
+    assert not (tmp_path / "results_analysis.json").exists()
+
+
+def test_initialize_results_journal_and_load_existing_results(tmp_path) -> None:
+    """Journal-backed summaries should remain readable by load_existing_results."""
+    output_path = tmp_path / "results.json"
+    results = [
+        FieldTestResult(
+            field_id="field_1",
+            field_type="MATRIX",
+            field_name="field_1",
+            template_name="tpl",
+            status="simulated",
+            submittable=False,
+            expression="rank(field_1)",
+        )
+    ]
+
+    initialize_results_journal(str(output_path), results)
+    payload = {
+        "dataset_id": "fundamental6",
+        "tested": 1,
+        "submittable": 0,
+        "submitted": 0,
+        "errors": 0,
+        "queue_timeouts": 0,
+        "results_embedded": False,
+        "results_journal": str(tmp_path / "results_results.jsonl"),
+    }
+    output_path.write_text(json.dumps(payload), encoding="utf-8")
+
+    loaded = load_existing_results(str(output_path))
+
+    assert len(loaded) == 1
+    assert loaded[0].field_id == "field_1"
+
+
+def test_dump_results_incremental_writes_lightweight_summary(tmp_path) -> None:
+    """Incremental flushes should append new rows without embedding all results in summary."""
+    output_path = tmp_path / "results.json"
+    result = FieldTestResult(
+        field_id="field_2",
+        field_type="MATRIX",
+        field_name="field_2",
+        template_name="tpl",
+        status="simulated",
+        submittable=True,
+        expression="rank(field_2)",
+    )
+
+    persisted = dump_results_incremental(
+        str(output_path),
+        "fundamental6",
+        [result],
+        persisted_result_count=0,
+        tested=1,
+        unique_fields_tested=1,
+        submittable_count=1,
+        submitted_count=0,
+        error_count=0,
+        queue_timeout_count=0,
+        settings_fingerprint="settings",
+        template_library_fingerprint="templates",
+        run_config={"mode": "incremental"},
+    )
+
+    payload = json.loads(output_path.read_text(encoding="utf-8"))
+    assert persisted == 1
+    assert payload["results_embedded"] is False
+    assert "results" not in payload
+    assert load_existing_results(str(output_path))[0].field_id == "field_2"
 
 
 def test_resolve_cli_path_uses_cwd_for_relative_paths(monkeypatch, tmp_path) -> None:

@@ -293,6 +293,7 @@ def build_output_sidecar_paths(output_path: str) -> dict[str, str]:
     log_date = time.strftime("%Y-%m-%d")
     return {
         "analysis": str(base_dir / f"{base_name}_analysis.json"),
+        "results_journal": str(base_dir / f"{base_name}_results.jsonl"),
         "run_log": str(base_dir / f"{base_name}_{log_date}.log"),
     }
 
@@ -365,6 +366,7 @@ def dump_results(
     template_library_fingerprint: str,
     run_config: dict[str, Any] | None = None,
     auto_update_template_blacklist: bool = False,
+    include_analysis: bool = True,
 ) -> None:
     """
     持久化完整运行结果，并写入一个统一分析文件。
@@ -381,6 +383,8 @@ def dump_results(
         run_config: 运行配置字典。默认为 None。
         auto_update_template_blacklist: 是否根据运行结果自动写入模板黑名单。
             默认为 False，避免普通运行修改仓库中受 Git 跟踪的 data/ 文件。
+        include_analysis: 是否同步重建分析边车文件。中间过程可关闭以减少
+            每条结果都全量分析的开销；最终收尾时应开启。
 
     Example:
         >>> dump_results(
@@ -437,11 +441,6 @@ def dump_results(
                     "failed_checks": result.failed_checks,
                 }
             )
-    template_performance_summary = compile_template_performance_summary(results)
-    field_performance_summary = compile_field_performance_summary(results)
-    failed_check_leaderboard = compile_failed_check_leaderboard(results)
-    near_pass_summary = compile_near_pass_summary(results)
-    optimization_hints = compile_optimization_hints(failed_check_leaderboard, near_pass_summary)
     summary = {
         "dataset_id": dataset_id,
         "run_config": run_config or {},
@@ -453,29 +452,41 @@ def dump_results(
         "submitted": submitted_count,
         "errors": error_count,
         "queue_timeouts": queue_timeout_count,
+        "results_embedded": True,
+        "results_journal": sidecar_paths["results_journal"],
         "results": results_dicts,
     }
-    analysis = {
-        "dataset_id": dataset_id,
-        "settings_fingerprint": settings_fingerprint,
-        "template_library_fingerprint": template_library_fingerprint,
-        "tested": summary["tested"],
-        "unique_fields_tested": summary["unique_fields_tested"],
-        "submittable_count": summary["submittable"],
-        "submitted_count": summary["submitted"],
-        "error_count": summary["errors"],
-        "queue_timeout_count": summary["queue_timeouts"],
-        "submittable": submittable_results,
-        "submitted": submitted_results,
-        "failed_checks_summary": failed_checks_summary,
-        "failed_check_leaderboard": failed_check_leaderboard,
-        "near_pass_summary": near_pass_summary,
-        "optimization_hints": optimization_hints,
-        "template_performance_summary": template_performance_summary,
-        "field_performance_summary": field_performance_summary,
-    }
     atomic_write_json(path, summary)
-    atomic_write_json(sidecar_paths["analysis"], analysis)
+    initialize_results_journal(path, results)
+    if include_analysis:
+        template_performance_summary = compile_template_performance_summary(results)
+        field_performance_summary = compile_field_performance_summary(results)
+        failed_check_leaderboard = compile_failed_check_leaderboard(results)
+        near_pass_summary = compile_near_pass_summary(results)
+        optimization_hints = compile_optimization_hints(
+            failed_check_leaderboard,
+            near_pass_summary,
+        )
+        analysis = {
+            "dataset_id": dataset_id,
+            "settings_fingerprint": settings_fingerprint,
+            "template_library_fingerprint": template_library_fingerprint,
+            "tested": summary["tested"],
+            "unique_fields_tested": summary["unique_fields_tested"],
+            "submittable_count": summary["submittable"],
+            "submitted_count": summary["submitted"],
+            "error_count": summary["errors"],
+            "queue_timeout_count": summary["queue_timeouts"],
+            "submittable": submittable_results,
+            "submitted": submitted_results,
+            "failed_checks_summary": failed_checks_summary,
+            "failed_check_leaderboard": failed_check_leaderboard,
+            "near_pass_summary": near_pass_summary,
+            "optimization_hints": optimization_hints,
+            "template_performance_summary": template_performance_summary,
+            "field_performance_summary": field_performance_summary,
+        }
+        atomic_write_json(sidecar_paths["analysis"], analysis)
     cleanup_legacy_sidecar_files(path)
     logger.info(
         "[done] wrote results to %s (tested=%d, submittable=%d)",
@@ -483,13 +494,96 @@ def dump_results(
         len(results),
         submittable_count,
     )
-    logger.debug(
-        "[done] wrote analysis to %s",
-        sidecar_paths["analysis"],
-    )
+    if include_analysis:
+        logger.debug(
+            "[done] wrote analysis to %s",
+            sidecar_paths["analysis"],
+        )
 
     if auto_update_template_blacklist:
         auto_update_blacklist(results, dataset_id)
+
+
+def initialize_results_journal(output_path: str, results: list[FieldTestResult]) -> int:
+    """用当前完整结果列表重建 journal，供运行中增量追加使用。"""
+    sidecar_paths = build_output_sidecar_paths(output_path)
+    journal_path = sidecar_paths["results_journal"]
+    directory = os.path.dirname(os.path.abspath(journal_path)) or "."
+    os.makedirs(directory, exist_ok=True)
+    fd, temp_path = tempfile.mkstemp(prefix=".tmp_", suffix=".jsonl", dir=directory)
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as handle:
+            for result in results:
+                handle.write(json.dumps(result.to_dict(), ensure_ascii=False))
+                handle.write("\n")
+        os.replace(temp_path, journal_path)
+    finally:
+        if os.path.exists(temp_path):
+            with suppress(OSError):
+                os.remove(temp_path)
+    return len(results)
+
+
+def _append_results_journal(journal_path: str, results: list[FieldTestResult]) -> None:
+    """把新增结果追加到 journal。"""
+    if not results:
+        return
+    directory = os.path.dirname(os.path.abspath(journal_path)) or "."
+    os.makedirs(directory, exist_ok=True)
+    with open(journal_path, "a", encoding="utf-8") as handle:
+        for result in results:
+            handle.write(json.dumps(result.to_dict(), ensure_ascii=False))
+            handle.write("\n")
+
+
+def dump_results_incremental(
+    path: str,
+    dataset_id: str,
+    new_results: list[FieldTestResult],
+    *,
+    persisted_result_count: int,
+    tested: int,
+    unique_fields_tested: int,
+    submittable_count: int,
+    submitted_count: int,
+    error_count: int,
+    queue_timeout_count: int,
+    settings_fingerprint: str,
+    template_library_fingerprint: str,
+    run_config: dict[str, Any] | None = None,
+    auto_update_template_blacklist: bool = False,
+    all_results: list[FieldTestResult] | None = None,
+) -> int:
+    """仅把新增结果追加到 journal，并写轻量 summary。"""
+    sidecar_paths = build_output_sidecar_paths(path)
+    if new_results:
+        _append_results_journal(sidecar_paths["results_journal"], new_results)
+    summary = {
+        "dataset_id": dataset_id,
+        "run_config": run_config or {},
+        "settings_fingerprint": settings_fingerprint,
+        "template_library_fingerprint": template_library_fingerprint,
+        "tested": tested,
+        "unique_fields_tested": unique_fields_tested,
+        "submittable": submittable_count,
+        "submitted": submitted_count,
+        "errors": error_count,
+        "queue_timeouts": queue_timeout_count,
+        "results_embedded": False,
+        "results_journal": sidecar_paths["results_journal"],
+    }
+    atomic_write_json(path, summary)
+    cleanup_legacy_sidecar_files(path)
+    logger.info(
+        "[done] wrote incremental results to %s (tested=%d, submittable=%d, appended=%d)",
+        path,
+        tested,
+        submittable_count,
+        len(new_results),
+    )
+    if auto_update_template_blacklist and all_results is not None:
+        auto_update_blacklist(all_results, dataset_id)
+    return persisted_result_count + len(new_results)
 
 
 # ============================================================================

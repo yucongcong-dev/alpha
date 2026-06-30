@@ -46,6 +46,9 @@ from .analysis.stats import (
     compile_global_failed_check_counts,
     current_submittable_count,
     field_priority,
+    is_queue_timeout_result,
+    update_field_feedback_with_result,
+    update_global_failed_check_counts_with_result,
 )
 
 # 导入 API 客户端
@@ -111,8 +114,10 @@ from .io.credentials import load_credentials
 # 导入输出模块
 from .io.output import (
     cleanup_legacy_sidecar_files,
+    dump_results,
     ensure_analysis_synced,
     ensure_template_blacklist_file,
+    initialize_results_journal,
 )
 from .models.base import (
     ExecutionState,
@@ -136,13 +141,27 @@ def refresh_runtime_feedback(
     *,
     force: bool = False,
 ) -> None:
-    """把当前进程内已产生的结果回灌到模板构建上下文。"""
+    """把当前进程内新产生的结果增量回灌到模板构建上下文。"""
     result_count = len(results)
     cached_count = getattr(template_build_ctx, "_feedback_result_count", -1)
-    if not force and cached_count == result_count:
+    if force:
+        template_build_ctx.field_feedback = compile_field_feedback(results)
+        template_build_ctx.global_failed_check_counts = compile_global_failed_check_counts(results)
+        setattr(template_build_ctx, "_feedback_result_count", result_count)
         return
-    template_build_ctx.field_feedback = compile_field_feedback(results)
-    template_build_ctx.global_failed_check_counts = compile_global_failed_check_counts(results)
+    if cached_count == result_count:
+        return
+    if cached_count < 0 or cached_count > result_count:
+        template_build_ctx.field_feedback = compile_field_feedback(results)
+        template_build_ctx.global_failed_check_counts = compile_global_failed_check_counts(results)
+        setattr(template_build_ctx, "_feedback_result_count", result_count)
+        return
+    for result in results[cached_count:]:
+        update_field_feedback_with_result(template_build_ctx.field_feedback, result)
+        update_global_failed_check_counts_with_result(
+            template_build_ctx.global_failed_check_counts,
+            result,
+        )
     setattr(template_build_ctx, "_feedback_result_count", result_count)
 
 
@@ -170,6 +189,34 @@ def _safe_date_ordinal(value: Any) -> int:
         return date.fromisoformat(str(value)).toordinal()
     except (TypeError, ValueError):
         return 0
+
+
+def build_field_resume_positions(fields: list[dict[str, Any]]) -> dict[str, int]:
+    """为字段列表建立稳定的原始顺序恢复位置索引。"""
+    return {
+        str(first_non_empty(field.get("id"), SENTINEL_UNKNOWN)): (index + 1)
+        for index, field in enumerate(fields)
+    }
+
+
+def normalize_resume_index(resume_index: int, total_fields: int) -> int:
+    """把续跑索引限制在当前字段列表范围内。"""
+    if total_fields <= 0:
+        return 0
+    return resume_index % total_fields
+
+
+def populate_execution_metrics(execution_state: ExecutionState) -> None:
+    """根据当前结果列表回填增量持久化所需的轻量计数。"""
+    execution_state.unique_field_ids = {result.field_id for result in execution_state.results}
+    execution_state.submittable_count = sum(
+        1 for result in execution_state.results if result.submittable
+    )
+    execution_state.submitted_count = sum(1 for result in execution_state.results if result.submitted)
+    execution_state.error_count = sum(1 for result in execution_state.results if result.status == "error")
+    execution_state.queue_timeout_count = sum(
+        1 for result in execution_state.results if is_queue_timeout_result(result)
+    )
 
 
 def _normalize_range(values: list[float]) -> list[float]:
@@ -573,6 +620,11 @@ def _initialize(
         field_queue_busy_counts={},
         skipped_fields_due_to_queue=set(),
     )
+    populate_execution_metrics(execution_state)
+    execution_state.persisted_result_count = initialize_results_journal(
+        output_file,
+        execution_state.results,
+    )
 
     max_workers = max(1, args.max_concurrent_simulations)
     runtime_state = RuntimeConcurrencyState(
@@ -624,8 +676,10 @@ def _run_field_test_loop(
     runtime_state = run_ctx.runtime_state
     execution_state = run_ctx.execution_state
     fields = list(run_ctx.fields)
+    original_fields = list(run_ctx.fields)
     max_workers = runtime_state.max_workers
     field_template_batch_size = max(0, int(getattr(args, "field_template_batch_size", 0) or 0))
+    field_resume_positions = build_field_resume_positions(original_fields)
 
     # --- 断点续传：恢复上次进度 ---
     resumed_index = 0
@@ -636,6 +690,7 @@ def _run_field_test_loop(
             execution_state=execution_state,
         )
         if resumed_index > 0:
+            resumed_index = normalize_resume_index(resumed_index, len(fields))
             logger.info(
                 "[resume] 从字段索引 %d/%d 附近继续 (优先从该位置恢复，但不会丢掉更早字段)",
                 resumed_index + 1,
@@ -668,11 +723,7 @@ def _run_field_test_loop(
         use_dataset_heuristics=run_ctx.use_dataset_heuristics,
         expression_policy=run_ctx.expression_policy,
     )
-    refresh_runtime_feedback(
-        template_build_ctx,
-        execution_state.results,
-        force=True,
-    )
+    setattr(template_build_ctx, "_feedback_result_count", len(execution_state.results))
 
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
         last_field_id = ""
@@ -831,7 +882,11 @@ def _run_field_test_loop(
 
                     # 字段处理完成（含已跳过字段），保存中间状态
                     if state_file:
-                        completed_index = resumed_index + field_index
+                        completed_index = field_resume_positions.get(field_id, field_index)
+                        completed_index = normalize_resume_index(
+                            completed_index,
+                            len(original_fields),
+                        )
                         save_pipeline_state(
                             state_file,
                             completed_field_index=completed_index,
@@ -900,6 +955,15 @@ def _run_field_test_loop(
         len(execution_state.results),
         current_submittable_count(execution_state.results),
         sum(1 for r in execution_state.results if r.status == "error"),
+    )
+    dump_results(
+        args.output,
+        args.dataset_id,
+        execution_state.results,
+        settings_fingerprint=run_ctx.settings_fingerprint,
+        template_library_fingerprint=run_ctx.template_library_fingerprint,
+        run_config=run_ctx.run_config,
+        auto_update_template_blacklist=getattr(args, "auto_update_blacklist", False),
     )
 
 

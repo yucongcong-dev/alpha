@@ -16,7 +16,12 @@ from alpha.io.output import (
     auto_update_blacklist,
     ensure_template_blacklist_file,
 )
-from alpha.models.base import FieldTestResult, FutureCompletionContext, TemplateBuildContext
+from alpha.models.base import (
+    ExecutionState,
+    FieldTestResult,
+    FutureCompletionContext,
+    TemplateBuildContext,
+)
 
 
 def test_ensure_dataset_template_library_copies_base_when_missing(monkeypatch, tmp_path) -> None:
@@ -370,13 +375,11 @@ def test_scheduler_dump_results_shrinks_next_template_queue(monkeypatch, tmp_pat
             )
 
     future = _DoneFuture()
-    handle_completed_future(
-        future,
-        completion_ctx=completion_ctx,
+    execution_state = ExecutionState(
         results=existing_results,
         attempted_keys=set(),
         template_stats={},
-        pending_contexts={
+        pending_futures={
             future: {
                 "field_id": "field_b",
                 "field_name": "field_b",
@@ -388,6 +391,13 @@ def test_scheduler_dump_results_shrinks_next_template_queue(monkeypatch, tmp_pat
                 "settings_fingerprint": "variant_fp",
             }
         },
+        field_queue_busy_counts={},
+        skipped_fields_due_to_queue=set(),
+    )
+    handle_completed_future(
+        future,
+        completion_ctx=completion_ctx,
+        execution_state=execution_state,
     )
 
     after_pending, after_disabled, after_count = build_pending_templates_for_field(
