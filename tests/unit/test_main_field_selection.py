@@ -3,10 +3,10 @@
 from __future__ import annotations
 
 from argparse import Namespace
-from types import SimpleNamespace
 
 from alpha.config import get_dataset_expression_policy
 from alpha.main import prepare_fields_for_execution
+from alpha.models.base import HistoricalRunState, RunFilters
 
 
 def test_prepare_fields_for_execution_filters_before_limit() -> None:
@@ -32,8 +32,8 @@ def test_prepare_fields_for_execution_filters_before_limit() -> None:
         },
     ]
     args = Namespace(limit=1, offset=0, top_fields_by_feedback=0)
-    filters = SimpleNamespace(include_fields={"cash_st"}, exclude_fields=set())
-    historical_state = SimpleNamespace(field_feedback={})
+    filters = RunFilters(include_fields={"cash_st"})
+    historical_state = HistoricalRunState(field_feedback={})
 
     selected, stats = prepare_fields_for_execution(
         fields,
@@ -72,8 +72,8 @@ def test_prepare_fields_for_execution_applies_metadata_filters() -> None:
         },
     ]
     args = Namespace(limit=0, offset=0, top_fields_by_feedback=0)
-    filters = SimpleNamespace(include_fields=set(), exclude_fields=set())
-    historical_state = SimpleNamespace(field_feedback={})
+    filters = RunFilters()
+    historical_state = HistoricalRunState(field_feedback={})
 
     selected, stats = prepare_fields_for_execution(
         fields,

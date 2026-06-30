@@ -717,6 +717,10 @@ def auto_update_blacklist(
     # 6. 更新时间戳并写回
     bl_data["_updated"] = datetime.now().strftime("%Y-%m-%d %H:%M")
     atomic_write_json(blacklist_path, bl_data)
+    # 同进程续跑时需要立刻看到新黑名单，而不是等下次启动再生效。
+    from ..generators.expressions import invalidate_blacklist_cache
+
+    invalidate_blacklist_cache(dataset_id)
     logger.info(
         "[blacklist] auto-updated %s: added %d new entries (total=%d)",
         blacklist_path,

@@ -92,6 +92,17 @@ def load_yaml_config(config_path: str = "") -> dict[str, Any]:
     return {}
 
 
+def _config_file_signature(path: str | None) -> tuple[int, int] | None:
+    """返回配置文件签名：(mtime_ns, size)。"""
+    if not path or not os.path.isfile(path):
+        return None
+    try:
+        stat = os.stat(path)
+    except OSError:
+        return None
+    return (stat.st_mtime_ns, stat.st_size)
+
+
 # ============================================================================
 # API 端点配置
 # ============================================================================
@@ -307,27 +318,164 @@ def _tuple_tuple_str_int(value: Any) -> tuple[tuple[str, str, int], ...]:
     return tuple(rows)
 
 
+def _coerce_field_transform_stage(value: Any) -> FieldTransformStage | None:
+    """把 YAML stage 条目转换为 FieldTransformStage。"""
+    if not isinstance(value, dict):
+        return None
+    kind = str(value.get("kind", "")).strip()
+    if not kind:
+        return None
+    try:
+        window = int(value.get("window", 0) or 0)
+    except (TypeError, ValueError):
+        window = 0
+    std_value = value.get("std")
+    try:
+        std = float(std_value) if std_value is not None else None
+    except (TypeError, ValueError):
+        std = None
+    return FieldTransformStage(kind=kind, window=window, std=std)
+
+
+def _coerce_field_transform_spec(value: Any) -> FieldTransformSpec | None:
+    """把 YAML transform 配置转换为 FieldTransformSpec。"""
+    if not isinstance(value, dict):
+        return None
+    stages_raw = value.get("stages", ())
+    stages: list[FieldTransformStage] = []
+    if isinstance(stages_raw, (list, tuple)):
+        for item in stages_raw:
+            stage = _coerce_field_transform_stage(item)
+            if stage is not None:
+                stages.append(stage)
+    try:
+        backfill_window = int(value.get("backfill_window", 0) or 0)
+    except (TypeError, ValueError):
+        backfill_window = 0
+    winsorize_value = value.get("winsorize_std")
+    try:
+        winsorize_std = float(winsorize_value) if winsorize_value is not None else None
+    except (TypeError, ValueError):
+        winsorize_std = None
+    return FieldTransformSpec(
+        stages=tuple(stages),
+        backfill_window=backfill_window,
+        winsorize_std=winsorize_std,
+    )
+
+
+def _coerce_feedback_phase_policy(value: Any) -> FeedbackPhasePolicy | None:
+    """把 YAML feedback phase 配置转换为 FeedbackPhasePolicy。"""
+    if not isinstance(value, dict):
+        return None
+    preferred_raw = value.get("preferred_template_stages", ())
+    preferred_template_stages = ()
+    if isinstance(preferred_raw, (list, tuple)):
+        preferred_template_stages = tuple(str(item) for item in preferred_raw if str(item).strip())
+    try:
+        min_attempted_templates = int(value.get("min_attempted_templates", 0) or 0)
+    except (TypeError, ValueError):
+        min_attempted_templates = 0
+    try:
+        min_best_score = float(value.get("min_best_score", STATS_DEFAULT_SCORE))
+    except (TypeError, ValueError):
+        min_best_score = STATS_DEFAULT_SCORE
+    try:
+        settings_variant_budget = int(value.get("settings_variant_budget", 3) or 3)
+    except (TypeError, ValueError):
+        settings_variant_budget = 3
+    return FeedbackPhasePolicy(
+        min_attempted_templates=min_attempted_templates,
+        min_best_score=min_best_score,
+        settings_variant_budget=settings_variant_budget,
+        enable_template_pruning=bool(value.get("enable_template_pruning", False)),
+        enable_resimulation_mutations=bool(value.get("enable_resimulation_mutations", False)),
+        preferred_template_stages=preferred_template_stages,
+    )
+
+
+def _coerce_feedback_loop_policy(value: Any) -> FeedbackLoopPolicy | None:
+    """把 YAML feedback loop 配置转换为 FeedbackLoopPolicy。"""
+    if not isinstance(value, dict):
+        return None
+    generate = _coerce_feedback_phase_policy(value.get("generate"))
+    prune = _coerce_feedback_phase_policy(value.get("prune"))
+    resimulate = _coerce_feedback_phase_policy(value.get("resimulate"))
+    if generate is None and prune is None and resimulate is None:
+        return None
+    return FeedbackLoopPolicy(
+        generate=generate or FeedbackPhasePolicy(),
+        prune=prune or FeedbackPhasePolicy(),
+        resimulate=resimulate or FeedbackPhasePolicy(),
+    )
+
+
 def _policy_config_for_dataset(
     dataset_id: str,
+    *,
+    use_curated_heuristics: bool | None = None,
     yaml_config: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    """读取数据集表达式策略的 YAML 覆盖项。"""
+    """读取数据集表达式策略的 YAML 覆盖项。
+
+    支持三级声明式合并：
+    1. expression_policies.__default__
+    2. expression_policies.__curated__（仅 curated 数据集）
+    3. expression_policies.<dataset_id>
+    """
     config = yaml_config or get_yaml_config()
     section = config.get("expression_policies", {})
     if not isinstance(section, dict):
         return {}
+    replace_list_keys = {"stages", "preferred_template_stages"}
+
+    def merge_values(base: Any, override: Any, *, key: str = "") -> Any:
+        if isinstance(base, dict) and isinstance(override, dict):
+            merged_dict = dict(base)
+            for child_key, value in override.items():
+                merged_dict[child_key] = merge_values(
+                    merged_dict.get(child_key),
+                    value,
+                    key=child_key,
+                )
+            return merged_dict
+        if isinstance(base, list) and isinstance(override, list):
+            if key in replace_list_keys:
+                return list(override)
+            return [*base, *override]
+        if isinstance(base, tuple) and isinstance(override, tuple):
+            if key in replace_list_keys:
+                return tuple(override)
+            return (*base, *override)
+        return override
+
+    merged: dict[str, Any] = {}
+    default_cfg = section.get("__default__", {})
+    if isinstance(default_cfg, dict):
+        merged = merge_values(merged, default_cfg)
+    if use_curated_heuristics:
+        curated_cfg = section.get("__curated__", {})
+        if isinstance(curated_cfg, dict):
+            merged = merge_values(merged, curated_cfg)
     dataset_cfg = section.get(dataset_id, {})
-    return dataset_cfg if isinstance(dataset_cfg, dict) else {}
+    if isinstance(dataset_cfg, dict):
+        merged = merge_values(merged, dataset_cfg)
+    return merged
 
 
 def _apply_yaml_expression_policy_overrides(
     policy: DatasetExpressionPolicy,
     *,
     dataset_id: str,
+    use_curated_heuristics: bool | None = None,
     yaml_config: dict[str, Any] | None = None,
 ) -> DatasetExpressionPolicy:
     """把 settings.yaml 中的 expression_policies 覆盖项应用到策略对象。"""
-    overrides = _policy_config_for_dataset(dataset_id, yaml_config)
+    overrides = _policy_config_for_dataset(
+        dataset_id,
+        use_curated_heuristics=use_curated_heuristics,
+        yaml_config=yaml_config,
+    )
     if not overrides:
         return policy
 
@@ -366,6 +514,13 @@ def _apply_yaml_expression_policy_overrides(
         "matrix_diversified_template_specs",
         "ratio_diversified_template_specs",
         "ratio_legacy_template_specs",
+    }
+    transform_fields = {
+        "default_field_transform",
+        "matrix_field_transform",
+        "vector_field_transform",
+        "ratio_numerator_transform",
+        "ratio_denominator_transform",
     }
 
     for key, value in overrides.items():
@@ -440,6 +595,14 @@ def _apply_yaml_expression_policy_overrides(
             update_map[key] = _tuple_tuple_int(value, 2)
         elif key in template_spec_fields:
             update_map[key] = _tuple_tuple_str_int(value)
+        elif key in transform_fields:
+            transform = _coerce_field_transform_spec(value)
+            if transform is not None:
+                update_map[key] = transform
+        elif key == "feedback_loop_policy":
+            loop_policy = _coerce_feedback_loop_policy(value)
+            if loop_policy is not None:
+                update_map[key] = loop_policy
         else:
             update_map[key] = value
 
@@ -986,12 +1149,27 @@ def get_yaml_config(config_path: str = "") -> dict[str, Any]:
         dict: 解析后的配置字典。
     """
     cache_attr = "_yaml_config_cache"
-    cache_key = os.path.abspath(config_path) if config_path else "__auto__"
+    resolved_path = os.path.abspath(config_path) if config_path else _resolve_yaml_path()
+    cache_key = resolved_path or "__missing__"
+    signature = _config_file_signature(resolved_path)
     cache = getattr(get_yaml_config, cache_attr, {})  # type: ignore[attr-defined]
-    if cache_key in cache:
-        return cache[cache_key]
-    data = load_yaml_config(config_path)
-    cache[cache_key] = data
+    cached_entry = cache.get(cache_key)
+    if isinstance(cached_entry, dict):
+        cached_signature = cached_entry.get("signature")
+        cached_path = cached_entry.get("path")
+        cached_data = cached_entry.get("data")
+        if (
+            cached_signature == signature
+            and cached_path == resolved_path
+            and isinstance(cached_data, dict)
+        ):
+            return cached_data
+    data = load_yaml_config(resolved_path or "")
+    cache[cache_key] = {
+        "path": resolved_path,
+        "signature": signature,
+        "data": data,
+    }
     setattr(get_yaml_config, cache_attr, cache)
     return data
 
@@ -1069,6 +1247,7 @@ def get_dataset_expression_policy(
                 feedback_loop_policy=default_feedback_loop_policy,
             ),
             dataset_id=dataset_id,
+            use_curated_heuristics=False,
         )
 
     return _apply_yaml_expression_policy_overrides(
@@ -1081,6 +1260,7 @@ def get_dataset_expression_policy(
             feedback_loop_policy=default_feedback_loop_policy,
         ),
         dataset_id=dataset_id,
+        use_curated_heuristics=True,
     )
 
 

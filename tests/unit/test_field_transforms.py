@@ -33,7 +33,7 @@ def test_build_field_view_uses_vec_avg_for_vector_fields() -> None:
     field_view = build_field_view({"id": "sentiment_vec", "type": "VECTOR"}, policy)
 
     assert field_view.raw_expression == "vec_avg(sentiment_vec)"
-    assert field_view.preprocessed_expression == "ts_backfill(vec_avg(sentiment_vec), 240)"
+    assert field_view.preprocessed_expression == "ts_backfill(vec_avg(sentiment_vec), 504)"
 
 
 def test_build_expression_candidates_uses_preprocessed_raw_field_view() -> None:
@@ -51,5 +51,5 @@ def test_build_expression_candidates_uses_preprocessed_raw_field_view() -> None:
     )
 
     expressions = {expression for _, expression, _ in candidates}
-    assert "ts_backfill(cash_st, 240)" in expressions
-    assert "group_rank(ts_backfill(cash_st, 240), subindustry)" in expressions
+    assert "ts_backfill(cash_st, 504)" in expressions
+    assert "group_rank(ts_backfill(cash_st, 504), subindustry)" in expressions

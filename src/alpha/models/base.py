@@ -17,10 +17,13 @@
 
 from __future__ import annotations
 
+import argparse
 from collections.abc import Sequence
 from dataclasses import dataclass, field
 import time
 from typing import Any
+
+from ..config import DatasetExpressionPolicy
 
 # ============================================================================
 # 类型别名定义
@@ -41,9 +44,6 @@ Example:
         ]
     }
 """
-
-DatasetExpressionPolicy = Any
-"""数据集表达式策略对象类型别名。由 config.get_dataset_expression_policy 生成。"""
 
 SettingsVariant = dict[str, Any]
 """
@@ -375,15 +375,15 @@ class TemplateBuildContext:
         use_dataset_heuristics: 是否使用数据集启发式。
     """
 
-    args: Any = field(default=None)
-    all_fields: Sequence[Any] = field(default_factory=list)
+    args: argparse.Namespace = field(default_factory=argparse.Namespace)
+    all_fields: Sequence[dict[str, Any]] = field(default_factory=list)
     template_library: dict[str, list[dict[str, Any]]] = field(default_factory=dict)
     field_feedback: dict[str, dict[str, Any]] = field(default_factory=dict)
     global_failed_check_counts: dict[str, int] = field(default_factory=dict)
     include_templates: set[str] = field(default_factory=set)
     exclude_templates: set[str] = field(default_factory=set)
     use_dataset_heuristics: bool = False
-    expression_policy: Any = None
+    expression_policy: DatasetExpressionPolicy | None = None
 
 
 @dataclass
@@ -401,7 +401,7 @@ class FutureCompletionContext:
         run_config: 运行配置（可选）。
     """
 
-    args: Any = field(default=None)
+    args: argparse.Namespace = field(default_factory=argparse.Namespace)
     settings_fingerprint: str = ""
     template_library_fingerprint: str = ""
     run_config: dict[str, Any] | None = None
@@ -699,3 +699,26 @@ class ExecutionState:
 
     last_submission_at: float = 0.0
     """上次提交时间（单调时钟）"""
+
+
+@dataclass(frozen=True)
+class InitializedRunContext:
+    """初始化阶段产出的主流程上下文。
+
+    用显式字段替代 `_initialize()` 返回的超长 tuple，避免主入口和执行循环
+    依赖脆弱的位置解包。
+    """
+
+    client_factory: Any
+    template_library: TemplateLibrary
+    filters: RunFilters
+    expression_policy: DatasetExpressionPolicy
+    use_dataset_heuristics: bool
+    template_library_fingerprint: str
+    settings_fingerprint: str
+    historical_state: HistoricalRunState
+    fields: list[dict[str, Any]]
+    execution_state: ExecutionState
+    runtime_state: RuntimeConcurrencyState
+    create_semaphore: Any
+    run_config: dict[str, Any]

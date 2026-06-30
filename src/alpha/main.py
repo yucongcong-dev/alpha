@@ -65,6 +65,7 @@ from .cli.parser import (
 
 # 导入配置和模型
 from .config import (
+    DatasetExpressionPolicy,
     SENTINEL_UNKNOWN,
     STATS_DEFAULT_SCORE,
     get_dataset_expression_policy,
@@ -113,6 +114,9 @@ from .io.output import (
 )
 from .models.base import (
     ExecutionState,
+    HistoricalRunState,
+    InitializedRunContext,
+    RunFilters,
     RuntimeConcurrencyState,
     TemplateBuildContext,
 )
@@ -164,9 +168,9 @@ def _normalize_range(values: list[float]) -> list[float]:
 def prepare_fields_for_execution(
     fields: list[dict[str, Any]],
     *,
-    filters_dict: Any,
-    expression_policy: Any,
-    historical_state: Any,
+    filters_dict: RunFilters,
+    expression_policy: DatasetExpressionPolicy,
+    historical_state: HistoricalRunState,
     args: argparse.Namespace,
 ) -> tuple[list[dict[str, Any]], dict[str, int]]:
     """对字段做过滤、排序并最终应用 offset/limit。"""
@@ -427,14 +431,8 @@ def create_and_login_client(
 def _initialize(
     args: argparse.Namespace,
     run_paths: Any,
-) -> tuple[Any, ...] | None:
-    """执行主流程的初始化阶段（步骤 2-19），返回所有需要的状态变量。
-
-    成功时返回包含 18 个值的元组，失败时返回 None。
-
-    Returns:
-        tuple or None: 成功时为包含所有状态变量的元组，失败时为 None。
-    """
+) -> InitializedRunContext | None:
+    """执行主流程的初始化阶段（步骤 2-19），返回结构化运行上下文。"""
     output_file = getattr(run_paths, "output", None) or args.output
     log_file = getattr(run_paths, "log_file", None)
     if log_file:
@@ -457,7 +455,7 @@ def _initialize(
         logger.error("[error] 缺少凭证，无法继续")
         return None
 
-    bootstrap_client, client_factory = create_and_login_client(email, password, args)
+    _bootstrap_client, client_factory = create_and_login_client(email, password, args)
 
     template_library = load_template_library(template_library_file)
     filters_dict = load_run_filters_extended(run_paths)
@@ -479,7 +477,7 @@ def _initialize(
         delay=args.delay,
     )
     fields = fetch_fields_with_cache(
-        bootstrap_client,
+        _bootstrap_client,
         args,
         fields_cache_file,
         cached_fields,
@@ -569,25 +567,20 @@ def _initialize(
     logger.info("[config] max_concurrent_creates=%d", max_create_workers)
     logger.info("[config] simulation_max_pending_cycles=%d", args.simulation_max_pending_cycles)
 
-    return (
-        email,
-        password,
-        bootstrap_client,
-        client_factory,
-        template_library,
-        filters_dict,
-        expression_policy,
-        use_dataset_heuristics,
-        template_library_fingerprint,
-        settings_fingerprint,
-        feedback_output,
-        historical_state,
-        fields,
-        execution_state,
-        runtime_state,
-        create_semaphore,
-        run_config,
-        output_file,
+    return InitializedRunContext(
+        client_factory=client_factory,
+        template_library=template_library,
+        filters=filters_dict,
+        expression_policy=expression_policy,
+        use_dataset_heuristics=use_dataset_heuristics,
+        template_library_fingerprint=template_library_fingerprint,
+        settings_fingerprint=settings_fingerprint,
+        historical_state=historical_state,
+        fields=fields,
+        execution_state=execution_state,
+        runtime_state=runtime_state,
+        create_semaphore=create_semaphore,
+        run_config=run_config,
     )
 
 
@@ -598,19 +591,7 @@ def _initialize(
 
 def _run_field_test_loop(
     args: argparse.Namespace,
-    client_factory: WorkerClientFactory,
-    template_library: Any,
-    filters_dict: Any,
-    expression_policy: Any,
-    use_dataset_heuristics: bool,
-    template_library_fingerprint: str,
-    settings_fingerprint: str,
-    historical_state: Any,
-    fields: list[dict[str, Any]],
-    execution_state: ExecutionState,
-    runtime_state: RuntimeConcurrencyState,
-    create_semaphore: threading.Semaphore,
-    run_config: dict[str, Any],
+    run_ctx: InitializedRunContext,
     run_paths: Any = None,
 ) -> None:
     """线程池中遍历字段并提交模拟任务，实时消费结果。
@@ -621,6 +602,9 @@ def _run_field_test_loop(
     """
     state_file = getattr(run_paths, "state_file", "") if run_paths is not None else ""
     checkpoint_file = getattr(run_paths, "checkpoint_file", "") if run_paths is not None else ""
+    runtime_state = run_ctx.runtime_state
+    execution_state = run_ctx.execution_state
+    fields = list(run_ctx.fields)
     max_workers = runtime_state.max_workers
     field_template_batch_size = max(0, int(getattr(args, "field_template_batch_size", 0) or 0))
 
@@ -645,11 +629,11 @@ def _run_field_test_loop(
         print_dry_run_plan(
             args=args,
             fields=fields,
-            filters=filters_dict,
-            template_library=template_library,
-            historical_state=historical_state,
+            filters=run_ctx.filters,
+            template_library=run_ctx.template_library,
+            historical_state=run_ctx.historical_state,
             execution_state=execution_state,
-            use_dataset_heuristics=use_dataset_heuristics,
+            use_dataset_heuristics=run_ctx.use_dataset_heuristics,
         )
         return
 
@@ -657,13 +641,13 @@ def _run_field_test_loop(
     template_build_ctx = TemplateBuildContext(
         args=args,
         all_fields=fields,
-        template_library=template_library,
-        field_feedback=historical_state.field_feedback,
-        global_failed_check_counts=historical_state.global_failed_check_counts,
-        include_templates=filters_dict.include_templates,
-        exclude_templates=filters_dict.exclude_templates,
-        use_dataset_heuristics=use_dataset_heuristics,
-        expression_policy=expression_policy,
+        template_library=run_ctx.template_library,
+        field_feedback=run_ctx.historical_state.field_feedback,
+        global_failed_check_counts=run_ctx.historical_state.global_failed_check_counts,
+        include_templates=run_ctx.filters.include_templates,
+        exclude_templates=run_ctx.filters.exclude_templates,
+        use_dataset_heuristics=run_ctx.use_dataset_heuristics,
+        expression_policy=run_ctx.expression_policy,
     )
 
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
@@ -696,7 +680,7 @@ def _run_field_test_loop(
                     if should_skip_field(
                         field_id,
                         field_name,
-                        filters_dict,
+                        run_ctx.filters,
                         execution_state.skipped_fields_due_to_queue,
                     ):
                         continue
@@ -770,9 +754,9 @@ def _run_field_test_loop(
                                 completed_futures=list(done),
                                 execution_state=execution_state,
                                 args=args,
-                                settings_fingerprint=settings_fingerprint,
-                                template_library_fingerprint=template_library_fingerprint,
-                                run_config=run_config,
+                                settings_fingerprint=run_ctx.settings_fingerprint,
+                                template_library_fingerprint=run_ctx.template_library_fingerprint,
+                                run_config=run_ctx.run_config,
                                 runtime_state=runtime_state,
                             )
                             if field_id in execution_state.skipped_fields_due_to_queue:
@@ -797,15 +781,15 @@ def _run_field_test_loop(
                         field_with_template["template_stage"] = template_stage
                         future = executor.submit(
                             run_field_test_in_worker,
-                            client_factory,
+                            run_ctx.client_factory,
                             args,
                             field_with_template,
                             template_name,
                             expression,
                             variant_fingerprint,
-                            template_library_fingerprint,
+                            run_ctx.template_library_fingerprint,
                             settings_variant,
-                            create_semaphore,
+                            run_ctx.create_semaphore,
                         )
 
                         execution_state.last_submission_at = time.monotonic()
@@ -846,9 +830,9 @@ def _run_field_test_loop(
                     completed_futures=list(done),
                     execution_state=execution_state,
                     args=args,
-                    settings_fingerprint=settings_fingerprint,
-                    template_library_fingerprint=template_library_fingerprint,
-                    run_config=run_config,
+                    settings_fingerprint=run_ctx.settings_fingerprint,
+                    template_library_fingerprint=run_ctx.template_library_fingerprint,
+                    run_config=run_ctx.run_config,
                     runtime_state=runtime_state,
                 )
                 # 排空后实时保存状态
@@ -921,42 +905,9 @@ def main() -> int:
     if init_result is None:
         return 1
 
-    (
-        _email,
-        _password,
-        _bootstrap_client,
-        client_factory,
-        template_library,
-        filters_dict,
-        expression_policy,
-        use_dataset_heuristics,
-        template_library_fingerprint,
-        settings_fingerprint,
-        _feedback_output,
-        historical_state,
-        fields,
-        execution_state,
-        runtime_state,
-        create_semaphore,
-        run_config,
-        _output_file,
-    ) = init_result
-
     _run_field_test_loop(
         args=args,
-        client_factory=client_factory,
-        template_library=template_library,
-        filters_dict=filters_dict,
-        expression_policy=expression_policy,
-        use_dataset_heuristics=use_dataset_heuristics,
-        template_library_fingerprint=template_library_fingerprint,
-        settings_fingerprint=settings_fingerprint,
-        historical_state=historical_state,
-        fields=fields,
-        execution_state=execution_state,
-        runtime_state=runtime_state,
-        create_semaphore=create_semaphore,
-        run_config=run_config,
+        run_ctx=init_result,
         run_paths=run_paths,
     )
 

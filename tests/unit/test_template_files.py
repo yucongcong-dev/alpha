@@ -2,14 +2,21 @@
 
 from __future__ import annotations
 
+from argparse import Namespace
 import json
 from pathlib import Path
 
+from alpha.core.executor import build_pending_templates_for_field
+from alpha.core.scheduler import handle_completed_future
 from alpha.generators import templates as template_module
 from alpha.generators.expressions import _BLACKLIST_CACHE, _is_blacklisted_template
 from alpha.generators.templates import ensure_dataset_template_library, load_template_library
-from alpha.io.output import auto_update_blacklist, ensure_template_blacklist_file
-from alpha.models.base import FieldTestResult
+from alpha.io.output import (
+    _BLACKLIST_PATH_CACHE,
+    auto_update_blacklist,
+    ensure_template_blacklist_file,
+)
+from alpha.models.base import FieldTestResult, FutureCompletionContext, TemplateBuildContext
 
 
 def test_ensure_dataset_template_library_copies_base_when_missing(monkeypatch, tmp_path) -> None:
@@ -211,6 +218,193 @@ def test_auto_update_blacklist_appends_low_quality_template_once(tmp_path) -> No
     assert [entry["name"] for entry in entries] == ["weak_template"]
     assert entries[0]["template_family"] == "group_vol_scaled_delta"
     assert entries[0]["fields_tested"] == ["sales", "assets"]
+
+
+def test_auto_update_blacklist_is_visible_to_same_process(monkeypatch, tmp_path) -> None:
+    data_dir = tmp_path / "data"
+    data_dir.mkdir()
+    monkeypatch.chdir(tmp_path)
+    _BLACKLIST_CACHE.clear()
+
+    assert not _is_blacklisted_template("weak_template", "rank(close)", dataset_id="custom_ds")
+
+    results = [
+        FieldTestResult(
+            field_id="sales",
+            field_type="MATRIX",
+            field_name="sales",
+            template_name="weak_template",
+            template_family="group_vol_scaled_delta",
+            template_stage="group_second_order",
+            expression="rank(sales)",
+            submittable=False,
+            failed_checks=[
+                {"name": "LOW_SHARPE", "value": 0.1},
+                {"name": "LOW_FITNESS", "value": 0.2},
+            ],
+        ),
+        FieldTestResult(
+            field_id="assets",
+            field_type="MATRIX",
+            field_name="assets",
+            template_name="weak_template",
+            template_family="group_vol_scaled_delta",
+            template_stage="group_second_order",
+            expression="rank(assets)",
+            submittable=False,
+            failed_checks=[
+                {"name": "LOW_SHARPE", "value": 0.2},
+                {"name": "LOW_FITNESS", "value": 0.3},
+            ],
+        ),
+    ]
+
+    auto_update_blacklist(results, "custom_ds", data_dir=str(data_dir))
+
+    assert _is_blacklisted_template(
+        "weak_template",
+        "group_rank(ts_zscore(close, 60), subindustry)",
+        template_metadata={
+            "stage": "group_second_order",
+            "family": "group_vol_scaled_delta",
+        },
+        dataset_id="custom_ds",
+    )
+
+
+def test_scheduler_dump_results_shrinks_next_template_queue(monkeypatch, tmp_path) -> None:
+    data_dir = tmp_path / "data"
+    data_dir.mkdir()
+    results_path = tmp_path / "results.json"
+    monkeypatch.chdir(tmp_path)
+    _BLACKLIST_CACHE.clear()
+    _BLACKLIST_PATH_CACHE.clear()
+    monkeypatch.setattr("alpha.io.output.DATA_DIR", data_dir)
+    monkeypatch.setattr(
+        "alpha.core.executor.build_setting_variants",
+        lambda *args, **kwargs: [{"neutralization": "SUBINDUSTRY", "truncation": 0.08}],
+    )
+
+    args = Namespace(
+        output=str(results_path),
+        dataset_id="custom_ds",
+        auto_update_blacklist=True,
+        template_disable_after=0,
+        disable_legacy_after=0,
+        max_templates_per_field=1000,
+        max_templates_per_family=1000,
+        legacy_similarity_penalty=0,
+    )
+    completion_ctx = FutureCompletionContext(
+        args=args,
+        settings_fingerprint="settings_fp",
+        template_library_fingerprint="tpl_fp",
+        run_config={"mode": "test"},
+    )
+    template_library = {
+        "default": [
+            {
+                "name": "weak_template",
+                "expression": "rank(ts_backfill({field}, {backfill_window}))",
+                "priority": 9999,
+                "family": "legacy_level",
+                "stage": "first_order",
+            }
+        ]
+    }
+    build_ctx = TemplateBuildContext(
+        args=args,
+        all_fields=[{"id": "sales", "type": "MATRIX"}],
+        template_library=template_library,
+        include_templates={"weak_template"},
+        use_dataset_heuristics=False,
+        expression_policy=None,
+    )
+
+    before_pending, before_disabled, before_count = build_pending_templates_for_field(
+        build_ctx,
+        {"id": "sales", "type": "MATRIX"},
+        template_stats={},
+        attempted_keys=set(),
+        prior_results=[],
+    )
+    assert before_count >= 1
+    assert len(before_pending) == 1
+    assert before_disabled == 0
+
+    existing_results = [
+        FieldTestResult(
+            field_id="field_a",
+            field_type="MATRIX",
+            field_name="field_a",
+            template_name="weak_template",
+            template_family="legacy_level",
+            template_stage="first_order",
+            expression="rank(ts_backfill(field_a, 240))",
+            status="simulated",
+            submittable=False,
+            failed_checks=[
+                {"name": "LOW_SHARPE", "value": 0.1},
+                {"name": "LOW_FITNESS", "value": 0.2},
+            ],
+        )
+    ]
+
+    class _DoneFuture:
+        def result(self) -> FieldTestResult:
+            return FieldTestResult(
+                field_id="field_b",
+                field_type="MATRIX",
+                field_name="field_b",
+                template_name="weak_template",
+                template_family="legacy_level",
+                template_stage="first_order",
+                expression="rank(ts_backfill(field_b, 240))",
+                status="simulated",
+                submittable=False,
+                failed_checks=[
+                    {"name": "LOW_SHARPE", "value": 0.1},
+                    {"name": "LOW_FITNESS", "value": 0.2},
+                ],
+            )
+
+    future = _DoneFuture()
+    handle_completed_future(
+        future,
+        completion_ctx=completion_ctx,
+        results=existing_results,
+        attempted_keys=set(),
+        template_stats={},
+        pending_contexts={
+            future: {
+                "field_id": "field_b",
+                "field_name": "field_b",
+                "field_type": "MATRIX",
+                "template_name": "weak_template",
+                "template_family": "legacy_level",
+                "template_stage": "first_order",
+                "expression": "rank(ts_backfill(field_b, 240))",
+                "settings_fingerprint": "variant_fp",
+            }
+        },
+    )
+
+    after_pending, after_disabled, after_count = build_pending_templates_for_field(
+        build_ctx,
+        {"id": "sales", "type": "MATRIX"},
+        template_stats={},
+        attempted_keys=set(),
+        prior_results=[],
+    )
+    assert after_count >= 1
+    assert after_pending == []
+    assert after_disabled == 0
+    assert _is_blacklisted_template(
+        "weak_template",
+        "rank(ts_backfill(sales, 240))",
+        template_metadata={"family": "legacy_level", "stage": "first_order"},
+        dataset_id="custom_ds",
+    )
 
 
 def test_fundamental6_template_library_has_family_and_layer_metadata() -> None:

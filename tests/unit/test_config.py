@@ -6,13 +6,18 @@
 
 from __future__ import annotations
 
+import os
+import time
+
 from alpha.config import (
     API_BASE,
     AUTH_URL,
     DEFAULT_DATASET_ID,
+    FieldTransformStage,
     SIM_ACCEPT_HEADER,
     VERSION_HEADER,
     get_dataset_expression_policy,
+    get_yaml_config,
     use_fundamental6_heuristics,
 )
 
@@ -89,10 +94,31 @@ def test_expression_policy_can_be_overridden_from_yaml(monkeypatch) -> None:
         "alpha.config.get_yaml_config",
         lambda config_path="": {
             "expression_policies": {
+                "__default__": {
+                    "partner_limit": 5,
+                    "preferred_partner_score_bonuses": {"assets": 11},
+                },
+                "__curated__": {
+                    "disabled_templates": ["base_disabled"],
+                },
                 "fundamental6": {
                     "partner_limit": 9,
                     "blacklisted_template_name_substrings": ["custom_block"],
                     "disabled_templates": ["weak_template"],
+                    "matrix_field_transform": {
+                        "stages": [{"kind": "backfill", "window": 720}],
+                        "backfill_window": 720,
+                    },
+                    "feedback_loop_policy": {
+                        "resimulate": {
+                            "min_attempted_templates": 5,
+                            "min_best_score": 0.4,
+                            "settings_variant_budget": 4,
+                            "enable_template_pruning": True,
+                            "enable_resimulation_mutations": True,
+                            "preferred_template_stages": ["event_conditioned"],
+                        }
+                    },
                     "template_prefix_penalties": [
                         {"prefixes": ["delta_", "group_delta_"], "penalty": -500}
                     ],
@@ -105,7 +131,17 @@ def test_expression_policy_can_be_overridden_from_yaml(monkeypatch) -> None:
 
     assert policy.partner_limit == 9
     assert policy.blacklisted_template_name_substrings == ("custom_block",)
+    assert "base_disabled" in policy.disabled_templates
     assert "weak_template" in policy.disabled_templates
+    assert policy.preferred_partner_score_bonuses["assets"] == 11
+    assert policy.matrix_field_transform.backfill_window == 720
+    assert policy.matrix_field_transform.stages == (
+        FieldTransformStage(kind="backfill", window=720, std=None),
+    )
+    assert policy.feedback_loop_policy.resimulate.min_attempted_templates == 5
+    assert policy.feedback_loop_policy.resimulate.preferred_template_stages == (
+        "event_conditioned",
+    )
     assert policy.template_prefix_penalties == {("delta_", "group_delta_"): -500}
 
 
@@ -117,3 +153,47 @@ def test_fundamental6_default_policy_is_loaded_from_settings_yaml() -> None:
     assert ("cashflow_op", "fnd6_mkvalt") in policy.high_conviction_ratio_pairs
     assert policy.field_min_coverage == 0.10
     assert policy.field_min_alpha_count == 25
+    assert policy.matrix_field_transform.backfill_window == 504
+    assert policy.feedback_loop_policy.resimulate.preferred_template_stages == (
+        "group_second_order",
+        "event_conditioned",
+    )
+
+
+def test_get_yaml_config_reloads_when_file_changes(tmp_path) -> None:
+    if hasattr(get_yaml_config, "_yaml_config_cache"):
+        delattr(get_yaml_config, "_yaml_config_cache")
+    config_path = tmp_path / "settings.yaml"
+    config_path.write_text("global:\n  limits:\n    limit: 10\n", encoding="utf-8")
+
+    first = get_yaml_config(str(config_path))
+    time.sleep(0.01)
+    config_path.write_text("global:\n  limits:\n    limit: 25\n", encoding="utf-8")
+    os.utime(config_path, None)
+    second = get_yaml_config(str(config_path))
+
+    assert first["global"]["limits"]["limit"] == 10
+    assert second["global"]["limits"]["limit"] == 25
+
+
+def test_expression_policy_default_section_applies_to_non_curated_dataset(monkeypatch) -> None:
+    monkeypatch.setattr(
+        "alpha.config.get_yaml_config",
+        lambda config_path="": {
+            "expression_policies": {
+                "__default__": {
+                    "partner_limit": 7,
+                    "preferred_partner_score_bonuses": {"assets": 33},
+                },
+                "__curated__": {
+                    "disabled_templates": ["curated_only"],
+                },
+            }
+        },
+    )
+
+    policy = get_dataset_expression_policy("custom_ds", use_curated_heuristics=False)
+
+    assert policy.partner_limit == 7
+    assert policy.preferred_partner_score_bonuses["assets"] == 33
+    assert "curated_only" not in policy.disabled_templates

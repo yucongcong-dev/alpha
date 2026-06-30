@@ -287,8 +287,195 @@ dataset_profiles:
 # 如果某个键未配置，继续使用代码内默认值。
 # ============================================================================
 expression_policies:
+  __default__:
+    partner_limit: 4
+    matrix_delta_over_std_windows:
+      - [5, 20, 176]
+      - [15, 40, 172]
+      - [10, 60, 170]
+      - [20, 60, 174]
+      - [25, 90, 168]
+      - [30, 120, 166]
+    matrix_diversified_template_specs:
+      - ["group_delta_over_std_industry_20_60", "group_rank(ts_delta(ts_backfill({field}, {backfill_window}), 20) / ts_std_dev(ts_backfill({field}, {backfill_window}), 60), industry)", 166]
+      - ["group_short_long_mean_spread_subindustry_20_{backfill_window}", "group_rank(ts_mean(ts_backfill({field}, {backfill_window}), 20) - ts_mean(ts_backfill({field}, {backfill_window}), {backfill_window}), subindustry)", 164]
+      - ["group_zscore_subindustry_60", "group_rank(ts_zscore(ts_backfill({field}, {backfill_window}), 60), subindustry)", 161]
+      - ["rank_mean_spread_over_std_20_{backfill_window}_60", "rank((ts_mean(ts_backfill({field}, {backfill_window}), 20) - ts_mean(ts_backfill({field}, {backfill_window}), {backfill_window})) / ts_std_dev(ts_backfill({field}, {backfill_window}), 60))", 158]
+      - ["rank_zscore_spread_20_{backfill_window}", "rank(ts_zscore(ts_backfill({field}, {backfill_window}), 20) - ts_zscore(ts_backfill({field}, {backfill_window}), {backfill_window}))", 154]
+      - ["group_rank_delta_of_rank_20", "group_rank(ts_delta(rank(ts_backfill({field}, {backfill_window})), 20), subindustry)", 150]
+    ratio_delta_rank_windows:
+      - [3, 188]
+      - [5, 184]
+      - [10, 176]
+    ratio_delta_over_std_windows:
+      - [5, 20, 180]
+      - [15, 40, 176]
+      - [10, 60, 174]
+      - [20, 60, 178]
+      - [25, 90, 172]
+      - [30, 120, 170]
+    ratio_diversified_template_specs:
+      - ["group_ratio_zscore_{ratio_label}", "group_rank(ts_zscore(ts_backfill({ratio_expr}, {backfill_window}), 60), subindustry)", 160]
+      - ["ratio_mean_spread_over_std_{ratio_label}", "rank((ts_mean(ts_backfill({ratio_expr}, {backfill_window}), 20) - ts_mean(ts_backfill({ratio_expr}, {backfill_window}), {backfill_window})) / ts_std_dev(ts_backfill({ratio_expr}, {backfill_window}), 60))", 156]
+      - ["ratio_zscore_spread_{ratio_label}", "rank(ts_zscore(ts_backfill({ratio_expr}, {backfill_window}), 20) - ts_zscore(ts_backfill({ratio_expr}, {backfill_window}), {backfill_window}))", 152]
+    ratio_legacy_template_specs:
+      - ["raw_ratio_{ratio_label}", "{ratio_expr}", 154]
+      - ["group_rank_ratio_{ratio_label}", "group_rank({ratio_expr}, subindustry)", 152]
+      - ["ratio_{ratio_label}", "rank({ratio_expr})", 148]
+      - ["decay_ratio_{ratio_label}", "rank(ts_decay_linear(ts_backfill({ratio_expr}, {backfill_window}), 63))", 126]
+    ratio_partner_candidates:
+      debt: ["cap", "assets", "equity", "enterprise_value"]
+      liabilities: ["assets", "equity", "cap", "enterprise_value"]
+      cash: ["debt", "liabilities", "assets", "enterprise_value"]
+      cashflow: ["assets", "enterprise_value", "debt"]
+      cashflow_op: ["cap", "assets", "enterprise_value", "debt"]
+      cashflow_invst: ["assets", "enterprise_value", "capex"]
+      cashflow_fin: ["assets", "debt", "equity"]
+      capex: ["cashflow_op", "assets", "enterprise_value", "cashflow_invst"]
+      cogs: ["assets", "cash", "enterprise_value"]
+      ebit: ["assets", "enterprise_value", "sales", "revenue"]
+      ebitda: ["assets", "enterprise_value", "sales", "revenue"]
+      equity: ["assets", "enterprise_value", "debt"]
+      enterprise_value: ["assets", "ebitda", "ebit", "cashflow_op"]
+      assets: ["debt", "liabilities", "equity", "cash", "enterprise_value"]
+    ratio_keywords:
+      debt: ["cap", "assets", "equity", "enterprise_value", "liabilities"]
+      liabilities: ["assets", "equity", "cap", "enterprise_value"]
+      cash: ["debt", "liabilities", "assets", "enterprise_value"]
+      cashflow: ["assets", "enterprise_value", "debt"]
+      cashflow_op: ["cap", "assets", "enterprise_value", "debt"]
+      cashflow_invst: ["assets", "enterprise_value", "capex"]
+      cashflow_fin: ["assets", "debt", "equity"]
+      capex: ["cashflow_op", "assets", "enterprise_value", "cashflow_invst"]
+      cogs: ["assets", "cash", "enterprise_value"]
+      ebit: ["assets", "enterprise_value", "sales", "revenue"]
+      ebitda: ["assets", "enterprise_value", "sales", "revenue"]
+      equity: ["assets", "enterprise_value", "debt"]
+      enterprise_value: ["assets", "ebitda", "ebit", "cashflow_op"]
+      assets: ["debt", "liabilities", "equity", "cash", "enterprise_value"]
+    preferred_partner_score_bonuses:
+      assets: 15
+      equity: 15
+      debt: 15
+      liabilities: 15
+      cash: 15
+      enterprise_value: 15
+      cap: 15
+    positive_raw_fields:
+      - "assets"
+      - "assets_curr"
+      - "bookvalue_ps"
+      - "capex"
+      - "cash"
+      - "cash_st"
+      - "debt"
+      - "debt_lt"
+      - "debt_st"
+      - "sales"
+      - "revenue"
+      - "ebit"
+      - "ebitda"
+      - "cashflow"
+      - "cashflow_op"
+      - "cashflow_invst"
+      - "cashflow_fin"
+      - "cogs"
+      - "equity"
+      - "enterprise_value"
+    negative_raw_fields:
+      - "cogs"
+      - "debt"
+      - "debt_lt"
+      - "debt_st"
+      - "liabilities"
+    default_field_transform:
+      stages: []
+      backfill_window: 0
+    matrix_field_transform:
+      stages:
+        - kind: "backfill"
+          window: 240
+      backfill_window: 240
+    vector_field_transform:
+      stages:
+        - kind: "backfill"
+          window: 240
+      backfill_window: 240
+    ratio_numerator_transform:
+      stages:
+        - kind: "backfill"
+          window: 240
+      backfill_window: 240
+    ratio_denominator_transform:
+      stages:
+        - kind: "backfill"
+          window: 240
+      backfill_window: 240
+    feedback_loop_policy:
+      generate:
+        min_attempted_templates: 0
+        min_best_score: -999.0
+        settings_variant_budget: 1
+      prune:
+        min_attempted_templates: 2
+        min_best_score: -999.0
+        settings_variant_budget: 2
+        enable_template_pruning: true
+      resimulate:
+        min_attempted_templates: 3
+        min_best_score: 0.25
+        settings_variant_budget: 3
+        enable_template_pruning: true
+        enable_resimulation_mutations: true
+        preferred_template_stages:
+          - "group_second_order"
+          - "event_conditioned"
+  __curated__:
+    use_curated_heuristics: true
   fundamental6:
     partner_limit: 6
+    default_field_transform:
+      stages: []
+      backfill_window: 0
+    matrix_field_transform:
+      stages:
+        - kind: "backfill"
+          window: 504
+      backfill_window: 504
+    vector_field_transform:
+      stages:
+        - kind: "backfill"
+          window: 504
+      backfill_window: 504
+    ratio_numerator_transform:
+      stages:
+        - kind: "backfill"
+          window: 504
+      backfill_window: 504
+    ratio_denominator_transform:
+      stages:
+        - kind: "backfill"
+          window: 504
+      backfill_window: 504
+    feedback_loop_policy:
+      generate:
+        min_attempted_templates: 0
+        min_best_score: -999.0
+        settings_variant_budget: 1
+      prune:
+        min_attempted_templates: 2
+        min_best_score: -999.0
+        settings_variant_budget: 2
+        enable_template_pruning: true
+      resimulate:
+        min_attempted_templates: 3
+        min_best_score: 0.25
+        settings_variant_budget: 3
+        enable_template_pruning: true
+        enable_resimulation_mutations: true
+        preferred_template_stages:
+          - "group_second_order"
+          - "event_conditioned"
     account_template_boost: 820
     high_conviction_ratio_priority_boost: 780
     disabled_templates:
