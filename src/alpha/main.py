@@ -87,7 +87,6 @@ from .core import (
 # 导入字段管理
 from .generators.fields import (
     fetch_fields_with_cache,
-    fields_cache_refresh_reason,
     load_fields_cache,
 )
 
@@ -291,18 +290,11 @@ def _initialize(
         instrument_type=args.instrument_type,
         delay=args.delay,
     )
-    cache_refresh_reason = fields_cache_refresh_reason(
-        cached_fields,
-        requested_limit=args.limit,
-        requested_offset=args.offset,
-        force_refresh=args.refresh_fields_cache,
-    )
     fields = fetch_fields_with_cache(
         bootstrap_client,
         args,
         fields_cache_file,
         cached_fields,
-        cache_refresh_reason,
     )
     if not fields:
         logger.error("[error] 数据集 %s 未返回任何字段", args.dataset_id)

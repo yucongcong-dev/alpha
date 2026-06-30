@@ -2,14 +2,12 @@
 字段缓存管理模块
 
 本模块负责管理数据字段的缓存和加载，包括字段元数据的缓存、
-刷新判断、合并以及从 API 获取字段等功能。字段缓存可以减少
+首次全量拉取以及从 API 获取字段等功能。字段缓存可以减少
 API 调用次数，提高运行效率。
 
 模块内容：
     - load_fields_cache(): 加载字段缓存
     - save_fields_cache(): 保存字段缓存
-    - fields_cache_refresh_reason(): 判断缓存是否需要刷新
-    - merge_fields_by_id(): 按字段 ID 合并字段列表
     - fetch_fields_with_cache(): 根据缓存状态获取字段
     - choose_field_name() (→ utils.helpers): 解析标准字段名
     - choose_field_type() (→ utils.helpers): 标准化字段类型
@@ -24,8 +22,6 @@ import os
 from typing import Any
 
 from ..io.output import atomic_write_json
-from ..utils.helpers import first_non_empty
-
 logger = logging.getLogger(__name__)
 
 
@@ -154,120 +150,24 @@ def save_fields_cache(
     )
 
 
-def fields_cache_refresh_reason(
-    cached_fields: Sequence[dict[str, Any]],
-    *,
-    requested_limit: int,
-    requested_offset: int,
-    force_refresh: bool,
-) -> str:
-    """
-    判断字段缓存是否应刷新，并返回可打印的原因。
-
-    根据缓存状态和请求参数，判断是否需要重新从 API 获取字段数据。
-    如果需要刷新，返回描述刷新原因的字符串；否则返回空字符串。
-
-    Args:
-        cached_fields (Sequence[Dict[str, Any]]): 当前缓存的字段列表。
-        requested_limit (int): 请求的字段数量限制。
-        requested_offset (int): 请求的字段偏移量。
-        force_refresh (bool): 是否强制刷新缓存。
-
-    Returns:
-        str: 刷新原因字符串。如果不需要刷新，返回空字符串。
-
-    刷新原因包括：
-        - "forced by --refresh-fields-cache": 强制刷新标志
-        - "cache missing or invalid": 缓存不存在或无效
-        - "non-zero --offset requires an exact field fetch": 非零偏移量需要精确获取
-        - "all-fields request requires a complete field fetch": 全字段请求需要完整获取
-        - "cache has X fields but current limit requests Y": 缓存数量不足
-
-    Example:
-        >>> reason = fields_cache_refresh_reason(
-        ...     cached_fields=[{"id": "sales"}],
-        ...     requested_limit=100,
-        ...     requested_offset=0,
-        ...     force_refresh=False,
-        ... )
-        >>> print(reason)
-        'cache has 1 fields but current limit requests 100'
-    """
-    if force_refresh:
-        return "forced by --refresh-fields-cache"
-    if not cached_fields:
-        return "cache missing or invalid"
-    if requested_offset > 0:
-        return "non-zero --offset requires an exact field fetch"
-    if requested_limit == 0:
-        return "all-fields request requires a complete field fetch"
-    if requested_limit > 0 and len(cached_fields) < requested_limit:
-        return f"cache has {len(cached_fields)} fields but current limit requests {requested_limit}"
-    return ""
-
-
-def merge_fields_by_id(
-    existing_fields: Sequence[dict[str, Any]], new_fields: Sequence[dict[str, Any]]
-) -> list[dict[str, Any]]:
-    """
-    按字段 ID 合并缓存和新拉取字段，保持原始顺序并去重。
-
-    将现有缓存字段和新获取的字段合并，通过字段 ID 去重。
-    保持字段的出现顺序，优先保留较早出现的字段。
-
-    Args:
-        existing_fields (Sequence[Dict[str, Any]]): 现有的缓存字段列表。
-        new_fields (Sequence[Dict[str, Any]]): 新获取的字段列表。
-
-    Returns:
-        List[Dict[str, Any]]: 合并后的字段列表，按 ID 去重。
-
-    Example:
-        >>> existing = [{"id": "sales", "name": "Sales"}]
-        >>> new = [{"id": "sales", "name": "Sales Updated"}, {"id": "ebitda"}]
-        >>> merged = merge_fields_by_id(existing, new)
-        >>> print(len(merged))
-        2
-        >>> print(merged[0]["name"])
-        'Sales'  # 保留较早出现的字段
-
-    Note:
-        字段 ID 从 id、name 字段中提取，优先使用 id。
-        如果字段没有 ID，仍然会包含在结果中但不进行去重。
-    """
-    merged: list[dict[str, Any]] = []
-    seen: set[str] = set()
-    for field in (*existing_fields, *new_fields):
-        field_id = str(first_non_empty(field.get("id"), field.get("name"), ""))
-        if field_id and field_id in seen:
-            continue
-        if field_id:
-            seen.add(field_id)
-        merged.append(dict(field))
-    return merged
-
-
 def fetch_fields_with_cache(
     client: Any,
     args: Any,
     fields_cache_file: str,
     cached_fields: Sequence[dict[str, Any]],
-    cache_refresh_reason: str,
 ) -> list[dict[str, Any]]:
     """
-    根据缓存状态拉取字段；默认补齐并缓存当前上下文下的全量字段。
+    根据缓存状态获取字段；首次默认拉取并缓存当前上下文下的全量字段。
 
-    此函数实现了智能的字段获取策略：
+    此函数实现了简化后的字段获取策略：
     - 如果缓存有效且满足当前上下文，直接使用缓存
-    - 如果缓存不完整，默认补齐为当前上下文下的全量字段
-    - 如果需要完全刷新，重新获取并缓存所有字段
+    - 如果缓存不存在或无效，首次拉取当前上下文下的全量字段并缓存
 
     Args:
         client: Brain API 客户端实例，需要实现 fetch_dataset_fields 方法。
-        args: 命令行参数对象，包含 dataset_id、limit、offset 等属性。
+        args: 命令行参数对象，包含 dataset_id、page_size 等属性。
         fields_cache_file: 字段缓存文件路径。
         cached_fields (Sequence[Dict[str, Any]]): 当前缓存的字段列表。
-        cache_refresh_reason (str): 刷新原因字符串。如果为空，表示无需刷新。
 
     Returns:
         List[Dict[str, Any]]: 当前上下文下的完整字段列表。
@@ -278,49 +178,34 @@ def fetch_fields_with_cache(
         ...     args=args,
         ...     fields_cache_file="/path/to/cache.json",
         ...     cached_fields=[{"id": "sales"}],
-        ...     cache_refresh_reason="cache has 1 fields but limit requests 100",
         ... )
         >>> print(len(fields)) >= 100
         True
 
     Note:
-        此函数会自动保存更新后的缓存文件，并尽量保持缓存为全量字段列表。
+        此函数会自动保存更新后的缓存文件，并保持缓存为全量字段列表。
         使用重试机制处理临时 API 不稳定性。
     """
-    if not cache_refresh_reason:
+    if cached_fields:
         fields = list(cached_fields)
         logger.info("[cache] 从 %s 加载 %d 个字段", os.path.basename(fields_cache_file), len(fields))
         return fields
 
-    logger.info("[cache] 刷新字段缓存: %s", cache_refresh_reason)
-    append_to_cache = bool(cached_fields) and not args.refresh_fields_cache
-    fetch_offset = len(cached_fields) if append_to_cache else 0
-    fetch_limit = 0
-    if append_to_cache:
-        logger.info(
-            "[cache] 从 %d 继续补齐全量字段，使用 offset=%d limit=%d",
-            len(cached_fields),
-            fetch_offset,
-            fetch_limit,
-        )
-    else:
-        logger.info("[cache] 重新拉取当前上下文下的全量字段")
+    logger.info("[cache] 未命中有效缓存，首次拉取当前上下文下的全量字段")
 
     # Fetching the field list is also wrapped so temporary API instability
     # does not abort the whole batch before it starts.
     fetched_fields = client.fetch_dataset_fields(
         args.dataset_id,
-        limit=fetch_limit,
-        offset=fetch_offset,
+        limit=0,
+        offset=0,
         page_size=args.page_size,
         region=args.region,
         universe=args.universe,
         instrument_type=args.instrument_type,
         delay=args.delay,
     )
-    fields = (
-        merge_fields_by_id(cached_fields, fetched_fields) if append_to_cache else fetched_fields
-    )
+    fields = fetched_fields
     save_fields_cache(
         fields_cache_file,
         dataset_id=args.dataset_id,

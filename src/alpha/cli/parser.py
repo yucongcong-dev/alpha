@@ -164,8 +164,6 @@ def parse_args() -> argparse.Namespace:
             --template-library-file: 模板库文件路径
             --fields-cache-file: 字段缓存文件路径
             --feedback-output: 反馈输出文件路径
-            --refresh-fields-cache: 强制刷新字段缓存
-
         过滤器参数：
             --include-fields-file: 包含字段文件
             --exclude-fields-file: 排除字段文件
@@ -363,11 +361,6 @@ def parse_args() -> argparse.Namespace:
         "--fields-cache-file",
         default="",
         help="本地 JSON 字段缓存文件路径（留空则根据 dataset_id 自动生成）",
-    )
-    parser.add_argument(
-        "--refresh-fields-cache",
-        action="store_true",
-        help="强制刷新字段缓存",
     )
     add_bool_argument(
         parser,
