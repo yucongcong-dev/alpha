@@ -163,6 +163,18 @@ BACKFILL_WINDOW: int = 240
 
 
 @dataclass(frozen=True)
+class FieldTransformSpec:
+    """字段预处理流水线配置。
+
+    该配置用于把字段预处理从表达式模板中抽离出来，统一管理
+    backfill / winsorize 等字段级转换规则。
+    """
+
+    backfill_window: int = 0
+    winsorize_std: float | None = None
+
+
+@dataclass(frozen=True)
 class DatasetExpressionPolicy:
     """数据集表达式生成策略。
 
@@ -223,6 +235,11 @@ class DatasetExpressionPolicy:
     field_recency_weight: float = 0.0
     field_theme_bonus_weight: float = 0.0
     field_preferred_unexplored_bonus: float = 0.0
+    default_field_transform: FieldTransformSpec = field(default_factory=FieldTransformSpec)
+    matrix_field_transform: FieldTransformSpec = field(default_factory=FieldTransformSpec)
+    vector_field_transform: FieldTransformSpec = field(default_factory=FieldTransformSpec)
+    ratio_numerator_transform: FieldTransformSpec = field(default_factory=FieldTransformSpec)
+    ratio_denominator_transform: FieldTransformSpec = field(default_factory=FieldTransformSpec)
 
 
 # ============================================================================
@@ -1067,6 +1084,11 @@ def get_dataset_expression_policy(
 
     expressions.py 只消费该策略对象，不再直接硬编码 fundamental6 细节。
     """
+    default_transform = FieldTransformSpec()
+    matrix_transform = FieldTransformSpec(backfill_window=BACKFILL_WINDOW)
+    vector_transform = FieldTransformSpec(backfill_window=BACKFILL_WINDOW)
+    ratio_transform = FieldTransformSpec(backfill_window=BACKFILL_WINDOW)
+
     if use_curated_heuristics is None:
         use_curated_heuristics = dataset_id == "fundamental6"
 
@@ -1084,6 +1106,11 @@ def get_dataset_expression_policy(
             ratio_partner_candidates=dict(RATIO_PARTNER_CANDIDATES),
             ratio_keywords=dict(RATIO_KEYWORDS),
             preferred_partner_score_bonuses=dict(DEFAULT_PREFERRED_PARTNER_SCORE_BONUSES),
+            default_field_transform=default_transform,
+            matrix_field_transform=matrix_transform,
+            vector_field_transform=vector_transform,
+            ratio_numerator_transform=ratio_transform,
+            ratio_denominator_transform=ratio_transform,
         )
 
     if dataset_id == "fundamental6":
@@ -1141,6 +1168,11 @@ def get_dataset_expression_policy(
             field_recency_weight=FUNDAMENTAL6_FIELD_RECENCY_WEIGHT,
             field_theme_bonus_weight=FUNDAMENTAL6_FIELD_THEME_BONUS_WEIGHT,
             field_preferred_unexplored_bonus=FUNDAMENTAL6_FIELD_PREFERRED_UNEXPLORED_BONUS,
+            default_field_transform=default_transform,
+            matrix_field_transform=matrix_transform,
+            vector_field_transform=vector_transform,
+            ratio_numerator_transform=ratio_transform,
+            ratio_denominator_transform=ratio_transform,
         )
 
     return DatasetExpressionPolicy(
@@ -1156,6 +1188,11 @@ def get_dataset_expression_policy(
         ratio_partner_candidates=dict(RATIO_PARTNER_CANDIDATES),
         ratio_keywords=dict(RATIO_KEYWORDS),
         preferred_partner_score_bonuses=dict(DEFAULT_PREFERRED_PARTNER_SCORE_BONUSES),
+        default_field_transform=default_transform,
+        matrix_field_transform=matrix_transform,
+        vector_field_transform=vector_transform,
+        ratio_numerator_transform=ratio_transform,
+        ratio_denominator_transform=ratio_transform,
     )
 
 

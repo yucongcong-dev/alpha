@@ -153,6 +153,7 @@ def load_existing_results(path: str) -> list[FieldTestResult]:
                     field_type=str(row.get(STAT_FIELD_FIELD_TYPE, SENTINEL_UNKNOWN)),
                     field_name=str(row.get(STAT_FIELD_FIELD_NAME, SENTINEL_UNKNOWN)),
                     template_name=str(row.get(STAT_FIELD_TEMPLATE_NAME, "")),
+                    template_family=str(row.get("template_family", "")),
                     simulation_id=row.get("simulation_id"),
                     alpha_id=row.get("alpha_id"),
                     status=str(row.get(API_KEY_STATUS, SENTINEL_UNKNOWN_STATUS)),
@@ -326,6 +327,8 @@ def compile_template_stats(results: Sequence[FieldTestResult]) -> dict[str, dict
                 STAT_FIELD_LOW_SUB_UNIVERSE_SHARPE: 0,
             },
         )
+        if result.template_family and "template_family" not in stat:
+            stat["template_family"] = result.template_family
         if is_queue_timeout_result(result):
             stat[STAT_FIELD_QUEUE_TIMEOUTS] += 1
             continue

@@ -25,6 +25,14 @@ logger = logging.getLogger(__name__)
 
 DEFAULT_TEMPLATE_PRIORITY_START = 1000
 """模板文件缺省优先级起点；文件越靠前，自动补齐的 priority 越高。"""
+_OPTIONAL_TEMPLATE_METADATA_KEYS = (
+    "family",
+    "layer",
+    "requires_partner_field",
+    "field_kinds",
+    "dataset_tags",
+)
+"""允许透传到运行时的模板元数据键。"""
 
 # 内置默认模板库 JSON 文件的路径回退
 _BUILTIN_TEMPLATE_LIBRARY_FILE = os.path.join(
@@ -238,10 +246,17 @@ def load_template_library(path: str) -> TemplateLibrary:
                 item["expression"].strip(), backfill_window
             )
             validated[field_type].append(
-                {
-                    "name": item["name"].strip(),
-                    "expression": resolved_expression,
-                    "priority": priority,
-                }
+                dict(
+                    {
+                        "name": item["name"].strip(),
+                        "expression": resolved_expression,
+                        "priority": priority,
+                    },
+                    **{
+                        key: item[key]
+                        for key in _OPTIONAL_TEMPLATE_METADATA_KEYS
+                        if key in item
+                    },
+                )
             )
     return validated

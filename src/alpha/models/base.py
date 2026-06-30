@@ -126,6 +126,9 @@ class FieldTestResult:
     template_name: str
     """使用的模板名称"""
 
+    template_family: str = ""
+    """模板家族；优先使用模板元数据，缺失时留空并允许下游回退推断。"""
+
     simulation_id: str | None = None
     """模拟任务的 ID"""
 
@@ -189,6 +192,7 @@ class FieldTestResult:
             "field_type": self.field_type,
             "field_name": self.field_name,
             "template_name": self.template_name,
+            "template_family": self.template_family,
             "simulation_id": self.simulation_id,
             "alpha_id": self.alpha_id,
             "status": self.status,
@@ -211,6 +215,24 @@ class FieldTestResult:
         """
         status_symbol = "✓" if self.submittable else "✗"
         return f"FieldTestResult({self.field_name}/{self.template_name}: {status_symbol})"
+
+
+@dataclass(frozen=True)
+class FieldView:
+    """模板构建消费的字段视图。
+
+    将原始字段表达式、预处理后的表达式，以及 ratio 使用的分子/分母表达式
+    聚合为统一对象，避免模板层散落字段清洗逻辑。
+    """
+
+    field_id: str
+    field_name: str
+    field_type: str
+    raw_expression: str
+    preprocessed_expression: str
+    ratio_numerator_expression: str
+    ratio_denominator_expression: str
+    metadata: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
@@ -238,6 +260,7 @@ class FieldTestContext:
     field_name: str
     template_name: str
     expression: str
+    template_family: str = ""
     settings_fingerprint: str = ""
     template_library_fingerprint: str = ""
 
@@ -257,6 +280,7 @@ class FieldTestContext:
             field_type=self.field_type,
             field_name=self.field_name,
             template_name=self.template_name,
+            template_family=self.template_family,
             simulation_id=simulation_id,
             alpha_id=alpha_id,
             status=status,
@@ -287,6 +311,7 @@ class FieldTestContext:
             field_type=self.field_type,
             field_name=self.field_name,
             template_name=self.template_name,
+            template_family=self.template_family,
             simulation_id=simulation_id,
             alpha_id=alpha_id,
             status=status,

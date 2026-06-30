@@ -660,6 +660,7 @@ def auto_update_blacklist(
             "dataset_id": dataset_id,
             "source": "auto_detected",
             "field_type": tresults[0].field_type,
+            "template_family": tresults[0].template_family,
             "reason": "。".join(reason_parts) + "。",
             "fields_tested": fields_tested,
             "low_sharpe": low_sharpe_count,

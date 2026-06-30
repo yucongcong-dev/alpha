@@ -48,6 +48,7 @@ from ..config import (
     get_dataset_expression_policy,
     get_backfill_window,
 )
+from ..generators.field_transforms import build_field_view, build_ratio_expression
 from ..models.base import TemplateLibrary
 from ..utils.helpers import choose_field_name, choose_field_type
 
@@ -60,6 +61,58 @@ _BLACKLIST_CACHE: dict[str, dict[str, Any]] = {}
 """按 dataset_id 缓存的黑名单数据（懒加载）。每个值为 {"names": set, "patterns": list}"""
 _DEFAULT_AVOID_RULES_CACHE: list[dict[str, str]] | None = None
 """跨数据集默认规避规则缓存（一次加载）。"""
+TemplateMetadataMap = dict[tuple[str, str], dict[str, Any]]
+"""表达式构建阶段使用的模板元数据映射。key=(template_name, expression)"""
+
+
+def _template_key(template_name: str, expression: str) -> tuple[str, str]:
+    """生成模板元数据映射键。"""
+    return (template_name, expression)
+
+
+def _runtime_template_metadata(item: dict[str, Any]) -> dict[str, Any]:
+    """提取运行时需要的模板元数据。"""
+    return {
+        key: item[key]
+        for key in ("family", "layer", "requires_partner_field", "field_kinds", "dataset_tags")
+        if key in item
+    }
+
+
+def build_template_metadata_index(
+    field_view: Any,
+    template_library: TemplateLibrary,
+    field_type: str,
+    dataset_id: str,
+) -> TemplateMetadataMap:
+    """为当前字段构建已渲染模板的元数据索引。"""
+    metadata_by_key: TemplateMetadataMap = {}
+    raw_templates = _select_template_items(template_library, field_type, dataset_id)
+    for item in raw_templates:
+        if not isinstance(item, dict) or "name" not in item or "expression" not in item:
+            continue
+        rendered_expression = str(item["expression"]).format(
+            field=field_view.raw_expression,
+            field_preprocessed=field_view.preprocessed_expression,
+            ratio_numerator=field_view.ratio_numerator_expression,
+            ratio_denominator=field_view.ratio_denominator_expression,
+            backfill_window=get_backfill_window(),
+        )
+        metadata = _runtime_template_metadata(item)
+        if metadata:
+            metadata_by_key[_template_key(str(item["name"]), rendered_expression)] = metadata
+    return metadata_by_key
+
+
+def get_template_metadata(
+    template_name: str,
+    expression: str,
+    metadata_by_key: TemplateMetadataMap | None = None,
+) -> dict[str, Any]:
+    """查找模板元数据。"""
+    return (metadata_by_key or {}).get(_template_key(template_name, expression), {})
+
+
 def _policy_template_priority_adjustment(
     template_name: str,
     policy: DatasetExpressionPolicy,
@@ -444,7 +497,11 @@ def limit_templates(
     return templates[:max_templates_per_field]
 
 
-def classify_expression_family(template_name: str, expression: str) -> str:
+def classify_expression_family(
+    template_name: str,
+    expression: str,
+    metadata: dict[str, Any] | None = None,
+) -> str:
     """
     将表达式归类到粗粒度家族，用于剪枝与排序。
 
@@ -485,6 +542,10 @@ def classify_expression_family(template_name: str, expression: str) -> str:
         >>> print(family)
         'group_rank_delta'
     """
+    if metadata:
+        explicit_family = metadata.get("family")
+        if isinstance(explicit_family, str) and explicit_family.strip():
+            return explicit_family.strip().lower()
     lower_name = template_name.lower()
     lower_expr = expression.lower()
     if "group_rank(ts_delta(rank(" in lower_expr:
@@ -531,7 +592,11 @@ def classify_expression_family(template_name: str, expression: str) -> str:
     return prefix or UNKNOWN_FAMILY
 
 
-def is_legacy_family(template_name: str, expression: str) -> bool:
+def is_legacy_family(
+    template_name: str,
+    expression: str,
+    metadata: dict[str, Any] | None = None,
+) -> bool:
     """
     判断模板是否属于历史上较易过度使用的 legacy 家族。
 
@@ -563,7 +628,7 @@ def is_legacy_family(template_name: str, expression: str) -> bool:
         >>> print(is_legacy)
         False
     """
-    return classify_expression_family(template_name, expression) in {
+    return classify_expression_family(template_name, expression, metadata) in {
         "legacy_level",
         "legacy_group_level",
         "legacy_ratio",
@@ -585,6 +650,8 @@ _SIMILARITY_PENALTY_OFFSETS: dict[str, int] = {
 def apply_similarity_penalty(
     templates: Sequence[tuple[str, str, int]],
     legacy_similarity_penalty: int,
+    *,
+    metadata_by_key: TemplateMetadataMap | None = None,
 ) -> list[tuple[str, str, int]]:
     """
     对 legacy 形态模板施加相似度惩罚，让多样化候选优先运行。
@@ -614,7 +681,11 @@ def apply_similarity_penalty(
     """
     penalized: list[tuple[str, str, int]] = []
     for name, expression, priority in templates:
-        family = classify_expression_family(name, expression)
+        family = classify_expression_family(
+            name,
+            expression,
+            (metadata_by_key or {}).get(_template_key(name, expression)),
+        )
         offset = _SIMILARITY_PENALTY_OFFSETS.get(family)
         penalty = max(legacy_similarity_penalty - offset, 0) if offset is not None else 0
         penalized.append((name, expression, priority - penalty))
@@ -761,6 +832,7 @@ def adaptive_template_priority_adjustment(
     *,
     field_feedback: dict[str, Any] | None,
     global_failed_check_counts: dict[str, int],
+    metadata: dict[str, Any] | None = None,
 ) -> int:
     """
     根据字段与全局失败分布动态调整模板优先级（声明式规则表驱动）。
@@ -783,7 +855,7 @@ def adaptive_template_priority_adjustment(
     dominant_names = dominant_failed_check_names(
         merge_failed_check_counts(global_failed_check_counts, field_counts)
     )
-    family = classify_expression_family(template_name, expression)
+    family = classify_expression_family(template_name, expression, metadata)
     lower_name = template_name.lower()
     adjustment = 0
 
@@ -836,6 +908,7 @@ def apply_adaptive_priority(
     *,
     field_feedback: dict[str, Any] | None,
     global_failed_check_counts: dict[str, int],
+    metadata_by_key: TemplateMetadataMap | None = None,
 ) -> list[tuple[str, str, int]]:
     """
     对候选模板应用自适应优先级调整。
@@ -870,6 +943,7 @@ def apply_adaptive_priority(
                 expression,
                 field_feedback=field_feedback,
                 global_failed_check_counts=global_failed_check_counts,
+                metadata=(metadata_by_key or {}).get(_template_key(name, expression)),
             ),
         )
         for name, expression, priority in templates
@@ -879,6 +953,8 @@ def apply_adaptive_priority(
 def cap_templates_per_family(
     templates: Sequence[tuple[str, str, int]],
     max_templates_per_family: int,
+    *,
+    metadata_by_key: TemplateMetadataMap | None = None,
 ) -> list[tuple[str, str, int]]:
     """
     限制每个结构家族仅保留前 N 个候选模板。
@@ -910,7 +986,11 @@ def cap_templates_per_family(
     kept: list[tuple[str, str, int]] = []
     family_counts: dict[str, int] = {}
     for name, expression, priority in templates:
-        family = classify_expression_family(name, expression)
+        family = classify_expression_family(
+            name,
+            expression,
+            (metadata_by_key or {}).get(_template_key(name, expression)),
+        )
         used = family_counts.get(family, 0)
         if used >= max_templates_per_family:
             continue
@@ -1188,8 +1268,7 @@ def invert_expression(expression: str) -> str:
 
 
 def _build_matrix_templates(
-    field_name: str,
-    bw: int,
+    field_view: Any,
     all_fields: Sequence[dict[str, Any]],
     expression_policy: DatasetExpressionPolicy,
 ) -> tuple[list[tuple[str, str, int]], list[tuple[str, str, int]]]:
@@ -1198,6 +1277,9 @@ def _build_matrix_templates(
     Returns:
         (diversified_templates, legacy_templates) 两个列表。
     """
+    field_name = field_view.field_name
+    preprocessed_expression = field_view.preprocessed_expression
+    backfill_window = expression_policy.matrix_field_transform.backfill_window or get_backfill_window()
     delta_over_std_windows = expression_policy.matrix_delta_over_std_windows
 
     diversified: list[tuple[str, str, int]] = []
@@ -1205,7 +1287,7 @@ def _build_matrix_templates(
         diversified.append(
             (
                 f"group_delta_over_std_subindustry_{delta}_{std}",
-                f"group_rank(ts_delta(ts_backfill({field_name}, {bw}), {delta}) / ts_std_dev(ts_backfill({field_name}, {bw}), {std}), subindustry)",
+                f"group_rank(ts_delta({preprocessed_expression}, {delta}) / ts_std_dev({preprocessed_expression}, {std}), subindustry)",
                 pri + DELTA_STD_PRIORITY_BOOST,
             )
         )
@@ -1223,23 +1305,24 @@ def _build_matrix_templates(
             for name, expr, pri in _render_template_specs(
                 diversified_specs,
                 field=field_name,
-                backfill_window=bw,
+                field_preprocessed=preprocessed_expression,
+                backfill_window=backfill_window,
             )
         ]
     )
 
     legacy: list[tuple[str, str, int]] = [
-        ("raw_field", field_name, 145),
-        ("group_rank_subindustry", f"group_rank({field_name}, subindustry)", 143),
-        ("group_rank_industry", f"group_rank({field_name}, industry)", 141),
-        ("rank_raw_field", f"rank({field_name})", 118),
+        ("raw_field", preprocessed_expression, 145),
+        ("group_rank_subindustry", f"group_rank({preprocessed_expression}, subindustry)", 143),
+        ("group_rank_industry", f"group_rank({preprocessed_expression}, industry)", 141),
+        ("rank_raw_field", f"rank({preprocessed_expression})", 118),
     ]
     if expression_policy.use_curated_heuristics and field_name in expression_policy.positive_raw_fields:
-        legacy.append(("neg_raw_field", f"-{field_name}", 132))
+        legacy.append(("neg_raw_field", f"-{preprocessed_expression}", 132))
     elif expression_policy.use_curated_heuristics and field_name in expression_policy.negative_raw_fields:
-        legacy.append(("neg_raw_field", f"-{field_name}", 144))
+        legacy.append(("neg_raw_field", f"-{preprocessed_expression}", 144))
     elif expression_policy.use_curated_heuristics:
-        legacy.append(("neg_raw_field", f"-{field_name}", 128))
+        legacy.append(("neg_raw_field", f"-{preprocessed_expression}", 128))
 
     # 比率配对模板
     fields_by_name = {choose_field_name(item): item for item in all_fields}
@@ -1256,7 +1339,16 @@ def _build_matrix_templates(
     for partner in partner_names:
         if partner not in fields_by_name and partner not in ALLOWED_EXTERNAL_RATIO_PARTNERS:
             continue
-        ratio_expr = f"{field_name}/{partner}"
+        denominator_view = (
+            build_field_view(fields_by_name[partner], expression_policy)
+            if partner in fields_by_name
+            else None
+        )
+        ratio_expr = (
+            build_ratio_expression(field_view, denominator_view)
+            if denominator_view is not None
+            else f"{field_view.ratio_numerator_expression}/{partner}"
+        )
         ratio_label = f"{field_name}_over_{partner}"
         ratio_priority_boost = 0
         if (field_name, partner) in expression_policy.high_conviction_ratio_pairs:
@@ -1265,7 +1357,7 @@ def _build_matrix_templates(
         # Delta rank 变体
         for delta, pri in ratio_delta_rank_windows:
             name = f"group_ratio_delta_rank_{delta}_{ratio_label}"
-            expr = f"group_rank(ts_delta(rank(ts_backfill({ratio_expr}, {bw})), {delta}), subindustry)"
+            expr = f"group_rank(ts_delta(rank({ratio_expr}), {delta}), subindustry)"
             if not _is_blacklisted_template(name, expr, policy=expression_policy):
                 diversified.append((name, expr, pri + DELTA_STD_PRIORITY_BOOST + ratio_priority_boost))
 
@@ -1274,7 +1366,7 @@ def _build_matrix_templates(
             diversified.append(
                 (
                     f"group_ratio_delta_over_std_{delta}_{std}_{ratio_label}",
-                    f"group_rank(ts_delta(ts_backfill({ratio_expr}, {bw}), {delta}) / ts_std_dev(ts_backfill({ratio_expr}, {bw}), {std}), subindustry)",
+                    f"group_rank(ts_delta({ratio_expr}, {delta}) / ts_std_dev({ratio_expr}, {std}), subindustry)",
                     pri + DELTA_STD_PRIORITY_BOOST + ratio_priority_boost,
                 )
             )
@@ -1287,7 +1379,8 @@ def _build_matrix_templates(
                     ratio_diversified_specs,
                     ratio_expr=ratio_expr,
                     ratio_label=ratio_label,
-                    backfill_window=bw,
+                    field_preprocessed=preprocessed_expression,
+                    backfill_window=backfill_window,
                 )
             ]
         )
@@ -1299,7 +1392,8 @@ def _build_matrix_templates(
                     expression_policy.ratio_legacy_template_specs,
                     ratio_expr=ratio_expr,
                     ratio_label=ratio_label,
-                    backfill_window=bw,
+                    field_preprocessed=preprocessed_expression,
+                    backfill_window=backfill_window,
                 )
             ]
         )
@@ -1373,19 +1467,31 @@ def build_expression_candidates(
     field_type = choose_field_type(field)
     all_fields = all_fields or []
     global_failed_check_counts = global_failed_check_counts or {}
-    bw = get_backfill_window()
     policy = expression_policy or get_dataset_expression_policy(
         dataset_id,
         use_curated_heuristics=use_dataset_heuristics,
     )
+    field_view = build_field_view(field, policy)
 
     # Template selection is now driven by an externalizable library so we can
     # expand or shrink search coverage between runs without changing code.
     raw_templates = _select_template_items(template_library, field_type, policy.dataset_id)
+    metadata_by_key = build_template_metadata_index(
+        field_view,
+        template_library,
+        field_type,
+        policy.dataset_id,
+    )
     templates = [
         (
             str(item["name"]),
-            str(item["expression"]).format(field=field_name),
+            str(item["expression"]).format(
+                field=field_view.raw_expression,
+                field_preprocessed=field_view.preprocessed_expression,
+                ratio_numerator=field_view.ratio_numerator_expression,
+                ratio_denominator=field_view.ratio_denominator_expression,
+                backfill_window=get_backfill_window(),
+            ),
             int(item.get("priority", 0))
             + _policy_template_priority_adjustment(str(item["name"]), policy),
         )
@@ -1406,22 +1512,30 @@ def build_expression_candidates(
 
     if field_type == "MATRIX":
         diversified, legacy = _build_matrix_templates(
-            field_name,
-            bw,
+            field_view,
             all_fields,
             policy,
         )
         templates.extend(diversified)
         templates.extend(legacy)
 
-    templates = apply_similarity_penalty(templates, legacy_similarity_penalty)
+    templates = apply_similarity_penalty(
+        templates,
+        legacy_similarity_penalty,
+        metadata_by_key=metadata_by_key,
+    )
     templates = apply_adaptive_priority(
         templates,
         field_feedback=field_feedback,
         global_failed_check_counts=global_failed_check_counts,
+        metadata_by_key=metadata_by_key,
     )
     templates = sort_templates_by_priority(templates)
     return limit_templates(
-        cap_templates_per_family(templates, max_templates_per_family),
+        cap_templates_per_family(
+            templates,
+            max_templates_per_family,
+            metadata_by_key=metadata_by_key,
+        ),
         max_templates_per_field,
     )

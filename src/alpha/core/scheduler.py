@@ -99,6 +99,7 @@ def handle_completed_future(
             field_type=context["field_type"],
             field_name=context["field_name"],
             template_name=template_name,
+            template_family=context.get("template_family", ""),
             simulation_id=None,
             alpha_id=None,
             expression=context["expression"],

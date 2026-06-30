@@ -47,6 +47,7 @@ from .exceptions import (
 from .models import (
     DatasetExpressionPolicy,
     ExecutionState,
+    FieldView,
     FieldTestResult,
     HistoricalRunState,
     RunFilters,
@@ -76,6 +77,7 @@ __all__ = [
     "ExecutionState",
     "DatasetExpressionPolicy",
     "FieldTestResult",
+    "FieldView",
     "HistoricalRunState",
     "RunFilters",
     "RunPaths",

@@ -218,6 +218,8 @@ def is_legacy_family_disabled(
     expression: str,
     template_stats: dict[str, dict[str, int]],
     disable_after: int,
+    *,
+    template_metadata: dict[str, Any] | None = None,
 ) -> bool:
     """
     当整个 legacy 家族消耗过多预算却没有收益时进行禁用。
@@ -244,12 +246,16 @@ def is_legacy_family_disabled(
         >>> if is_legacy_family_disabled("raw_field", "sales", stats, disable_after=20):
         ...     print("legacy 家族应被禁用")
     """
-    if disable_after <= 0 or not is_legacy_family(template_name, expression):
+    if disable_after <= 0 or not is_legacy_family(template_name, expression, template_metadata):
         return False
     attempted = 0
     submittable = 0
     for prior_template_name, stat in template_stats.items():
-        if not is_legacy_family(prior_template_name, ""):
+        prior_metadata = {}
+        prior_family = stat.get("template_family")
+        if isinstance(prior_family, str) and prior_family.strip():
+            prior_metadata = {"family": prior_family}
+        if not is_legacy_family(prior_template_name, "", prior_metadata):
             continue
         attempted += int(stat.get("attempted", 0))
         submittable += int(stat.get("submittable", 0))
@@ -274,6 +280,7 @@ def should_keep_template_for_feedback(
     *,
     dataset_id: str = "",
     expression_policy: DatasetExpressionPolicy | None = None,
+    template_metadata: dict[str, Any] | None = None,
 ) -> bool:
     """
     在字段反馈足够后剪掉低信号、低价值的模板。
@@ -311,7 +318,7 @@ def should_keep_template_for_feedback(
 
     dominant_counts = field_feedback.get("failed_check_counts", {})
     dominant_names = dominant_failed_check_names(dominant_counts, limit=4)
-    family = classify_expression_family(template_name, expression)
+    family = classify_expression_family(template_name, expression, template_metadata)
     lower_name = template_name.lower()
     lower_expr = expression.lower()
 
@@ -388,6 +395,7 @@ def should_skip_field_template_family(
     use_dataset_heuristics: bool | None = None,
     dataset_id: str = "",
     expression_policy: DatasetExpressionPolicy | None = None,
+    template_metadata: dict[str, Any] | None = None,
 ) -> bool:
     """
     对已经证明偏弱的字段-模板家族组合做先验剪枝。
@@ -430,7 +438,7 @@ def should_skip_field_template_family(
     if _is_blacklisted_template(template_name, expression, policy=policy):
         return True
 
-    family = classify_expression_family(template_name, expression)
+    family = classify_expression_family(template_name, expression, template_metadata)
 
     if field_name in policy.weak_mean_spread_fields and family in {
         "group_mean_spread",

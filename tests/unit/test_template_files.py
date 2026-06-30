@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from pathlib import Path
 
 from alpha.generators import templates as template_module
 from alpha.generators.templates import ensure_dataset_template_library, load_template_library
@@ -61,6 +62,33 @@ def test_ensure_dataset_template_library_preserves_existing(monkeypatch, tmp_pat
 
     payload = json.loads(target.read_text(encoding="utf-8"))
     assert payload["default"][0]["name"] == "custom"
+
+
+def test_load_template_library_preserves_optional_metadata(tmp_path) -> None:
+    template_file = tmp_path / "library.json"
+    template_file.write_text(
+        json.dumps(
+            {
+                "default": [
+                    {
+                        "name": "custom",
+                        "expression": "rank({field})",
+                        "priority": 100,
+                        "family": "custom_family",
+                        "layer": "ratio",
+                        "requires_partner_field": False,
+                    }
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    library = load_template_library(str(template_file))
+
+    assert library["default"][0]["family"] == "custom_family"
+    assert library["default"][0]["layer"] == "ratio"
+    assert library["default"][0]["requires_partner_field"] is False
 
 
 def test_ensure_dataset_template_library_fills_missing_priorities(
@@ -126,6 +154,7 @@ def test_auto_update_blacklist_appends_low_quality_template_once(tmp_path) -> No
             field_type="MATRIX",
             field_name="sales",
             template_name="weak_template",
+            template_family="group_vol_scaled_delta",
             expression="rank(sales)",
             submittable=False,
             failed_checks=[
@@ -138,6 +167,7 @@ def test_auto_update_blacklist_appends_low_quality_template_once(tmp_path) -> No
             field_type="MATRIX",
             field_name="assets",
             template_name="weak_template",
+            template_family="group_vol_scaled_delta",
             expression="rank(assets)",
             submittable=False,
             failed_checks=[
@@ -153,4 +183,23 @@ def test_auto_update_blacklist_appends_low_quality_template_once(tmp_path) -> No
     payload = json.loads((tmp_path / "template_blacklist_custom_ds.json").read_text())
     entries = payload["blacklisted_templates"]
     assert [entry["name"] for entry in entries] == ["weak_template"]
+    assert entries[0]["template_family"] == "group_vol_scaled_delta"
     assert entries[0]["fields_tested"] == ["sales", "assets"]
+
+
+def test_fundamental6_template_library_has_family_and_layer_metadata() -> None:
+    """Common dataset template library entries should carry explicit family/layer metadata."""
+    template_file = Path(__file__).resolve().parents[2] / "data" / "worldquant_template_library_fundamental6.json"
+    payload = json.loads(template_file.read_text(encoding="utf-8"))
+
+    missing = []
+    for section, items in payload.items():
+        if not isinstance(items, list):
+            continue
+        for item in items:
+            if not isinstance(item, dict) or "name" not in item or "expression" not in item:
+                continue
+            if "family" not in item or "layer" not in item:
+                missing.append((section, item["name"]))
+
+    assert missing == []

@@ -740,6 +740,7 @@ def _run_field_test_loop(
 
                     for template_index, (
                         template_name,
+                        template_family,
                         expression,
                         priority,
                         settings_variant,
@@ -790,11 +791,13 @@ def _run_field_test_loop(
 
                         throttle_before_submission(args, execution_state)
 
+                        field_with_template = dict(field)
+                        field_with_template["template_family"] = template_family
                         future = executor.submit(
                             run_field_test_in_worker,
                             client_factory,
                             args,
-                            field,
+                            field_with_template,
                             template_name,
                             expression,
                             variant_fingerprint,
@@ -809,6 +812,7 @@ def _run_field_test_loop(
                             "field_name": field_name,
                             "field_type": field_type,
                             "template_name": template_name,
+                            "template_family": template_family,
                             "expression": expression,
                             "settings_fingerprint": variant_fingerprint,
                         }
