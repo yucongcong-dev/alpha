@@ -6,10 +6,13 @@
 
 from __future__ import annotations
 
+import json
+
 import pytest
 
 from alpha.config import get_dataset_expression_policy
 from alpha.generators.expressions import (
+    _load_default_avoid_rules,
     build_bucket_group_templates,
     build_expression_candidates,
     build_feedback_mutations,
@@ -204,3 +207,15 @@ def test_build_expression_candidates_adds_financial_ratio_templates() -> None:
     names = {item.name for item in candidates}
     assert "hc_ratio_group_level_cashflow_op_over_assets" in names
     assert "hc_ratio_group_zscore_252_cashflow_op_over_assets" in names
+
+
+def test_load_default_avoid_rules_ignores_invalid_json_shape(monkeypatch, tmp_path) -> None:
+    """A valid JSON file with the wrong top-level type should not crash rule loading."""
+    data_dir = tmp_path / "data"
+    data_dir.mkdir()
+    (data_dir / "template_blacklist.json").write_text(json.dumps([]), encoding="utf-8")
+
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr("alpha.generators.expressions._DEFAULT_AVOID_RULES_CACHE", None)
+
+    assert _load_default_avoid_rules() == []

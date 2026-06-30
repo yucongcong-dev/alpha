@@ -1021,18 +1021,27 @@ def ensure_analysis_synced(output_path: str) -> None:
     except Exception as exc:
         logger.warning("[analysis] skipped sync; failed to read main results: %s", exc)
         return
+    if not isinstance(summary, dict):
+        logger.warning(
+            "[analysis] skipped sync; unexpected main results JSON type: %s",
+            type(summary).__name__,
+        )
+        return
 
     should_rebuild = not os.path.exists(sidecar_paths["analysis"])
     if not should_rebuild:
         try:
             with open(sidecar_paths["analysis"], encoding="utf-8") as handle:
                 analysis = json.load(handle)
-            should_rebuild = (
-                analysis.get("tested") != summary.get("tested")
-                or analysis.get("settings_fingerprint") != summary.get("settings_fingerprint")
-                or analysis.get("template_library_fingerprint")
-                != summary.get("template_library_fingerprint")
-            )
+            if not isinstance(analysis, dict):
+                should_rebuild = True
+            else:
+                should_rebuild = (
+                    analysis.get("tested") != summary.get("tested")
+                    or analysis.get("settings_fingerprint") != summary.get("settings_fingerprint")
+                    or analysis.get("template_library_fingerprint")
+                    != summary.get("template_library_fingerprint")
+                )
         except Exception:
             should_rebuild = True
 

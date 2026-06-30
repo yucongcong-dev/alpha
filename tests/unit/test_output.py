@@ -13,6 +13,7 @@ from alpha.io.output import (
     build_dataset_scoped_paths,
     dump_results,
     dump_results_incremental,
+    ensure_analysis_synced,
     initialize_results_journal,
     load_blacklisted_template_names,
     resolve_cli_path,
@@ -259,6 +260,17 @@ def test_load_existing_results_falls_back_to_journal_when_summary_has_invalid_js
     assert len(loaded) == 1
     assert loaded[0].field_id == "field_6"
     assert not output_path.exists()
+
+
+def test_ensure_analysis_synced_skips_invalid_main_summary_shape(tmp_path) -> None:
+    """Analysis sync should gracefully skip a valid JSON file with the wrong top-level type."""
+    output_path = tmp_path / "results.json"
+    output_path.write_text("[]", encoding="utf-8")
+
+    ensure_analysis_synced(str(output_path))
+
+    assert output_path.read_text(encoding="utf-8") == "[]"
+    assert not (tmp_path / "results_analysis.json").exists()
 
 
 def test_auto_update_blacklist_incremental_blacklists_only_changed_template(tmp_path) -> None:

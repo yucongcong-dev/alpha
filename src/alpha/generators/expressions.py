@@ -321,7 +321,11 @@ def _load_default_avoid_rules() -> list[dict[str, str]]:
             try:
                 with open(path, "r", encoding="utf-8") as fh:
                     raw = json.load(fh)
+                if not isinstance(raw, dict):
+                    continue
                 rules = raw.get("_default_auto_avoid_rules", [])
+                if not isinstance(rules, list):
+                    rules = []
                 _DEFAULT_AVOID_RULES_CACHE = {
                     "path": path,
                     "signature": signature,
@@ -329,7 +333,7 @@ def _load_default_avoid_rules() -> list[dict[str, str]]:
                 }
                 return rules
             except (json.JSONDecodeError, OSError):
-                pass
+                continue
     _DEFAULT_AVOID_RULES_CACHE = {"path": None, "signature": None, "rules": []}
     return []
 
