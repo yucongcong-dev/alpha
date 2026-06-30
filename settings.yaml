@@ -190,7 +190,7 @@ global:
   # --------------------------------------------------------------------------
   runtime:
     submit: false          # 是否自动提交通过预检的 Alpha
-    auto_update_blacklist: true   # 自动追加低质量模板到 data/template_blacklist_<dataset>.json，下次自动跳过
+    auto_update_blacklist: true   # 自动追加低质量模板到 data/blacklists/<dataset>/blacklist.json，下次自动跳过
     smoke_test: false      # 冒烟测试模式 (1字段/1模板，快速验证)
     dry_run_plan: false    # 干运行模式 (仅打印计划，不创建模拟)
     full_run: false        # 全量运行模式 (所有字段/所有模板)

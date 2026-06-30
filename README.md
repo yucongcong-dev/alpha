@@ -57,7 +57,7 @@ alpha/                     # 项目根目录
 ├── requirements.txt       # 依赖
 ├── pyproject.toml         # 项目配置
 ├── settings.yaml          # 默认运行配置
-├── data/                  # 模板库和人工维护的黑名单
+├── data/                  # 顶层基础模板；dataset 专属模板与黑名单按目录分层
 └── .gitignore
 ```
 
@@ -98,7 +98,7 @@ python3 -m alpha
 
 不传参时使用内置默认值（`--limit 200 --max-templates-per-field 6 --field-template-batch-size 2`）。
 首次运行会先按当前数据集上下文全量拉取字段并写入
-`cache/<dataset>_<region>_<universe>_<instrument_type>_delay<delay>_fields_cache.json`，
+`cache/fields/<dataset>/<region>/<universe>/<instrument_type>/delay<delay>/fields.json`，
 后续同一 `dataset_id + region + universe + instrument_type + delay` 组合直接复用缓存。
 
 **目标**：从数据集中找出有潜力的字段和模板家族。

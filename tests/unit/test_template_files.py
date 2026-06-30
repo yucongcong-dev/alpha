@@ -172,8 +172,9 @@ def test_ensure_template_blacklist_file_creates_empty_dataset_file(tmp_path) -> 
     """Missing dataset blacklist files should be created with the expected schema."""
     path = ensure_template_blacklist_file("custom_ds", data_dir=str(tmp_path))
 
-    payload = json.loads((tmp_path / "template_blacklist_custom_ds.json").read_text())
-    assert path == str(tmp_path / "template_blacklist_custom_ds.json")
+    blacklist_file = tmp_path / "blacklists" / "custom_ds" / "blacklist.json"
+    payload = json.loads(blacklist_file.read_text())
+    assert path == str(blacklist_file)
     assert payload["dataset_id"] == "custom_ds"
     assert payload["blacklisted_templates"] == []
     assert payload["auto_avoid_rules"] == []
@@ -213,7 +214,7 @@ def test_auto_update_blacklist_appends_low_quality_template_once(tmp_path) -> No
     auto_update_blacklist(results, "custom_ds", data_dir=str(tmp_path))
     auto_update_blacklist(results, "custom_ds", data_dir=str(tmp_path))
 
-    payload = json.loads((tmp_path / "template_blacklist_custom_ds.json").read_text())
+    payload = json.loads((tmp_path / "blacklists" / "custom_ds" / "blacklist.json").read_text())
     entries = payload["blacklisted_templates"]
     assert [entry["name"] for entry in entries] == ["weak_template"]
     assert entries[0]["template_family"] == "group_vol_scaled_delta"
@@ -409,7 +410,7 @@ def test_scheduler_dump_results_shrinks_next_template_queue(monkeypatch, tmp_pat
 
 def test_fundamental6_template_library_has_family_and_layer_metadata() -> None:
     """Common dataset template library entries should carry explicit family/layer metadata."""
-    template_file = Path(__file__).resolve().parents[2] / "data" / "worldquant_template_library_fundamental6.json"
+    template_file = Path(__file__).resolve().parents[2] / "data" / "templates" / "fundamental6" / "library.json"
     payload = json.loads(template_file.read_text(encoding="utf-8"))
 
     missing = []
@@ -428,7 +429,9 @@ def test_fundamental6_template_library_has_family_and_layer_metadata() -> None:
 def test_blacklist_prefers_name_and_stage_over_name_only(monkeypatch, tmp_path) -> None:
     data_dir = tmp_path / "data"
     data_dir.mkdir()
-    (data_dir / "template_blacklist_custom_ds.json").write_text(
+    blacklist_file = data_dir / "blacklists" / "custom_ds" / "blacklist.json"
+    blacklist_file.parent.mkdir(parents=True)
+    blacklist_file.write_text(
         json.dumps(
             {
                 "dataset_id": "custom_ds",
@@ -464,7 +467,9 @@ def test_blacklist_prefers_name_and_stage_over_name_only(monkeypatch, tmp_path) 
 def test_legacy_blacklist_name_only_only_applies_without_runtime_metadata(monkeypatch, tmp_path) -> None:
     data_dir = tmp_path / "data"
     data_dir.mkdir()
-    (data_dir / "template_blacklist_custom_ds.json").write_text(
+    blacklist_file = data_dir / "blacklists" / "custom_ds" / "blacklist.json"
+    blacklist_file.parent.mkdir(parents=True)
+    blacklist_file.write_text(
         json.dumps(
             {
                 "dataset_id": "custom_ds",
@@ -489,7 +494,9 @@ def test_legacy_blacklist_name_only_only_applies_without_runtime_metadata(monkey
 def test_blacklist_pattern_rules_support_exact_and_regex(monkeypatch, tmp_path) -> None:
     data_dir = tmp_path / "data"
     data_dir.mkdir()
-    (data_dir / "template_blacklist_custom_ds.json").write_text(
+    blacklist_file = data_dir / "blacklists" / "custom_ds" / "blacklist.json"
+    blacklist_file.parent.mkdir(parents=True)
+    blacklist_file.write_text(
         json.dumps(
             {
                 "dataset_id": "custom_ds",

@@ -222,7 +222,7 @@ def build_dataset_scoped_paths(
     Example:
         >>> paths = build_dataset_scoped_paths("fundamental6")
         >>> print(paths["fields_cache_file"])
-        /path/to/project_root/cache/fundamental6_fields_cache.json
+        /path/to/project_root/cache/fields/fundamental6/fields.json
 
         >>> paths = build_dataset_scoped_paths("my_dataset")
         >>> print(paths["output"])
@@ -231,12 +231,14 @@ def build_dataset_scoped_paths(
     Note:
         - 所有路径都相对于 PROJECT_ROOT
         - 文件名使用 sanitize_dataset_id_for_filename 安全化
-        - 模板库文件名格式：data/worldquant_template_library_{sanitized}.json
-        - 字段缓存文件名格式：cache/{dataset}_{region}_{universe}_{instrument}_{delay}_fields_cache.json
+        - 基础模板文件留在 data/worldquant_template_library.json
+        - 专属模板路径格式：data/templates/{dataset}/library.json
+        - 专属黑名单路径格式：data/blacklists/{dataset}/blacklist.json
+        - 字段缓存路径格式：cache/fields/{dataset}/{region}/{universe}/{instrument}/{delay}/fields.json
         - 结果文件路径格式：results/{sanitized}/test_results.json
     """
     dataset_key = sanitize_dataset_id_for_filename(dataset_id)
-    cache_parts = [dataset_key]
+    cache_parts = [CACHE_DIR / "fields" / dataset_key]
     if region:
         cache_parts.append(sanitize_dataset_id_for_filename(region))
     if universe:
@@ -245,10 +247,10 @@ def build_dataset_scoped_paths(
         cache_parts.append(sanitize_dataset_id_for_filename(instrument_type))
     if delay is not None:
         cache_parts.append(f"delay{int(delay)}")
-    cache_key = "_".join(cache_parts)
+    fields_cache_path = Path(*cache_parts) / "fields.json"
     return {
-        "template_library_file": str(DATA_DIR / f"worldquant_template_library_{dataset_key}.json"),
-        "fields_cache_file": str(CACHE_DIR / f"{cache_key}_fields_cache.json"),
+        "template_library_file": str(DATA_DIR / "templates" / dataset_key / "library.json"),
+        "fields_cache_file": str(fields_cache_path),
         "output": str(RESULTS_DIR / dataset_key / "test_results.json"),
     }
 
@@ -498,14 +500,14 @@ _BLACKLIST_PATH_CACHE: dict[str, str] = {}
 
 
 def _resolve_blacklist_path(dataset_id: str, *, data_dir: str = "") -> str:
-    """按数据集解析黑名单文件路径：template_blacklist_{dataset_id}.json"""
+    """按数据集解析黑名单文件路径：blacklists/{dataset_id}/blacklist.json。"""
     global _BLACKLIST_PATH_CACHE
     cache_key = f"{dataset_id}|{data_dir}" if data_dir else dataset_id
     if cache_key in _BLACKLIST_PATH_CACHE:
         return _BLACKLIST_PATH_CACHE[cache_key]
     base = Path(data_dir) if data_dir else DATA_DIR
-    filename = f"template_blacklist_{dataset_id}.json"
-    resolved = str(base / filename)
+    dataset_key = sanitize_dataset_id_for_filename(dataset_id)
+    resolved = str(base / "blacklists" / dataset_key / "blacklist.json")
     _BLACKLIST_PATH_CACHE[cache_key] = resolved
     return resolved
 

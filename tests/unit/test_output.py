@@ -49,8 +49,8 @@ def test_resolve_cli_path_uses_cwd_for_relative_paths(monkeypatch, tmp_path) -> 
     assert resolved == str((tmp_path / "nested" / "config.json").resolve())
 
 
-def test_build_dataset_scoped_paths_includes_runtime_context_in_cache_name() -> None:
-    """Cache filenames should distinguish region/universe/instrument/delay contexts."""
+def test_build_dataset_scoped_paths_includes_runtime_context_in_cache_path() -> None:
+    """Cache paths should distinguish region/universe/instrument/delay contexts."""
     paths = build_dataset_scoped_paths(
         "fundamental6",
         region="USA",
@@ -59,6 +59,17 @@ def test_build_dataset_scoped_paths_includes_runtime_context_in_cache_name() -> 
         delay=1,
     )
 
-    cache_name = Path(paths["fields_cache_file"]).name
-    assert cache_name == "fundamental6_USA_TOP3000_EQUITY_delay1_fields_cache.json"
+    template_path = Path(paths["template_library_file"])
+    assert template_path.parts[-4:] == ("data", "templates", "fundamental6", "library.json")
+    cache_path = Path(paths["fields_cache_file"])
+    assert cache_path.parent.parts[-7:] == (
+        "cache",
+        "fields",
+        "fundamental6",
+        "USA",
+        "TOP3000",
+        "EQUITY",
+        "delay1",
+    )
+    assert cache_path.name == "fields.json"
     assert Path(paths["output"]).name == "test_results.json"

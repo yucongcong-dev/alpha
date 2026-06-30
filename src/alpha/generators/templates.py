@@ -104,7 +104,7 @@ def ensure_dataset_template_library(path: str, dataset_id: str) -> str:
     确保 dataset 专属模板库文件存在，不存在时从基础模板库生成。
 
     基础模板库固定为 data/worldquant_template_library.json；专属模板库默认
-    由 CLI 路径规范化为 data/worldquant_template_library_<dataset_id>.json。
+    由 CLI 路径规范化为 data/templates/{dataset_id}/library.json。
     如果专属文件已存在，保持原文件不覆盖，避免丢失人工优化。
 
     Args:

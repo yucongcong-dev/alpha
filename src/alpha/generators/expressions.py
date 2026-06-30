@@ -362,7 +362,7 @@ def _match_pattern_rule(expression: str, rule: dict[str, str]) -> bool:
 
 
 def _load_blacklist(dataset_id: str) -> None:
-    """按 dataset_id 加载专属黑名单文件 template_blacklist_{dataset_id}.json。"""
+    """按 dataset_id 加载专属黑名单文件 blacklists/{dataset_id}/blacklist.json。"""
     global _BLACKLIST_CACHE
     names: set[str] = set()
     pattern_rules: list[dict[str, str]] = []
@@ -371,10 +371,13 @@ def _load_blacklist(dataset_id: str) -> None:
 
     # 1. 加载数据集专属黑名单文件
     project_root = _resolve_blacklist_project_root()
-    filename = f"template_blacklist_{dataset_id}.json"
+    dataset_key = re.sub(r"[^A-Za-z0-9_.-]+", "_", dataset_id.strip()).strip("._-") or "default"
+    legacy_filename = f"template_blacklist_{dataset_id}.json"
     candidates = [
-        os.path.join(project_root, "data", filename),
-        os.path.join(os.getcwd(), "data", filename),
+        os.path.join(project_root, "data", "blacklists", dataset_key, "blacklist.json"),
+        os.path.join(os.getcwd(), "data", "blacklists", dataset_key, "blacklist.json"),
+        os.path.join(project_root, "data", legacy_filename),
+        os.path.join(os.getcwd(), "data", legacy_filename),
     ]
     blacklist_path = ""
     for path in candidates:
