@@ -74,6 +74,22 @@ TemplateMetadataMap = dict[tuple[str, str], dict[str, Any]]
 TemplateSpec = tuple[str, str, int]
 """配置模板规格：(name_template, expression_template, priority)。"""
 
+_BUCKET_GROUP_SPECS: tuple[tuple[str, str, int], ...] = (
+    ("cap_bucket", "bucket(rank(cap), range='0.1, 1, 0.1')", 174),
+    ("asset_bucket", "bucket(rank(assets), range='0.1, 1, 0.1')", 172),
+    ("volatility_bucket", "bucket(rank(ts_std_dev(returns, 20)), range='0.1, 1, 0.1')", 170),
+    ("liquidity_bucket", "bucket(rank(close * volume), range='0.1, 1, 0.1')", 168),
+)
+"""从旧回测脚本吸收的通用 bucket 分组维度，控制数量避免候选爆炸。"""
+
+_TRADE_WHEN_EVENT_SPECS: tuple[tuple[str, str, int], ...] = (
+    ("volume_expansion", "ts_mean(volume, 10) > ts_mean(volume, 60)", 166),
+    ("price_breakout_20", "ts_arg_max(close, 20) == 0", 164),
+    ("return_zscore_high", "ts_zscore(returns, 60) > 2", 162),
+    ("high_volatility_sector", "group_rank(ts_std_dev(returns, 60), sector) > 0.7", 160),
+)
+"""从旧回测脚本吸收的事件开关，用于降低噪声和改善 turnover。"""
+
 
 def _file_signature(path: str | None) -> tuple[int, int] | None:
     """返回文件签名：(mtime_ns, size)。"""
@@ -1679,6 +1695,15 @@ def build_feedback_mutations(
                 ]
             )
 
+    mutations.extend(
+        build_historical_reuse_templates(
+            field_name,
+            field_feedback,
+            feedback_stage=feedback_stage,
+            expression_policy=expression_policy,
+        )
+    )
+
     return mutations
 
 
@@ -1702,6 +1727,134 @@ def invert_expression(expression: str) -> str:
     if expression.startswith("-"):
         return expression[1:]
     return f"-{expression}"
+
+
+def build_bucket_group_templates(
+    expression: str,
+    *,
+    name_prefix: str,
+    priority_offset: int = 0,
+) -> list[TemplateCandidate]:
+    """基于市值/资产/波动率/流动性 bucket 生成分组排名模板。"""
+    templates: list[TemplateCandidate] = []
+    for group_label, group_expr, priority in _BUCKET_GROUP_SPECS:
+        name = f"{name_prefix}_bucket_group_rank_{group_label}"
+        expr = f"group_rank({expression}, densify({group_expr}))"
+        templates.append(
+            _make_template_candidate(
+                name,
+                expr,
+                priority + priority_offset,
+                metadata=_candidate_metadata(
+                    family="bucket_group_rank",
+                    layer="group",
+                    stage=TEMPLATE_STAGE_GROUP_SECOND_ORDER,
+                ),
+            )
+        )
+    return templates
+
+
+def build_trade_when_templates(
+    expression: str,
+    *,
+    name_prefix: str,
+    priority_offset: int = 0,
+) -> list[TemplateCandidate]:
+    """基于常见价量事件生成 trade_when 包装模板，减少无效交易噪声。"""
+    templates: list[TemplateCandidate] = []
+    for event_label, open_event, priority in _TRADE_WHEN_EVENT_SPECS:
+        name = f"{name_prefix}_trade_when_{event_label}"
+        expr = f"trade_when({open_event}, {expression}, -1)"
+        templates.append(
+            _make_template_candidate(
+                name,
+                expr,
+                priority + priority_offset,
+                metadata=_candidate_metadata(
+                    family="event_trade_when",
+                    layer="event",
+                    stage=TEMPLATE_STAGE_EVENT_CONDITIONED,
+                ),
+            )
+        )
+    return templates
+
+
+def build_historical_reuse_templates(
+    field_name: str,
+    field_feedback: dict[str, Any] | None,
+    *,
+    feedback_stage: str,
+    expression_policy: DatasetExpressionPolicy | None = None,
+) -> list[TemplateCandidate]:
+    """
+    将 get_alphas + prune 的思想落到本地反馈：复用当前字段历史最佳表达式。
+
+    只有字段已有较高 best_score 时才生成，避免把低质量表达式继续扩散。
+    """
+    if not field_feedback or feedback_stage == FEEDBACK_STAGE_GENERATE:
+        return []
+    best_expression = str(field_feedback.get("best_expression", "")).strip()
+    if not best_expression:
+        return []
+    try:
+        best_score = float(field_feedback.get("best_score", STATS_DEFAULT_SCORE))
+    except (TypeError, ValueError):
+        best_score = STATS_DEFAULT_SCORE
+    if best_score < EXPR_MUTATION_EXTEND_THRESHOLD:
+        return []
+
+    priority_offset = 18 if best_score >= FEEDBACK_MUTATION_HIGHSCORE_THRESHOLD else 0
+    templates: list[TemplateCandidate] = []
+    templates.extend(
+        build_bucket_group_templates(
+            best_expression,
+            name_prefix="iter_reuse_best",
+            priority_offset=priority_offset,
+        )
+    )
+    templates.extend(
+        build_trade_when_templates(
+            best_expression,
+            name_prefix="iter_reuse_best",
+            priority_offset=priority_offset,
+        )
+    )
+    templates.extend(
+        [
+            _make_template_candidate(
+                "iter_reuse_best_group_neutralize_subindustry",
+                f"group_neutralize({best_expression}, subindustry)",
+                178 + priority_offset,
+                metadata=_candidate_metadata(
+                    family="neutralize_decay",
+                    layer="group",
+                    stage=TEMPLATE_STAGE_GROUP_SECOND_ORDER,
+                ),
+            ),
+            _make_template_candidate(
+                "iter_reuse_best_group_rank_subindustry",
+                f"group_rank({best_expression}, subindustry)",
+                176 + priority_offset,
+                metadata=_candidate_metadata(
+                    family="legacy_group_level",
+                    layer="group",
+                    stage=TEMPLATE_STAGE_GROUP_SECOND_ORDER,
+                ),
+            ),
+        ]
+    )
+    return [
+        template
+        for template in templates
+        if not _is_blacklisted_template(
+            template.name,
+            template.expression,
+            template_metadata=template.metadata,
+            policy=expression_policy,
+        )
+    ]
 
 
 def _build_matrix_templates(
@@ -1752,6 +1905,18 @@ def _build_matrix_templates(
                 backfill_window=backfill_window,
             )
         ]
+    )
+    diversified.extend(
+        build_bucket_group_templates(
+            preprocessed_expression,
+            name_prefix="bucket",
+        )
+    )
+    diversified.extend(
+        build_trade_when_templates(
+            f"rank({preprocessed_expression})",
+            name_prefix="event",
+        )
     )
 
     legacy: list[TemplateCandidate] = [

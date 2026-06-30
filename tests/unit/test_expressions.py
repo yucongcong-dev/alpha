@@ -10,8 +10,11 @@ import pytest
 
 from alpha.config import get_dataset_expression_policy
 from alpha.generators.expressions import (
+    build_bucket_group_templates,
     build_expression_candidates,
     build_feedback_mutations,
+    build_historical_reuse_templates,
+    build_trade_when_templates,
     classify_expression_family,
     is_legacy_family,
 )
@@ -128,3 +131,39 @@ def test_build_expression_candidates_preserve_generated_metadata() -> None:
     candidate = next(item for item in candidates if item.name == "raw_field")
     assert candidate.metadata["family"] == "legacy_level"
     assert candidate.metadata["stage"] == "first_order"
+
+
+def test_bucket_group_templates_add_four_controlled_groups() -> None:
+    templates = build_bucket_group_templates("rank(cash_st)", name_prefix="bucket")
+
+    assert len(templates) == 4
+    assert {item.metadata["family"] for item in templates} == {"bucket_group_rank"}
+    assert all("bucket(" in item.expression for item in templates)
+    assert all(item.metadata["stage"] == "group_second_order" for item in templates)
+
+
+def test_trade_when_templates_wrap_expression_with_event_switches() -> None:
+    templates = build_trade_when_templates("rank(cash_st)", name_prefix="event")
+
+    assert len(templates) == 4
+    assert {item.metadata["family"] for item in templates} == {"event_trade_when"}
+    assert all(item.expression.startswith("trade_when(") for item in templates)
+    assert all(item.expression.endswith(", -1)") for item in templates)
+    assert all(item.metadata["stage"] == "event_conditioned" for item in templates)
+
+
+def test_historical_reuse_templates_require_good_feedback() -> None:
+    weak = build_historical_reuse_templates(
+        "cash_st",
+        {"best_score": 0.1, "best_expression": "rank(cash_st)"},
+        feedback_stage="resimulate",
+    )
+    strong = build_historical_reuse_templates(
+        "cash_st",
+        {"best_score": 0.7, "best_expression": "rank(cash_st)"},
+        feedback_stage="resimulate",
+    )
+
+    assert weak == []
+    assert any(item.name.startswith("iter_reuse_best_bucket_group_rank_") for item in strong)
+    assert any(item.name.startswith("iter_reuse_best_trade_when_") for item in strong)
