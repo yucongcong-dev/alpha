@@ -782,7 +782,7 @@ def apply_yaml_global_defaults(
     # limits (字段筛选)
     _merge_section(args, global_cfg.get("limits", {}), {
         "limit", "offset", "page_size", "sleep_between_fields",
-        "max_templates_per_field", "max_templates_per_family",
+        "max_templates_per_field", "max_templates_per_family", "field_template_batch_size",
         "legacy_similarity_penalty", "disable_legacy_after",
     }, explicit_cli_keys)
 

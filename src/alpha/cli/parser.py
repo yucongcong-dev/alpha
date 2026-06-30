@@ -330,6 +330,12 @@ def parse_args() -> argparse.Namespace:
         help="每个表达式家族保留的最大候选数；0 表示不限制",
     )
     parser.add_argument(
+        "--field-template-batch-size",
+        type=int,
+        default=0,
+        help="每轮每个字段最多发出的模板/setting 组合数；0 表示保持单字段一次跑满的旧行为",
+    )
+    parser.add_argument(
         "--legacy-similarity-penalty",
         type=int,
         default=42,
@@ -583,6 +589,7 @@ def parse_args() -> argparse.Namespace:
         "max_concurrent_simulations",
         "max_concurrent_creates",
         "max_templates_per_field",
+        "field_template_batch_size",
         "simulation_max_wait_seconds",
         "simulation_max_queue_seconds",
         "queue_busy_cooldown_seconds",
@@ -781,6 +788,7 @@ def build_run_config_snapshot(args: argparse.Namespace, run_paths: RunPaths) -> 
             "sleep_between_fields": args.sleep_between_fields,
             "max_templates_per_field": args.max_templates_per_field,
             "max_templates_per_family": args.max_templates_per_family,
+            "field_template_batch_size": args.field_template_batch_size,
             "legacy_similarity_penalty": args.legacy_similarity_penalty,
             "disable_legacy_after": args.disable_legacy_after,
         },
