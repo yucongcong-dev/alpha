@@ -64,6 +64,7 @@ from .cli.parser import (
 # 导入配置和模型
 from .config import (
     SENTINEL_UNKNOWN,
+    STATS_DEFAULT_SCORE,
     get_dataset_expression_policy,
 )
 
@@ -301,6 +302,31 @@ def _initialize(
         return None
 
     cached_field_count = len(fields)
+    filtered_fields: list[dict[str, Any]] = []
+    prefiltered_count = 0
+    for field in fields:
+        field_id = str(first_non_empty(field.get("id"), SENTINEL_UNKNOWN))
+        field_name = choose_field_name(field)
+        if (
+            filters_dict.include_fields
+            and field_id not in filters_dict.include_fields
+            and field_name not in filters_dict.include_fields
+        ):
+            prefiltered_count += 1
+            continue
+        if (
+            field_id in filters_dict.exclude_fields
+            or field_name in filters_dict.exclude_fields
+        ):
+            prefiltered_count += 1
+            continue
+        filtered_fields.append(field)
+    fields = filtered_fields
+    if prefiltered_count > 0:
+        logger.info("[filter] 排序前因 include/exclude 规则过滤 %d 个字段", prefiltered_count)
+    if not fields:
+        logger.error("[error] 数据集 %s 在字段过滤后没有可运行字段", args.dataset_id)
+        return None
 
     def field_sort_key(item: dict[str, Any]) -> tuple[Any, ...]:
         field_id = str(first_non_empty(item.get("id"), SENTINEL_UNKNOWN))
@@ -316,13 +342,21 @@ def _initialize(
         is_overtested_weak = (
             field_name in expression_policy.overtested_weak_fields and feedback is not None
         )
+        effective_priority = priority
+        if is_unexplored:
+            # Preferred unexplored fields stay visible, but historical winners still dominate.
+            effective_priority = (
+                expression_policy.promising_field_min_priority - 0.01
+                if is_preferred_direction
+                else STATS_DEFAULT_SCORE
+            )
         return (
             -int(is_promising_seen),
+            int(is_overtested_weak),
+            -effective_priority,
             -int(is_preferred_direction),
             preferred_rank,
             -int(is_unexplored),
-            int(is_overtested_weak),
-            -priority,
             -_safe_float(item.get("coverage")),
             -_safe_int(item.get("alphaCount")),
             -_safe_int(item.get("userCount")),
@@ -349,8 +383,9 @@ def _initialize(
     if args.limit > 0:
         fields = fields[: args.limit]
     logger.info(
-        "[data] 当前上下文缓存共 %d 个字段，优先级排序后共 %d 个字段，本次按 offset=%d limit=%d 取 %d 个字段",
+        "[data] 当前上下文缓存共 %d 个字段，过滤后共 %d 个字段，优先级排序后共 %d 个字段，本次按 offset=%d limit=%d 取 %d 个字段",
         cached_field_count,
+        len(filtered_fields),
         ranked_field_count,
         args.offset,
         args.limit,

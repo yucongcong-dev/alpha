@@ -162,7 +162,7 @@ python3 -m alpha --dry-run-plan
 强制刷新本地字段缓存：
 
 ```bash
-python3 -m alpha --refresh-fields-cache
+python3 -m alpha
 ```
 
 清理本地运行产物（默认保留 `.credentials/`）：
