@@ -13,6 +13,7 @@ from alpha.generators.expressions import (
     build_bucket_group_templates,
     build_expression_candidates,
     build_feedback_mutations,
+    build_high_conviction_ratio_templates,
     build_historical_reuse_templates,
     build_trade_when_templates,
     classify_expression_family,
@@ -167,3 +168,39 @@ def test_historical_reuse_templates_require_good_feedback() -> None:
     assert weak == []
     assert any(item.name.startswith("iter_reuse_best_bucket_group_rank_") for item in strong)
     assert any(item.name.startswith("iter_reuse_best_trade_when_") for item in strong)
+
+
+def test_high_conviction_ratio_templates_are_group_second_order() -> None:
+    templates = build_high_conviction_ratio_templates(
+        "cashflow_op/assets",
+        "cashflow_op_over_assets",
+    )
+
+    assert len(templates) == 4
+    assert {item.metadata["family"] for item in templates} == {"high_conviction_ratio"}
+    assert all(item.metadata["requires_partner_field"] is True for item in templates)
+    assert all(item.metadata["stage"] == "group_second_order" for item in templates)
+
+
+def test_build_expression_candidates_adds_financial_ratio_templates() -> None:
+    policy = get_dataset_expression_policy("fundamental6")
+    field = {"id": "cashflow_op", "type": "MATRIX"}
+    all_fields = [
+        field,
+        {"id": "assets", "type": "MATRIX"},
+        {"id": "enterprise_value", "type": "MATRIX"},
+    ]
+
+    candidates = build_expression_candidates(
+        field,
+        {"default": []},
+        max_templates_per_field=0,
+        max_templates_per_family=0,
+        legacy_similarity_penalty=0,
+        all_fields=all_fields,
+        expression_policy=policy,
+    )
+
+    names = {item.name for item in candidates}
+    assert "hc_ratio_group_level_cashflow_op_over_assets" in names
+    assert "hc_ratio_group_zscore_252_cashflow_op_over_assets" in names

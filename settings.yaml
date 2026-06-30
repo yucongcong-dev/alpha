@@ -513,6 +513,11 @@ expression_policies:
       - ["cashflow_op", "fnd6_mkvalt"]
       - ["cashflow_op", "fnd6_mkvaltq"]
       - ["cashflow_invst", "assets"]
+      - ["ebitda", "enterprise_value"]
+      - ["liabilities", "assets"]
+      - ["income", "assets"]
+      - ["sales", "assets"]
+      - ["revenue", "assets"]
     template_priority_penalties:
       account_neutralize_zscore_decay_63_industry: -220
       vol_scaled_delta_20_60: -820
@@ -612,8 +617,11 @@ expression_policies:
       capex: ["assets", "cashflow_op", "cashflow_invst", "enterprise_value"]
       cogs: ["assets", "cash", "fnd6_mkvalt", "fnd6_mkvaltq"]
       current_ratio: ["cash_st", "debt_st", "liabilities_curr"]
+      income: ["assets", "sales", "revenue", "enterprise_value"]
       ebit: ["assets", "sales", "revenue", "enterprise_value"]
       ebitda: ["assets", "sales", "revenue", "enterprise_value"]
+      revenue: ["assets", "enterprise_value"]
+      sales: ["assets", "enterprise_value"]
       equity: ["assets", "debt", "enterprise_value"]
       enterprise_value: ["assets", "ebitda", "ebit", "cashflow_op"]
     ratio_keywords:
@@ -627,8 +635,11 @@ expression_policies:
       cashflow_fin: ["assets", "debt", "equity"]
       capex: ["cashflow_op", "assets", "enterprise_value", "cashflow_invst"]
       cogs: ["assets", "cash", "enterprise_value"]
+      income: ["assets", "enterprise_value", "sales", "revenue"]
       ebit: ["assets", "enterprise_value", "sales", "revenue"]
       ebitda: ["assets", "enterprise_value", "sales", "revenue"]
+      revenue: ["assets", "enterprise_value"]
+      sales: ["assets", "enterprise_value"]
       equity: ["assets", "enterprise_value", "debt"]
       enterprise_value: ["assets", "ebitda", "ebit", "cashflow_op"]
       assets: ["debt", "liabilities", "equity", "cash", "enterprise_value"]

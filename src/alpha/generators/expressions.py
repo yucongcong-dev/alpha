@@ -1857,6 +1857,70 @@ def build_historical_reuse_templates(
     ]
 
 
+def build_high_conviction_ratio_templates(
+    ratio_expr: str,
+    ratio_label: str,
+    *,
+    priority_boost: int = 0,
+    expression_policy: DatasetExpressionPolicy | None = None,
+) -> list[TemplateCandidate]:
+    """为财务含义强的 ratio pair 生成专属长窗质量模板。"""
+    bw = get_backfill_window()
+    specs: tuple[tuple[str, str, int, str, str], ...] = (
+        (
+            "hc_ratio_group_level_{ratio_label}",
+            "group_rank({ratio_expr}, subindustry)",
+            228,
+            "high_conviction_ratio",
+            TEMPLATE_STAGE_GROUP_SECOND_ORDER,
+        ),
+        (
+            "hc_ratio_group_zscore_252_{ratio_label}",
+            "group_rank(ts_zscore({ratio_expr}, 252), subindustry)",
+            226,
+            "high_conviction_ratio",
+            TEMPLATE_STAGE_GROUP_SECOND_ORDER,
+        ),
+        (
+            "hc_ratio_decay_zscore_252_{ratio_label}",
+            "ts_decay_linear(group_rank(ts_zscore({ratio_expr}, 252), subindustry), 20)",
+            224,
+            "high_conviction_ratio",
+            TEMPLATE_STAGE_GROUP_SECOND_ORDER,
+        ),
+        (
+            "hc_ratio_industry_zscore_252_{ratio_label}",
+            "group_rank(ts_zscore({ratio_expr}, 252), industry)",
+            222,
+            "high_conviction_ratio",
+            TEMPLATE_STAGE_GROUP_SECOND_ORDER,
+        ),
+    )
+    templates: list[TemplateCandidate] = []
+    for name_template, expr_template, priority, family, stage in specs:
+        name = name_template.format(ratio_label=ratio_label)
+        expr = expr_template.format(ratio_expr=ratio_expr, backfill_window=bw)
+        template = _make_template_candidate(
+            name,
+            expr,
+            priority + priority_boost,
+            metadata=_candidate_metadata(
+                family=family,
+                layer="group",
+                stage=stage,
+                requires_partner_field=True,
+            ),
+        )
+        if not _is_blacklisted_template(
+            template.name,
+            template.expression,
+            template_metadata=template.metadata,
+            policy=expression_policy,
+        ):
+            templates.append(template)
+    return templates
+
+
 def _build_matrix_templates(
     field_view: Any,
     all_fields: Sequence[dict[str, Any]],
@@ -2030,6 +2094,14 @@ def _build_matrix_templates(
         ratio_priority_boost = 0
         if (field_name, partner) in expression_policy.high_conviction_ratio_pairs:
             ratio_priority_boost = expression_policy.high_conviction_ratio_priority_boost
+            diversified.extend(
+                build_high_conviction_ratio_templates(
+                    ratio_expr,
+                    ratio_label,
+                    priority_boost=ratio_priority_boost,
+                    expression_policy=expression_policy,
+                )
+            )
 
         # Delta rank 变体
         for delta, pri in ratio_delta_rank_windows:

@@ -151,6 +151,11 @@ def test_fundamental6_default_policy_is_loaded_from_settings_yaml() -> None:
     assert policy.partner_limit == 6
     assert "account_rank_backfill_504" in policy.protected_templates
     assert ("cashflow_op", "fnd6_mkvalt") in policy.high_conviction_ratio_pairs
+    assert ("cashflow_op", "assets") in policy.high_conviction_ratio_pairs
+    assert ("ebitda", "enterprise_value") in policy.high_conviction_ratio_pairs
+    assert ("liabilities", "assets") in policy.high_conviction_ratio_pairs
+    assert ("income", "assets") in policy.high_conviction_ratio_pairs
+    assert ("sales", "assets") in policy.high_conviction_ratio_pairs
     assert policy.field_min_coverage == 0.10
     assert policy.field_min_alpha_count == 25
     assert policy.matrix_field_transform.backfill_window == 504
