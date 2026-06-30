@@ -136,6 +136,50 @@ def test_dump_results_incremental_writes_lightweight_summary(tmp_path) -> None:
     assert load_existing_results(str(output_path))[0].field_id == "field_2"
 
 
+def test_dump_results_incremental_can_flip_existing_summary_to_journal_mode(tmp_path) -> None:
+    """Bootstrapping a run should switch the main summary to journal mode before new results arrive."""
+    output_path = tmp_path / "results.json"
+    result = FieldTestResult(
+        field_id="field_3",
+        field_type="MATRIX",
+        field_name="field_3",
+        template_name="tpl",
+        status="simulated",
+        submittable=False,
+        expression="rank(field_3)",
+    )
+
+    dump_results(
+        str(output_path),
+        "fundamental6",
+        [result],
+        settings_fingerprint="settings",
+        template_library_fingerprint="templates",
+        include_analysis=False,
+    )
+    persisted = initialize_results_journal(str(output_path), [result])
+    persisted = dump_results_incremental(
+        str(output_path),
+        "fundamental6",
+        [],
+        persisted_result_count=persisted,
+        tested=1,
+        unique_fields_tested=1,
+        submittable_count=0,
+        submitted_count=0,
+        error_count=0,
+        queue_timeout_count=0,
+        settings_fingerprint="settings",
+        template_library_fingerprint="templates",
+    )
+
+    payload = json.loads(output_path.read_text(encoding="utf-8"))
+    assert persisted == 1
+    assert payload["results_embedded"] is False
+    assert "results" not in payload
+    assert load_existing_results(str(output_path))[0].field_id == "field_3"
+
+
 def test_resolve_cli_path_uses_cwd_for_relative_paths(monkeypatch, tmp_path) -> None:
     """Relative CLI paths should resolve from the current working directory."""
     monkeypatch.chdir(tmp_path)

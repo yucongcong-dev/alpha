@@ -115,6 +115,7 @@ from .io.credentials import load_credentials
 from .io.output import (
     cleanup_legacy_sidecar_files,
     dump_results,
+    dump_results_incremental,
     ensure_analysis_synced,
     ensure_template_blacklist_file,
     initialize_results_journal,
@@ -624,6 +625,21 @@ def _initialize(
     execution_state.persisted_result_count = initialize_results_journal(
         output_file,
         execution_state.results,
+    )
+    execution_state.persisted_result_count = dump_results_incremental(
+        output_file,
+        args.dataset_id,
+        [],
+        persisted_result_count=execution_state.persisted_result_count,
+        tested=len(execution_state.results),
+        unique_fields_tested=len(execution_state.unique_field_ids),
+        submittable_count=execution_state.submittable_count,
+        submitted_count=execution_state.submitted_count,
+        error_count=execution_state.error_count,
+        queue_timeout_count=execution_state.queue_timeout_count,
+        settings_fingerprint=settings_fingerprint,
+        template_library_fingerprint=template_library_fingerprint,
+        run_config=run_config,
     )
 
     max_workers = max(1, args.max_concurrent_simulations)
