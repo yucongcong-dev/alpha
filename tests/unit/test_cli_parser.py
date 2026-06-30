@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import sys
 
-from alpha.cli.parser import parse_args
+from alpha.cli.parser import normalize_args_paths, parse_args
 from alpha.config import get_yaml_config
 
 
@@ -188,3 +188,52 @@ def test_clean_command_parses(monkeypatch) -> None:
 
     assert args.command == "clean"
     assert args.dry_run_clean is True
+
+
+def test_normalize_args_paths_uses_dataset_scoped_defaults(monkeypatch, tmp_path) -> None:
+    """Blank CLI path defaults should expand using the active dataset context."""
+    clear_yaml_cache()
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "alpha",
+            "--dataset-id",
+            "pv1",
+            "--region",
+            "USA",
+            "--universe",
+            "TOP1000",
+            "--instrument-type",
+            "EQUITY",
+            "--delay",
+            "2",
+        ],
+    )
+
+    args = parse_args()
+    paths = normalize_args_paths(args)
+
+    assert paths.fields_cache_file.endswith("pv1_USA_TOP1000_EQUITY_delay2_fields_cache.json")
+    assert paths.output.endswith("/results/pv1/test_results.json")
+
+
+def test_normalize_args_paths_resolves_relative_files_from_cwd(monkeypatch, tmp_path) -> None:
+    """User-supplied relative file paths should resolve from the shell cwd."""
+    clear_yaml_cache()
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "alpha",
+            "--include-fields-file",
+            "tmp_priority_fields_round1.txt",
+        ],
+    )
+
+    args = parse_args()
+    paths = normalize_args_paths(args)
+
+    assert paths.include_fields_file == str((tmp_path / "tmp_priority_fields_round1.txt").resolve())

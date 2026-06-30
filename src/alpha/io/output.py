@@ -108,15 +108,16 @@ def atomic_write_json(path: str, payload: Any) -> None:
 # ============================================================================
 
 
-def resolve_cli_path(path: str) -> str:
+def resolve_cli_path(path: str, *, base_dir: str | None = None) -> str:
     """
-    将 CLI 文件路径解析为相对于脚本目录的绝对路径。
+    将 CLI 文件路径解析为相对于指定基准目录的绝对路径。
 
-    如果路径是相对路径，将其转换为相对于脚本目录的绝对路径；
+    如果路径是相对路径，将其转换为相对于指定基准目录的绝对路径；
     如果已经是绝对路径，直接返回。
 
     Args:
         path: CLI 参数提供的文件路径（可能为相对或绝对路径）。
+        base_dir: 解析相对路径时使用的基准目录。留空时使用当前工作目录。
 
     Returns:
         str: 解析后的绝对路径字符串。
@@ -136,14 +137,15 @@ def resolve_cli_path(path: str) -> str:
 
     Note:
         - 使用 Path.expanduser() 处理用户目录符号（~）
-        - 相对路径会相对于 SCRIPT_DIR 解析
+        - 相对路径默认相对于当前工作目录解析
         - 绝对路径直接返回
     """
     if not path:
         return ""
     candidate = Path(path).expanduser()
     if not candidate.is_absolute():
-        candidate = SCRIPT_DIR / candidate
+        base_path = Path(base_dir).expanduser() if base_dir else Path.cwd()
+        candidate = base_path / candidate
     return str(candidate.resolve())
 
 
@@ -190,15 +192,26 @@ def sanitize_dataset_id_for_filename(dataset_id: str) -> str:
 # ============================================================================
 
 
-def build_dataset_scoped_paths(dataset_id: str) -> dict[str, str]:
+def build_dataset_scoped_paths(
+    dataset_id: str,
+    *,
+    region: str = "",
+    universe: str = "",
+    instrument_type: str = "",
+    delay: int | None = None,
+) -> dict[str, str]:
     """
     根据 dataset_id 派生默认缓存、结果与模板库路径。
 
-    根据数据集标识符生成默认的文件路径，
+    根据数据集标识符和运行上下文生成默认的文件路径，
     包括模板库文件、字段缓存文件和结果输出文件。
 
     Args:
         dataset_id: 数据集标识符字符串。
+        region: 地区代码。
+        universe: 股票池代码。
+        instrument_type: 标的类型。
+        delay: 延迟天数。
 
     Returns:
         dict[str, str]: 包含以下键的路径字典：
@@ -219,13 +232,23 @@ def build_dataset_scoped_paths(dataset_id: str) -> dict[str, str]:
         - 所有路径都相对于 PROJECT_ROOT
         - 文件名使用 sanitize_dataset_id_for_filename 安全化
         - 模板库文件名格式：data/worldquant_template_library_{sanitized}.json
-        - 字段缓存文件名格式：cache/{sanitized}_fields_cache.json
+        - 字段缓存文件名格式：cache/{dataset}_{region}_{universe}_{instrument}_{delay}_fields_cache.json
         - 结果文件路径格式：results/{sanitized}/test_results.json
     """
     dataset_key = sanitize_dataset_id_for_filename(dataset_id)
+    cache_parts = [dataset_key]
+    if region:
+        cache_parts.append(sanitize_dataset_id_for_filename(region))
+    if universe:
+        cache_parts.append(sanitize_dataset_id_for_filename(universe))
+    if instrument_type:
+        cache_parts.append(sanitize_dataset_id_for_filename(instrument_type))
+    if delay is not None:
+        cache_parts.append(f"delay{int(delay)}")
+    cache_key = "_".join(cache_parts)
     return {
         "template_library_file": str(DATA_DIR / f"worldquant_template_library_{dataset_key}.json"),
-        "fields_cache_file": str(CACHE_DIR / f"{dataset_key}_fields_cache.json"),
+        "fields_cache_file": str(CACHE_DIR / f"{cache_key}_fields_cache.json"),
         "output": str(RESULTS_DIR / dataset_key / "test_results.json"),
     }
 

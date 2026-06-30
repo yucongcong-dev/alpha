@@ -97,7 +97,8 @@ python3 -m alpha
 ```
 
 不传参时使用内置默认值（`--limit 200 --max-templates-per-field 6 --field-template-batch-size 2`）。
-首次运行会先按当前数据集上下文全量拉取字段并写入 `cache/<dataset>_fields_cache.json`，
+首次运行会先按当前数据集上下文全量拉取字段并写入
+`cache/<dataset>_<region>_<universe>_<instrument_type>_delay<delay>_fields_cache.json`，
 后续同一 `dataset_id + region + universe + instrument_type + delay` 组合直接复用缓存。
 
 **目标**：从数据集中找出有潜力的字段和模板家族。
@@ -181,6 +182,8 @@ python3 -m alpha --dry-run-plan
 ```bash
 python3 -m alpha
 ```
+
+所有相对路径参数（如 `--output`、`--fields-cache-file`、`--include-fields-file`）都相对于当前命令执行目录解析。
 
 清理本地运行产物（默认保留 `.credentials/`）：
 

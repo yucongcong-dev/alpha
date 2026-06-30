@@ -66,10 +66,10 @@ DEFAULT_CREDS_KEY_FILE = str(CREDS_DIR / "worldquant_brain_credentials.key")
 DEFAULT_TEMPLATE_LIBRARY_FILE = ""
 """默认模板库文件路径 — 空字符串让 normalize_args_paths 通过 build_dataset_scoped_paths 按 dataset_id 自动分流"""
 
-DEFAULT_FIELDS_CACHE_FILE = str(CACHE_DIR / "fundamental6_fields_cache.json")
+DEFAULT_FIELDS_CACHE_FILE = ""
 """默认字段缓存文件路径"""
 
-DEFAULT_OUTPUT_FILE = str(RESULTS_DIR / "fundamental6" / "test_results.json")
+DEFAULT_OUTPUT_FILE = ""
 """默认输出文件路径"""
 
 
@@ -666,33 +666,40 @@ def normalize_args_paths(args: argparse.Namespace) -> RunPaths:
         - 使用 resolve_cli_path 函数处理每个路径
     """
     # 根据数据集 ID 派生默认路径
-    scoped_paths = build_dataset_scoped_paths(args.dataset_id)
+    scoped_paths = build_dataset_scoped_paths(
+        args.dataset_id,
+        region=args.region,
+        universe=args.universe,
+        instrument_type=args.instrument_type,
+        delay=args.delay,
+    )
 
     # 标准化所有文件路径
     template_library_file = (
-        resolve_cli_path(args.template_library_file) or scoped_paths["template_library_file"]
+        resolve_cli_path(args.template_library_file, base_dir=os.getcwd())
+        or scoped_paths["template_library_file"]
     )
     fields_cache_file = (
-        resolve_cli_path(args.fields_cache_file) or scoped_paths["fields_cache_file"]
+        resolve_cli_path(args.fields_cache_file, base_dir=os.getcwd()) or scoped_paths["fields_cache_file"]
     )
-    output_file = resolve_cli_path(args.output) or scoped_paths["output"]
+    output_file = resolve_cli_path(args.output, base_dir=os.getcwd()) or scoped_paths["output"]
     
     # 同步更新 args 对象，确保后续代码（如 scheduler.py）能使用正确的路径
     args.output = output_file
     args.fields_cache_file = fields_cache_file
     args.template_library_file = template_library_file
 
-    feedback_output = resolve_cli_path(args.feedback_output) or output_file
-    creds_file = resolve_cli_path(args.creds_file) or DEFAULT_CREDS_FILE
-    creds_key_file = resolve_cli_path(args.creds_key_file) or DEFAULT_CREDS_KEY_FILE
-    include_fields_file = resolve_cli_path(args.include_fields_file)
-    exclude_fields_file = resolve_cli_path(args.exclude_fields_file)
-    include_templates_file = resolve_cli_path(args.include_templates_file)
-    exclude_templates_file = resolve_cli_path(args.exclude_templates_file)
+    feedback_output = resolve_cli_path(args.feedback_output, base_dir=os.getcwd()) or output_file
+    creds_file = resolve_cli_path(args.creds_file, base_dir=os.getcwd()) or DEFAULT_CREDS_FILE
+    creds_key_file = resolve_cli_path(args.creds_key_file, base_dir=os.getcwd()) or DEFAULT_CREDS_KEY_FILE
+    include_fields_file = resolve_cli_path(args.include_fields_file, base_dir=os.getcwd())
+    exclude_fields_file = resolve_cli_path(args.exclude_fields_file, base_dir=os.getcwd())
+    include_templates_file = resolve_cli_path(args.include_templates_file, base_dir=os.getcwd())
+    exclude_templates_file = resolve_cli_path(args.exclude_templates_file, base_dir=os.getcwd())
 
     # 日志文件路径
     sidecar_paths = build_output_sidecar_paths(output_file)
-    log_file = resolve_cli_path(args.log_file) or sidecar_paths["run_log"]
+    log_file = resolve_cli_path(args.log_file, base_dir=os.getcwd()) or sidecar_paths["run_log"]
 
     # 结果目录
     results_dir = str(Path(output_file).parent)
