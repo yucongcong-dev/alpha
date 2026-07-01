@@ -1,0 +1,4 @@
+unsystematic_risk_last_360_days
+systematic_risk_last_360_days
+correlation_last_90_days_spy
+beta_last_90_days_spy

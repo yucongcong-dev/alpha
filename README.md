@@ -75,6 +75,7 @@ alpha/                     # 项目根目录
 - 基础模板说明：`data/templates/base/README.md`
 - 数据集专属模板库：`data/templates/<dataset_id>/library.json`
 - 数据集专属模板说明：`data/templates/<dataset_id>/README.md`
+- 数据集聚焦白名单：可选放在 `data/templates/<dataset_id>/*.txt`
 
 其中 `base` 只负责提供共享 fallback 模板，真正的搜索方向应尽量在数据集专属目录里定制和收敛。
 
@@ -180,6 +181,40 @@ python3 -m alpha --top-fields-by-feedback 10 --max-templates-per-field 15
 - 阶段 3：candidate-centric refine / resimulate
 
 **预估时间**：通常短于阶段 2，因为会把预算收缩到少数 near-pass 候选，而不是继续全模板铺开
+
+#### 数据集 Playbooks
+
+`fundamental6`:
+- 当前更适合做止损式小验证，而不是继续大范围单字段深挖。
+
+`model51`:
+- 当前更适合做“小字段集 + 小模板集”的聚焦 refine。
+- 项目内已提供可复用白名单：
+  - `data/templates/model51/focused_fields.txt`
+  - `data/templates/model51/focused_templates.txt`
+
+示例：
+
+```bash
+python3 -m alpha --dataset-id model51 --dry-run-plan \
+  --include-fields-file data/templates/model51/focused_fields.txt \
+  --include-templates-file data/templates/model51/focused_templates.txt \
+  --limit 4 --max-templates-per-field 4 --max-templates-per-family 1 \
+  --output results/model51/focused_validation.json \
+  --feedback-output results/model51/focused_validation.json \
+  --no-auto-update-blacklist
+```
+
+```bash
+python3 -m alpha --dataset-id model51 \
+  --include-fields-file data/templates/model51/focused_fields.txt \
+  --include-templates-file data/templates/model51/focused_templates.txt \
+  --limit 4 --max-templates-per-field 4 --max-templates-per-family 1 \
+  --max-concurrent-simulations 2 --max-concurrent-creates 1 \
+  --output results/model51/focused_validation.json \
+  --feedback-output results/model51/focused_validation.json \
+  --no-auto-update-blacklist
+```
 
 #### 阶段 4：完整运行（可选）
 
