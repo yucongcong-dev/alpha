@@ -264,23 +264,31 @@ expression_policies:
     matrix_field_transform:
       stages:
         - kind: "backfill"
-          window: 504
-      backfill_window: 504
+          window: 120
+        - kind: "winsorize"
+          std: 4
+      backfill_window: 120
     vector_field_transform:
       stages:
         - kind: "backfill"
-          window: 504
-      backfill_window: 504
+          window: 120
+        - kind: "winsorize"
+          std: 4
+      backfill_window: 120
     ratio_numerator_transform:
       stages:
         - kind: "backfill"
-          window: 504
-      backfill_window: 504
+          window: 120
+        - kind: "winsorize"
+          std: 4
+      backfill_window: 120
     ratio_denominator_transform:
       stages:
         - kind: "backfill"
-          window: 504
-      backfill_window: 504
+          window: 120
+        - kind: "winsorize"
+          std: 4
+      backfill_window: 120
     feedback_loop_policy:
       generate:
         min_attempted_templates: 0
@@ -604,16 +612,22 @@ expression_policies:
       stages:
         - kind: "backfill"
           window: 252
+        - kind: "winsorize"
+          std: 4
       backfill_window: 252
     matrix_field_transform:
       stages:
         - kind: "backfill"
           window: 252
+        - kind: "winsorize"
+          std: 4
       backfill_window: 252
     vector_field_transform:
       stages:
         - kind: "backfill"
           window: 252
+        - kind: "winsorize"
+          std: 4
       backfill_window: 252
     feedback_loop_policy:
       generate:
@@ -652,6 +666,8 @@ expression_policies:
       - "model16_market_neutral_zscore_decay_126"
       - "model16_group_ts_rank_market_126"
       - "model16_group_zscore_sector_126"
+      - "model16_bucket_cap_zscore_126"
+      - "model16_bucket_liquidity_ts_rank_126"
     template_prefix_penalties:
       - prefixes: ["delta_", "group_delta_", "rank_delta_", "vol_scaled_delta_"]
         penalty: -820
@@ -685,6 +701,8 @@ expression_policies:
       stages:
         - kind: "backfill"
           window: 504
+        - kind: "winsorize"
+          std: 4
       backfill_window: 504
     feedback_loop_policy:
       generate:
@@ -741,9 +759,12 @@ expression_policies:
       - "ts_corr_self_252"
     protected_templates:
       - "model51_market_zscore_decay_63"
+      - "model51_market_zscore_decay_126"
       - "model51_industry_zscore_decay_63"
       - "model51_group_zscore_market_63"
       - "model51_group_zscore_market_126"
+      - "model51_bucket_cap_zscore_126"
+      - "model51_bucket_volatility_rank_126"
       - "model51_ts_rank_126"
       - "model51_ts_rank_252"
       - "model51_ts_zscore_126"

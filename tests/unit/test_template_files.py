@@ -175,6 +175,24 @@ def test_ensure_dataset_template_library_does_not_mutate_base_template(
     assert "priority" not in payload["default"][0]
 
 
+def test_load_template_library_legacy_base_path_falls_back_to_new_location(
+    monkeypatch, tmp_path
+) -> None:
+    new_base = tmp_path / "templates" / "base" / "library.json"
+    legacy_base = tmp_path / "worldquant_template_library.json"
+    new_base.parent.mkdir(parents=True, exist_ok=True)
+    new_base.write_text(
+        json.dumps({"default": [{"name": "base", "expression": "rank({field})"}]}),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(template_module, "_BUILTIN_TEMPLATE_LIBRARY_FILE", str(new_base))
+    monkeypatch.setattr(template_module, "_LEGACY_BUILTIN_TEMPLATE_LIBRARY_FILE", str(legacy_base))
+
+    library = load_template_library(str(legacy_base))
+
+    assert library["default"][0]["name"] == "base"
+
+
 def test_ensure_template_blacklist_file_creates_empty_dataset_file(tmp_path) -> None:
     """Missing dataset blacklist files should be created with the expected schema."""
     path = ensure_template_blacklist_file("custom_ds", data_dir=str(tmp_path))

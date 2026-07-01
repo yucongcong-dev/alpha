@@ -57,9 +57,26 @@ alpha/                     # 项目根目录
 ├── requirements.txt       # 依赖
 ├── pyproject.toml         # 项目配置
 ├── settings.yaml          # 默认运行配置
-├── data/                  # 顶层基础模板；dataset 专属模板与黑名单按目录分层
+├── data/                  # 模板库与黑名单
+│   ├── templates/
+│   │   ├── base/          # 基础共享模板库与说明
+│   │   ├── fundamental6/  # fundamental6 专属模板库与说明
+│   │   ├── model16/       # model16 专属模板库与说明
+│   │   └── model51/       # model51 专属模板库与说明
+│   └── blacklists/        # dataset 专属 blacklist
 └── .gitignore
 ```
+
+## 模板目录
+
+当前模板目录统一放在 `data/templates/`：
+
+- 基础共享模板库：`data/templates/base/library.json`
+- 基础模板说明：`data/templates/base/README.md`
+- 数据集专属模板库：`data/templates/<dataset_id>/library.json`
+- 数据集专属模板说明：`data/templates/<dataset_id>/README.md`
+
+其中 `base` 只负责提供共享 fallback 模板，真正的搜索方向应尽量在数据集专属目录里定制和收敛。
 
 ## 安装
 
@@ -120,8 +137,8 @@ python3 -m alpha
 
 **表达式策略配置**：
 - 数据集级表达式搜索策略可在 `settings.yaml` 的 `expression_policies.<dataset_id>` 下覆盖
-- 适合放这里的参数包括：`partner_limit`、模板加成/降权、弱模板名单、字段质量阈值
-- 未在 YAML 中声明的键继续使用代码内置默认值
+- 适合放这里的参数包括：`partner_limit`、字段质量阈值、反馈阶段设置、少量运行期策略开关
+- 模板本身优先放在 `data/templates/base/` 或 `data/templates/<dataset_id>/` 下维护，而不是继续把模板内容塞回 Python 常量
 
 **输出**：`*_analysis.json` 中的关键字段：
 - `near_pass_summary`：接近通过的候选（按 score 排序）

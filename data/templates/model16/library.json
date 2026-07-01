@@ -2,12 +2,12 @@
   "_comment": "model16 dataset-specific template library — fundamental scores are treated as slow-moving composite signals. Prefer long-window stabilization, mild decay, and group-aware ranking; avoid short-window delta families.",
   "_comment_placeholders": "{field}=字段名, {backfill_window}=settings.yaml expression.backfill_window",
   "_dataset_id": "model16",
-  "_generated_from": "../../worldquant_template_library.json",
+  "_generated_from": "../base/library.json",
   "_comment_dataset_template": "Curated dataset-specific template library for model16. Keep this library focused on stable long-window score transforms.",
   "default": [
     {
       "name": "model16_rank_zscore_decay_126",
-      "expression": "rank(ts_decay_linear(ts_zscore(ts_backfill({field}, {backfill_window}), 126), 20))",
+      "expression": "rank(ts_decay_linear(ts_zscore({field_preprocessed}, 126), 20))",
       "priority": 1000,
       "family": "zscore_decay",
       "layer": "time_series",
@@ -16,7 +16,7 @@
     },
     {
       "name": "model16_rank_ts_rank_126",
-      "expression": "rank(ts_rank(ts_backfill({field}, {backfill_window}), 126))",
+      "expression": "rank(ts_rank({field_preprocessed}, 126))",
       "priority": 999,
       "family": "ts_rank",
       "layer": "time_series",
@@ -25,7 +25,7 @@
     },
     {
       "name": "model16_market_neutral_zscore_decay_126",
-      "expression": "ts_decay_linear(group_neutralize(ts_zscore(ts_backfill({field}, {backfill_window}), 126), market), 20)",
+      "expression": "ts_decay_linear(group_neutralize(ts_zscore({field_preprocessed}, 126), market), 20)",
       "priority": 998,
       "family": "neutralize_decay",
       "layer": "composite",
@@ -34,7 +34,7 @@
     },
     {
       "name": "model16_group_ts_rank_market_126",
-      "expression": "group_rank(ts_rank(ts_backfill({field}, {backfill_window}), 126), market)",
+      "expression": "group_rank(ts_rank({field_preprocessed}, 126), market)",
       "priority": 997,
       "family": "group_ts_rank",
       "layer": "group",
@@ -43,7 +43,7 @@
     },
     {
       "name": "model16_group_zscore_sector_126",
-      "expression": "group_rank(ts_zscore(ts_backfill({field}, {backfill_window}), 126), sector)",
+      "expression": "group_rank(ts_zscore({field_preprocessed}, 126), sector)",
       "priority": 996,
       "family": "group_zscore",
       "layer": "group",
@@ -52,7 +52,7 @@
     },
     {
       "name": "model16_rank_decay_126",
-      "expression": "rank(ts_decay_linear(ts_backfill({field}, {backfill_window}), 126))",
+      "expression": "rank(ts_decay_linear({field_preprocessed}, 126))",
       "priority": 995,
       "family": "decay",
       "layer": "time_series",
@@ -61,7 +61,7 @@
     },
     {
       "name": "model16_rank_ir_126",
-      "expression": "rank(ts_mean(ts_backfill({field}, {backfill_window}), 126) / ts_std_dev(ts_backfill({field}, {backfill_window}), 126))",
+      "expression": "rank(ts_mean({field_preprocessed}, 126) / ts_std_dev({field_preprocessed}, 126))",
       "priority": 994,
       "family": "information_ratio",
       "layer": "time_series",
@@ -69,11 +69,20 @@
       "dataset_tags": ["model16", "fundamental_scores"]
     },
     {
-      "name": "model16_market_neutral_zscore_decay_63",
-      "expression": "ts_decay_linear(group_neutralize(ts_zscore(ts_backfill({field}, {backfill_window}), 63), market), 20)",
+      "name": "model16_bucket_cap_zscore_126",
+      "expression": "group_rank(ts_zscore({field_preprocessed}, 126), bucket(rank(cap), range='0.1, 1, 0.1'))",
       "priority": 993,
-      "family": "neutralize_decay",
-      "layer": "composite",
+      "family": "bucket_group_rank",
+      "layer": "group",
+      "stage": "group_second_order",
+      "dataset_tags": ["model16", "fundamental_scores"]
+    },
+    {
+      "name": "model16_bucket_liquidity_ts_rank_126",
+      "expression": "group_rank(ts_rank({field_preprocessed}, 126), bucket(rank(close * volume), range='0.1, 1, 0.1'))",
+      "priority": 992,
+      "family": "bucket_group_rank",
+      "layer": "group",
       "stage": "group_second_order",
       "dataset_tags": ["model16", "fundamental_scores"]
     }

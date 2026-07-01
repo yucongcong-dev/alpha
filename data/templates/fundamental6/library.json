@@ -4,30 +4,8 @@
   "_comment_tiers": "Tier1=vol-scaled-delta(+MARKET) > Tier2=三层嵌套(+MARKET) > Tier2.5=ts_corr自相关 > Tier3=delta(+22/66) > Tier4=group_delta(+MARKET) > Tier5=ts_rank(+22/66) > Tier6=ts_zscore(+22/66+MARKET) > Tier7=decay_linear(+22/66) > Tier8=mean_reversion(+22) > Tier9=mean_diff(+22_66) > Tier10=volatility+IR(+22) > Tier11=截面标准化 > Tier12=ts_mean(+22/66) > Tier13=sum+exotic > Tier14=argmax/min > Tier15=STRING/TEXT/BOOL",
   "_comment_community_refs": "xiegengcai/world-quant-brain(SuperAlpha工厂), phyphy-quant/WorldQuant-Genetic-Algorithm(4层嵌套), WorldQuant官方alpha-examples(基本面Sharpe2.03), CSDN量化Amy(Sharpe>2.5标准)",
   "_comment_v3_changelog": "新增ts_corr自相关Tier(5模板) + MARKET中性化变体(vol_scaled_delta/3layer/group_delta/ts_zscore) + 窗口22/66全覆盖 + INDUSTRY中性化变体",
-  "_comment_neutralization": "settings.yaml neutralization已切换至MARKET(官方Sharpe2.03方案), 模板库包含subindustry/market/industry三种中性化变体",
+  "_comment_neutralization": "模板库保留 subindustry / market / industry 变体；实际默认 neutralization 以 settings.yaml 和当前运行参数为准",
   "default": [
-    {
-      "_comment": "=== Tier 1 (200-196): vol-scaled delta — fundamental6 保留较稳的长窗版本, 去掉已验证偏弱的 5/20 短窗 ===",
-      "name": "vol_scaled_delta_20_60",
-      "expression": "group_rank(ts_delta(ts_backfill({field}, {backfill_window}), 20) / ts_std_dev(ts_backfill({field}, {backfill_window}), 60), subindustry)",
-      "priority": 999,
-      "family": "group_vol_scaled_delta",
-      "layer": "group"
-    },
-    {
-      "name": "vol_scaled_delta_20_60_MARKET",
-      "expression": "group_rank(ts_delta(ts_backfill({field}, {backfill_window}), 20) / ts_std_dev(ts_backfill({field}, {backfill_window}), 60), market)",
-      "priority": 997,
-      "family": "group_vol_scaled_delta",
-      "layer": "group"
-    },
-    {
-      "name": "vol_scaled_delta_20_60_INDUSTRY",
-      "expression": "group_rank(ts_delta(ts_backfill({field}, {backfill_window}), 20) / ts_std_dev(ts_backfill({field}, {backfill_window}), 60), industry)",
-      "priority": 996,
-      "family": "group_vol_scaled_delta",
-      "layer": "group"
-    },
     {
       "_comment": "=== Tier 2 (193-189): 三层嵌套 — 社区遗传算法验证, ts→group→decay 管线, fundamental官方示例Sharpe2.03 ===",
       "name": "3layer_zscore_sector_decay",
@@ -56,85 +34,6 @@
       "priority": 992,
       "family": "neutralize_decay",
       "layer": "composite"
-    },
-    {
-      "_comment": "=== Tier 3 (183-176): delta — fundamental6 保留更稳的中长窗版本, 去掉 5 日短窗 ===",
-      "name": "delta_22",
-      "expression": "rank(ts_delta({field}, 22))",
-      "priority": 985,
-      "family": "rank_delta",
-      "layer": "time_series"
-    },
-    {
-      "name": "delta_21",
-      "expression": "rank(ts_delta({field}, 21))",
-      "priority": 984,
-      "family": "rank_delta",
-      "layer": "time_series"
-    },
-    {
-      "name": "delta_20",
-      "expression": "rank(ts_delta({field}, 20))",
-      "priority": 983,
-      "family": "rank_delta",
-      "layer": "time_series"
-    },
-    {
-      "name": "delta_63",
-      "expression": "rank(ts_delta({field}, 63))",
-      "priority": 982,
-      "family": "rank_delta",
-      "layer": "time_series"
-    },
-    {
-      "name": "delta_66",
-      "expression": "rank(ts_delta({field}, 66))",
-      "priority": 981,
-      "family": "rank_delta",
-      "layer": "time_series"
-    },
-    {
-      "name": "delta_60",
-      "expression": "rank(ts_delta({field}, 60))",
-      "priority": 980,
-      "family": "rank_delta",
-      "layer": "time_series"
-    },
-    {
-      "_comment": "=== Tier 4 (174-170): group_delta — 分组中性化 delta, fundamental6 去掉 5 日短窗 ===",
-      "name": "group_delta_20",
-      "expression": "group_rank(ts_delta({field}, 20), subindustry)",
-      "priority": 976,
-      "family": "group_rank_delta",
-      "layer": "group"
-    },
-    {
-      "name": "group_delta_20_MARKET",
-      "expression": "group_rank(ts_delta({field}, 20), market)",
-      "priority": 975,
-      "family": "group_rank_delta",
-      "layer": "group"
-    },
-    {
-      "name": "group_delta_60",
-      "expression": "group_rank(ts_delta({field}, 60), subindustry)",
-      "priority": 974,
-      "family": "group_rank_delta",
-      "layer": "group"
-    },
-    {
-      "name": "group_delta_60_MARKET",
-      "expression": "group_rank(ts_delta({field}, 60), market)",
-      "priority": 973,
-      "family": "group_rank_delta",
-      "layer": "group"
-    },
-    {
-      "name": "group_delta_20_INDUSTRY",
-      "expression": "group_rank(ts_delta({field}, 20), industry)",
-      "priority": 972,
-      "family": "group_rank_delta",
-      "layer": "group"
     },
     {
       "_comment": "=== Tier 5 (167-156): ts_rank — 成熟因子, 新增22/66窗口 ===",
@@ -350,57 +249,6 @@
       "layer": "group"
     },
     {
-      "_comment": "=== Tier 8 (129-123): mean_reversion — 反转信号, 新增22窗口 ===",
-      "name": "mean_reversion_20",
-      "expression": "group_rank(-1 * ts_zscore({field}, 20), subindustry)",
-      "priority": 941,
-      "family": "group_zscore",
-      "layer": "group"
-    },
-    {
-      "name": "mean_reversion_22",
-      "expression": "group_rank(-1 * ts_zscore({field}, 22), subindustry)",
-      "priority": 940,
-      "family": "group_zscore",
-      "layer": "group"
-    },
-    {
-      "name": "mean_reversion_60",
-      "expression": "group_rank(-1 * ts_zscore({field}, 60), subindustry)",
-      "priority": 939,
-      "family": "group_zscore",
-      "layer": "group"
-    },
-    {
-      "name": "mean_reversion_63",
-      "expression": "group_rank(-1 * ts_zscore({field}, 63), subindustry)",
-      "priority": 938,
-      "family": "group_zscore",
-      "layer": "group"
-    },
-    {
-      "_comment": "=== Tier 9 (122-115): mean_diff — fundamental6 去掉已验证偏弱的 5/20 短窗价差 ===",
-      "name": "mean_diff_22_66",
-      "expression": "rank(ts_mean({field}, 22) - ts_mean({field}, 66))",
-      "priority": 936,
-      "family": "mean_spread",
-      "layer": "time_series"
-    },
-    {
-      "name": "mean_diff_20_60",
-      "expression": "rank(ts_mean({field}, 20) - ts_mean({field}, 60))",
-      "priority": 935,
-      "family": "mean_spread",
-      "layer": "time_series"
-    },
-    {
-      "name": "mean_diff_21_63",
-      "expression": "rank(ts_mean({field}, 21) - ts_mean({field}, 63))",
-      "priority": 934,
-      "family": "mean_spread",
-      "layer": "time_series"
-    },
-    {
       "_comment": "=== Tier 10 (113-102): 波动率 & 信息比率, 新增22/66窗口 ===",
       "name": "stddev_60",
       "expression": "rank(ts_std_dev({field}, 60))",
@@ -473,57 +321,7 @@
       "layer": "preprocess"
     },
     {
-      "_comment": "=== Tier 12 (91-80): ts_mean — 移动平均, 新增22/66窗口 ===",
-      "name": "ts_mean_20",
-      "expression": "rank(ts_mean({field}, 20))",
-      "priority": 923,
-      "family": "ts_mean",
-      "layer": "time_series"
-    },
-    {
-      "name": "ts_mean_22",
-      "expression": "rank(ts_mean({field}, 22))",
-      "priority": 922,
-      "family": "ts_mean",
-      "layer": "time_series"
-    },
-    {
-      "name": "ts_mean_63",
-      "expression": "rank(ts_mean({field}, 63))",
-      "priority": 921,
-      "family": "ts_mean",
-      "layer": "time_series"
-    },
-    {
-      "name": "ts_mean_60",
-      "expression": "rank(ts_mean({field}, 60))",
-      "priority": 920,
-      "family": "ts_mean",
-      "layer": "time_series"
-    },
-    {
-      "name": "ts_mean_66",
-      "expression": "rank(ts_mean({field}, 66))",
-      "priority": 919,
-      "family": "ts_mean",
-      "layer": "time_series"
-    },
-    {
-      "name": "ts_mean_252",
-      "expression": "rank(ts_mean({field}, 252))",
-      "priority": 918,
-      "family": "ts_mean",
-      "layer": "time_series"
-    },
-    {
-      "name": "ts_mean_120",
-      "expression": "rank(ts_mean({field}, 120))",
-      "priority": 917,
-      "family": "ts_mean",
-      "layer": "time_series"
-    },
-    {
-      "_comment": "=== Tier 13 (79-68): sum + 偏度/峰度 — 低频但独特信号 ===",
+      "_comment": "=== Tier 13 (79-68): sum + 偏度/峰度 — 保留少量低频独特信号 ===",
       "name": "sum_20",
       "expression": "rank(ts_sum({field}, 20))",
       "priority": 916,
@@ -827,90 +625,111 @@
     {
       "_comment": "fundamental6 高优先级长窗/近门槛模板，优先服务 cash_st、debt_lt、cogs、cashflow_op 等季度字段",
       "name": "account_neutralize_zscore_decay_63_industry",
-      "expression": "ts_decay_linear(group_neutralize(ts_zscore(ts_backfill({field}, 240), 63), industry), 20)",
+      "expression": "ts_decay_linear(group_neutralize(ts_zscore({field_preprocessed}, 63), industry), 20)",
       "priority": 214,
       "family": "neutralize_decay",
       "layer": "account"
     },
     {
       "name": "account_group_zscore_60_subindustry",
-      "expression": "group_rank(ts_zscore({field}, 60), subindustry)",
+      "expression": "group_rank(ts_zscore({field_preprocessed}, 60), subindustry)",
       "priority": 210,
       "family": "group_zscore",
       "layer": "account"
     },
     {
       "name": "account_ts_rank_60",
-      "expression": "rank(ts_rank({field}, 60))",
+      "expression": "rank(ts_rank({field_preprocessed}, 60))",
       "priority": 208,
       "family": "ts_rank",
       "layer": "account"
     },
     {
       "name": "account_group_backfill_504_subindustry",
-      "expression": "group_rank(ts_backfill({field}, {backfill_window}), subindustry)",
+      "expression": "group_rank({field_preprocessed}, subindustry)",
       "priority": 207,
       "family": "legacy_group_level",
       "layer": "account"
     },
     {
+      "name": "account_bucket_cap_zscore_63",
+      "expression": "group_rank(ts_zscore({field_preprocessed}, 63), bucket(rank(cap), range='0.1, 1, 0.1'))",
+      "priority": 206,
+      "family": "bucket_group_rank",
+      "layer": "account"
+    },
+    {
       "name": "account_backfill_zscore_decay_63_subindustry",
-      "expression": "group_rank(ts_decay_linear(ts_zscore(ts_backfill({field}, {backfill_window}), 63), 20), subindustry)",
+      "expression": "group_rank(ts_decay_linear(ts_zscore({field_preprocessed}, 63), 20), subindustry)",
       "priority": 205,
       "family": "group_zscore",
       "layer": "account"
     },
     {
+      "name": "account_bucket_liquidity_ts_rank_126",
+      "expression": "group_rank(ts_rank({field_preprocessed}, 126), bucket(rank(close * volume), range='0.1, 1, 0.1'))",
+      "priority": 205,
+      "family": "bucket_group_rank",
+      "layer": "account"
+    },
+    {
       "name": "account_group_ir_60_subindustry",
-      "expression": "group_rank(ts_mean({field}, 60) / ts_std_dev({field}, 60), subindustry)",
+      "expression": "group_rank(ts_mean({field_preprocessed}, 60) / ts_std_dev({field_preprocessed}, 60), subindustry)",
       "priority": 204,
       "family": "group_ratio_level",
       "layer": "account"
     },
     {
+      "name": "account_bucket_volatility_zscore_63",
+      "expression": "group_rank(ts_zscore({field_preprocessed}, 63), bucket(rank(ts_std_dev(returns, 20)), range='0.1, 1, 0.1'))",
+      "priority": 204,
+      "family": "bucket_group_rank",
+      "layer": "account"
+    },
+    {
       "name": "account_ts_rank_200",
-      "expression": "rank(ts_rank({field}, 200))",
+      "expression": "rank(ts_rank({field_preprocessed}, 200))",
       "priority": 204,
       "family": "ts_rank",
       "layer": "account"
     },
     {
       "name": "account_ir_60_decay_20",
-      "expression": "rank(ts_decay_linear(ts_mean({field}, 60) / ts_std_dev({field}, 60), 20))",
+      "expression": "rank(ts_decay_linear(ts_mean({field_preprocessed}, 60) / ts_std_dev({field_preprocessed}, 60), 20))",
       "priority": 203,
       "family": "decayed_ratio",
       "layer": "account"
     },
     {
       "name": "account_rank_zscore_240",
-      "expression": "rank(ts_zscore(ts_backfill({field}, 240), 240))",
+      "expression": "rank(ts_zscore({field_preprocessed}, 240))",
       "priority": 202,
       "family": "zscore_time",
       "layer": "account"
     },
     {
       "name": "account_rank_backfill_504",
-      "expression": "rank(ts_backfill({field}, {backfill_window}))",
+      "expression": "rank({field_preprocessed})",
       "priority": 200,
       "family": "legacy_level",
       "layer": "account"
     },
     {
       "name": "account_group_decay_63_subindustry",
-      "expression": "group_rank(ts_decay_linear(ts_backfill({field}, {backfill_window}), 63), subindustry)",
+      "expression": "group_rank(ts_decay_linear({field_preprocessed}, 63), subindustry)",
       "priority": 198,
       "family": "decay_level",
       "layer": "account"
     },
     {
       "name": "account_ir_60",
-      "expression": "rank(ts_mean({field}, 60) / ts_std_dev({field}, 60))",
+      "expression": "rank(ts_mean({field_preprocessed}, 60) / ts_std_dev({field_preprocessed}, 60))",
       "priority": 196,
       "family": "mean_ratio",
       "layer": "account"
     }
   ],
-  "_generated_from": "worldquant_template_library.json",
+  "_generated_from": "../base/library.json",
   "_dataset_id": "fundamental6",
   "_comment_dataset_template": "Auto-generated dataset-specific template library. Edit this file for dataset-level template tuning; base templates remain unchanged."
 }

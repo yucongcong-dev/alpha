@@ -172,12 +172,46 @@ def test_fundamental6_default_policy_is_loaded_from_settings_yaml() -> None:
     assert policy.event_max_templates_per_family == 1
     assert policy.event_allowed_template_stages == ("event_conditioned",)
     assert "event_trade_when" in policy.event_allowed_template_families
-    assert policy.matrix_field_transform.backfill_window == 504
+    assert policy.matrix_field_transform.backfill_window == 120
+    assert policy.matrix_field_transform.stages == (
+        FieldTransformStage(kind="backfill", window=120, std=None),
+        FieldTransformStage(kind="winsorize", window=0, std=4.0),
+    )
+    assert policy.vector_field_transform.backfill_window == 120
+    assert policy.vector_field_transform.stages == (
+        FieldTransformStage(kind="backfill", window=120, std=None),
+        FieldTransformStage(kind="winsorize", window=0, std=4.0),
+    )
     assert policy.template_prefix_penalties[("vec_avg_delta_", "vec_avg_rank_delta_", "vec_avg_vol_scaled_delta_")] == -820
     assert policy.feedback_loop_policy.resimulate.preferred_template_stages == (
         "group_second_order",
         "event_conditioned",
     )
+
+
+def test_model16_policy_uses_long_backfill_with_winsorize() -> None:
+    policy = get_dataset_expression_policy("model16")
+
+    assert policy.matrix_field_transform.backfill_window == 252
+    assert policy.matrix_field_transform.stages == (
+        FieldTransformStage(kind="backfill", window=252, std=None),
+        FieldTransformStage(kind="winsorize", window=0, std=4.0),
+    )
+    assert "model16_bucket_cap_zscore_126" in policy.protected_templates
+    assert "model16_bucket_liquidity_ts_rank_126" in policy.protected_templates
+
+
+def test_model51_policy_uses_risk_metric_winsorize_and_bucket_templates() -> None:
+    policy = get_dataset_expression_policy("model51")
+
+    assert policy.matrix_field_transform.backfill_window == 504
+    assert policy.matrix_field_transform.stages == (
+        FieldTransformStage(kind="backfill", window=504, std=None),
+        FieldTransformStage(kind="winsorize", window=0, std=4.0),
+    )
+    assert "model51_market_zscore_decay_126" in policy.protected_templates
+    assert "model51_bucket_cap_zscore_126" in policy.protected_templates
+    assert "model51_bucket_volatility_rank_126" in policy.protected_templates
 
 
 def test_get_yaml_config_reloads_when_file_changes(tmp_path) -> None:

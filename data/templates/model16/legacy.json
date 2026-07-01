@@ -4,6 +4,15 @@
   "_dataset_id": "model16",
   "default": [
     {
+      "name": "model16_market_neutral_zscore_decay_63",
+      "expression": "ts_decay_linear(group_neutralize(ts_zscore(ts_backfill({field}, {backfill_window}), 63), market), 20)",
+      "priority": 993,
+      "family": "neutralize_decay",
+      "layer": "composite",
+      "stage": "group_second_order",
+      "dataset_tags": ["model16", "fundamental_scores", "legacy"]
+    },
+    {
       "name": "model16_group_zscore_subindustry_63",
       "expression": "group_rank(ts_zscore(ts_backfill({field}, {backfill_window}), 63), subindustry)",
       "priority": 992,

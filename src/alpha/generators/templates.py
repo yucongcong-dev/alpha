@@ -2,7 +2,7 @@
 模板库管理模块
 
 本模块负责从 JSON 配置文件加载 Alpha 表达式模板库。
-模板数据已外部化为 JSON 文件（data/worldquant_template_library.json），
+模板数据已外部化为 JSON 文件（data/templates/base/library.json），
 方便修改和扩展而无需修改 Python 代码。
 
 模块内容：
@@ -35,12 +35,28 @@ _OPTIONAL_TEMPLATE_METADATA_KEYS = (
 )
 """允许透传到运行时的模板元数据键。"""
 
-# 内置默认模板库 JSON 文件的路径回退
+# 内置默认模板库 JSON 文件路径
 _BUILTIN_TEMPLATE_LIBRARY_FILE = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))),
+    "data",
+    "templates",
+    "base",
+    "library.json",
+)
+_LEGACY_BUILTIN_TEMPLATE_LIBRARY_FILE = os.path.join(
     os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))),
     "data",
     "worldquant_template_library.json",
 )
+
+
+def _resolve_builtin_template_library_file() -> str:
+    """优先返回新的基础模板路径，必要时兼容旧路径。"""
+    if os.path.exists(_BUILTIN_TEMPLATE_LIBRARY_FILE):
+        return _BUILTIN_TEMPLATE_LIBRARY_FILE
+    if os.path.exists(_LEGACY_BUILTIN_TEMPLATE_LIBRARY_FILE):
+        return _LEGACY_BUILTIN_TEMPLATE_LIBRARY_FILE
+    return _BUILTIN_TEMPLATE_LIBRARY_FILE
 
 
 def _infer_template_stage(item: dict[str, object]) -> str:
@@ -70,9 +86,17 @@ def _default_priority_for_index(index: int) -> int:
 def _is_builtin_template_path(path: str) -> bool:
     """判断路径是否指向受版本管理的基础模板库。"""
     try:
-        return Path(path).resolve() == Path(_BUILTIN_TEMPLATE_LIBRARY_FILE).resolve()
+        resolved = Path(path).resolve()
+        return resolved in {
+            Path(_BUILTIN_TEMPLATE_LIBRARY_FILE).resolve(),
+            Path(_LEGACY_BUILTIN_TEMPLATE_LIBRARY_FILE).resolve(),
+        }
     except OSError:
-        return os.path.abspath(path) == os.path.abspath(_BUILTIN_TEMPLATE_LIBRARY_FILE)
+        normalized = os.path.abspath(path)
+        return normalized in {
+            os.path.abspath(_BUILTIN_TEMPLATE_LIBRARY_FILE),
+            os.path.abspath(_LEGACY_BUILTIN_TEMPLATE_LIBRARY_FILE),
+        }
 
 
 def _add_missing_template_priorities(payload: dict[str, object]) -> bool:
@@ -103,7 +127,7 @@ def ensure_dataset_template_library(path: str, dataset_id: str) -> str:
     """
     确保 dataset 专属模板库文件存在，不存在时从基础模板库生成。
 
-    基础模板库固定为 data/worldquant_template_library.json；专属模板库默认
+    基础模板库固定为 data/templates/base/library.json；专属模板库默认
     由 CLI 路径规范化为 data/templates/{dataset_id}/library.json。
     如果专属文件已存在，保持原文件不覆盖，避免丢失人工优化。
 
@@ -114,7 +138,7 @@ def ensure_dataset_template_library(path: str, dataset_id: str) -> str:
     Returns:
         str: 最终可加载的模板库路径。path 为空时返回基础模板库路径。
     """
-    target_path = path or _BUILTIN_TEMPLATE_LIBRARY_FILE
+    target_path = path or _resolve_builtin_template_library_file()
     if os.path.exists(target_path):
         if _is_builtin_template_path(target_path):
             return target_path
@@ -130,7 +154,7 @@ def ensure_dataset_template_library(path: str, dataset_id: str) -> str:
             raise BrainAPIError(f"读取模板库文件失败 {target_path}: {exc}") from exc
         return target_path
 
-    base_path = _BUILTIN_TEMPLATE_LIBRARY_FILE
+    base_path = _resolve_builtin_template_library_file()
     if not os.path.exists(base_path):
         raise BrainAPIError(f"基础模板库文件不存在，无法生成专属模板库: {base_path}")
 
@@ -195,7 +219,7 @@ def load_template_library(path: str) -> TemplateLibrary:
 
     Args:
         path (str): 模板库 JSON 文件的路径。如果为空字符串或文件不存在，
-            将回退到内置默认模板库 data/worldquant_template_library.json。
+            将回退到内置默认模板库 data/templates/base/library.json。
 
     Returns:
         TemplateLibrary: 加载并校验后的模板库字典。
@@ -240,7 +264,11 @@ def load_template_library(path: str) -> TemplateLibrary:
     """
     # 回退：路径为空时使用内置基础模板库；指定路径不存在时由调用方先生成。
     if not path:
-        path = _BUILTIN_TEMPLATE_LIBRARY_FILE
+        path = _resolve_builtin_template_library_file()
+    elif not os.path.exists(path) and os.path.abspath(path) == os.path.abspath(
+        _LEGACY_BUILTIN_TEMPLATE_LIBRARY_FILE
+    ):
+        path = _resolve_builtin_template_library_file()
 
     try:
         with open(path, encoding="utf-8") as handle:

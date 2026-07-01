@@ -360,10 +360,6 @@
       "expression": "ts_decay_linear(group_neutralize(ts_zscore(vec_avg({field}), 63), market), 20)"
     },
     {
-      "name": "vec_avg_delta_5",
-      "expression": "rank(ts_delta(vec_avg({field}), 5))"
-    },
-    {
       "name": "vec_avg_delta_22",
       "expression": "rank(ts_delta(vec_avg({field}), 22))"
     },
@@ -378,10 +374,6 @@
     {
       "name": "vec_avg_delta_66",
       "expression": "rank(ts_delta(vec_avg({field}), 66))"
-    },
-    {
-      "name": "vec_avg_rank_delta_5",
-      "expression": "rank(ts_delta(rank(vec_avg({field})), 5))"
     },
     {
       "name": "vec_avg_ts_rank_63",
@@ -420,36 +412,8 @@
       "expression": "rank(ts_backfill(vec_avg({field}), {backfill_window}))"
     },
     {
-      "name": "vec_avg_rank",
-      "expression": "rank(vec_avg({field}))"
-    },
-    {
-      "name": "vec_avg_ts_mean_20",
-      "expression": "rank(ts_mean(vec_avg({field}), 20))"
-    },
-    {
-      "name": "vec_avg_ts_mean_22",
-      "expression": "rank(ts_mean(vec_avg({field}), 22))"
-    },
-    {
-      "name": "vec_avg_ts_mean_63",
-      "expression": "rank(ts_mean(vec_avg({field}), 63))"
-    },
-    {
-      "name": "vec_avg_ts_mean_60",
-      "expression": "rank(ts_mean(vec_avg({field}), 60))"
-    },
-    {
-      "name": "vec_avg_ts_mean_66",
-      "expression": "rank(ts_mean(vec_avg({field}), 66))"
-    },
-    {
       "name": "vec_avg_scale",
       "expression": "rank(scale(vec_avg({field})))"
-    },
-    {
-      "name": "vec_avg_ts_mean_252",
-      "expression": "rank(ts_mean(vec_avg({field}), 252))"
     }
   ],
   "GROUP": [
