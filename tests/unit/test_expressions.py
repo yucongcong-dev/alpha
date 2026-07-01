@@ -246,3 +246,4 @@ def test_build_expression_candidates_narrows_event_field_template_pool() -> None
     assert "vec_avg_ts_mean_63" not in names
     assert "vec_avg_zscore" not in names
     assert families <= {"ts_rank", "zscore_time", "decay_level", "event_trade_when"}
+    assert all("vec_avg(vec_avg(" not in item.expression for item in candidates)

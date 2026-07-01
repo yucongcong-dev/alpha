@@ -464,6 +464,18 @@ def test_fundamental6_template_library_removes_known_weak_short_window_templates
         "vec_avg_delta_22",
         "vec_avg_delta_66",
         "vec_avg_rank_delta_5",
+        "mean_diff_5_20",
+        "vec_avg_ts_corr_self_60",
+        "vec_avg_zscore",
+        "vec_avg_backfill",
+        "vec_avg_rank",
+        "vec_avg_ts_mean_20",
+        "vec_avg_ts_mean_22",
+        "vec_avg_ts_mean_60",
+        "vec_avg_ts_mean_63",
+        "vec_avg_ts_mean_66",
+        "vec_avg_ts_mean_252",
+        "vec_avg_scale",
     }
 
     assert names.isdisjoint(removed)

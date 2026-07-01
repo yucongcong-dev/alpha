@@ -415,14 +415,7 @@
       "layer": "group"
     },
     {
-      "_comment": "=== Tier 9 (122-114): mean_diff — 动量交叉/价差 ===",
-      "name": "mean_diff_5_20",
-      "expression": "rank(ts_mean({field}, 5) - ts_mean({field}, 20))",
-      "priority": 937,
-      "family": "mean_spread",
-      "layer": "time_series"
-    },
-    {
+      "_comment": "=== Tier 9 (122-115): mean_diff — fundamental6 去掉已验证偏弱的 5/20 短窗价差 ===",
       "name": "mean_diff_22_66",
       "expression": "rank(ts_mean({field}, 22) - ts_mean({field}, 66))",
       "priority": 936,
@@ -612,189 +605,91 @@
   ],
   "VECTOR": [
     {
-      "_comment": "=== VECTOR: vec_avg 聚合, fundamental6 去掉已验证偏弱的短窗 delta / vol-scaled-delta 结构，保留较稳的 rank/zscore/decay ===",
-      "name": "vec_avg_ts_corr_self_60",
-      "expression": "group_rank(ts_corr(vec_avg({field}), ts_delta(vec_avg({field}), 5), 60), subindustry)",
-      "priority": 999,
-      "family": "ts_corr_self",
-      "layer": "vector"
-    },
-    {
-      "name": "vec_avg_3layer_zs_sector_decay",
-      "expression": "ts_decay_linear(group_neutralize(ts_zscore(vec_avg({field}), 63), industry), 20)",
-      "priority": 998,
-      "family": "neutralize_decay",
-      "layer": "vector"
-    },
-    {
-      "name": "vec_avg_3layer_zs_MARKET_decay",
-      "expression": "ts_decay_linear(group_neutralize(ts_zscore(vec_avg({field}), 63), market), 20)",
-      "priority": 997,
-      "family": "neutralize_decay",
-      "layer": "vector"
-    },
-    {
+      "_comment": "=== VECTOR: fundamental6 仅保留事件字段相对稳健的 rank / zscore / decay 结构 ===",
       "name": "vec_avg_ts_rank_63",
-      "expression": "rank(ts_rank(vec_avg({field}), 63))",
+      "expression": "rank(ts_rank({field_preprocessed}, 63))",
       "priority": 990,
       "family": "ts_rank",
       "layer": "vector"
     },
     {
       "name": "vec_avg_ts_rank_60",
-      "expression": "rank(ts_rank(vec_avg({field}), 60))",
+      "expression": "rank(ts_rank({field_preprocessed}, 60))",
       "priority": 989,
       "family": "ts_rank",
       "layer": "vector"
     },
     {
       "name": "vec_avg_ts_rank_22",
-      "expression": "rank(ts_rank(vec_avg({field}), 22))",
+      "expression": "rank(ts_rank({field_preprocessed}, 22))",
       "priority": 988,
       "family": "ts_rank",
       "layer": "vector"
     },
     {
       "name": "vec_avg_ts_rank_66",
-      "expression": "rank(ts_rank(vec_avg({field}), 66))",
+      "expression": "rank(ts_rank({field_preprocessed}, 66))",
       "priority": 987,
       "family": "ts_rank",
       "layer": "vector"
     },
     {
       "name": "vec_avg_ts_zscore_63",
-      "expression": "rank(ts_zscore(vec_avg({field}), 63))",
+      "expression": "rank(ts_zscore({field_preprocessed}, 63))",
       "priority": 986,
       "family": "zscore_time",
       "layer": "vector"
     },
     {
       "name": "vec_avg_ts_zscore_60",
-      "expression": "rank(ts_zscore(vec_avg({field}), 60))",
+      "expression": "rank(ts_zscore({field_preprocessed}, 60))",
       "priority": 985,
       "family": "zscore_time",
       "layer": "vector"
     },
     {
       "name": "vec_avg_ts_zscore_22",
-      "expression": "rank(ts_zscore(vec_avg({field}), 22))",
+      "expression": "rank(ts_zscore({field_preprocessed}, 22))",
       "priority": 984,
       "family": "zscore_time",
       "layer": "vector"
     },
     {
       "name": "vec_avg_ts_rank_252",
-      "expression": "rank(ts_rank(vec_avg({field}), 252))",
+      "expression": "rank(ts_rank({field_preprocessed}, 252))",
       "priority": 983,
       "family": "ts_rank",
       "layer": "vector"
     },
     {
       "name": "vec_avg_ts_zscore_66",
-      "expression": "rank(ts_zscore(vec_avg({field}), 66))",
+      "expression": "rank(ts_zscore({field_preprocessed}, 66))",
       "priority": 982,
       "family": "zscore_time",
       "layer": "vector"
     },
     {
-      "name": "vec_avg_zscore",
-      "expression": "rank(zscore(vec_avg({field})))",
-      "priority": 981,
-      "family": "legacy_level",
-      "layer": "vector"
-    },
-    {
       "name": "vec_avg_decay_20",
-      "expression": "rank(ts_decay_linear(ts_backfill(vec_avg({field}), {backfill_window}), 20))",
+      "expression": "rank(ts_decay_linear({field_preprocessed}, 20))",
       "priority": 980,
       "family": "decay_level",
       "layer": "vector"
     },
     {
       "name": "vec_avg_decay_10",
-      "expression": "rank(ts_decay_linear(ts_backfill(vec_avg({field}), {backfill_window}), 10))",
+      "expression": "rank(ts_decay_linear({field_preprocessed}, 10))",
       "priority": 979,
       "family": "decay_level",
-      "layer": "vector"
-    },
-    {
-      "name": "vec_avg_backfill",
-      "expression": "rank(ts_backfill(vec_avg({field}), {backfill_window}))",
-      "priority": 978,
-      "family": "legacy_level",
-      "layer": "vector"
-    },
-    {
-      "name": "vec_avg_rank",
-      "expression": "rank(vec_avg({field}))",
-      "priority": 977,
-      "family": "legacy_level",
-      "layer": "vector"
-    },
-    {
-      "name": "vec_avg_ts_mean_20",
-      "expression": "rank(ts_mean(vec_avg({field}), 20))",
-      "priority": 976,
-      "family": "ts_mean",
-      "layer": "vector"
-    },
-    {
-      "name": "vec_avg_ts_mean_22",
-      "expression": "rank(ts_mean(vec_avg({field}), 22))",
-      "priority": 975,
-      "family": "ts_mean",
-      "layer": "vector"
-    },
-    {
-      "name": "vec_avg_ts_mean_63",
-      "expression": "rank(ts_mean(vec_avg({field}), 63))",
-      "priority": 974,
-      "family": "ts_mean",
-      "layer": "vector"
-    },
-    {
-      "name": "vec_avg_ts_mean_60",
-      "expression": "rank(ts_mean(vec_avg({field}), 60))",
-      "priority": 973,
-      "family": "ts_mean",
-      "layer": "vector"
-    },
-    {
-      "name": "vec_avg_ts_mean_66",
-      "expression": "rank(ts_mean(vec_avg({field}), 66))",
-      "priority": 972,
-      "family": "ts_mean",
-      "layer": "vector"
-    },
-    {
-      "name": "vec_avg_scale",
-      "expression": "rank(scale(vec_avg({field})))",
-      "priority": 971,
-      "family": "legacy_level",
-      "layer": "vector"
-    },
-    {
-      "name": "vec_avg_ts_mean_252",
-      "expression": "rank(ts_mean(vec_avg({field}), 252))",
-      "priority": 970,
-      "family": "ts_mean",
       "layer": "vector"
     }
   ],
   "GROUP": [
     {
-      "_comment": "=== GROUP: 新增22/66窗口 ===",
+      "_comment": "=== GROUP: 新增22/66窗口, fundamental6 去掉明显偏弱的 vec_avg 自相关 / ts_mean / 原始排名结构 ===",
       "name": "vec_avg_3layer_zs_sector_decay",
       "expression": "ts_decay_linear(group_neutralize(ts_zscore(vec_avg({field}), 63), industry), 20)",
       "priority": 1000,
       "family": "neutralize_decay",
-      "layer": "group"
-    },
-    {
-      "name": "vec_avg_ts_corr_self_60",
-      "expression": "group_rank(ts_corr(vec_avg({field}), ts_delta(vec_avg({field}), 5), 60), subindustry)",
-      "priority": 999,
-      "family": "ts_corr_self",
       "layer": "group"
     },
     {
@@ -861,13 +756,6 @@
       "layer": "group"
     },
     {
-      "name": "vec_avg_mean_diff_5_20",
-      "expression": "rank(ts_mean(vec_avg({field}), 5) - ts_mean(vec_avg({field}), 20))",
-      "priority": 989,
-      "family": "mean_spread",
-      "layer": "group"
-    },
-    {
       "name": "vec_avg_mean_diff_22_66",
       "expression": "rank(ts_mean(vec_avg({field}), 22) - ts_mean(vec_avg({field}), 66))",
       "priority": 988,
@@ -879,51 +767,16 @@
       "expression": "rank(ts_mean(vec_avg({field}), 21) - ts_mean(vec_avg({field}), 63))",
       "priority": 987,
       "family": "mean_spread",
-      "layer": "group"
-    },
-    {
-      "name": "vec_avg_ts_mean_20",
-      "expression": "rank(ts_mean(vec_avg({field}), 20))",
-      "priority": 986,
-      "family": "ts_mean",
-      "layer": "group"
-    },
-    {
-      "name": "vec_avg_ts_mean_22",
-      "expression": "rank(ts_mean(vec_avg({field}), 22))",
-      "priority": 985,
-      "family": "ts_mean",
-      "layer": "group"
-    },
-    {
-      "name": "vec_avg_ts_mean_63",
-      "expression": "rank(ts_mean(vec_avg({field}), 63))",
-      "priority": 984,
-      "family": "ts_mean",
-      "layer": "group"
-    },
-    {
-      "name": "vec_avg_rank",
-      "expression": "rank(vec_avg({field}))",
-      "priority": 983,
-      "family": "legacy_level",
       "layer": "group"
     }
   ],
   "SET": [
     {
-      "_comment": "=== SET: 同 GROUP, 稍低优先级 ===",
+      "_comment": "=== SET: 同 GROUP, 稍低优先级；fundamental6 去掉明显偏弱的 vec_avg 自相关 / ts_mean / 原始排名结构 ===",
       "name": "vec_avg_3layer_zs_sector_decay",
       "expression": "ts_decay_linear(group_neutralize(ts_zscore(vec_avg({field}), 63), industry), 20)",
       "priority": 1000,
       "family": "neutralize_decay",
-      "layer": "set"
-    },
-    {
-      "name": "vec_avg_ts_corr_self_60",
-      "expression": "group_rank(ts_corr(vec_avg({field}), ts_delta(vec_avg({field}), 5), 60), subindustry)",
-      "priority": 999,
-      "family": "ts_corr_self",
       "layer": "set"
     },
     {
@@ -990,13 +843,6 @@
       "layer": "set"
     },
     {
-      "name": "vec_avg_mean_diff_5_20",
-      "expression": "rank(ts_mean(vec_avg({field}), 5) - ts_mean(vec_avg({field}), 20))",
-      "priority": 989,
-      "family": "mean_spread",
-      "layer": "set"
-    },
-    {
       "name": "vec_avg_mean_diff_22_66",
       "expression": "rank(ts_mean(vec_avg({field}), 22) - ts_mean(vec_avg({field}), 66))",
       "priority": 988,
@@ -1008,34 +854,6 @@
       "expression": "rank(ts_mean(vec_avg({field}), 21) - ts_mean(vec_avg({field}), 63))",
       "priority": 987,
       "family": "mean_spread",
-      "layer": "set"
-    },
-    {
-      "name": "vec_avg_ts_mean_20",
-      "expression": "rank(ts_mean(vec_avg({field}), 20))",
-      "priority": 986,
-      "family": "ts_mean",
-      "layer": "set"
-    },
-    {
-      "name": "vec_avg_ts_mean_22",
-      "expression": "rank(ts_mean(vec_avg({field}), 22))",
-      "priority": 985,
-      "family": "ts_mean",
-      "layer": "set"
-    },
-    {
-      "name": "vec_avg_ts_mean_63",
-      "expression": "rank(ts_mean(vec_avg({field}), 63))",
-      "priority": 984,
-      "family": "ts_mean",
-      "layer": "set"
-    },
-    {
-      "name": "vec_avg_rank",
-      "expression": "rank(vec_avg({field}))",
-      "priority": 983,
-      "family": "legacy_level",
       "layer": "set"
     }
   ],

@@ -285,20 +285,6 @@ expression_policies:
     account_template_boost: 820
     high_conviction_ratio_priority_boost: 780
     disabled_templates:
-      - "vol_scaled_delta_5_20"
-      - "vol_scaled_delta_5_20_MARKET"
-      - "vec_avg_vol_scaled_delta_20_60"
-      - "delta_5"
-      - "rank_delta_5"
-      - "group_delta_5"
-      - "group_delta_5_MARKET"
-      - "vec_avg_delta_5"
-      - "vec_avg_delta_20"
-      - "vec_avg_delta_21"
-      - "vec_avg_delta_22"
-      - "vec_avg_delta_66"
-      - "vec_avg_rank_delta_5"
-      - "mean_diff_5_20"
       - "iter_group_vol_scaled_delta_63_126"
       - "iter_group_vol_scaled_delta_63_126_bf180"
       - "iter_group_vol_scaled_delta_63_126_bf260"
@@ -557,10 +543,10 @@ expression_policies:
     blacklist_min_fields_for_nearpass: 4
     blacklist_protected_min_avg_sharpe: 0.70
     blacklist_protected_min_avg_fitness: 0.35
-    field_min_coverage: 0.10
-    field_min_date_coverage: 0.95
-    field_min_alpha_count: 25
-    field_min_user_count: 5
+    field_min_coverage: 0.20
+    field_min_date_coverage: 0.98
+    field_min_alpha_count: 40
+    field_min_user_count: 8
     field_coverage_weight: 0.35
     field_date_coverage_weight: 0.30
     field_alpha_validation_weight: 0.12

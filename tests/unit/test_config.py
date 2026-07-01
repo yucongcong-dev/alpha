@@ -150,17 +150,21 @@ def test_fundamental6_default_policy_is_loaded_from_settings_yaml() -> None:
 
     assert policy.partner_limit == 6
     assert "account_rank_backfill_504" in policy.protected_templates
-    assert "rank_delta_5" in policy.disabled_templates
-    assert "vec_avg_delta_22" in policy.disabled_templates
-    assert "vec_avg_vol_scaled_delta_20_60" in policy.disabled_templates
+    assert policy.disabled_templates == {
+        "iter_group_vol_scaled_delta_63_126",
+        "iter_group_vol_scaled_delta_63_126_bf180",
+        "iter_group_vol_scaled_delta_63_126_bf260",
+    }
     assert ("cashflow_op", "fnd6_mkvalt") in policy.high_conviction_ratio_pairs
     assert ("cashflow_op", "assets") in policy.high_conviction_ratio_pairs
     assert ("ebitda", "enterprise_value") in policy.high_conviction_ratio_pairs
     assert ("liabilities", "assets") in policy.high_conviction_ratio_pairs
     assert ("income", "assets") in policy.high_conviction_ratio_pairs
     assert ("sales", "assets") in policy.high_conviction_ratio_pairs
-    assert policy.field_min_coverage == 0.10
-    assert policy.field_min_alpha_count == 25
+    assert policy.field_min_coverage == 0.20
+    assert policy.field_min_date_coverage == 0.98
+    assert policy.field_min_alpha_count == 40
+    assert policy.field_min_user_count == 8
     assert policy.event_field_prefixes == ("fnd6_cptnewqeventv110_",)
     assert policy.event_field_min_coverage == 0.30
     assert policy.event_field_min_date_coverage == 0.99
