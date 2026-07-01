@@ -6,6 +6,7 @@ from argparse import Namespace
 import json
 from pathlib import Path
 
+from alpha.config import get_dataset_expression_policy
 from alpha.core.executor import build_pending_templates_for_field
 from alpha.core.scheduler import handle_completed_future
 from alpha.generators import templates as template_module
@@ -20,6 +21,7 @@ from alpha.models.base import (
     ExecutionState,
     FieldTestResult,
     FutureCompletionContext,
+    TemplateCandidate,
     TemplateBuildContext,
 )
 
@@ -436,6 +438,37 @@ def test_fundamental6_template_library_has_family_and_layer_metadata() -> None:
     assert missing == []
 
 
+def test_fundamental6_template_library_removes_known_weak_short_window_templates() -> None:
+    template_file = Path(__file__).resolve().parents[2] / "data" / "templates" / "fundamental6" / "library.json"
+    payload = json.loads(template_file.read_text(encoding="utf-8"))
+
+    names = {
+        item["name"]
+        for section, items in payload.items()
+        if isinstance(items, list)
+        for item in items
+        if isinstance(item, dict) and "name" in item
+    }
+
+    removed = {
+        "vol_scaled_delta_5_20",
+        "vol_scaled_delta_5_20_MARKET",
+        "delta_5",
+        "rank_delta_5",
+        "group_delta_5",
+        "group_delta_5_MARKET",
+        "vec_avg_vol_scaled_delta_20_60",
+        "vec_avg_delta_5",
+        "vec_avg_delta_20",
+        "vec_avg_delta_21",
+        "vec_avg_delta_22",
+        "vec_avg_delta_66",
+        "vec_avg_rank_delta_5",
+    }
+
+    assert names.isdisjoint(removed)
+
+
 def test_blacklist_prefers_name_and_stage_over_name_only(monkeypatch, tmp_path) -> None:
     data_dir = tmp_path / "data"
     data_dir.mkdir()
@@ -573,6 +606,68 @@ def test_resimulate_stage_prefers_refine_templates_over_broad_generation(monkeyp
     assert pending
     assert pending[0][0].startswith("refine_")
     assert all(template_name != "broad_template" for template_name, *_ in pending)
+
+
+def test_event_field_uses_narrower_template_budget(monkeypatch) -> None:
+    monkeypatch.setattr(
+        "alpha.core.executor.build_setting_variants",
+        lambda *args, **kwargs: [{"neutralization": "SUBINDUSTRY", "truncation": 0.08}],
+    )
+    monkeypatch.setattr(
+        "alpha.core.executor.build_expression_candidates",
+        lambda *args, **kwargs: [
+            TemplateCandidate(
+                "vec_avg_ts_rank_63",
+                "rank(ts_rank(vec_avg(x), 63))",
+                100,
+                {"family": "ts_rank", "stage": "first_order"},
+            ),
+            TemplateCandidate(
+                "vec_avg_ts_zscore_63",
+                "rank(ts_zscore(vec_avg(x), 63))",
+                99,
+                {"family": "zscore_time", "stage": "first_order"},
+            ),
+            TemplateCandidate(
+                "vec_avg_decay_20",
+                "rank(ts_decay_linear(vec_avg(x), 20))",
+                98,
+                {"family": "decay_level", "stage": "first_order"},
+            ),
+            TemplateCandidate(
+                "iter_reuse_best_trade_when_volume_expansion",
+                "trade_when(ts_mean(volume, 10) > ts_mean(volume, 60), rank(x), -1)",
+                97,
+                {"family": "event_trade_when", "stage": "event_conditioned"},
+            ),
+        ],
+    )
+    args = Namespace(
+        dataset_id="fundamental6",
+        template_disable_after=0,
+        disable_legacy_after=0,
+        max_templates_per_field=10,
+        max_templates_per_family=3,
+        legacy_similarity_penalty=0,
+    )
+    build_ctx = TemplateBuildContext(
+        args=args,
+        all_fields=[{"id": "fnd6_cptnewqeventv110_apq", "type": "VECTOR", "name": "fnd6_cptnewqeventv110_apq"}],
+        template_library={},
+        use_dataset_heuristics=False,
+        expression_policy=get_dataset_expression_policy("fundamental6"),
+    )
+
+    pending, _disabled, total = build_pending_templates_for_field(
+        build_ctx,
+        {"id": "fnd6_cptnewqeventv110_apq", "type": "VECTOR", "name": "fnd6_cptnewqeventv110_apq"},
+        template_stats={},
+        attempted_keys=set(),
+        prior_results=[],
+    )
+
+    assert total == 3
+    assert len(pending) == 3
 
 
 def test_blacklist_pattern_rules_support_exact_and_regex(monkeypatch, tmp_path) -> None:

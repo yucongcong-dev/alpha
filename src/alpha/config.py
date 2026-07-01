@@ -277,6 +277,16 @@ class DatasetExpressionPolicy:
     field_recency_weight: float = 0.0
     field_theme_bonus_weight: float = 0.0
     field_preferred_unexplored_bonus: float = 0.0
+    event_field_prefixes: tuple[str, ...] = ()
+    event_field_min_coverage: float = 0.0
+    event_field_min_date_coverage: float = 0.0
+    event_field_min_alpha_count: int = 0
+    event_field_min_user_count: int = 0
+    event_max_templates_per_field: int = 0
+    event_max_templates_per_family: int = 0
+    event_allowed_template_stages: tuple[str, ...] = ()
+    event_allowed_template_prefixes: tuple[str, ...] = ()
+    event_allowed_template_families: set[str] = field(default_factory=set)
     default_field_transform: FieldTransformSpec = field(default_factory=FieldTransformSpec)
     matrix_field_transform: FieldTransformSpec = field(default_factory=FieldTransformSpec)
     vector_field_transform: FieldTransformSpec = field(default_factory=FieldTransformSpec)
@@ -494,12 +504,16 @@ def _apply_yaml_expression_policy_overrides(
         "weak_mean_spread_fields",
         "broken_zscore_spread_fields",
         "weak_ratio_standalone_fields",
+        "event_allowed_template_families",
     }
     tuple_fields = {
         "blacklisted_template_name_substrings",
         "slow_template_prefixes",
         "concentrated_weak_prefixes",
         "low_sharpe_weak_ratio_prefixes",
+        "event_field_prefixes",
+        "event_allowed_template_stages",
+        "event_allowed_template_prefixes",
     }
     dict_tuple_fields = {"ratio_partner_candidates", "ratio_keywords"}
     dict_int_fields = {

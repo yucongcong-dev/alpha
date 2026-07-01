@@ -287,9 +287,17 @@ expression_policies:
     disabled_templates:
       - "vol_scaled_delta_5_20"
       - "vol_scaled_delta_5_20_MARKET"
+      - "vec_avg_vol_scaled_delta_20_60"
       - "delta_5"
+      - "rank_delta_5"
       - "group_delta_5"
       - "group_delta_5_MARKET"
+      - "vec_avg_delta_5"
+      - "vec_avg_delta_20"
+      - "vec_avg_delta_21"
+      - "vec_avg_delta_22"
+      - "vec_avg_delta_66"
+      - "vec_avg_rank_delta_5"
       - "mean_diff_5_20"
       - "iter_group_vol_scaled_delta_63_126"
       - "iter_group_vol_scaled_delta_63_126_bf180"
@@ -375,6 +383,8 @@ expression_policies:
     template_prefix_penalties:
       - prefixes: ["delta_", "group_delta_", "rank_delta_"]
         penalty: -760
+      - prefixes: ["vec_avg_delta_", "vec_avg_rank_delta_", "vec_avg_vol_scaled_delta_"]
+        penalty: -820
       - prefixes: ["mean_diff_", "vec_avg_mean_diff_"]
         penalty: -180
       - prefixes: ["stddev_"]
@@ -560,3 +570,28 @@ expression_policies:
     field_recency_weight: 0.05
     field_theme_bonus_weight: 0.02
     field_preferred_unexplored_bonus: 0.08
+    event_field_prefixes:
+      - "fnd6_cptnewqeventv110_"
+    event_field_min_coverage: 0.30
+    event_field_min_date_coverage: 0.99
+    event_field_min_alpha_count: 60
+    event_field_min_user_count: 10
+    event_max_templates_per_field: 3
+    event_max_templates_per_family: 1
+    event_allowed_template_stages:
+      - "event_conditioned"
+    event_allowed_template_prefixes:
+      - "vec_avg_ts_rank_"
+      - "vec_avg_ts_zscore_"
+      - "vec_avg_decay_"
+      - "refine_exact_"
+      - "refine_tsrank_"
+      - "refine_zscore_"
+      - "refine_trade_when_"
+      - "refine_decay_"
+      - "iter_reuse_best_trade_when_"
+    event_allowed_template_families:
+      - "ts_rank"
+      - "zscore_time"
+      - "decay_level"
+      - "event_trade_when"

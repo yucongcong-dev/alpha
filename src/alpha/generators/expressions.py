@@ -57,7 +57,7 @@ from ..config import (
 )
 from ..generators.field_transforms import build_field_view, build_ratio_expression
 from ..models.base import NearPassCandidate, TemplateCandidate, TemplateLibrary
-from ..utils.helpers import choose_field_name, choose_field_type
+from ..utils.helpers import choose_field_name, choose_field_type, is_event_field_name
 
 # 预编译正则表达式（性能优化）
 _TOKENIZE_REGEX: re.Pattern = re.compile(r"[^a-z0-9]+")
@@ -259,6 +259,36 @@ def _make_template_candidate(
         priority=priority,
         metadata=_enrich_candidate_metadata(name, expression, metadata),
     )
+
+
+def _is_event_field(field_name: str, policy: DatasetExpressionPolicy) -> bool:
+    """按策略前缀判断字段是否属于事件类字段。"""
+    return is_event_field_name(field_name, policy.event_field_prefixes)
+
+
+def _event_template_allowed(
+    candidate: TemplateCandidate,
+    policy: DatasetExpressionPolicy,
+) -> bool:
+    """事件字段只保留更窄的模板池，避免高噪音模板占预算。"""
+    if not (
+        policy.event_allowed_template_stages
+        or policy.event_allowed_template_prefixes
+        or policy.event_allowed_template_families
+    ):
+        return True
+    name = candidate.name
+    family = classify_expression_family(name, candidate.expression, candidate.metadata)
+    stage = classify_template_stage(name, candidate.expression, candidate.metadata)
+    if policy.event_allowed_template_stages and stage in policy.event_allowed_template_stages:
+        return True
+    if policy.event_allowed_template_families and family in policy.event_allowed_template_families:
+        return True
+    if policy.event_allowed_template_prefixes and any(
+        name.startswith(prefix) for prefix in policy.event_allowed_template_prefixes
+    ):
+        return True
+    return False
 
 
 def _coerce_template_candidate(
@@ -2462,6 +2492,7 @@ def build_expression_candidates(
     )
     feedback_stage = resolve_feedback_stage(field_feedback, policy.feedback_loop_policy)
     field_view = build_field_view(field, policy)
+    is_event_field = _is_event_field(field_name, policy)
 
     # Template selection is now driven by an externalizable library so we can
     # expand or shrink search coverage between runs without changing code.
@@ -2509,6 +2540,9 @@ def build_expression_candidates(
         )
         templates.extend(diversified)
         templates.extend(legacy)
+
+    if is_event_field:
+        templates = [item for item in templates if _event_template_allowed(item, policy)]
 
     templates = apply_similarity_penalty(
         templates,

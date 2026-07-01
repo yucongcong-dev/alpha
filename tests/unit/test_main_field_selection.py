@@ -93,6 +93,43 @@ def test_prepare_fields_for_execution_applies_metadata_filters() -> None:
     assert stats["filtered_field_count"] == 1
 
 
+def test_prepare_fields_for_execution_applies_stricter_event_field_filters() -> None:
+    fields = [
+        {
+            "id": "cash_st",
+            "coverage": 0.21,
+            "dateCoverage": 0.98,
+            "alphaCount": 45,
+            "userCount": 8,
+            "themes": [],
+            "dateCreated": "2022-05-01",
+        },
+        {
+            "id": "fnd6_cptnewqeventv110_apq",
+            "coverage": 0.21,
+            "dateCoverage": 0.98,
+            "alphaCount": 45,
+            "userCount": 8,
+            "themes": [],
+            "dateCreated": "2022-05-01",
+        },
+    ]
+    args = Namespace(limit=0, offset=0, top_fields_by_feedback=0)
+    filters = RunFilters()
+    historical_state = HistoricalRunState(field_feedback={})
+
+    selected, stats = prepare_fields_for_execution(
+        fields,
+        filters_dict=filters,
+        expression_policy=get_dataset_expression_policy("fundamental6"),
+        historical_state=historical_state,
+        args=args,
+    )
+
+    assert [row["id"] for row in selected] == ["cash_st"]
+    assert stats["low_coverage_count"] == 1
+
+
 def test_refresh_runtime_feedback_rebuilds_feedback_from_current_results() -> None:
     """Same-process results should be converted into fresh field/global feedback."""
     build_ctx = TemplateBuildContext()

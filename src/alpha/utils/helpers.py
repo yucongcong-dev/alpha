@@ -8,6 +8,7 @@
     - first_non_empty(): 从多个候选值中返回第一个非空值
     - choose_field_name(): 从异构字段元数据中解析标准字段名
     - choose_field_type(): 将字段类型标准化为统一的大写标签
+    - is_event_field_name(): 判断字段名是否属于事件类字段
 """
 
 from __future__ import annotations
@@ -128,3 +129,11 @@ def choose_field_type(field: dict[str, Any]) -> str:
             SENTINEL_UNKNOWN,
         )
     ).upper()
+
+
+def is_event_field_name(field_name: str, prefixes: tuple[str, ...] = ()) -> bool:
+    """按配置前缀判断字段是否属于事件类字段。"""
+    normalized = str(field_name).strip().lower()
+    if not normalized:
+        return False
+    return any(normalized.startswith(str(prefix).strip().lower()) for prefix in prefixes if str(prefix).strip())

@@ -133,7 +133,7 @@ from .models.base import (
 )
 
 # 导入公共工具
-from .utils.helpers import choose_field_name, choose_field_type, first_non_empty
+from .utils.helpers import choose_field_name, choose_field_type, first_non_empty, is_event_field_name
 
 logger = logging.getLogger(__name__)
 
@@ -254,6 +254,27 @@ def prepare_fields_for_execution(
     for field in fields:
         field_id = str(first_non_empty(field.get("id"), SENTINEL_UNKNOWN))
         field_name = choose_field_name(field)
+        is_event_field = is_event_field_name(field_name, expression_policy.event_field_prefixes)
+        min_coverage = (
+            expression_policy.event_field_min_coverage
+            if is_event_field and expression_policy.event_field_min_coverage > 0
+            else expression_policy.field_min_coverage
+        )
+        min_date_coverage = (
+            expression_policy.event_field_min_date_coverage
+            if is_event_field and expression_policy.event_field_min_date_coverage > 0
+            else expression_policy.field_min_date_coverage
+        )
+        min_alpha_count = (
+            expression_policy.event_field_min_alpha_count
+            if is_event_field and expression_policy.event_field_min_alpha_count > 0
+            else expression_policy.field_min_alpha_count
+        )
+        min_user_count = (
+            expression_policy.event_field_min_user_count
+            if is_event_field and expression_policy.event_field_min_user_count > 0
+            else expression_policy.field_min_user_count
+        )
         if (
             filters_dict.include_fields
             and field_id not in filters_dict.include_fields
@@ -264,16 +285,16 @@ def prepare_fields_for_execution(
         if field_id in filters_dict.exclude_fields or field_name in filters_dict.exclude_fields:
             prefiltered_count += 1
             continue
-        if _safe_float(field.get("coverage")) < expression_policy.field_min_coverage:
+        if _safe_float(field.get("coverage")) < min_coverage:
             low_coverage_count += 1
             continue
-        if _safe_float(field.get("dateCoverage")) < expression_policy.field_min_date_coverage:
+        if _safe_float(field.get("dateCoverage")) < min_date_coverage:
             low_date_coverage_count += 1
             continue
-        if _safe_int(field.get("alphaCount")) < expression_policy.field_min_alpha_count:
+        if _safe_int(field.get("alphaCount")) < min_alpha_count:
             low_alpha_count += 1
             continue
-        if _safe_int(field.get("userCount")) < expression_policy.field_min_user_count:
+        if _safe_int(field.get("userCount")) < min_user_count:
             low_user_count += 1
             continue
         filtered_fields.append(field)

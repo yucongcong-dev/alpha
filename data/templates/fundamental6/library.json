@@ -7,24 +7,10 @@
   "_comment_neutralization": "settings.yaml neutralization已切换至MARKET(官方Sharpe2.03方案), 模板库包含subindustry/market/industry三种中性化变体",
   "default": [
     {
-      "_comment": "=== Tier 1 (200-194): vol-scaled delta — 波动率标准化动量, 101 Alpha 核心模式, 新增MARKET变体(官方Sharpe2.03方案) ===",
-      "name": "vol_scaled_delta_5_20",
-      "expression": "group_rank(ts_delta(ts_backfill({field}, {backfill_window}), 5) / ts_std_dev(ts_backfill({field}, {backfill_window}), 20), subindustry)",
-      "priority": 1000,
-      "family": "group_vol_scaled_delta",
-      "layer": "group"
-    },
-    {
+      "_comment": "=== Tier 1 (200-196): vol-scaled delta — fundamental6 保留较稳的长窗版本, 去掉已验证偏弱的 5/20 短窗 ===",
       "name": "vol_scaled_delta_20_60",
       "expression": "group_rank(ts_delta(ts_backfill({field}, {backfill_window}), 20) / ts_std_dev(ts_backfill({field}, {backfill_window}), 60), subindustry)",
       "priority": 999,
-      "family": "group_vol_scaled_delta",
-      "layer": "group"
-    },
-    {
-      "name": "vol_scaled_delta_5_20_MARKET",
-      "expression": "group_rank(ts_delta(ts_backfill({field}, {backfill_window}), 5) / ts_std_dev(ts_backfill({field}, {backfill_window}), 20), market)",
-      "priority": 998,
       "family": "group_vol_scaled_delta",
       "layer": "group"
     },
@@ -108,14 +94,7 @@
       "layer": "time_series"
     },
     {
-      "_comment": "=== Tier 3 (183-175): delta — 101 Alpha 中出现 35+ 次, 新增标准窗口22/66 ===",
-      "name": "delta_5",
-      "expression": "rank(ts_delta({field}, 5))",
-      "priority": 986,
-      "family": "rank_delta",
-      "layer": "time_series"
-    },
-    {
+      "_comment": "=== Tier 3 (183-176): delta — fundamental6 保留更稳的中长窗版本, 去掉 5 日短窗 ===",
       "name": "delta_22",
       "expression": "rank(ts_delta({field}, 22))",
       "priority": 985,
@@ -158,28 +137,7 @@
       "layer": "time_series"
     },
     {
-      "name": "rank_delta_5",
-      "expression": "rank(ts_delta(rank({field}), 5))",
-      "priority": 979,
-      "family": "rank_delta",
-      "layer": "time_series"
-    },
-    {
-      "_comment": "=== Tier 4 (174-168): group_delta — 分组中性化 delta, 新增MARKET/INDUSTRY变体 ===",
-      "name": "group_delta_5",
-      "expression": "group_rank(ts_delta({field}, 5), subindustry)",
-      "priority": 978,
-      "family": "group_rank_delta",
-      "layer": "group"
-    },
-    {
-      "name": "group_delta_5_MARKET",
-      "expression": "group_rank(ts_delta({field}, 5), market)",
-      "priority": 977,
-      "family": "group_rank_delta",
-      "layer": "group"
-    },
-    {
+      "_comment": "=== Tier 4 (174-170): group_delta — 分组中性化 delta, fundamental6 去掉 5 日短窗 ===",
       "name": "group_delta_20",
       "expression": "group_rank(ts_delta({field}, 20), subindustry)",
       "priority": 976,
@@ -654,14 +612,7 @@
   ],
   "VECTOR": [
     {
-      "_comment": "=== VECTOR: vec_avg 聚合, 新增 ts_corr + 22/66窗口 + MARKET变体 ===",
-      "name": "vec_avg_vol_scaled_delta_20_60",
-      "expression": "rank(ts_delta(vec_avg({field}), 20) / ts_std_dev(vec_avg({field}), 60))",
-      "priority": 1000,
-      "family": "vol_scaled_delta",
-      "layer": "vector"
-    },
-    {
+      "_comment": "=== VECTOR: vec_avg 聚合, fundamental6 去掉已验证偏弱的短窗 delta / vol-scaled-delta 结构，保留较稳的 rank/zscore/decay ===",
       "name": "vec_avg_ts_corr_self_60",
       "expression": "group_rank(ts_corr(vec_avg({field}), ts_delta(vec_avg({field}), 5), 60), subindustry)",
       "priority": 999,
@@ -680,48 +631,6 @@
       "expression": "ts_decay_linear(group_neutralize(ts_zscore(vec_avg({field}), 63), market), 20)",
       "priority": 997,
       "family": "neutralize_decay",
-      "layer": "vector"
-    },
-    {
-      "name": "vec_avg_delta_5",
-      "expression": "rank(ts_delta(vec_avg({field}), 5))",
-      "priority": 996,
-      "family": "rank_delta",
-      "layer": "vector"
-    },
-    {
-      "name": "vec_avg_delta_22",
-      "expression": "rank(ts_delta(vec_avg({field}), 22))",
-      "priority": 995,
-      "family": "rank_delta",
-      "layer": "vector"
-    },
-    {
-      "name": "vec_avg_delta_21",
-      "expression": "rank(ts_delta(vec_avg({field}), 21))",
-      "priority": 994,
-      "family": "rank_delta",
-      "layer": "vector"
-    },
-    {
-      "name": "vec_avg_delta_20",
-      "expression": "rank(ts_delta(vec_avg({field}), 20))",
-      "priority": 993,
-      "family": "rank_delta",
-      "layer": "vector"
-    },
-    {
-      "name": "vec_avg_delta_66",
-      "expression": "rank(ts_delta(vec_avg({field}), 66))",
-      "priority": 992,
-      "family": "rank_delta",
-      "layer": "vector"
-    },
-    {
-      "name": "vec_avg_rank_delta_5",
-      "expression": "rank(ts_delta(rank(vec_avg({field})), 5))",
-      "priority": 991,
-      "family": "rank_delta",
       "layer": "vector"
     },
     {

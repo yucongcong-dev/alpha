@@ -62,7 +62,7 @@ from ..models.base import (
     TemplateBuildContext,
     TemplateLibrary,
 )
-from ..utils.helpers import choose_field_name, first_non_empty
+from ..utils.helpers import choose_field_name, first_non_empty, is_event_field_name
 
 logger = logging.getLogger(__name__)
 
@@ -108,6 +108,17 @@ def build_pending_templates_for_field(
     field_name = choose_field_name(field)
     field_feedback = build_ctx.field_feedback.get(field_id)
     expression_policy = build_ctx.expression_policy or get_dataset_expression_policy(args.dataset_id)
+    is_event_field = is_event_field_name(field_name, expression_policy.event_field_prefixes)
+    max_templates_per_field = (
+        expression_policy.event_max_templates_per_field
+        if is_event_field and expression_policy.event_max_templates_per_field > 0
+        else args.max_templates_per_field
+    )
+    max_templates_per_family = (
+        expression_policy.event_max_templates_per_family
+        if is_event_field and expression_policy.event_max_templates_per_family > 0
+        else args.max_templates_per_family
+    )
     feedback_stage = resolve_feedback_stage(
         field_feedback,
         expression_policy.feedback_loop_policy,
@@ -130,16 +141,16 @@ def build_pending_templates_for_field(
         templates = limit_templates(
             cap_templates_per_family(
                 sort_templates_by_priority(templates),
-                args.max_templates_per_family,
+                max_templates_per_family,
             ),
-            args.max_templates_per_field,
+            max_templates_per_field,
         )
     else:
         templates = build_expression_candidates(
             field,
             build_ctx.template_library,
-            args.max_templates_per_field,
-            args.max_templates_per_family,
+            max_templates_per_field,
+            max_templates_per_family,
             args.legacy_similarity_penalty,
             all_fields=build_ctx.all_fields,
             field_feedback=field_feedback,
@@ -148,6 +159,13 @@ def build_pending_templates_for_field(
             dataset_id=args.dataset_id,
             expression_policy=expression_policy,
         )
+    templates = limit_templates(
+        cap_templates_per_family(
+            sort_templates_by_priority(templates),
+            max_templates_per_family,
+        ),
+        max_templates_per_field,
+    )
     pending_templates: list[tuple[str, str, str, str, int, SettingsVariant, str]] = []
     disabled_templates = 0
     max_setting_variants = choose_settings_variant_budget(

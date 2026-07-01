@@ -150,6 +150,9 @@ def test_fundamental6_default_policy_is_loaded_from_settings_yaml() -> None:
 
     assert policy.partner_limit == 6
     assert "account_rank_backfill_504" in policy.protected_templates
+    assert "rank_delta_5" in policy.disabled_templates
+    assert "vec_avg_delta_22" in policy.disabled_templates
+    assert "vec_avg_vol_scaled_delta_20_60" in policy.disabled_templates
     assert ("cashflow_op", "fnd6_mkvalt") in policy.high_conviction_ratio_pairs
     assert ("cashflow_op", "assets") in policy.high_conviction_ratio_pairs
     assert ("ebitda", "enterprise_value") in policy.high_conviction_ratio_pairs
@@ -158,7 +161,15 @@ def test_fundamental6_default_policy_is_loaded_from_settings_yaml() -> None:
     assert ("sales", "assets") in policy.high_conviction_ratio_pairs
     assert policy.field_min_coverage == 0.10
     assert policy.field_min_alpha_count == 25
+    assert policy.event_field_prefixes == ("fnd6_cptnewqeventv110_",)
+    assert policy.event_field_min_coverage == 0.30
+    assert policy.event_field_min_date_coverage == 0.99
+    assert policy.event_max_templates_per_field == 3
+    assert policy.event_max_templates_per_family == 1
+    assert policy.event_allowed_template_stages == ("event_conditioned",)
+    assert "event_trade_when" in policy.event_allowed_template_families
     assert policy.matrix_field_transform.backfill_window == 504
+    assert policy.template_prefix_penalties[("vec_avg_delta_", "vec_avg_rank_delta_", "vec_avg_vol_scaled_delta_")] == -820
     assert policy.feedback_loop_policy.resimulate.preferred_template_stages == (
         "group_second_order",
         "event_conditioned",

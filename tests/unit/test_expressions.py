@@ -22,6 +22,8 @@ from alpha.generators.expressions import (
     classify_expression_family,
     is_legacy_family,
 )
+from alpha.generators.templates import load_template_library
+from pathlib import Path
 
 
 class TestClassifyExpressionFamily:
@@ -219,3 +221,28 @@ def test_load_default_avoid_rules_ignores_invalid_json_shape(monkeypatch, tmp_pa
     monkeypatch.setattr("alpha.generators.expressions._DEFAULT_AVOID_RULES_CACHE", None)
 
     assert _load_default_avoid_rules() == []
+
+
+def test_build_expression_candidates_narrows_event_field_template_pool() -> None:
+    policy = get_dataset_expression_policy("fundamental6")
+    field = {"id": "fnd6_cptnewqeventv110_apq", "type": "VECTOR"}
+    template_file = Path(__file__).resolve().parents[2] / "data" / "templates" / "fundamental6" / "library.json"
+    template_library = load_template_library(str(template_file))
+
+    candidates = build_expression_candidates(
+        field,
+        template_library,
+        max_templates_per_field=0,
+        max_templates_per_family=0,
+        legacy_similarity_penalty=0,
+        all_fields=[field],
+        expression_policy=policy,
+    )
+
+    assert candidates
+    names = {item.name for item in candidates}
+    families = {item.metadata["family"] for item in candidates}
+
+    assert "vec_avg_ts_mean_63" not in names
+    assert "vec_avg_zscore" not in names
+    assert families <= {"ts_rank", "zscore_time", "decay_level", "event_trade_when"}
