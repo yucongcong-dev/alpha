@@ -1970,6 +1970,11 @@ def build_refine_templates(
         )
 
     for index, candidate in enumerate(nearpass_candidates, start=1):
+        lower_template_name = candidate.template_name.lower()
+        if lower_template_name.startswith("refine_"):
+            # Avoid re-wrapping refine candidates into refine_exact/refine_industry
+            # chains like refine_exact_1_refine_exact_1_* with identical expressions.
+            continue
         base_priority = 260 - (index - 1) * 12
         family = candidate.template_family
         stage = candidate.template_stage

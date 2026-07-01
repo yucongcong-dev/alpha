@@ -252,3 +252,27 @@ def test_build_refine_templates_generates_localized_mutations_from_nearpass_cand
     assert "refine_industry_1_account_group_zscore_60_subindustry" in names
     assert any("trade_when(" in expression for expression in expressions)
     assert any("ts_decay_linear(" in expression for expression in expressions)
+
+
+def test_build_refine_templates_skips_recursive_refine_candidates() -> None:
+    templates = build_refine_templates(
+        "cash_st",
+        [
+            NearPassCandidate(
+                field_id="cash_st",
+                field_name="cash_st",
+                template_name="refine_exact_1_account_group_zscore_60_subindustry",
+                expression="group_rank(ts_zscore(cash_st, 60), subindustry)",
+                template_family="group_zscore",
+                template_stage="group_second_order",
+                score=0.80,
+                failed_checks=[
+                    {"name": "LOW_SHARPE", "value": 1.21, "limit": 1.25},
+                    {"name": "LOW_FITNESS", "value": 0.64, "limit": 1.0},
+                ],
+            )
+        ],
+        expression_policy=get_dataset_expression_policy("fundamental6"),
+    )
+
+    assert templates == []
