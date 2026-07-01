@@ -48,20 +48,22 @@ Focused refine:
 - Use [focused_fields.txt](/Users/boyaa/Downloads/alpha/data/templates/model51/focused_fields.txt) to keep the run centered on the strongest local field family:
   - `unsystematic_risk_last_360_days`
   - `systematic_risk_last_360_days`
-  - `correlation_last_90_days_spy`
-  - `beta_last_90_days_spy`
 - Use [focused_templates.txt](/Users/boyaa/Downloads/alpha/data/templates/model51/focused_templates.txt) to keep the run centered on the strongest template family:
   - `model51_industry_zscore_decay_63`
   - `model51_market_zscore_decay_63`
   - `model51_group_zscore_market_126`
-  - `model51_group_zscore_market_63`
+
+Current local evidence behind this narrower focus:
+- `unsystematic_risk_last_360_days + model51_industry_zscore_decay_63` has already produced `submittable=true`.
+- `unsystematic_risk_last_60/90_days + model51_group_zscore_market_126` repeatedly landed near the platform threshold on fitness.
+- `beta_last_*_spy` and `correlation_last_*_spy` have been consistently weak in both broad and focused runs, so they are no longer part of the default refine whitelist.
 
 Suggested commands:
 ```bash
 python3 -m alpha --dataset-id model51 --dry-run-plan \
   --include-fields-file data/templates/model51/focused_fields.txt \
   --include-templates-file data/templates/model51/focused_templates.txt \
-  --limit 4 --max-templates-per-field 4 --max-templates-per-family 1 \
+  --limit 2 --max-templates-per-field 3 --max-templates-per-family 1 \
   --output results/model51/focused_validation.json \
   --feedback-output results/model51/focused_validation.json \
   --no-auto-update-blacklist
@@ -71,8 +73,8 @@ python3 -m alpha --dataset-id model51 --dry-run-plan \
 python3 -m alpha --dataset-id model51 \
   --include-fields-file data/templates/model51/focused_fields.txt \
   --include-templates-file data/templates/model51/focused_templates.txt \
-  --limit 4 --max-templates-per-field 4 --max-templates-per-family 1 \
-  --max-concurrent-simulations 2 --max-concurrent-creates 1 \
+  --limit 2 --max-templates-per-field 3 --max-templates-per-family 1 \
+  --max-concurrent-simulations 1 --max-concurrent-creates 1 \
   --output results/model51/focused_validation.json \
   --feedback-output results/model51/focused_validation.json \
   --no-auto-update-blacklist
@@ -80,7 +82,8 @@ python3 -m alpha --dataset-id model51 \
 
 Local evidence:
 - `unsystematic_risk_last_360_days + model51_industry_zscore_decay_63` has already produced a `submittable=true` result locally.
-- That makes `model51` a better candidate for continued refine than `fundamental6` under the current template framework.
+- `beta/correlation` families have shown clearly weaker quality than the risk families in repeated runs.
+- That makes `model51` a better candidate for continued refine than `fundamental6` under the current template framework, but specifically along the risk-field branch rather than the broader SPY beta/correlation branch.
 
 ## Things To Revisit Later
 - Add regime-aware variants only if later runs show that risk fields respond to separate high-vol / low-vol pathways.
