@@ -225,6 +225,24 @@ dataset_profiles:
     simulation_max_queue_seconds: 600
     queue_busy_cooldown_seconds: 60
     template_disable_after: 12
+  model16:
+    sleep_between_fields: 3.0
+    max_concurrent_simulations: 3
+    max_concurrent_creates: 1
+    max_templates_per_field: 4
+    simulation_max_wait_seconds: 900
+    simulation_max_queue_seconds: 600
+    queue_busy_cooldown_seconds: 60
+    template_disable_after: 10
+  model51:
+    sleep_between_fields: 3.0
+    max_concurrent_simulations: 3
+    max_concurrent_creates: 1
+    max_templates_per_field: 4
+    simulation_max_wait_seconds: 900
+    simulation_max_queue_seconds: 600
+    queue_busy_cooldown_seconds: 60
+    template_disable_after: 8
 
 # ============================================================================
 # Expression Policies — 数据集表达式策略覆盖
@@ -581,3 +599,159 @@ expression_policies:
       - "zscore_time"
       - "decay_level"
       - "event_trade_when"
+  model16:
+    default_field_transform:
+      stages:
+        - kind: "backfill"
+          window: 252
+      backfill_window: 252
+    matrix_field_transform:
+      stages:
+        - kind: "backfill"
+          window: 252
+      backfill_window: 252
+    vector_field_transform:
+      stages:
+        - kind: "backfill"
+          window: 252
+      backfill_window: 252
+    feedback_loop_policy:
+      generate:
+        min_attempted_templates: 0
+        min_best_score: -999.0
+        settings_variant_budget: 1
+      prune:
+        min_attempted_templates: 2
+        min_best_score: -999.0
+        settings_variant_budget: 2
+        enable_template_pruning: true
+      resimulate:
+        min_attempted_templates: 3
+        min_best_score: 0.20
+        settings_variant_budget: 3
+        enable_template_pruning: true
+        enable_resimulation_mutations: true
+        preferred_template_stages:
+          - "group_second_order"
+          - "first_order"
+    disabled_templates:
+      - "vol_scaled_delta_5_20"
+      - "vol_scaled_delta_20_60"
+      - "delta_5"
+      - "delta_20"
+      - "group_delta_5"
+      - "group_delta_20"
+      - "rank_delta_5"
+      - "rank_delta_20"
+      - "mean_reversion_5_20"
+      - "mean_diff_5_20"
+      - "ts_corr_self_60"
+    protected_templates:
+      - "model16_rank_zscore_decay_126"
+      - "model16_rank_ts_rank_126"
+      - "model16_market_neutral_zscore_decay_126"
+      - "model16_group_ts_rank_market_126"
+      - "model16_group_zscore_sector_126"
+    template_prefix_penalties:
+      - prefixes: ["delta_", "group_delta_", "rank_delta_", "vol_scaled_delta_"]
+        penalty: -820
+      - prefixes: ["mean_reversion_", "mean_diff_"]
+        penalty: -220
+      - prefixes: ["ts_corr_self_"]
+        penalty: -320
+    preferred_field_order:
+      value: 0
+      quality: 1
+      growth: 2
+      momentum: 3
+      sentiment: 4
+      profitability: 5
+      revision: 6
+      yield: 7
+    promising_field_min_priority: 0.55
+    field_priority_weights:
+      field_count_weight: 0.0
+      user_count_weight: 0.10
+      alpha_count_weight: 0.10
+      coverage_weight: 0.35
+      value_score_weight: 0.20
+      score_weight: 0.10
+      coverage_floor_bonus_weight: 0.05
+      priority_weight: 0.10
+      search_count_penalty_weight: 0.10
+      search_count_penalty_cap: 0.40
+  model51:
+    matrix_field_transform:
+      stages:
+        - kind: "backfill"
+          window: 504
+      backfill_window: 504
+    feedback_loop_policy:
+      generate:
+        min_attempted_templates: 0
+        min_best_score: -999.0
+        settings_variant_budget: 1
+      prune:
+        min_attempted_templates: 2
+        min_best_score: -999.0
+        settings_variant_budget: 1
+        enable_template_pruning: true
+      resimulate:
+        min_attempted_templates: 3
+        min_best_score: 0.15
+        settings_variant_budget: 2
+        enable_template_pruning: true
+        enable_resimulation_mutations: true
+        preferred_template_stages:
+          - "group_second_order"
+          - "first_order"
+    disabled_templates:
+      - "vol_scaled_delta_5_20"
+      - "vol_scaled_delta_20_60"
+      - "vol_scaled_delta_5_20_MARKET"
+      - "vol_scaled_delta_20_60_MARKET"
+      - "vol_scaled_delta_20_60_INDUSTRY"
+      - "delta_5"
+      - "delta_20"
+      - "delta_21"
+      - "delta_22"
+      - "delta_60"
+      - "delta_63"
+      - "delta_66"
+      - "rank_delta_5"
+      - "group_delta_5"
+      - "group_delta_5_MARKET"
+      - "group_delta_20"
+      - "group_delta_20_MARKET"
+      - "group_delta_20_INDUSTRY"
+      - "group_delta_60"
+      - "group_delta_60_MARKET"
+      - "mean_diff_5_20"
+      - "mean_diff_20_60"
+      - "mean_diff_21_63"
+      - "mean_diff_22_66"
+      - "mean_reversion_20"
+      - "mean_reversion_22"
+      - "mean_reversion_60"
+      - "mean_reversion_63"
+      - "ts_corr_self_rank_60"
+      - "ts_corr_self_60"
+      - "ts_corr_self_rank_252"
+      - "ts_corr_self_120"
+      - "ts_corr_self_252"
+    protected_templates:
+      - "model51_market_zscore_decay_63"
+      - "model51_industry_zscore_decay_63"
+      - "model51_group_zscore_market_63"
+      - "model51_group_zscore_market_126"
+      - "model51_ts_rank_126"
+      - "model51_ts_rank_252"
+      - "model51_ts_zscore_126"
+      - "model51_ts_zscore_252"
+      - "model51_decay_63"
+      - "model51_decay_126"
+      - "model51_decay_252"
+      - "model51_ir_63"
+      - "model51_ir_126"
+      - "model51_stddev_126"
+      - "model51_stddev_252"

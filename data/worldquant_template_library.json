@@ -4,20 +4,12 @@
   "_comment_tiers": "Tier1=vol-scaled-delta(+MARKET) > Tier2=三层嵌套(+MARKET) > Tier2.5=ts_corr自相关 > Tier3=delta(+22/66) > Tier4=group_delta(+MARKET) > Tier5=ts_rank(+22/66) > Tier6=ts_zscore(+22/66+MARKET) > Tier7=decay_linear(+22/66) > Tier8=mean_reversion(+22) > Tier9=mean_diff(+22_66) > Tier10=volatility+IR(+22) > Tier11=截面标准化 > Tier12=ts_mean(+22/66) > Tier13=sum+exotic > Tier14=argmax/min > Tier15=STRING/TEXT/BOOL",
   "_comment_community_refs": "xiegengcai/world-quant-brain(SuperAlpha工厂), phyphy-quant/WorldQuant-Genetic-Algorithm(4层嵌套), WorldQuant官方alpha-examples(基本面Sharpe2.03), CSDN量化Amy(Sharpe>2.5标准)",
   "_comment_v3_changelog": "新增ts_corr自相关Tier(5模板) + MARKET中性化变体(vol_scaled_delta/3layer/group_delta/ts_zscore) + 窗口22/66全覆盖 + INDUSTRY中性化变体",
-  "_comment_neutralization": "settings.yaml neutralization已切换至MARKET(官方Sharpe2.03方案), 模板库包含subindustry/market/industry三种中性化变体",
+  "_comment_neutralization": "模板库保留 subindustry / market / industry 变体；实际默认 neutralization 以 settings.yaml 为准",
   "default": [
     {
-      "_comment": "=== Tier 1 (200-194): vol-scaled delta — 波动率标准化动量, 101 Alpha 核心模式, 新增MARKET变体(官方Sharpe2.03方案) ===",
-      "name": "vol_scaled_delta_5_20",
-      "expression": "group_rank(ts_delta(ts_backfill({field}, {backfill_window}), 5) / ts_std_dev(ts_backfill({field}, {backfill_window}), 20), subindustry)"
-    },
-    {
+      "_comment": "=== Tier 1: 保留相对更稳的中窗 vol-scaled delta；移除已过时的 5/20 短窗默认模板 ===",
       "name": "vol_scaled_delta_20_60",
       "expression": "group_rank(ts_delta(ts_backfill({field}, {backfill_window}), 20) / ts_std_dev(ts_backfill({field}, {backfill_window}), 60), subindustry)"
-    },
-    {
-      "name": "vol_scaled_delta_5_20_MARKET",
-      "expression": "group_rank(ts_delta(ts_backfill({field}, {backfill_window}), 5) / ts_std_dev(ts_backfill({field}, {backfill_window}), 20), market)"
     },
     {
       "name": "vol_scaled_delta_20_60_MARKET",
@@ -45,32 +37,7 @@
       "expression": "ts_decay_linear(group_rank(ts_zscore(ts_backfill({field}, {backfill_window}), 63), subindustry), 20)"
     },
     {
-      "_comment": "=== Tier 2.5 (188-184): ts_corr — 自相关信号, 101 Alpha 核心算子, 探测时间序列可预测性 ===",
-      "name": "ts_corr_self_rank_60",
-      "expression": "group_rank(ts_corr(rank(ts_backfill({field}, {backfill_window})), ts_delta(rank(ts_backfill({field}, {backfill_window})), 5), 60), subindustry)"
-    },
-    {
-      "name": "ts_corr_self_60",
-      "expression": "group_rank(ts_corr(ts_backfill({field}, {backfill_window}), ts_delta(ts_backfill({field}, {backfill_window}), 5), 60), subindustry)"
-    },
-    {
-      "name": "ts_corr_self_rank_252",
-      "expression": "group_rank(ts_corr(rank(ts_backfill({field}, {backfill_window})), ts_delta(rank(ts_backfill({field}, {backfill_window})), 21), 252), subindustry)"
-    },
-    {
-      "name": "ts_corr_self_120",
-      "expression": "group_rank(ts_corr(ts_backfill({field}, {backfill_window}), ts_delta(ts_backfill({field}, {backfill_window}), 5), 120), subindustry)"
-    },
-    {
-      "name": "ts_corr_self_252",
-      "expression": "group_rank(ts_corr(ts_backfill({field}, {backfill_window}), ts_delta(ts_backfill({field}, {backfill_window}), 21), 252), subindustry)"
-    },
-    {
-      "_comment": "=== Tier 3 (183-175): delta — 101 Alpha 中出现 35+ 次, 新增标准窗口22/66 ===",
-      "name": "delta_5",
-      "expression": "rank(ts_delta({field}, 5))"
-    },
-    {
+      "_comment": "=== Tier 3: 保留中长窗 delta；移除 5 日短窗与 rank-delta-5 默认模板 ===",
       "name": "delta_22",
       "expression": "rank(ts_delta({field}, 22))"
     },
@@ -95,19 +62,7 @@
       "expression": "rank(ts_delta({field}, 60))"
     },
     {
-      "name": "rank_delta_5",
-      "expression": "rank(ts_delta(rank({field}), 5))"
-    },
-    {
-      "_comment": "=== Tier 4 (174-168): group_delta — 分组中性化 delta, 新增MARKET/INDUSTRY变体 ===",
-      "name": "group_delta_5",
-      "expression": "group_rank(ts_delta({field}, 5), subindustry)"
-    },
-    {
-      "name": "group_delta_5_MARKET",
-      "expression": "group_rank(ts_delta({field}, 5), market)"
-    },
-    {
+      "_comment": "=== Tier 4: group_delta 仅保留中长窗版本 ===",
       "name": "group_delta_20",
       "expression": "group_rank(ts_delta({field}, 20), subindustry)"
     },
@@ -155,6 +110,23 @@
     {
       "name": "group_ts_rank_60",
       "expression": "group_rank(ts_rank({field}, 60), subindustry)"
+    },
+    {
+      "_comment": "=== Tier 5.5: 更现代的 bucket/group 分桶模板，吸收旧回测脚本里的 cap/波动率/流动性分层思路 ===",
+      "name": "bucket_cap_group_ts_zscore_63",
+      "expression": "group_rank(ts_zscore(ts_backfill({field}, {backfill_window}), 63), bucket(rank(cap), range='0.1, 1, 0.1'))"
+    },
+    {
+      "name": "bucket_liquidity_group_ts_rank_126",
+      "expression": "group_rank(ts_rank(ts_backfill({field}, {backfill_window}), 126), bucket(rank(close * volume), range='0.1, 1, 0.1'))"
+    },
+    {
+      "name": "bucket_volatility_group_ts_zscore_63",
+      "expression": "group_rank(ts_zscore(ts_backfill({field}, {backfill_window}), 63), bucket(rank(ts_std_dev(returns, 20)), range='0.1, 1, 0.1'))"
+    },
+    {
+      "name": "bucket_sector_cap_group_ts_zscore_63",
+      "expression": "group_rank(ts_zscore(ts_backfill({field}, {backfill_window}), 63), bucket(group_rank(cap, sector), range='0.1, 1, 0.1'))"
     },
     {
       "name": "ts_rank_120",
@@ -371,26 +343,13 @@
     {
       "name": "skewness_252",
       "expression": "rank(ts_skewness({field}, 252))"
-    },
-    {
-      "_comment": "=== Tier 14 (67-60): arg_max/min — 仅实验保留 ===",
-      "name": "argmax_60",
-      "expression": "rank(ts_arg_max({field}, 60))"
-    },
-    {
-      "name": "argmin_60",
-      "expression": "rank(ts_arg_min({field}, 60))"
     }
   ],
   "VECTOR": [
     {
-      "_comment": "=== VECTOR: vec_avg 聚合, 新增 ts_corr + 22/66窗口 + MARKET变体 ===",
+      "_comment": "=== VECTOR: vec_avg 聚合，仅保留相对稳健的中长窗 rank / zscore / decay 结构 ===",
       "name": "vec_avg_vol_scaled_delta_20_60",
       "expression": "rank(ts_delta(vec_avg({field}), 20) / ts_std_dev(vec_avg({field}), 60))"
-    },
-    {
-      "name": "vec_avg_ts_corr_self_60",
-      "expression": "group_rank(ts_corr(vec_avg({field}), ts_delta(vec_avg({field}), 5), 60), subindustry)"
     },
     {
       "name": "vec_avg_3layer_zs_sector_decay",
@@ -433,10 +392,6 @@
       "expression": "rank(ts_rank(vec_avg({field}), 60))"
     },
     {
-      "name": "vec_avg_ts_rank_22",
-      "expression": "rank(ts_rank(vec_avg({field}), 22))"
-    },
-    {
       "name": "vec_avg_ts_rank_66",
       "expression": "rank(ts_rank(vec_avg({field}), 66))"
     },
@@ -449,10 +404,6 @@
       "expression": "rank(ts_zscore(vec_avg({field}), 60))"
     },
     {
-      "name": "vec_avg_ts_zscore_22",
-      "expression": "rank(ts_zscore(vec_avg({field}), 22))"
-    },
-    {
       "name": "vec_avg_ts_rank_252",
       "expression": "rank(ts_rank(vec_avg({field}), 252))"
     },
@@ -463,14 +414,6 @@
     {
       "name": "vec_avg_zscore",
       "expression": "rank(zscore(vec_avg({field})))"
-    },
-    {
-      "name": "vec_avg_decay_20",
-      "expression": "rank(ts_decay_linear(ts_backfill(vec_avg({field}), {backfill_window}), 20))"
-    },
-    {
-      "name": "vec_avg_decay_10",
-      "expression": "rank(ts_decay_linear(ts_backfill(vec_avg({field}), {backfill_window}), 10))"
     },
     {
       "name": "vec_avg_backfill",
@@ -511,13 +454,9 @@
   ],
   "GROUP": [
     {
-      "_comment": "=== GROUP: 新增22/66窗口 ===",
+      "_comment": "=== GROUP: vec_avg 仅保留中长窗 rank / zscore 和三层稳态结构 ===",
       "name": "vec_avg_3layer_zs_sector_decay",
       "expression": "ts_decay_linear(group_neutralize(ts_zscore(vec_avg({field}), 63), industry), 20)"
-    },
-    {
-      "name": "vec_avg_ts_corr_self_60",
-      "expression": "group_rank(ts_corr(vec_avg({field}), ts_delta(vec_avg({field}), 5), 60), subindustry)"
     },
     {
       "name": "vec_avg_ts_rank_63",
@@ -526,10 +465,6 @@
     {
       "name": "vec_avg_ts_rank_60",
       "expression": "rank(ts_rank(vec_avg({field}), 60))"
-    },
-    {
-      "name": "vec_avg_ts_rank_22",
-      "expression": "rank(ts_rank(vec_avg({field}), 22))"
     },
     {
       "name": "vec_avg_ts_rank_66",
@@ -550,49 +485,13 @@
     {
       "name": "vec_avg_ts_zscore_60",
       "expression": "rank(ts_zscore(vec_avg({field}), 60))"
-    },
-    {
-      "name": "vec_avg_ts_zscore_22",
-      "expression": "rank(ts_zscore(vec_avg({field}), 22))"
-    },
-    {
-      "name": "vec_avg_mean_diff_5_20",
-      "expression": "rank(ts_mean(vec_avg({field}), 5) - ts_mean(vec_avg({field}), 20))"
-    },
-    {
-      "name": "vec_avg_mean_diff_22_66",
-      "expression": "rank(ts_mean(vec_avg({field}), 22) - ts_mean(vec_avg({field}), 66))"
-    },
-    {
-      "name": "vec_avg_mean_diff_21_63",
-      "expression": "rank(ts_mean(vec_avg({field}), 21) - ts_mean(vec_avg({field}), 63))"
-    },
-    {
-      "name": "vec_avg_ts_mean_20",
-      "expression": "rank(ts_mean(vec_avg({field}), 20))"
-    },
-    {
-      "name": "vec_avg_ts_mean_22",
-      "expression": "rank(ts_mean(vec_avg({field}), 22))"
-    },
-    {
-      "name": "vec_avg_ts_mean_63",
-      "expression": "rank(ts_mean(vec_avg({field}), 63))"
-    },
-    {
-      "name": "vec_avg_rank",
-      "expression": "rank(vec_avg({field}))"
     }
   ],
   "SET": [
     {
-      "_comment": "=== SET: 同 GROUP, 稍低优先级 ===",
+      "_comment": "=== SET: 同 GROUP，仅保留中长窗 rank / zscore 和三层稳态结构 ===",
       "name": "vec_avg_3layer_zs_sector_decay",
       "expression": "ts_decay_linear(group_neutralize(ts_zscore(vec_avg({field}), 63), industry), 20)"
-    },
-    {
-      "name": "vec_avg_ts_corr_self_60",
-      "expression": "group_rank(ts_corr(vec_avg({field}), ts_delta(vec_avg({field}), 5), 60), subindustry)"
     },
     {
       "name": "vec_avg_ts_rank_63",
@@ -601,10 +500,6 @@
     {
       "name": "vec_avg_ts_rank_60",
       "expression": "rank(ts_rank(vec_avg({field}), 60))"
-    },
-    {
-      "name": "vec_avg_ts_rank_22",
-      "expression": "rank(ts_rank(vec_avg({field}), 22))"
     },
     {
       "name": "vec_avg_ts_rank_66",
@@ -625,38 +520,6 @@
     {
       "name": "vec_avg_ts_zscore_60",
       "expression": "rank(ts_zscore(vec_avg({field}), 60))"
-    },
-    {
-      "name": "vec_avg_ts_zscore_22",
-      "expression": "rank(ts_zscore(vec_avg({field}), 22))"
-    },
-    {
-      "name": "vec_avg_mean_diff_5_20",
-      "expression": "rank(ts_mean(vec_avg({field}), 5) - ts_mean(vec_avg({field}), 20))"
-    },
-    {
-      "name": "vec_avg_mean_diff_22_66",
-      "expression": "rank(ts_mean(vec_avg({field}), 22) - ts_mean(vec_avg({field}), 66))"
-    },
-    {
-      "name": "vec_avg_mean_diff_21_63",
-      "expression": "rank(ts_mean(vec_avg({field}), 21) - ts_mean(vec_avg({field}), 63))"
-    },
-    {
-      "name": "vec_avg_ts_mean_20",
-      "expression": "rank(ts_mean(vec_avg({field}), 20))"
-    },
-    {
-      "name": "vec_avg_ts_mean_22",
-      "expression": "rank(ts_mean(vec_avg({field}), 22))"
-    },
-    {
-      "name": "vec_avg_ts_mean_63",
-      "expression": "rank(ts_mean(vec_avg({field}), 63))"
-    },
-    {
-      "name": "vec_avg_rank",
-      "expression": "rank(vec_avg({field}))"
     }
   ],
   "STRING": [

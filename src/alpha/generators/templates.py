@@ -16,7 +16,7 @@ import logging
 import os
 from pathlib import Path
 
-from ..config import get_backfill_window
+from ..config import get_backfill_window, get_dataset_expression_policy
 from ..exceptions import BrainAPIError
 from ..io.output import atomic_write_json
 from ..models.base import TemplateLibrary
@@ -167,6 +167,24 @@ def _resolve_placeholders(expression: str, backfill_window: int) -> str:
     return expression.replace("{backfill_window}", str(backfill_window))
 
 
+def _resolve_template_backfill_window(payload: dict[str, object], field_type: str) -> int:
+    """按数据集策略和字段类型解析模板占位符 backfill_window。"""
+    dataset_id = str(payload.get("_dataset_id", "")).strip()
+    fallback = get_backfill_window()
+    if not dataset_id:
+        return fallback
+
+    policy = get_dataset_expression_policy(dataset_id)
+    normalized = field_type.strip().upper()
+    if normalized == "VECTOR":
+        configured = policy.vector_field_transform.backfill_window
+    elif normalized == "MATRIX":
+        configured = policy.matrix_field_transform.backfill_window
+    else:
+        configured = policy.default_field_transform.backfill_window
+    return configured or fallback
+
+
 def load_template_library(path: str) -> TemplateLibrary:
     """
     从 JSON 文件加载并校验模板库。
@@ -233,9 +251,6 @@ def load_template_library(path: str) -> TemplateLibrary:
     if not isinstance(payload, dict):
         raise BrainAPIError(f"模板库文件 {path} 必须包含一个 JSON 对象。")
 
-    # 获取 backfill_window 配置值，用于下文的占位符替换
-    backfill_window = get_backfill_window()
-
     validated: TemplateLibrary = {}
     for field_type, templates in payload.items():
         # 跳过元数据键（如 _comment / _dataset_id / _generated_from）
@@ -245,6 +260,7 @@ def load_template_library(path: str) -> TemplateLibrary:
             raise BrainAPIError("模板库的键必须是字符串。")
         if not isinstance(templates, list):
             raise BrainAPIError(f"模板库条目 '{field_type}' 必须是一个列表。")
+        backfill_window = _resolve_template_backfill_window(payload, field_type)
         validated[field_type] = []
         for index, item in enumerate(templates):
             if not isinstance(item, dict):
