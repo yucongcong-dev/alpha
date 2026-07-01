@@ -468,6 +468,10 @@ def load_credentials(args: argparse.Namespace) -> tuple[str | None, str | None]:
             payload = json.load(handle)
     except Exception as exc:
         raise BrainAPIError(f"Failed to read credentials file {creds_file}: {exc}") from exc
+    if not isinstance(payload, dict):
+        raise BrainAPIError(
+            f"Failed to read credentials file {creds_file}: expected a JSON object."
+        )
 
     if is_encrypted_credentials_payload(payload):
         file_email, file_password = decrypt_credentials_payload(payload, creds_key_file)

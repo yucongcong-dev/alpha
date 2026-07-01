@@ -121,7 +121,15 @@ def load_pipeline_state(
         logger.info("[checkpoint] state file version mismatch, starting fresh")
         return 0
 
-    completed_index = int(payload.get("completed_field_index", 0))
+    try:
+        completed_index = int(payload.get("completed_field_index", 0))
+        remaining = float(payload.get("remaining_cooldown_seconds", 0))
+        runtime_max_workers = int(payload.get("runtime_max_workers", runtime_state.max_workers))
+        last_submission = float(payload.get("last_submission_at", 0))
+    except (TypeError, ValueError) as exc:
+        logger.warning("[checkpoint] invalid state payload in %s: %s", state_file, exc)
+        return 0
+
     if completed_index <= 0:
         return 0
 
@@ -140,18 +148,14 @@ def load_pipeline_state(
         execution_state.template_stats = template_stats
 
     # 恢复冷却状态（用剩余秒数重建绝对单调钟）
-    remaining = float(payload.get("remaining_cooldown_seconds", 0))
     if remaining > 0:
         runtime_state.cooldown_until = time.monotonic() + remaining
-        runtime_state.runtime_max_workers = int(
-            payload.get("runtime_max_workers", runtime_state.max_workers)
-        )
+        runtime_state.runtime_max_workers = runtime_max_workers
     else:
         runtime_state.cooldown_until = 0.0
         runtime_state.runtime_max_workers = runtime_state.max_workers
 
     # 恢复上次提交时间（需注意单调钟在进程重启后不连续）
-    last_submission = float(payload.get("last_submission_at", 0))
     if last_submission > 0:
         # 保守估计：减去一个安全余量，避免立即节流
         execution_state.last_submission_at = max(0, time.monotonic() - 30.0)
