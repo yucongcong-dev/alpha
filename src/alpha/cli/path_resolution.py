@@ -75,6 +75,15 @@ def normalize_args_paths(args: argparse.Namespace) -> RunPaths:
 def apply_run_paths(args: argparse.Namespace, run_paths: RunPaths) -> None:
     """把归一化后的关键路径显式同步回 args，供旧调用链兼容使用。"""
     args.output = run_paths.output
+    args.log_file = run_paths.log_file
+    args.state_file = run_paths.state_file
+    args.checkpoint_file = run_paths.checkpoint_file
     args.fields_cache_file = run_paths.fields_cache_file
     args.template_library_file = run_paths.template_library_file
     args.feedback_output = run_paths.feedback_output
+    args.creds_file = run_paths.creds_file
+    args.creds_key_file = run_paths.creds_key_file
+    args.include_fields_file = run_paths.include_fields_file
+    args.exclude_fields_file = run_paths.exclude_fields_file
+    args.include_templates_file = run_paths.include_templates_file
+    args.exclude_templates_file = run_paths.exclude_templates_file

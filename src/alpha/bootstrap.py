@@ -125,6 +125,10 @@ def initialize_run_context(
     template_library_file = ensure_dataset_template_library(template_library_file, args.dataset_id)
     ensure_template_blacklist_file(args.dataset_id)
 
+    creds_file = getattr(run_paths, "creds_file", None) or args.creds_file
+    creds_key_file = getattr(run_paths, "creds_key_file", None) or args.creds_key_file
+    args.creds_file = creds_file
+    args.creds_key_file = creds_key_file
     email, password = load_credentials(args)
     if not email or not password:
         logger.error("[error] 缺少凭证，无法继续")
@@ -141,7 +145,7 @@ def initialize_run_context(
     feedback_output = getattr(run_paths, "feedback_output", None) or output_file
     historical_state = build_historical_run_state(output_file, feedback_output)
 
-    fields_cache_file = args.fields_cache_file
+    fields_cache_file = getattr(run_paths, "fields_cache_file", None) or args.fields_cache_file
     cached_fields = load_fields_cache(
         fields_cache_file,
         dataset_id=args.dataset_id,

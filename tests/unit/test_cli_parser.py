@@ -5,6 +5,7 @@ from __future__ import annotations
 import sys
 
 from alpha.cli.parser import normalize_args_paths, parse_args
+from alpha.cli.path_resolution import apply_run_paths
 from alpha.config import get_yaml_config
 
 
@@ -259,6 +260,59 @@ def test_normalize_args_paths_resolves_relative_files_from_cwd(monkeypatch, tmp_
     paths = normalize_args_paths(args)
 
     assert paths.include_fields_file == str((tmp_path / "tmp_priority_fields_round1.txt").resolve())
+
+
+def test_apply_run_paths_syncs_legacy_runtime_path_attrs(monkeypatch, tmp_path) -> None:
+    """Normalized CLI paths should be mirrored back to args for legacy call sites."""
+    clear_yaml_cache()
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "alpha",
+            "--output",
+            "results/custom.json",
+            "--feedback-output",
+            "results/feedback.json",
+            "--fields-cache-file",
+            "cache/fields.json",
+            "--template-library-file",
+            "data/templates/custom.json",
+            "--creds-file",
+            "~/.alpha/credentials.json",
+            "--creds-key-file",
+            "~/.alpha/credentials.key",
+            "--include-fields-file",
+            "filters/include_fields.txt",
+            "--exclude-fields-file",
+            "filters/exclude_fields.txt",
+            "--include-templates-file",
+            "filters/include_templates.txt",
+            "--exclude-templates-file",
+            "filters/exclude_templates.txt",
+            "--log-file",
+            "logs/runtime.log",
+        ],
+    )
+
+    args = parse_args()
+    paths = normalize_args_paths(args)
+    apply_run_paths(args, paths)
+
+    assert args.output == paths.output
+    assert args.feedback_output == paths.feedback_output
+    assert args.fields_cache_file == paths.fields_cache_file
+    assert args.template_library_file == paths.template_library_file
+    assert args.creds_file == paths.creds_file
+    assert args.creds_key_file == paths.creds_key_file
+    assert args.include_fields_file == paths.include_fields_file
+    assert args.exclude_fields_file == paths.exclude_fields_file
+    assert args.include_templates_file == paths.include_templates_file
+    assert args.exclude_templates_file == paths.exclude_templates_file
+    assert args.log_file == paths.log_file
+    assert args.state_file == paths.state_file
+    assert args.checkpoint_file == paths.checkpoint_file
 
 
 def test_default_profile_applies_when_dataset_profile_is_missing(monkeypatch, tmp_path) -> None:
