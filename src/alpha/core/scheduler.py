@@ -26,7 +26,7 @@ from ..analysis.stats import (
     result_identity,
     update_template_stats_with_result,
 )
-from ..api.client import wait_seconds
+from ..api.timing import wait_seconds
 from ..io.results_store import dump_results_incremental
 from ..models.runtime import (
     ExecutionState,
@@ -56,6 +56,68 @@ class DrainResult:
     template_stats: dict[str, dict[str, int]]
     congestion_detected: bool
     queue_busy_field_id: str | None
+
+
+# ============================================================================
+# 并发度、拥塞与节流兼容入口
+# ============================================================================
+
+
+def maybe_restore_runtime_concurrency(state: RuntimeConcurrencyState) -> None:
+    """在拥塞冷却结束后恢复正常并发度。"""
+    if (
+        state.cooldown_until
+        and time.monotonic() >= state.cooldown_until
+        and state.runtime_max_workers != state.max_workers
+    ):
+        state.runtime_max_workers = state.max_workers
+        state.cooldown_until = 0.0
+        logger.info(
+            "[cooldown] restored runtime concurrency to %d",
+            state.runtime_max_workers,
+        )
+
+
+def apply_congestion_cooldown(args: SchedulerRuntimeArgs, state: RuntimeConcurrencyState) -> None:
+    """检测到拥塞后，临时切换到单 worker 运行模式。"""
+    state.runtime_max_workers = 1
+    state.cooldown_until = time.monotonic() + max(args.queue_busy_cooldown_seconds, 0.0)
+    logger.info(
+        "[cooldown] detected queue congestion, runtime concurrency -> 1 for %.0fs",
+        args.queue_busy_cooldown_seconds,
+    )
+
+
+def register_queue_busy_field(
+    field_id: str | None,
+    args: SchedulerRuntimeArgs,
+    field_queue_busy_counts: dict[str, int],
+    skipped_fields_due_to_queue: set[str],
+) -> None:
+    """记录重复的排队拥塞字段，并在达到阈值后跳过该字段。"""
+    if not field_id or args.field_queue_busy_skip_after <= 0:
+        return
+    field_queue_busy_counts[field_id] = field_queue_busy_counts.get(field_id, 0) + 1
+    if field_queue_busy_counts[field_id] >= args.field_queue_busy_skip_after:
+        skipped_fields_due_to_queue.add(field_id)
+        logger.info(
+            "[skip] field=%s hit queue-busy limit %d/%d",
+            field_id,
+            field_queue_busy_counts[field_id],
+            args.field_queue_busy_skip_after,
+        )
+
+
+def throttle_before_submission(args: SchedulerRuntimeArgs, execution_state: ExecutionState) -> None:
+    """在提交新任务前控制节奏，避免阻塞已完成任务处理。"""
+    if args.sleep_between_fields <= 0:
+        return
+    if execution_state.last_submission_at <= 0:
+        return
+    elapsed = time.monotonic() - execution_state.last_submission_at
+    remaining = args.sleep_between_fields - elapsed
+    if remaining > 0:
+        wait_seconds(remaining, "before next template submission")
 
 
 # ============================================================================
@@ -125,162 +187,6 @@ def handle_completed_future(
         auto_update_blacklist_incremental_fn=auto_update_blacklist_incremental,
         dump_results_incremental_fn=dump_results_incremental,
     )
-
-
-# ============================================================================
-# 并发度动态调整函数
-# ============================================================================
-
-
-def maybe_restore_runtime_concurrency(state: RuntimeConcurrencyState) -> None:
-    """
-    在拥塞冷却结束后恢复正常并发度。
-
-    检查冷却时间是否已结束，如果结束则恢复正常的并发度设置。
-
-    Args:
-        state: RuntimeConcurrencyState 实例（会被修改）。
-
-    Example:
-        >>> state = RuntimeConcurrencyState(
-        ...     max_workers=5, runtime_max_workers=1, cooldown_until=100.0
-        ... )
-        >>> # 时间已超过冷却时间
-        >>> maybe_restore_runtime_concurrency(state)
-        >>> print(state.runtime_max_workers)
-        5
-
-    Note:
-        - 使用单调时钟判断冷却时间
-        - 恢复后会打印日志消息
-    """
-    if (
-        state.cooldown_until
-        and time.monotonic() >= state.cooldown_until
-        and state.runtime_max_workers != state.max_workers
-    ):
-        state.runtime_max_workers = state.max_workers
-        state.cooldown_until = 0.0
-        logger.info(
-            "[cooldown] restored runtime concurrency to %d",
-            state.runtime_max_workers,
-        )
-
-
-def apply_congestion_cooldown(args: SchedulerRuntimeArgs, state: RuntimeConcurrencyState) -> None:
-    """
-    检测到拥塞后，临时切换到单 worker 运行模式。
-
-    当检测到队列拥塞时，临时将并发度降低到 1，
-    并设置冷却时间。
-
-    Args:
-        args: 命令行参数，需要包含 queue_busy_cooldown_seconds。
-        state: RuntimeConcurrencyState 实例（会被修改）。
-
-    Example:
-        >>> args.queue_busy_cooldown_seconds = 180
-        >>> state = RuntimeConcurrencyState(max_workers=5, runtime_max_workers=5)
-        >>> apply_congestion_cooldown(args, state)
-        >>> print(state.runtime_max_workers)
-        1
-
-    Note:
-        - 将 runtime_max_workers 设置为 1
-        - 使用 queue_busy_cooldown_seconds 设置冷却时间
-        - 会打印日志消息
-    """
-    state.runtime_max_workers = 1
-    state.cooldown_until = time.monotonic() + max(args.queue_busy_cooldown_seconds, 0.0)
-    logger.info(
-        "[cooldown] detected queue congestion, runtime concurrency -> 1 for %.0fs",
-        args.queue_busy_cooldown_seconds,
-    )
-
-
-# ============================================================================
-# 队列拥塞跟踪函数
-# ============================================================================
-
-
-def register_queue_busy_field(
-    field_id: str | None,
-    args: SchedulerRuntimeArgs,
-    field_queue_busy_counts: dict[str, int],
-    skipped_fields_due_to_queue: set[str],
-) -> None:
-    """
-    记录重复的排队拥塞字段，并在达到阈值后跳过该字段。
-
-    跟踪字段的队列拥塞次数，当达到阈值时将字段加入跳过列表。
-
-    Args:
-        field_id: 字段 ID（可能为 None）。
-        args: 命令行参数，需要包含 field_queue_busy_skip_after。
-        field_queue_busy_counts: 字段拥塞计数字典（会被修改）。
-        skipped_fields_due_to_queue: 跳过字段集合（会被修改）。
-
-    Example:
-        >>> args.field_queue_busy_skip_after = 2
-        >>> field_queue_busy_counts = {}
-        >>> skipped_fields_due_to_queue = set()
-        >>> register_queue_busy_field(
-        ...     "field_1", args, field_queue_busy_counts, skipped_fields_due_to_queue
-        ... )
-        >>> print(field_queue_busy_counts)
-        {'field_1': 1}
-
-    Note:
-        - 如果 field_id 为 None 或阈值为 0，不执行任何操作
-        - 达到阈值后会打印日志消息
-    """
-    if not field_id or args.field_queue_busy_skip_after <= 0:
-        return
-    field_queue_busy_counts[field_id] = field_queue_busy_counts.get(field_id, 0) + 1
-    if field_queue_busy_counts[field_id] >= args.field_queue_busy_skip_after:
-        skipped_fields_due_to_queue.add(field_id)
-        logger.info(
-            "[skip] field=%s hit queue-busy limit %d/%d",
-            field_id,
-            field_queue_busy_counts[field_id],
-            args.field_queue_busy_skip_after,
-        )
-
-
-# ============================================================================
-# 任务节流函数
-# ============================================================================
-
-
-def throttle_before_submission(args: SchedulerRuntimeArgs, execution_state: ExecutionState) -> None:
-    """
-    在提交新任务前控制节奏，避免阻塞已完成任务处理。
-
-    在提交新任务前检查是否需要等待，以保持稳定的提交节奏。
-
-    Args:
-        args: 命令行参数，需要包含 sleep_between_fields。
-        execution_state: ExecutionState 实例，包含上次提交时间。
-
-    Example:
-        >>> args.sleep_between_fields = 2.0
-        >>> execution_state.last_submission_at = time.monotonic() - 1.0
-        >>> throttle_before_submission(args, execution_state)
-        >>> # 等待 1 秒
-
-    Note:
-        - 如果 sleep_between_fields <= 0，不执行任何操作
-        - 如果上次提交时间为 0（首次），不执行任何操作
-        - 使用 wait_seconds 函数等待剩余时间
-    """
-    if args.sleep_between_fields <= 0:
-        return
-    if execution_state.last_submission_at <= 0:
-        return
-    elapsed = time.monotonic() - execution_state.last_submission_at
-    remaining = args.sleep_between_fields - elapsed
-    if remaining > 0:
-        wait_seconds(remaining, "before next template submission")
 
 
 # ============================================================================

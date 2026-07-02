@@ -31,12 +31,12 @@ from .filters import (  # noqa: F401
     load_run_filters_extended,
     setup_runtime_logging,
 )
-from .path_resolution import normalize_args_paths as _normalize_args_paths
 from .parser_schema import (
     build_parser,
     collect_explicit_cli_keys,
     collect_parser_defaults,
 )
+from .path_resolution import normalize_args_paths as _normalize_args_paths
 from .run_config import build_run_config_snapshot as _build_run_config_snapshot
 
 # ============================================================================

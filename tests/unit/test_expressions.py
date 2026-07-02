@@ -23,8 +23,8 @@ from alpha.generators.expressions import (
     classify_expression_family,
     is_legacy_family,
 )
-from alpha.policy.template_blacklist import invalidate_default_avoid_rules_cache
 from alpha.generators.templates import load_template_library
+from alpha.policy.template_blacklist import invalidate_default_avoid_rules_cache
 
 
 class TestClassifyExpressionFamily:

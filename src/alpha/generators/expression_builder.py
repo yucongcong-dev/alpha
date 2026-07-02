@@ -1,0 +1,244 @@
+"""
+Expression candidate construction.
+
+表达式候选构建模块。
+
+This module owns the orchestration flow that turns a field, template library,
+dataset policy, and feedback into ordered alpha expression candidates.
+
+本模块只负责编排：把字段、模板库、数据集策略和反馈转换为有序 Alpha 表达式
+候选。具体 MATRIX/ratio 模板、分类、优先级和变体构造放在各自子模块中。
+"""
+
+from __future__ import annotations
+
+from collections.abc import Sequence
+from typing import Any
+
+from ..config.getters import get_backfill_window
+from ..config.models import DatasetExpressionPolicy
+from ..config.policy import get_dataset_expression_policy, resolve_feedback_stage
+from ..generators.field_transforms import build_field_view
+from ..models.domain import TemplateCandidate, TemplateLibrary
+from ..models.runtime import TemplateFeedback, TemplateField
+from ..policy.template_blacklist import (
+    is_blacklisted_template as _policy_is_blacklisted_template,
+)
+from ..policy.template_blacklist import load_default_avoid_rules
+from ..policy.template_blacklist import (
+    runtime_blacklist_match_reason as _policy_runtime_blacklist_match_reason,
+)
+from ..utils.helpers import choose_field_name, choose_field_type, is_event_field_name
+from .matrix_templates import build_matrix_templates
+from .templates.candidates import (
+    _coerce_template_candidate,
+    _make_template_candidate,
+)
+from .templates.classification import classify_expression_family, classify_template_stage
+from .templates.metadata import _runtime_template_metadata, _select_template_items
+from .templates.priority import (
+    apply_adaptive_priority,
+    apply_similarity_penalty,
+    cap_templates_per_family,
+)
+from .templates.variations import build_feedback_mutations
+
+
+def _load_default_avoid_rules() -> list[dict[str, str]]:
+    """兼容导出：加载跨数据集默认规避规则。"""
+    return list(load_default_avoid_rules())
+
+
+def _policy_template_priority_adjustment(
+    template_name: str,
+    policy: DatasetExpressionPolicy,
+) -> int:
+    """按数据集策略调整模板优先级。"""
+    lower_name = template_name.lower()
+    adjustment = policy.account_template_boost if lower_name.startswith("account_") else 0
+    if lower_name in policy.template_priority_penalties:
+        adjustment += policy.template_priority_penalties[lower_name]
+        return adjustment
+    for prefixes, penalty in policy.template_prefix_penalties.items():
+        if lower_name.startswith(prefixes):
+            adjustment += penalty
+            return adjustment
+    return adjustment
+
+
+def _is_event_field(field_name: str, policy: DatasetExpressionPolicy) -> bool:
+    """按策略前缀判断字段是否属于事件类字段。"""
+    return is_event_field_name(field_name, policy.event_field_prefixes)
+
+
+def _event_template_allowed(
+    candidate: TemplateCandidate,
+    policy: DatasetExpressionPolicy,
+) -> bool:
+    """事件字段只保留更窄的模板池，避免高噪音模板占预算。"""
+    if not (
+        policy.event_allowed_template_stages
+        or policy.event_allowed_template_prefixes
+        or policy.event_allowed_template_families
+    ):
+        return True
+    name = candidate.name
+    family = classify_expression_family(name, candidate.expression, candidate.metadata)
+    stage = classify_template_stage(name, candidate.expression, candidate.metadata)
+    if policy.event_allowed_template_stages and stage in policy.event_allowed_template_stages:
+        return True
+    if policy.event_allowed_template_families and family in policy.event_allowed_template_families:
+        return True
+    return bool(
+        policy.event_allowed_template_prefixes
+        and any(name.startswith(prefix) for prefix in policy.event_allowed_template_prefixes)
+    )
+
+
+def _is_blacklisted_template(
+    template_name: str,
+    expression: str = "",
+    *,
+    template_metadata: dict[str, Any] | None = None,
+    dataset_id: str = "",
+    policy: DatasetExpressionPolicy | None = None,
+) -> bool:
+    """判断模板是否命中默认或运行期黑名单。"""
+    return _policy_is_blacklisted_template(
+        template_name,
+        expression,
+        template_metadata=template_metadata,
+        dataset_id=dataset_id,
+        policy=policy,
+        current_family=classify_expression_family(template_name, expression, template_metadata),
+        current_stage=classify_template_stage(template_name, expression, template_metadata),
+    )
+
+
+def _blacklist_match_reason(
+    template_name: str,
+    expression: str = "",
+    *,
+    template_metadata: dict[str, Any] | None = None,
+    dataset_id: str = "",
+    policy: DatasetExpressionPolicy | None = None,
+) -> str | None:
+    """返回模板命中黑名单的原因；未命中则返回 None。"""
+    current_family = classify_expression_family(template_name, expression, template_metadata)
+    current_stage = classify_template_stage(template_name, expression, template_metadata)
+    return _policy_runtime_blacklist_match_reason(
+        template_name,
+        expression,
+        template_metadata=template_metadata,
+        dataset_id=dataset_id,
+        policy=policy,
+        current_family=current_family,
+        current_stage=current_stage,
+    )
+
+
+def sort_templates_by_priority(
+    templates: Sequence[TemplateCandidate | tuple[str, str, int]],
+) -> list[TemplateCandidate]:
+    """按有效优先级从高到低排序候选模板。"""
+    normalized = [_coerce_template_candidate(template) for template in templates]
+    return sorted(normalized, key=lambda item: (-item.priority, item.name, item.expression))
+
+
+def limit_templates(
+    templates: list[TemplateCandidate | tuple[str, str, int]],
+    max_templates_per_field: int,
+) -> list[TemplateCandidate]:
+    """应用字段级模板数量上限；小于等于 0 表示不限制。"""
+    normalized = [_coerce_template_candidate(template) for template in templates]
+    if max_templates_per_field <= 0:
+        return normalized
+    return normalized[:max_templates_per_field]
+
+
+def build_expression_candidates(
+    field: TemplateField,
+    template_library: TemplateLibrary,
+    max_templates_per_field: int,
+    max_templates_per_family: int,
+    legacy_similarity_penalty: int,
+    all_fields: Sequence[TemplateField] | None = None,
+    field_feedback: TemplateFeedback | None = None,
+    global_failed_check_counts: dict[str, int] | None = None,
+    use_dataset_heuristics: bool = True,
+    *,
+    dataset_id: str = "",
+    expression_policy: DatasetExpressionPolicy | None = None,
+) -> list[TemplateCandidate]:
+    """为单个字段构建、变异、多样化并排序表达式候选。"""
+    field_name = choose_field_name(field)
+    field_type = choose_field_type(field)
+    all_fields = all_fields or []
+    global_failed_check_counts = global_failed_check_counts or {}
+    policy = expression_policy or get_dataset_expression_policy(
+        dataset_id,
+        use_curated_heuristics=use_dataset_heuristics,
+    )
+    feedback_stage = resolve_feedback_stage(field_feedback, policy.feedback_loop_policy)
+    field_view = build_field_view(field, policy)
+    is_event_field = _is_event_field(field_name, policy)
+
+    raw_templates = _select_template_items(template_library, field_type, policy.dataset_id)
+    templates = [
+        _make_template_candidate(
+            str(item["name"]),
+            str(item["expression"]).format(
+                field=field_view.raw_expression,
+                field_preprocessed=field_view.preprocessed_expression,
+                ratio_numerator=field_view.ratio_numerator_expression,
+                ratio_denominator=field_view.ratio_denominator_expression,
+                backfill_window=get_backfill_window(),
+            ),
+            int(item.get("priority", 0))
+            + _policy_template_priority_adjustment(str(item["name"]), policy),
+            metadata=_runtime_template_metadata(item),
+        )
+        for item in raw_templates
+        if isinstance(item, dict)
+        and "name" in item
+        and "expression" in item
+        and str(item["name"]) not in policy.disabled_templates
+        and not _is_blacklisted_template(
+            str(item["name"]),
+            str(item["expression"]),
+            template_metadata=_runtime_template_metadata(item),
+            policy=policy,
+        )
+    ]
+    templates.extend(
+        build_feedback_mutations(
+            field_name,
+            field_feedback,
+            expression_policy=policy,
+            feedback_stage=feedback_stage,
+        )
+    )
+
+    if field_type == "MATRIX":
+        diversified, legacy = build_matrix_templates(
+            field_view,
+            all_fields,
+            policy,
+        )
+        templates.extend(diversified)
+        templates.extend(legacy)
+
+    if is_event_field:
+        templates = [item for item in templates if _event_template_allowed(item, policy)]
+
+    templates = apply_similarity_penalty(templates, legacy_similarity_penalty)
+    templates = apply_adaptive_priority(
+        templates,
+        field_feedback=field_feedback,
+        global_failed_check_counts=global_failed_check_counts,
+    )
+    templates = sort_templates_by_priority(templates)
+    return limit_templates(
+        cap_templates_per_family(templates, max_templates_per_family),
+        max_templates_per_field,
+    )

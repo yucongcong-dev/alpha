@@ -11,7 +11,6 @@ from alpha.core.executor import build_pending_templates_for_field, inflight_temp
 from alpha.core.scheduler import handle_completed_future
 from alpha.generators import templates as template_module
 from alpha.generators.expressions import _is_blacklisted_template
-from alpha.policy.template_blacklist import invalidate_blacklist_cache
 from alpha.generators.settings import build_settings_fingerprint_from_payload
 from alpha.generators.templates import ensure_dataset_template_library, load_template_library
 from alpha.io.output import (
@@ -28,6 +27,7 @@ from alpha.models.base import (
     TemplateBuildOptions,
     TemplateCandidate,
 )
+from alpha.policy.template_blacklist import invalidate_blacklist_cache
 
 
 def test_ensure_dataset_template_library_copies_base_when_missing(monkeypatch, tmp_path) -> None:

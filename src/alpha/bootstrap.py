@@ -16,7 +16,7 @@ from pathlib import Path
 import shutil
 import threading
 
-from .analysis.feedback import build_historical_run_state
+from .analysis.feedback_history import build_historical_run_state
 from .api.client import BrainClient, WorkerClientFactory, login_with_retry
 from .bootstrap_fields import prepare_fields_for_execution
 from .bootstrap_state import build_execution_state

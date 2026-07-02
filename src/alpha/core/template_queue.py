@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 
-from ..analysis.feedback import (
+from ..analysis.feedback_history import (
     choose_settings_variant_budget,
     select_nearpass_candidates,
 )
@@ -20,12 +20,8 @@ from ..config.constants import (
 )
 from ..config.models import DatasetExpressionPolicy
 from ..config.policy import get_dataset_expression_policy, resolve_feedback_stage
-from ..generators.expressions import (
+from ..generators.expression_builder import (
     build_expression_candidates,
-    build_refine_templates,
-    cap_templates_per_family,
-    classify_expression_family,
-    classify_template_stage,
     limit_templates,
     sort_templates_by_priority,
 )
@@ -33,6 +29,12 @@ from ..generators.settings import (
     build_setting_variants,
     build_settings_fingerprint_from_payload,
 )
+from ..generators.templates.classification import (
+    classify_expression_family,
+    classify_template_stage,
+)
+from ..generators.templates.priority import cap_templates_per_family
+from ..generators.templates.refine import build_refine_templates
 from ..models.domain import (
     FieldTestResult,
     NearPassCandidate,

@@ -17,6 +17,7 @@ from .runtime_protocols import (
     CredentialsArgs,
     FieldFetchArgs,
     FieldSelectionArgs,
+    ResultWriteArgs,
     RunConfig,
     RunConfigArgs,
     RunLoopArgs,
@@ -30,7 +31,6 @@ from .runtime_protocols import (
     TemplateField,
     TemplateSequence,
     TemplateStats,
-    ResultWriteArgs,
 )
 from .runtime_state import (
     ExecutionState,

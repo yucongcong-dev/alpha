@@ -14,11 +14,13 @@ from .runtime_options import ResultWriteOptions, TemplateBuildOptions
 from .runtime_protocols import (
     BlacklistRuntimeStats,
     ClientFactoryLike,
-    PendingFutureLike as PendingFuturePayload,
     RunConfig,
     SemaphoreLike,
     TemplateField,
     TemplateStats,
+)
+from .runtime_protocols import (
+    PendingFutureLike as PendingFuturePayload,
 )
 
 

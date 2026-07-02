@@ -21,14 +21,12 @@ import logging
 
 from ..config.constants import SENTINEL_UNKNOWN
 from ..config.policy import get_dataset_expression_policy
-from ..generators.expressions import (
-    build_expression_candidates,
-    build_refine_templates,
-)
+from ..generators.expression_builder import build_expression_candidates
 from ..generators.settings import (
     build_setting_variants,
     build_settings_fingerprint_from_payload,
 )
+from ..generators.templates.refine import build_refine_templates
 from ..models.domain import FieldTestResult, SettingsVariant, TemplateCandidate, TemplateLibrary
 from ..models.io_types import RunFilters
 from ..models.runtime import (

@@ -13,6 +13,7 @@ alpha/                     # 项目根目录
 │       ├── main.py        # 精简入口与兼容导出
 │       ├── bootstrap.py   # 初始化阶段：参数、字段、模板、历史状态
 │       ├── run_loop.py    # 主运行循环：调度、反馈刷新、续跑推进
+│       ├── run_loop_state.py # run_loop 状态辅助：反馈刷新、续跑索引、写入路径
 │       ├── finalize.py    # 收尾阶段：最终落盘与清理
 │       │
 │       ├── core/          # 核心业务层
@@ -21,6 +22,7 @@ alpha/                     # 项目根目录
 │       │   ├── scheduler.py
 │       │   ├── result_processing.py
 │       │   ├── simulation_parsing.py
+│       │   ├── simulation_precheck.py
 │       │   ├── simulation_results.py
 │       │   ├── simulation_stages.py
 │       │   ├── template_filters.py
@@ -29,21 +31,32 @@ alpha/                     # 项目根目录
 │       │
 │       ├── generators/    # Alpha 生成层
 │       │   ├── expressions.py
+│       │   ├── expression_builder.py
 │       │   ├── field_transforms.py
 │       │   ├── fields.py
+│       │   ├── matrix_templates.py
+│       │   ├── ratio_templates.py
 │       │   ├── settings.py
 │       │   └── templates/ # 模板库、候选构造、分类、优先级、refine 变体
 │       │       ├── __init__.py
 │       │       ├── candidates.py
 │       │       ├── classification.py
+│       │       ├── feedback_best_expression.py
+│       │       ├── feedback_mutations.py
+│       │       ├── feedback_mutation_sets.py
+│       │       ├── historical_reuse.py
 │       │       ├── metadata.py
 │       │       ├── partner_fields.py
 │       │       ├── priority.py
 │       │       ├── refine.py
+│       │       ├── variation_common.py
+│       │       ├── wrappers.py
 │       │       └── variations.py
 │       │
 │       ├── analysis/      # 分析优化层
 │       │   ├── feedback.py
+│       │   ├── feedback_filters.py
+│       │   ├── feedback_history.py
 │       │   ├── failed_checks.py
 │       │   ├── feedback_stats.py
 │       │   ├── field_stats.py
@@ -59,6 +72,7 @@ alpha/                     # 项目根目录
 │       │   ├── client.py      # BrainClient / WorkerClientFactory 组合入口
 │       │   ├── fields.py
 │       │   ├── payloads.py
+│       │   ├── retry.py
 │       │   ├── session.py
 │       │   ├── simulations.py
 │       │   └── timing.py
@@ -67,21 +81,28 @@ alpha/                     # 项目根目录
 │       │   ├── analysis_sync.py
 │       │   ├── common.py
 │       │   ├── credentials.py
+│       │   ├── credentials_crypto.py
 │       │   ├── output_paths.py
 │       │   ├── results_store.py
 │       │   └── output.py      # 兼容导出层
 │       │
 │       ├── cli/           # 命令行接口层
+│       │   ├── arg_resolution.py
 │       │   ├── constants.py
 │       │   ├── filters.py
+│       │   ├── parser_sections.py
+│       │   ├── parser_schema.py
 │       │   ├── path_resolution.py
 │       │   ├── run_config.py
 │       │   └── parser.py
 │       │
 │       ├── models/        # 数据模型层
 │       │   ├── domain.py
-│       │   ├── runtime.py
 │       │   ├── io_types.py
+│       │   ├── runtime.py
+│       │   ├── runtime_options.py
+│       │   ├── runtime_protocols.py
+│       │   ├── runtime_state.py
 │       │   └── base.py    # 兼容导出层
 │       │
 │       ├── policy/        # 运行期策略层
@@ -101,6 +122,7 @@ alpha/                     # 项目根目录
 │       │   ├── getters.py
 │       │   ├── models.py
 │       │   ├── policy.py
+│       │   ├── policy_overrides.py
 │       │   ├── profiles.py
 │       │   ├── types.py
 │       │   └── yaml.py
@@ -156,16 +178,20 @@ alpha/                     # 项目根目录
 ## 当前代码分层
 
 - `main.py` 现在只保留精简入口和兼容导出，具体实现已经拆到 `bootstrap.py`、`run_loop.py`、`finalize.py`
-- `models/domain.py` 只放领域对象；`models/runtime.py` 放运行态上下文；`models/io_types.py` 放路径/过滤边界对象；`models/base.py` 仅保留兼容导出
+- `models/domain.py` 只放领域对象；`models/io_types.py` 放路径/过滤边界对象；`models/runtime_options.py`、`models/runtime_protocols.py`、`models/runtime_state.py` 分别放运行配置、协议和运行态上下文；`models/runtime.py` / `models/base.py` 仅保留兼容导出
 - `analysis/stats.py` 是兼容导出层；结果加载、失败检查评分、模板/字段统计、反馈画像已经分别拆到 `results_loader.py`、`failed_checks.py`、`template_stats.py`、`field_stats.py`、`feedback_stats.py`
+- `analysis/feedback.py` 是兼容导出层；历史状态/near-pass 选择放在 `feedback_history.py`，模板禁用/保留/跳过策略放在 `feedback_filters.py`
 - `analysis/report_builder.py` 负责从结果构建 summary/analysis payload
 - `policy/blacklist.py` 负责黑名单策略、聚合与增量更新
 - `io/output.py` 负责结果持久化与分析边车编排，不再承载黑名单策略实现
 - `io/common.py` 放更底层的 JSON 原子写入、路径常量、dataset 文件名安全化与运行时 `data/` 目录解析
-- `config/` 是配置子包：`__init__.py` 保留旧的 `alpha.config` 入口，`models.py` 放配置 dataclass，`yaml.py` 放 YAML 查找/加载/缓存，`defaults.py` 放 YAML global 到 CLI 参数的合并，`profiles.py` 放 dataset profile fallback。
-- `generators/templates/` 是模板子包：`__init__.py` 管理 JSON 模板库，`candidates.py` 构造 `TemplateCandidate`，`classification.py` 做模板 family/stage 分类，`metadata.py` 建模板元数据索引，`partner_fields.py` 发现 ratio 配对字段，`priority.py` 做自适应优先级和 family 裁剪，`refine.py` 生成 near-pass 精修模板，`variations.py` 生成 feedback/bucket/trade_when/历史复用变体。
-- `generators/expressions.py` 现在是表达式候选编排层，不再承载模板分类、元数据、优先级、refine 或 feedback mutation 的具体实现。
-- `api/client.py` 保留 `BrainClient` / `WorkerClientFactory` 组合入口；`api/session.py` 放登录、底层 request 和全局节流；`api/fields.py` 放 dataset 字段分页；`api/simulations.py` 放 simulation create/poll；`api/alphas.py` 放 alpha detail/submit；`api/payloads.py` 放响应 payload 解析，`api/timing.py` 放等待和 `Retry-After` 解析。
+- `config/` 是配置子包：`__init__.py` 保留旧的 `alpha.config` 入口，`models.py` 放配置 dataclass，`yaml.py` 放 YAML 查找/加载/缓存，`defaults.py` 放 YAML global 到 CLI 参数的合并，`policy.py` 放策略构建和反馈阶段判断，`policy_overrides.py` 放 YAML expression policy 覆盖解析，`profiles.py` 放 dataset profile fallback。
+- `generators/templates/` 是模板子包：`__init__.py` 管理 JSON 模板库，`candidates.py` 构造 `TemplateCandidate`，`classification.py` 做模板 family/stage 分类，`metadata.py` 建模板元数据索引，`partner_fields.py` 发现 ratio 配对字段，`priority.py` 做自适应优先级和 family 裁剪，`refine.py` 生成 near-pass 精修模板，`feedback_mutations.py` 编排反馈 mutation，`feedback_mutation_sets.py` 放具体 mutation 集合，`feedback_best_expression.py` 放历史最佳表达式变异，`historical_reuse.py`、`wrappers.py` 和 `variation_common.py` 拆分模板变体策略，`variations.py` 保留组合入口。
+- `generators/expression_builder.py` 是表达式候选编排层，负责把字段、模板库、策略和反馈组合成候选表达式。
+- `generators/matrix_templates.py` 负责 MATRIX 字段的多样化、ratio、bucket、trade_when 和 legacy 模板构造。
+- `generators/ratio_templates.py` 负责高信心 ratio、字段配对 ratio、delta-rank 和 delta/std ratio 模板构造。
+- `generators/expressions.py` 现在是兼容导出层，不再承载模板分类、元数据、优先级、refine、feedback mutation 或候选构建的具体实现。
+- `api/client.py` 保留 `BrainClient` / `WorkerClientFactory` 组合入口；`api/retry.py` 放阶段重试和登录重试；`api/session.py` 放登录、底层 request 和全局节流；`api/fields.py` 放 dataset 字段分页；`api/simulations.py` 放 simulation create/poll；`api/alphas.py` 放 alpha detail/submit；`api/payloads.py` 放响应 payload 解析，`api/timing.py` 放等待和 `Retry-After` 解析。
 - 内部源码已改为直接依赖具体模块（如 `models/domain.py`、`models/runtime.py`、`models/io_types.py`、`config/constants.py`、`config/getters.py`、`config/policy.py`），`models/base.py` 和 `config/__init__.py` 主要服务外部旧导入兼容。
 
 这次重构的目标是把原先集中在少数大文件里的职责拆开，让入口、运行态、分析构建、配置、模板生成、策略和 IO 边界更清晰。旧入口仍保持兼容，例如 `from alpha.config import get_yaml_config`、`from alpha.generators.templates import load_template_library` 仍然可用。
