@@ -5,6 +5,7 @@
 from __future__ import annotations
 
 from .blacklist import (
+    _BLACKLIST_PATH_CACHE,
     auto_update_blacklist,
     auto_update_blacklist_incremental,
     build_blacklist_runtime_stats,
@@ -13,6 +14,7 @@ from .blacklist import (
 )
 
 __all__ = [
+    "_BLACKLIST_PATH_CACHE",
     "auto_update_blacklist",
     "auto_update_blacklist_incremental",
     "build_blacklist_runtime_stats",

@@ -26,7 +26,7 @@ from ..config import (
     get_dataset_profile,
     get_yaml_config,
 )
-from ..io.output import (
+from ..io.output_paths import (
     build_dataset_scoped_paths,
     build_output_sidecar_paths,
     resolve_cli_path,

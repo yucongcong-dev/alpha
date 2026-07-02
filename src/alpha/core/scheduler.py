@@ -28,16 +28,13 @@ from ..analysis.stats import (
     update_template_stats_with_result,
 )
 from ..api.client import wait_seconds
-from ..io.output import (
-    auto_update_blacklist_incremental,
-    build_blacklist_runtime_stats,
-    dump_results_incremental,
-)
+from ..io.results_store import dump_results_incremental
 from ..models.base import (
     ExecutionState,
     FutureCompletionContext,
     RuntimeConcurrencyState,
 )
+from ..policy import auto_update_blacklist_incremental, build_blacklist_runtime_stats
 from .result_processing import apply_completed_result
 from .simulation import build_failure_result
 

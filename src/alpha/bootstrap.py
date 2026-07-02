@@ -34,18 +34,16 @@ from .config import (
 from .generators.fields import fetch_fields_with_cache, load_fields_cache
 from .generators.settings import build_settings_fingerprint, stable_fingerprint
 from .generators.templates import ensure_dataset_template_library, load_template_library
+from .io.analysis_sync import ensure_analysis_synced
 from .io.credentials import load_credentials
-from .io.output import (
-    cleanup_legacy_sidecar_files,
-    ensure_analysis_synced,
-    ensure_template_blacklist_file,
-)
+from .io.output_paths import cleanup_legacy_sidecar_files
 from .models.base import (
     HistoricalRunState,
     InitializedRunContext,
     RunFilters,
     RuntimeConcurrencyState,
 )
+from .policy import ensure_template_blacklist_file
 
 logger = logging.getLogger(__name__)
 

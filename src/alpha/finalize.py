@@ -15,8 +15,9 @@ from typing import Any
 
 from .analysis.stats import current_submittable_count
 from .core import delete_pipeline_state
-from .io.output import dump_results
+from .io.results_store import dump_results
 from .models.base import InitializedRunContext
+from .policy import auto_update_blacklist
 
 logger = logging.getLogger(__name__)
 
@@ -42,5 +43,6 @@ def finalize_run(
         template_library_fingerprint=run_ctx.template_library_fingerprint,
         run_config=run_ctx.run_config,
         auto_update_template_blacklist=getattr(args, "auto_update_blacklist", False),
+        auto_update_blacklist_fn=auto_update_blacklist,
     )
     delete_pipeline_state(getattr(run_paths, "state_file", ""))

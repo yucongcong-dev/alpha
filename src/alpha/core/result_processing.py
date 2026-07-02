@@ -15,16 +15,13 @@ from ..analysis.stats import (
     result_identity,
     update_template_stats_with_result,
 )
-from ..io.output import (
-    auto_update_blacklist_incremental,
-    build_blacklist_runtime_stats,
-    dump_results_incremental,
-)
+from ..io.results_store import dump_results_incremental
 from ..models.base import (
     ExecutionState,
     FieldTestResult,
     FutureCompletionContext,
 )
+from ..policy import auto_update_blacklist_incremental, build_blacklist_runtime_stats
 
 logger = logging.getLogger(__name__)
 

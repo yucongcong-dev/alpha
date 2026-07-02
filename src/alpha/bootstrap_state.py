@@ -7,13 +7,9 @@ from __future__ import annotations
 import argparse
 
 from .analysis.stats import is_queue_timeout_result
-from .io.output import (
-    build_blacklist_runtime_stats,
-    dump_results_incremental,
-    initialize_results_journal,
-    load_blacklisted_template_names,
-)
+from .io.results_store import dump_results_incremental, initialize_results_journal
 from .models.base import ExecutionState
+from .policy import build_blacklist_runtime_stats, load_blacklisted_template_names
 
 
 def populate_execution_metrics(execution_state: ExecutionState) -> None:
