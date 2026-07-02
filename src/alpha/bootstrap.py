@@ -11,20 +11,16 @@
 from __future__ import annotations
 
 import argparse
-from datetime import date
 import logging
-from math import log1p
 from pathlib import Path
 import shutil
 import threading
 from typing import Any
 
 from .analysis.feedback import build_historical_run_state
-from .analysis.stats import (
-    field_priority,
-    is_queue_timeout_result,
-)
 from .api.client import BrainClient, WorkerClientFactory, login_with_retry
+from .bootstrap_fields import prepare_fields_for_execution
+from .bootstrap_state import build_execution_state, populate_execution_metrics
 from .cli.parser import (
     PROJECT_ROOT,
     build_run_config_snapshot,
@@ -33,8 +29,6 @@ from .cli.parser import (
 )
 from .config import (
     DatasetExpressionPolicy,
-    SENTINEL_UNKNOWN,
-    STATS_DEFAULT_SCORE,
     get_dataset_expression_policy,
 )
 from .generators.fields import fetch_fields_with_cache, load_fields_cache
@@ -42,259 +36,18 @@ from .generators.settings import build_settings_fingerprint, stable_fingerprint
 from .generators.templates import ensure_dataset_template_library, load_template_library
 from .io.credentials import load_credentials
 from .io.output import (
-    build_blacklist_runtime_stats,
     cleanup_legacy_sidecar_files,
-    dump_results_incremental,
     ensure_analysis_synced,
     ensure_template_blacklist_file,
-    initialize_results_journal,
-    load_blacklisted_template_names,
 )
 from .models.base import (
-    ExecutionState,
     HistoricalRunState,
     InitializedRunContext,
     RunFilters,
     RuntimeConcurrencyState,
 )
-from .utils.helpers import choose_field_name, first_non_empty, is_event_field_name
 
 logger = logging.getLogger(__name__)
-
-
-def _safe_int(value: Any) -> int:
-    """宽松地把字段元数据转为 int，失败时返回 0。"""
-    try:
-        return int(value)
-    except (TypeError, ValueError):
-        return 0
-
-
-def _safe_float(value: Any) -> float:
-    """宽松地把字段元数据转为 float，失败时返回 0.0。"""
-    try:
-        return float(value)
-    except (TypeError, ValueError):
-        return 0.0
-
-
-def _safe_date_ordinal(value: Any) -> int:
-    """把 YYYY-MM-DD 形式的日期字符串转换为 ordinal，失败时返回 0。"""
-    if not value:
-        return 0
-    try:
-        return date.fromisoformat(str(value)).toordinal()
-    except (TypeError, ValueError):
-        return 0
-
-
-def populate_execution_metrics(execution_state: ExecutionState) -> None:
-    """根据当前结果列表回填增量持久化所需的轻量计数。"""
-    execution_state.unique_field_ids = {result.field_id for result in execution_state.results}
-    execution_state.submittable_count = sum(
-        1 for result in execution_state.results if result.submittable
-    )
-    execution_state.submitted_count = sum(1 for result in execution_state.results if result.submitted)
-    execution_state.error_count = sum(1 for result in execution_state.results if result.status == "error")
-    execution_state.queue_timeout_count = sum(
-        1 for result in execution_state.results if is_queue_timeout_result(result)
-    )
-
-
-def _normalize_range(values: list[float]) -> list[float]:
-    """对一组数做 min-max 归一化；常数列返回全 0。"""
-    if not values:
-        return []
-    low = min(values)
-    high = max(values)
-    if high <= low:
-        return [0.0 for _ in values]
-    span = high - low
-    return [(value - low) / span for value in values]
-
-
-def prepare_fields_for_execution(
-    fields: list[dict[str, Any]],
-    *,
-    filters_dict: RunFilters,
-    expression_policy: DatasetExpressionPolicy,
-    historical_state: HistoricalRunState,
-    args: argparse.Namespace,
-) -> tuple[list[dict[str, Any]], dict[str, int]]:
-    """对字段做过滤、排序并最终应用 offset/limit。"""
-    cached_field_count = len(fields)
-    filtered_fields: list[dict[str, Any]] = []
-    prefiltered_count = 0
-    low_coverage_count = 0
-    low_date_coverage_count = 0
-    low_alpha_count = 0
-    low_user_count = 0
-
-    for field in fields:
-        field_id = str(first_non_empty(field.get("id"), SENTINEL_UNKNOWN))
-        field_name = choose_field_name(field)
-        is_event_field = is_event_field_name(field_name, expression_policy.event_field_prefixes)
-        min_coverage = (
-            expression_policy.event_field_min_coverage
-            if is_event_field and expression_policy.event_field_min_coverage > 0
-            else expression_policy.field_min_coverage
-        )
-        min_date_coverage = (
-            expression_policy.event_field_min_date_coverage
-            if is_event_field and expression_policy.event_field_min_date_coverage > 0
-            else expression_policy.field_min_date_coverage
-        )
-        min_alpha_count = (
-            expression_policy.event_field_min_alpha_count
-            if is_event_field and expression_policy.event_field_min_alpha_count > 0
-            else expression_policy.field_min_alpha_count
-        )
-        min_user_count = (
-            expression_policy.event_field_min_user_count
-            if is_event_field and expression_policy.event_field_min_user_count > 0
-            else expression_policy.field_min_user_count
-        )
-        if (
-            filters_dict.include_fields
-            and field_id not in filters_dict.include_fields
-            and field_name not in filters_dict.include_fields
-        ):
-            prefiltered_count += 1
-            continue
-        if field_id in filters_dict.exclude_fields or field_name in filters_dict.exclude_fields:
-            prefiltered_count += 1
-            continue
-        if _safe_float(field.get("coverage")) < min_coverage:
-            low_coverage_count += 1
-            continue
-        if _safe_float(field.get("dateCoverage")) < min_date_coverage:
-            low_date_coverage_count += 1
-            continue
-        if _safe_int(field.get("alphaCount")) < min_alpha_count:
-            low_alpha_count += 1
-            continue
-        if _safe_int(field.get("userCount")) < min_user_count:
-            low_user_count += 1
-            continue
-        filtered_fields.append(field)
-
-    fields = filtered_fields
-    if not fields:
-        return [], {
-            "cached_field_count": cached_field_count,
-            "filtered_field_count": 0,
-            "ranked_field_count": 0,
-            "prefiltered_count": prefiltered_count,
-            "low_coverage_count": low_coverage_count,
-            "low_date_coverage_count": low_date_coverage_count,
-            "low_alpha_count": low_alpha_count,
-            "low_user_count": low_user_count,
-        }
-
-    coverage_values = [_safe_float(field.get("coverage")) for field in fields]
-    date_coverage_values = [_safe_float(field.get("dateCoverage")) for field in fields]
-    alpha_validation_values = [log1p(_safe_int(field.get("alphaCount"))) for field in fields]
-    user_validation_values = [log1p(_safe_int(field.get("userCount"))) for field in fields]
-    recency_values = [_safe_date_ordinal(field.get("dateCreated")) for field in fields]
-    theme_values = [float(len(field.get("themes") or [])) for field in fields]
-
-    norm_coverage_values = _normalize_range(coverage_values)
-    norm_date_coverage_values = _normalize_range(date_coverage_values)
-    norm_alpha_validation_values = _normalize_range(alpha_validation_values)
-    norm_user_validation_values = _normalize_range(user_validation_values)
-    norm_recency_values = _normalize_range([float(value) for value in recency_values])
-    norm_theme_values = _normalize_range(theme_values)
-
-    field_metadata_scores: dict[str, float] = {}
-    for idx, field in enumerate(fields):
-        field_id = str(first_non_empty(field.get("id"), SENTINEL_UNKNOWN))
-        validation_score = (
-            expression_policy.field_coverage_weight * norm_coverage_values[idx]
-            + expression_policy.field_date_coverage_weight * norm_date_coverage_values[idx]
-            + expression_policy.field_alpha_validation_weight * norm_alpha_validation_values[idx]
-            + expression_policy.field_user_validation_weight * norm_user_validation_values[idx]
-            + expression_policy.field_recency_weight * norm_recency_values[idx]
-            + expression_policy.field_theme_bonus_weight * norm_theme_values[idx]
-        )
-        crowding_penalty = (
-            expression_policy.field_alpha_crowding_penalty_weight * norm_alpha_validation_values[idx]
-            + expression_policy.field_user_crowding_penalty_weight * norm_user_validation_values[idx]
-        )
-        field_metadata_scores[field_id] = validation_score - crowding_penalty
-
-    def field_sort_key(item: dict[str, Any]) -> tuple[Any, ...]:
-        field_id = str(first_non_empty(item.get("id"), SENTINEL_UNKNOWN))
-        field_name = choose_field_name(item)
-        feedback = historical_state.field_feedback.get(field_id)
-        priority = field_priority(field_id, historical_state.field_feedback)
-        is_promising_seen = (
-            feedback is not None and priority >= expression_policy.promising_field_min_priority
-        )
-        is_unexplored = feedback is None
-        preferred_rank = expression_policy.preferred_field_order.get(field_name, 999)
-        is_preferred_direction = preferred_rank < 999
-        is_overtested_weak = (
-            field_name in expression_policy.overtested_weak_fields and feedback is not None
-        )
-        metadata_score = field_metadata_scores.get(field_id, 0.0)
-        effective_priority = priority
-        if is_unexplored:
-            effective_priority = min(
-                expression_policy.promising_field_min_priority - 0.01,
-                max(
-                    metadata_score
-                    + (
-                        expression_policy.field_preferred_unexplored_bonus
-                        if is_preferred_direction
-                        else 0.0
-                    ),
-                    STATS_DEFAULT_SCORE,
-                ),
-            )
-        elif priority > STATS_DEFAULT_SCORE:
-            effective_priority = priority + metadata_score
-        return (
-            -int(is_promising_seen),
-            int(is_overtested_weak),
-            -effective_priority,
-            -int(is_preferred_direction),
-            preferred_rank,
-            -int(is_unexplored),
-            -metadata_score,
-            -_safe_float(item.get("coverage")),
-            -_safe_float(item.get("dateCoverage")),
-            field_name,
-        )
-
-    fields.sort(key=field_sort_key)
-    if args.top_fields_by_feedback > 0:
-        focused_fields = [
-            field
-            for field in fields
-            if field_priority(
-                str(first_non_empty(field.get("id"), SENTINEL_UNKNOWN)),
-                historical_state.field_feedback,
-            )
-            > -999.0
-        ]
-        fields = focused_fields[: args.top_fields_by_feedback]
-
-    ranked_field_count = len(fields)
-    if args.offset > 0:
-        fields = fields[args.offset :]
-    if args.limit > 0:
-        fields = fields[: args.limit]
-
-    return fields, {
-        "cached_field_count": cached_field_count,
-        "filtered_field_count": len(filtered_fields),
-        "ranked_field_count": ranked_field_count,
-        "prefiltered_count": prefiltered_count,
-        "low_coverage_count": low_coverage_count,
-        "low_date_coverage_count": low_date_coverage_count,
-        "low_alpha_count": low_alpha_count,
-        "low_user_count": low_user_count,
-    }
 
 
 def clean_runtime_artifacts(
@@ -466,34 +219,10 @@ def initialize_run_context(
             len(historical_state.existing_results),
         )
 
-    execution_state = ExecutionState(
-        results=list(historical_state.existing_results),
-        attempted_keys=set(historical_state.attempted_keys),
-        template_stats=dict(historical_state.template_stats),
-        pending_futures={},
-        field_queue_busy_counts={},
-        skipped_fields_due_to_queue=set(),
-    )
-    populate_execution_metrics(execution_state)
-    execution_state.persisted_result_count = initialize_results_journal(
-        output_file,
-        execution_state.results,
-    )
-    execution_state.blacklist_runtime_stats = build_blacklist_runtime_stats(
-        execution_state.results,
-    )
-    execution_state.blacklisted_template_names = load_blacklisted_template_names(args.dataset_id)
-    execution_state.persisted_result_count = dump_results_incremental(
-        output_file,
-        args.dataset_id,
-        [],
-        persisted_result_count=execution_state.persisted_result_count,
-        tested=len(execution_state.results),
-        unique_fields_tested=len(execution_state.unique_field_ids),
-        submittable_count=execution_state.submittable_count,
-        submitted_count=execution_state.submitted_count,
-        error_count=execution_state.error_count,
-        queue_timeout_count=execution_state.queue_timeout_count,
+    execution_state = build_execution_state(
+        args=args,
+        output_file=output_file,
+        historical_state=historical_state,
         settings_fingerprint=settings_fingerprint,
         template_library_fingerprint=template_library_fingerprint,
         run_config=run_config,
