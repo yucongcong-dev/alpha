@@ -18,48 +18,52 @@ from typing import Any
 _log = logging.getLogger("alpha.config.constants")
 
 # ---------------------------------------------------------------------------
-# YAML 加载辅助 — 统一通过 yaml.py 的合并管道读取配置
+# YAML 加载辅助 — 直接调用 yaml.py 的 get_yaml_config()，复用其签名缓存
+#
+# 自身不做额外缓存，确保 YAML 文件变化后自动刷新。
+# 路径优先级: global.<keys> (settings.yaml 覆盖) > <keys> (constants_defaults) > 代码默认值
 # ---------------------------------------------------------------------------
-
-_MERGED_CONFIG: dict[str, Any] | None = None
 
 # 记录已警告过的缺失 key，避免重复日志
 _MISSING_KEY_WARNED: set[str] = set()
 
 
-def _get_merged_config() -> dict[str, Any]:
-    """懒加载合并后的完整 YAML 配置。
-
-    优先级: settings > expression_policies > dataset_profiles > constants_defaults
-    复用 yaml.py 的缓存与签名检测机制，所有文件变化自动重载。
-    """
-    global _MERGED_CONFIG
-    if _MERGED_CONFIG is None:
-        from .yaml import get_yaml_config
-
-        _MERGED_CONFIG = get_yaml_config()
-    return _MERGED_CONFIG
-
-
-def _yaml_val(*keys: str, default: Any = None, cast: type = str) -> Any:
-    """从完整合并 YAML 配置中读取嵌套值: _yaml_val('api', 'base_url', default=..., cast=str)。
-
-    优先级: settings.yaml > expression_policies.yaml > dataset_profiles.yaml > constants_defaults.yaml > 代码 default
-    若所有来源均无此值，返回代码内 default 并发出一次性 WARNING。
-    cast=None 表示不做类型转换，直接返回 YAML 原始值。
-    """
-    yaml_data = _get_merged_config()
-    key_path = ".".join(keys)
+def _resolve_yaml_key(yaml_data: dict[str, Any], keys: tuple[str, ...]) -> Any:
+    """在 yaml_data 中沿 keys 路径导航，返回最终值或 None（表示未找到）。"""
     node: Any = yaml_data
     for key in keys:
         if isinstance(node, dict):
             node = node.get(key)
+            if node is None:
+                return None
         else:
-            node = None
-            break
+            return None
+    return node
+
+
+def _yaml_val(*keys: str, default: Any = None, cast: type = str) -> Any:
+    """从完整合并 YAML 配置中读取嵌套值。
+
+    查找顺序：
+      1. global.<keys> — settings.yaml 中的用户覆盖（高优先级）
+      2. <keys> — constants_defaults.yaml 中的基础默认值
+      3. 代码内 default
+
+    cast=None 表示不做类型转换，直接返回 YAML 原始值。
+    """
+    from .yaml import get_yaml_config
+
+    yaml_data = get_yaml_config()
+    key_path = ".".join(keys)
+
+    # 1. 优先查找 global.* 路径（settings.yaml 用户覆盖，消除路径分裂问题）
+    node = _resolve_yaml_key(yaml_data, ("global",) + keys)
+
+    # 2. 回退到扁平路径（constants_defaults.yaml 基础默认值）
+    if node is None:
+        node = _resolve_yaml_key(yaml_data, keys)
 
     if node is None:
-        # YAML 中确实未找到该 key，回退到代码默认值
         if key_path not in _MISSING_KEY_WARNED:
             _MISSING_KEY_WARNED.add(key_path)
             _log.warning(
@@ -69,7 +73,6 @@ def _yaml_val(*keys: str, default: Any = None, cast: type = str) -> Any:
             )
         return default
 
-    # cast=None 表示不需要类型转换，直接返回原始值
     if cast is None:
         return node
 
