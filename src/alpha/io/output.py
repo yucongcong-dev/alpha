@@ -6,11 +6,11 @@ from __future__ import annotations
 
 from ..io.common import CACHE_DIR, DATA_DIR, PROJECT_ROOT, RESULTS_DIR, SCRIPT_DIR
 from ..policy.blacklist import (
-    _BLACKLIST_PATH_CACHE,
     auto_update_blacklist,
     auto_update_blacklist_incremental,
     build_blacklist_runtime_stats,
     ensure_template_blacklist_file,
+    invalidate_blacklist_path_cache,
     load_blacklisted_template_names,
 )
 from .analysis_sync import ensure_analysis_synced as _ensure_analysis_synced
@@ -49,7 +49,6 @@ __all__ = [
     "PROJECT_ROOT",
     "RESULTS_DIR",
     "SCRIPT_DIR",
-    "_BLACKLIST_PATH_CACHE",
     "_load_results_rows_from_journal",
     "auto_update_blacklist",
     "auto_update_blacklist_incremental",
@@ -61,6 +60,7 @@ __all__ = [
     "dump_results_incremental",
     "ensure_analysis_synced",
     "ensure_template_blacklist_file",
+    "invalidate_blacklist_path_cache",
     "initialize_results_journal",
     "load_blacklisted_template_names",
     "resolve_cli_path",

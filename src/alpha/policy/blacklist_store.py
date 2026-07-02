@@ -33,6 +33,15 @@ def resolve_blacklist_path(dataset_id: str, *, data_dir: str = "") -> str:
     return resolved
 
 
+def invalidate_blacklist_path_cache(dataset_id: str = "", *, data_dir: str = "") -> None:
+    """Invalidate cached blacklist path lookups."""
+    if not dataset_id:
+        _BLACKLIST_PATH_CACHE.clear()
+        return
+    cache_key = f"{dataset_id}|{data_dir}" if data_dir else dataset_id
+    _BLACKLIST_PATH_CACHE.pop(cache_key, None)
+
+
 def build_default_blacklist(dataset_id: str) -> BlacklistPayload:
     return {
         "_version": "v2",

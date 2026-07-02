@@ -14,9 +14,9 @@ from alpha.generators.expressions import _is_blacklisted_template
 from alpha.generators.settings import build_settings_fingerprint_from_payload
 from alpha.generators.templates import ensure_dataset_template_library, load_template_library
 from alpha.io.output import (
-    _BLACKLIST_PATH_CACHE,
     auto_update_blacklist,
     ensure_template_blacklist_file,
+    invalidate_blacklist_path_cache,
 )
 from alpha.models.base import (
     ExecutionState,
@@ -308,7 +308,7 @@ def test_scheduler_dump_results_shrinks_next_template_queue(monkeypatch, tmp_pat
     results_path = tmp_path / "results.json"
     monkeypatch.chdir(tmp_path)
     invalidate_blacklist_cache()
-    _BLACKLIST_PATH_CACHE.clear()
+    invalidate_blacklist_path_cache()
     monkeypatch.setattr("alpha.io.output.DATA_DIR", data_dir)
     monkeypatch.setattr(
         "alpha.core.executor.build_setting_variants",
