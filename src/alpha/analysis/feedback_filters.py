@@ -13,6 +13,10 @@ from ..config.constants import (
     FEEDBACK_STAGE_PRUNE,
     FEEDBACK_STAGE_RESIMULATE,
     FEEDBACK_TEMPLATE_MIN_PRIORITY,
+    TEMPLATE_DISABLE_MIN_CONCENTRATED_WEIGHT,
+    TEMPLATE_DISABLE_MIN_LOW_FITNESS,
+    TEMPLATE_DISABLE_MIN_LOW_SHARPE,
+    TEMPLATE_DISABLE_MIN_SIMULATED,
 )
 from ..config.models import DatasetExpressionPolicy
 from ..config.policy import get_dataset_expression_policy, resolve_feedback_stage
@@ -39,15 +43,15 @@ def is_template_disabled(
     if not stat:
         return False
     if (
-        stat.get("simulated", 0) >= 3
+        stat.get("simulated", 0) >= TEMPLATE_DISABLE_MIN_SIMULATED
         and stat.get("submittable", 0) == 0
         and (
             (
                 "mean_spread" in template_name
-                and stat.get("low_sharpe", 0) >= 3
-                and stat.get("low_fitness", 0) >= 3
+                and stat.get("low_sharpe", 0) >= TEMPLATE_DISABLE_MIN_LOW_SHARPE
+                and stat.get("low_fitness", 0) >= TEMPLATE_DISABLE_MIN_LOW_FITNESS
             )
-            or stat.get("concentrated_weight", 0) >= 2
+            or stat.get("concentrated_weight", 0) >= TEMPLATE_DISABLE_MIN_CONCENTRATED_WEIGHT
         )
     ):
         return True
@@ -111,7 +115,7 @@ def should_keep_template_for_feedback(
         return True
 
     dominant_counts = field_feedback.get("failed_check_counts", {})
-    dominant_names = dominant_failed_check_names(dominant_counts, limit=4)
+    dominant_names = dominant_failed_check_names(dominant_counts)
     family = classify_expression_family(template_name, expression, template_metadata)
     template_stage = classify_template_stage(template_name, expression, template_metadata)
     lower_name = template_name.lower()

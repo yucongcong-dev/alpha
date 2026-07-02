@@ -11,6 +11,12 @@ from ..config.constants import (
     CHECK_LOW_TURNOVER,
     FEEDBACK_STAGE_PRUNE,
     FEEDBACK_STAGE_RESIMULATE,
+    NEARPASS_DEFAULT_LIMIT,
+    NEARPASS_PENALTY_CONCENTRATED_WEIGHT,
+    NEARPASS_PENALTY_CONCENTRATED_WEIGHT_EXTRA,
+    NEARPASS_PENALTY_CONCENTRATED_WEIGHT_GAP_THRESHOLD,
+    NEARPASS_PENALTY_LOW_SUB_UNIVERSE_SHARPE,
+    NEARPASS_PENALTY_LOW_TURNOVER,
 )
 from ..config.models import DatasetExpressionPolicy
 from ..config.policy import get_dataset_expression_policy, resolve_feedback_stage
@@ -72,13 +78,13 @@ def _nearpass_penalty(failed_checks: Sequence[dict[str, Any]] | None) -> float:
         name = str(check.get("name", "")).strip()
         gap = failed_check_gap(check)
         if name == CHECK_CONCENTRATED_WEIGHT:
-            penalty += 0.35
-            if isinstance(gap, (int, float)) and gap >= 0.20:
-                penalty += 0.55
+            penalty += NEARPASS_PENALTY_CONCENTRATED_WEIGHT
+            if isinstance(gap, (int, float)) and gap >= NEARPASS_PENALTY_CONCENTRATED_WEIGHT_GAP_THRESHOLD:
+                penalty += NEARPASS_PENALTY_CONCENTRATED_WEIGHT_EXTRA
         elif name == CHECK_LOW_TURNOVER:
-            penalty += 0.10
+            penalty += NEARPASS_PENALTY_LOW_TURNOVER
         elif name == CHECK_LOW_SUB_UNIVERSE_SHARPE:
-            penalty += 0.05
+            penalty += NEARPASS_PENALTY_LOW_SUB_UNIVERSE_SHARPE
     return penalty
 
 
@@ -88,7 +94,7 @@ def select_nearpass_candidates(
     *,
     dataset_id: str = "",
     expression_policy: DatasetExpressionPolicy | None = None,
-    limit: int = 3,
+    limit: int = NEARPASS_DEFAULT_LIMIT,
 ) -> list[NearPassCandidate]:
     """为单个字段挑选最值得进入 stage-3 refine 的近门槛候选。"""
     if limit <= 0:

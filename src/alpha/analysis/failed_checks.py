@@ -12,6 +12,9 @@ from ..config.constants import (
     CHECK_LOW_SHARPE,
     CHECK_LOW_SUB_UNIVERSE_SHARPE,
     CHECK_LOW_TURNOVER,
+    FAILED_CHECK_EPSILON,
+    FAILED_CHECK_MAX_EXAMPLE_IDS,
+    OPTIMIZATION_HINT_TOP_N,
     SENTINEL_UNKNOWN_CHECK,
     STATS_DEFAULT_SCORE,
     STATS_FAILED_CHECK_DEFAULT_SCORE,
@@ -47,7 +50,7 @@ def failed_check_closeness(check: FailedCheck) -> float | None:
     if not isinstance(value, (int, float)) or not isinstance(limit, (int, float)):
         return None
     gap = failed_check_gap(check)
-    scale = max(abs(limit), 1e-9)
+    scale = max(abs(limit), FAILED_CHECK_EPSILON)
     if gap is None:
         return None
     return max(0.0, 1.0 - (gap / scale))
@@ -112,7 +115,7 @@ def compile_failed_check_leaderboard(results: Sequence[FieldTestResult]) -> list
             if (
                 result.alpha_id
                 and result.alpha_id not in row["example_alpha_ids"]
-                and len(row["example_alpha_ids"]) < 5
+                and len(row["example_alpha_ids"]) < FAILED_CHECK_MAX_EXAMPLE_IDS
             ):
                 row["example_alpha_ids"].append(result.alpha_id)
 
@@ -175,7 +178,7 @@ def compile_optimization_hints(
     near_pass_summary: Sequence[dict[str, Any]],
 ) -> list[str]:
     """根据失败分布生成下一轮搜索建议。"""
-    dominant_names = {str(row.get("name")) for row in failed_check_leaderboard[:3]}
+    dominant_names = {str(row.get("name")) for row in failed_check_leaderboard[:OPTIMIZATION_HINT_TOP_N]}
     hints: list[str] = []
     if not failed_check_leaderboard:
         return ["还没有失败检查记录；先运行更广泛的探索样本。"]

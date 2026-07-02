@@ -17,9 +17,38 @@ from ...config import (
     CHECK_LOW_SHARPE,
     CHECK_LOW_SUB_UNIVERSE_SHARPE,
     CHECK_LOW_TURNOVER,
+    DOMINANT_FAILED_CHECK_LIMIT,
     EXPR_ITER_BOOST_THRESHOLD,
     EXPR_NEARPASS_BOOST_THRESHOLD,
     EXPR_RATIO_PENALTY_THRESHOLD,
+    PRIORITY_ADJ_ACCOUNT_TEMPLATES,
+    PRIORITY_ADJ_DELTA_HIGH_TURNOVER,
+    PRIORITY_ADJ_DELTA_LOW_FITNESS,
+    PRIORITY_ADJ_DELTA_LOW_TURNOVER,
+    PRIORITY_ADJ_GROUP_CONCENTRATED,
+    PRIORITY_ADJ_GROUP_LOW_SHARPE,
+    PRIORITY_ADJ_HIGH_TURNOVER_CONCENTRATED_RANK_SPREAD,
+    PRIORITY_ADJ_HIGH_TURNOVER_CONCENTRATED_ZSCORE_SPREAD,
+    PRIORITY_ADJ_ITER_BOOST,
+    PRIORITY_ADJ_LEGACY_BASIC_LOW_FITNESS,
+    PRIORITY_ADJ_LEGACY_LOW_SHARPE,
+    PRIORITY_ADJ_LEGACY_MEAN_SPREAD_LOW_TURNOVER,
+    PRIORITY_ADJ_LEGACY_RATIO_CONCENTRATED,
+    PRIORITY_ADJ_LEGACY_RATIO_PENALTY,
+    PRIORITY_ADJ_NEARPASS_BOOST,
+    PRIORITY_ADJ_NEARPASS_GROUP_RANK_DELTA,
+    PRIORITY_ADJ_SIGNAL_LOW_SHARPE,
+    PRIORITY_ADJ_STABLE_HIGH_TURNOVER,
+    PRIORITY_ADJ_VOL_SCALED_CONCENTRATED,
+    PRIORITY_ADJ_VOL_SCALED_DELTA_BASE,
+    PRIORITY_ADJ_VOL_SCALED_DELTA_CONCENTRATED,
+    PRIORITY_ADJ_VOL_SCALED_DELTA_NEARPASS,
+    PRIORITY_ADJ_VOL_SCALED_LOW_FITNESS,
+    SIMILARITY_PENALTY_OFFSET_GROUP_RATIO_LEVEL,
+    SIMILARITY_PENALTY_OFFSET_LEGACY_GROUP_LEVEL,
+    SIMILARITY_PENALTY_OFFSET_LEGACY_LEVEL,
+    SIMILARITY_PENALTY_OFFSET_LEGACY_NEG_RATIO,
+    SIMILARITY_PENALTY_OFFSET_LEGACY_RATIO,
     STATS_DEFAULT_SCORE,
 )
 from ...models.base import TemplateCandidate
@@ -28,11 +57,11 @@ from .classification import classify_expression_family
 from .metadata import TemplateMetadataMap
 
 _SIMILARITY_PENALTY_OFFSETS: dict[str, int] = {
-    "legacy_level": 0,
-    "legacy_group_level": 6,
-    "legacy_ratio": 10,
-    "legacy_neg_ratio": 8,
-    "group_ratio_level": 14,
+    "legacy_level": SIMILARITY_PENALTY_OFFSET_LEGACY_LEVEL,
+    "legacy_group_level": SIMILARITY_PENALTY_OFFSET_LEGACY_GROUP_LEVEL,
+    "legacy_ratio": SIMILARITY_PENALTY_OFFSET_LEGACY_RATIO,
+    "legacy_neg_ratio": SIMILARITY_PENALTY_OFFSET_LEGACY_NEG_RATIO,
+    "group_ratio_level": SIMILARITY_PENALTY_OFFSET_GROUP_RATIO_LEVEL,
 }
 """家族名到相似度惩罚减免值的映射。"""
 
@@ -75,7 +104,7 @@ def apply_similarity_penalty(
     return penalized
 
 
-def dominant_failed_check_names(counts: dict[str, int], limit: int = 4) -> set[str]:
+def dominant_failed_check_names(counts: dict[str, int], limit: int = DOMINANT_FAILED_CHECK_LIMIT) -> set[str]:
     """
     返回失败检查计数最高的若干名称。
 
@@ -142,39 +171,39 @@ _PRIORITY_RULES: list[tuple[set[str], Any, int]] = [
     (
         {CHECK_LOW_SHARPE, CHECK_LOW_SUB_UNIVERSE_SHARPE},
         lambda f, n: f.startswith("group_") or f in _GROUP_FAMILIES,
-        28,
+        PRIORITY_ADJ_GROUP_LOW_SHARPE,
     ),
-    ({CHECK_LOW_SHARPE, CHECK_LOW_SUB_UNIVERSE_SHARPE}, lambda f, n: f in _SIGNAL_FAMILIES, 18),
-    ({CHECK_LOW_SHARPE, CHECK_LOW_SUB_UNIVERSE_SHARPE}, lambda f, n: f in _LEGACY_FAMILIES, -35),
-    ({CHECK_LOW_FITNESS}, lambda f, n: "delta" in f or "spread" in f or n.startswith("iter_"), 22),
-    ({CHECK_LOW_FITNESS}, lambda f, n: f in _LEGACY_BASIC, -25),
-    ({CHECK_LOW_FITNESS}, lambda f, n: f in {"group_vol_scaled_delta", "vol_scaled_delta"}, -18),
+    ({CHECK_LOW_SHARPE, CHECK_LOW_SUB_UNIVERSE_SHARPE}, lambda f, n: f in _SIGNAL_FAMILIES, PRIORITY_ADJ_SIGNAL_LOW_SHARPE),
+    ({CHECK_LOW_SHARPE, CHECK_LOW_SUB_UNIVERSE_SHARPE}, lambda f, n: f in _LEGACY_FAMILIES, PRIORITY_ADJ_LEGACY_LOW_SHARPE),
+    ({CHECK_LOW_FITNESS}, lambda f, n: "delta" in f or "spread" in f or n.startswith("iter_"), PRIORITY_ADJ_DELTA_LOW_FITNESS),
+    ({CHECK_LOW_FITNESS}, lambda f, n: f in _LEGACY_BASIC, PRIORITY_ADJ_LEGACY_BASIC_LOW_FITNESS),
+    ({CHECK_LOW_FITNESS}, lambda f, n: f in {"group_vol_scaled_delta", "vol_scaled_delta"}, PRIORITY_ADJ_VOL_SCALED_LOW_FITNESS),
     (
         {CHECK_LOW_TURNOVER},
         lambda f, n: "delta" in f or n.startswith(("iter_rank_delta", "iter_rank_then_delta")),
-        30,
+        PRIORITY_ADJ_DELTA_LOW_TURNOVER,
     ),
     (
         {CHECK_LOW_TURNOVER},
         lambda f, n: f in {"legacy_level", "legacy_group_level", "mean_spread"},
-        -18,
+        PRIORITY_ADJ_LEGACY_MEAN_SPREAD_LOW_TURNOVER,
     ),
     (
         {CHECK_HIGH_TURNOVER},
         lambda f, n: f in {"mean_spread", "decayed_delta", "decayed_ratio"},
-        20,
+        PRIORITY_ADJ_STABLE_HIGH_TURNOVER,
     ),
-    ({CHECK_HIGH_TURNOVER}, lambda f, n: "delta" in f, -20),
+    ({CHECK_HIGH_TURNOVER}, lambda f, n: "delta" in f, PRIORITY_ADJ_DELTA_HIGH_TURNOVER),
     (
         {CHECK_CONCENTRATED_WEIGHT},
         lambda f, n: f.startswith("group_") and f not in {"group_vol_scaled_delta", "vol_scaled_delta"},
-        24,
+        PRIORITY_ADJ_GROUP_CONCENTRATED,
     ),
-    ({CHECK_CONCENTRATED_WEIGHT}, lambda f, n: f in {"group_vol_scaled_delta", "vol_scaled_delta"}, -30),
+    ({CHECK_CONCENTRATED_WEIGHT}, lambda f, n: f in {"group_vol_scaled_delta", "vol_scaled_delta"}, PRIORITY_ADJ_VOL_SCALED_CONCENTRATED),
     (
         {CHECK_CONCENTRATED_WEIGHT},
         lambda f, n: f in {"legacy_ratio", "legacy_neg_ratio", "group_ratio_level"},
-        -30,
+        PRIORITY_ADJ_LEGACY_RATIO_CONCENTRATED,
     ),
 ]
 """失败检查触发条件到优先级调整值的声明式规则表。"""
@@ -215,37 +244,37 @@ def adaptive_template_priority_adjustment(
 
     if {CHECK_HIGH_TURNOVER, CHECK_CONCENTRATED_WEIGHT} <= dominant_names:
         if family in {"rank_spread", "mean_spread"}:
-            adjustment -= 50
+            adjustment += PRIORITY_ADJ_HIGH_TURNOVER_CONCENTRATED_RANK_SPREAD
         if "zscore" in lower_name and "spread" in lower_name:
-            adjustment -= 45
+            adjustment += PRIORITY_ADJ_HIGH_TURNOVER_CONCENTRATED_ZSCORE_SPREAD
 
     if field_feedback:
         best_score = float(field_feedback.get("best_score", STATS_DEFAULT_SCORE))
         if best_score >= EXPR_NEARPASS_BOOST_THRESHOLD and lower_name.startswith("iter_nearpass_"):
-            adjustment += 40
+            adjustment += PRIORITY_ADJ_NEARPASS_BOOST
         elif best_score >= EXPR_ITER_BOOST_THRESHOLD and lower_name.startswith("iter_"):
-            adjustment += 18
+            adjustment += PRIORITY_ADJ_ITER_BOOST
         if best_score >= EXPR_RATIO_PENALTY_THRESHOLD and family in _LEGACY_FAMILIES:
-            adjustment -= 40
+            adjustment += PRIORITY_ADJ_LEGACY_RATIO_PENALTY
         if (
             best_score >= EXPR_NEARPASS_BOOST_THRESHOLD
             and family == "group_rank_delta"
             and "nearpass" in lower_name
         ):
-            adjustment += 20
+            adjustment += PRIORITY_ADJ_NEARPASS_GROUP_RANK_DELTA
         if family in {"group_vol_scaled_delta", "vol_scaled_delta"}:
-            adjustment -= 28
+            adjustment += PRIORITY_ADJ_VOL_SCALED_DELTA_BASE
             if CHECK_CONCENTRATED_WEIGHT in dominant_names:
-                adjustment -= 18
+                adjustment += PRIORITY_ADJ_VOL_SCALED_DELTA_CONCENTRATED
             if "nearpass" in lower_name:
-                adjustment -= 8
+                adjustment += PRIORITY_ADJ_VOL_SCALED_DELTA_NEARPASS
         if (
             lower_name.startswith("account_rank_backfill_")
             or lower_name == "account_ir_60"
             or lower_name.startswith("account_group_ir_60")
             or lower_name.startswith("account_group_backfill_")
         ):
-            adjustment += 22
+            adjustment += PRIORITY_ADJ_ACCOUNT_TEMPLATES
 
     return adjustment
 
