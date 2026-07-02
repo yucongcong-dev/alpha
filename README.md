@@ -74,7 +74,7 @@ alpha/                     # 项目根目录
 │   │   ├── fundamental6/  # fundamental6 专属模板库与说明
 │   │   ├── model16/       # model16 专属模板库与说明
 │   │   └── model51/       # model51 专属模板库与说明
-│   └── blacklists/        # 人工维护的 dataset 专属 blacklist
+│   └── blacklists/        # dataset 统一 blacklist（脚本自动追加，也可人工补充）
 └── .gitignore
 ```
 
