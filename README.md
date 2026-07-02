@@ -166,6 +166,7 @@ alpha/                     # 项目根目录
 - `generators/templates/` 是模板子包：`__init__.py` 管理 JSON 模板库，`candidates.py` 构造 `TemplateCandidate`，`classification.py` 做模板 family/stage 分类，`metadata.py` 建模板元数据索引，`partner_fields.py` 发现 ratio 配对字段，`priority.py` 做自适应优先级和 family 裁剪，`refine.py` 生成 near-pass 精修模板，`variations.py` 生成 feedback/bucket/trade_when/历史复用变体。
 - `generators/expressions.py` 现在是表达式候选编排层，不再承载模板分类、元数据、优先级、refine 或 feedback mutation 的具体实现。
 - `api/client.py` 保留 `BrainClient` / `WorkerClientFactory` 组合入口；`api/session.py` 放登录、底层 request 和全局节流；`api/fields.py` 放 dataset 字段分页；`api/simulations.py` 放 simulation create/poll；`api/alphas.py` 放 alpha detail/submit；`api/payloads.py` 放响应 payload 解析，`api/timing.py` 放等待和 `Retry-After` 解析。
+- 内部源码已改为直接依赖具体模块（如 `models/domain.py`、`models/runtime.py`、`models/io_types.py`、`config/constants.py`、`config/getters.py`、`config/policy.py`），`models/base.py` 和 `config/__init__.py` 主要服务外部旧导入兼容。
 
 这次重构的目标是把原先集中在少数大文件里的职责拆开，让入口、运行态、分析构建、配置、模板生成、策略和 IO 边界更清晰。旧入口仍保持兼容，例如 `from alpha.config import get_yaml_config`、`from alpha.generators.templates import load_template_library` 仍然可用。
 

@@ -21,13 +21,12 @@ import os
 import sys
 from typing import Any
 
-from ..config import (
-    DEFAULT_DATASET_ID,
-    apply_yaml_global_defaults,
-    get_dataset_profile,
-    get_yaml_config,
-)
-from ..models.base import RunConfigArgs, RunPaths
+from ..config.constants import DEFAULT_DATASET_ID
+from ..config.defaults import apply_yaml_global_defaults
+from ..config.profiles import get_dataset_profile
+from ..config.yaml import get_yaml_config
+from ..models.io_types import RunPaths
+from ..models.runtime import RunConfigArgs
 from .constants import (
     DEFAULT_CREDS_FILE,
     DEFAULT_CREDS_KEY_FILE,

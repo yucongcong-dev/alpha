@@ -14,12 +14,12 @@ from ..analysis.feedback import (
     select_nearpass_candidates,
 )
 from ..analysis.stats import historical_template_priority_bonus
-from ..config import (
+from ..config.constants import (
     FEEDBACK_STAGE_RESIMULATE,
     SENTINEL_UNKNOWN,
-    get_dataset_expression_policy,
-    resolve_feedback_stage,
 )
+from ..config.models import DatasetExpressionPolicy
+from ..config.policy import get_dataset_expression_policy, resolve_feedback_stage
 from ..generators.expressions import (
     build_expression_candidates,
     build_refine_templates,
@@ -33,15 +33,13 @@ from ..generators.settings import (
     build_setting_variants,
     build_settings_fingerprint_from_payload,
 )
-from ..models.base import (
-    DatasetExpressionPolicy,
+from ..models.domain import (
     FieldTestResult,
     NearPassCandidate,
     SettingsVariant,
-    TemplateBuildContext,
     TemplateCandidate,
-    TemplateFeedback,
 )
+from ..models.runtime import TemplateBuildContext, TemplateFeedback
 from ..utils.helpers import choose_field_name, first_non_empty, is_event_field_name
 
 

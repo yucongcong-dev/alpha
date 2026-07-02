@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Sequence
 from typing import Any
 
-from ..config import (
+from ..config.constants import (
     SENTINEL_UNKNOWN_CHECK,
     STAT_FIELD_ATTEMPTED_TEMPLATES,
     STAT_FIELD_ERRORS,
@@ -21,7 +21,7 @@ from ..config import (
     STATS_PERFORMANCE_TOP_N,
     STATUS_ERROR,
 )
-from ..models.base import FieldFeedbackMap, FieldTestResult
+from ..models.domain import FieldFeedbackMap, FieldTestResult
 from .result_identity import is_queue_timeout_result
 
 

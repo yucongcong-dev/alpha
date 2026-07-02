@@ -11,7 +11,7 @@ from dataclasses import dataclass, field
 import time
 from typing import Any, Protocol, Union
 
-from ..config import DatasetExpressionPolicy
+from ..config.models import DatasetExpressionPolicy
 from .domain import (
     FieldFeedbackMap,
     FieldFeedbackSummary,

@@ -7,7 +7,7 @@ from __future__ import annotations
 import logging
 import time
 
-from ..config import get_polling_retry_buffer
+from ..config.getters import get_polling_retry_buffer
 
 logger = logging.getLogger(__name__)
 

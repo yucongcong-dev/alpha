@@ -22,7 +22,7 @@ from __future__ import annotations
 from collections.abc import Sequence
 from typing import Any
 
-from ..config import (
+from ..config.constants import (
     CHECK_CONCENTRATED_WEIGHT,
     CHECK_HIGH_TURNOVER,
     CHECK_LOW_SHARPE,
@@ -31,10 +31,9 @@ from ..config import (
     FEEDBACK_STAGE_PRUNE,
     FEEDBACK_STAGE_RESIMULATE,
     FEEDBACK_TEMPLATE_MIN_PRIORITY,
-    DatasetExpressionPolicy,
-    get_dataset_expression_policy,
-    resolve_feedback_stage,
 )
+from ..config.models import DatasetExpressionPolicy
+from ..config.policy import get_dataset_expression_policy, resolve_feedback_stage
 
 # 从 expressions 模块导入分类函数（唯一源）
 from ..generators.expressions import (
@@ -44,10 +43,9 @@ from ..generators.expressions import (
     dominant_failed_check_names,
     is_legacy_family,
 )
-from ..models.base import (
-    FieldTestResult,
+from ..models.domain import FieldTestResult, NearPassCandidate
+from ..models.runtime import (
     HistoricalRunState,
-    NearPassCandidate,
     StopAfterSubmittableArgs,
 )
 

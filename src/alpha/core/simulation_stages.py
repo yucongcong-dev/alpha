@@ -10,7 +10,7 @@ import re
 
 from ..api.api_types import CheckResultDict, SimulationPayload
 from ..api.client import BrainClient, retry_operation
-from ..config import (
+from ..config.constants import (
     API_KEY_FAILED,
     API_KEY_PROGRESS,
     API_KEY_STATE,
@@ -28,6 +28,8 @@ from ..config import (
     SIMULATION_RETRY_WAIT,
     STATUS_SIMULATED,
     STATUS_SUBMITTED,
+)
+from ..config.getters import (
     get_submit_max_turnover,
     get_submit_max_weight,
     get_submit_min_fitness,
@@ -35,11 +37,13 @@ from ..config import (
     get_submit_min_turnover,
 )
 from ..generators.settings import build_simulation_payload
-from ..models.base import (
+from ..models.domain import (
     FieldTestContext,
     FieldTestResult,
-    SemaphoreLike,
     SettingsVariant,
+)
+from ..models.runtime import (
+    SemaphoreLike,
     SimulationStageArgs,
 )
 from ..utils.helpers import first_non_empty

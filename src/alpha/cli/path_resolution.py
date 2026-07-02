@@ -13,7 +13,7 @@ from ..io.output_paths import (
     build_output_sidecar_paths,
     resolve_cli_path,
 )
-from ..models.base import RunPaths
+from ..models.io_types import RunPaths
 from .constants import DEFAULT_CREDS_FILE, DEFAULT_CREDS_KEY_FILE
 
 

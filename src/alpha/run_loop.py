@@ -19,7 +19,7 @@ from .analysis.stats import (
     update_field_feedback_with_result,
     update_global_failed_check_counts_with_result,
 )
-from .config import SENTINEL_UNKNOWN
+from .config.constants import SENTINEL_UNKNOWN
 from .core import (
     build_pending_templates_for_field,
     inflight_template_keys,
@@ -37,13 +37,13 @@ from .loop_support import (
     save_runtime_checkpoint,
     submit_template_future,
 )
-from .models.base import (
-    FieldTestResult,
+from .models.domain import FieldTestResult
+from .models.io_types import RunPaths
+from .models.runtime import (
     InitializedRunContext,
     ResultWriteArgs,
     ResultWriteOptions,
     RunLoopArgs,
-    RunPaths,
     TemplateBuildContext,
     TemplateField,
 )

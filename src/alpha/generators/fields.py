@@ -22,7 +22,7 @@ import os
 from typing import Protocol
 
 from ..io.common import atomic_write_json
-from ..models.base import FieldFetchOptions, TemplateField
+from ..models.runtime import FieldFetchOptions, TemplateField
 
 logger = logging.getLogger(__name__)
 

@@ -10,7 +10,7 @@ import logging
 import os
 
 from ..analysis.stats import load_existing_results
-from ..config import DEFAULT_DATASET_ID
+from ..config.constants import DEFAULT_DATASET_ID
 from .output_paths import build_output_sidecar_paths
 from .results_store import dump_results as dump_results_store
 
@@ -71,4 +71,3 @@ def ensure_analysis_synced(
         run_config=summary.get("run_config") if isinstance(summary.get("run_config"), dict) else {},
     )
     logger.info("[analysis] rebuilt analysis from main results: %s", sidecar_paths["analysis"])
-

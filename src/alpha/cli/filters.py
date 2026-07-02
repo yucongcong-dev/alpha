@@ -8,7 +8,7 @@ from __future__ import annotations
 import logging
 import os
 
-from ..models.base import RunFilters, RunPaths
+from ..models.io_types import RunFilters, RunPaths
 
 logger = logging.getLogger(__name__)
 

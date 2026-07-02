@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 
-from ..models.base import FieldTestResult
+from ..models.domain import FieldTestResult
 
 
 def result_identity(result: FieldTestResult) -> tuple[str, str, str, str]:

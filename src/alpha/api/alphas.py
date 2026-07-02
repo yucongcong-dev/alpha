@@ -4,7 +4,8 @@ from __future__ import annotations
 
 import logging
 
-from ..config import ALPHAS_URL, SIM_ACCEPT_HEADER, get_polling_default_wait
+from ..config.constants import ALPHAS_URL, SIM_ACCEPT_HEADER
+from ..config.getters import get_polling_default_wait
 from .api_types import ApiPayload
 from .payloads import safe_json_bytes
 from .timing import polling_retry_after, wait_seconds

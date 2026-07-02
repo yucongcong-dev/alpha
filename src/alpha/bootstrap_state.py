@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from .analysis.stats import is_queue_timeout_result
 from .io.results_store import dump_results_incremental, initialize_results_journal
-from .models.base import ExecutionState
+from .models.runtime import ExecutionState
 from .policy import build_blacklist_runtime_stats, load_blacklisted_template_names
 
 

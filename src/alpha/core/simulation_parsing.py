@@ -9,7 +9,7 @@ import re
 from typing import Any, cast
 
 from ..api.api_types import ApiPayload, CheckResultDict
-from ..config import (
+from ..config.constants import (
     API_KEY_DETAIL,
     API_KEY_ERROR,
     API_KEY_MESSAGE,

@@ -20,12 +20,15 @@ import hashlib
 import json
 from typing import Any
 
-from ..config import (
+from ..config.getters import (
     get_simulation_default_end_date,
     get_simulation_default_start_date,
+)
+from ..config.yaml import (
     get_yaml_config,
 )
-from ..models.base import NearPassCandidate, SettingsVariant, SimulationSettingsArgs
+from ..models.domain import NearPassCandidate, SettingsVariant
+from ..models.runtime import SimulationSettingsArgs
 
 
 def stable_fingerprint(payload: Any) -> str:

@@ -6,10 +6,12 @@ import json
 import logging
 import time
 
-from ..config import (
+from ..config.constants import (
     API_BASE,
     SIM_ACCEPT_HEADER,
     SIMULATIONS_URL,
+)
+from ..config.getters import (
     get_polling_default_wait,
     get_polling_no_retry_after_wait,
 )

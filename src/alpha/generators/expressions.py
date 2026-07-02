@@ -25,24 +25,25 @@ from __future__ import annotations
 from collections.abc import Sequence
 from typing import Any
 
-from ..config import (
+from ..config.constants import (
     ALLOWED_EXTERNAL_RATIO_PARTNERS,
     DELTA_STD_PRIORITY_BOOST,
     TEMPLATE_STAGE_FIRST_ORDER,
     TEMPLATE_STAGE_GROUP_SECOND_ORDER,
-    DatasetExpressionPolicy,
-    get_backfill_window,
+)
+from ..config.getters import get_backfill_window
+from ..config.models import DatasetExpressionPolicy
+from ..config.policy import (
     get_dataset_expression_policy,
     resolve_feedback_stage,
 )
 from ..generators.field_transforms import build_field_view, build_ratio_expression
-from ..models.base import (
+from ..models.domain import (
     FieldView,
     TemplateCandidate,
-    TemplateFeedback,
-    TemplateField,
     TemplateLibrary,
 )
+from ..models.runtime import TemplateFeedback, TemplateField
 from ..policy import template_blacklist as _template_blacklist_policy
 from ..policy.template_blacklist import (
     _BLACKLIST_CACHE as _BLACKLIST_CACHE,

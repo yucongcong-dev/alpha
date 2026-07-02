@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Sequence
 from typing import Any
 
-from ..config import (
+from ..config.constants import (
     CHECK_CONCENTRATED_WEIGHT,
     CHECK_LOW_FITNESS,
     CHECK_LOW_SHARPE,
@@ -29,7 +29,7 @@ from ..config import (
     STATUS_SIMULATED,
     STATUS_SUBMITTED,
 )
-from ..models.base import FieldTestResult
+from ..models.domain import FieldTestResult
 from .result_identity import is_queue_timeout_result
 
 

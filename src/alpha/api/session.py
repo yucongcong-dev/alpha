@@ -11,9 +11,11 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
 from urllib.request import Request
 
-from ..config import (
+from ..config.constants import (
     AUTH_URL,
     DEFAULT_HEADERS,
+)
+from ..config.getters import (
     get_http_request_timeout,
     get_rate_limit_default_wait,
     get_server_error_backoff_max,

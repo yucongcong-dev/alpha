@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 
-from ..config import DATA_FIELDS_URL, VERSION_HEADER
+from ..config.constants import DATA_FIELDS_URL, VERSION_HEADER
 from ..exceptions import BrainAPIError
 from .api_types import ApiPayload, FieldInfoDict
 from .payloads import extract_total, normalize_results, safe_json_bytes

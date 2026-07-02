@@ -6,8 +6,8 @@ from __future__ import annotations
 
 from typing import Any
 
-from ..config import STATUS_ERROR
-from ..models.base import FieldTestContext, FieldTestResult
+from ..config.constants import STATUS_ERROR
+from ..models.domain import FieldTestContext, FieldTestResult
 
 
 def build_failure_result(

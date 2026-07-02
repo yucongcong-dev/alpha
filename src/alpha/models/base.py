@@ -12,7 +12,7 @@
 
 from __future__ import annotations
 
-from ..config import DatasetExpressionPolicy
+from ..config.models import DatasetExpressionPolicy
 from .domain import (
     AnalysisInputs,
     AnalysisPayload,

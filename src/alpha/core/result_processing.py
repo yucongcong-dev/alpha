@@ -16,11 +16,8 @@ from ..analysis.stats import (
     update_template_stats_with_result,
 )
 from ..io.results_store import dump_results_incremental
-from ..models.base import (
-    ExecutionState,
-    FieldTestResult,
-    FutureCompletionContext,
-)
+from ..models.domain import FieldTestResult
+from ..models.runtime import ExecutionState, FutureCompletionContext
 from ..policy import auto_update_blacklist_incremental, build_blacklist_runtime_stats
 
 logger = logging.getLogger(__name__)

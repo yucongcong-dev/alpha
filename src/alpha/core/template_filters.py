@@ -16,18 +16,17 @@ from ..analysis.feedback import (
     should_keep_template_for_feedback,
     should_skip_field_template_family,
 )
-from ..config import (
+from ..config.constants import (
     CHECK_CONCENTRATED_WEIGHT,
     CHECK_LOW_FITNESS,
     CHECK_LOW_SHARPE,
     CHECK_LOW_SUB_UNIVERSE_SHARPE,
-    DatasetExpressionPolicy,
 )
-from ..models.base import (
-    FieldTestResult,
-    RunFilters,
+from ..config.models import DatasetExpressionPolicy
+from ..models.domain import FieldTestResult, TemplateCandidate
+from ..models.io_types import RunFilters
+from ..models.runtime import (
     TemplateBuildContext,
-    TemplateCandidate,
     TemplateFeedback,
 )
 

@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from ..models.base import (
+from ..models.domain import (
     AnalysisInputs,
     AnalysisPayload,
     FieldTestResult,

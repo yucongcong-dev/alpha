@@ -34,7 +34,7 @@ from typing import Any
 
 from ..exceptions import BrainAPIError
 from ..io.common import atomic_write_json
-from ..models.base import CredentialsArgs
+from ..models.runtime import CredentialsArgs
 
 logger = logging.getLogger(__name__)
 

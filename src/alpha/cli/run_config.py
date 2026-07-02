@@ -6,7 +6,8 @@ from __future__ import annotations
 
 from typing import Any
 
-from ..models.base import RunConfigArgs, RunPaths
+from ..models.io_types import RunPaths
+from ..models.runtime import RunConfigArgs
 
 
 def build_run_config_snapshot(args: RunConfigArgs, run_paths: RunPaths) -> dict[str, Any]:

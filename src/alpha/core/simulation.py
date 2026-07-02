@@ -10,12 +10,14 @@ from __future__ import annotations
 import logging
 
 from ..api.client import BrainClient, WorkerClientFactory
-from ..config import SENTINEL_UNKNOWN
-from ..models.base import (
+from ..config.constants import SENTINEL_UNKNOWN
+from ..models.domain import (
     FieldTestContext,
     FieldTestResult,
-    SemaphoreLike,
     SettingsVariant,
+)
+from ..models.runtime import (
+    SemaphoreLike,
     SimulationStageArgs,
     TemplateField,
 )

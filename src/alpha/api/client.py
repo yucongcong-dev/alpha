@@ -30,17 +30,14 @@ import threading
 from typing import TypeVar
 from urllib.request import HTTPCookieProcessor, ProxyHandler, build_opener
 
-from ..config import (
-    DEFAULT_RATE_LIMIT_MAX_RETRIES,
-    get_login_retry_wait,
-    get_retry_operation_default_wait,
-)
+from ..config.constants import DEFAULT_RATE_LIMIT_MAX_RETRIES
+from ..config.getters import get_login_retry_wait, get_retry_operation_default_wait
 from ..exceptions import (
     BrainAPIError,
     BrainQueueBusyError,
     BrainRateLimitError,
 )
-from ..models.base import ApiClientOptions
+from ..models.runtime import ApiClientOptions
 from .alphas import BrainAlphasMixin
 from .fields import BrainFieldsMixin
 from .session import BrainSessionMixin

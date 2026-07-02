@@ -6,14 +6,14 @@ from __future__ import annotations
 
 import logging
 
-from ..config import (
+from ..config.constants import (
     CHECK_CONCENTRATED_WEIGHT,
     CHECK_LOW_FITNESS,
     CHECK_LOW_SHARPE,
-    DatasetExpressionPolicy,
-    get_dataset_expression_policy,
 )
-from ..models.base import FieldTestResult
+from ..config.models import DatasetExpressionPolicy
+from ..config.policy import get_dataset_expression_policy
+from ..models.domain import FieldTestResult
 from .blacklist_store import (
     invalidate_blacklist_runtime_cache,
     read_blacklist_payload,

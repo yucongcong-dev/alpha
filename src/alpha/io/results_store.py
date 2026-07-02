@@ -13,7 +13,7 @@ import tempfile
 from typing import Any
 
 from ..analysis.report_builder import build_analysis_payload, build_results_summary_payload
-from ..models.base import FieldTestResult
+from ..models.domain import FieldTestResult
 from .common import atomic_write_json
 from .output_paths import build_output_sidecar_paths, cleanup_legacy_sidecar_files
 

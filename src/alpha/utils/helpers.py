@@ -15,7 +15,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from ..config import SENTINEL_UNKNOWN
+from ..config.constants import SENTINEL_UNKNOWN
 
 
 def first_non_empty(*values: Any) -> Any | None:

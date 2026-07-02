@@ -14,7 +14,8 @@ import logging
 from .analysis.stats import current_submittable_count
 from .core import delete_pipeline_state
 from .io.results_store import dump_results
-from .models.base import InitializedRunContext, ResultWriteArgs, RunPaths
+from .models.io_types import RunPaths
+from .models.runtime import InitializedRunContext, ResultWriteArgs
 from .policy import auto_update_blacklist
 
 logger = logging.getLogger(__name__)

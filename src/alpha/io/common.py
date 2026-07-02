@@ -14,7 +14,7 @@ from pathlib import Path
 import tempfile
 from typing import Any
 
-from ..config import DEFAULT_DATASET_ID
+from ..config.constants import DEFAULT_DATASET_ID
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 PROJECT_ROOT = SCRIPT_DIR.parent.parent.parent

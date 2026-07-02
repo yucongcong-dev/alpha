@@ -9,7 +9,7 @@ from pathlib import Path
 import time
 from typing import Any
 
-from ..config import (
+from ..config.constants import (
     API_KEY_MESSAGE,
     API_KEY_STATUS,
     SENTINEL_UNKNOWN,
@@ -21,7 +21,7 @@ from ..config import (
     STAT_FIELD_SUBMITTED,
     STAT_FIELD_TEMPLATE_NAME,
 )
-from ..models.base import FieldTestResult, ResultRow
+from ..models.domain import FieldTestResult, ResultRow
 
 logger = logging.getLogger(__name__)
 

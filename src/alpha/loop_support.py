@@ -17,14 +17,14 @@ from .core import (
     save_checkpoint,
     save_pipeline_state,
 )
-from .models.base import (
+from .models.domain import SettingsVariant
+from .models.runtime import (
     ExecutionState,
     InitializedRunContext,
     PendingFutureContext,
     ResultWriteOptions,
     RuntimeConcurrencyState,
     SchedulerRuntimeArgs,
-    SettingsVariant,
     SimulationStageArgs,
     TemplateBuildArgs,
     TemplateBuildContext,

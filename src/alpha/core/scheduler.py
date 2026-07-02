@@ -28,7 +28,7 @@ from ..analysis.stats import (
 )
 from ..api.client import wait_seconds
 from ..io.results_store import dump_results_incremental
-from ..models.base import (
+from ..models.runtime import (
     ExecutionState,
     FutureCompletionContext,
     ResultWriteOptions,

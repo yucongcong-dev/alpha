@@ -19,7 +19,8 @@ from __future__ import annotations
 from collections.abc import Mapping, Sequence
 import logging
 
-from ..config import SENTINEL_UNKNOWN, get_dataset_expression_policy
+from ..config.constants import SENTINEL_UNKNOWN
+from ..config.policy import get_dataset_expression_policy
 from ..generators.expressions import (
     build_expression_candidates,
     build_refine_templates,
@@ -28,19 +29,16 @@ from ..generators.settings import (
     build_setting_variants,
     build_settings_fingerprint_from_payload,
 )
-from ..models.base import (
+from ..models.domain import FieldTestResult, SettingsVariant, TemplateCandidate, TemplateLibrary
+from ..models.io_types import RunFilters
+from ..models.runtime import (
     ExecutionState,
-    FieldTestResult,
     HistoricalRunState,
     PendingFutureLike,
-    RunFilters,
-    SettingsVariant,
     TemplateBuildArgs,
     TemplateBuildContext,
     TemplateBuildOptions,
-    TemplateCandidate,
     TemplateField,
-    TemplateLibrary,
 )
 from ..utils.helpers import choose_field_name, first_non_empty
 from .template_filters import (
