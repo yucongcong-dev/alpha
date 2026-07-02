@@ -12,15 +12,13 @@ Brain API 客户端模块
     - 多线程客户端管理
 
 模块内容：
-    - wait_seconds: 带日志的休眠函数
-    - extract_retry_after: 解析 Retry-After 头
-    - doubled_retry_after: 双倍等待时间
-    - polling_retry_after: 轮询等待时间
-    - first_non_empty: 返回第一个非空值
-    - safe_json_bytes: 安全解析 JSON
-    - simulation_payload_is_pending: 判断模拟状态
+    - retry_operation: 统一阶段重试封装
+    - login_with_retry: 登录重试封装
     - BrainClient: 主 API 客户端类
     - WorkerClientFactory: 多线程客户端工厂
+
+响应 payload 解析已拆到 api.payloads，等待与 Retry-After 解析已拆到 api.timing。
+本模块仍导入这些 helper 以保持旧调用路径兼容。
 """
 
 from __future__ import annotations
@@ -82,11 +80,6 @@ logger = logging.getLogger(__name__)
 # 全局请求节流：所有 BrainClient 实例共享同一个时钟，避免多线程各自为政
 _request_throttle_lock = threading.Lock()
 _global_last_request_at: float = 0.0
-
-# ============================================================================
-# 辅助函数 - 数据处理
-# ============================================================================
-
 
 # ============================================================================
 # 辅助函数 - 重试与登录

@@ -87,22 +87,6 @@ from ..policy.template_blacklist import (
 )
 from ..utils.helpers import choose_field_name, choose_field_type, is_event_field_name
 
-_BUCKET_GROUP_SPECS: tuple[tuple[str, str, int], ...] = (
-    ("cap_bucket", "bucket(rank(cap), range='0.1, 1, 0.1')", 174),
-    ("asset_bucket", "bucket(rank(assets), range='0.1, 1, 0.1')", 172),
-    ("volatility_bucket", "bucket(rank(ts_std_dev(returns, 20)), range='0.1, 1, 0.1')", 170),
-    ("liquidity_bucket", "bucket(rank(close * volume), range='0.1, 1, 0.1')", 168),
-)
-"""从旧回测脚本吸收的通用 bucket 分组维度，控制数量避免候选爆炸。"""
-
-_TRADE_WHEN_EVENT_SPECS: tuple[tuple[str, str, int], ...] = (
-    ("volume_expansion", "ts_mean(volume, 10) > ts_mean(volume, 60)", 166),
-    ("price_breakout_20", "ts_arg_max(close, 20) == 0", 164),
-    ("return_zscore_high", "ts_zscore(returns, 60) > 2", 162),
-    ("high_volatility_sector", "group_rank(ts_std_dev(returns, 60), sector) > 0.7", 160),
-)
-"""从旧回测脚本吸收的事件开关，用于降低噪声和改善 turnover。"""
-
 
 def _load_default_avoid_rules() -> list[dict[str, str]]:
     """兼容导出：加载跨数据集默认规避规则。"""
