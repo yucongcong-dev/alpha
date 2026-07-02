@@ -22,8 +22,8 @@ from .bootstrap import (
     initialize_run_context,
     prepare_fields_for_execution,
 )
-from .cli.parser import normalize_args_paths, parse_args
-from .cli.path_resolution import apply_run_paths
+from .cli.parser import parse_args
+from .cli.path_resolution import apply_run_paths, normalize_args_paths
 from .finalize import finalize_run
 from .run_loop import (
     build_field_resume_positions,

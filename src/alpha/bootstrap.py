@@ -10,7 +10,7 @@
 
 from __future__ import annotations
 
-import argparse
+from dataclasses import dataclass
 import logging
 from pathlib import Path
 import shutil
@@ -20,12 +20,9 @@ from .analysis.feedback import build_historical_run_state
 from .api.client import BrainClient, WorkerClientFactory, login_with_retry
 from .bootstrap_fields import prepare_fields_for_execution
 from .bootstrap_state import build_execution_state, populate_execution_metrics
-from .cli.parser import (
-    PROJECT_ROOT,
-    build_run_config_snapshot,
-    load_run_filters_extended,
-    setup_runtime_logging,
-)
+from .cli.constants import PROJECT_ROOT
+from .cli.filters import load_run_filters_extended, setup_runtime_logging
+from .cli.run_config import build_run_config_snapshot
 from .config import (
     DatasetExpressionPolicy,
     get_dataset_expression_policy,
@@ -38,6 +35,9 @@ from .io.credentials import load_credentials
 from .io.output_paths import cleanup_legacy_sidecar_files
 from .models.base import (
     ApiClientOptions,
+    ApiClientArgs,
+    BootstrapRuntimeArgs,
+    CleanRuntimeArgs,
     HistoricalRunState,
     FieldFetchOptions,
     InitializedRunContext,
@@ -50,6 +50,16 @@ from .policy import ensure_template_blacklist_file
 logger = logging.getLogger(__name__)
 
 
+@dataclass(frozen=True)
+class ResolvedCredentials:
+    """凭证加载所需的最小只读输入。"""
+
+    email: object
+    password: object
+    creds_file: object
+    creds_key_file: object
+
+
 def _run_path_value(run_paths: object | None, attr: str) -> str:
     """兼容 RunPaths 与历史 attr-style 对象的路径读取。"""
     if run_paths is None:
@@ -59,7 +69,7 @@ def _run_path_value(run_paths: object | None, attr: str) -> str:
 
 
 def clean_runtime_artifacts(
-    args: argparse.Namespace,
+    args: CleanRuntimeArgs,
     *,
     project_root: Path = PROJECT_ROOT,
 ) -> int:
@@ -97,7 +107,7 @@ def clean_runtime_artifacts(
 
 
 def create_and_login_client(
-    email: str, password: str, args: argparse.Namespace
+    email: str, password: str, args: ApiClientArgs
 ) -> tuple[BrainClient, WorkerClientFactory]:
     """创建 Brain API 客户端并完成登录，同时创建工作线程客户端工厂。"""
     client_options = ApiClientOptions.from_args(args)
@@ -113,7 +123,7 @@ def create_and_login_client(
 
 
 def initialize_run_context(
-    args: argparse.Namespace,
+    args: BootstrapRuntimeArgs,
     run_paths: RunPaths | object | None,
 ) -> InitializedRunContext | None:
     """执行主流程的初始化阶段，返回结构化运行上下文。"""
@@ -136,9 +146,17 @@ def initialize_run_context(
 
     creds_file = _run_path_value(run_paths, "creds_file") or args.creds_file
     creds_key_file = _run_path_value(run_paths, "creds_key_file") or args.creds_key_file
-    args.creds_file = creds_file
-    args.creds_key_file = creds_key_file
-    email, password = load_credentials(args)
+    if hasattr(args, "creds_file"):
+        args.creds_file = creds_file
+    if hasattr(args, "creds_key_file"):
+        args.creds_key_file = creds_key_file
+    credentials_args = ResolvedCredentials(
+        email=getattr(args, "email", None),
+        password=getattr(args, "password", None),
+        creds_file=creds_file,
+        creds_key_file=creds_key_file,
+    )
+    email, password = load_credentials(credentials_args)
     if not email or not password:
         logger.error("[error] 缺少凭证，无法继续")
         return None

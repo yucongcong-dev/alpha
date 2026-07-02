@@ -145,7 +145,7 @@ def build_simulation_payload(args: SimulationSettingsArgs, expression: str) -> d
     YAML key 即为 Brain API payload key (camelCase)，无需翻译。
 
     Args:
-        args: 命令行参数对象 (argparse.Namespace)。
+        args: 满足 `SimulationSettingsArgs` 协议的设置输入对象。
         expression: Alpha 表达式字符串。
 
     Returns:
@@ -226,7 +226,7 @@ def build_settings_fingerprint(args: SimulationSettingsArgs) -> str:
     用于验证配置一致性。
 
     Args:
-        args: 命令行参数对象。
+        args: 满足 `SimulationSettingsArgs` 协议的设置输入对象。
 
     Returns:
         str: 16 位十六进制指纹字符串。
@@ -280,7 +280,7 @@ def build_setting_variants(
     优先级仍然是 CLI > YAML > 硬编码官网默认值，然后在此基础上生成少量派生配置。
 
     Args:
-        args: 命令行参数对象。
+        args: 满足 `SimulationSettingsArgs` 协议的设置输入对象。
         template_name: 模板名称（保留兼容，未使用）。
         expression: Alpha 表达式字符串。
         field_feedback: 保留兼容，未使用。

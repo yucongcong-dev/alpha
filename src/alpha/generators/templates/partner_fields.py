@@ -9,9 +9,9 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 import re
-from typing import Any
 
 from ...config import ALLOWED_EXTERNAL_RATIO_PARTNERS, DatasetExpressionPolicy
+from ...models.base import TemplateField
 from ...utils.helpers import choose_field_name, choose_field_type
 
 _TOKENIZE_REGEX: re.Pattern = re.compile(r"[^a-z0-9]+")
@@ -66,7 +66,7 @@ def score_partner_candidate(
 
 def discover_partner_fields(
     field_name: str,
-    all_fields: Sequence[dict[str, Any]],
+    all_fields: Sequence[TemplateField],
     policy: DatasetExpressionPolicy,
     *,
     limit: int = 4,

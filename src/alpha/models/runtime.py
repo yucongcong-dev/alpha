@@ -12,8 +12,20 @@ import time
 from typing import Any, Protocol, Union
 
 from ..config import DatasetExpressionPolicy
-from .domain import FieldTestResult, TemplateCandidate, TemplateLibrary
+from .domain import (
+    FieldFeedbackMap,
+    FieldFeedbackSummary,
+    FieldTestResult,
+    TemplateCandidate,
+    TemplateLibrary,
+)
 from .io_types import RunFilters
+
+TemplateField = dict[str, Any]
+TemplateFeedback = FieldFeedbackSummary
+TemplateStats = dict[str, dict[str, int]]
+RunConfig = dict[str, Any]
+BlacklistRuntimeStats = dict[str, dict[str, Any]]
 
 
 class ApiClientArgs(Protocol):
@@ -50,6 +62,18 @@ class ResultWriteArgs(Protocol):
     auto_update_blacklist: object
 
 
+class CleanRuntimeArgs(Protocol):
+    include_credentials: object
+    dry_run_clean: object
+
+
+class CredentialsArgs(Protocol):
+    email: object
+    password: object
+    creds_file: object
+    creds_key_file: object
+
+
 class FieldFetchArgs(Protocol):
     dataset_id: object
     page_size: object
@@ -57,6 +81,77 @@ class FieldFetchArgs(Protocol):
     universe: object
     instrument_type: object
     delay: object
+
+
+class FieldSelectionArgs(Protocol):
+    top_fields_by_feedback: object
+    offset: object
+    limit: object
+
+
+class RunConfigArgs(Protocol):
+    dataset_id: object
+    region: object
+    universe: object
+    instrument_type: object
+    delay: object
+    decay: object
+    neutralization: object
+    truncation: object
+    nan_handling: object
+    limit: object
+    offset: object
+    page_size: object
+    sleep_between_fields: object
+    max_templates_per_field: object
+    max_templates_per_family: object
+    field_template_batch_size: object
+    legacy_similarity_penalty: object
+    disable_legacy_after: object
+    max_concurrent_simulations: object
+    max_concurrent_creates: object
+    simulation_create_retries: object
+    simulation_poll_retries: object
+    simulation_max_polls: object
+    simulation_max_wait_seconds: object
+    simulation_max_pending_cycles: object
+    simulation_max_queue_seconds: object
+    queue_busy_cooldown_seconds: object
+    field_queue_busy_skip_after: object
+    check_submit_retries: object
+    submit_retries: object
+    rate_limit_max_retries: object
+    login_retries: object
+    min_request_interval: object
+    template_disable_after: object
+    top_fields_by_feedback: object
+    stop_after_submittable: object
+    submit: object
+    auto_update_blacklist: object
+    smoke_test: object
+    dry_run_plan: object
+    full_run: object
+    verbose: object
+    quiet: object
+
+
+class StopAfterSubmittableArgs(Protocol):
+    stop_after_submittable: object
+
+
+class BootstrapRuntimeArgs(
+    ApiClientArgs,
+    CredentialsArgs,
+    FieldFetchArgs,
+    FieldSelectionArgs,
+    RunConfigArgs,
+    Protocol,
+):
+    output: object
+    template_library_file: object
+    fields_cache_file: object
+    max_concurrent_simulations: object
+    max_concurrent_creates: object
 
 
 class SimulationSettingsArgs(Protocol):
@@ -99,6 +194,11 @@ class SchedulerRuntimeArgs(Protocol):
     dataset_id: object
     output: object
     auto_update_blacklist: object
+
+
+class RunLoopArgs(SimulationStageArgs, SchedulerRuntimeArgs, StopAfterSubmittableArgs, Protocol):
+    dry_run_plan: object
+    field_template_batch_size: object
 
 
 class ClientFactoryLike(Protocol):
@@ -236,9 +336,9 @@ class TemplateBuildContext:
     """模板队列构建的只读上下文数据类。"""
 
     options: TemplateBuildOptions = field(default_factory=TemplateBuildOptions)
-    all_fields: Sequence[dict[str, Any]] = field(default_factory=list)
-    template_library: dict[str, list[dict[str, Any]]] = field(default_factory=dict)
-    field_feedback: dict[str, dict[str, Any]] = field(default_factory=dict)
+    all_fields: Sequence[TemplateField] = field(default_factory=list)
+    template_library: TemplateLibrary = field(default_factory=dict)
+    field_feedback: FieldFeedbackMap = field(default_factory=dict)
     global_failed_check_counts: dict[str, int] = field(default_factory=dict)
     include_templates: set[str] = field(default_factory=set)
     exclude_templates: set[str] = field(default_factory=set)
@@ -254,7 +354,7 @@ class FutureCompletionContext:
     result_write_options: ResultWriteOptions = field(default_factory=ResultWriteOptions)
     settings_fingerprint: str = ""
     template_library_fingerprint: str = ""
-    run_config: dict[str, Any] | None = None
+    run_config: RunConfig | None = None
 
 
 @dataclass
@@ -282,8 +382,8 @@ class HistoricalRunState:
 
     existing_results: list[FieldTestResult] = field(default_factory=list)
     attempted_keys: set[tuple[str, str, str, str]] = field(default_factory=set)
-    template_stats: dict[str, dict[str, int]] = field(default_factory=dict)
-    field_feedback: dict[str, dict[str, Any]] = field(default_factory=dict)
+    template_stats: TemplateStats = field(default_factory=dict)
+    field_feedback: FieldFeedbackMap = field(default_factory=dict)
     global_failed_check_counts: dict[str, int] = field(default_factory=dict)
 
 
@@ -293,7 +393,7 @@ class ExecutionState:
 
     results: list[FieldTestResult]
     attempted_keys: set[tuple[str, str, str, str]]
-    template_stats: dict[str, dict[str, int]]
+    template_stats: TemplateStats
     pending_futures: dict[object, PendingFutureContext]
     field_queue_busy_counts: dict[str, int]
     skipped_fields_due_to_queue: set[str]
@@ -303,7 +403,7 @@ class ExecutionState:
     error_count: int = 0
     queue_timeout_count: int = 0
     persisted_result_count: int = 0
-    blacklist_runtime_stats: dict[str, dict[str, Any]] = field(default_factory=dict)
+    blacklist_runtime_stats: BlacklistRuntimeStats = field(default_factory=dict)
     blacklisted_template_names: set[str] = field(default_factory=set)
     last_submission_at: float = 0.0
 
@@ -320,14 +420,12 @@ class InitializedRunContext:
     template_library_fingerprint: str
     settings_fingerprint: str
     historical_state: HistoricalRunState
-    fields: list[dict[str, Any]]
+    fields: list[TemplateField]
     execution_state: ExecutionState
     runtime_state: RuntimeConcurrencyState
     create_semaphore: SemaphoreLike
-    run_config: dict[str, Any]
+    run_config: RunConfig
 
 
-TemplateField = dict[str, Any]
-TemplateFeedback = dict[str, Any]
 PendingFutureLike = Union[PendingFutureContext, dict[str, object]]
 TemplateSequence = Sequence[TemplateCandidate]

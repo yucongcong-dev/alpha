@@ -9,13 +9,12 @@
 
 from __future__ import annotations
 
-import argparse
 import logging
 
 from .analysis.stats import current_submittable_count
 from .core import delete_pipeline_state
 from .io.results_store import dump_results
-from .models.base import InitializedRunContext, RunPaths
+from .models.base import InitializedRunContext, ResultWriteArgs, RunPaths
 from .policy import auto_update_blacklist
 
 logger = logging.getLogger(__name__)
@@ -30,7 +29,7 @@ def _run_path_value(run_paths: object | None, attr: str) -> str:
 
 
 def finalize_run(
-    args: argparse.Namespace,
+    args: ResultWriteArgs,
     run_ctx: InitializedRunContext,
     run_paths: RunPaths | object | None = None,
 ) -> None:

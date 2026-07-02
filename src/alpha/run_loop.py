@@ -9,7 +9,6 @@
 
 from __future__ import annotations
 
-import argparse
 from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
 import logging
 import time
@@ -35,8 +34,16 @@ from .core import (
     should_skip_field,
     throttle_before_submission,
 )
-from .models.base import InitializedRunContext, TemplateBuildContext
-from .models.base import ResultWriteOptions, RunPaths
+from .models.base import (
+    FieldTestResult,
+    InitializedRunContext,
+    ResultWriteOptions,
+    ResultWriteArgs,
+    RunLoopArgs,
+    RunPaths,
+    TemplateBuildContext,
+    TemplateField,
+)
 from .loop_support import (
     create_template_build_context,
     drain_remaining_futures,
@@ -53,7 +60,7 @@ logger = logging.getLogger(__name__)
 
 def refresh_runtime_feedback(
     template_build_ctx: TemplateBuildContext,
-    results: list[Any],
+    results: list[FieldTestResult],
     *,
     force: bool = False,
 ) -> None:
@@ -81,7 +88,7 @@ def refresh_runtime_feedback(
     template_build_ctx.feedback_result_count = result_count
 
 
-def build_field_resume_positions(fields: list[dict[str, Any]]) -> dict[str, int]:
+def build_field_resume_positions(fields: list[TemplateField]) -> dict[str, int]:
     """为字段列表建立稳定的原始顺序恢复位置索引。"""
     return {
         str(first_non_empty(field.get("id"), SENTINEL_UNKNOWN)): (index + 1)
@@ -112,7 +119,7 @@ def _run_path_value(run_paths: object | None, attr: str) -> str:
 
 
 def resolve_result_write_options(
-    args: argparse.Namespace,
+    args: ResultWriteArgs,
     run_paths: RunPaths | object | None,
 ) -> ResultWriteOptions:
     """优先使用 run_paths 中的输出路径，避免旧调用链依赖 args 已被改写。"""
@@ -126,7 +133,7 @@ def resolve_result_write_options(
 
 
 def run_field_test_loop(
-    args: argparse.Namespace,
+    args: RunLoopArgs,
     run_ctx: InitializedRunContext,
     run_paths: RunPaths | object | None = None,
 ) -> None:

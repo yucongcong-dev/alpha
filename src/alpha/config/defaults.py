@@ -6,11 +6,31 @@ YAML global 默认值合并。
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Protocol
+
+
+class DefaultsTarget(Protocol):
+    """支持按属性读写的配置承载对象。"""
+
+    def __getattr__(self, name: str) -> object: ...
+
+    def __setattr__(self, name: str, value: object) -> None: ...
+
+
+def _assign_if_supported(
+    target: DefaultsTarget,
+    key: str,
+    value: object,
+    explicit_cli_keys: set[str],
+) -> None:
+    """仅在目标对象支持该属性且 CLI 未显式传参时写入值。"""
+    if key in explicit_cli_keys or not hasattr(target, key):
+        return
+    setattr(target, key, value)
 
 
 def apply_yaml_global_defaults(
-    args: Any,
+    args: DefaultsTarget,
     yaml_config: dict[str, Any] | None = None,
     explicit_cli_keys: set[str] | None = None,
 ) -> None:
@@ -33,8 +53,8 @@ def apply_yaml_global_defaults(
     sim_section = global_cfg.get("simulation", {})
     if isinstance(sim_section, dict):
         for yaml_key, arg_key in sim_key_map.items():
-            if yaml_key in sim_section and hasattr(args, arg_key) and arg_key not in explicit_cli_keys:
-                setattr(args, arg_key, sim_section[yaml_key])
+            if yaml_key in sim_section:
+                _assign_if_supported(args, arg_key, sim_section[yaml_key], explicit_cli_keys)
 
     _merge_section(args, sim_section, {
         "region", "universe", "delay", "decay", "neutralization",
@@ -82,7 +102,7 @@ def apply_yaml_global_defaults(
 
 
 def _merge_section(
-    args: Any,
+    args: DefaultsTarget,
     section: dict[str, Any],
     keys: set[str],
     explicit_cli_keys: set[str] | None = None,
@@ -92,5 +112,5 @@ def _merge_section(
         return
     explicit_cli_keys = explicit_cli_keys or set()
     for key in keys:
-        if key in section and hasattr(args, key) and key not in explicit_cli_keys:
-            setattr(args, key, section[key])
+        if key in section:
+            _assign_if_supported(args, key, section[key], explicit_cli_keys)

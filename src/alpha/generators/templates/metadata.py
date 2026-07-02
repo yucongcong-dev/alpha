@@ -10,7 +10,7 @@ from __future__ import annotations
 from typing import Any
 
 from ...config import get_backfill_window
-from ...models.base import TemplateLibrary
+from ...models.base import FieldView, TemplateLibrary
 
 TemplateMetadataMap = dict[tuple[str, str], dict[str, Any]]
 """表达式构建阶段使用的模板元数据映射。key=(template_name, expression)。"""
@@ -58,7 +58,7 @@ def _select_template_items(
 
 
 def build_template_metadata_index(
-    field_view: Any,
+    field_view: FieldView,
     template_library: TemplateLibrary,
     field_type: str,
     dataset_id: str,

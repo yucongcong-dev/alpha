@@ -22,7 +22,7 @@ import os
 from typing import Any, Protocol
 
 from ..io.common import atomic_write_json
-from ..models.base import FieldFetchOptions
+from ..models.base import FieldFetchOptions, TemplateField
 logger = logging.getLogger(__name__)
 
 
@@ -51,7 +51,7 @@ def load_fields_cache(
     universe: str,
     instrument_type: str,
     delay: int,
-) -> list[dict[str, Any]]:
+) -> list[TemplateField]:
     """
     仅在数据集上下文完全匹配时加载字段缓存。
 
@@ -68,7 +68,7 @@ def load_fields_cache(
         delay (int): 延迟天数。
 
     Returns:
-        list[dict[str, Any]]: 缓存的字段列表。如果文件不存在、
+        list[TemplateField]: 缓存的字段列表。如果文件不存在、
             格式错误或上下文不匹配，返回空列表。
 
     Example:
@@ -118,7 +118,7 @@ def save_fields_cache(
     universe: str,
     instrument_type: str,
     delay: int,
-    fields: Sequence[dict[str, Any]],
+    fields: Sequence[TemplateField],
 ) -> None:
     """
     保存字段元数据及其缓存作用域键。
@@ -133,7 +133,7 @@ def save_fields_cache(
         universe (str): 宇宙代码。
         instrument_type (str): 工具类型。
         delay (int): 延迟天数。
-        fields (Sequence[dict[str, Any]]): 要保存的字段列表。
+        fields (Sequence[TemplateField]): 要保存的字段列表。
 
     Example:
         >>> save_fields_cache(
@@ -172,8 +172,8 @@ def fetch_fields_with_cache(
     client: DatasetFieldClient,
     options: FieldFetchOptions,
     fields_cache_file: str,
-    cached_fields: Sequence[dict[str, object]],
-) -> list[dict[str, object]]:
+    cached_fields: Sequence[TemplateField],
+) -> list[TemplateField]:
     """
     根据缓存状态获取字段；首次默认拉取并缓存当前上下文下的全量字段。
 

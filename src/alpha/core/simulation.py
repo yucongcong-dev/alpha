@@ -18,6 +18,7 @@ from ..models.base import (
     SemaphoreLike,
     SettingsVariant,
     SimulationStageArgs,
+    TemplateField,
 )
 from ..utils.helpers import choose_field_type, first_non_empty
 from .simulation_parsing import (
@@ -47,7 +48,7 @@ logger = logging.getLogger(__name__)
 def run_field_test(
     client: BrainClient,
     args: SimulationStageArgs,
-    field: dict[str, Any],
+    field: TemplateField,
     template_name: str,
     expression: str,
     settings_fingerprint: str,
@@ -158,7 +159,7 @@ def run_field_test(
 def run_field_test_in_worker(
     client_factory: WorkerClientFactory,
     args: SimulationStageArgs,
-    field: dict[str, Any],
+    field: TemplateField,
     template_name: str,
     expression: str,
     settings_fingerprint: str,

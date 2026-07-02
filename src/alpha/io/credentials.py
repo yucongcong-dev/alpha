@@ -24,7 +24,6 @@
 
 from __future__ import annotations
 
-import argparse
 from contextlib import suppress
 import getpass
 import json
@@ -35,6 +34,7 @@ from typing import Any
 
 from ..exceptions import BrainAPIError
 from ..io.common import atomic_write_json
+from ..models.base import CredentialsArgs
 
 logger = logging.getLogger(__name__)
 
@@ -404,7 +404,7 @@ def prompt_and_store_credentials(path: str, key_path: str) -> tuple[str, str]:
     return email, password
 
 
-def load_credentials(args: argparse.Namespace) -> tuple[str | None, str | None]:
+def load_credentials(args: CredentialsArgs) -> tuple[str | None, str | None]:
     """
     优先从命令行或环境变量读取凭证，否则回退到本地凭证文件。
 
@@ -432,8 +432,8 @@ def load_credentials(args: argparse.Namespace) -> tuple[str | None, str | None]:
             - 凭证格式不支持
 
     Example:
-        >>> import argparse
-        >>> args = argparse.Namespace(
+        >>> from types import SimpleNamespace
+        >>> args = SimpleNamespace(
         ...     email=None,
         ...     password=None,
         ...     creds_file="~/.wqb/credentials.json",

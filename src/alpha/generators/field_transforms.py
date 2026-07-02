@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from ..config import DatasetExpressionPolicy, FieldTransformSpec, FieldTransformStage
-from ..models.base import FieldView
+from ..models.base import FieldView, TemplateField
 from ..utils.helpers import choose_field_name, choose_field_type
 
 
@@ -39,7 +39,7 @@ def apply_transform_pipeline(expression: str, transform_spec: FieldTransformSpec
 
 
 def build_field_view(
-    field: dict[str, Any],
+    field: TemplateField,
     policy: DatasetExpressionPolicy,
 ) -> FieldView:
     """为字段构建统一视图。"""

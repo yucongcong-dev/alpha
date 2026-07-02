@@ -10,6 +10,30 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any
 
+FailedCheck = dict[str, Any]
+"""单条失败检查项。"""
+
+ResultRow = dict[str, Any]
+"""结果落盘 / 分析阶段使用的通用行对象。"""
+
+TemplateMetadata = dict[str, Any]
+"""模板候选或字段视图附带的元数据。"""
+
+FieldFeedbackSummary = dict[str, Any]
+"""单个字段的历史反馈画像。"""
+
+FieldFeedbackMap = dict[str, FieldFeedbackSummary]
+"""按字段 ID 聚合的反馈画像映射。"""
+
+AnalysisInputs = dict[str, list[ResultRow]]
+"""analysis sidecar 构建前的中间聚合输入。"""
+
+SummaryPayload = dict[str, Any]
+"""主结果文件 summary payload。"""
+
+AnalysisPayload = dict[str, Any]
+"""analysis sidecar payload。"""
+
 TemplateLibrary = dict[str, list[dict[str, Any]]]
 """模板库类型别名。"""
 
@@ -37,12 +61,12 @@ class FieldTestResult:
     settings_fingerprint: str = ""
     template_library_fingerprint: str = ""
     failed_stage: str | None = None
-    failed_checks: list[dict[str, Any]] | None = None
+    failed_checks: list[FailedCheck] | None = None
 
     def is_successful(self) -> bool:
         return self.submittable is True
 
-    def to_dict(self) -> dict[str, Any]:
+    def to_dict(self) -> ResultRow:
         return {
             "field_id": self.field_id,
             "field_type": self.field_type,
@@ -79,7 +103,7 @@ class FieldView:
     preprocessed_expression: str
     ratio_numerator_expression: str
     ratio_denominator_expression: str
-    metadata: dict[str, Any] = field(default_factory=dict)
+    metadata: TemplateMetadata = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
@@ -89,7 +113,7 @@ class TemplateCandidate:
     name: str
     expression: str
     priority: int
-    metadata: dict[str, Any] = field(default_factory=dict)
+    metadata: TemplateMetadata = field(default_factory=dict)
 
     def __iter__(self):
         yield self.name
@@ -111,7 +135,7 @@ class NearPassCandidate:
     template_family: str = ""
     template_stage: str = ""
     score: float = 0.0
-    failed_checks: list[dict[str, Any]] = field(default_factory=list)
+    failed_checks: list[FailedCheck] = field(default_factory=list)
 
 
 @dataclass
@@ -136,7 +160,7 @@ class FieldTestContext:
         simulation_id: str | None = None,
         alpha_id: str | None = None,
         status: str = "error",
-        failed_checks: list[dict[str, Any]] | None = None,
+        failed_checks: list[FailedCheck] | None = None,
     ) -> FieldTestResult:
         return FieldTestResult(
             field_id=self.field_id,
@@ -167,7 +191,7 @@ class FieldTestContext:
         submitted: bool,
         message: str,
         status: str = "simulated",
-        failed_checks: list[dict[str, Any]] | None = None,
+        failed_checks: list[FailedCheck] | None = None,
     ) -> FieldTestResult:
         return FieldTestResult(
             field_id=self.field_id,

@@ -1,15 +1,17 @@
 """
-命令行参数解析模块
+命令行参数解析模块。
 
-本模块负责解析命令行参数、标准化路径、构建配置快照、
-加载运行过滤器和设置日志等初始化工作。
+本模块的核心职责是解析 CLI 参数，并在解析完成后应用
+YAML / dataset profile / smoke-test / full-run 等参数覆盖逻辑。
+
+路径归一化、运行配置快照和过滤器/日志辅助逻辑已经拆到
+`cli.path_resolution`、`cli.run_config`、`cli.filters`。
+本模块仅保留薄兼容导出，避免旧调用方一次性失效。
 
 模块内容：
     - parse_args() -> argparse.Namespace: 解析命令行参数
-    - normalize_args_paths(args) -> RunPaths: 标准化参数中的文件路径
-    - build_run_config_snapshot(args, run_paths) -> Dict: 构建运行配置快照
-    - load_run_filters(run_paths) -> RunFilters: 加载运行过滤器
-    - setup_runtime_logging(log_path) -> None: 设置运行时日志
+    - normalize_args_paths(args) -> RunPaths: 兼容导出路径归一化
+    - build_run_config_snapshot(args, run_paths) -> Dict: 兼容导出运行配置快照
 """
 
 from __future__ import annotations
@@ -25,7 +27,7 @@ from ..config import (
     get_dataset_profile,
     get_yaml_config,
 )
-from ..models.base import RunPaths
+from ..models.base import RunConfigArgs, RunPaths
 from .constants import (
     CACHE_DIR,
     CREDS_DIR,
@@ -619,7 +621,7 @@ def normalize_args_paths(args: argparse.Namespace) -> RunPaths:
 # ============================================================================
 
 
-def build_run_config_snapshot(args: argparse.Namespace, run_paths: RunPaths) -> dict[str, Any]:
+def build_run_config_snapshot(args: RunConfigArgs, run_paths: RunPaths) -> dict[str, Any]:
     """兼容导出：构建运行配置快照。"""
     return _build_run_config_snapshot(args, run_paths)
 

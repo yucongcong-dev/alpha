@@ -16,7 +16,6 @@
 
 from __future__ import annotations
 
-import argparse
 from collections.abc import Mapping, Sequence
 import logging
 
@@ -47,6 +46,7 @@ from ..models.base import (
     RunFilters,
     SettingsVariant,
     TemplateCandidate,
+    TemplateBuildArgs,
     TemplateBuildContext,
     TemplateBuildOptions,
     TemplateField,
@@ -174,7 +174,7 @@ def build_pending_templates_for_field(
 
 def print_dry_run_plan(
     *,
-    args: argparse.Namespace,
+    args: TemplateBuildArgs,
     fields: Sequence[TemplateField],
     filters: RunFilters,
     template_library: TemplateLibrary,

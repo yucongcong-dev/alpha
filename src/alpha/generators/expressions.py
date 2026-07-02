@@ -76,7 +76,7 @@ from .templates.variations import (
     build_trade_when_templates,
     invert_expression,
 )
-from ..models.base import TemplateCandidate, TemplateLibrary
+from ..models.base import FieldView, TemplateCandidate, TemplateFeedback, TemplateField, TemplateLibrary
 from ..policy import template_blacklist as _template_blacklist_policy
 from ..policy.template_blacklist import (
     _BLACKLIST_CACHE,
@@ -321,8 +321,8 @@ def build_high_conviction_ratio_templates(
 
 
 def _build_matrix_templates(
-    field_view: Any,
-    all_fields: Sequence[dict[str, Any]],
+    field_view: FieldView,
+    all_fields: Sequence[TemplateField],
     expression_policy: DatasetExpressionPolicy,
 ) -> tuple[list[TemplateCandidate], list[TemplateCandidate]]:
     """为 MATRIX 类型字段构建多样化和 legacy 模板候选。
@@ -584,13 +584,13 @@ def _build_matrix_templates(
 
 
 def build_expression_candidates(
-    field: dict[str, Any],
+    field: TemplateField,
     template_library: TemplateLibrary,
     max_templates_per_field: int,
     max_templates_per_family: int,
     legacy_similarity_penalty: int,
-    all_fields: Sequence[dict[str, Any]] | None = None,
-    field_feedback: dict[str, Any] | None = None,
+    all_fields: Sequence[TemplateField] | None = None,
+    field_feedback: TemplateFeedback | None = None,
     global_failed_check_counts: dict[str, int] | None = None,
     use_dataset_heuristics: bool = True,
     *,
@@ -604,13 +604,13 @@ def build_expression_candidates(
     优先级调整和数量限制等多个步骤。
 
     Args:
-        field (dict[str, Any]): 字段元数据。
+        field (TemplateField): 字段元数据。
         template_library (TemplateLibrary): 模板库字典。
         max_templates_per_field (int): 每个字段的模板数量上限。
         max_templates_per_family (int): 每个家族的模板数量上限。
         legacy_similarity_penalty (int): legacy 家族的相似度惩罚。
-        all_fields (Sequence[dict[str, Any]] | None): 所有可用字段列表。
-        field_feedback (dict[str, Any] | None): 字段反馈数据。
+        all_fields (Sequence[TemplateField] | None): 所有可用字段列表。
+        field_feedback (TemplateFeedback | None): 字段反馈数据。
         global_failed_check_counts (dict[str, int] | None): 全局失败检查计数。
         use_dataset_heuristics (bool): 是否使用数据集启发式规则。
         dataset_id (str): 兼容保留；未显式传 expression_policy 时用于生成策略。

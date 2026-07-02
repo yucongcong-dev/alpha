@@ -4,13 +4,12 @@
 
 from __future__ import annotations
 
-import argparse
 from typing import Any
 
-from ..models.base import RunPaths
+from ..models.base import RunConfigArgs, RunPaths
 
 
-def build_run_config_snapshot(args: argparse.Namespace, run_paths: RunPaths) -> dict[str, Any]:
+def build_run_config_snapshot(args: RunConfigArgs, run_paths: RunPaths) -> dict[str, Any]:
     """构建用于结果落盘的运行配置快照。"""
     return {
         "dataset": {
@@ -77,4 +76,3 @@ def build_run_config_snapshot(args: argparse.Namespace, run_paths: RunPaths) -> 
             "quiet": args.quiet,
         },
     }
-

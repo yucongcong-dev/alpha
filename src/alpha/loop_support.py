@@ -6,11 +6,9 @@
 
 from __future__ import annotations
 
-import argparse
 from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
 import logging
 import time
-from typing import Any
 
 from .config import SENTINEL_UNKNOWN
 from .core import (
@@ -24,10 +22,15 @@ from .models.base import (
     ExecutionState,
     InitializedRunContext,
     PendingFutureContext,
+    ResultWriteOptions,
     RuntimeConcurrencyState,
+    SchedulerRuntimeArgs,
+    SimulationStageArgs,
+    TemplateBuildArgs,
+    SettingsVariant,
     TemplateBuildContext,
     TemplateBuildOptions,
-    ResultWriteOptions,
+    TemplateField,
 )
 from .utils.helpers import first_non_empty
 
@@ -36,12 +39,12 @@ logger = logging.getLogger(__name__)
 
 def restore_fields_from_state(
     *,
-    fields: list[dict[str, Any]],
+    fields: list[TemplateField],
     state_file: str,
     runtime_state: RuntimeConcurrencyState,
     execution_state: ExecutionState,
     clamp_resume_index_fn,
-) -> tuple[list[dict[str, Any]], int]:
+) -> tuple[list[TemplateField], int]:
     """从 pipeline state 恢复字段起点，并把字段列表旋转到恢复位置。"""
     resumed_index = 0
     if not state_file:
@@ -70,9 +73,9 @@ def restore_fields_from_state(
 
 def create_template_build_context(
     *,
-    args: argparse.Namespace,
+    args: TemplateBuildArgs,
     run_ctx: InitializedRunContext,
-    fields: list[dict[str, Any]],
+    fields: list[TemplateField],
     existing_results_count: int,
 ) -> TemplateBuildContext:
     """构建运行期模板上下文，并记录初始反馈结果数缓存。"""
@@ -95,7 +98,7 @@ def drain_until_capacity(
     *,
     executor_state: ExecutionState,
     runtime_state: RuntimeConcurrencyState,
-    args: argparse.Namespace,
+    args: SchedulerRuntimeArgs,
     run_ctx: InitializedRunContext,
     field_id: str,
     result_write_options: ResultWriteOptions,
@@ -125,8 +128,8 @@ def submit_template_future(
     executor: ThreadPoolExecutor,
     run_ctx: InitializedRunContext,
     execution_state: ExecutionState,
-    args: argparse.Namespace,
-    field: dict[str, Any],
+    args: SimulationStageArgs,
+    field: TemplateField,
     field_id: str,
     field_name: str,
     field_type: str,
@@ -134,7 +137,7 @@ def submit_template_future(
     template_family: str,
     template_stage: str,
     expression: str,
-    settings_variant: dict[str, Any],
+    settings_variant: SettingsVariant,
     variant_fingerprint: str,
 ) -> None:
     """提交单个模板模拟任务，并登记 pending future 上下文。"""
@@ -171,7 +174,7 @@ def persist_field_progress(
     state_file: str,
     field_id: str,
     field_index: int,
-    original_fields: list[dict[str, Any]],
+    original_fields: list[TemplateField],
     field_resume_positions: dict[str, int],
     execution_state: ExecutionState,
     runtime_state: RuntimeConcurrencyState,
@@ -197,7 +200,7 @@ def drain_remaining_futures(
     last_field_id: str,
     execution_state: ExecutionState,
     runtime_state: RuntimeConcurrencyState,
-    args: argparse.Namespace,
+    args: SchedulerRuntimeArgs,
     run_ctx: InitializedRunContext,
     result_write_options: ResultWriteOptions,
 ) -> None:
@@ -230,7 +233,7 @@ def save_runtime_checkpoint(
     execution_state: ExecutionState,
     runtime_state: RuntimeConcurrencyState,
     last_field_id: str,
-    fields: list[dict[str, Any]],
+    fields: list[TemplateField],
     reason: str,
 ) -> None:
     """在中断或异常时统一保存 checkpoint。"""

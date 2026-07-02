@@ -19,7 +19,6 @@
 
 from __future__ import annotations
 
-import argparse
 from collections.abc import Sequence
 from typing import Any
 
@@ -46,7 +45,12 @@ from ..generators.expressions import (
     dominant_failed_check_names,
     is_legacy_family,
 )
-from ..models.base import FieldTestResult, HistoricalRunState, NearPassCandidate
+from ..models.base import (
+    FieldTestResult,
+    HistoricalRunState,
+    NearPassCandidate,
+    StopAfterSubmittableArgs,
+)
 
 # 从 analysis 模块导入分析函数
 from .stats import (
@@ -200,7 +204,7 @@ def select_nearpass_candidates(
 
 
 def should_stop_after_submittable(
-    args: argparse.Namespace, results: Sequence[FieldTestResult]
+    args: StopAfterSubmittableArgs, results: Sequence[FieldTestResult]
 ) -> bool:
     """
     判断当前运行是否已达到要求的可提交数量上限。
@@ -209,7 +213,7 @@ def should_stop_after_submittable(
     用于提前终止运行。
 
     Args:
-        args (argparse.Namespace): 命令行参数对象，必须包含
+        args (StopAfterSubmittableArgs): 运行参数对象，必须包含
             stop_after_submittable 字段（int 类型）。
         results (Sequence[FieldTestResult]): 当前运行结果序列。
 

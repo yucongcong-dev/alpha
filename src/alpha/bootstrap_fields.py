@@ -4,14 +4,13 @@ bootstrap 字段准备辅助模块。
 
 from __future__ import annotations
 
-import argparse
 from datetime import date
 from math import log1p
 from typing import Any
 
 from .analysis.stats import field_priority
 from .config import DatasetExpressionPolicy, SENTINEL_UNKNOWN, STATS_DEFAULT_SCORE
-from .models.base import HistoricalRunState, RunFilters
+from .models.base import FieldSelectionArgs, HistoricalRunState, RunFilters, TemplateField
 from .utils.helpers import choose_field_name, first_non_empty, is_event_field_name
 
 
@@ -50,16 +49,16 @@ def _normalize_range(values: list[float]) -> list[float]:
 
 
 def prepare_fields_for_execution(
-    fields: list[dict[str, Any]],
+    fields: list[TemplateField],
     *,
     filters_dict: RunFilters,
     expression_policy: DatasetExpressionPolicy,
     historical_state: HistoricalRunState,
-    args: argparse.Namespace,
-) -> tuple[list[dict[str, Any]], dict[str, int]]:
+    args: FieldSelectionArgs,
+) -> tuple[list[TemplateField], dict[str, int]]:
     """对字段做过滤、排序并最终应用 offset/limit。"""
     cached_field_count = len(fields)
-    filtered_fields: list[dict[str, Any]] = []
+    filtered_fields: list[TemplateField] = []
     prefiltered_count = 0
     low_coverage_count = 0
     low_date_coverage_count = 0
@@ -158,7 +157,7 @@ def prepare_fields_for_execution(
         )
         field_metadata_scores[field_id] = validation_score - crowding_penalty
 
-    def field_sort_key(item: dict[str, Any]) -> tuple[Any, ...]:
+    def field_sort_key(item: TemplateField) -> tuple[Any, ...]:
         field_id = str(first_non_empty(item.get("id"), SENTINEL_UNKNOWN))
         field_name = choose_field_name(item)
         feedback = historical_state.field_feedback.get(field_id)
