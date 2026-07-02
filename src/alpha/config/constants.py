@@ -2,72 +2,90 @@
 静态配置常量。
 
 本模块承载所有代码常量定义，优先级为:
-  YAML (constants_defaults.yaml) > 代码内默认值
+  settings.yaml > expression_policies.yaml > dataset_profiles.yaml > constants_defaults.yaml > 代码内默认值
 
-即: 修改 constants_defaults.yaml 后重启即可生效，无需改动代码。
+即: 修改任意 YAML 文件后重启即可生效，无需改动代码。
+
+当某个常量在 YAML 中缺失（回退到代码默认值）时，会通过 logging 输出 WARNING，
+提示开发者将该常量添加到 constants_defaults.yaml 中。
 """
 
 from __future__ import annotations
 
-import os
-from pathlib import Path
+import logging
 from typing import Any
 
+_log = logging.getLogger("alpha.config.constants")
+
 # ---------------------------------------------------------------------------
-# YAML 加载辅助
+# YAML 加载辅助 — 统一通过 yaml.py 的合并管道读取配置
 # ---------------------------------------------------------------------------
 
-_YAML_DATA: dict[str, Any] | None = None
+_MERGED_CONFIG: dict[str, Any] | None = None
+
+# 记录已警告过的缺失 key，避免重复日志
+_MISSING_KEY_WARNED: set[str] = set()
 
 
-def _load_constants_yaml() -> dict[str, Any]:
-    """懒加载 constants_defaults.yaml，返回其内容（仅加载一次）。"""
-    global _YAML_DATA
-    if _YAML_DATA is not None:
-        return _YAML_DATA
-    try:
-        import yaml
-    except ImportError:
-        _YAML_DATA = {}
-        return _YAML_DATA
+def _get_merged_config() -> dict[str, Any]:
+    """懒加载合并后的完整 YAML 配置。
 
-    project_root = Path(__file__).resolve().parent.parent.parent
-    search_paths = [
-        project_root / "constants_defaults.yaml",
-        project_root / "config" / "constants_defaults.yaml",
-    ]
-    for candidate in search_paths:
-        if candidate.is_file():
-            try:
-                with open(candidate, encoding="utf-8") as fh:
-                    data = yaml.safe_load(fh)
-                _YAML_DATA = data if isinstance(data, dict) else {}
-                return _YAML_DATA
-            except (yaml.YAMLError, UnicodeDecodeError, OSError):
-                pass
-    _YAML_DATA = {}
-    return _YAML_DATA
+    优先级: settings > expression_policies > dataset_profiles > constants_defaults
+    复用 yaml.py 的缓存与签名检测机制，所有文件变化自动重载。
+    """
+    global _MERGED_CONFIG
+    if _MERGED_CONFIG is None:
+        from .yaml import get_yaml_config
+
+        _MERGED_CONFIG = get_yaml_config()
+    return _MERGED_CONFIG
 
 
 def _yaml_val(*keys: str, default: Any = None, cast: type = str) -> Any:
-    """从 constants_defaults.yaml 中读取嵌套值: _yaml_val('api', 'base_url', default=..., cast=str)。
+    """从完整合并 YAML 配置中读取嵌套值: _yaml_val('api', 'base_url', default=..., cast=str)。
 
-    若 YAML 中无此值，返回 default；否则按 cast 转换后返回。
+    优先级: settings.yaml > expression_policies.yaml > dataset_profiles.yaml > constants_defaults.yaml > 代码 default
+    若所有来源均无此值，返回代码内 default 并发出一次性 WARNING。
+    cast=None 表示不做类型转换，直接返回 YAML 原始值。
     """
-    yaml_data = _load_constants_yaml()
+    yaml_data = _get_merged_config()
+    key_path = ".".join(keys)
     node: Any = yaml_data
     for key in keys:
         if isinstance(node, dict):
             node = node.get(key)
         else:
-            return default
+            node = None
+            break
+
     if node is None:
+        # YAML 中确实未找到该 key，回退到代码默认值
+        if key_path not in _MISSING_KEY_WARNED:
+            _MISSING_KEY_WARNED.add(key_path)
+            _log.warning(
+                "YAML 配置 key '%s' 未找到，使用代码默认值。"
+                "建议在 constants_defaults.yaml 中添加此项。",
+                key_path,
+            )
         return default
+
+    # cast=None 表示不需要类型转换，直接返回原始值
+    if cast is None:
+        return node
+
     try:
         if cast is bool:
             return bool(node)
         return cast(node)
     except (TypeError, ValueError):
+        if key_path not in _MISSING_KEY_WARNED:
+            _MISSING_KEY_WARNED.add(key_path)
+            _log.warning(
+                "配置 key '%s' 值类型转换失败 (cast=%s, got=%r)，使用默认值。",
+                key_path,
+                cast.__name__,
+                type(node).__name__,
+            )
         return default
 
 

@@ -443,12 +443,9 @@ expression_policies:
       - "model16_bucket_cap_zscore_126"
       - "model16_bucket_liquidity_ts_rank_126"
     template_prefix_penalties:
-      - prefixes: ["delta_", "group_delta_", "rank_delta_", "vol_scaled_delta_"]
-        penalty: -820
-      - prefixes: ["mean_reversion_", "mean_diff_"]
-        penalty: -220
-      - prefixes: ["ts_corr_self_"]
-        penalty: -320
+      "delta_|group_delta_|rank_delta_|vol_scaled_delta_": "@heavy_penalty"
+      "mean_reversion_|mean_diff_": "@mild_penalty"
+      "ts_corr_self_": -320
     preferred_field_order:
       value: 0
       quality: 1

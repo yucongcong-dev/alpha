@@ -16,11 +16,14 @@ constant_defaults.yaml，解析 YAML 内容并合并为统一配置。
 
 from __future__ import annotations
 
+import logging
 import os
 from pathlib import Path
 from typing import Optional
 
 from .types import YamlConfig
+
+_log = logging.getLogger("alpha.config.yaml")
 
 # ---------------------------------------------------------------------------
 # YAML 文件定义
@@ -168,6 +171,98 @@ def _all_files_signature(settings_path: str | None = None) -> tuple[tuple[str, i
     return tuple(sigs) if sigs else None
 
 
+
+# ---------------------------------------------------------------------------
+# Schema 验证 — 配置加载时检测未知 key，帮助发现 YAML 拼写错误
+# ---------------------------------------------------------------------------
+
+# 各 YAML 文件中已知的顶层 key（每个文件各自的顶层 key 清单）
+_KNOWN_TOP_KEYS: dict[str, set[str]] = {
+    "constants_defaults": {
+        "api", "checkpoint", "dataset_profiles", "default_profile", "expression",
+        "failed_check", "feedback", "field", "http", "misc", "mutation",
+        "nearpass", "partner", "paths", "quality", "ratio", "sentinel",
+        "settings_variant", "simulation", "smoke_test", "stats", "strings", "templates",
+    },
+    "dataset_profiles": {"dataset_profiles"},
+    "expression_policies": {"expression_policies"},
+    "settings": {
+        "global", "dataset_profiles", "expression_policies",
+        # 注释行不产生实际 key，以下为 settings.yaml 顶层允许的 key
+    },
+}
+
+
+def _validate_merged_config(config: YamlConfig, resolved_files: dict[str, str]) -> list[str]:
+    """验证合并后的配置，返回警告信息列表。
+
+    检查项：
+      1. 顶层 key 是否为已知类型（防止 typo）
+      2. 各文件专属 key 是否出现在正确文件中
+    """
+    warnings: list[str] = []
+    if not isinstance(config, dict):
+        return warnings
+
+    # 收集所有已知顶层 key（从各文件合并而来）
+    all_top_keys: set[str] = set()
+    for keys in _KNOWN_TOP_KEYS.values():
+        all_top_keys.update(keys)
+
+    actual_keys = set(config.keys())
+
+    # 1. 检查是否为有效顶层 key 的超集
+    unknown = actual_keys - all_top_keys
+    if unknown:
+        # 某些 key 可能是运行时动态插入的（如 expression_policies 下层合并结果）
+        # 仅对完全不在任何文件已知 key 中的 key 发出警告
+        warnings.append(
+            f"未知顶层 key: {sorted(unknown)}。"
+            f"可能是 YAML 中的拼写错误，请在对应 YAML 文件中检查。"
+        )
+
+    # 2. 按文件验证：检查 settings.yaml 中是否存在拼写错误的 section
+    settings_files = [
+        name for name, _ in _YAML_FILES
+        if name == "settings" and name in resolved_files
+    ]
+    if settings_files:
+        # 对 settings.yaml 的顶层 key 进行深度结构检查
+        global_section = config.get("global", {})
+        if isinstance(global_section, dict):
+            _global_known = {
+                "simulation", "limits", "concurrency", "retries", "filters",
+                "quality", "http", "expression", "feedback", "runtime",
+            }
+            for gkey in global_section:
+                if gkey not in _global_known:
+                    warnings.append(
+                        f"settings.yaml: global 段存在未知 key '{gkey}'，"
+                        f"已知 key: {sorted(_global_known)}"
+                    )
+
+    return warnings
+
+
+def validate_yaml_config(config_path: str = "") -> list[str]:
+    """验证 YAML 配置，返回警告信息列表。
+
+    如有警告，建议检查对应 YAML 文件中的 key 拼写。
+    返回空列表表示所有配置 key 均通过验证。
+    """
+    merged = get_yaml_config(config_path)
+    # 收集实际加载的文件
+    resolved_files: dict[str, str] = {}
+    project_dir = str(_PROJECT_ROOT)
+    for name, search_paths in _YAML_FILES:
+        for rel in search_paths:
+            full = os.path.join(project_dir, rel) if not os.path.isabs(rel) else rel
+            if os.path.isfile(full):
+                resolved_files[name] = full
+                break
+    return _validate_merged_config(merged, resolved_files)
+
+
 # ---------------------------------------------------------------------------
 # 公共 API
 # ---------------------------------------------------------------------------
@@ -182,11 +277,13 @@ def load_yaml_config(config_path: str = "") -> YamlConfig:
 
 
 def get_yaml_config(config_path: str = "") -> YamlConfig:
-    """获取 YAML 配置（带多文件缓存）。
+    """获取 YAML 配置（带多文件缓存与 schema 验证）。
 
     缓存基于所有 YAML 文件的聚合签名，任一文件变化即触发重载。
+    首次加载时自动运行 schema 验证，检测 YAML 键名拼写错误。
     """
     cache_attr = "_yaml_config_cache"
+    validated_attr = "_yaml_config_validated"
     settings_path = (
         os.path.abspath(config_path) if config_path else _resolve_yaml_path()
     )
@@ -200,6 +297,23 @@ def get_yaml_config(config_path: str = "") -> YamlConfig:
         ):
             return cached_entry["data"]
     data = _load_all_yamls(settings_path)
+
+    # 仅首次加载时运行验证（避免重复警告）
+    if not getattr(get_yaml_config, validated_attr, False):
+        resolved_files: dict[str, str] = {}
+        project_dir = str(_PROJECT_ROOT)
+        for name, search_paths in _YAML_FILES:
+            for rel in search_paths:
+                full = os.path.join(project_dir, rel) if not os.path.isabs(rel) else rel
+                if os.path.isfile(full):
+                    resolved_files[name] = full
+                    break
+        validation_warnings = _validate_merged_config(data, resolved_files)
+        if validation_warnings:
+            for warning in validation_warnings:
+                _log.warning("[schema] %s", warning)
+        setattr(get_yaml_config, validated_attr, True)
+
     cache[cache_key] = {
         "path": settings_path,
         "signature": signature,
