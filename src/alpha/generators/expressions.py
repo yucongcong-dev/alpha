@@ -37,30 +37,30 @@ from ..config import (
     resolve_feedback_stage,
 )
 from ..generators.field_transforms import build_field_view, build_ratio_expression
-from ..generators.partner_fields import (
+from .templates.partner_fields import (
     discover_partner_fields,
     score_partner_candidate as score_partner_candidate,
     tokenize_field_name as tokenize_field_name,
 )
-from ..generators.template_candidates import (
+from .templates.candidates import (
     _candidate_metadata,
     _coerce_template_candidate,
     _make_template_candidate,
     _render_template_specs,
 )
-from ..generators.template_classification import (
+from .templates.classification import (
     classify_expression_family,
     classify_template_stage,
     is_legacy_family,
 )
-from ..generators.template_metadata import (
+from .templates.metadata import (
     TemplateMetadataMap,
     _runtime_template_metadata,
     _select_template_items,
     build_template_metadata_index,
     get_template_metadata,
 )
-from ..generators.template_priority import (
+from .templates.priority import (
     adaptive_template_priority_adjustment as adaptive_template_priority_adjustment,
     apply_adaptive_priority,
     apply_similarity_penalty,
@@ -68,8 +68,8 @@ from ..generators.template_priority import (
     dominant_failed_check_names as dominant_failed_check_names,
     merge_failed_check_counts as merge_failed_check_counts,
 )
-from ..generators.template_refine import build_refine_templates
-from ..generators.template_variations import (
+from .templates.refine import build_refine_templates
+from .templates.variations import (
     build_bucket_group_templates,
     build_feedback_mutations,
     build_historical_reuse_templates,

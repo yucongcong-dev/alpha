@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from ..config import (
+from ...config import (
     CHECK_CONCENTRATED_WEIGHT,
     CHECK_LOW_SUB_UNIVERSE_SHARPE,
     CHECK_LOW_TURNOVER,
@@ -25,11 +25,11 @@ from ..config import (
     TEMPLATE_STAGE_GROUP_SECOND_ORDER,
     get_backfill_window,
 )
-from ..models.base import TemplateCandidate
-from ..policy.template_blacklist import blacklist_match_reason as _policy_blacklist_match_reason
-from .template_candidates import _candidate_metadata, _make_template_candidate
-from .template_classification import classify_expression_family, classify_template_stage
-from .template_priority import dominant_failed_check_names
+from ...models.base import TemplateCandidate
+from ...policy.template_blacklist import blacklist_match_reason as _policy_blacklist_match_reason
+from .candidates import _candidate_metadata, _make_template_candidate
+from .classification import classify_expression_family, classify_template_stage
+from .priority import dominant_failed_check_names
 
 _BUCKET_GROUP_SPECS: tuple[tuple[str, str, int], ...] = (
     ("cap_bucket", "bucket(rank(cap), range='0.1, 1, 0.1')", 174),
@@ -606,4 +606,3 @@ def build_historical_reuse_templates(
             policy=expression_policy,
         )
     ]
-

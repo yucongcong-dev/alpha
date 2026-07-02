@@ -10,7 +10,7 @@ from __future__ import annotations
 from collections.abc import Sequence
 from typing import Any
 
-from ..config import (
+from ...config import (
     CHECK_CONCENTRATED_WEIGHT,
     CHECK_HIGH_TURNOVER,
     CHECK_LOW_FITNESS,
@@ -22,10 +22,10 @@ from ..config import (
     EXPR_RATIO_PENALTY_THRESHOLD,
     STATS_DEFAULT_SCORE,
 )
-from ..models.base import TemplateCandidate
-from .template_candidates import _coerce_template_candidate, _make_template_candidate
-from .template_classification import classify_expression_family
-from .template_metadata import TemplateMetadataMap
+from ...models.base import TemplateCandidate
+from .candidates import _coerce_template_candidate, _make_template_candidate
+from .classification import classify_expression_family
+from .metadata import TemplateMetadataMap
 
 _SIMILARITY_PENALTY_OFFSETS: dict[str, int] = {
     "legacy_level": 0,

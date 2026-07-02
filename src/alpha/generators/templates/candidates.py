@@ -10,14 +10,14 @@ from __future__ import annotations
 from collections.abc import Sequence
 from typing import Any
 
-from ..config import (
+from ...config import (
     TEMPLATE_STAGE_EVENT_CONDITIONED,
     TEMPLATE_STAGE_FIRST_ORDER,
     TEMPLATE_STAGE_GROUP_SECOND_ORDER,
 )
-from ..models.base import TemplateCandidate
-from .template_classification import classify_expression_family, classify_template_stage
-from .template_metadata import TemplateMetadataMap, _template_key
+from ...models.base import TemplateCandidate
+from .classification import classify_expression_family, classify_template_stage
+from .metadata import TemplateMetadataMap, _template_key
 
 TemplateSpec = tuple[str, str, int]
 """配置模板规格：(name_template, expression_template, priority)。"""

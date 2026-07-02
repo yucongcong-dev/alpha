@@ -11,15 +11,15 @@ from collections.abc import Sequence
 import re
 from typing import Any
 
-from ..config import (
+from ...config import (
     TEMPLATE_STAGE_EVENT_CONDITIONED,
     TEMPLATE_STAGE_GROUP_SECOND_ORDER,
     DatasetExpressionPolicy,
 )
-from ..models.base import NearPassCandidate, TemplateCandidate
-from ..policy.template_blacklist import blacklist_match_reason as _policy_blacklist_match_reason
-from .template_candidates import _candidate_metadata, _make_template_candidate
-from .template_classification import classify_expression_family, classify_template_stage
+from ...models.base import NearPassCandidate, TemplateCandidate
+from ...policy.template_blacklist import blacklist_match_reason as _policy_blacklist_match_reason
+from .candidates import _candidate_metadata, _make_template_candidate
+from .classification import classify_expression_family, classify_template_stage
 
 
 def _is_blacklisted_template(

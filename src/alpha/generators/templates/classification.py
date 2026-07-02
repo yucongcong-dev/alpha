@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from ..config import (
+from ...config import (
     TEMPLATE_STAGE_EVENT_CONDITIONED,
     TEMPLATE_STAGE_FIRST_ORDER,
     TEMPLATE_STAGE_GROUP_SECOND_ORDER,

@@ -16,20 +16,20 @@ from __future__ import annotations
 from dataclasses import replace
 from typing import Any
 
-from .config_models import (
+from .models import (
     DatasetExpressionPolicy,
     FeedbackLoopPolicy,
     FeedbackPhasePolicy,
     FieldTransformSpec,
     FieldTransformStage,
 )
-from .config_defaults import apply_yaml_global_defaults as apply_yaml_global_defaults
-from .config_profiles import (
+from .defaults import apply_yaml_global_defaults as apply_yaml_global_defaults
+from .profiles import (
     DATASET_PROFILES as DATASET_PROFILES,
     DEFAULT_PROFILE as DEFAULT_PROFILE,
     get_dataset_profile as get_dataset_profile,
 )
-from .config_yaml import (
+from .yaml import (
     _config_file_signature as _config_file_signature,
     _resolve_yaml_path as _resolve_yaml_path,
     get_yaml_config,
