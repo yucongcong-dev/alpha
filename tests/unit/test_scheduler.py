@@ -7,16 +7,19 @@
 
 from __future__ import annotations
 
+import argparse
+from concurrent.futures import Future
 import time
 from unittest.mock import patch
 
 from alpha.core.scheduler import (
     apply_congestion_cooldown,
+    drain_completed_futures,
     maybe_restore_runtime_concurrency,
     register_queue_busy_field,
     throttle_before_submission,
 )
-from alpha.models.base import ExecutionState, RuntimeConcurrencyState
+from alpha.models.base import ExecutionState, PendingFutureContext, ResultWriteOptions, RuntimeConcurrencyState
 from tests.conftest import MockArgs
 
 # ============================================================================
@@ -313,3 +316,53 @@ class TestRuntimeConcurrencyState:
         assert state.max_workers == 2
         assert state.runtime_max_workers == 2
         assert state.cooldown_until == 0.0
+
+
+def test_drain_completed_futures_prefers_explicit_result_write_options() -> None:
+    """Incremental writes should be able to honor normalized output paths over raw args."""
+    future: Future[object] = Future()
+    future.set_result(None)
+    execution_state = ExecutionState(
+        results=[],
+        attempted_keys=set(),
+        template_stats={},
+        pending_futures={
+            future: PendingFutureContext(
+                field_id="field_1",
+                field_name="field_1",
+                field_type="MATRIX",
+                template_name="tpl",
+                expression="rank(field_1)",
+                settings_fingerprint="variant-fp",
+            )
+        },
+        field_queue_busy_counts={},
+        skipped_fields_due_to_queue=set(),
+    )
+    args = argparse.Namespace(
+        dataset_id="fundamental6",
+        output="raw-results.json",
+        auto_update_blacklist=False,
+        field_queue_busy_skip_after=0,
+        queue_busy_cooldown_seconds=0,
+    )
+    result_write_options = ResultWriteOptions(
+        dataset_id="fundamental6",
+        output_path="/tmp/normalized-results.json",
+        auto_update_blacklist=False,
+    )
+
+    with patch("alpha.core.scheduler.apply_completed_result", return_value=({}, False, None)) as mock_apply:
+        drain_completed_futures(
+            completed_futures=[future],
+            execution_state=execution_state,
+            args=args,
+            result_write_options=result_write_options,
+            settings_fingerprint="settings-fp",
+            template_library_fingerprint="templates-fp",
+            run_config={},
+            runtime_state=RuntimeConcurrencyState(max_workers=1, runtime_max_workers=1),
+        )
+
+    completion_ctx = mock_apply.call_args.kwargs["completion_ctx"]
+    assert completion_ctx.result_write_options.output_path == "/tmp/normalized-results.json"

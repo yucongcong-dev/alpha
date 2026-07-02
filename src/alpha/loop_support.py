@@ -27,6 +27,7 @@ from .models.base import (
     RuntimeConcurrencyState,
     TemplateBuildContext,
     TemplateBuildOptions,
+    ResultWriteOptions,
 )
 from .utils.helpers import first_non_empty
 
@@ -97,6 +98,7 @@ def drain_until_capacity(
     args: argparse.Namespace,
     run_ctx: InitializedRunContext,
     field_id: str,
+    result_write_options: ResultWriteOptions,
 ) -> bool:
     """在达到并发上限时排空已完成任务，直到恢复容量或字段被标记跳过。"""
     while len(executor_state.pending_futures) >= runtime_state.runtime_max_workers:
@@ -107,6 +109,7 @@ def drain_until_capacity(
             completed_futures=list(done),
             execution_state=executor_state,
             args=args,
+            result_write_options=result_write_options,
             settings_fingerprint=run_ctx.settings_fingerprint,
             template_library_fingerprint=run_ctx.template_library_fingerprint,
             run_config=run_ctx.run_config,
@@ -196,6 +199,7 @@ def drain_remaining_futures(
     runtime_state: RuntimeConcurrencyState,
     args: argparse.Namespace,
     run_ctx: InitializedRunContext,
+    result_write_options: ResultWriteOptions,
 ) -> None:
     """排空剩余 future，并在需要时持续保存 state。"""
     while execution_state.pending_futures:
@@ -204,6 +208,7 @@ def drain_remaining_futures(
             completed_futures=list(done),
             execution_state=execution_state,
             args=args,
+            result_write_options=result_write_options,
             settings_fingerprint=run_ctx.settings_fingerprint,
             template_library_fingerprint=run_ctx.template_library_fingerprint,
             run_config=run_ctx.run_config,

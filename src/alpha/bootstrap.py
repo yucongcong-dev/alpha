@@ -15,7 +15,6 @@ import logging
 from pathlib import Path
 import shutil
 import threading
-from typing import Any
 
 from .analysis.feedback import build_historical_run_state
 from .api.client import BrainClient, WorkerClientFactory, login_with_retry
@@ -43,10 +42,19 @@ from .models.base import (
     InitializedRunContext,
     RunFilters,
     RuntimeConcurrencyState,
+    RunPaths,
 )
 from .policy import ensure_template_blacklist_file
 
 logger = logging.getLogger(__name__)
+
+
+def _run_path_value(run_paths: object | None, attr: str) -> str:
+    """兼容 RunPaths 与历史 attr-style 对象的路径读取。"""
+    if run_paths is None:
+        return ""
+    value = getattr(run_paths, attr, "")
+    return str(value or "")
 
 
 def clean_runtime_artifacts(
@@ -105,11 +113,11 @@ def create_and_login_client(
 
 def initialize_run_context(
     args: argparse.Namespace,
-    run_paths: Any,
+    run_paths: RunPaths | object | None,
 ) -> InitializedRunContext | None:
     """执行主流程的初始化阶段，返回结构化运行上下文。"""
-    output_file = getattr(run_paths, "output", None) or args.output
-    log_file = getattr(run_paths, "log_file", None)
+    output_file = _run_path_value(run_paths, "output") or args.output
+    log_file = _run_path_value(run_paths, "log_file")
     if log_file:
         setup_runtime_logging(log_file)
 
@@ -120,13 +128,13 @@ def initialize_run_context(
     logger.info("[config] 运行配置将嵌入主结果文件")
 
     template_library_file = (
-        getattr(run_paths, "template_library_file", None) or args.template_library_file
+        _run_path_value(run_paths, "template_library_file") or args.template_library_file
     )
     template_library_file = ensure_dataset_template_library(template_library_file, args.dataset_id)
     ensure_template_blacklist_file(args.dataset_id)
 
-    creds_file = getattr(run_paths, "creds_file", None) or args.creds_file
-    creds_key_file = getattr(run_paths, "creds_key_file", None) or args.creds_key_file
+    creds_file = _run_path_value(run_paths, "creds_file") or args.creds_file
+    creds_key_file = _run_path_value(run_paths, "creds_key_file") or args.creds_key_file
     args.creds_file = creds_file
     args.creds_key_file = creds_key_file
     email, password = load_credentials(args)
@@ -142,10 +150,10 @@ def initialize_run_context(
     use_dataset_heuristics = expression_policy.use_curated_heuristics
     template_library_fingerprint = stable_fingerprint(template_library)
     settings_fingerprint = build_settings_fingerprint(args)
-    feedback_output = getattr(run_paths, "feedback_output", None) or output_file
+    feedback_output = _run_path_value(run_paths, "feedback_output") or output_file
     historical_state = build_historical_run_state(output_file, feedback_output)
 
-    fields_cache_file = getattr(run_paths, "fields_cache_file", None) or args.fields_cache_file
+    fields_cache_file = _run_path_value(run_paths, "fields_cache_file") or args.fields_cache_file
     cached_fields = load_fields_cache(
         fields_cache_file,
         dataset_id=args.dataset_id,

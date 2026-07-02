@@ -13,7 +13,6 @@ import argparse
 from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
 import logging
 import time
-from typing import Any
 
 from .analysis.feedback import should_stop_after_submittable
 from .analysis.stats import (
@@ -37,6 +36,7 @@ from .core import (
     throttle_before_submission,
 )
 from .models.base import InitializedRunContext, TemplateBuildContext
+from .models.base import ResultWriteOptions, RunPaths
 from .loop_support import (
     create_template_build_context,
     drain_remaining_futures,
@@ -103,14 +103,36 @@ def normalize_resume_index(resume_index: int, total_fields: int) -> int:
     return resume_index % total_fields
 
 
+def _run_path_value(run_paths: object | None, attr: str) -> str:
+    """兼容 RunPaths 与历史 attr-style 对象的路径读取。"""
+    if run_paths is None:
+        return ""
+    value = getattr(run_paths, attr, "")
+    return str(value or "")
+
+
+def resolve_result_write_options(
+    args: argparse.Namespace,
+    run_paths: RunPaths | object | None,
+) -> ResultWriteOptions:
+    """优先使用 run_paths 中的输出路径，避免旧调用链依赖 args 已被改写。"""
+    options = ResultWriteOptions.from_args(args)
+    output_path = _run_path_value(run_paths, "output") or options.output_path
+    return ResultWriteOptions(
+        dataset_id=options.dataset_id,
+        output_path=output_path,
+        auto_update_blacklist=options.auto_update_blacklist,
+    )
+
+
 def run_field_test_loop(
     args: argparse.Namespace,
     run_ctx: InitializedRunContext,
-    run_paths: Any = None,
+    run_paths: RunPaths | object | None = None,
 ) -> None:
     """线程池中遍历字段并提交模拟任务，实时消费结果。"""
-    state_file = getattr(run_paths, "state_file", "") if run_paths is not None else ""
-    checkpoint_file = getattr(run_paths, "checkpoint_file", "") if run_paths is not None else ""
+    state_file = _run_path_value(run_paths, "state_file")
+    checkpoint_file = _run_path_value(run_paths, "checkpoint_file")
     runtime_state = run_ctx.runtime_state
     execution_state = run_ctx.execution_state
     fields = list(run_ctx.fields)
@@ -118,6 +140,7 @@ def run_field_test_loop(
     max_workers = runtime_state.max_workers
     field_template_batch_size = max(0, int(getattr(args, "field_template_batch_size", 0) or 0))
     field_resume_positions = build_field_resume_positions(original_fields)
+    result_write_options = resolve_result_write_options(args, run_paths)
 
     fields, resumed_index = restore_fields_from_state(
         fields=fields,
@@ -259,6 +282,7 @@ def run_field_test_loop(
                             args=args,
                             run_ctx=run_ctx,
                             field_id=field_id,
+                            result_write_options=result_write_options,
                         ):
                             break
 
@@ -318,6 +342,7 @@ def run_field_test_loop(
                 runtime_state=runtime_state,
                 args=args,
                 run_ctx=run_ctx,
+                result_write_options=result_write_options,
             )
         except KeyboardInterrupt:
             save_runtime_checkpoint(

@@ -293,6 +293,7 @@ def drain_completed_futures(
     completed_futures: Sequence[Any],
     execution_state: ExecutionState,
     args: argparse.Namespace,
+    result_write_options: ResultWriteOptions | None = None,
     settings_fingerprint: str,
     template_library_fingerprint: str,
     run_config: dict[str, Any] | None,
@@ -321,7 +322,7 @@ def drain_completed_futures(
         - 注册队列拥塞字段
     """
     completion_ctx = FutureCompletionContext(
-        result_write_options=ResultWriteOptions.from_args(args),
+        result_write_options=result_write_options or ResultWriteOptions.from_args(args),
         settings_fingerprint=settings_fingerprint,
         template_library_fingerprint=template_library_fingerprint,
         run_config=run_config,

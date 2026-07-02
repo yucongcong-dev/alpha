@@ -17,10 +17,12 @@ from alpha.models.base import (
     ExecutionState,
     HistoricalRunState,
     InitializedRunContext,
+    ResultWriteOptions,
     RunFilters,
+    RunPaths,
     RuntimeConcurrencyState,
 )
-from alpha.run_loop import clamp_resume_index, run_field_test_loop
+from alpha.run_loop import clamp_resume_index, resolve_result_write_options, run_field_test_loop
 
 
 def _build_execution_state() -> ExecutionState:
@@ -109,6 +111,7 @@ def test_drain_remaining_futures_persists_total_field_count() -> None:
             runtime_state=RuntimeConcurrencyState(max_workers=2, runtime_max_workers=2),
             args=argparse.Namespace(),
             run_ctx=_build_run_ctx([]),
+            result_write_options=ResultWriteOptions(),
         )
 
     assert mock_save.call_args.kwargs["completed_field_index"] == 5
@@ -144,3 +147,26 @@ def test_run_field_test_loop_persists_progress_for_skipped_fields(tmp_path) -> N
         )
 
     assert mock_persist.call_count == 2
+
+
+def test_resolve_result_write_options_prefers_run_paths_output() -> None:
+    args = argparse.Namespace(
+        dataset_id="fundamental6",
+        output="raw-results.json",
+        auto_update_blacklist=False,
+    )
+    run_paths = RunPaths(
+        results_dir="/tmp/results",
+        log_file="/tmp/run.log",
+        state_file="/tmp/state.json",
+        checkpoint_file="/tmp/checkpoint.json",
+        output="/tmp/normalized-results.json",
+    )
+
+    options = resolve_result_write_options(args, run_paths)
+
+    assert options == ResultWriteOptions(
+        dataset_id="fundamental6",
+        output_path="/tmp/normalized-results.json",
+        auto_update_blacklist=False,
+    )
