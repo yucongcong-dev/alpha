@@ -46,6 +46,7 @@ from ..models.base import (
     RunFilters,
     SettingsVariant,
     TemplateBuildContext,
+    TemplateBuildOptions,
     TemplateLibrary,
 )
 from ..utils.helpers import choose_field_name, first_non_empty
@@ -96,7 +97,7 @@ def build_pending_templates_for_field(
     使用 TemplateBuildContext 将 11 个参数收敛到 4 个。
 
     Args:
-        build_ctx: 包含 args、all_fields、template_library、field_feedback 等只读配置的上下文对象。
+        build_ctx: 包含模板构建配置、字段集合和历史反馈等只读上下文对象。
         field: 字段元数据字典。
         template_stats: 模板统计数据。
         attempted_keys: 已尝试的模板键集合。
@@ -113,7 +114,7 @@ def build_pending_templates_for_field(
         - 模板按优先级降序排列
         - 已尝试的键会被跳过
     """
-    args = build_ctx.args
+    options = build_ctx.options
     field_id = str(first_non_empty(field.get("id"), SENTINEL_UNKNOWN))
     field_name = choose_field_name(field)
     templates, field_feedback, expression_policy = resolve_field_template_candidates(
@@ -209,9 +210,10 @@ def print_dry_run_plan(
     planned_templates = 0
     disabled_templates = 0
     samples: list[dict[str, Any]] = []
+    options = TemplateBuildOptions.from_args(args)
 
     build_ctx = TemplateBuildContext(
-        args=args,
+        options=options,
         all_fields=fields,
         template_library=template_library,
         field_feedback=historical_state.field_feedback,
@@ -220,7 +222,7 @@ def print_dry_run_plan(
         exclude_templates=filters.exclude_templates,
         use_dataset_heuristics=use_dataset_heuristics,
         expression_policy=get_dataset_expression_policy(
-            args.dataset_id,
+            options.dataset_id,
             use_curated_heuristics=use_dataset_heuristics,
         ),
     )

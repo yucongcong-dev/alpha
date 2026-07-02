@@ -172,7 +172,7 @@ def test_refresh_runtime_feedback_preserves_seed_feedback_and_only_adds_new_resu
         },
         global_failed_check_counts={"LOW_FITNESS": 2},
     )
-    setattr(build_ctx, "_feedback_result_count", 1)
+    build_ctx.feedback_result_count = 1
     results = [
         FieldTestResult(
             field_id="existing_output_field",

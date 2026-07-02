@@ -20,7 +20,13 @@ from .core import (
     save_checkpoint,
     save_pipeline_state,
 )
-from .models.base import ExecutionState, InitializedRunContext, RuntimeConcurrencyState, TemplateBuildContext
+from .models.base import (
+    ExecutionState,
+    InitializedRunContext,
+    RuntimeConcurrencyState,
+    TemplateBuildContext,
+    TemplateBuildOptions,
+)
 from .utils.helpers import first_non_empty
 
 logger = logging.getLogger(__name__)
@@ -69,7 +75,7 @@ def create_template_build_context(
 ) -> TemplateBuildContext:
     """构建运行期模板上下文，并记录初始反馈结果数缓存。"""
     template_build_ctx = TemplateBuildContext(
-        args=args,
+        options=TemplateBuildOptions.from_args(args),
         all_fields=fields,
         template_library=run_ctx.template_library,
         field_feedback=run_ctx.historical_state.field_feedback,
@@ -79,7 +85,7 @@ def create_template_build_context(
         use_dataset_heuristics=run_ctx.use_dataset_heuristics,
         expression_policy=run_ctx.expression_policy,
     )
-    setattr(template_build_ctx, "_feedback_result_count", existing_results_count)
+    template_build_ctx.feedback_result_count = existing_results_count
     return template_build_ctx
 
 

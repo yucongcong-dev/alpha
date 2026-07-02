@@ -38,6 +38,7 @@ from .io.analysis_sync import ensure_analysis_synced
 from .io.credentials import load_credentials
 from .io.output_paths import cleanup_legacy_sidecar_files
 from .models.base import (
+    ApiClientOptions,
     HistoricalRunState,
     InitializedRunContext,
     RunFilters,
@@ -90,14 +91,15 @@ def create_and_login_client(
     email: str, password: str, args: argparse.Namespace
 ) -> tuple[BrainClient, WorkerClientFactory]:
     """创建 Brain API 客户端并完成登录，同时创建工作线程客户端工厂。"""
+    client_options = ApiClientOptions.from_args(args)
     bootstrap_client = BrainClient(
         email,
         password,
-        min_request_interval=args.min_request_interval,
-        rate_limit_max_retries=args.rate_limit_max_retries,
+        min_request_interval=client_options.min_request_interval,
+        rate_limit_max_retries=client_options.rate_limit_max_retries,
     )
-    login_with_retry(bootstrap_client, args.login_retries)
-    client_factory = WorkerClientFactory(args, email, password)
+    login_with_retry(bootstrap_client, client_options.login_retries)
+    client_factory = WorkerClientFactory(client_options, email, password)
     return bootstrap_client, client_factory
 
 

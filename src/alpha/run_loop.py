@@ -59,18 +59,18 @@ def refresh_runtime_feedback(
 ) -> None:
     """把当前进程内新产生的结果增量回灌到模板构建上下文。"""
     result_count = len(results)
-    cached_count = getattr(template_build_ctx, "_feedback_result_count", -1)
+    cached_count = template_build_ctx.feedback_result_count
     if force:
         template_build_ctx.field_feedback = compile_field_feedback(results)
         template_build_ctx.global_failed_check_counts = compile_global_failed_check_counts(results)
-        setattr(template_build_ctx, "_feedback_result_count", result_count)
+        template_build_ctx.feedback_result_count = result_count
         return
     if cached_count == result_count:
         return
     if cached_count < 0 or cached_count > result_count:
         template_build_ctx.field_feedback = compile_field_feedback(results)
         template_build_ctx.global_failed_check_counts = compile_global_failed_check_counts(results)
-        setattr(template_build_ctx, "_feedback_result_count", result_count)
+        template_build_ctx.feedback_result_count = result_count
         return
     for result in results[cached_count:]:
         update_field_feedback_with_result(template_build_ctx.field_feedback, result)
@@ -78,7 +78,7 @@ def refresh_runtime_feedback(
             template_build_ctx.global_failed_check_counts,
             result,
         )
-    setattr(template_build_ctx, "_feedback_result_count", result_count)
+    template_build_ctx.feedback_result_count = result_count
 
 
 def build_field_resume_positions(fields: list[dict[str, Any]]) -> dict[str, int]:

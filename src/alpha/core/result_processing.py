@@ -63,7 +63,7 @@ def apply_completed_result(
     dump_results_incremental_fn=dump_results_incremental,
 ) -> tuple[dict[str, dict[str, int]], bool, str | None]:
     """把单条结果并入执行状态，并执行增量持久化与策略副作用。"""
-    args = completion_ctx.args
+    result_write_options = completion_ctx.result_write_options
     execution_state.results.append(result)
     execution_state.unique_field_ids.add(result.field_id)
     if result.submittable:
@@ -106,7 +106,7 @@ def apply_completed_result(
             result.message,
         )
 
-    if getattr(args, "auto_update_blacklist", False):
+    if result_write_options.auto_update_blacklist:
         if not execution_state.blacklist_runtime_stats and len(execution_state.results) > 1:
             execution_state.blacklist_runtime_stats = build_blacklist_runtime_stats_fn(
                 execution_state.results[:-1]
@@ -115,12 +115,12 @@ def apply_completed_result(
             execution_state.blacklist_runtime_stats,
             execution_state.blacklisted_template_names,
             result,
-            args.dataset_id,
+            result_write_options.dataset_id,
         )
 
     execution_state.persisted_result_count = dump_results_incremental_fn(
-        args.output,
-        args.dataset_id,
+        result_write_options.output_path,
+        result_write_options.dataset_id,
         [result],
         persisted_result_count=execution_state.persisted_result_count,
         tested=len(execution_state.results),

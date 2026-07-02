@@ -22,8 +22,10 @@ from alpha.models.base import (
     ExecutionState,
     FieldTestResult,
     FutureCompletionContext,
+    ResultWriteOptions,
     TemplateCandidate,
     TemplateBuildContext,
+    TemplateBuildOptions,
 )
 
 
@@ -323,7 +325,11 @@ def test_scheduler_dump_results_shrinks_next_template_queue(monkeypatch, tmp_pat
         legacy_similarity_penalty=0,
     )
     completion_ctx = FutureCompletionContext(
-        args=args,
+        result_write_options=ResultWriteOptions(
+            dataset_id=args.dataset_id,
+            output_path=args.output,
+            auto_update_blacklist=args.auto_update_blacklist,
+        ),
         settings_fingerprint="settings_fp",
         template_library_fingerprint="tpl_fp",
         run_config={"mode": "test"},
@@ -340,7 +346,7 @@ def test_scheduler_dump_results_shrinks_next_template_queue(monkeypatch, tmp_pat
         ]
     }
     build_ctx = TemplateBuildContext(
-        args=args,
+        options=TemplateBuildOptions.from_args(args),
         all_fields=[{"id": "sales", "type": "MATRIX"}],
         template_library=template_library,
         include_templates={"weak_template"},
@@ -483,7 +489,7 @@ def test_build_pending_templates_skips_inflight_duplicate(monkeypatch) -> None:
         legacy_similarity_penalty=0,
     )
     build_ctx = TemplateBuildContext(
-        args=args,
+        options=TemplateBuildOptions.from_args(args),
         all_fields=[
             {
                 "id": "unsystematic_risk_last_360_days",
@@ -651,7 +657,7 @@ def test_resimulate_stage_prefers_refine_templates_over_broad_generation(monkeyp
         legacy_similarity_penalty=0,
     )
     build_ctx = TemplateBuildContext(
-        args=args,
+        options=TemplateBuildOptions.from_args(args),
         all_fields=[{"id": "cash_st", "type": "MATRIX", "name": "cash_st"}],
         template_library={
             "default": [
@@ -754,7 +760,7 @@ def test_event_field_uses_narrower_template_budget(monkeypatch) -> None:
         legacy_similarity_penalty=0,
     )
     build_ctx = TemplateBuildContext(
-        args=args,
+        options=TemplateBuildOptions.from_args(args),
         all_fields=[{"id": "fnd6_cptnewqeventv110_apq", "type": "VECTOR", "name": "fnd6_cptnewqeventv110_apq"}],
         template_library={},
         use_dataset_heuristics=False,

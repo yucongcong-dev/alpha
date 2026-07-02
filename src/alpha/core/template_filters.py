@@ -97,7 +97,7 @@ def is_template_actionable(
     prior_results: Sequence[FieldTestResult],
 ) -> bool:
     """判断模板在当前字段上下文中是否应继续展开 settings 变体。"""
-    args = build_ctx.args
+    options = build_ctx.options
     template_name = template.name
     expression = template.expression
     priority = template.priority
@@ -123,13 +123,13 @@ def is_template_actionable(
         expression_policy=expression_policy,
     ):
         return False
-    if is_template_disabled(template_name, template_stats, args.template_disable_after):
+    if is_template_disabled(template_name, template_stats, options.template_disable_after):
         return False
     if is_legacy_family_disabled(
         template_name,
         expression,
         template_stats,
-        args.disable_legacy_after,
+        options.disable_legacy_after,
         template_metadata=template_metadata,
     ):
         return False

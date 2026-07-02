@@ -47,21 +47,21 @@ def resolve_field_template_candidates(
     build_expression_candidates_fn=build_expression_candidates,
 ) -> tuple[list[object], dict[str, object], object]:
     """为单个字段解析模板候选、字段反馈和表达式策略。"""
-    args = build_ctx.args
+    options = build_ctx.options
     field_id = str(first_non_empty(field.get("id"), SENTINEL_UNKNOWN))
     field_name = choose_field_name(field)
     field_feedback = build_ctx.field_feedback.get(field_id)
-    expression_policy = build_ctx.expression_policy or get_dataset_expression_policy(args.dataset_id)
+    expression_policy = build_ctx.expression_policy or get_dataset_expression_policy(options.dataset_id)
     is_event_field = is_event_field_name(field_name, expression_policy.event_field_prefixes)
     max_templates_per_field = (
         expression_policy.event_max_templates_per_field
         if is_event_field and expression_policy.event_max_templates_per_field > 0
-        else args.max_templates_per_field
+        else options.max_templates_per_field
     )
     max_templates_per_family = (
         expression_policy.event_max_templates_per_family
         if is_event_field and expression_policy.event_max_templates_per_family > 0
-        else args.max_templates_per_family
+        else options.max_templates_per_family
     )
     feedback_stage = resolve_feedback_stage(
         field_feedback,
@@ -95,12 +95,12 @@ def resolve_field_template_candidates(
             build_ctx.template_library,
             max_templates_per_field,
             max_templates_per_family,
-            args.legacy_similarity_penalty,
+            options.legacy_similarity_penalty,
             all_fields=build_ctx.all_fields,
             field_feedback=field_feedback,
             global_failed_check_counts=build_ctx.global_failed_check_counts,
             use_dataset_heuristics=build_ctx.use_dataset_heuristics,
-            dataset_id=args.dataset_id,
+            dataset_id=options.dataset_id,
             expression_policy=expression_policy,
         )
     templates = limit_templates(
@@ -126,7 +126,7 @@ def build_pending_template_variants(
     build_settings_fingerprint_fn=build_settings_fingerprint_from_payload,
 ) -> list[tuple[str, str, str, str, int, SettingsVariant, str]]:
     """把模板候选展开为真正待执行的 settings 变体队列。"""
-    args = build_ctx.args
+    options = build_ctx.options
     field_id = str(first_non_empty(field.get("id"), SENTINEL_UNKNOWN))
     field_name = choose_field_name(field)
     pending_templates: list[tuple[str, str, str, str, int, SettingsVariant, str]] = []
@@ -169,7 +169,7 @@ def build_pending_template_variants(
                 ],
             )
         for settings_variant in build_setting_variants_fn(
-            args,
+            options,
             template_name,
             expression,
             field_feedback=field_feedback,

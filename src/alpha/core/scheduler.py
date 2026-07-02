@@ -32,6 +32,7 @@ from ..io.results_store import dump_results_incremental
 from ..models.base import (
     ExecutionState,
     FutureCompletionContext,
+    ResultWriteOptions,
     RuntimeConcurrencyState,
 )
 from ..policy import auto_update_blacklist_incremental, build_blacklist_runtime_stats
@@ -82,7 +83,6 @@ def handle_completed_future(
         - 结果立即落盘以防止中断丢失
         - 检测拥塞信号并返回给调用方
     """
-    args = completion_ctx.args
     context = execution_state.pending_futures.pop(future)
     field_id = context["field_id"]
     template_name = context["template_name"]
@@ -314,7 +314,7 @@ def drain_completed_futures(
         - 注册队列拥塞字段
     """
     completion_ctx = FutureCompletionContext(
-        args=args,
+        result_write_options=ResultWriteOptions.from_args(args),
         settings_fingerprint=settings_fingerprint,
         template_library_fingerprint=template_library_fingerprint,
         run_config=run_config,

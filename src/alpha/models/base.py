@@ -24,15 +24,19 @@ from .domain import (
 )
 from .io_types import RunFilters, RunPaths
 from .runtime import (
+    ApiClientOptions,
     ExecutionState,
     FutureCompletionContext,
     HistoricalRunState,
     InitializedRunContext,
+    ResultWriteOptions,
     RuntimeConcurrencyState,
     TemplateBuildContext,
+    TemplateBuildOptions,
 )
 
 __all__ = [
+    "ApiClientOptions",
     "DatasetExpressionPolicy",
     "ExecutionState",
     "FieldTestContext",
@@ -42,11 +46,13 @@ __all__ = [
     "HistoricalRunState",
     "InitializedRunContext",
     "NearPassCandidate",
+    "ResultWriteOptions",
     "RunFilters",
     "RunPaths",
     "RuntimeConcurrencyState",
     "SettingsVariant",
     "TemplateBuildContext",
+    "TemplateBuildOptions",
     "TemplateCandidate",
     "TemplateLibrary",
 ]

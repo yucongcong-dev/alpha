@@ -126,7 +126,7 @@ def test_run_field_test_loop_persists_progress_for_skipped_fields(tmp_path) -> N
             return_value=SimpleNamespace(
                 field_feedback={},
                 global_failed_check_counts={},
-                _feedback_result_count=0,
+                feedback_result_count=0,
             ),
         ),
         patch("alpha.run_loop.should_stop_after_submittable", return_value=False),

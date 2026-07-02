@@ -23,7 +23,6 @@ Brain API 客户端模块
 
 from __future__ import annotations
 
-import argparse
 import base64
 from collections.abc import Callable, Iterable
 from http.cookiejar import CookieJar
@@ -74,6 +73,7 @@ from .timing import (
     wait_seconds,
 )
 from ..utils.helpers import first_non_empty
+from ..models.base import ApiClientOptions
 
 logger = logging.getLogger(__name__)
 
@@ -1147,17 +1147,17 @@ class WorkerClientFactory:
     所以每个工作线程懒加载创建并登录自己的客户端，恰好一次。
 
     Attributes:
-        args (argparse.Namespace): 命令行参数命名空间。
+        options (ApiClientOptions): worker 客户端窄配置。
         email (str): 用户邮箱地址。
         password (str): 用户密码。
         _local (threading.local): 线程本地存储。
 
     Example:
         >>> import argparse
-        >>> args = argparse.Namespace(
+        >>> options = ApiClientOptions(
         ...     min_request_interval=0.5, rate_limit_max_retries=3, login_retries=2
         ... )
-        >>> factory = WorkerClientFactory(args, "user@example.com", "password")
+        >>> factory = WorkerClientFactory(options, "user@example.com", "password")
         >>> # 在工作线程中
         >>> client = factory.get_client()
         >>> # client 已登录且独立于其他线程的客户端
@@ -1169,28 +1169,24 @@ class WorkerClientFactory:
         - 客户端创建时会使用 args 中的配置参数
     """
 
-    def __init__(self, args: argparse.Namespace, email: str, password: str) -> None:
+    def __init__(self, options: ApiClientOptions, email: str, password: str) -> None:
         """
         记录线程级客户端创建所需的参数与凭证。
 
         存储 args 和凭证，供后续线程本地客户端创建使用。
 
         Args:
-            args: 命令行参数命名空间，必须包含：
-                - min_request_interval: 最小请求间隔
-                - rate_limit_max_retries: 速率限制重试次数
-                - login_retries: 登录重试次数
+            options: worker 客户端窄配置，包含请求节流、限流重试和登录重试参数。
             email: WorldQuant Brain 账号的邮箱地址。
             password: WorldQuant Brain 账号的密码。
 
         Example:
-            >>> import argparse
-            >>> args = argparse.Namespace(
+            >>> options = ApiClientOptions(
             ...     min_request_interval=0.5, rate_limit_max_retries=3, login_retries=2
             ... )
-            >>> factory = WorkerClientFactory(args, "user@example.com", "password")
+            >>> factory = WorkerClientFactory(options, "user@example.com", "password")
         """
-        self.args = args
+        self.options = options
         self.email = email
         self.password = password
         self._local = threading.local()
@@ -1223,9 +1219,9 @@ class WorkerClientFactory:
         client = BrainClient(
             self.email,
             self.password,
-            min_request_interval=self.args.min_request_interval,
-            rate_limit_max_retries=self.args.rate_limit_max_retries,
+            min_request_interval=self.options.min_request_interval,
+            rate_limit_max_retries=self.options.rate_limit_max_retries,
         )
-        login_with_retry(client, self.args.login_retries)
+        login_with_retry(client, self.options.login_retries)
         self._local.client = client
         return client

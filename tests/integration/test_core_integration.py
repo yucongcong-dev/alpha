@@ -28,6 +28,7 @@ from alpha.models.base import (
     FieldTestContext,
     FieldTestResult,
     FutureCompletionContext,
+    ResultWriteOptions,
     RunFilters,
     RuntimeConcurrencyState,
     TemplateBuildContext,
@@ -72,7 +73,7 @@ class TestCongestionSignalPropagation:
             failed_stage="simulation",
         )
         completion_ctx = FutureCompletionContext(
-            args=scheduler_args,
+            result_write_options=ResultWriteOptions.from_args(scheduler_args),
             settings_fingerprint="abc",
             template_library_fingerprint="def",
             run_config={"key": "val"},
@@ -131,7 +132,7 @@ class TestCongestionSignalPropagation:
         )
 
         completion_ctx = FutureCompletionContext(
-            args=scheduler_args,
+            result_write_options=ResultWriteOptions.from_args(scheduler_args),
             settings_fingerprint="abc",
             template_library_fingerprint="def",
             run_config={"key": "val"},
@@ -537,7 +538,7 @@ class TestContextConsistency:
     ) -> None:
         """FutureCompletionContext 保持 fingerprints 不变。"""
         ctx = FutureCompletionContext(
-            args=scheduler_args,
+            result_write_options=ResultWriteOptions.from_args(scheduler_args),
             settings_fingerprint="s_fp_001",
             template_library_fingerprint="tl_fp_001",
             run_config={"mode": "full"},
