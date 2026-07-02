@@ -32,7 +32,10 @@ from .policy import (
     resolve_feedback_stage as resolve_feedback_stage,
 )
 from .policy import (
-    use_fundamental6_heuristics as use_fundamental6_heuristics,
+    use_curated_heuristics_for_dataset as use_curated_heuristics_for_dataset,
+)
+from .policy import (
+    use_fundamental6_heuristics as use_fundamental6_heuristics,  # deprecated backward-compat alias
 )
 from .profiles import (
     DATASET_PROFILES as DATASET_PROFILES,

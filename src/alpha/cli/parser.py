@@ -129,7 +129,7 @@ def parse_args() -> argparse.Namespace:
     Example:
         >>> args = parse_args()
         >>> print(args.dataset_id)
-        fundamental6
+        model51
         >>> print(args.region)
         USA
 
@@ -137,7 +137,7 @@ def parse_args() -> argparse.Namespace:
         - smoke_test 和 full_run 是互斥的运行模式
         - smoke_test 会自动设置 limit=1, max_templates_per_field=1
         - full_run 会自动设置 limit=0, max_templates_per_field=0
-        - 默认使用 fundamental6 数据集和 USA 地区
+        - 默认使用 model51 数据集（日频系统性风险指标）和 USA 地区
     """
     parser = build_parser()
 

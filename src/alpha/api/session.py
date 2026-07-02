@@ -7,9 +7,7 @@ import logging
 import threading
 import time
 from typing import Any
-from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
-from urllib.request import Request
 
 from ..config.constants import (
     AUTH_URL,
@@ -23,6 +21,7 @@ from ..config.getters import (
 )
 from ..exceptions import BrainAPIError, BrainRateLimitError
 from .api_types import ApiParams
+from .http_backend import HttpBackend
 from .payloads import safe_json_bytes
 from .timing import doubled_retry_after, wait_seconds
 
@@ -39,7 +38,7 @@ class BrainSessionMixin:
     password: str
     min_request_interval: float
     rate_limit_max_retries: int
-    opener: Any
+    _http_backend: HttpBackend
 
     def login(self) -> None:
         """使用 basic auth 登录并初始化会话 cookie。"""
@@ -153,11 +152,10 @@ class BrainSessionMixin:
         else:
             request_data = str(data).encode("utf-8")
 
-        request = Request(url=url, data=request_data, headers=headers or {}, method=method)
-        try:
-            with self.opener.open(request, timeout=get_http_request_timeout()) as response:
-                return response.getcode(), dict(response.headers.items()), response.read()
-        except HTTPError as exc:
-            return exc.code, dict(exc.headers.items()), exc.read()
-        except URLError as exc:
-            raise BrainAPIError(f"{method} {url} failed: {exc}") from exc
+        return self._http_backend.request(
+            method=method,
+            url=url,
+            headers=headers,
+            data=request_data,
+            timeout=get_http_request_timeout(),
+        )

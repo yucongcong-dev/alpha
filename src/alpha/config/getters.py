@@ -12,6 +12,10 @@ from .runtime_values import (
 )
 
 
+def get_http_backend() -> str:
+    return load_http_runtime_config().backend
+
+
 def get_http_request_timeout() -> float:
     return load_http_runtime_config().request_timeout
 

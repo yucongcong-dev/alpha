@@ -12,7 +12,7 @@ DATA_FIELDS_URL: str = f"{API_BASE}/data-fields"
 SIMULATIONS_URL: str = f"{API_BASE}/simulations"
 ALPHAS_URL: str = f"{API_BASE}/alphas"
 
-DEFAULT_DATASET_ID: str = "fundamental6"
+DEFAULT_DATASET_ID: str = "model51"
 DEFAULT_HEADERS: dict = {
     "Accept": "application/json",
     "Content-Type": "application/json",
@@ -27,7 +27,7 @@ SUBMIT_MIN_TURNOVER: float = 0.01
 SUBMIT_MAX_TURNOVER: float = 0.70
 SUBMIT_MAX_WEIGHT: float = 0.10
 
-BACKFILL_WINDOW: int = 240
+BACKFILL_WINDOW: int = 504  # 与 YAML global.expression.backfill_window 保持一致，daily 数据 >= 2y
 
 PRECHECK_FALLBACK_MIN_SHARPE: float = 1.25
 PRECHECK_FALLBACK_MIN_FITNESS: float = 1.00
@@ -69,13 +69,16 @@ LOGIN_RETRY_WAIT: float = 3.0
 SIMULATION_RETRY_WAIT: float = 3.0
 POLLING_RETRY_BUFFER: float = 0.5
 
-SIMULATION_DEFAULT_START_DATE: str = "2019-01-01"
-SIMULATION_DEFAULT_END_DATE: str = "2023-12-31"
+# 模拟默认时间窗口 —— 仅当 YAML simulation 未指定 startDate/endDate 时使用
+# 实际运行时优先用 YAML global.simulation.testPeriodYears/Months 动态计算
+SIMULATION_DEFAULT_START_DATE: str = "2020-01-01"
+SIMULATION_DEFAULT_END_DATE: str = "2025-12-31"
 
 STATS_DEFAULT_SCORE: float = -999.0
 STATS_FAILED_CHECK_DEFAULT_SCORE: float = -10.0
-STATS_NEARPASS_SUMMARY_LIMIT: int = 20
+STATS_NEARPASS_SUMMARY_LIMIT: int = 50  # 从 20 上调，减少信息丢失
 STATS_PERFORMANCE_TOP_N: int = 10
+FIELDS_CACHE_TTL_HOURS: int = 24  # 字段缓存过期时间，到期后自动重新拉取最新字段元数据
 
 SENTINEL_UNKNOWN: str = "UNKNOWN"
 SENTINEL_UNKNOWN_CHECK: str = "UNKNOWN"

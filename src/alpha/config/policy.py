@@ -131,9 +131,13 @@ def get_dataset_expression_policy(
     *,
     use_curated_heuristics: bool | None = None,
 ) -> DatasetExpressionPolicy:
-    """Return the dataset expression policy after YAML overrides."""
+    """Return the dataset expression policy after YAML overrides.
+
+    精选启发式（use_curated_heuristics）现在由 YAML expression_policies.<dataset>.use_curated_heuristics
+    控制，不再硬编码特定数据集名称。
+    """
     if use_curated_heuristics is None:
-        use_curated_heuristics = dataset_id == "fundamental6"
+        use_curated_heuristics = _yaml_curated_heuristics(dataset_id)
 
     default_transform, matrix_transform, vector_transform, ratio_transform = _default_transform_specs()
     base_policy = _base_expression_policy(
@@ -150,6 +154,25 @@ def get_dataset_expression_policy(
         dataset_id=dataset_id,
         use_curated_heuristics=use_curated_heuristics,
     )
+
+
+def _yaml_curated_heuristics(dataset_id: str) -> bool:
+    """从 YAML expression_policies.<dataset>.use_curated_heuristics 读取精选启发式开关。
+
+    默认关闭；仅当 YAML 中该数据集显式配置 use_curated_heuristics: true 时启用。
+    """
+    if not dataset_id:
+        return False
+    from . import get_yaml_config
+
+    yaml_config = get_yaml_config() or {}
+    policies: dict = yaml_config.get("expression_policies", {})
+    if not isinstance(policies, dict):
+        return False
+    dataset_policy: dict = policies.get(dataset_id, {})
+    if isinstance(dataset_policy, dict):
+        return bool(dataset_policy.get("use_curated_heuristics", False))
+    return False
 
 
 def resolve_feedback_stage(
@@ -174,6 +197,26 @@ def resolve_feedback_stage(
     return FEEDBACK_STAGE_GENERATE
 
 
-def use_fundamental6_heuristics(dataset_id: str = "fundamental6") -> bool:
-    """Return whether a dataset id should use fundamental6 curated heuristics."""
-    return dataset_id == "fundamental6" or "fundamental6" in dataset_id.lower()
+def use_curated_heuristics_for_dataset(
+    dataset_id: str = "",
+    *,
+    yaml_config: dict | None = None,
+) -> bool:
+    """检查数据集是否应使用精选启发式（POSITIVE/NEGATIVE_RAW_FIELDS、高置信度比率等）。
+
+    默认返回 False；YAML expression_policies.<dataset>.use_curated_heuristics 控制开启。
+    """
+    if not dataset_id:
+        return False
+    yaml_config = yaml_config or {}
+    policies: dict = yaml_config.get("expression_policies", {})
+    if not isinstance(policies, dict):
+        return False
+    dataset_policy: dict = policies.get(dataset_id, {})
+    if isinstance(dataset_policy, dict):
+        return bool(dataset_policy.get("use_curated_heuristics", False))
+    return False
+
+
+# 向后兼容别名
+use_fundamental6_heuristics = use_curated_heuristics_for_dataset

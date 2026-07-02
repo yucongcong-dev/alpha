@@ -19,8 +19,10 @@ from collections.abc import Sequence
 import json
 import logging
 import os
+import time
 from typing import Protocol
 
+from ..config.constants import FIELDS_CACHE_TTL_HOURS
 from ..io.common import atomic_write_json
 from ..models.runtime import FieldFetchOptions, TemplateField
 
@@ -52,13 +54,14 @@ def load_fields_cache(
     universe: str,
     instrument_type: str,
     delay: int,
+    cache_ttl_hours: int = FIELDS_CACHE_TTL_HOURS,
 ) -> list[TemplateField]:
     """
-    仅在数据集上下文完全匹配时加载字段缓存。
+    仅在数据集上下文完全匹配且缓存未过期时加载字段缓存。
 
     从缓存文件加载字段元数据，但只有在缓存的作用域
     （数据集 ID、地区、宇宙、工具类型、延迟）与当前
-    请求的参数完全匹配时才返回缓存数据。
+    请求的参数完全匹配，且缓存未超过 TTL 时才返回缓存数据。
 
     Args:
         path (str): 缓存文件的路径。
@@ -67,26 +70,15 @@ def load_fields_cache(
         universe (str): 宇宙代码。
         instrument_type (str): 工具类型。
         delay (int): 延迟天数。
+        cache_ttl_hours (int): 缓存有效期（小时），超过后视为过期重新拉取。
 
     Returns:
         list[TemplateField]: 缓存的字段列表。如果文件不存在、
-            格式错误或上下文不匹配，返回空列表。
-
-    Example:
-        >>> fields = load_fields_cache(
-        ...     "fields_cache.json",
-        ...     dataset_id="fundamental6",
-        ...     region="USA",
-        ...     universe="TOP3000",
-        ...     instrument_type="EQUITY",
-        ...     delay=1,
-        ... )
-        >>> print(len(fields))
-        500
+            格式错误、上下文不匹配或缓存过期，返回空列表。
 
     Note:
-        缓存文件包含一个 cache_key 字段，用于验证缓存的作用域。
-        只有完全匹配的缓存才会被使用，避免不同配置的数据混淆。
+        缓存文件包含 cache_key 和 cached_at 字段，分别用于
+        验证缓存作用域和检查过期时间。
     """
     if not path or not os.path.exists(path):
         return []
@@ -97,6 +89,19 @@ def load_fields_cache(
         return []
     if not isinstance(payload, dict):
         return []
+
+    # --- TTL 过期检查 ---
+    cached_at = payload.get("cached_at")
+    if isinstance(cached_at, (int, float)) and cache_ttl_hours > 0:
+        age_seconds = time.time() - float(cached_at)
+        if age_seconds > cache_ttl_hours * 3600:
+            logger.info(
+                "[cache] 缓存已过期 (%.1fh > %dh)，将重新拉取字段",
+                age_seconds / 3600,
+                cache_ttl_hours,
+            )
+            return []
+
     cache_key = payload.get("cache_key", {})
     expected_key = {
         "dataset_id": dataset_id,
@@ -122,10 +127,10 @@ def save_fields_cache(
     fields: Sequence[TemplateField],
 ) -> None:
     """
-    保存字段元数据及其缓存作用域键。
+    保存字段元数据及其缓存作用域键，包含缓存时间戳用于 TTL 检查。
 
     将获取的字段元数据持久化到缓存文件，同时保存缓存的作用域
-    信息，以便后续加载时验证缓存的适用性。
+    信息和缓存时间戳，以便后续加载时验证缓存的适用性和新鲜度。
 
     Args:
         path (str): 缓存文件的路径。如果为空，不执行任何操作。
@@ -136,20 +141,9 @@ def save_fields_cache(
         delay (int): 延迟天数。
         fields (Sequence[TemplateField]): 要保存的字段列表。
 
-    Example:
-        >>> save_fields_cache(
-        ...     "fields_cache.json",
-        ...     dataset_id="fundamental6",
-        ...     region="USA",
-        ...     universe="TOP3000",
-        ...     instrument_type="EQUITY",
-        ...     delay=1,
-        ...     fields=[{"id": "sales", "name": "Sales", "type": "MATRIX"}],
-        ... )
-
     Note:
         使用原子写入确保文件操作的可靠性。
-        缓存文件格式为 JSON，包含 cache_key、count 和 fields 三个字段。
+        缓存文件格式为 JSON，包含 cache_key、cached_at、count 和 fields 四个字段。
     """
     if not path:
         return
@@ -163,6 +157,7 @@ def save_fields_cache(
                 "instrument_type": instrument_type,
                 "delay": delay,
             },
+            "cached_at": time.time(),
             "count": len(fields),
             "fields": list(fields),
         },

@@ -46,6 +46,9 @@ def build_field_view(
     field_type = choose_field_type(field)
 
     if field_type == "VECTOR":
+        # vec_avg() 将整个 VECTOR 时间序列压缩为标量，丢弃了所有时序结构。
+        # 对日频 VECTOR 字段（如 model51 风险指标），后续 ts_delta / ts_zscore 会失效。
+        # TODO: 替代方案 —— 逐日展开 VECTOR 分量或使用 vec_select_nth() 选取主成分。
         raw_expression = f"vec_avg({field_name})"
         transform_spec = policy.vector_field_transform
     elif field_type == "MATRIX":

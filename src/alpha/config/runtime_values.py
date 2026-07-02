@@ -76,6 +76,7 @@ class HttpRuntimeConfig:
     login_retry_wait: float
     simulation_retry_wait: float
     polling_retry_buffer: float
+    backend: str = "urllib"
 
 
 @dataclass(frozen=True)
@@ -151,6 +152,7 @@ def load_http_runtime_config() -> HttpRuntimeConfig:
         polling_retry_buffer=float(
             yaml_global_value("http", "polling_retry_buffer", POLLING_RETRY_BUFFER)
         ),
+        backend=str(yaml_global_value("http", "backend", "")),
     )
 
 
