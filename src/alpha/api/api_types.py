@@ -8,6 +8,11 @@ from __future__ import annotations
 
 from typing import Any, TypedDict
 
+ApiPayload = dict[str, Any]
+ApiParams = dict[str, Any]
+ApiResultList = list[dict[str, Any]]
+SimulationPayload = dict[str, Any]
+
 
 class SimulationAlphaResult(TypedDict, total=False):
     """模拟 Alpha 结果的结构定义。"""
@@ -16,12 +21,12 @@ class SimulationAlphaResult(TypedDict, total=False):
     status: str
     alpha: str
     expression: str | None
-    is_: dict[str, Any]
-    os_: dict[str, Any]
-    settings: dict[str, Any]
+    is_: ApiPayload
+    os_: ApiPayload
+    settings: ApiPayload
     regular: str | None
     submittable: bool | None
-    failed_checks: list[dict[str, Any]] | None
+    failed_checks: list["CheckResultDict"] | None
 
 
 class SimulationResponsePayload(TypedDict, total=False):

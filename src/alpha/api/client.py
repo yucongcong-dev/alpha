@@ -60,6 +60,7 @@ from ..exceptions import (
     BrainQueueBusyError,
     BrainRateLimitError,
 )
+from .api_types import ApiParams, ApiPayload, FieldInfoDict, SimulationPayload
 from .payloads import (
     extract_total,
     normalize_results,
@@ -507,7 +508,7 @@ class BrainClient:
         url: str,
         *,
         headers: dict[str, str] | None = None,
-        params: dict[str, Any] | None = None,
+        params: ApiParams | None = None,
         data: Any | None = None,
     ) -> tuple[int, dict[str, str], bytes]:
         """
@@ -602,7 +603,7 @@ class BrainClient:
         universe: str,
         instrument_type: str,
         delay: int,
-    ) -> list[dict[str, Any]]:
+    ) -> list[FieldInfoDict]:
         """
         按分页拉取某个数据集的字段元数据。
 
@@ -641,7 +642,7 @@ class BrainClient:
             - 当达到 limit 或数据耗尽时停止
             - 使用 extract_total 提取总数，优化分页控制
         """
-        fields: list[dict[str, Any]] = []
+        fields: list[FieldInfoDict] = []
         current_offset = offset
         announced_total: int | None = None
 
@@ -722,7 +723,7 @@ class BrainClient:
         universe: str,
         instrument_type: str,
         delay: int,
-    ) -> dict[str, Any]:
+    ) -> ApiPayload:
         """
         获取一页字段元数据，并尝试几种已知可行的查询参数形态。
 
@@ -834,7 +835,7 @@ class BrainClient:
 
         raise BrainAPIError(f"Unable to fetch dataset fields for {dataset_id}: {last_error}")
 
-    def create_simulation(self, payload: dict[str, Any]) -> str:
+    def create_simulation(self, payload: SimulationPayload) -> str:
         """
         创建模拟任务并返回后续轮询使用的 Location 地址。
 
@@ -907,7 +908,7 @@ class BrainClient:
         max_wait_seconds: float,
         max_pending_cycles: int,
         max_queue_seconds: float,
-    ) -> dict[str, Any]:
+    ) -> SimulationPayload:
         """
         轮询单个模拟任务，直到完成或超出排队/等待预算。
 
@@ -1052,7 +1053,7 @@ class BrainClient:
                 continue
             return payload
 
-    def get_alpha_detail(self, alpha_id: str) -> dict[str, Any]:
+    def get_alpha_detail(self, alpha_id: str) -> ApiPayload:
         """
         获取 Alpha 详情，包括可用时的 check-submit 结果。
 
@@ -1082,7 +1083,7 @@ class BrainClient:
         )
         return safe_json_bytes(content)
 
-    def submit_alpha(self, alpha_id: str) -> dict[str, Any]:
+    def submit_alpha(self, alpha_id: str) -> ApiPayload:
         """
         提交可提交的 Alpha，并在需要时跟随异步 Retry-After 轮询。
 

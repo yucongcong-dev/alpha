@@ -8,6 +8,7 @@ import json
 import re
 from typing import Any, cast
 
+from ..api.api_types import ApiPayload, CheckResultDict
 from ..config import (
     API_KEY_DETAIL,
     API_KEY_ERROR,
@@ -36,7 +37,7 @@ _KEY_VALUE: str = "value"
 _TYPE_ALPHA: str = "ALPHA"
 
 
-def extract_alpha_id(payload: dict[str, Any]) -> str | None:
+def extract_alpha_id(payload: ApiPayload) -> str | None:
     candidates = [
         payload.get(_KEY_ALPHA),
         payload.get(_KEY_ALPHA_ID),
@@ -46,7 +47,7 @@ def extract_alpha_id(payload: dict[str, Any]) -> str | None:
         if isinstance(candidate, str) and candidate:
             return candidate
         if isinstance(candidate, dict):
-            cd = cast(dict[str, Any], candidate)
+            cd = cast(ApiPayload, candidate)
             candidate_id = first_non_empty(cd.get(_KEY_ID), cd.get(_KEY_ALPHA))
             if isinstance(candidate_id, str) and candidate_id:
                 return candidate_id
@@ -55,7 +56,7 @@ def extract_alpha_id(payload: dict[str, Any]) -> str | None:
     if isinstance(children, list):
         for child in children:
             if isinstance(child, dict):
-                alpha_id = extract_alpha_id(cast(dict[str, Any], child))
+                alpha_id = extract_alpha_id(cast(ApiPayload, child))
             else:
                 alpha_id = None
             if alpha_id:
@@ -69,10 +70,10 @@ def extract_alpha_id(payload: dict[str, Any]) -> str | None:
     return None
 
 
-def extract_checks(alpha_payload: dict[str, Any]) -> list[dict[str, Any]]:
+def extract_checks(alpha_payload: ApiPayload) -> list[CheckResultDict]:
     is_section = alpha_payload.get(_KEY_IS)
     if isinstance(is_section, dict):
-        section = cast(dict[str, Any], is_section)
+        section = cast(ApiPayload, is_section)
         section_checks = section.get(_KEY_CHECKS)
         if isinstance(section_checks, list):
             return section_checks
@@ -82,8 +83,8 @@ def extract_checks(alpha_payload: dict[str, Any]) -> list[dict[str, Any]]:
     return []
 
 
-def extract_failed_checks(alpha_payload: dict[str, Any]) -> list[dict[str, Any]]:
-    failed_checks: list[dict[str, Any]] = []
+def extract_failed_checks(alpha_payload: ApiPayload) -> list[CheckResultDict]:
+    failed_checks: list[CheckResultDict] = []
     for check in extract_checks(alpha_payload):
         if str(check.get(_KEY_RESULT, "")).upper() != _RESULT_FAIL:
             continue
@@ -98,13 +99,13 @@ def extract_failed_checks(alpha_payload: dict[str, Any]) -> list[dict[str, Any]]
     return failed_checks
 
 
-def is_submittable_from_checks(checks: list[dict[str, Any]]) -> bool | None:
+def is_submittable_from_checks(checks: list[CheckResultDict]) -> bool | None:
     if not checks:
         return None
     return all(str(check.get(_KEY_RESULT, "")).upper() != _RESULT_FAIL for check in checks)
 
 
-def summarize_failure(payload: dict[str, Any] | list[Any] | Any) -> str:
+def summarize_failure(payload: ApiPayload | list[Any] | Any) -> str:
     if not isinstance(payload, dict):
         text = json.dumps(payload, ensure_ascii=False)[:FAILURE_SUMMARY_MAX_LEN]
         return text or "unknown error"

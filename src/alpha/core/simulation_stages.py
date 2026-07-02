@@ -7,8 +7,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 import logging
 import re
-from typing import Any
 
+from ..api.api_types import CheckResultDict, SimulationPayload
 from ..api.client import BrainClient, retry_operation
 from ..config import (
     API_KEY_FAILED,
@@ -89,14 +89,14 @@ class PrecheckConfig:
 
 
 def precheck_simulation_metrics(
-    simulation_result: dict[str, Any],
+    simulation_result: SimulationPayload,
     *,
     min_sharpe: float = get_submit_min_sharpe(),
     min_fitness: float = get_submit_min_fitness(),
     min_turnover: float = get_submit_min_turnover(),
     max_turnover: float = get_submit_max_turnover(),
     max_weight: float = get_submit_max_weight(),
-) -> tuple[bool, str, list[dict[str, Any]]]:
+) -> tuple[bool, str, list[CheckResultDict]]:
     is_section = simulation_result.get(_KEY_IS)
     if not isinstance(is_section, dict):
         return True, "", []
@@ -110,7 +110,7 @@ def precheck_simulation_metrics(
         or is_section.get(_KEY_CONCENTRATED_WEIGHT)
     )
 
-    failures: list[dict[str, Any]] = []
+    failures: list[CheckResultDict] = []
 
     def _add_failure(check_name: str, v: int | float, limit: float) -> None:
         failures.append(
@@ -144,7 +144,7 @@ def precheck_simulation_metrics(
 
 
 def create_simulation_with_retry(
-    client: BrainClient, payload: dict[str, Any], retries: int
+    client: BrainClient, payload: SimulationPayload, retries: int
 ) -> tuple[str, str]:
     simulation_location = retry_operation(
         "create simulation",
@@ -171,7 +171,7 @@ def poll_simulation_with_retry(
     max_wait_seconds: float,
     max_pending_cycles: int,
     max_queue_seconds: float,
-) -> dict[str, Any]:
+) -> SimulationPayload:
     return retry_operation(
         "poll simulation",
         retries,
@@ -190,7 +190,7 @@ def checksubmit_with_retry(
     client: BrainClient,
     alpha_id: str,
     retries: int,
-) -> tuple[bool | None, str, list[dict[str, Any]]]:
+) -> tuple[bool | None, str, list[CheckResultDict]]:
     alpha_detail = retry_operation(
         "checksubmit",
         retries,
@@ -269,7 +269,7 @@ def run_simulation_poll_stage(
     *,
     simulation_location: str,
     simulation_id: str,
-) -> FieldTestResult | tuple[str, dict[str, Any]]:
+) -> FieldTestResult | tuple[str, SimulationPayload]:
     try:
         simulation_result = poll_simulation_with_retry(
             client,
@@ -316,8 +316,8 @@ def run_checksubmit_stage(
     *,
     alpha_id: str,
     simulation_id: str,
-    simulation_result: dict[str, Any] | None = None,
-) -> FieldTestResult | tuple[bool | None, str, list[dict[str, Any]]]:
+    simulation_result: SimulationPayload | None = None,
+) -> FieldTestResult | tuple[bool | None, str, list[CheckResultDict]]:
     if simulation_result:
         config = PrecheckConfig.from_args(args)
         passed, reason, precheck_failed_checks = precheck_simulation_metrics(
