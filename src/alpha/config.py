@@ -13,94 +13,32 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field, replace
-import os
-from pathlib import Path
-from typing import Any, Optional
+from dataclasses import replace
+from typing import Any
+
+from .config_models import (
+    DatasetExpressionPolicy,
+    FeedbackLoopPolicy,
+    FeedbackPhasePolicy,
+    FieldTransformSpec,
+    FieldTransformStage,
+)
+from .config_defaults import apply_yaml_global_defaults as apply_yaml_global_defaults
+from .config_profiles import (
+    DATASET_PROFILES as DATASET_PROFILES,
+    DEFAULT_PROFILE as DEFAULT_PROFILE,
+    get_dataset_profile as get_dataset_profile,
+)
+from .config_yaml import (
+    _config_file_signature as _config_file_signature,
+    _resolve_yaml_path as _resolve_yaml_path,
+    get_yaml_config,
+    load_yaml_config as load_yaml_config,
+)
 
 # ============================================================================
 # YAML 配置文件支持
 # ============================================================================
-
-# 默认 YAML 配置文件查找路径（按优先级）
-_YAML_SEARCH_PATHS: list[str] = [
-    "settings.yaml",                          # 当前工作目录
-    "config/settings.yaml",                   # config 子目录
-]
-
-# 可通过环境变量指定配置文件路径
-_ENV_CONFIG_PATH: str = "ALPHA_CONFIG_FILE"
-
-
-def _resolve_yaml_path() -> Optional[str]:
-    """按优先级查找 YAML 配置文件路径。
-
-    优先级：
-        1. 环境变量 ALPHA_CONFIG_FILE
-        2. 当前目录 settings.yaml
-        3. config/settings.yaml
-        4. 项目根目录 settings.yaml（相对于 src/alpha/config.py）
-
-    Returns:
-        str or None: 找到的配置文件绝对路径，未找到返回 None。
-    """
-    # 1. 环境变量
-    env_path = os.environ.get(_ENV_CONFIG_PATH)
-    if env_path and os.path.isfile(env_path):
-        return os.path.abspath(env_path)
-
-    # 2. 工作目录下的 settings.yaml
-    for rel in _YAML_SEARCH_PATHS:
-        if os.path.isfile(rel):
-            return os.path.abspath(rel)
-
-    # 3. 项目根目录 (相对于此文件位置)
-    project_root = Path(__file__).resolve().parent.parent.parent
-    candidate = project_root / "settings.yaml"
-    if candidate.is_file():
-        return str(candidate)
-
-    return None
-
-
-def load_yaml_config(config_path: str = "") -> dict[str, Any]:
-    """从 YAML 文件加载运行配置。
-
-    Args:
-        config_path: YAML 配置文件路径。为空时自动搜索。
-
-    Returns:
-        dict: 解析后的配置字典。文件不存在或解析失败返回空字典。
-    """
-    try:
-        import yaml
-    except ImportError:
-        return {}
-
-    path = config_path if config_path else _resolve_yaml_path()
-    if not path or not os.path.isfile(path):
-        return {}
-
-    try:
-        with open(path, "r", encoding="utf-8") as fh:
-            data = yaml.safe_load(fh)
-        if isinstance(data, dict):
-            return data
-    except (yaml.YAMLError, UnicodeDecodeError, OSError):
-        pass
-
-    return {}
-
-
-def _config_file_signature(path: str | None) -> tuple[int, int] | None:
-    """返回配置文件签名：(mtime_ns, size)。"""
-    if not path or not os.path.isfile(path):
-        return None
-    try:
-        stat = os.stat(path)
-    except OSError:
-        return None
-    return (stat.st_mtime_ns, stat.st_size)
 
 
 # ============================================================================
@@ -171,128 +109,6 @@ SUBMIT_MAX_WEIGHT: float = 0.10
 
 BACKFILL_WINDOW: int = 240
 """ts_backfill 默认时间窗口（天）。更大的窗口能捕捉更多历史数据，提升信号稳定性。"""
-
-
-@dataclass(frozen=True)
-class FieldTransformStage:
-    """字段预处理单个 stage 的配置。"""
-
-    kind: str
-    window: int = 0
-    std: float | None = None
-
-
-@dataclass(frozen=True)
-class FieldTransformSpec:
-    """字段预处理流水线配置。
-
-    该配置用于把字段预处理从表达式模板中抽离出来，统一管理
-    backfill / winsorize 等字段级转换规则。
-    """
-
-    stages: tuple[FieldTransformStage, ...] = ()
-    backfill_window: int = 0
-    winsorize_std: float | None = None
-
-
-@dataclass(frozen=True)
-class FeedbackPhasePolicy:
-    """单个 feedback 阶段的预算与门槛。"""
-
-    min_attempted_templates: int = 0
-    min_best_score: float = -999.0
-    settings_variant_budget: int = 3
-    enable_template_pruning: bool = False
-    enable_resimulation_mutations: bool = False
-    preferred_template_stages: tuple[str, ...] = ()
-
-
-@dataclass(frozen=True)
-class FeedbackLoopPolicy:
-    """表达式搜索反馈闭环：generate -> prune -> resimulate。"""
-
-    generate: FeedbackPhasePolicy = field(default_factory=FeedbackPhasePolicy)
-    prune: FeedbackPhasePolicy = field(default_factory=FeedbackPhasePolicy)
-    resimulate: FeedbackPhasePolicy = field(default_factory=FeedbackPhasePolicy)
-
-
-@dataclass(frozen=True)
-class DatasetExpressionPolicy:
-    """数据集表达式生成策略。
-
-    用于把数据集专属的模板优先级、窗口、黑名单保护和比值偏好
-    从 expressions.py 中抽离出来，由调用方按 dataset_id 注入。
-    """
-
-    dataset_id: str = ""
-    use_curated_heuristics: bool = False
-    partner_limit: int = 4
-    account_template_boost: int = 0
-    high_conviction_ratio_priority_boost: int = 0
-    disabled_templates: set[str] = field(default_factory=set)
-    protected_templates: set[str] = field(default_factory=set)
-    high_conviction_ratio_pairs: set[tuple[str, str]] = field(default_factory=set)
-    template_priority_penalties: dict[str, int] = field(default_factory=dict)
-    template_prefix_penalties: dict[tuple[str, ...], int] = field(default_factory=dict)
-    matrix_delta_over_std_windows: tuple[tuple[int, int, int], ...] = ()
-    matrix_diversified_template_specs: tuple[tuple[str, str, int], ...] = ()
-    ratio_delta_rank_windows: tuple[tuple[int, int], ...] = ()
-    ratio_delta_over_std_windows: tuple[tuple[int, int, int], ...] = ()
-    ratio_diversified_template_specs: tuple[tuple[str, str, int], ...] = ()
-    ratio_legacy_template_specs: tuple[tuple[str, str, int], ...] = ()
-    positive_raw_fields: set[str] = field(default_factory=set)
-    negative_raw_fields: set[str] = field(default_factory=set)
-    blacklisted_template_name_substrings: tuple[str, ...] = ()
-    ratio_partner_candidates: dict[str, tuple[str, ...]] = field(default_factory=dict)
-    ratio_keywords: dict[str, tuple[str, ...]] = field(default_factory=dict)
-    preferred_partner_score_bonuses: dict[str, int] = field(default_factory=dict)
-    preferred_field_order: dict[str, int] = field(default_factory=dict)
-    overtested_weak_fields: set[str] = field(default_factory=set)
-    promising_field_min_priority: float = 0.65
-    always_keep_families: set[str] = field(default_factory=set)
-    slow_template_prefixes: tuple[str, ...] = ()
-    slow_template_names: set[str] = field(default_factory=set)
-    concentrated_weak_families: set[str] = field(default_factory=set)
-    concentrated_weak_prefixes: tuple[str, ...] = ()
-    concentrated_weak_names: set[str] = field(default_factory=set)
-    low_sharpe_weak_ratio_families: set[str] = field(default_factory=set)
-    low_sharpe_weak_ratio_prefixes: tuple[str, ...] = ()
-    weak_mean_spread_fields: set[str] = field(default_factory=set)
-    broken_zscore_spread_fields: set[str] = field(default_factory=set)
-    weak_ratio_standalone_fields: set[str] = field(default_factory=set)
-    low_sharpe_ratio_fail_threshold: int = 0
-    blacklist_min_fields_for_nearpass: int = 0
-    blacklist_protected_min_avg_sharpe: float = 0.0
-    blacklist_protected_min_avg_fitness: float = 0.0
-    field_min_coverage: float = 0.0
-    field_min_date_coverage: float = 0.0
-    field_min_alpha_count: int = 0
-    field_min_user_count: int = 0
-    field_coverage_weight: float = 0.0
-    field_date_coverage_weight: float = 0.0
-    field_alpha_validation_weight: float = 0.0
-    field_user_validation_weight: float = 0.0
-    field_alpha_crowding_penalty_weight: float = 0.0
-    field_user_crowding_penalty_weight: float = 0.0
-    field_recency_weight: float = 0.0
-    field_theme_bonus_weight: float = 0.0
-    field_preferred_unexplored_bonus: float = 0.0
-    event_field_prefixes: tuple[str, ...] = ()
-    event_field_min_coverage: float = 0.0
-    event_field_min_date_coverage: float = 0.0
-    event_field_min_alpha_count: int = 0
-    event_field_min_user_count: int = 0
-    event_max_templates_per_field: int = 0
-    event_max_templates_per_family: int = 0
-    event_allowed_template_stages: tuple[str, ...] = ()
-    event_allowed_template_prefixes: tuple[str, ...] = ()
-    event_allowed_template_families: set[str] = field(default_factory=set)
-    default_field_transform: FieldTransformSpec = field(default_factory=FieldTransformSpec)
-    matrix_field_transform: FieldTransformSpec = field(default_factory=FieldTransformSpec)
-    vector_field_transform: FieldTransformSpec = field(default_factory=FieldTransformSpec)
-    ratio_numerator_transform: FieldTransformSpec = field(default_factory=FieldTransformSpec)
-    ratio_denominator_transform: FieldTransformSpec = field(default_factory=FieldTransformSpec)
-    feedback_loop_policy: FeedbackLoopPolicy = field(default_factory=FeedbackLoopPolicy)
 
 
 def _tuple_tuple_int(value: Any, width: int) -> tuple[tuple[int, ...], ...]:
@@ -1095,107 +911,6 @@ RATIO_LEGACY_TEMPLATE_SPECS: tuple[tuple[str, str, int], ...] = (
 )
 """所有数据集通用的 ratio legacy 模板。"""
 
-# ============================================================================
-# 数据集自适应配置 (Dataset Profiles)
-# ============================================================================
-# 每个数据集有不同的字段数、Value Score、限流风险，应有不同的运行参数。
-# 键名为 dataset_id，未匹配的数据集使用 DEFAULT_PROFILE。
-#
-# 字段说明:
-#   min_request_interval:       API 请求最小间隔（秒），字段多应增大
-#   sleep_between_fields:       字段间休眠（秒）
-#   max_concurrent_simulations: 最大并发模拟数
-#   max_templates_per_field:    每字段最大模板数（0=全部）
-#   simulation_max_wait_seconds:单个模拟最大等待时间（秒）
-#   simulation_max_queue_seconds:模拟排队最大等待时间（秒）
-#   queue_busy_cooldown_seconds: 队列繁忙冷却时间（秒）
-#   template_disable_after:     模板禁用阈值（0=不自动剪枝）
-
-from typing import Any
-
-DATASET_PROFILES: dict[str, dict[str, Any]] = {}
-"""数据集专属配置已迁移至 settings.yaml (dataset_profiles 段)。
-此处保留空字典以确保向后兼容，代码仅从 YAML 读取。
-如需添加/修改数据集参数，请编辑 settings.yaml 而非此文件。"""
-
-# 默认配置（未在 settings.yaml dataset_profiles 中匹配时使用）
-DEFAULT_PROFILE: dict[str, Any] = {
-    "min_request_interval": 2.0,
-    "sleep_between_fields": 5.0,
-    "max_concurrent_simulations": 1,
-    "max_concurrent_creates": 1,
-    "max_templates_per_field": 12,
-    "field_template_batch_size": 2,
-    "simulation_max_wait_seconds": 900,
-    "simulation_max_queue_seconds": 600,
-    "queue_busy_cooldown_seconds": 120,
-    "template_disable_after": 12,
-}
-
-
-def get_dataset_profile(dataset_id: str, yaml_config: dict[str, Any] | None = None) -> dict[str, Any]:
-    """返回指定数据集的运行参数配置。
-
-    优先级：YAML dataset_profiles > DEFAULT_PROFILE
-    所有数据集专属参数统一在 settings.yaml 的 dataset_profiles 段维护。
-
-    Args:
-        dataset_id: 数据集 ID，如 "model51", "pv1", "fundamental6"。
-        yaml_config: 从 YAML 加载的配置字典（可选）。
-
-    Returns:
-        dict: 该数据集的参数配置；未匹配时返回默认配置。
-    """
-    profile = dict(DEFAULT_PROFILE)
-
-    # 从 YAML 读取数据集专属配置（唯一来源）
-    if yaml_config:
-        yaml_profiles = yaml_config.get("dataset_profiles", {})
-        if isinstance(yaml_profiles, dict):
-            yaml_profile = yaml_profiles.get(dataset_id)
-            if isinstance(yaml_profile, dict):
-                profile.update(yaml_profile)
-
-    return profile
-
-
-def get_yaml_config(config_path: str = "") -> dict[str, Any]:
-    """获取 YAML 配置（带缓存）。
-
-    仅在首次调用时加载文件，之后返回缓存。
-
-    Args:
-        config_path: YAML 配置文件路径。为空时自动搜索。
-
-    Returns:
-        dict: 解析后的配置字典。
-    """
-    cache_attr = "_yaml_config_cache"
-    resolved_path = os.path.abspath(config_path) if config_path else _resolve_yaml_path()
-    cache_key = resolved_path or "__missing__"
-    signature = _config_file_signature(resolved_path)
-    cache = getattr(get_yaml_config, cache_attr, {})  # type: ignore[attr-defined]
-    cached_entry = cache.get(cache_key)
-    if isinstance(cached_entry, dict):
-        cached_signature = cached_entry.get("signature")
-        cached_path = cached_entry.get("path")
-        cached_data = cached_entry.get("data")
-        if (
-            cached_signature == signature
-            and cached_path == resolved_path
-            and isinstance(cached_data, dict)
-        ):
-            return cached_data
-    data = load_yaml_config(resolved_path or "")
-    cache[cache_key] = {
-        "path": resolved_path,
-        "signature": signature,
-        "data": data,
-    }
-    setattr(get_yaml_config, cache_attr, cache)
-    return data
-
-
 def get_dataset_expression_policy(
     dataset_id: str,
     *,
@@ -1306,114 +1021,6 @@ def resolve_feedback_stage(
     ):
         return FEEDBACK_STAGE_PRUNE
     return FEEDBACK_STAGE_GENERATE
-
-
-def apply_yaml_global_defaults(
-    args: Any,
-    yaml_config: dict[str, Any] | None = None,
-    explicit_cli_keys: set[str] | None = None,
-) -> None:
-    """将 YAML global 默认值应用到 argparse namespace 上（CLI 未显式传参时）。
-
-    仅当 argparse 值仍然是代码默认值时才会被 YAML 值覆盖。
-    此函数在 parser.parse_args 之后调用，确保 CLI > YAML > 代码默认的优先级。
-
-    覆盖所有 YAML global section，包括:
-        dataset, simulation, limits, concurrency, retries,
-        filters, quality, expression, runtime
-
-    Args:
-        args: argparse.Namespace 对象。
-        yaml_config: YAML 配置字典。
-    """
-    if not yaml_config:
-        return
-    explicit_cli_keys = explicit_cli_keys or set()
-
-    global_cfg = yaml_config.get("global", {})
-    if not isinstance(global_cfg, dict):
-        return
-
-    # simulation settings —— YAML key 现在是 Brain API camelCase，需映射到 args snake_case
-    _SIM_KEY_MAP = {
-        "instrumentType": "instrument_type",
-        "unitHandling": "unit_handling",
-        "nanHandling": "nan_handling",
-        "startDate": "start_date",
-        "endDate": "end_date",
-    }
-    sim_section = global_cfg.get("simulation", {})
-    if isinstance(sim_section, dict):
-        for yaml_key, arg_key in _SIM_KEY_MAP.items():
-            if yaml_key in sim_section and hasattr(args, arg_key) and arg_key not in explicit_cli_keys:
-                setattr(args, arg_key, sim_section[yaml_key])
-    # 不需要映射的 key (region, universe, delay, decay, neutralization, truncation,
-    # pasteurization, language) — YAML key == args attr
-    _merge_section(args, sim_section, {
-        "region", "universe", "delay", "decay", "neutralization",
-        "truncation", "pasteurization", "language",
-    }, explicit_cli_keys)
-
-    # limits (字段筛选)
-    _merge_section(args, global_cfg.get("limits", {}), {
-        "limit", "offset", "page_size", "sleep_between_fields",
-        "max_templates_per_field", "max_templates_per_family", "field_template_batch_size",
-        "legacy_similarity_penalty", "disable_legacy_after",
-    }, explicit_cli_keys)
-
-    # concurrency (并发)
-    _merge_section(args, global_cfg.get("concurrency", {}), {
-        "max_concurrent_simulations",
-        "max_concurrent_creates",
-    }, explicit_cli_keys)
-
-    # retries (重试和超时)
-    _merge_section(args, global_cfg.get("retries", {}), {
-        "simulation_create_retries", "simulation_poll_retries",
-        "simulation_max_polls", "simulation_max_wait_seconds",
-        "simulation_max_pending_cycles", "simulation_max_queue_seconds",
-        "queue_busy_cooldown_seconds", "field_queue_busy_skip_after",
-        "check_submit_retries", "submit_retries",
-        "rate_limit_max_retries", "login_retries", "min_request_interval",
-    }, explicit_cli_keys)
-
-    # filters
-    _merge_section(args, global_cfg.get("filters", {}), {
-        "template_disable_after", "top_fields_by_feedback",
-        "stop_after_submittable",
-    }, explicit_cli_keys)
-
-    # quality (质量阈值)
-    _merge_section(args, global_cfg.get("quality", {}), {
-        "min_sharpe", "min_fitness", "min_turnover",
-        "max_turnover", "max_weight",
-    }, explicit_cli_keys)
-
-    # expression (表达式生成)
-    _merge_section(args, global_cfg.get("expression", {}), {
-        "backfill_window",
-    }, explicit_cli_keys)
-
-    # runtime (运行时开关)
-    _merge_section(args, global_cfg.get("runtime", {}), {
-        "submit", "auto_update_blacklist", "smoke_test", "dry_run_plan", "full_run",
-        "verbose", "quiet",
-    }, explicit_cli_keys)
-
-
-def _merge_section(
-    args: Any,
-    section: dict[str, Any],
-    keys: set[str],
-    explicit_cli_keys: set[str] | None = None,
-) -> None:
-    """将 YAML section 中的值合并到 args（仅当 key 在 section 中存在时）。"""
-    if not isinstance(section, dict):
-        return
-    explicit_cli_keys = explicit_cli_keys or set()
-    for key in keys:
-        if key in section and hasattr(args, key) and key not in explicit_cli_keys:
-            setattr(args, key, section[key])
 
 
 # ============================================================================
