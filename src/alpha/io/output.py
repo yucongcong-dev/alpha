@@ -180,7 +180,7 @@ def build_dataset_scoped_paths(
         - 文件名使用 sanitize_dataset_id_for_filename 安全化
         - 基础模板文件位于 data/templates/base/library.json
         - 专属模板路径格式：data/templates/{dataset}/library.json
-        - 专属黑名单路径格式：data/blacklists/{dataset}/blacklist.json
+        - 统一黑名单路径格式：data/blacklists/{dataset}/blacklist.json
         - 字段缓存路径格式：cache/fields/{dataset}/{region}/{universe}/{instrument}/{delay}/fields.json
         - 结果文件路径格式：results/{sanitized}/test_results.json
     """

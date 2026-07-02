@@ -74,7 +74,7 @@ alpha/                     # 项目根目录
 │   │   ├── fundamental6/  # fundamental6 专属模板库与说明
 │   │   ├── model16/       # model16 专属模板库与说明
 │   │   └── model51/       # model51 专属模板库与说明
-│   └── blacklists/        # dataset 专属 blacklist
+│   └── blacklists/        # 人工维护的 dataset 专属 blacklist
 └── .gitignore
 ```
 
@@ -89,6 +89,12 @@ alpha/                     # 项目根目录
 - 数据集聚焦白名单：可选放在 `data/templates/<dataset_id>/*.txt`
 
 其中 `base` 只负责提供共享 fallback 模板，真正的搜索方向应尽量在数据集专属目录里定制和收敛。
+
+## 黑名单目录
+
+- 统一黑名单：`data/blacklists/<dataset_id>/blacklist.json`。
+- 当运行结果持续不佳时，脚本会直接把低质量模板追加到该文件，下次运行自动跳过。
+- 你也可以手工编辑同一个文件，用于补充明确不想再跑的模板或表达式规则。
 
 ## 当前代码分层
 

@@ -4,7 +4,7 @@
 本模块负责：
 - 黑名单文件路径与骨架管理
 - 模板失败聚合
-- 自动黑名单判定与增量更新
+- 黑名单判定与增量更新
 """
 
 from __future__ import annotations
@@ -12,7 +12,6 @@ from __future__ import annotations
 import json
 import logging
 import os
-from pathlib import Path
 import time
 from typing import Any
 
@@ -36,7 +35,7 @@ _BLACKLIST_PATH_CACHE: dict[str, str] = {}
 
 
 def _resolve_blacklist_path(dataset_id: str, *, data_dir: str = "") -> str:
-    """按数据集解析黑名单文件路径：blacklists/{dataset_id}/blacklist.json。"""
+    """按数据集解析统一黑名单路径：data/blacklists/{dataset_id}/blacklist.json。"""
     cache_key = f"{dataset_id}|{data_dir}" if data_dir else dataset_id
     if cache_key in _BLACKLIST_PATH_CACHE:
         return _BLACKLIST_PATH_CACHE[cache_key]
@@ -45,7 +44,6 @@ def _resolve_blacklist_path(dataset_id: str, *, data_dir: str = "") -> str:
     resolved = str(base / "blacklists" / dataset_key / "blacklist.json")
     _BLACKLIST_PATH_CACHE[cache_key] = resolved
     return resolved
-
 
 def _build_default_blacklist(dataset_id: str) -> dict[str, Any]:
     """构建单个数据集的黑名单骨架结构。"""
@@ -61,7 +59,7 @@ def _build_default_blacklist(dataset_id: str) -> dict[str, Any]:
 
 
 def load_blacklisted_template_names(dataset_id: str, *, data_dir: str = "") -> set[str]:
-    """读取当前数据集已存在的黑名单模板名集合。"""
+    """读取当前数据集统一黑名单中的模板名集合。"""
     blacklist_path = _resolve_blacklist_path(dataset_id, data_dir=data_dir)
     try:
         if os.path.isfile(blacklist_path):
@@ -84,7 +82,7 @@ def load_blacklisted_template_names(dataset_id: str, *, data_dir: str = "") -> s
 
 
 def ensure_template_blacklist_file(dataset_id: str, *, data_dir: str = "") -> str:
-    """确保 dataset 专属模板黑名单文件存在。"""
+    """确保 dataset 专属统一模板黑名单文件存在。"""
     blacklist_path = _resolve_blacklist_path(dataset_id, data_dir=data_dir)
     if os.path.isfile(blacklist_path):
         return blacklist_path

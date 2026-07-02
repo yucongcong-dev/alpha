@@ -17,6 +17,9 @@ dist/
 # Local run outputs and logs
 cache/
 results/
+tmp/
+scratch/
+tmp_*.txt
 
 # Legacy patterns (for backward compatibility)
 worldquant_brain_credentials.json
