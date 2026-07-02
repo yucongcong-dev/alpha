@@ -45,7 +45,7 @@ from .simulation import (
     submit_with_retry,
     summarize_failure,
 )
-from .template_queue import (
+from .template_planning import (
     build_pending_template_variants,
     resolve_field_template_candidates,
 )

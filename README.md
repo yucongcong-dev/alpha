@@ -18,6 +18,7 @@ alpha/                     # 项目根目录
 │       │
 │       ├── core/          # 核心业务层
 │       │   ├── checkpoint.py
+│       │   ├── execution_filters.py
 │       │   ├── executor.py
 │       │   ├── scheduler.py
 │       │   ├── result_processing.py
@@ -25,8 +26,7 @@ alpha/                     # 项目根目录
 │       │   ├── simulation_precheck.py
 │       │   ├── simulation_results.py
 │       │   ├── simulation_stages.py
-│       │   ├── template_filters.py
-│       │   ├── template_queue.py
+│       │   ├── template_planning.py
 │       │   └── simulation.py   # 兼容导出层
 │       │
 │       ├── generators/    # Alpha 生成层
@@ -182,6 +182,7 @@ alpha/                     # 项目根目录
 - `analysis/stats.py` 是兼容导出层；结果加载、失败检查评分、模板/字段统计、反馈画像已经分别拆到 `results_loader.py`、`failed_checks.py`、`template_stats.py`、`field_stats.py`、`feedback_stats.py`
 - `analysis/feedback.py` 是兼容导出层；历史状态/near-pass 选择放在 `feedback_history.py`，模板禁用/保留/跳过策略放在 `feedback_filters.py`
 - `analysis/report_builder.py` 负责从结果构建 summary/analysis payload
+- `core/execution_filters.py` 负责执行期字段/模板跳过判断；`core/template_planning.py` 负责把模板候选展开为执行队列。旧的 `core/template_filters.py` / `core/template_queue.py` 仅保留兼容导出。
 - `policy/blacklist.py` 负责黑名单策略、聚合与增量更新
 - `io/output.py` 负责结果持久化与分析边车编排，不再承载黑名单策略实现
 - `io/common.py` 放更底层的 JSON 原子写入、路径常量、dataset 文件名安全化与运行时 `data/` 目录解析
