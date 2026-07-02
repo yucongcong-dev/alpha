@@ -68,7 +68,7 @@ def stable_fingerprint(payload: Any) -> str:
         True  # 字典顺序不影响哈希结果
     """
     text = json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
-    return hashlib.sha256(text.encode("utf-8")).hexdigest()[:16]
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()[:STABLE_FINGERPRINT_HEX_LEN]
 
 
 # ---------------------------------------------------------------------------

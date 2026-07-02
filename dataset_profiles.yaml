@@ -1,0 +1,45 @@
+# ============================================================================
+# dataset_profiles.yaml — 数据集自适应运行参数
+# ============================================================================
+# 运行时根据 --dataset-id 自动匹配。
+# 字段说明:
+#   min_request_interval          API 请求最小间隔 (秒)
+#   sleep_between_fields          字段间休眠 (秒)
+#   max_concurrent_simulations    最大并发模拟数
+#   max_concurrent_creates        最大并发创建数
+#   max_templates_per_field       每字段最大模板数 (0=全部)
+#   field_template_batch_size     每轮每字段仅发出少量模板
+#   simulation_max_wait_seconds   单个模拟最大等待 (秒)
+#   simulation_max_queue_seconds  排队最大等待 (秒)
+#   queue_busy_cooldown_seconds   队列繁忙冷却 (秒)
+#   template_disable_after        模板自动禁用阈值 (0=不剪枝)
+# ============================================================================
+
+dataset_profiles:
+  fundamental6:
+    sleep_between_fields: 3.0
+    max_concurrent_simulations: 3
+    max_concurrent_creates: 1
+    max_templates_per_field: 6
+    simulation_max_wait_seconds: 900
+    simulation_max_queue_seconds: 600
+    queue_busy_cooldown_seconds: 60
+    template_disable_after: 12
+  model16:
+    sleep_between_fields: 3.0
+    max_concurrent_simulations: 3
+    max_concurrent_creates: 1
+    max_templates_per_field: 4
+    simulation_max_wait_seconds: 900
+    simulation_max_queue_seconds: 600
+    queue_busy_cooldown_seconds: 60
+    template_disable_after: 10
+  model51:
+    sleep_between_fields: 3.0
+    max_concurrent_simulations: 3
+    max_concurrent_creates: 1
+    max_templates_per_field: 4
+    simulation_max_wait_seconds: 900
+    simulation_max_queue_seconds: 600
+    queue_busy_cooldown_seconds: 60
+    template_disable_after: 8

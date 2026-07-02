@@ -16,6 +16,13 @@ from collections.abc import Sequence
 
 from ..config.constants import (
     DELTA_STD_PRIORITY_BOOST,
+    LEGACY_MATRIX_GROUP_RANK_INDUSTRY_PRIORITY,
+    LEGACY_MATRIX_GROUP_RANK_SUBINDUSTRY_PRIORITY,
+    LEGACY_MATRIX_NEG_DEFAULT_PRIORITY,
+    LEGACY_MATRIX_NEG_NEGATIVE_RAW_PRIORITY,
+    LEGACY_MATRIX_NEG_POSITIVE_RAW_PRIORITY,
+    LEGACY_MATRIX_RANK_RAW_FIELD_PRIORITY,
+    LEGACY_MATRIX_RAW_FIELD_PRIORITY,
     TEMPLATE_STAGE_FIRST_ORDER,
     TEMPLATE_STAGE_GROUP_SECOND_ORDER,
 )
@@ -105,7 +112,7 @@ def _build_legacy_matrix_templates(
         _make_template_candidate(
             "raw_field",
             preprocessed_expression,
-            145,
+            LEGACY_MATRIX_RAW_FIELD_PRIORITY,
             metadata=_candidate_metadata(
                 family="legacy_level",
                 layer="first_order",
@@ -115,7 +122,7 @@ def _build_legacy_matrix_templates(
         _make_template_candidate(
             "group_rank_subindustry",
             f"group_rank({preprocessed_expression}, subindustry)",
-            143,
+            LEGACY_MATRIX_GROUP_RANK_SUBINDUSTRY_PRIORITY,
             metadata=_candidate_metadata(
                 family="legacy_group_level",
                 layer="group",
@@ -125,7 +132,7 @@ def _build_legacy_matrix_templates(
         _make_template_candidate(
             "group_rank_industry",
             f"group_rank({preprocessed_expression}, industry)",
-            141,
+            LEGACY_MATRIX_GROUP_RANK_INDUSTRY_PRIORITY,
             metadata=_candidate_metadata(
                 family="legacy_group_level",
                 layer="group",
@@ -135,7 +142,7 @@ def _build_legacy_matrix_templates(
         _make_template_candidate(
             "rank_raw_field",
             f"rank({preprocessed_expression})",
-            118,
+            LEGACY_MATRIX_RANK_RAW_FIELD_PRIORITY,
             metadata=_candidate_metadata(
                 family="legacy_level",
                 layer="first_order",
@@ -144,11 +151,11 @@ def _build_legacy_matrix_templates(
         ),
     ]
     if expression_policy.use_curated_heuristics and field_name in expression_policy.positive_raw_fields:
-        priority = 132
+        priority = LEGACY_MATRIX_NEG_POSITIVE_RAW_PRIORITY
     elif expression_policy.use_curated_heuristics and field_name in expression_policy.negative_raw_fields:
-        priority = 144
+        priority = LEGACY_MATRIX_NEG_NEGATIVE_RAW_PRIORITY
     elif expression_policy.use_curated_heuristics:
-        priority = 128
+        priority = LEGACY_MATRIX_NEG_DEFAULT_PRIORITY
     else:
         return legacy
 

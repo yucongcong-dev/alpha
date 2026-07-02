@@ -1,0 +1,507 @@
+# ============================================================================
+# constants_defaults.yaml — 代码级常量默认值
+# ============================================================================
+# 本文件为所有硬编码常量提供 YAML 默认值。
+# 运行时按 settings.yaml → constants_defaults.yaml → 代码 fallback 优先级读取。
+# 修改此文件后保存，下次运行自动生效。
+# ============================================================================
+
+# ---------------------------------------------------------------------------
+# api — API 端点、请求头
+# ---------------------------------------------------------------------------
+api:
+  base_url: "https://api.worldquantbrain.com"
+  # 以下 URL 由 base_url 拼接生成，但也可直接覆盖
+  auth_url: "{base}/authentication"
+  data_fields_url: "{base}/data-fields"
+  simulations_url: "{base}/simulations"
+  alphas_url: "{base}/alphas"
+  default_rate_limit_max_retries: 3
+  headers:
+    default:
+      Accept: "application/json"
+      Content-Type: "application/json"
+    version:
+      Accept: "application/json;version=2.0"
+    simulation:
+      Accept: "application/json;version=3.0"
+
+# ---------------------------------------------------------------------------
+# simulation — 模拟默认值、状态码、中性化策略
+# ---------------------------------------------------------------------------
+simulation:
+  default_dataset_id: "model51"
+  default_start_date: "2020-01-01"
+  default_end_date: "2025-12-31"
+  states:
+    pending: "PENDING"
+    running: "RUNNING"
+    queued: "QUEUED"
+    completed: "COMPLETED"
+    failed: "FAILED"
+    error: "ERROR"
+    cancelled: "CANCELLED"
+  neutralization:
+    none: "NONE"
+    industry: "INDUSTRY"
+    market: "MARKET"
+    subindustry: "SUBINDUSTRY"
+  group_names:
+    subindustry: "subindustry"
+    industry: "industry"
+  truncation:
+    web_default: 0.08
+    tighter_max: 0.05
+
+# ---------------------------------------------------------------------------
+# quality — 提交质量阈值 (已由 settings.yaml 覆盖，此处仅作文档级 fallback)
+# ---------------------------------------------------------------------------
+quality:
+  submit:
+    min_fitness: 1.00
+    min_sharpe: 1.25
+    min_turnover: 0.01
+    max_turnover: 0.70
+    max_weight: 0.10
+  precheck:
+    min_sharpe: 1.25
+    min_fitness: 1.00
+    min_turnover: 0.01
+    max_turnover: 0.70
+    max_weight: 0.10
+
+# ---------------------------------------------------------------------------
+# expression — 表达式生成默认值
+# ---------------------------------------------------------------------------
+expression:
+  backfill_window: 504
+
+# ---------------------------------------------------------------------------
+# feedback — 反馈阈值 (已由 settings.yaml 覆盖，此处仅作 fallback)
+# ---------------------------------------------------------------------------
+feedback:
+  settings_variant_budget_high: 0.35
+  settings_variant_budget_mid: 0.10
+  mutation_nearpass_threshold: 0.08
+  mutation_highscore_threshold: 0.25
+  template_min_priority: 105
+  delta_std_priority_boost: 15
+  settings_nearpass_threshold: 0.45
+  settings_close_threshold: 0.65
+  expr_nearpass_boost_threshold: 0.50
+  expr_iter_boost_threshold: 0.20
+  expr_ratio_penalty_threshold: 0.30
+  expr_mutation_extend_threshold: 0.15
+
+# ---------------------------------------------------------------------------
+# http — HTTP 客户端超时与退避
+# ---------------------------------------------------------------------------
+http:
+  request_timeout: 90.0
+  rate_limit_default_wait: 10.0
+  polling_default_wait: 5.0
+  polling_no_retry_after_wait: 1.5
+  server_error_backoff_max: 30.0
+  server_error_backoff_step: 3.0
+  retry_operation_default_wait: 2.0
+  login_retry_wait: 3.0
+  simulation_retry_wait: 3.0
+  polling_retry_buffer: 0.5
+
+# ---------------------------------------------------------------------------
+# templates — 模板评分、惩罚、优先级调整
+# ---------------------------------------------------------------------------
+templates:
+  # ---- 旧版 Matrix 模板优先级 (generators/matrix_templates) ----
+  legacy_matrix:
+    raw_field: 145
+    group_rank_subindustry: 143
+    group_rank_industry: 141
+    rank_raw_field: 118
+    neg_positive_raw: 132
+    neg_negative_raw: 144
+    neg_default: 128
+  # ---- 模板禁用阈值 ----
+  disable:
+    min_simulated: 3
+    min_low_sharpe: 3
+    min_low_fitness: 3
+    min_concentrated_weight: 2
+
+  # ---- 模板历史评分奖励/惩罚 ----
+  history:
+    submittable_bonus: 200
+    simulated_base: 40
+    simulated_cap: 5
+    simulated_step: 8
+    low_perf_penalty: -90
+    concentrated_penalty: -60
+    error_penalty: -20
+
+  # ---- 失败检查触发的优先级调整 ----
+  priority_adj:
+    group_low_sharpe: 28
+    signal_low_sharpe: 18
+    legacy_low_sharpe: -35
+    delta_low_fitness: 22
+    legacy_basic_low_fitness: -25
+    vol_scaled_low_fitness: -18
+    delta_low_turnover: 30
+    legacy_mean_spread_low_turnover: -18
+    stable_high_turnover: 20
+    delta_high_turnover: -20
+    group_concentrated: 24
+    vol_scaled_concentrated: -30
+    legacy_ratio_concentrated: -30
+    high_turnover_concentrated_rank_spread: -50
+    high_turnover_concentrated_zscore_spread: -45
+    nearpass_boost: 40
+    iter_boost: 18
+    legacy_ratio_penalty: -40
+    nearpass_group_rank_delta: 20
+    vol_scaled_delta_base: -28
+    vol_scaled_delta_concentrated: -18
+    vol_scaled_delta_nearpass: -8
+    account_templates: 22
+
+  # ---- 相似度惩罚减免 ----
+  similarity_penalty_offset:
+    legacy_level: 0
+    legacy_group_level: 6
+    legacy_ratio: 10
+    legacy_neg_ratio: 8
+    group_ratio_level: 14
+
+  # ---- Near-pass 精修优先级 ----
+  refine_priority:
+    base: 260
+    step: 12
+    subindustry_delta: -2
+    zscore_delta: -3
+    tsrank_delta: -4
+    backfill_delta: -5
+    trade_when_delta: -6
+    decay_delta: -7
+
+# ---------------------------------------------------------------------------
+# ratio — Ratio 相关: 字段极性、伙伴候选、默认窗口、模板规格
+# ---------------------------------------------------------------------------
+ratio:
+  # ---- 精选启发式: 原始字段极性 ----
+  positive_raw_fields:
+    - "assets"
+    - "assets_curr"
+    - "bookvalue_ps"
+    - "cash"
+    - "cash_st"
+    - "cashflow"
+    - "cashflow_op"
+    - "current_ratio"
+    - "ebit"
+    - "ebitda"
+    - "enterprise_value"
+    - "eps"
+    - "equity"
+
+  negative_raw_fields:
+    - "cogs"
+    - "debt"
+    - "debt_lt"
+    - "debt_st"
+    - "liabilities"
+
+  allowed_external_partners:
+    - "cap"
+
+  # ---- 伙伴候选 (通用默认值，各数据集可在 expression_policies 中覆盖) ----
+  partner_candidates:
+    debt: ["cap", "assets", "equity", "enterprise_value"]
+    debt_lt: ["cap", "assets", "equity", "enterprise_value"]
+    debt_st: ["assets", "cash", "cash_st"]
+    assets_curr: ["cash_st", "debt_st", "liabilities_curr"]
+    liabilities: ["assets", "equity", "cap", "liabilities_curr"]
+    liabilities_curr: ["assets", "equity", "cap"]
+    cash: ["assets", "debt", "liabilities"]
+    cash_st: ["assets_curr", "assets", "debt_st", "liabilities_curr"]
+    cashflow: ["assets", "enterprise_value", "debt"]
+    cashflow_op: ["cap", "assets", "debt", "enterprise_value"]
+    cashflow_invst: ["assets", "enterprise_value", "capex"]
+    cashflow_fin: ["assets", "debt", "equity"]
+    capex: ["assets", "cashflow_op", "cashflow_invst", "enterprise_value"]
+    cogs: ["assets", "cash", "enterprise_value"]
+    current_ratio: ["cash_st", "debt_st", "liabilities_curr"]
+    income: ["assets", "sales", "revenue", "enterprise_value"]
+    ebit: ["assets", "sales", "revenue", "enterprise_value"]
+    ebitda: ["assets", "sales", "revenue", "enterprise_value"]
+    revenue: ["assets", "enterprise_value"]
+    sales: ["assets", "enterprise_value"]
+    equity: ["assets", "debt", "enterprise_value"]
+    enterprise_value: ["assets", "ebitda", "ebit", "cashflow_op"]
+
+  # ---- 关键词 (通用默认值) ----
+  keywords:
+    debt: ["cap", "assets", "equity", "enterprise_value", "liabilities"]
+    liabilities: ["assets", "equity", "cap", "enterprise_value"]
+    cash: ["debt", "liabilities", "assets", "enterprise_value"]
+    cash_st: ["assets_curr", "assets", "debt_st", "liabilities_curr"]
+    cashflow: ["assets", "enterprise_value", "debt"]
+    cashflow_op: ["cap", "assets", "enterprise_value", "debt"]
+    cashflow_invst: ["assets", "enterprise_value", "capex"]
+    cashflow_fin: ["assets", "debt", "equity"]
+    capex: ["cashflow_op", "assets", "enterprise_value", "cashflow_invst"]
+    cogs: ["assets", "cash", "enterprise_value"]
+    income: ["assets", "enterprise_value", "sales", "revenue"]
+    ebit: ["assets", "enterprise_value", "sales", "revenue"]
+    ebitda: ["assets", "enterprise_value", "sales", "revenue"]
+    revenue: ["assets", "enterprise_value"]
+    sales: ["assets", "enterprise_value"]
+    equity: ["assets", "enterprise_value", "debt"]
+    enterprise_value: ["assets", "ebitda", "ebit", "cashflow_op"]
+    assets: ["debt", "liabilities", "equity", "cash", "enterprise_value"]
+
+  # ---- 伙伴评分默认值 ----
+  preferred_partner_score_bonuses:
+    assets: 15
+    equity: 15
+    debt: 15
+    liabilities: 15
+    cash: 15
+    enterprise_value: 15
+    cap: 15
+
+  # ---- 默认 matrix delta/std 窗口 ----
+  default_matrix_delta_over_std_windows:
+    - [5, 20, 176]
+    - [15, 40, 172]
+    - [10, 60, 170]
+    - [20, 60, 174]
+    - [25, 90, 168]
+    - [30, 120, 166]
+
+  # ---- 默认 matrix 多样化模板 ----
+  default_matrix_diversified_template_specs:
+    - ["group_delta_over_std_industry_20_60", "group_rank(ts_delta(ts_backfill({field}, {backfill_window}), 20) / ts_std_dev(ts_backfill({field}, {backfill_window}), 60), industry)", 166]
+    - ["group_short_long_mean_spread_subindustry_20_{backfill_window}", "group_rank(ts_mean(ts_backfill({field}, {backfill_window}), 20) - ts_mean(ts_backfill({field}, {backfill_window}), {backfill_window}), subindustry)", 164]
+    - ["group_zscore_subindustry_60", "group_rank(ts_zscore(ts_backfill({field}, {backfill_window}), 60), subindustry)", 161]
+    - ["rank_mean_spread_over_std_20_{backfill_window}_60", "rank((ts_mean(ts_backfill({field}, {backfill_window}), 20) - ts_mean(ts_backfill({field}, {backfill_window}), {backfill_window})) / ts_std_dev(ts_backfill({field}, {backfill_window}), 60))", 158]
+    - ["rank_zscore_spread_20_{backfill_window}", "rank(ts_zscore(ts_backfill({field}, {backfill_window}), 20) - ts_zscore(ts_backfill({field}, {backfill_window}), {backfill_window}))", 154]
+    - ["group_rank_delta_of_rank_20", "group_rank(ts_delta(rank(ts_backfill({field}, {backfill_window})), 20), subindustry)", 150]
+
+  # ---- 默认 ratio delta rank 窗口 ----
+  default_ratio_delta_rank_windows:
+    - [3, 188]
+    - [5, 184]
+    - [10, 176]
+
+  # ---- 默认 ratio delta/std 窗口 ----
+  default_ratio_delta_over_std_windows:
+    - [5, 20, 180]
+    - [15, 40, 176]
+    - [10, 60, 174]
+    - [20, 60, 178]
+    - [25, 90, 172]
+    - [30, 120, 170]
+
+  # ---- 默认 ratio 多样化模板 ----
+  default_ratio_diversified_template_specs:
+    - ["group_ratio_zscore_{ratio_label}", "group_rank(ts_zscore(ts_backfill({ratio_expr}, {backfill_window}), 60), subindustry)", 160]
+    - ["ratio_mean_spread_over_std_{ratio_label}", "rank((ts_mean(ts_backfill({ratio_expr}, {backfill_window}), 20) - ts_mean(ts_backfill({ratio_expr}, {backfill_window}), {backfill_window})) / ts_std_dev(ts_backfill({ratio_expr}, {backfill_window}), 60))", 156]
+    - ["ratio_zscore_spread_{ratio_label}", "rank(ts_zscore(ts_backfill({ratio_expr}, {backfill_window}), 20) - ts_zscore(ts_backfill({ratio_expr}, {backfill_window}), {backfill_window}))", 152]
+
+  # ---- 默认 ratio legacy 模板 ----
+  legacy_template_specs:
+    - ["raw_ratio_{ratio_label}", "{ratio_expr}", 154]
+    - ["group_rank_ratio_{ratio_label}", "group_rank({ratio_expr}, subindustry)", 152]
+    - ["ratio_{ratio_label}", "rank({ratio_expr})", 148]
+    - ["decay_ratio_{ratio_label}", "rank(ts_decay_linear(ts_backfill({ratio_expr}, {backfill_window}), 63))", 126]
+
+# ---------------------------------------------------------------------------
+# partner — 伙伴字段配对评分权重
+# ---------------------------------------------------------------------------
+partner:
+  self_match_penalty: -10000
+  preferred_base_score: 180
+  rank_max_score: 30
+  rank_step_penalty: 5
+  keyword_match_score: 100
+  reverse_keyword_score: 80
+  shared_token_weight: 10
+  substring_score: 5
+
+# ---------------------------------------------------------------------------
+# nearpass — Near-pass 惩罚权重与限制
+# ---------------------------------------------------------------------------
+nearpass:
+  penalty_concentrated_weight: 0.35
+  penalty_concentrated_weight_gap_threshold: 0.20
+  penalty_concentrated_weight_extra: 0.55
+  penalty_low_turnover: 0.10
+  penalty_low_sub_universe_sharpe: 0.05
+  default_limit: 3
+
+# ---------------------------------------------------------------------------
+# stats — 统计与分析阈值
+# ---------------------------------------------------------------------------
+stats:
+  default_score: -999.0
+  failed_check_default_score: -10.0
+  nearpass_summary_limit: 50
+  performance_top_n: 10
+  fields_cache_ttl_hours: 24
+
+# ---------------------------------------------------------------------------
+# failed_check — 失败检查边界参数
+# ---------------------------------------------------------------------------
+failed_check:
+  epsilon: 1.0e-9
+  max_example_ids: 5
+  optimization_hint_top_n: 3
+  dominant_check_limit: 4
+  max_failed_check_names: 5
+  failure_summary_max_len: 300
+
+# ---------------------------------------------------------------------------
+# mutation — 变异生成阈值
+# ---------------------------------------------------------------------------
+mutation:
+  dominant_check_limit: 3
+  account_extend_threshold: 0.45
+
+# ---------------------------------------------------------------------------
+# field — 字段优先级阈值
+# ---------------------------------------------------------------------------
+field:
+  priority:
+    attempted_high: 8
+    score_high: 0.70
+    attempted_low: 5
+    score_low: 0.40
+
+# ---------------------------------------------------------------------------
+# sentinel — 哨兵值
+# ---------------------------------------------------------------------------
+sentinel:
+  unknown: "UNKNOWN"
+  unknown_check: "UNKNOWN"
+  unknown_status: "unknown"
+  preferred_field_rank: 999
+  default_settings_variant_budget: 3
+  unknown_family: "other"
+
+# ---------------------------------------------------------------------------
+# checkpoint — 检查点/恢复参数
+# ---------------------------------------------------------------------------
+checkpoint:
+  resume_safety_seconds: 30.0
+  pending_futures_limit: 50
+  dry_run_sample_limit: 20
+
+# ---------------------------------------------------------------------------
+# settings_variant — Settings 变体特殊参数
+# ---------------------------------------------------------------------------
+settings_variant:
+  decay_fast: 2
+  decay_slow: 6
+
+# ---------------------------------------------------------------------------
+# smoke_test — 冒烟测试安全边界
+# ---------------------------------------------------------------------------
+smoke_test:
+  max_pending_cycles: 60
+  max_queue_seconds: 300
+
+# ---------------------------------------------------------------------------
+# dataset_profiles — 数据集默认 profile 回退值
+# ---------------------------------------------------------------------------
+default_profile:
+  min_request_interval: 2.0
+  sleep_between_fields: 5.0
+  max_concurrent_simulations: 1
+  max_concurrent_creates: 1
+  max_templates_per_field: 12
+  field_template_batch_size: 2
+  simulation_max_wait_seconds: 900
+  simulation_max_queue_seconds: 600
+  queue_busy_cooldown_seconds: 120
+  template_disable_after: 12
+
+# ---------------------------------------------------------------------------
+# misc — 杂项常量
+# ---------------------------------------------------------------------------
+misc:
+  months_per_year: 12
+  payload_text_truncation_limit: 500
+  stable_fingerprint_hex_len: 16
+  blacklist_schema_version: "v2"
+  date_format_iso: "%Y-%m-%d"
+  date_format_iso_minutes: "%Y-%m-%d %H:%M"
+
+# ---------------------------------------------------------------------------
+# paths — 文件系统路径约定
+# ---------------------------------------------------------------------------
+paths:
+  credentials_dir: ".credentials"
+  cache_dir: "cache"
+  results_dir: "results"
+  data_dir: "data"
+  credentials_filename: "worldquant_brain_credentials.json"
+  credentials_key_filename: "worldquant_brain_credentials.key"
+  template_library_subpath: "templates"
+  library_filename: "library.json"
+  fields_cache_filename: "fields.json"
+  default_results_filename: "test_results.json"
+  analysis_suffix: "_analysis.json"
+  results_journal_suffix: "_results.jsonl"
+  state_suffix: "_state.json"
+  checkpoint_suffix: "_checkpoint.json"
+  log_suffix: ".log"
+
+# ---------------------------------------------------------------------------
+# strings — 静态字符串常量 (API key、状态、字段统计键名等)
+# ---------------------------------------------------------------------------
+strings:
+  api_keys:
+    detail: "detail"
+    error: "error"
+    message: "message"
+    status: "status"
+    failed: "failed"
+    progress: "progress"
+    state: "state"
+  status:
+    submitted: "submitted"
+    simulated: "simulated"
+    error: "error"
+  stat_fields:
+    attempted: "attempted"
+    submittable: "submittable"
+    submitted: "submitted"
+    errors: "errors"
+    simulated: "simulated"
+    queue_timeouts: "queue_timeouts"
+    low_sharpe: "low_sharpe"
+    low_fitness: "low_fitness"
+    concentrated_weight: "concentrated_weight"
+    low_sub_universe_sharpe: "low_sub_universe_sharpe"
+    failed_check_counts: "failed_check_counts"
+    top_failed_checks: "top_failed_checks"
+    template_name: "template_name"
+    field_id: "field_id"
+    field_name: "field_name"
+    field_type: "field_type"
+    attempted_templates: "attempted_templates"
+  check_names:
+    low_sharpe: "LOW_SHARPE"
+    low_turnover: "LOW_TURNOVER"
+    low_fitness: "LOW_FITNESS"
+    low_sub_universe_sharpe: "LOW_SUB_UNIVERSE_SHARPE"
+    concentrated_weight: "CONCENTRATED_WEIGHT"
+    high_turnover: "HIGH_TURNOVER"
+  template_stages:
+    first_order: "first_order"
+    group_second_order: "group_second_order"
+    event_conditioned: "event_conditioned"
+  feedback_stages:
+    generate: "generate"
+    prune: "prune"
+    resimulate: "resimulate"
