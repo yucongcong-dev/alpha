@@ -8,7 +8,9 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
-from typing import Any, Optional
+from typing import Optional
+
+from .types import YamlConfig, YamlConfigCacheEntry
 
 _YAML_SEARCH_PATHS: list[str] = [
     "settings.yaml",
@@ -38,7 +40,7 @@ def _resolve_yaml_path() -> Optional[str]:
     return None
 
 
-def load_yaml_config(config_path: str = "") -> dict[str, Any]:
+def load_yaml_config(config_path: str = "") -> YamlConfig:
     """从 YAML 文件加载运行配置。文件不存在或解析失败返回空字典。"""
     try:
         import yaml
@@ -71,7 +73,7 @@ def _config_file_signature(path: str | None) -> tuple[int, int] | None:
     return (stat.st_mtime_ns, stat.st_size)
 
 
-def get_yaml_config(config_path: str = "") -> dict[str, Any]:
+def get_yaml_config(config_path: str = "") -> YamlConfig:
     """获取 YAML 配置（带缓存）。"""
     cache_attr = "_yaml_config_cache"
     resolved_path = os.path.abspath(config_path) if config_path else _resolve_yaml_path()

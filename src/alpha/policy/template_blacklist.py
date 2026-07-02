@@ -10,13 +10,18 @@ from __future__ import annotations
 import json
 import os
 import re
-from typing import Any
 
 from ..io.common import resolve_runtime_data_dir, sanitize_dataset_id_for_filename
+from .types import (
+    BlacklistCacheEntry,
+    BlacklistMatcherEntry,
+    BlacklistPatternRule,
+    DefaultAvoidRulesCache,
+)
 
-_BLACKLIST_CACHE: dict[str, dict[str, Any]] = {}
+_BLACKLIST_CACHE: dict[str, BlacklistCacheEntry] = {}
 """按 dataset_id 缓存的黑名单数据，带文件签名用于热更新检测。"""
-_DEFAULT_AVOID_RULES_CACHE: dict[str, Any] | None = None
+_DEFAULT_AVOID_RULES_CACHE: DefaultAvoidRulesCache | None = None
 """跨数据集默认规避规则缓存，带文件签名用于热更新检测。"""
 
 
@@ -39,7 +44,7 @@ def invalidate_blacklist_cache(dataset_id: str = "") -> None:
     _BLACKLIST_CACHE.clear()
 
 
-def _load_default_avoid_rules() -> list[dict[str, str]]:
+def _load_default_avoid_rules() -> list[BlacklistPatternRule]:
     """加载跨数据集默认规避规则 template_blacklist.json。"""
     global _DEFAULT_AVOID_RULES_CACHE
     runtime_data_dir = resolve_runtime_data_dir()
@@ -75,7 +80,7 @@ def _load_default_avoid_rules() -> list[dict[str, str]]:
     return []
 
 
-def _normalize_pattern_rule(rule: dict[str, Any]) -> dict[str, str] | None:
+def _normalize_pattern_rule(rule: dict[str, object]) -> BlacklistPatternRule | None:
     """规范化黑名单 pattern 规则。"""
     pattern = str(rule.get("pattern", "")).strip()
     if not pattern:
@@ -86,7 +91,7 @@ def _normalize_pattern_rule(rule: dict[str, Any]) -> dict[str, str] | None:
     return {"pattern": pattern, "type": match_type}
 
 
-def _match_pattern_rule(expression: str, rule: dict[str, str]) -> bool:
+def _match_pattern_rule(expression: str, rule: BlacklistPatternRule) -> bool:
     """按规则类型匹配表达式黑名单。"""
     pattern = rule.get("pattern", "")
     match_type = rule.get("type", "contains")
@@ -105,8 +110,8 @@ def _match_pattern_rule(expression: str, rule: dict[str, str]) -> bool:
 def _load_blacklist(dataset_id: str) -> None:
     """按 dataset_id 加载统一黑名单文件 blacklists/{dataset_id}/blacklist.json。"""
     names: set[str] = set()
-    pattern_rules: list[dict[str, str]] = []
-    entries: list[dict[str, str]] = []
+    pattern_rules: list[BlacklistPatternRule] = []
+    entries: list[BlacklistMatcherEntry] = []
     dataset_signature: tuple[int, int] | None = None
 
     runtime_data_dir = resolve_runtime_data_dir()

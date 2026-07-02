@@ -43,7 +43,10 @@ from .constants import (
     SUBMIT_MIN_SHARPE,
     SUBMIT_MIN_TURNOVER,
 )
-def _yaml_global_section(section: str) -> dict[str, Any]:
+from .types import ConfigSection
+
+
+def _yaml_global_section(section: str) -> ConfigSection:
     from . import get_yaml_config
 
     yaml_cfg = get_yaml_config()

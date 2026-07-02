@@ -1,7 +1,7 @@
 """
 结果分析报告构建模块。
 
-本模块只负责把运行结果编译成 summary / analysis payload，
+本模块只负责把运行结果编译成 `SummaryPayload` / `AnalysisPayload`，
 不负责具体文件写入。
 """
 
@@ -17,7 +17,13 @@ from .stats import (
     compile_template_performance_summary,
     is_queue_timeout_result,
 )
-from ..models.base import FieldTestResult
+from ..models.base import (
+    AnalysisInputs,
+    AnalysisPayload,
+    FieldTestResult,
+    ResultRow,
+    SummaryPayload,
+)
 
 
 def build_results_summary_payload(
@@ -28,12 +34,12 @@ def build_results_summary_payload(
     template_library_fingerprint: str,
     run_config: dict[str, Any] | None,
     results_journal_path: str,
-) -> tuple[dict[str, Any], dict[str, Any]]:
+) -> tuple[SummaryPayload, AnalysisInputs]:
     """单次遍历构建主结果 summary 及 analysis 所需的中间聚合数据。"""
-    results_dicts: list[dict[str, Any]] = []
-    submittable_results: list[dict[str, Any]] = []
-    submitted_results: list[dict[str, Any]] = []
-    failed_checks_summary: list[dict[str, Any]] = []
+    results_dicts: list[ResultRow] = []
+    submittable_results: list[ResultRow] = []
+    submitted_results: list[ResultRow] = []
+    failed_checks_summary: list[ResultRow] = []
     field_ids: set[str] = set()
     submittable_count = 0
     submitted_count = 0
@@ -89,9 +95,9 @@ def build_results_summary_payload(
 
 def build_analysis_payload(
     results: list[FieldTestResult],
-    summary: dict[str, Any],
-    analysis_inputs: dict[str, Any],
-) -> dict[str, Any]:
+    summary: SummaryPayload,
+    analysis_inputs: AnalysisInputs,
+) -> AnalysisPayload:
     """基于完整结果和 summary 构建 analysis sidecar 内容。"""
     template_performance_summary = compile_template_performance_summary(results)
     field_performance_summary = compile_field_performance_summary(results)

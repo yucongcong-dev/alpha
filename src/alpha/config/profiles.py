@@ -7,12 +7,12 @@ settings.yaml 的 dataset_profiles 段为唯一推荐来源。
 
 from __future__ import annotations
 
-from typing import Any
+from .types import DatasetProfile, YamlConfig
 
-DATASET_PROFILES: dict[str, dict[str, Any]] = {}
+DATASET_PROFILES: dict[str, DatasetProfile] = {}
 """向后兼容保留的空字典；数据集专属配置请维护在 settings.yaml。"""
 
-DEFAULT_PROFILE: dict[str, Any] = {
+DEFAULT_PROFILE: DatasetProfile = {
     "min_request_interval": 2.0,
     "sleep_between_fields": 5.0,
     "max_concurrent_simulations": 1,
@@ -27,7 +27,10 @@ DEFAULT_PROFILE: dict[str, Any] = {
 """未在 YAML dataset_profiles 中匹配时使用的默认运行参数。"""
 
 
-def get_dataset_profile(dataset_id: str, yaml_config: dict[str, Any] | None = None) -> dict[str, Any]:
+def get_dataset_profile(
+    dataset_id: str,
+    yaml_config: YamlConfig | None = None,
+) -> DatasetProfile:
     """返回指定数据集的运行参数配置。"""
     profile = dict(DEFAULT_PROFILE)
     if yaml_config:

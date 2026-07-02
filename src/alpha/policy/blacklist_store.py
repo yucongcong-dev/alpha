@@ -8,9 +8,9 @@ import json
 import logging
 import os
 import time
-from typing import Any
 
 from ..io.common import atomic_write_json, resolve_runtime_data_dir, sanitize_dataset_id_for_filename
+from .types import BlacklistPayload
 
 logger = logging.getLogger(__name__)
 
@@ -29,7 +29,7 @@ def resolve_blacklist_path(dataset_id: str, *, data_dir: str = "") -> str:
     return resolved
 
 
-def build_default_blacklist(dataset_id: str) -> dict[str, Any]:
+def build_default_blacklist(dataset_id: str) -> BlacklistPayload:
     return {
         "_version": "v2",
         "_comment": f"Template blacklist for {dataset_id} — auto-populated from test results.",
@@ -41,7 +41,7 @@ def build_default_blacklist(dataset_id: str) -> dict[str, Any]:
     }
 
 
-def read_blacklist_payload(dataset_id: str, *, data_dir: str = "") -> dict[str, Any]:
+def read_blacklist_payload(dataset_id: str, *, data_dir: str = "") -> BlacklistPayload:
     blacklist_path = resolve_blacklist_path(dataset_id, data_dir=data_dir)
     try:
         if os.path.isfile(blacklist_path):
@@ -59,7 +59,12 @@ def read_blacklist_payload(dataset_id: str, *, data_dir: str = "") -> dict[str, 
     return payload
 
 
-def write_blacklist_payload(dataset_id: str, payload: dict[str, Any], *, data_dir: str = "") -> str:
+def write_blacklist_payload(
+    dataset_id: str,
+    payload: BlacklistPayload,
+    *,
+    data_dir: str = "",
+) -> str:
     blacklist_path = resolve_blacklist_path(dataset_id, data_dir=data_dir)
     atomic_write_json(blacklist_path, payload)
     return blacklist_path

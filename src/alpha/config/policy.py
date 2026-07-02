@@ -36,6 +36,7 @@ from .models import (
     FieldTransformSpec,
     FieldTransformStage,
 )
+from .types import ExpressionPolicyOverrides, YamlConfig
 def _tuple_tuple_int(value: Any, width: int) -> tuple[tuple[int, ...], ...]:
     if not isinstance(value, (list, tuple)):
         return ()
@@ -159,8 +160,8 @@ def _policy_config_for_dataset(
     dataset_id: str,
     *,
     use_curated_heuristics: bool | None = None,
-    yaml_config: dict[str, Any] | None = None,
-) -> dict[str, Any]:
+    yaml_config: YamlConfig | None = None,
+) -> ExpressionPolicyOverrides:
     if yaml_config is None:
         from . import get_yaml_config
 
@@ -191,7 +192,7 @@ def _policy_config_for_dataset(
             return (*base, *override)
         return override
 
-    merged: dict[str, Any] = {}
+    merged: ExpressionPolicyOverrides = {}
     default_cfg = section.get("__default__", {})
     if isinstance(default_cfg, dict):
         merged = merge_values(merged, default_cfg)
@@ -210,7 +211,7 @@ def _apply_yaml_expression_policy_overrides(
     *,
     dataset_id: str,
     use_curated_heuristics: bool | None = None,
-    yaml_config: dict[str, Any] | None = None,
+    yaml_config: YamlConfig | None = None,
 ) -> DatasetExpressionPolicy:
     overrides = _policy_config_for_dataset(
         dataset_id,

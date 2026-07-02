@@ -5,7 +5,6 @@
 from __future__ import annotations
 
 import logging
-from typing import Any
 
 from ..config import (
     CHECK_CONCENTRATED_WEIGHT,
@@ -20,14 +19,15 @@ from .blacklist_store import (
     read_blacklist_payload,
     write_blacklist_payload,
 )
+from .types import BlacklistRuntimeStats, BlacklistRuntimeSummary, BlacklistTemplateEntry
 
 logger = logging.getLogger(__name__)
 
 
 def _update_blacklist_runtime_stats_with_result(
-    stats: dict[str, dict[str, Any]],
+    stats: BlacklistRuntimeStats,
     result: FieldTestResult,
-) -> dict[str, Any] | None:
+) -> BlacklistRuntimeSummary | None:
     from ..analysis.stats import is_informative_result
 
     if not is_informative_result(result):
@@ -76,21 +76,21 @@ def _update_blacklist_runtime_stats_with_result(
     return summary
 
 
-def build_blacklist_runtime_stats(results: list[FieldTestResult]) -> dict[str, dict[str, Any]]:
-    stats: dict[str, dict[str, Any]] = {}
+def build_blacklist_runtime_stats(results: list[FieldTestResult]) -> BlacklistRuntimeStats:
+    stats: BlacklistRuntimeStats = {}
     for result in results:
         _update_blacklist_runtime_stats_with_result(stats, result)
     return stats
 
 
 def _build_blacklist_entry_from_runtime_summary(
-    summary: dict[str, Any],
+    summary: BlacklistRuntimeSummary,
     *,
     dataset_id: str,
     policy: DatasetExpressionPolicy,
     min_fields_tested: int,
     min_fail_checks: int,
-) -> dict[str, Any] | None:
+) -> BlacklistTemplateEntry | None:
     template_name = str(summary.get("template_name", "")).strip()
     if not template_name or template_name in policy.protected_templates:
         return None
@@ -136,7 +136,7 @@ def _build_blacklist_entry_from_runtime_summary(
         reason_parts.append(f"平均 Fitness {avg_fitness:.3f}")
     from datetime import datetime
 
-    entry: dict[str, Any] = {
+    entry: BlacklistTemplateEntry = {
         "name": template_name,
         "dataset_id": dataset_id,
         "source": "auto_detected",
@@ -173,7 +173,7 @@ def auto_update_blacklist(
 
     policy = expression_policy or get_dataset_expression_policy(dataset_id)
     runtime_stats = build_blacklist_runtime_stats(results)
-    new_entries: list[dict[str, Any]] = []
+    new_entries: list[BlacklistTemplateEntry] = []
     for summary in runtime_stats.values():
         entry = _build_blacklist_entry_from_runtime_summary(
             summary,
@@ -214,7 +214,7 @@ def auto_update_blacklist(
 
 
 def auto_update_blacklist_incremental(
-    runtime_stats: dict[str, dict[str, Any]],
+    runtime_stats: BlacklistRuntimeStats,
     blacklisted_template_names: set[str],
     result: FieldTestResult,
     dataset_id: str,

@@ -1,32 +1,11 @@
 """
-结果分析统计模块
+结果分析统计模块。
 
-本模块负责分析和统计字段测试结果，包括加载历史结果、
-统计模板和字段性能、分析失败检查、生成优化建议等。
-
-模块内容：
-    - load_existing_results(path) -> list[FieldTestResult]: 加载历史运行结果
-    - result_identity(result) -> tuple[str, str, str, str]: 生成结果去重键
-    - is_queue_timeout_result(result) -> bool: 判断是否为队列超时结果
-    - is_informative_result(result) -> bool: 判断是否为有效反馈结果
-    - attempted_template_keys(results) -> set: 收集已尝试的模板键集合
-    - compile_template_stats(results) -> dict[str, dict[str, int]]: 编译模板统计
-    - historical_template_priority_bonus(template_name, template_stats, multiplier) -> int: 历史优先级奖励
-    - compile_template_performance_summary(results) -> list[Dict]: 模板性能汇总
-    - compile_field_performance_summary(results) -> list[Dict]: 字段性能汇总
-    - score_failed_checks(failed_checks) -> float: 失败检查评分
-    - failed_check_closeness(check) ->  | Nonefloat]: 失败检查接近度
-    - failed_check_gap(check) ->  | Nonefloat]: 失败检查差距
-    - summarize_failed_check(check) -> Dict: 失败检查摘要
-    - compile_failed_check_leaderboard(results) -> list[Dict]: 失败检查排行榜
-    - compile_near_pass_summary(results, limit) -> list[Dict]: 接近通过结果汇总
-    - compile_optimization_hints(dataset_id, results, ...) -> Dict: 编译优化建议
-    - compile_field_feedback(results) -> dict[str, Dict]: 字段反馈汇总
-    - compile_global_failed_check_counts(results) -> dict[str, int]: 全局失败检查计数
-    - dominant_failed_check_names(counts, limit) -> set: 主导失败检查名称
-    - merge_failed_check_counts(*count_maps) -> Dict: 合并失败检查计数
-    - field_priority(field_id, field_feedback) -> float: 字段优先级分数
-    - current_submittable_count(results) -> int: 当前可提交数量计数
+本模块负责围绕 `FieldTestResult` 构建统计与反馈画像，包括：
+- 历史结果加载与恢复
+- 模板 / 字段 / 失败检查汇总
+- near-pass 候选分析与优化建议
+- 字段反馈画像与全局失败检查计数
 """
 
 from __future__ import annotations
@@ -77,7 +56,7 @@ from ..config import (
     STATUS_SUBMITTED,
 )
 from ..exceptions import BrainAPIError
-from ..models.base import FieldTestResult
+from ..models.base import FailedCheck, FieldFeedbackMap, FieldTestResult, ResultRow
 
 logger = logging.getLogger(__name__)
 
@@ -201,9 +180,9 @@ def load_existing_results(path: str) -> list[FieldTestResult]:
     return _rows_to_results(rows)
 
 
-def _load_results_rows_from_journal(journal_path: str) -> list[dict[str, Any]]:
+def _load_results_rows_from_journal(journal_path: str) -> list[ResultRow]:
     """从结果 journal 读取原始结果行。"""
-    rows: list[dict[str, Any]] = []
+    rows: list[ResultRow] = []
     with open(journal_path, encoding="utf-8") as handle:
         for line in handle:
             line = line.strip()
@@ -649,7 +628,7 @@ def compile_field_performance_summary(results: Sequence[FieldTestResult]) -> lis
     )
 
 
-def score_failed_checks(failed_checks: Sequence[dict[str, Any]] | None) -> float:
+def score_failed_checks(failed_checks: Sequence[FailedCheck] | None) -> float:
     """
     根据失败检查项估计一个 Alpha 距离可提交状态还有多近。
 
@@ -693,7 +672,7 @@ def score_failed_checks(failed_checks: Sequence[dict[str, Any]] | None) -> float
     return score / counted
 
 
-def failed_check_closeness(check: dict[str, Any]) -> float | None:
+def failed_check_closeness(check: FailedCheck) -> float | None:
     """
     计算单个失败检查离通过阈值有多近，返回 0-1 左右的分数。
 
@@ -729,7 +708,7 @@ def failed_check_closeness(check: dict[str, Any]) -> float | None:
     return max(0.0, 1.0 - (gap / scale))
 
 
-def failed_check_gap(check: dict[str, Any]) -> float | None:
+def failed_check_gap(check: FailedCheck) -> float | None:
     """
     计算失败检查到阈值的原始差距，正数表示还差多少。
 
@@ -763,7 +742,7 @@ def failed_check_gap(check: dict[str, Any]) -> float | None:
     return value - limit
 
 
-def summarize_failed_check(check: dict[str, Any]) -> dict[str, Any]:
+def summarize_failed_check(check: FailedCheck) -> ResultRow:
     """
     把失败检查转换成适合分析排序的紧凑结构。
 
@@ -1001,7 +980,7 @@ def compile_optimization_hints(
     return hints
 
 
-def compile_field_feedback(results: Sequence[FieldTestResult]) -> dict[str, dict[str, Any]]:
+def compile_field_feedback(results: Sequence[FieldTestResult]) -> FieldFeedbackMap:
     """
     将历史接近通过的结果转为按字段组织的优化反馈。
 
@@ -1012,7 +991,7 @@ def compile_field_feedback(results: Sequence[FieldTestResult]) -> dict[str, dict
         results (Sequence[FieldTestResult]): 结果序列。
 
     Returns:
-        dict[str, dict[str, Any]]: 字段反馈字典，键为字段 ID，
+        FieldFeedbackMap: 字段反馈字典，键为字段 ID，
             值为包含以下字段的字典：
             - field_name: 字段名称
             - best_score: 最佳接近分数
@@ -1025,16 +1004,16 @@ def compile_field_feedback(results: Sequence[FieldTestResult]) -> dict[str, dict
         >>> print(feedback["fnd6_sales"])
         {'field_name': 'sales', 'best_score': 0.85, ...}
     """
-    feedback: dict[str, dict[str, Any]] = {}
+    feedback: FieldFeedbackMap = {}
     for result in results:
         update_field_feedback_with_result(feedback, result)
     return feedback
 
 
 def update_field_feedback_with_result(
-    feedback: dict[str, dict[str, Any]],
+    feedback: FieldFeedbackMap,
     result: FieldTestResult,
-) -> dict[str, dict[str, Any]]:
+) -> FieldFeedbackMap:
     """将单条结果增量合并到字段反馈画像中。"""
     summary = feedback.setdefault(
         result.field_id,
@@ -1133,7 +1112,7 @@ def dominant_failed_check_names(counts: dict[str, int], limit: int = 4) -> set[s
     }
 
 
-def merge_failed_check_counts(*count_maps: dict[str, Any]) -> dict[str, int]:
+def merge_failed_check_counts(*count_maps: dict[str, object]) -> dict[str, int]:
     """
     合并多个失败检查计数字典。
 
@@ -1159,7 +1138,7 @@ def merge_failed_check_counts(*count_maps: dict[str, Any]) -> dict[str, int]:
     return merged
 
 
-def field_priority(field_id: str, field_feedback: dict[str, dict[str, Any]]) -> float:
+def field_priority(field_id: str, field_feedback: FieldFeedbackMap) -> float:
     """
     返回字段在续跑排序中使用的历史优先级分数。
 
@@ -1168,7 +1147,7 @@ def field_priority(field_id: str, field_feedback: dict[str, dict[str, Any]]) -> 
 
     Args:
         field_id (str): 字段 ID。
-        field_feedback (dict[str, dict[str, Any]]): 字段反馈字典。
+        field_feedback (FieldFeedbackMap): 字段反馈字典。
 
     Returns:
         float: 优先级分数，范围为历史最佳接近分数。
