@@ -14,7 +14,6 @@
 
 from __future__ import annotations
 
-import argparse
 from collections.abc import Sequence
 from dataclasses import dataclass
 import logging
@@ -34,6 +33,7 @@ from ..models.base import (
     FutureCompletionContext,
     ResultWriteOptions,
     RuntimeConcurrencyState,
+    SchedulerRuntimeArgs,
 )
 from ..policy import auto_update_blacklist_incremental, build_blacklist_runtime_stats
 from .result_processing import apply_completed_result
@@ -167,7 +167,7 @@ def maybe_restore_runtime_concurrency(state: RuntimeConcurrencyState) -> None:
         )
 
 
-def apply_congestion_cooldown(args: argparse.Namespace, state: RuntimeConcurrencyState) -> None:
+def apply_congestion_cooldown(args: SchedulerRuntimeArgs, state: RuntimeConcurrencyState) -> None:
     """
     检测到拥塞后，临时切换到单 worker 运行模式。
 
@@ -205,7 +205,7 @@ def apply_congestion_cooldown(args: argparse.Namespace, state: RuntimeConcurrenc
 
 def register_queue_busy_field(
     field_id: str | None,
-    args: argparse.Namespace,
+    args: SchedulerRuntimeArgs,
     field_queue_busy_counts: dict[str, int],
     skipped_fields_due_to_queue: set[str],
 ) -> None:
@@ -252,7 +252,7 @@ def register_queue_busy_field(
 # ============================================================================
 
 
-def throttle_before_submission(args: argparse.Namespace, execution_state: ExecutionState) -> None:
+def throttle_before_submission(args: SchedulerRuntimeArgs, execution_state: ExecutionState) -> None:
     """
     在提交新任务前控制节奏，避免阻塞已完成任务处理。
 
@@ -292,7 +292,7 @@ def drain_completed_futures(
     *,
     completed_futures: Sequence[Any],
     execution_state: ExecutionState,
-    args: argparse.Namespace,
+    args: SchedulerRuntimeArgs,
     result_write_options: ResultWriteOptions | None = None,
     settings_fingerprint: str,
     template_library_fingerprint: str,

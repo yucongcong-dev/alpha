@@ -4,11 +4,9 @@ simulation 阶段函数与本地预检辅助模块。
 
 from __future__ import annotations
 
-import argparse
 from dataclasses import dataclass
 import logging
 import re
-import threading
 from typing import Any
 
 from ..api.client import BrainClient, retry_operation
@@ -37,7 +35,13 @@ from ..config import (
     get_submit_min_turnover,
 )
 from ..generators.settings import build_simulation_payload
-from ..models.base import FieldTestContext, FieldTestResult, SettingsVariant
+from ..models.base import (
+    FieldTestContext,
+    FieldTestResult,
+    SemaphoreLike,
+    SettingsVariant,
+    SimulationStageArgs,
+)
 from ..utils.helpers import first_non_empty
 from .simulation_parsing import (
     extract_alpha_id,
@@ -74,7 +78,7 @@ class PrecheckConfig:
     max_weight: float = PRECHECK_FALLBACK_MAX_WEIGHT
 
     @classmethod
-    def from_args(cls, args: argparse.Namespace) -> "PrecheckConfig":
+    def from_args(cls, args: SimulationStageArgs) -> "PrecheckConfig":
         return cls(
             min_sharpe=getattr(args, "min_sharpe", cls.min_sharpe),
             min_fitness=getattr(args, "min_fitness", cls.min_fitness),
@@ -227,10 +231,10 @@ def submit_with_retry(client: BrainClient, alpha_id: str, retries: int) -> str:
 def run_simulation_create_stage(
     ctx: FieldTestContext,
     client: BrainClient,
-    args: argparse.Namespace,
+    args: SimulationStageArgs,
     *,
     simulation_settings: SettingsVariant | None = None,
-    create_semaphore: threading.Semaphore | None = None,
+    create_semaphore: SemaphoreLike | None = None,
 ) -> FieldTestResult | tuple[str, str]:
     try:
         payload = build_simulation_payload(args, ctx.expression)
@@ -261,7 +265,7 @@ def run_simulation_create_stage(
 def run_simulation_poll_stage(
     ctx: FieldTestContext,
     client: BrainClient,
-    args: argparse.Namespace,
+    args: SimulationStageArgs,
     *,
     simulation_location: str,
     simulation_id: str,
@@ -308,7 +312,7 @@ def run_simulation_poll_stage(
 def run_checksubmit_stage(
     ctx: FieldTestContext,
     client: BrainClient,
-    args: argparse.Namespace,
+    args: SimulationStageArgs,
     *,
     alpha_id: str,
     simulation_id: str,
@@ -348,7 +352,7 @@ def run_checksubmit_stage(
 def run_submit_stage(
     ctx: FieldTestContext,
     client: BrainClient,
-    args: argparse.Namespace,
+    args: SimulationStageArgs,
     *,
     alpha_id: str,
     simulation_id: str,

@@ -7,14 +7,18 @@
 
 from __future__ import annotations
 
-import argparse
 import logging
-import threading
 from typing import Any
 
 from ..api.client import BrainClient, WorkerClientFactory
 from ..config import SENTINEL_UNKNOWN
-from ..models.base import FieldTestContext, FieldTestResult, SettingsVariant
+from ..models.base import (
+    FieldTestContext,
+    FieldTestResult,
+    SemaphoreLike,
+    SettingsVariant,
+    SimulationStageArgs,
+)
 from ..utils.helpers import choose_field_type, first_non_empty
 from .simulation_parsing import (
     extract_alpha_id,
@@ -42,14 +46,14 @@ logger = logging.getLogger(__name__)
 
 def run_field_test(
     client: BrainClient,
-    args: argparse.Namespace,
+    args: SimulationStageArgs,
     field: dict[str, Any],
     template_name: str,
     expression: str,
     settings_fingerprint: str,
     template_library_fingerprint: str,
     simulation_settings: SettingsVariant | None = None,
-    create_semaphore: threading.Semaphore | None = None,
+    create_semaphore: SemaphoreLike | None = None,
 ) -> FieldTestResult:
     """执行单个候选表达式的 simulation / checksubmit / submit 三阶段流程。"""
     if not expression or not expression.strip():
@@ -153,14 +157,14 @@ def run_field_test(
 
 def run_field_test_in_worker(
     client_factory: WorkerClientFactory,
-    args: argparse.Namespace,
+    args: SimulationStageArgs,
     field: dict[str, Any],
     template_name: str,
     expression: str,
     settings_fingerprint: str,
     template_library_fingerprint: str,
     simulation_settings: SettingsVariant | None = None,
-    create_semaphore: threading.Semaphore | None = None,
+    create_semaphore: SemaphoreLike | None = None,
 ) -> FieldTestResult:
     """工作线程入口，先解析线程本地客户端再执行测试。"""
     client = client_factory.get_client()

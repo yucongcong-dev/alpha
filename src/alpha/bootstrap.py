@@ -234,7 +234,7 @@ def initialize_run_context(
         )
 
     execution_state = build_execution_state(
-        args=args,
+        dataset_id=args.dataset_id,
         output_file=output_file,
         historical_state=historical_state,
         settings_fingerprint=settings_fingerprint,

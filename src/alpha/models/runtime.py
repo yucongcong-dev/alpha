@@ -75,6 +75,32 @@ class SimulationSettingsArgs(Protocol):
     end_date: object
 
 
+class SimulationStageArgs(SimulationSettingsArgs, Protocol):
+    simulation_create_retries: object
+    simulation_poll_retries: object
+    simulation_max_polls: object
+    simulation_max_wait_seconds: object
+    simulation_max_pending_cycles: object
+    simulation_max_queue_seconds: object
+    check_submit_retries: object
+    submit_retries: object
+    submit: object
+    min_sharpe: object
+    min_fitness: object
+    min_turnover: object
+    max_turnover: object
+    max_weight: object
+
+
+class SchedulerRuntimeArgs(Protocol):
+    queue_busy_cooldown_seconds: object
+    field_queue_busy_skip_after: object
+    sleep_between_fields: object
+    dataset_id: object
+    output: object
+    auto_update_blacklist: object
+
+
 class ClientFactoryLike(Protocol):
     def create_client(self) -> object: ...
 

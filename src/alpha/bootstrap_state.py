@@ -4,8 +4,6 @@ bootstrap 执行态与历史结果装配辅助模块。
 
 from __future__ import annotations
 
-import argparse
-
 from .analysis.stats import is_queue_timeout_result
 from .io.results_store import dump_results_incremental, initialize_results_journal
 from .models.base import ExecutionState
@@ -27,7 +25,7 @@ def populate_execution_metrics(execution_state: ExecutionState) -> None:
 
 def build_execution_state(
     *,
-    args: argparse.Namespace,
+    dataset_id: str,
     output_file: str,
     historical_state,
     settings_fingerprint: str,
@@ -51,10 +49,10 @@ def build_execution_state(
     execution_state.blacklist_runtime_stats = build_blacklist_runtime_stats(
         execution_state.results,
     )
-    execution_state.blacklisted_template_names = load_blacklisted_template_names(args.dataset_id)
+    execution_state.blacklisted_template_names = load_blacklisted_template_names(dataset_id)
     execution_state.persisted_result_count = dump_results_incremental(
         output_file,
-        args.dataset_id,
+        dataset_id,
         [],
         persisted_result_count=execution_state.persisted_result_count,
         tested=len(execution_state.results),
