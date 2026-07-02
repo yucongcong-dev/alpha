@@ -26,7 +26,7 @@ from ..config import (
     get_simulation_default_start_date,
     get_yaml_config,
 )
-from ..models.base import NearPassCandidate, SettingsVariant
+from ..models.base import NearPassCandidate, SettingsVariant, SimulationSettingsArgs
 
 
 def stable_fingerprint(payload: Any) -> str:
@@ -116,7 +116,11 @@ def _read_simulation_from_yaml() -> dict[str, Any] | None:
     return sim if isinstance(sim, dict) else None
 
 
-def _resolve_setting(yaml_sim: dict[str, Any] | None, args: Any, api_key: str) -> Any:
+def _resolve_setting(
+    yaml_sim: dict[str, Any] | None,
+    args: SimulationSettingsArgs,
+    api_key: str,
+) -> Any:
     """按 CLI > YAML > 官网默认 优先级解析单个设置参数。
 
     api_key 即为 YAML key 和 Brain API payload key (camelCase)。
@@ -133,7 +137,7 @@ def _resolve_setting(yaml_sim: dict[str, Any] | None, args: Any, api_key: str) -
     return _WEBSITE_DEFAULTS.get(api_key, cli_val)
 
 
-def build_simulation_payload(args: Any, expression: str) -> dict[str, Any]:
+def build_simulation_payload(args: SimulationSettingsArgs, expression: str) -> dict[str, Any]:
     """
     从 settings.yaml 读取配置，构建模拟请求体。
 
@@ -214,7 +218,7 @@ def build_simulation_payload(args: Any, expression: str) -> dict[str, Any]:
     }
 
 
-def build_settings_fingerprint(args: Any) -> str:
+def build_settings_fingerprint(args: SimulationSettingsArgs) -> str:
     """
     为当前模拟配置生成指纹，便于安全续跑与去重。
 
@@ -261,7 +265,7 @@ def build_settings_fingerprint_from_payload(payload: dict[str, Any]) -> str:
 
 
 def build_setting_variants(
-    args: Any,
+    args: SimulationSettingsArgs,
     template_name: str,
     expression: str,
     *,

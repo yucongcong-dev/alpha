@@ -29,10 +29,13 @@ from ..generators.settings import (
     build_settings_fingerprint_from_payload,
 )
 from ..models.base import (
+    DatasetExpressionPolicy,
     FieldTestResult,
     NearPassCandidate,
     SettingsVariant,
+    TemplateCandidate,
     TemplateBuildContext,
+    TemplateFeedback,
 )
 from ..utils.helpers import choose_field_name, first_non_empty, is_event_field_name
 from ..config import SENTINEL_UNKNOWN
@@ -45,7 +48,7 @@ def resolve_field_template_candidates(
     prior_results: Sequence[FieldTestResult],
     build_refine_templates_fn=build_refine_templates,
     build_expression_candidates_fn=build_expression_candidates,
-) -> tuple[list[object], dict[str, object], object]:
+) -> tuple[list[TemplateCandidate], TemplateFeedback, DatasetExpressionPolicy]:
     """为单个字段解析模板候选、字段反馈和表达式策略。"""
     options = build_ctx.options
     field_id = str(first_non_empty(field.get("id"), SENTINEL_UNKNOWN))
@@ -117,11 +120,11 @@ def build_pending_template_variants(
     build_ctx: TemplateBuildContext,
     field: dict[str, object],
     *,
-    templates: Sequence[object],
+    templates: Sequence[TemplateCandidate],
     template_stats: dict[str, dict[str, int]],
     attempted_keys: set[tuple[str, str, str, str]],
     reserved_keys: set[tuple[str, str, str, str]],
-    field_feedback: dict[str, object] | None,
+    field_feedback: TemplateFeedback | None,
     build_setting_variants_fn=build_setting_variants,
     build_settings_fingerprint_fn=build_settings_fingerprint_from_payload,
 ) -> list[tuple[str, str, str, str, int, SettingsVariant, str]]:

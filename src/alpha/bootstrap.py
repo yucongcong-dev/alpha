@@ -39,6 +39,7 @@ from .io.output_paths import cleanup_legacy_sidecar_files
 from .models.base import (
     ApiClientOptions,
     HistoricalRunState,
+    FieldFetchOptions,
     InitializedRunContext,
     RunFilters,
     RuntimeConcurrencyState,
@@ -162,9 +163,10 @@ def initialize_run_context(
         instrument_type=args.instrument_type,
         delay=args.delay,
     )
+    field_fetch_options = FieldFetchOptions.from_args(args)
     fields = fetch_fields_with_cache(
         bootstrap_client,
-        args,
+        field_fetch_options,
         fields_cache_file,
         cached_fields,
     )

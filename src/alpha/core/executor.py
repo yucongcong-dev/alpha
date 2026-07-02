@@ -19,7 +19,6 @@ from __future__ import annotations
 import argparse
 from collections.abc import Mapping, Sequence
 import logging
-from typing import Any
 
 from ..config import SENTINEL_UNKNOWN, get_dataset_expression_policy
 from .template_queue import (
@@ -43,11 +42,14 @@ from ..models.base import (
     ExecutionState,
     FieldTestResult,
     HistoricalRunState,
+    PendingFutureLike,
     PendingFutureContext,
     RunFilters,
     SettingsVariant,
+    TemplateCandidate,
     TemplateBuildContext,
     TemplateBuildOptions,
+    TemplateField,
     TemplateLibrary,
 )
 from ..utils.helpers import choose_field_name, first_non_empty
@@ -60,7 +62,7 @@ logger = logging.getLogger(__name__)
 
 
 def inflight_template_keys(
-    pending_futures: Mapping[Any, PendingFutureContext],
+    pending_futures: Mapping[object, PendingFutureLike],
 ) -> set[tuple[str, str, str, str]]:
     """
     从尚未完成的 future 上下文中提取去重键。
@@ -89,7 +91,7 @@ def inflight_template_keys(
 
 def build_pending_templates_for_field(
     build_ctx: TemplateBuildContext,
-    field: dict[str, Any],
+    field: TemplateField,
     *,
     template_stats: dict[str, dict[str, int]],
     attempted_keys: set[tuple[str, str, str, str]],
@@ -131,7 +133,7 @@ def build_pending_templates_for_field(
         build_refine_templates_fn=build_refine_templates,
         build_expression_candidates_fn=build_expression_candidates,
     )
-    enabled_templates: list[Any] = []
+    enabled_templates: list[TemplateCandidate] = []
     disabled_templates = 0
     for template in templates:
         if build_ctx.include_templates and template.name not in build_ctx.include_templates:
@@ -173,7 +175,7 @@ def build_pending_templates_for_field(
 def print_dry_run_plan(
     *,
     args: argparse.Namespace,
-    fields: Sequence[dict[str, Any]],
+    fields: Sequence[TemplateField],
     filters: RunFilters,
     template_library: TemplateLibrary,
     historical_state: HistoricalRunState,
@@ -216,7 +218,7 @@ def print_dry_run_plan(
     planned_fields = 0
     planned_templates = 0
     disabled_templates = 0
-    samples: list[dict[str, Any]] = []
+    samples: list[dict[str, object]] = []
     options = TemplateBuildOptions.from_args(args)
 
     build_ctx = TemplateBuildContext(

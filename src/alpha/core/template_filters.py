@@ -9,7 +9,6 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 import logging
-from typing import Any
 
 from ..analysis.feedback import (
     is_legacy_family_disabled,
@@ -23,7 +22,14 @@ from ..config import (
     CHECK_LOW_SHARPE,
     CHECK_LOW_SUB_UNIVERSE_SHARPE,
 )
-from ..models.base import FieldTestResult, RunFilters
+from ..config import DatasetExpressionPolicy
+from ..models.base import (
+    FieldTestResult,
+    RunFilters,
+    TemplateBuildContext,
+    TemplateCandidate,
+    TemplateFeedback,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -87,12 +93,12 @@ def should_skip_field(
 
 def is_template_actionable(
     *,
-    template: Any,
-    build_ctx: Any,
+    template: TemplateCandidate,
+    build_ctx: TemplateBuildContext,
     field_id: str,
     field_name: str,
-    field_feedback: dict[str, Any] | None,
-    expression_policy: Any,
+    field_feedback: TemplateFeedback | None,
+    expression_policy: DatasetExpressionPolicy | None,
     template_stats: dict[str, dict[str, int]],
     prior_results: Sequence[FieldTestResult],
 ) -> bool:

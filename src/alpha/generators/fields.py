@@ -19,10 +19,28 @@ from collections.abc import Sequence
 import json
 import logging
 import os
-from typing import Any
+from typing import Any, Protocol
 
 from ..io.common import atomic_write_json
+from ..models.base import FieldFetchOptions
 logger = logging.getLogger(__name__)
+
+
+class DatasetFieldClient(Protocol):
+    """字段拉取客户端最小协议。"""
+
+    def fetch_dataset_fields(
+        self,
+        dataset_id: str,
+        *,
+        limit: int,
+        offset: int,
+        page_size: int,
+        region: str,
+        universe: str,
+        instrument_type: str,
+        delay: int,
+    ) -> list[dict[str, object]]: ...
 
 
 def load_fields_cache(
@@ -151,11 +169,11 @@ def save_fields_cache(
 
 
 def fetch_fields_with_cache(
-    client: Any,
-    args: Any,
+    client: DatasetFieldClient,
+    options: FieldFetchOptions,
     fields_cache_file: str,
-    cached_fields: Sequence[dict[str, Any]],
-) -> list[dict[str, Any]]:
+    cached_fields: Sequence[dict[str, object]],
+) -> list[dict[str, object]]:
     """
     根据缓存状态获取字段；首次默认拉取并缓存当前上下文下的全量字段。
 
@@ -165,7 +183,7 @@ def fetch_fields_with_cache(
 
     Args:
         client: Brain API 客户端实例，需要实现 fetch_dataset_fields 方法。
-        args: 命令行参数对象，包含 dataset_id、page_size 等属性。
+        options: 字段拉取所需的窄配置对象。
         fields_cache_file: 字段缓存文件路径。
         cached_fields (Sequence[Dict[str, Any]]): 当前缓存的字段列表。
 
@@ -175,7 +193,7 @@ def fetch_fields_with_cache(
     Example:
         >>> fields = fetch_fields_with_cache(
         ...     client=brain_client,
-        ...     args=args,
+        ...     options=options,
         ...     fields_cache_file="/path/to/cache.json",
         ...     cached_fields=[{"id": "sales"}],
         ... )
@@ -196,23 +214,23 @@ def fetch_fields_with_cache(
     # Fetching the field list is also wrapped so temporary API instability
     # does not abort the whole batch before it starts.
     fetched_fields = client.fetch_dataset_fields(
-        args.dataset_id,
+        options.dataset_id,
         limit=0,
         offset=0,
-        page_size=args.page_size,
-        region=args.region,
-        universe=args.universe,
-        instrument_type=args.instrument_type,
-        delay=args.delay,
+        page_size=options.page_size,
+        region=options.region,
+        universe=options.universe,
+        instrument_type=options.instrument_type,
+        delay=options.delay,
     )
     fields = fetched_fields
     save_fields_cache(
         fields_cache_file,
-        dataset_id=args.dataset_id,
-        region=args.region,
-        universe=args.universe,
-        instrument_type=args.instrument_type,
-        delay=args.delay,
+        dataset_id=options.dataset_id,
+        region=options.region,
+        universe=options.universe,
+        instrument_type=options.instrument_type,
+        delay=options.delay,
         fields=fields,
     )
     logger.info("[cache] 保存 %d 个字段到 %s", len(fields), os.path.basename(fields_cache_file))

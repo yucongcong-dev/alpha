@@ -9,11 +9,80 @@ from __future__ import annotations
 from collections.abc import Sequence
 from dataclasses import dataclass, field
 import time
-from typing import Any
+from typing import Any, Protocol, Union
 
 from ..config import DatasetExpressionPolicy
-from .domain import FieldTestResult, TemplateLibrary
+from .domain import FieldTestResult, TemplateCandidate, TemplateLibrary
 from .io_types import RunFilters
+
+
+class ApiClientArgs(Protocol):
+    min_request_interval: object
+    rate_limit_max_retries: object
+    login_retries: object
+
+
+class TemplateBuildArgs(Protocol):
+    dataset_id: object
+    max_templates_per_field: object
+    max_templates_per_family: object
+    legacy_similarity_penalty: object
+    template_disable_after: object
+    disable_legacy_after: object
+    region: object
+    universe: object
+    instrument_type: object
+    delay: object
+    decay: object
+    neutralization: object
+    truncation: object
+    pasteurization: object
+    unit_handling: object
+    nan_handling: object
+    language: object
+    start_date: object
+    end_date: object
+
+
+class ResultWriteArgs(Protocol):
+    dataset_id: object
+    output: object
+    auto_update_blacklist: object
+
+
+class FieldFetchArgs(Protocol):
+    dataset_id: object
+    page_size: object
+    region: object
+    universe: object
+    instrument_type: object
+    delay: object
+
+
+class SimulationSettingsArgs(Protocol):
+    instrument_type: object
+    region: object
+    universe: object
+    delay: object
+    decay: object
+    neutralization: object
+    truncation: object
+    pasteurization: object
+    unit_handling: object
+    nan_handling: object
+    language: object
+    start_date: object
+    end_date: object
+
+
+class ClientFactoryLike(Protocol):
+    def create_client(self) -> object: ...
+
+
+class SemaphoreLike(Protocol):
+    def acquire(self, blocking: bool = True, timeout: float | None = -1) -> bool: ...
+
+    def release(self) -> None: ...
 
 
 @dataclass(frozen=True)
@@ -25,7 +94,7 @@ class ApiClientOptions:
     login_retries: int = 0
 
     @classmethod
-    def from_args(cls, args: Any) -> "ApiClientOptions":
+    def from_args(cls, args: ApiClientArgs) -> "ApiClientOptions":
         return cls(
             min_request_interval=float(getattr(args, "min_request_interval", 0.0) or 0.0),
             rate_limit_max_retries=int(getattr(args, "rate_limit_max_retries", 0) or 0),
@@ -58,7 +127,7 @@ class TemplateBuildOptions:
     end_date: str | None = None
 
     @classmethod
-    def from_args(cls, args: Any) -> "TemplateBuildOptions":
+    def from_args(cls, args: TemplateBuildArgs) -> "TemplateBuildOptions":
         return cls(
             dataset_id=str(getattr(args, "dataset_id", "") or ""),
             max_templates_per_field=int(getattr(args, "max_templates_per_field", 0) or 0),
@@ -91,11 +160,34 @@ class ResultWriteOptions:
     auto_update_blacklist: bool = False
 
     @classmethod
-    def from_args(cls, args: Any) -> "ResultWriteOptions":
+    def from_args(cls, args: ResultWriteArgs) -> "ResultWriteOptions":
         return cls(
             dataset_id=str(getattr(args, "dataset_id", "") or ""),
             output_path=str(getattr(args, "output", "") or ""),
             auto_update_blacklist=bool(getattr(args, "auto_update_blacklist", False)),
+        )
+
+
+@dataclass(frozen=True)
+class FieldFetchOptions:
+    """字段缓存校验与字段列表拉取所需的窄配置。"""
+
+    dataset_id: str = ""
+    page_size: int = 0
+    region: str = ""
+    universe: str = ""
+    instrument_type: str = ""
+    delay: int = 0
+
+    @classmethod
+    def from_args(cls, args: FieldFetchArgs) -> "FieldFetchOptions":
+        return cls(
+            dataset_id=str(getattr(args, "dataset_id", "") or ""),
+            page_size=int(getattr(args, "page_size", 0) or 0),
+            region=str(getattr(args, "region", "") or ""),
+            universe=str(getattr(args, "universe", "") or ""),
+            instrument_type=str(getattr(args, "instrument_type", "") or ""),
+            delay=int(getattr(args, "delay", 0) or 0),
         )
 
 
@@ -176,7 +268,7 @@ class ExecutionState:
     results: list[FieldTestResult]
     attempted_keys: set[tuple[str, str, str, str]]
     template_stats: dict[str, dict[str, int]]
-    pending_futures: dict[Any, PendingFutureContext]
+    pending_futures: dict[object, PendingFutureContext]
     field_queue_busy_counts: dict[str, int]
     skipped_fields_due_to_queue: set[str]
     unique_field_ids: set[str] = field(default_factory=set)
@@ -194,7 +286,7 @@ class ExecutionState:
 class InitializedRunContext:
     """初始化阶段产出的主流程上下文。"""
 
-    client_factory: Any
+    client_factory: ClientFactoryLike
     template_library: TemplateLibrary
     filters: RunFilters
     expression_policy: DatasetExpressionPolicy
@@ -205,5 +297,11 @@ class InitializedRunContext:
     fields: list[dict[str, Any]]
     execution_state: ExecutionState
     runtime_state: RuntimeConcurrencyState
-    create_semaphore: Any
+    create_semaphore: SemaphoreLike
     run_config: dict[str, Any]
+
+
+TemplateField = dict[str, Any]
+TemplateFeedback = dict[str, Any]
+PendingFutureLike = Union[PendingFutureContext, dict[str, object]]
+TemplateSequence = Sequence[TemplateCandidate]

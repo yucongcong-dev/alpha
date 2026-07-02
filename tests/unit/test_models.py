@@ -8,12 +8,16 @@ import time
 import pytest
 
 from alpha.models.base import (
+    ApiClientOptions,
     ExecutionState,
+    FieldFetchOptions,
     FieldTestContext,
     FieldTestResult,
     HistoricalRunState,
+    ResultWriteOptions,
     RunFilters,
     RuntimeConcurrencyState,
+    TemplateBuildOptions,
 )
 
 # ============================================================================
@@ -62,6 +66,78 @@ class TestRuntimeConcurrencyState:
             cooldown_until=max(0.001, time.monotonic() / 2),
         )
         assert not state.can_restore_concurrency()
+
+
+class TestRuntimeOptionBuilders:
+    """测试从 args-like 对象提取窄配置。"""
+
+    def test_api_client_options_from_args(self) -> None:
+        class _Args:
+            min_request_interval = "0.25"
+            rate_limit_max_retries = "7"
+            login_retries = 3
+
+        assert ApiClientOptions.from_args(_Args()) == ApiClientOptions(
+            min_request_interval=0.25,
+            rate_limit_max_retries=7,
+            login_retries=3,
+        )
+
+    def test_template_build_options_from_args(self) -> None:
+        class _Args:
+            dataset_id = "fundamental6"
+            max_templates_per_field = "8"
+            max_templates_per_family = 2
+            legacy_similarity_penalty = "4"
+            template_disable_after = 5
+            disable_legacy_after = 6
+            region = "USA"
+            universe = "TOP3000"
+            instrument_type = "EQUITY"
+            delay = "1"
+            decay = "7"
+            neutralization = "SUBINDUSTRY"
+            truncation = "0.08"
+            pasteurization = "OFF"
+            unit_handling = "VERIFY"
+            nan_handling = "OFF"
+            language = "FASTEXPR"
+            start_date = "2020-01-01"
+            end_date = "2020-12-31"
+
+        options = TemplateBuildOptions.from_args(_Args())
+
+        assert options.dataset_id == "fundamental6"
+        assert options.max_templates_per_field == 8
+        assert options.max_templates_per_family == 2
+        assert options.truncation == 0.08
+        assert options.start_date == "2020-01-01"
+        assert options.end_date == "2020-12-31"
+
+    def test_result_write_and_field_fetch_options_from_args(self) -> None:
+        class _Args:
+            dataset_id = "model51"
+            output = "results.json"
+            auto_update_blacklist = True
+            page_size = "100"
+            region = "USA"
+            universe = "TOP1000"
+            instrument_type = "EQUITY"
+            delay = "2"
+
+        assert ResultWriteOptions.from_args(_Args()) == ResultWriteOptions(
+            dataset_id="model51",
+            output_path="results.json",
+            auto_update_blacklist=True,
+        )
+        assert FieldFetchOptions.from_args(_Args()) == FieldFetchOptions(
+            dataset_id="model51",
+            page_size=100,
+            region="USA",
+            universe="TOP1000",
+            instrument_type="EQUITY",
+            delay=2,
+        )
 
 
 # ============================================================================
