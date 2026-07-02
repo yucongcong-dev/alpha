@@ -21,7 +21,7 @@ import logging
 import os
 from typing import Any
 
-from ..io.output import atomic_write_json
+from ..io.common import atomic_write_json
 logger = logging.getLogger(__name__)
 
 

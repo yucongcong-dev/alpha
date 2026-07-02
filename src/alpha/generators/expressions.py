@@ -56,6 +56,7 @@ from ..config import (
     resolve_feedback_stage,
 )
 from ..generators.field_transforms import build_field_view, build_ratio_expression
+from ..io.common import resolve_runtime_data_dir
 from ..models.base import NearPassCandidate, TemplateCandidate, TemplateLibrary
 from ..utils.helpers import choose_field_name, choose_field_type, is_event_field_name
 
@@ -322,20 +323,12 @@ def _render_template_specs(
             )
         )
     return rendered
-
-
-def _resolve_blacklist_project_root() -> str:
-    """查找项目根目录（与 data 目录同级的 src 目录所在路径）。"""
-    current = os.path.dirname(os.path.abspath(__file__))
-    return os.path.normpath(os.path.join(current, "..", "..", ".."))
-
-
 def _load_default_avoid_rules() -> list[dict[str, str]]:
     """加载跨数据集默认规避规则 template_blacklist.json。"""
     global _DEFAULT_AVOID_RULES_CACHE
+    runtime_data_dir = resolve_runtime_data_dir()
     candidates = [
-        os.path.join(_resolve_blacklist_project_root(), "data", "template_blacklist.json"),
-        os.path.join(os.getcwd(), "data", "template_blacklist.json"),
+        os.path.join(str(runtime_data_dir), "template_blacklist.json"),
     ]
     for path in candidates:
         if os.path.isfile(path):
@@ -404,14 +397,12 @@ def _load_blacklist(dataset_id: str) -> None:
     dataset_signature: tuple[int, int] | None = None
 
     # 1. 加载数据集专属黑名单文件
-    project_root = _resolve_blacklist_project_root()
+    runtime_data_dir = resolve_runtime_data_dir()
     dataset_key = re.sub(r"[^A-Za-z0-9_.-]+", "_", dataset_id.strip()).strip("._-") or "default"
     legacy_filename = f"template_blacklist_{dataset_id}.json"
     candidates = [
-        os.path.join(project_root, "data", "blacklists", dataset_key, "blacklist.json"),
-        os.path.join(os.getcwd(), "data", "blacklists", dataset_key, "blacklist.json"),
-        os.path.join(project_root, "data", legacy_filename),
-        os.path.join(os.getcwd(), "data", legacy_filename),
+        os.path.join(str(runtime_data_dir), "blacklists", dataset_key, "blacklist.json"),
+        os.path.join(str(runtime_data_dir), legacy_filename),
     ]
     blacklist_path = ""
     for path in candidates:

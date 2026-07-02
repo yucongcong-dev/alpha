@@ -34,7 +34,7 @@ from pathlib import Path
 from typing import Any
 
 from ..exceptions import BrainAPIError
-from ..io.output import atomic_write_json
+from ..io.common import atomic_write_json
 
 logger = logging.getLogger(__name__)
 

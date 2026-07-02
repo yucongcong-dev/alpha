@@ -10,7 +10,10 @@ alpha/                     # 项目根目录
 │   └── alpha/             # 主包
 │       ├── __init__.py    # 包入口（导出基础公共 API）
 │       ├── __main__.py    # python3 -m alpha / alpha 命令入口
-│       ├── main.py        # 主流程编排
+│       ├── main.py        # 精简入口与兼容导出
+│       ├── bootstrap.py   # 初始化阶段：参数、字段、模板、历史状态
+│       ├── run_loop.py    # 主运行循环：调度、反馈刷新、续跑推进
+│       ├── finalize.py    # 收尾阶段：最终落盘与清理
 │       │
 │       ├── core/          # 核心业务层
 │       │   ├── checkpoint.py
@@ -26,13 +29,15 @@ alpha/                     # 项目根目录
 │       │
 │       ├── analysis/      # 分析优化层
 │       │   ├── stats.py
-│       │   └── feedback.py
+│       │   ├── feedback.py
+│       │   └── report_builder.py
 │       │
 │       ├── api/           # API 客户端层
 │       │   ├── api_types.py
 │       │   └── client.py
 │       │
 │       ├── io/            # 输入输出层
+│       │   ├── common.py
 │       │   ├── credentials.py
 │       │   └── output.py
 │       │
@@ -41,7 +46,13 @@ alpha/                     # 项目根目录
 │       │   └── parser.py
 │       │
 │       ├── models/        # 数据模型层
-│       │   └── base.py
+│       │   ├── domain.py
+│       │   ├── runtime.py
+│       │   ├── io_types.py
+│       │   └── base.py    # 兼容导出层
+│       │
+│       ├── policy/        # 运行期策略层
+│       │   └── blacklist.py
 │       │
 │       ├── utils/         # 工具函数层
 │       │   └── helpers.py
@@ -78,6 +89,17 @@ alpha/                     # 项目根目录
 - 数据集聚焦白名单：可选放在 `data/templates/<dataset_id>/*.txt`
 
 其中 `base` 只负责提供共享 fallback 模板，真正的搜索方向应尽量在数据集专属目录里定制和收敛。
+
+## 当前代码分层
+
+- `main.py` 现在只保留精简入口和兼容导出，具体实现已经拆到 `bootstrap.py`、`run_loop.py`、`finalize.py`
+- `models/domain.py` 只放领域对象；`models/runtime.py` 放运行态上下文；`models/io_types.py` 放路径/过滤边界对象；`models/base.py` 仅保留兼容导出
+- `analysis/report_builder.py` 负责从结果构建 summary/analysis payload
+- `policy/blacklist.py` 负责黑名单策略、聚合与增量更新
+- `io/output.py` 负责结果持久化与分析边车编排，不再承载黑名单策略实现
+- `io/common.py` 放更底层的 JSON 原子写入、路径常量、dataset 文件名安全化与运行时 `data/` 目录解析
+
+这次重构的目标是把原先集中在 `main.py`、`models/base.py`、`io/output.py` 的大杂烩职责拆开，让入口、运行态、分析构建、策略和 IO 边界更清晰。
 
 ## 安装
 
@@ -254,6 +276,13 @@ python3 -m alpha
 ```
 
 所有相对路径参数（如 `--output`、`--fields-cache-file`、`--include-fields-file`）都相对于当前命令执行目录解析。
+
+运行时 `data/` 目录也遵循类似优先级：
+- 显式传入的 `data_dir`
+- 当前命令执行目录下的 `data/`
+- 项目内置 `data/`
+
+这意味着你可以在临时工作目录放一份独立的 `data/templates/` 或 `data/blacklists/`，而不用改动仓库内置数据。
 
 清理本地运行产物（默认保留 `.credentials/`）：
 
