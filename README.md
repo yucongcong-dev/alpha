@@ -54,9 +54,13 @@ alpha/                     # 项目根目录
 │       │   └── template_stats.py
 │       │
 │       ├── api/           # API 客户端层
+│       │   ├── alphas.py
 │       │   ├── api_types.py
-│       │   ├── client.py
+│       │   ├── client.py      # BrainClient / WorkerClientFactory 组合入口
+│       │   ├── fields.py
 │       │   ├── payloads.py
+│       │   ├── session.py
+│       │   ├── simulations.py
 │       │   └── timing.py
 │       │
 │       ├── io/            # 输入输出层
@@ -161,7 +165,7 @@ alpha/                     # 项目根目录
 - `config/` 是配置子包：`__init__.py` 保留旧的 `alpha.config` 入口，`models.py` 放配置 dataclass，`yaml.py` 放 YAML 查找/加载/缓存，`defaults.py` 放 YAML global 到 CLI 参数的合并，`profiles.py` 放 dataset profile fallback。
 - `generators/templates/` 是模板子包：`__init__.py` 管理 JSON 模板库，`candidates.py` 构造 `TemplateCandidate`，`classification.py` 做模板 family/stage 分类，`metadata.py` 建模板元数据索引，`partner_fields.py` 发现 ratio 配对字段，`priority.py` 做自适应优先级和 family 裁剪，`refine.py` 生成 near-pass 精修模板，`variations.py` 生成 feedback/bucket/trade_when/历史复用变体。
 - `generators/expressions.py` 现在是表达式候选编排层，不再承载模板分类、元数据、优先级、refine 或 feedback mutation 的具体实现。
-- `api/client.py` 保留 Brain API 客户端主体；`api/payloads.py` 放响应 payload 解析，`api/timing.py` 放等待和 `Retry-After` 解析。
+- `api/client.py` 保留 `BrainClient` / `WorkerClientFactory` 组合入口；`api/session.py` 放登录、底层 request 和全局节流；`api/fields.py` 放 dataset 字段分页；`api/simulations.py` 放 simulation create/poll；`api/alphas.py` 放 alpha detail/submit；`api/payloads.py` 放响应 payload 解析，`api/timing.py` 放等待和 `Retry-After` 解析。
 
 这次重构的目标是把原先集中在少数大文件里的职责拆开，让入口、运行态、分析构建、配置、模板生成、策略和 IO 边界更清晰。旧入口仍保持兼容，例如 `from alpha.config import get_yaml_config`、`from alpha.generators.templates import load_template_library` 仍然可用。
 
