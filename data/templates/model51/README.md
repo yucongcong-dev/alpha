@@ -45,10 +45,10 @@ Broad exploration:
 - Prefer the dataset library over the shared base library.
 
 Focused refine:
-- Use [focused_fields.txt](/Users/boyaa/Downloads/alpha/data/templates/model51/focused_fields.txt) to keep the run centered on the strongest local field family:
+- Use [focused_fields.txt](focused_fields.txt) to keep the run centered on the strongest local field family:
   - `unsystematic_risk_last_360_days`
   - `systematic_risk_last_360_days`
-- Use [focused_templates.txt](/Users/boyaa/Downloads/alpha/data/templates/model51/focused_templates.txt) to keep the run centered on the strongest template family:
+- Use [focused_templates.txt](focused_templates.txt) to keep the run centered on the strongest template family:
   - `model51_industry_zscore_decay_63`
   - `model51_market_zscore_decay_63`
   - `model51_group_zscore_market_126`

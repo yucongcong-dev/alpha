@@ -19,13 +19,25 @@ alpha/                     # 项目根目录
 │       │   ├── checkpoint.py
 │       │   ├── executor.py
 │       │   ├── scheduler.py
+│       │   ├── result_processing.py
+│       │   ├── template_filters.py
+│       │   ├── template_queue.py
 │       │   └── simulation.py
 │       │
 │       ├── generators/    # Alpha 生成层
-│       │   ├── templates.py
 │       │   ├── expressions.py
+│       │   ├── field_transforms.py
 │       │   ├── fields.py
-│       │   └── settings.py
+│       │   ├── settings.py
+│       │   └── templates/ # 模板库、候选构造、分类、优先级、refine 变体
+│       │       ├── __init__.py
+│       │       ├── candidates.py
+│       │       ├── classification.py
+│       │       ├── metadata.py
+│       │       ├── partner_fields.py
+│       │       ├── priority.py
+│       │       ├── refine.py
+│       │       └── variations.py
 │       │
 │       ├── analysis/      # 分析优化层
 │       │   ├── stats.py
@@ -34,7 +46,9 @@ alpha/                     # 项目根目录
 │       │
 │       ├── api/           # API 客户端层
 │       │   ├── api_types.py
-│       │   └── client.py
+│       │   ├── client.py
+│       │   ├── payloads.py
+│       │   └── timing.py
 │       │
 │       ├── io/            # 输入输出层
 │       │   ├── common.py
@@ -57,7 +71,12 @@ alpha/                     # 项目根目录
 │       ├── utils/         # 工具函数层
 │       │   └── helpers.py
 │       │
-│       ├── config.py      # 配置常量
+│       ├── config/        # 配置入口、YAML、模型、profiles、CLI defaults
+│       │   ├── __init__.py
+│       │   ├── defaults.py
+│       │   ├── models.py
+│       │   ├── profiles.py
+│       │   └── yaml.py
 │       └── exceptions.py  # 自定义异常
 │
 ├── tests/                 # 测试目录
@@ -90,6 +109,17 @@ alpha/                     # 项目根目录
 
 其中 `base` 只负责提供共享 fallback 模板，真正的搜索方向应尽量在数据集专属目录里定制和收敛。
 
+代码中的模板相关逻辑统一放在 `src/alpha/generators/templates/`：
+
+- `__init__.py`：加载、校验、补齐和生成 JSON 模板库
+- `candidates.py`：统一构造 `TemplateCandidate`
+- `classification.py`：识别模板 family / stage
+- `metadata.py`：构建模板 metadata 索引
+- `partner_fields.py`：为 ratio 模板发现配对字段
+- `priority.py`：自适应优先级、相似度惩罚、family 数量裁剪
+- `refine.py`：near-pass 候选的局部精修
+- `variations.py`：feedback mutation、bucket group、trade_when、历史优秀表达式复用
+
 ## 黑名单目录
 
 - 统一黑名单：`data/blacklists/<dataset_id>/blacklist.json`。
@@ -104,8 +134,12 @@ alpha/                     # 项目根目录
 - `policy/blacklist.py` 负责黑名单策略、聚合与增量更新
 - `io/output.py` 负责结果持久化与分析边车编排，不再承载黑名单策略实现
 - `io/common.py` 放更底层的 JSON 原子写入、路径常量、dataset 文件名安全化与运行时 `data/` 目录解析
+- `config/` 是配置子包：`__init__.py` 保留旧的 `alpha.config` 入口，`models.py` 放配置 dataclass，`yaml.py` 放 YAML 查找/加载/缓存，`defaults.py` 放 YAML global 到 CLI 参数的合并，`profiles.py` 放 dataset profile fallback。
+- `generators/templates/` 是模板子包：`__init__.py` 管理 JSON 模板库，`candidates.py` 构造 `TemplateCandidate`，`classification.py` 做模板 family/stage 分类，`metadata.py` 建模板元数据索引，`partner_fields.py` 发现 ratio 配对字段，`priority.py` 做自适应优先级和 family 裁剪，`refine.py` 生成 near-pass 精修模板，`variations.py` 生成 feedback/bucket/trade_when/历史复用变体。
+- `generators/expressions.py` 现在是表达式候选编排层，不再承载模板分类、元数据、优先级、refine 或 feedback mutation 的具体实现。
+- `api/client.py` 保留 Brain API 客户端主体；`api/payloads.py` 放响应 payload 解析，`api/timing.py` 放等待和 `Retry-After` 解析。
 
-这次重构的目标是把原先集中在 `main.py`、`models/base.py`、`io/output.py` 的大杂烩职责拆开，让入口、运行态、分析构建、策略和 IO 边界更清晰。
+这次重构的目标是把原先集中在少数大文件里的职责拆开，让入口、运行态、分析构建、配置、模板生成、策略和 IO 边界更清晰。旧入口仍保持兼容，例如 `from alpha.config import get_yaml_config`、`from alpha.generators.templates import load_template_library` 仍然可用。
 
 ## 安装
 
@@ -316,6 +350,18 @@ YAML 中打开的布尔开关可以用 `--no-*` 在命令行临时关闭：
 python3 -m alpha --no-submit --no-auto-update-blacklist
 python3 -m alpha --no-smoke-test --no-full-run
 ```
+
+## 配置代码结构
+
+配置入口仍然是 `alpha.config`，内部已拆成子模块：
+
+- `config/__init__.py`：公共兼容入口，集中导出常量、getter 和策略函数
+- `config/models.py`：`DatasetExpressionPolicy`、`FieldTransformSpec`、`FeedbackLoopPolicy`
+- `config/yaml.py`：`settings.yaml` 查找、加载和缓存
+- `config/defaults.py`：把 YAML `global` 配置合并到 CLI 参数
+- `config/profiles.py`：dataset profile fallback
+
+实际运行配置优先维护在 `settings.yaml`、`data/templates/` 和 `data/blacklists/`，不要把数据集专属模板重新塞回 Python 常量。
 
 ## 结果解读
 
