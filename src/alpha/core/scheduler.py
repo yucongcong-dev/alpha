@@ -35,10 +35,10 @@ from ..io.output import (
 )
 from ..models.base import (
     ExecutionState,
-    FieldTestResult,
     FutureCompletionContext,
     RuntimeConcurrencyState,
 )
+from .result_processing import apply_completed_result
 from .simulation import build_failure_result
 
 logger = logging.getLogger(__name__)
@@ -109,100 +109,18 @@ def handle_completed_future(
             message=str(exc),
         )
 
-    execution_state.results.append(result)
-    execution_state.unique_field_ids.add(result.field_id)
-    if result.submittable:
-        execution_state.submittable_count += 1
-    if result.submitted:
-        execution_state.submitted_count += 1
-    if result.status == "error":
-        execution_state.error_count += 1
-    if is_queue_timeout_result(result):
-        execution_state.queue_timeout_count += 1
-    if is_informative_result(result):
-        execution_state.attempted_keys.add(result_identity(result))
-    template_stats = update_template_stats_with_result(execution_state.template_stats, result)
-    execution_state.template_stats = template_stats
-
-    # 根据结果状态使用不同日志级别
-    if result.status == "error":
-        logger.error(
-            "[result] field=%s template=%s status=ERROR message=%s",
-            result.field_id,
-            result.template_name,
-            result.message,
-        )
-    elif not result.submittable:
-        logger.debug(
-            "[result] field=%s template=%s status=%s submittable=%s message=%s",
-            result.field_id,
-            result.template_name,
-            result.status,
-            result.submittable,
-            result.message,
-        )
-    else:
-        logger.info(
-            "[result] field=%s template=%s status=%s submittable=%s submitted=%s message=%s",
-            result.field_id,
-            result.template_name,
-            result.status,
-            result.submittable,
-            result.submitted,
-            result.message,
-        )
-    if getattr(args, "auto_update_blacklist", False):
-        if not execution_state.blacklist_runtime_stats and len(execution_state.results) > 1:
-            execution_state.blacklist_runtime_stats = build_blacklist_runtime_stats(
-                execution_state.results[:-1]
-            )
-        auto_update_blacklist_incremental(
-            execution_state.blacklist_runtime_stats,
-            execution_state.blacklisted_template_names,
-            result,
-            args.dataset_id,
-        )
-    execution_state.persisted_result_count = dump_results_incremental(
-        args.output,
-        args.dataset_id,
-        [result],
-        persisted_result_count=execution_state.persisted_result_count,
-        tested=len(execution_state.results),
-        unique_fields_tested=len(execution_state.unique_field_ids),
-        submittable_count=execution_state.submittable_count,
-        submitted_count=execution_state.submitted_count,
-        error_count=execution_state.error_count,
-        queue_timeout_count=execution_state.queue_timeout_count,
-        settings_fingerprint=completion_ctx.settings_fingerprint,
-        template_library_fingerprint=completion_ctx.template_library_fingerprint,
-        run_config=completion_ctx.run_config,
+    return apply_completed_result(
+        result,
+        completion_ctx=completion_ctx,
+        execution_state=execution_state,
+        is_informative_result_fn=is_informative_result,
+        is_queue_timeout_result_fn=is_queue_timeout_result,
+        result_identity_fn=result_identity,
+        update_template_stats_with_result_fn=update_template_stats_with_result,
+        build_blacklist_runtime_stats_fn=build_blacklist_runtime_stats,
+        auto_update_blacklist_incremental_fn=auto_update_blacklist_incremental,
+        dump_results_incremental_fn=dump_results_incremental,
     )
-    congestion_detected = False
-    if "CONCURRENT_SIMULATION_LIMIT_EXCEEDED" in result.message:
-        congestion_detected = True
-        logger.warning(
-            "[congestion] concurrent simulation limit exceeded for field=%s",
-            result.field_id,
-        )
-    if isinstance(result.message, str) and "queued too long" in result.message.lower():
-        congestion_detected = True
-        logger.warning(
-            "[congestion] queue timeout for field=%s template=%s",
-            result.field_id,
-            result.template_name,
-        )
-    if (
-        result.failed_stage == "simulation"
-        and isinstance(result.message, str)
-        and "rate limited" in result.message.lower()
-    ):
-        congestion_detected = True
-    queue_busy_field_id = None
-    if result.failed_stage == "simulation" and isinstance(result.message, str):
-        lowered = result.message.lower()
-        if "queued too long" in lowered or "queue budget" in lowered:
-            queue_busy_field_id = result.field_id
-    return template_stats, congestion_detected, queue_busy_field_id
 
 
 # ============================================================================

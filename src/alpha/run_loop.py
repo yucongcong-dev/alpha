@@ -12,6 +12,7 @@ from __future__ import annotations
 import argparse
 from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
 import logging
+import time
 from typing import Any
 
 from .analysis.feedback import should_stop_after_submittable
@@ -36,6 +37,15 @@ from .core import (
     throttle_before_submission,
 )
 from .models.base import InitializedRunContext, TemplateBuildContext
+from .loop_support import (
+    create_template_build_context,
+    drain_remaining_futures,
+    drain_until_capacity,
+    persist_field_progress,
+    restore_fields_from_state,
+    save_runtime_checkpoint,
+    submit_template_future,
+)
 from .utils.helpers import choose_field_name, choose_field_type, first_non_empty
 
 logger = logging.getLogger(__name__)
@@ -102,21 +112,13 @@ def run_field_test_loop(
     field_template_batch_size = max(0, int(getattr(args, "field_template_batch_size", 0) or 0))
     field_resume_positions = build_field_resume_positions(original_fields)
 
-    resumed_index = 0
-    if state_file:
-        resumed_index = load_pipeline_state(
-            state_file,
-            runtime_state=runtime_state,
-            execution_state=execution_state,
-        )
-        if resumed_index > 0:
-            resumed_index = normalize_resume_index(resumed_index, len(fields))
-            logger.info(
-                "[resume] 从字段索引 %d/%d 附近继续 (优先从该位置恢复，但不会丢掉更早字段)",
-                resumed_index + 1,
-                len(fields),
-            )
-            fields = fields[resumed_index:] + fields[:resumed_index]
+    fields, resumed_index = restore_fields_from_state(
+        fields=fields,
+        state_file=state_file,
+        runtime_state=runtime_state,
+        execution_state=execution_state,
+        normalize_resume_index_fn=normalize_resume_index,
+    )
 
     if args.dry_run_plan:
         print_dry_run_plan(
@@ -130,18 +132,12 @@ def run_field_test_loop(
         )
         return
 
-    template_build_ctx = TemplateBuildContext(
+    template_build_ctx = create_template_build_context(
         args=args,
-        all_fields=fields,
-        template_library=run_ctx.template_library,
-        field_feedback=run_ctx.historical_state.field_feedback,
-        global_failed_check_counts=run_ctx.historical_state.global_failed_check_counts,
-        include_templates=run_ctx.filters.include_templates,
-        exclude_templates=run_ctx.filters.exclude_templates,
-        use_dataset_heuristics=run_ctx.use_dataset_heuristics,
-        expression_policy=run_ctx.expression_policy,
+        run_ctx=run_ctx,
+        fields=fields,
+        existing_results_count=len(execution_state.results),
     )
-    setattr(template_build_ctx, "_feedback_result_count", len(execution_state.results))
 
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
         last_field_id = ""
@@ -241,21 +237,14 @@ def run_field_test_loop(
 
                         maybe_restore_runtime_concurrency(runtime_state)
 
-                        while len(execution_state.pending_futures) >= runtime_state.runtime_max_workers:
-                            done, _ = wait(
-                                set(execution_state.pending_futures), return_when=FIRST_COMPLETED
-                            )
-                            drain_completed_futures(
-                                completed_futures=list(done),
-                                execution_state=execution_state,
-                                args=args,
-                                settings_fingerprint=run_ctx.settings_fingerprint,
-                                template_library_fingerprint=run_ctx.template_library_fingerprint,
-                                run_config=run_ctx.run_config,
-                                runtime_state=runtime_state,
-                            )
-                            if field_id in execution_state.skipped_fields_due_to_queue:
-                                break
+                        if not drain_until_capacity(
+                            executor_state=execution_state,
+                            runtime_state=runtime_state,
+                            args=args,
+                            run_ctx=run_ctx,
+                            field_id=field_id,
+                        ):
+                            break
 
                         logger.debug(
                             "[progress] field=%s template %d/%d name=%s priority=%d queued=%d/%d settings=%s",
@@ -271,47 +260,32 @@ def run_field_test_loop(
 
                         throttle_before_submission(args, execution_state)
 
-                        field_with_template = dict(field)
-                        field_with_template["template_family"] = template_family
-                        field_with_template["template_stage"] = template_stage
-                        future = executor.submit(
-                            run_field_test_in_worker,
-                            run_ctx.client_factory,
-                            args,
-                            field_with_template,
-                            template_name,
-                            expression,
-                            variant_fingerprint,
-                            run_ctx.template_library_fingerprint,
-                            settings_variant,
-                            run_ctx.create_semaphore,
-                        )
-
-                        execution_state.last_submission_at = time.monotonic()
-                        execution_state.pending_futures[future] = {
-                            "field_id": field_id,
-                            "field_name": field_name,
-                            "field_type": field_type,
-                            "template_name": template_name,
-                            "template_family": template_family,
-                            "template_stage": template_stage,
-                            "expression": expression,
-                            "settings_fingerprint": variant_fingerprint,
-                        }
-
-                    if state_file:
-                        completed_index = field_resume_positions.get(field_id, field_index)
-                        completed_index = normalize_resume_index(
-                            completed_index,
-                            len(original_fields),
-                        )
-                        save_pipeline_state(
-                            state_file,
-                            completed_field_index=completed_index,
+                        submit_template_future(
+                            executor=executor,
+                            run_ctx=run_ctx,
                             execution_state=execution_state,
-                            runtime_state=runtime_state,
+                            args=args,
+                            field=field,
                             field_id=field_id,
+                            field_name=field_name,
+                            field_type=field_type,
+                            template_name=template_name,
+                            template_family=template_family,
+                            template_stage=template_stage,
+                            expression=expression,
+                            settings_variant=settings_variant,
+                            variant_fingerprint=variant_fingerprint,
                         )
+                    persist_field_progress(
+                        state_file=state_file,
+                        field_id=field_id,
+                        field_index=field_index,
+                        original_fields=original_fields,
+                        field_resume_positions=field_resume_positions,
+                        execution_state=execution_state,
+                        runtime_state=runtime_state,
+                        normalize_resume_index_fn=normalize_resume_index,
+                    )
 
                 if field_template_batch_size <= 0 or should_stop_after_submittable(
                     args, execution_state.results
@@ -321,45 +295,33 @@ def run_field_test_loop(
                     logger.info("[schedule] no pending templates remain after round=%d", round_index)
                     break
 
-            while execution_state.pending_futures:
-                done, _ = wait(set(execution_state.pending_futures), return_when=FIRST_COMPLETED)
-                drain_completed_futures(
-                    completed_futures=list(done),
-                    execution_state=execution_state,
-                    args=args,
-                    settings_fingerprint=run_ctx.settings_fingerprint,
-                    template_library_fingerprint=run_ctx.template_library_fingerprint,
-                    run_config=run_ctx.run_config,
-                    runtime_state=runtime_state,
-                )
-                if state_file:
-                    completed_index = resumed_index + len(fields)
-                    save_pipeline_state(
-                        state_file,
-                        completed_field_index=completed_index,
-                        execution_state=execution_state,
-                        runtime_state=runtime_state,
-                        field_id=last_field_id,
-                    )
+            drain_remaining_futures(
+                state_file=state_file,
+                resumed_index=resumed_index,
+                fields=fields,
+                last_field_id=last_field_id,
+                execution_state=execution_state,
+                runtime_state=runtime_state,
+                args=args,
+                run_ctx=run_ctx,
+            )
         except KeyboardInterrupt:
-            if checkpoint_file:
-                save_checkpoint(
-                    checkpoint_file,
-                    execution_state=execution_state,
-                    runtime_state=runtime_state,
-                    field_id=last_field_id or "",
-                    remaining_fields=max(0, len(fields)),
-                    reason="KeyboardInterrupt",
-                )
+            save_runtime_checkpoint(
+                checkpoint_file=checkpoint_file,
+                execution_state=execution_state,
+                runtime_state=runtime_state,
+                last_field_id=last_field_id,
+                fields=fields,
+                reason="KeyboardInterrupt",
+            )
             raise
         except Exception:
-            if checkpoint_file:
-                save_checkpoint(
-                    checkpoint_file,
-                    execution_state=execution_state,
-                    runtime_state=runtime_state,
-                    field_id=last_field_id or "",
-                    remaining_fields=max(0, len(fields)),
-                    reason="Exception",
-                )
+            save_runtime_checkpoint(
+                checkpoint_file=checkpoint_file,
+                execution_state=execution_state,
+                runtime_state=runtime_state,
+                last_field_id=last_field_id,
+                fields=fields,
+                reason="Exception",
+            )
             raise

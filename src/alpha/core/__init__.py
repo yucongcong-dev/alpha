@@ -16,6 +16,7 @@ from .executor import (
     should_skip_expression_by_history,
     should_skip_field,
 )
+from .result_processing import apply_completed_result, detect_result_congestion
 from .scheduler import (
     apply_congestion_cooldown,
     drain_completed_futures,
@@ -38,6 +39,10 @@ from .simulation import (
     submit_with_retry,
     summarize_failure,
 )
+from .template_queue import (
+    build_pending_template_variants,
+    resolve_field_template_candidates,
+)
 from .checkpoint import (
     delete_pipeline_state,
     load_pipeline_state,
@@ -47,8 +52,10 @@ from .checkpoint import (
 
 __all__ = [
     "apply_congestion_cooldown",
+    "apply_completed_result",
     "build_failure_result",
     "build_pending_templates_for_field",
+    "build_pending_template_variants",
     "inflight_template_keys",
     "checksubmit_with_retry",
     "create_simulation_with_retry",
@@ -58,12 +65,14 @@ __all__ = [
     "extract_checks",
     "extract_failed_checks",
     "handle_completed_future",
+    "detect_result_congestion",
     "is_submittable_from_checks",
     "load_pipeline_state",
     "maybe_restore_runtime_concurrency",
     "poll_simulation_with_retry",
     "print_dry_run_plan",
     "register_queue_busy_field",
+    "resolve_field_template_candidates",
     "run_field_test",
     "run_field_test_in_worker",
     "save_checkpoint",

@@ -21,32 +21,19 @@ from collections.abc import Mapping, Sequence
 import logging
 from typing import Any
 
-from ..analysis.feedback import (
-    choose_settings_variant_budget,
-    is_legacy_family_disabled,
-    is_template_disabled,
-    select_nearpass_candidates,
-    should_keep_template_for_feedback,
-    should_skip_field_template_family,
+from ..config import SENTINEL_UNKNOWN, get_dataset_expression_policy
+from .template_queue import (
+    build_pending_template_variants,
+    resolve_field_template_candidates,
 )
-from ..analysis.stats import historical_template_priority_bonus
-from ..config import (
-    CHECK_CONCENTRATED_WEIGHT,
-    FEEDBACK_STAGE_RESIMULATE,
-    CHECK_LOW_FITNESS,
-    CHECK_LOW_SHARPE,
-    CHECK_LOW_SUB_UNIVERSE_SHARPE,
-    SENTINEL_UNKNOWN,
-    get_dataset_expression_policy,
-    resolve_feedback_stage,
+from .template_filters import (
+    is_template_actionable,
+    should_skip_expression_by_history,
+    should_skip_field,
 )
-from ..generators.expressions import classify_expression_family, classify_template_stage
 from ..generators.expressions import (
-    build_refine_templates,
     build_expression_candidates,
-    cap_templates_per_family,
-    limit_templates,
-    sort_templates_by_priority,
+    build_refine_templates,
 )
 from ..generators.settings import (
     build_setting_variants,
@@ -56,13 +43,12 @@ from ..models.base import (
     ExecutionState,
     FieldTestResult,
     HistoricalRunState,
-    NearPassCandidate,
     RunFilters,
     SettingsVariant,
     TemplateBuildContext,
     TemplateLibrary,
 )
-from ..utils.helpers import choose_field_name, first_non_empty, is_event_field_name
+from ..utils.helpers import choose_field_name, first_non_empty
 
 logger = logging.getLogger(__name__)
 
@@ -130,293 +116,45 @@ def build_pending_templates_for_field(
     args = build_ctx.args
     field_id = str(first_non_empty(field.get("id"), SENTINEL_UNKNOWN))
     field_name = choose_field_name(field)
-    field_feedback = build_ctx.field_feedback.get(field_id)
-    expression_policy = build_ctx.expression_policy or get_dataset_expression_policy(args.dataset_id)
-    is_event_field = is_event_field_name(field_name, expression_policy.event_field_prefixes)
-    max_templates_per_field = (
-        expression_policy.event_max_templates_per_field
-        if is_event_field and expression_policy.event_max_templates_per_field > 0
-        else args.max_templates_per_field
+    templates, field_feedback, expression_policy = resolve_field_template_candidates(
+        build_ctx,
+        field,
+        prior_results=prior_results,
+        build_refine_templates_fn=build_refine_templates,
+        build_expression_candidates_fn=build_expression_candidates,
     )
-    max_templates_per_family = (
-        expression_policy.event_max_templates_per_family
-        if is_event_field and expression_policy.event_max_templates_per_family > 0
-        else args.max_templates_per_family
-    )
-    feedback_stage = resolve_feedback_stage(
-        field_feedback,
-        expression_policy.feedback_loop_policy,
-    )
-    nearpass_candidates = (
-        select_nearpass_candidates(
-            field_id,
-            prior_results,
-            expression_policy=expression_policy,
-        )
-        if feedback_stage == FEEDBACK_STAGE_RESIMULATE
-        else []
-    )
-    if nearpass_candidates:
-        templates = build_refine_templates(
-            field_name,
-            nearpass_candidates,
-            expression_policy=expression_policy,
-        )
-        templates = limit_templates(
-            cap_templates_per_family(
-                sort_templates_by_priority(templates),
-                max_templates_per_family,
-            ),
-            max_templates_per_field,
-        )
-    else:
-        templates = build_expression_candidates(
-            field,
-            build_ctx.template_library,
-            max_templates_per_field,
-            max_templates_per_family,
-            args.legacy_similarity_penalty,
-            all_fields=build_ctx.all_fields,
-            field_feedback=field_feedback,
-            global_failed_check_counts=build_ctx.global_failed_check_counts,
-            use_dataset_heuristics=build_ctx.use_dataset_heuristics,
-            dataset_id=args.dataset_id,
-            expression_policy=expression_policy,
-        )
-    templates = limit_templates(
-        cap_templates_per_family(
-            sort_templates_by_priority(templates),
-            max_templates_per_family,
-        ),
-        max_templates_per_field,
-    )
-    pending_templates: list[tuple[str, str, str, str, int, SettingsVariant, str]] = []
+    enabled_templates: list[Any] = []
     disabled_templates = 0
-    all_reserved_keys = attempted_keys | (reserved_keys or set())
-    max_setting_variants = choose_settings_variant_budget(
-        field_feedback,
-        expression_policy=build_ctx.expression_policy,
-    )
     for template in templates:
-        template_name = template.name
-        expression = template.expression
-        priority = template.priority
-        template_metadata = template.metadata
-        template_family = classify_expression_family(
-            template_name,
-            expression,
-            template_metadata,
-        )
-        template_stage = classify_template_stage(
-            template_name,
-            expression,
-            template_metadata,
-        )
-        if build_ctx.include_templates and template_name not in build_ctx.include_templates:
+        if build_ctx.include_templates and template.name not in build_ctx.include_templates:
             continue
-        if template_name in build_ctx.exclude_templates:
+        if template.name in build_ctx.exclude_templates:
             continue
-        if not should_keep_template_for_feedback(
-            template_name,
-            expression,
-            priority,
-            field_feedback,
-            expression_policy=expression_policy,
-            template_metadata=template_metadata,
-        ):
-            disabled_templates += 1
-            continue
-        if should_skip_field_template_family(
-            field_name,
-            template_name,
-            expression,
-            template_metadata=template_metadata,
-            expression_policy=expression_policy,
-        ):
-            disabled_templates += 1
-            continue
-        if is_template_disabled(template_name, template_stats, args.template_disable_after):
-            disabled_templates += 1
-            continue
-        if is_legacy_family_disabled(
-            template_name,
-            expression,
-            template_stats,
-            args.disable_legacy_after,
-            template_metadata=template_metadata,
-        ):
-            disabled_templates += 1
-            continue
-        if should_skip_expression_by_history(field_id, template_name, expression, prior_results):
-            disabled_templates += 1
-            continue
-        effective_priority = priority + historical_template_priority_bonus(
-            template_name, template_stats
-        )
-        refine_candidate = None
-        refine_failed_checks = template_metadata.get("refine_failed_checks")
-        if isinstance(refine_failed_checks, list):
-            refine_candidate = NearPassCandidate(
-                field_id=field_id,
-                field_name=field_name,
-                template_name=template_name,
-                expression=expression,
-                template_family=template_family,
-                template_stage=template_stage,
-                score=float(template_metadata.get("refine_score", 0.0) or 0.0),
-                failed_checks=[
-                    check for check in refine_failed_checks if isinstance(check, dict)
-                ],
-            )
-        for settings_variant in build_setting_variants(
-            args,
-            template_name,
-            expression,
+        if is_template_actionable(
+            template=template,
+            build_ctx=build_ctx,
+            field_id=field_id,
+            field_name=field_name,
             field_feedback=field_feedback,
-            refine_candidate=refine_candidate,
-        )[:max_setting_variants]:
-            variant_fingerprint = build_settings_fingerprint_from_payload(settings_variant)
-            if (field_id, template_name, expression, variant_fingerprint) in all_reserved_keys:
-                continue
-            pending_templates.append(
-                (
-                    template_name,
-                    template_family,
-                    template_stage,
-                    expression,
-                    effective_priority,
-                    settings_variant,
-                    variant_fingerprint,
-                )
-            )
-    pending_templates.sort(key=lambda item: (-item[4], item[0], item[3], item[6]))
+            expression_policy=expression_policy,
+            template_stats=template_stats,
+            prior_results=prior_results,
+        ):
+            enabled_templates.append(template)
+        else:
+            disabled_templates += 1
+    pending_templates = build_pending_template_variants(
+        build_ctx,
+        field,
+        templates=enabled_templates,
+        template_stats=template_stats,
+        attempted_keys=attempted_keys,
+        reserved_keys=reserved_keys or set(),
+        field_feedback=field_feedback,
+        build_setting_variants_fn=build_setting_variants,
+        build_settings_fingerprint_fn=build_settings_fingerprint_from_payload,
+    )
     return pending_templates, disabled_templates, len(templates)
-
-
-def should_skip_expression_by_history(
-    field_id: str,
-    template_name: str,
-    expression: str,
-    prior_results: Sequence[FieldTestResult],
-) -> bool:
-    """
-    对历史上已明显偏弱的同字段同表达式，续跑时直接跳过剩余变体。
-
-    根据历史结果判断某个表达式是否应该被跳过，
-    避免浪费资源在明显偏弱的候选上。
-
-    Args:
-        field_id: 字段 ID。
-        template_name: 模板名称。
-        expression: Alpha 表达式。
-        prior_results: 历史测试结果列表。
-
-    Returns:
-        bool: 如果应该跳过返回 True，否则返回 False。
-
-    Example:
-        >>> results = [
-        ...     FieldTestResult(
-        ...         field_id="sales",
-        ...         template_name="ts_mean_20",
-        ...         expression="rank(ts_mean(sales, 20))",
-        ...         submittable=False,
-        ...         failed_checks=[
-        ...             {"name": "LOW_SHARPE", "value": -0.1},
-        ...             {"name": "LOW_FITNESS", "value": -0.2},
-        ...         ],
-        ...     )
-        ... ]
-        >>> should_skip_expression_by_history(
-        ...     "sales", "ts_mean_20", "rank(ts_mean(sales, 20))", results
-        ... )
-        True
-
-    Note:
-        - 如果历史结果中已有可提交的相同表达式，不跳过
-        - 如果 LOW_SHARPE 和 LOW_FITNESS 都为负数，跳过
-        - 如果同时有 CONCENTRATED_WEIGHT 和 LOW_SUB_UNIVERSE_SHARPE，跳过
-    """
-    for result in prior_results:
-        if (
-            result.field_id != field_id
-            or result.template_name != template_name
-            or result.expression != expression
-        ):
-            continue
-        if result.submittable:
-            return False
-        failed_checks = result.failed_checks or []
-        if not failed_checks:
-            continue
-        values = {str(check.get("name")): check.get("value") for check in failed_checks}
-        low_sharpe = values.get(CHECK_LOW_SHARPE)
-        low_fitness = values.get(CHECK_LOW_FITNESS)
-        if (
-            isinstance(low_sharpe, (int, float))
-            and isinstance(low_fitness, (int, float))
-            and low_sharpe < 0.0
-            and low_fitness < 0.0
-        ):
-            return True
-        if CHECK_CONCENTRATED_WEIGHT in values and CHECK_LOW_SUB_UNIVERSE_SHARPE in values:
-            return True
-    return False
-
-
-def should_skip_field(
-    field_id: str,
-    field_name: str,
-    filters: RunFilters,
-    skipped_fields_due_to_queue: set[str],
-) -> bool:
-    """
-    判断某个字段是否应在生成模板前被直接跳过。
-
-    根据队列拥塞状态和过滤条件判断字段是否应该被跳过。
-
-    Args:
-        field_id: 字段 ID。
-        field_name: 字段名称。
-        filters: 运行过滤器集合。
-        skipped_fields_due_to_queue: 因队列拥塞而跳过的字段集合。
-
-    Returns:
-        bool: 如果应该跳过返回 True，否则返回 False。
-
-    Example:
-        >>> filters = RunFilters(
-        ...     include_fields=set(),
-        ...     exclude_fields=set(),
-        ...     include_templates=set(),
-        ...     exclude_templates=set(),
-        ... )
-        >>> should_skip_field("sales", "sales", filters, set())
-        False
-
-        >>> skipped = {"field_123"}
-        >>> should_skip_field("field_123", "test", filters, skipped)
-        True
-
-    Note:
-        - 如果字段在 skipped_fields_due_to_queue 中，跳过
-        - 如果 filters 指定了包含字段且字段不在其中，跳过
-        - 如果字段在排除列表中，跳过
-    """
-    if field_id in skipped_fields_due_to_queue:
-        logger.info("[skip] field=%s skipped after repeated queue-busy simulations", field_id)
-        return True
-    if (
-        filters.include_fields
-        and field_id not in filters.include_fields
-        and field_name not in filters.include_fields
-    ):
-        logger.info("[skip] field=%s excluded by include-fields filter", field_id)
-        return True
-    if field_id in filters.exclude_fields or field_name in filters.exclude_fields:
-        logger.info("[skip] field=%s excluded by exclude-fields filter", field_id)
-        return True
-    return False
 
 
 # ============================================================================
