@@ -23,6 +23,7 @@ from alpha.models.base import (
     RuntimeConcurrencyState,
 )
 from alpha.run_loop import clamp_resume_index, resolve_result_write_options, run_field_test_loop
+from alpha.run_loop_rounds import ScheduleRoundResult
 
 
 def _build_execution_state() -> ExecutionState:
@@ -76,7 +77,7 @@ def test_restore_fields_from_state_returns_empty_when_all_fields_completed(tmp_p
 
 
 def test_persist_field_progress_keeps_terminal_index() -> None:
-    with patch("alpha.loop_support.save_pipeline_state") as mock_save:
+    with patch("alpha.loop_persistence.save_pipeline_state") as mock_save:
         persist_field_progress(
             state_file="/tmp/state.json",
             field_id="f3",
@@ -99,9 +100,9 @@ def test_drain_remaining_futures_persists_total_field_count() -> None:
         execution_state.pending_futures.clear()
 
     with (
-        patch("alpha.loop_support.wait", return_value=({future}, set())),
-        patch("alpha.loop_support.drain_completed_futures", side_effect=_drain),
-        patch("alpha.loop_support.save_pipeline_state") as mock_save,
+        patch("alpha.loop_future_support.wait", return_value=({future}, set())),
+        patch("alpha.loop_future_support.drain_completed_futures", side_effect=_drain),
+        patch("alpha.loop_future_support.save_pipeline_state") as mock_save,
     ):
         drain_remaining_futures(
             state_file="/tmp/state.json",
@@ -132,9 +133,14 @@ def test_run_field_test_loop_persists_progress_for_skipped_fields(tmp_path) -> N
                 feedback_result_count=0,
             ),
         ),
-        patch("alpha.run_loop.should_stop_after_submittable", return_value=False),
-        patch("alpha.run_loop.should_skip_field", side_effect=[True, True]),
-        patch("alpha.run_loop.persist_field_progress") as mock_persist,
+        patch(
+            "alpha.run_loop.execute_schedule_round",
+            return_value=ScheduleRoundResult(
+                progressed=False,
+                stop_requested=False,
+                last_field_id="f2",
+            ),
+        ) as mock_round,
         patch("alpha.run_loop.drain_remaining_futures"),
     ):
         run_field_test_loop(
@@ -146,7 +152,7 @@ def test_run_field_test_loop_persists_progress_for_skipped_fields(tmp_path) -> N
             ),
         )
 
-    assert mock_persist.call_count == 2
+    assert mock_round.call_count == 1
 
 
 def test_resolve_result_write_options_prefers_run_paths_output() -> None:
