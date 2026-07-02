@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from ..config.constants import STATUS_ERROR
 from ..models.domain import (
     AnalysisInputs,
     AnalysisPayload,
@@ -57,7 +58,7 @@ def build_results_summary_payload(
         if result.submitted:
             submitted_count += 1
             submitted_results.append(item)
-        if result.status == "error":
+        if result.status == STATUS_ERROR:
             error_count += 1
         if is_queue_timeout_result(result):
             queue_timeout_count += 1

@@ -24,7 +24,19 @@ from ..config.getters import (
     get_simulation_default_end_date,
     get_simulation_default_start_date,
 )
-from ..config.constants import TRUNCATION_TIGHTER_MAX, TRUNCATION_WEB_DEFAULT
+from ..config.constants import (
+    GROUP_NAME_SUBINDUSTRY,
+    MONTHS_PER_YEAR,
+    NEUTRALIZATION_INDUSTRY,
+    NEUTRALIZATION_MARKET,
+    NEUTRALIZATION_NONE,
+    NEUTRALIZATION_SUBINDUSTRY,
+    SETTINGS_VARIANT_DECAY_FAST,
+    SETTINGS_VARIANT_DECAY_SLOW,
+    STABLE_FINGERPRINT_HEX_LEN,
+    TRUNCATION_TIGHTER_MAX,
+    TRUNCATION_WEB_DEFAULT,
+)
 from ..config.yaml import (
     get_yaml_config,
 )
@@ -74,7 +86,7 @@ _WEBSITE_DEFAULTS: dict[str, Any] = {
     "region": "USA",
     "universe": "TOP3000",
     "delay": 1,
-    "neutralization": "SUBINDUSTRY",
+    "neutralization": NEUTRALIZATION_SUBINDUSTRY,
     "decay": 4,
     "truncation": 0.08,
     "pasteurization": "ON",
@@ -98,7 +110,7 @@ _API_TO_ARGS: dict[str, str] = {
 # argparse CLI 默认值 —— 用于判断用户是否主动传参
 _CLI_DEFAULTS: dict[str, Any] = {
     "instrument_type": "EQUITY", "region": "USA", "universe": "TOP3000",
-    "delay": 1, "decay": 4, "neutralization": "SUBINDUSTRY", "truncation": 0.08,
+    "delay": 1, "decay": 4, "neutralization": NEUTRALIZATION_SUBINDUSTRY, "truncation": 0.08,
     "pasteurization": "ON", "unit_handling": "VERIFY", "nan_handling": "OFF",
     "language": "FASTEXPR",
 }
@@ -183,13 +195,13 @@ def build_simulation_payload(args: SimulationSettingsArgs, expression: str) -> d
             years = _TEST_PERIOD_DEFAULTS["testPeriodYears"]
         if not months:
             months = _TEST_PERIOD_DEFAULTS["testPeriodMonths"]
-        total_months = (years or 0) * 12 + (months or 0)
+        total_months = (years or 0) * MONTHS_PER_YEAR + (months or 0)
         if total_months > 0:
             today = date.today()
             # 往前推 total_months 个月，日期不超过目标月末
-            comp_months = today.year * 12 + today.month - 1  # 0-based
+            comp_months = today.year * MONTHS_PER_YEAR + today.month - 1  # 0-based
             comp_months -= total_months
-            cy, cm = divmod(comp_months, 12)
+            cy, cm = divmod(comp_months, MONTHS_PER_YEAR)
             cm += 1  # 1-based month
             max_day = calendar.monthrange(cy, cm)[1]
             computed = date(cy, cm, min(today.day, max_day))
@@ -312,24 +324,24 @@ def build_setting_variants(
 
     # 如果表达式已经在公式里显式做了 group_neutralize，避免再用 settings 重复中性化。
     if "group_neutralize(" in lower_expr:
-        add_variant(neutralization="NONE", truncation=tighter_truncation)
-    elif "subindustry" in lower_expr or "group_rank(" in lower_expr:
+        add_variant(neutralization=NEUTRALIZATION_NONE, truncation=tighter_truncation)
+    elif GROUP_NAME_SUBINDUSTRY in lower_expr or "group_rank(" in lower_expr:
         # 对强 subindustry 模板给一个更大颗粒度的 neutralization 备选，
         # 有助于缓解 weight concentration / subuniverse fail。
-        add_variant(neutralization="INDUSTRY", truncation=tighter_truncation)
+        add_variant(neutralization=NEUTRALIZATION_INDUSTRY, truncation=tighter_truncation)
     else:
-        add_variant(neutralization="MARKET")
+        add_variant(neutralization=NEUTRALIZATION_MARKET)
 
     if refine_candidate is not None:
         if {"CONCENTRATED_WEIGHT", "LOW_SUB_UNIVERSE_SHARPE"} & nearpass_failed_names:
-            add_variant(neutralization="INDUSTRY", truncation=tighter_truncation)
-            add_variant(neutralization="MARKET", truncation=tighter_truncation)
+            add_variant(neutralization=NEUTRALIZATION_INDUSTRY, truncation=tighter_truncation)
+            add_variant(neutralization=NEUTRALIZATION_MARKET, truncation=tighter_truncation)
         if "LOW_TURNOVER" in nearpass_failed_names:
-            add_variant(decay=2, truncation=tighter_truncation)
+            add_variant(decay=SETTINGS_VARIANT_DECAY_FAST, truncation=tighter_truncation)
         elif "HIGH_TURNOVER" in nearpass_failed_names:
-            add_variant(decay=6, truncation=tighter_truncation)
+            add_variant(decay=SETTINGS_VARIANT_DECAY_SLOW, truncation=tighter_truncation)
         else:
-            add_variant(decay=2)
-            add_variant(decay=6, truncation=tighter_truncation)
+            add_variant(decay=SETTINGS_VARIANT_DECAY_FAST)
+            add_variant(decay=SETTINGS_VARIANT_DECAY_SLOW, truncation=tighter_truncation)
 
     return variants

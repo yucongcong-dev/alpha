@@ -19,7 +19,7 @@ from __future__ import annotations
 from collections.abc import Mapping, Sequence
 import logging
 
-from ..config.constants import SENTINEL_UNKNOWN
+from ..config.constants import DRY_RUN_SAMPLE_LIMIT, SENTINEL_UNKNOWN
 from ..config.policy import get_dataset_expression_policy
 from ..generators.expression_builder import build_expression_candidates
 from ..generators.settings import (
@@ -177,7 +177,7 @@ def print_dry_run_plan(
     historical_state: HistoricalRunState,
     execution_state: ExecutionState,
     use_dataset_heuristics: bool,
-    sample_limit: int = 20,
+    sample_limit: int = DRY_RUN_SAMPLE_LIMIT,
 ) -> None:
     """
     打印本轮计划执行的字段/模板，不创建任何 simulation。

@@ -12,6 +12,16 @@ import re
 from typing import Any
 
 from ...config import (
+    GROUP_NAME_INDUSTRY,
+    GROUP_NAME_SUBINDUSTRY,
+    REFINE_PRIORITY_BACKFILL_DELTA,
+    REFINE_PRIORITY_BASE,
+    REFINE_PRIORITY_DECAY_DELTA,
+    REFINE_PRIORITY_STEP,
+    REFINE_PRIORITY_SUBINDUSTRY_DELTA,
+    REFINE_PRIORITY_TRADE_WHEN_DELTA,
+    REFINE_PRIORITY_TSRANK_DELTA,
+    REFINE_PRIORITY_ZSCORE_DELTA,
     TEMPLATE_STAGE_EVENT_CONDITIONED,
     TEMPLATE_STAGE_GROUP_SECOND_ORDER,
     DatasetExpressionPolicy,
@@ -121,7 +131,7 @@ def build_refine_templates(
         lower_template_name = candidate.template_name.lower()
         if lower_template_name.startswith("refine_"):
             continue
-        base_priority = 260 - (index - 1) * 12
+        base_priority = REFINE_PRIORITY_BASE - (index - 1) * REFINE_PRIORITY_STEP
         family = candidate.template_family
         stage = candidate.template_stage
         layer = (
@@ -145,11 +155,11 @@ def build_refine_templates(
         )
 
         lower_expr = candidate.expression.lower()
-        if "subindustry" in lower_expr:
+        if GROUP_NAME_SUBINDUSTRY in lower_expr:
             add_candidate(
                 f"refine_industry_{index}_{candidate.template_name}",
-                re.sub(r"\bsubindustry\b", "industry", candidate.expression, count=1),
-                base_priority - 2,
+                re.sub(rf"\b{GROUP_NAME_SUBINDUSTRY}\b", GROUP_NAME_INDUSTRY, candidate.expression, count=1),
+                base_priority + REFINE_PRIORITY_SUBINDUSTRY_DELTA,
                 family=family,
                 stage=stage,
                 layer=layer,
@@ -185,7 +195,7 @@ def build_refine_templates(
             add_candidate(
                 f"refine_tsrank_{suffix}_{index}_{candidate.template_name}",
                 expr,
-                base_priority - 4,
+                base_priority + REFINE_PRIORITY_TSRANK_DELTA,
                 family=family or "ts_rank",
                 stage=stage,
                 layer=layer,
@@ -203,7 +213,7 @@ def build_refine_templates(
             add_candidate(
                 f"refine_backfill_{suffix}_{index}_{candidate.template_name}",
                 expr,
-                base_priority - 5,
+                base_priority + REFINE_PRIORITY_BACKFILL_DELTA,
                 family=family,
                 stage=stage,
                 layer=layer,
@@ -217,7 +227,7 @@ def build_refine_templates(
             add_candidate(
                 f"refine_trade_when_volume_{index}_{candidate.template_name}",
                 f"trade_when(ts_mean(volume, 10) > ts_mean(volume, 60), {candidate.expression}, -1)",
-                base_priority - 6,
+                base_priority + REFINE_PRIORITY_TRADE_WHEN_DELTA,
                 family="event_trade_when",
                 stage=TEMPLATE_STAGE_EVENT_CONDITIONED,
                 layer="event",
@@ -231,7 +241,7 @@ def build_refine_templates(
             add_candidate(
                 f"refine_decay_{index}_{candidate.template_name}",
                 f"ts_decay_linear({candidate.expression}, 6)",
-                base_priority - 7,
+                base_priority + REFINE_PRIORITY_DECAY_DELTA,
                 family="neutralize_decay",
                 stage=stage,
                 layer=layer,

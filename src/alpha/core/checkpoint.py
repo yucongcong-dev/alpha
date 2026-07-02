@@ -20,6 +20,7 @@ import os
 import time
 from typing import Any
 
+from ..config.constants import CHECKPOINT_PENDING_FUTURES_LIMIT, CHECKPOINT_RESUME_SAFETY_SECONDS
 from ..models.runtime import ExecutionState, RuntimeConcurrencyState
 
 logger = logging.getLogger(__name__)
@@ -158,7 +159,7 @@ def load_pipeline_state(
     # 恢复上次提交时间（需注意单调钟在进程重启后不连续）
     if last_submission > 0:
         # 保守估计：减去一个安全余量，避免立即节流
-        execution_state.last_submission_at = max(0, time.monotonic() - 30.0)
+        execution_state.last_submission_at = max(0, time.monotonic() - CHECKPOINT_RESUME_SAFETY_SECONDS)
 
     logger.info(
         "[checkpoint] resumed from state_file=%s completed=%d "
@@ -210,7 +211,7 @@ def save_checkpoint(
 
     # 收集待处理任务摘要
     pending_summary: list[dict[str, str]] = []
-    for meta in list(execution_state.pending_futures.values())[-50:]:
+    for meta in list(execution_state.pending_futures.values())[-CHECKPOINT_PENDING_FUTURES_LIMIT:]:
         if isinstance(meta, dict):
             field_id = str(meta.get("field_id", ""))
             template_name = str(meta.get("template_name", ""))

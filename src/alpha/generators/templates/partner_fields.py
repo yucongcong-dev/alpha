@@ -10,7 +10,18 @@ from __future__ import annotations
 from collections.abc import Sequence
 import re
 
-from ...config import ALLOWED_EXTERNAL_RATIO_PARTNERS, DatasetExpressionPolicy
+from ...config import (
+    ALLOWED_EXTERNAL_RATIO_PARTNERS,
+    PARTNER_KEYWORD_MATCH_SCORE,
+    PARTNER_PREFERRED_BASE_SCORE,
+    PARTNER_RANK_MAX_SCORE,
+    PARTNER_RANK_STEP_PENALTY,
+    PARTNER_REVERSE_KEYWORD_SCORE,
+    PARTNER_SELF_MATCH_PENALTY,
+    PARTNER_SHARED_TOKEN_WEIGHT,
+    PARTNER_SUBSTRING_SCORE,
+    DatasetExpressionPolicy,
+)
 from ...models.base import TemplateField
 from ...utils.helpers import choose_field_name, choose_field_type
 
@@ -42,24 +53,24 @@ def score_partner_candidate(
     得分越高表示越适合配对；负值表示应排除。
     """
     if field_name == partner_name:
-        return -10_000
+        return PARTNER_SELF_MATCH_PENALTY
     field_tokens = set(tokenize_field_name(field_name))
     partner_tokens = set(tokenize_field_name(partner_name))
     score = 0
     preferred_partners = policy.ratio_partner_candidates.get(field_name, ())
     if partner_name in preferred_partners:
-        score += 180
+        score += PARTNER_PREFERRED_BASE_SCORE
         preferred_rank = preferred_partners.index(partner_name)
-        score += max(0, 30 - preferred_rank * 5)
+        score += max(0, PARTNER_RANK_MAX_SCORE - preferred_rank * PARTNER_RANK_STEP_PENALTY)
     if partner_name in policy.ratio_keywords.get(field_name, ()):
-        score += 100
+        score += PARTNER_KEYWORD_MATCH_SCORE
     if field_name in policy.ratio_keywords.get(partner_name, ()):
-        score += 80
+        score += PARTNER_REVERSE_KEYWORD_SCORE
     if field_tokens & partner_tokens:
-        score += 10 * len(field_tokens & partner_tokens)
+        score += PARTNER_SHARED_TOKEN_WEIGHT * len(field_tokens & partner_tokens)
     for token in field_tokens:
         if token and token in partner_name:
-            score += 5
+            score += PARTNER_SUBSTRING_SCORE
     score += int(policy.preferred_partner_score_bonuses.get(partner_name, 0))
     return score
 

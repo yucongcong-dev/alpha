@@ -9,6 +9,7 @@ import time
 from ..config.constants import (
     API_BASE,
     SIM_ACCEPT_HEADER,
+    SIM_TERMINAL_STATES,
     SIMULATIONS_URL,
 )
 from ..config.getters import (
@@ -137,7 +138,7 @@ class BrainSimulationsMixin:
                 body_status = str(
                     first_non_empty(payload.get("status"), payload.get("state"), "")
                 ).upper()
-                if body_status in {"COMPLETED", "FAILED", "ERROR", "CANCELLED"}:
+                if body_status in SIM_TERMINAL_STATES:
                     logger.info(
                         "[simulation] terminal state detected body_status=%s ignoring Retry-After header",
                         body_status,

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 
+from ..config.constants import SMOKE_TEST_MAX_PENDING_CYCLES, SMOKE_TEST_MAX_QUEUE_SECONDS
 from ..config.defaults import apply_yaml_global_defaults
 from ..config.profiles import get_dataset_profile
 from ..config.yaml import get_yaml_config
@@ -70,8 +71,8 @@ def apply_run_mode_overrides(args: argparse.Namespace) -> None:
         args.max_templates_per_field = 1
         args.max_concurrent_simulations = 1
         args.max_concurrent_creates = 1
-        args.simulation_max_pending_cycles = min(args.simulation_max_pending_cycles, 60)
-        args.simulation_max_queue_seconds = min(args.simulation_max_queue_seconds, 300)
+        args.simulation_max_pending_cycles = min(args.simulation_max_pending_cycles, SMOKE_TEST_MAX_PENDING_CYCLES)
+        args.simulation_max_queue_seconds = min(args.simulation_max_queue_seconds, SMOKE_TEST_MAX_QUEUE_SECONDS)
         return
     if args.full_run:
         args.limit = 0

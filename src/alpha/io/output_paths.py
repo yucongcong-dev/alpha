@@ -8,6 +8,7 @@ import logging
 from pathlib import Path
 import time
 
+from ..config.constants import DATE_FORMAT_ISO
 from ..io.common import (
     CACHE_DIR,
     DATA_DIR,
@@ -63,7 +64,7 @@ def build_output_sidecar_paths(output_path: str) -> dict[str, str]:
     base_name = output.stem or "results"
     if not output.suffix:
         base_name = output.name or "results"
-    log_date = time.strftime("%Y-%m-%d")
+    log_date = time.strftime(DATE_FORMAT_ISO)
     return {
         "analysis": str(base_dir / f"{base_name}_analysis.json"),
         "results_journal": str(base_dir / f"{base_name}_results.jsonl"),

@@ -10,6 +10,8 @@ from ..config.constants import (
     CHECK_CONCENTRATED_WEIGHT,
     CHECK_LOW_FITNESS,
     CHECK_LOW_SHARPE,
+    DATE_FORMAT_ISO,
+    DATE_FORMAT_ISO_MINUTES,
 )
 from ..config.models import DatasetExpressionPolicy
 from ..config.policy import get_dataset_expression_policy
@@ -147,7 +149,7 @@ def _build_blacklist_entry_from_runtime_summary(
         "fields_tested": fields_tested,
         "low_sharpe": low_sharpe_count,
         "low_fitness": low_fitness_count,
-        "date_blacklisted": datetime.now().strftime("%Y-%m-%d"),
+        "date_blacklisted": datetime.now().strftime(DATE_FORMAT_ISO),
     }
     if avg_sharpe is not None:
         entry["avg_sharpe"] = avg_sharpe
@@ -202,7 +204,7 @@ def auto_update_blacklist(
     if added == 0:
         return
 
-    bl_data["_updated"] = datetime.now().strftime("%Y-%m-%d %H:%M")
+    bl_data["_updated"] = datetime.now().strftime(DATE_FORMAT_ISO_MINUTES)
     blacklist_path = write_blacklist_payload(dataset_id, bl_data, data_dir=data_dir)
     invalidate_blacklist_runtime_cache(dataset_id)
     logger.info(
@@ -254,7 +256,7 @@ def auto_update_blacklist_incremental(
         blacklisted_template_names.add(entry["name"])
         return False
     bl_data["blacklisted_templates"].append(entry)
-    bl_data["_updated"] = datetime.now().strftime("%Y-%m-%d %H:%M")
+    bl_data["_updated"] = datetime.now().strftime(DATE_FORMAT_ISO_MINUTES)
     blacklist_path = write_blacklist_payload(dataset_id, bl_data, data_dir=data_dir)
     invalidate_blacklist_runtime_cache(dataset_id)
     blacklisted_template_names.add(entry["name"])

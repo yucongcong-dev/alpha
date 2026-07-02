@@ -5,6 +5,7 @@ bootstrap 执行态与历史结果装配辅助模块。
 from __future__ import annotations
 
 from .analysis.stats import is_queue_timeout_result
+from .config.constants import STATUS_ERROR
 from .io.results_store import dump_results_incremental, initialize_results_journal
 from .models.runtime import ExecutionState
 from .policy import build_blacklist_runtime_stats, load_blacklisted_template_names
@@ -17,7 +18,7 @@ def populate_execution_metrics(execution_state: ExecutionState) -> None:
         1 for result in execution_state.results if result.submittable
     )
     execution_state.submitted_count = sum(1 for result in execution_state.results if result.submitted)
-    execution_state.error_count = sum(1 for result in execution_state.results if result.status == "error")
+    execution_state.error_count = sum(1 for result in execution_state.results if result.status == STATUS_ERROR)
     execution_state.queue_timeout_count = sum(
         1 for result in execution_state.results if is_queue_timeout_result(result)
     )

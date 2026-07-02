@@ -12,6 +12,7 @@ from __future__ import annotations
 import logging
 
 from .analysis.stats import current_submittable_count
+from .config.constants import STATUS_ERROR
 from .core import delete_pipeline_state
 from .io.results_store import dump_results
 from .models.io_types import RunPaths
@@ -42,7 +43,7 @@ def finalize_run(
         "[done] 测试完成：tested=%d submittable=%d errors=%d",
         len(execution_state.results),
         current_submittable_count(execution_state.results),
-        sum(1 for result in execution_state.results if result.status == "error"),
+        sum(1 for result in execution_state.results if result.status == STATUS_ERROR),
     )
     dump_results(
         output_path,

@@ -10,6 +10,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any
 
+from ..config.constants import STATUS_ERROR
+
 FailedCheck = dict[str, Any]
 """单条失败检查项。"""
 
@@ -159,7 +161,7 @@ class FieldTestContext:
         message: str,
         simulation_id: str | None = None,
         alpha_id: str | None = None,
-        status: str = "error",
+        status: str = STATUS_ERROR,
         failed_checks: list[FailedCheck] | None = None,
     ) -> FieldTestResult:
         return FieldTestResult(

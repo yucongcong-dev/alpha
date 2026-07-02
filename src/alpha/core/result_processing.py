@@ -15,6 +15,7 @@ from ..analysis.stats import (
     result_identity,
     update_template_stats_with_result,
 )
+from ..config.constants import STATUS_ERROR
 from ..io.results_store import dump_results_incremental
 from ..models.domain import FieldTestResult
 from ..models.runtime import ExecutionState, FutureCompletionContext
@@ -67,7 +68,7 @@ def apply_completed_result(
         execution_state.submittable_count += 1
     if result.submitted:
         execution_state.submitted_count += 1
-    if result.status == "error":
+    if result.status == STATUS_ERROR:
         execution_state.error_count += 1
     if is_queue_timeout_result_fn(result):
         execution_state.queue_timeout_count += 1
@@ -76,7 +77,7 @@ def apply_completed_result(
     template_stats = update_template_stats_with_result_fn(execution_state.template_stats, result)
     execution_state.template_stats = template_stats
 
-    if result.status == "error":
+    if result.status == STATUS_ERROR:
         logger.error(
             "[result] field=%s template=%s status=ERROR message=%s",
             result.field_id,

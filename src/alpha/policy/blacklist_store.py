@@ -9,6 +9,7 @@ import logging
 import os
 import time
 
+from ..config.constants import BLACKLIST_SCHEMA_VERSION, DATE_FORMAT_ISO
 from ..io.common import (
     atomic_write_json,
     resolve_runtime_data_dir,
@@ -44,10 +45,10 @@ def invalidate_blacklist_path_cache(dataset_id: str = "", *, data_dir: str = "")
 
 def build_default_blacklist(dataset_id: str) -> BlacklistPayload:
     return {
-        "_version": "v2",
+        "_version": BLACKLIST_SCHEMA_VERSION,
         "_comment": f"Template blacklist for {dataset_id} — auto-populated from test results.",
-        "_created": time.strftime("%Y-%m-%d"),
-        "_updated": time.strftime("%Y-%m-%d"),
+        "_created": time.strftime(DATE_FORMAT_ISO),
+        "_updated": time.strftime(DATE_FORMAT_ISO),
         "dataset_id": dataset_id,
         "blacklisted_templates": [],
         "auto_avoid_rules": [],

@@ -172,6 +172,80 @@ DEFAULT_TEMPLATE_DISABLE_AFTER: int = 12
 PREFERRED_FIELD_RANK_SENTINEL: int = 999        # 未匹配的 preferred_field_order 排名
 DEFAULT_SETTINGS_VARIANT_BUDGET: int = 3        # feedback 阶段 settings 变体生成上限
 
+# ---- Smoke test 安全边界（cli/arg_resolution） ----
+SMOKE_TEST_MAX_PENDING_CYCLES: int = 60
+SMOKE_TEST_MAX_QUEUE_SECONDS: int = 300
+
+# ---- 伙伴字段配对评分权重（partner_fields） ----
+PARTNER_SELF_MATCH_PENALTY: int = -10_000       # 同一个字段自身配对的惩罚
+PARTNER_PREFERRED_BASE_SCORE: int = 180          # 在推荐配对列表中的基础加分
+PARTNER_RANK_MAX_SCORE: int = 30                # 排名加分的起点
+PARTNER_RANK_STEP_PENALTY: int = 5              # 每降低一个排名的扣分
+PARTNER_KEYWORD_MATCH_SCORE: int = 100           # 出现在关键词列表中的加分
+PARTNER_REVERSE_KEYWORD_SCORE: int = 80          # 反向关键词匹配加分
+PARTNER_SHARED_TOKEN_WEIGHT: int = 10            # 共享 token 的每个加分权重
+PARTNER_SUBSTRING_SCORE: int = 5                 # 子串匹配的每个加分
+
+# ---- 日期格式字符串 ----
+DATE_FORMAT_ISO: str = "%Y-%m-%d"
+DATE_FORMAT_ISO_MINUTES: str = "%Y-%m-%d %H:%M"
+
+# ---- 黑名单 schema 版本 ----
+BLACKLIST_SCHEMA_VERSION: str = "v2"
+
+# ---- 时间/单位转换 ----
+MONTHS_PER_YEAR: int = 12
+
+# ---- Brain API 中性化策略字符串（generators/settings） ----
+NEUTRALIZATION_NONE: str = "NONE"
+NEUTRALIZATION_INDUSTRY: str = "INDUSTRY"
+NEUTRALIZATION_MARKET: str = "MARKET"
+NEUTRALIZATION_SUBINDUSTRY: str = "SUBINDUSTRY"  # Brain 官网默认中性化类型
+
+# ---- Brain 分组名称（表达式内 group key，refine/settings） ----
+GROUP_NAME_SUBINDUSTRY: str = "subindustry"
+GROUP_NAME_INDUSTRY: str = "industry"
+
+# ---- Simulation 状态字符串（API polling，api/payloads & api/simulations） ----
+SIM_STATE_PENDING: str = "PENDING"
+SIM_STATE_RUNNING: str = "RUNNING"
+SIM_STATE_QUEUED: str = "QUEUED"
+SIM_STATE_COMPLETED: str = "COMPLETED"
+SIM_STATE_FAILED: str = "FAILED"
+SIM_STATE_ERROR: str = "ERROR"
+SIM_STATE_CANCELLED: str = "CANCELLED"
+#: 活跃（未完成）的 simulation 状态集合
+SIM_ACTIVE_STATES: frozenset[str] = frozenset({SIM_STATE_PENDING, SIM_STATE_RUNNING, SIM_STATE_QUEUED})
+#: 终态（已完成或失败）的 simulation 状态集合
+SIM_TERMINAL_STATES: frozenset[str] = frozenset({SIM_STATE_COMPLETED, SIM_STATE_FAILED, SIM_STATE_ERROR, SIM_STATE_CANCELLED})
+
+# ---- API 响应/日志截断限制 ----
+PAYLOAD_TEXT_TRUNCATION_LIMIT: int = 500
+
+# ---- 指纹/哈希摘要长度 ----
+STABLE_FINGERPRINT_HEX_LEN: int = 16
+
+# ---- 检查点恢复参数（core/checkpoint） ----
+CHECKPOINT_RESUME_SAFETY_SECONDS: float = 30.0
+CHECKPOINT_PENDING_FUTURES_LIMIT: int = 50
+
+# ---- 干运行样本限制（core/executor） ----
+DRY_RUN_SAMPLE_LIMIT: int = 20
+
+# ---- Settings 变体 decay 策略（generators/settings） ----
+SETTINGS_VARIANT_DECAY_FAST: int = 2   # LOW_TURNOVER 时加速换手
+SETTINGS_VARIANT_DECAY_SLOW: int = 6   # HIGH_TURNOVER 时减速换手
+
+# ---- Near-pass 精修优先级（templates/refine） ----
+REFINE_PRIORITY_BASE: int = 260            # 基础优先级
+REFINE_PRIORITY_STEP: int = 12             # 每个候选递减
+REFINE_PRIORITY_SUBINDUSTRY_DELTA: int = -2   # subindustry→industry 替换的惩罚
+REFINE_PRIORITY_ZSCORE_DELTA: int = -3     # zscore 窗口替换的惩罚
+REFINE_PRIORITY_TSRANK_DELTA: int = -4     # ts_rank 窗口替换的惩罚
+REFINE_PRIORITY_BACKFILL_DELTA: int = -5   # backfill 窗口替换的惩罚
+REFINE_PRIORITY_TRADE_WHEN_DELTA: int = -6 # trade_when 包装的惩罚
+REFINE_PRIORITY_DECAY_DELTA: int = -7      # ts_decay_linear 包装的惩罚
+
 SENTINEL_UNKNOWN: str = "UNKNOWN"
 SENTINEL_UNKNOWN_CHECK: str = "UNKNOWN"
 SENTINEL_UNKNOWN_STATUS: str = "unknown"

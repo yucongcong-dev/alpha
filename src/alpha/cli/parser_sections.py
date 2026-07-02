@@ -5,7 +5,7 @@ from __future__ import annotations
 import argparse
 import os
 
-from ..config.constants import DEFAULT_DATASET_ID
+from ..config.constants import DEFAULT_DATASET_ID, NEUTRALIZATION_SUBINDUSTRY
 from .constants import DEFAULT_CREDS_FILE, DEFAULT_CREDS_KEY_FILE
 
 
@@ -67,7 +67,7 @@ def add_dataset_arguments(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--instrument-type", default="EQUITY", help="工具类型")
     parser.add_argument("--delay", type=int, default=1, help="延迟天数")
     parser.add_argument("--decay", type=int, default=0, help="衰减天数 (Decay)")
-    parser.add_argument("--neutralization", default="SUBINDUSTRY", help="中性化类型 (Neutralization)")
+    parser.add_argument("--neutralization", default=NEUTRALIZATION_SUBINDUSTRY, help="中性化类型 (Neutralization)")
     parser.add_argument("--truncation", type=float, default=0.05, help="截断阈值 (Truncation)")
     parser.add_argument("--nan-handling", default="ON", help="NaN 处理方式 (NaN Handling)")
     parser.add_argument("--pasteurization", default="ON", help="Pasteurization 开关 (ON/OFF)")
