@@ -89,8 +89,15 @@ def build_field_resume_positions(fields: list[dict[str, Any]]) -> dict[str, int]
     }
 
 
+def clamp_resume_index(resume_index: int, total_fields: int) -> int:
+    """把续跑索引限制在当前字段列表范围内，并保留“已全部完成”终态。"""
+    if total_fields <= 0:
+        return 0
+    return max(0, min(resume_index, total_fields))
+
+
 def normalize_resume_index(resume_index: int, total_fields: int) -> int:
-    """把续跑索引限制在当前字段列表范围内。"""
+    """兼容旧调用方的续跑索引归一化入口。"""
     if total_fields <= 0:
         return 0
     return resume_index % total_fields
@@ -117,7 +124,7 @@ def run_field_test_loop(
         state_file=state_file,
         runtime_state=runtime_state,
         execution_state=execution_state,
-        normalize_resume_index_fn=normalize_resume_index,
+        clamp_resume_index_fn=clamp_resume_index,
     )
 
     if args.dry_run_plan:
@@ -173,6 +180,15 @@ def run_field_test_loop(
                         run_ctx.filters,
                         execution_state.skipped_fields_due_to_queue,
                     ):
+                        persist_field_progress(
+                            state_file=state_file,
+                            field_id=field_id,
+                            field_index=field_index,
+                            original_fields=original_fields,
+                            field_resume_positions=field_resume_positions,
+                            execution_state=execution_state,
+                            runtime_state=runtime_state,
+                        )
                         continue
 
                     pending_templates, disabled_templates, template_count = (
@@ -284,7 +300,6 @@ def run_field_test_loop(
                         field_resume_positions=field_resume_positions,
                         execution_state=execution_state,
                         runtime_state=runtime_state,
-                        normalize_resume_index_fn=normalize_resume_index,
                     )
 
                 if field_template_batch_size <= 0 or should_stop_after_submittable(
@@ -297,8 +312,7 @@ def run_field_test_loop(
 
             drain_remaining_futures(
                 state_file=state_file,
-                resumed_index=resumed_index,
-                fields=fields,
+                total_fields=len(original_fields),
                 last_field_id=last_field_id,
                 execution_state=execution_state,
                 runtime_state=runtime_state,

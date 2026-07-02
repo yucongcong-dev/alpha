@@ -32,7 +32,7 @@ def restore_fields_from_state(
     state_file: str,
     runtime_state: RuntimeConcurrencyState,
     execution_state: ExecutionState,
-    normalize_resume_index_fn,
+    clamp_resume_index_fn,
 ) -> tuple[list[dict[str, Any]], int]:
     """从 pipeline state 恢复字段起点，并把字段列表旋转到恢复位置。"""
     resumed_index = 0
@@ -45,7 +45,13 @@ def restore_fields_from_state(
     )
     if resumed_index <= 0:
         return fields, resumed_index
-    resumed_index = normalize_resume_index_fn(resumed_index, len(fields))
+    resumed_index = clamp_resume_index_fn(resumed_index, len(fields))
+    if resumed_index >= len(fields):
+        logger.info(
+            "[resume] state_file 记录的字段进度已覆盖全部 %d 个字段，直接进入收尾阶段",
+            len(fields),
+        )
+        return [], resumed_index
     logger.info(
         "[resume] 从字段索引 %d/%d 附近继续 (优先从该位置恢复，但不会丢掉更早字段)",
         resumed_index + 1,
@@ -159,16 +165,12 @@ def persist_field_progress(
     field_resume_positions: dict[str, int],
     execution_state: ExecutionState,
     runtime_state: RuntimeConcurrencyState,
-    normalize_resume_index_fn,
 ) -> None:
     """在字段完成后保存 pipeline state。"""
     if not state_file:
         return
     completed_index = field_resume_positions.get(field_id, field_index)
-    completed_index = normalize_resume_index_fn(
-        completed_index,
-        len(original_fields),
-    )
+    completed_index = max(0, min(completed_index, len(original_fields)))
     save_pipeline_state(
         state_file,
         completed_field_index=completed_index,
@@ -181,8 +183,7 @@ def persist_field_progress(
 def drain_remaining_futures(
     *,
     state_file: str,
-    resumed_index: int,
-    fields: list[dict[str, Any]],
+    total_fields: int,
     last_field_id: str,
     execution_state: ExecutionState,
     runtime_state: RuntimeConcurrencyState,
@@ -202,10 +203,9 @@ def drain_remaining_futures(
             runtime_state=runtime_state,
         )
         if state_file:
-            completed_index = resumed_index + len(fields)
             save_pipeline_state(
                 state_file,
-                completed_field_index=completed_index,
+                completed_field_index=max(0, total_fields),
                 execution_state=execution_state,
                 runtime_state=runtime_state,
                 field_id=last_field_id,
