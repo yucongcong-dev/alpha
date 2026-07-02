@@ -9,7 +9,7 @@ from math import log1p
 from typing import Any
 
 from .analysis.stats import field_priority
-from .config.constants import SENTINEL_UNKNOWN, STATS_DEFAULT_SCORE
+from .config.constants import PREFERRED_FIELD_RANK_SENTINEL, SENTINEL_UNKNOWN, STATS_DEFAULT_SCORE
 from .config.models import DatasetExpressionPolicy
 from .models.io_types import RunFilters
 from .models.runtime import FieldSelectionArgs, HistoricalRunState, TemplateField
@@ -168,8 +168,8 @@ def prepare_fields_for_execution(
             feedback is not None and priority >= expression_policy.promising_field_min_priority
         )
         is_unexplored = feedback is None
-        preferred_rank = expression_policy.preferred_field_order.get(field_name, 999)
-        is_preferred_direction = preferred_rank < 999
+        preferred_rank = expression_policy.preferred_field_order.get(field_name, PREFERRED_FIELD_RANK_SENTINEL)
+        is_preferred_direction = preferred_rank < PREFERRED_FIELD_RANK_SENTINEL
         is_overtested_weak = (
             field_name in expression_policy.overtested_weak_fields and feedback is not None
         )

@@ -12,6 +12,8 @@ from ...config import (
     EXPR_NEARPASS_BOOST_THRESHOLD,
     FEEDBACK_STAGE_GENERATE,
     FEEDBACK_STAGE_RESIMULATE,
+    MUTATION_ACCOUNT_EXTEND_THRESHOLD,
+    MUTATION_DOMINANT_CHECK_LIMIT,
     STATS_DEFAULT_SCORE,
     DatasetExpressionPolicy,
     get_backfill_window,
@@ -49,7 +51,7 @@ def build_feedback_mutations(
 
     mutations = list(base_mutations)
     failed_counts = field_feedback.get("failed_check_counts", {})
-    dominant_names = dominant_failed_check_names(failed_counts, limit=3)
+    dominant_names = dominant_failed_check_names(failed_counts, limit=MUTATION_DOMINANT_CHECK_LIMIT)
     best_expression = str(field_feedback.get("best_expression", "")).strip()
     best_score = float(field_feedback.get("best_score", STATS_DEFAULT_SCORE))
     best_template_name = str(field_feedback.get("best_template_name", "")).strip()
@@ -58,7 +60,7 @@ def build_feedback_mutations(
         mutations.extend(build_nearpass_extension_mutations(field_name, bw))
 
     if feedback_stage == FEEDBACK_STAGE_RESIMULATE and (
-        best_template_name in {"account_rank_backfill_504", "account_ir_60"} or best_score >= 0.45
+        best_template_name in {"account_rank_backfill_504", "account_ir_60"} or best_score >= MUTATION_ACCOUNT_EXTEND_THRESHOLD
     ):
         mutations.extend(build_account_resimulation_mutations(field_name, bw))
 

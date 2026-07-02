@@ -7,22 +7,34 @@ settings.yaml 的 dataset_profiles 段为唯一推荐来源。
 
 from __future__ import annotations
 
+from .constants import (
+    DEFAULT_FIELD_TEMPLATE_BATCH_SIZE,
+    DEFAULT_MAX_CONCURRENT_CREATES,
+    DEFAULT_MAX_CONCURRENT_SIMULATIONS,
+    DEFAULT_MAX_TEMPLATES_PER_FIELD,
+    DEFAULT_MIN_REQUEST_INTERVAL,
+    DEFAULT_QUEUE_BUSY_COOLDOWN_SECONDS,
+    DEFAULT_SIMULATION_MAX_QUEUE_SECONDS,
+    DEFAULT_SIMULATION_MAX_WAIT_SECONDS,
+    DEFAULT_SLEEP_BETWEEN_FIELDS,
+    DEFAULT_TEMPLATE_DISABLE_AFTER,
+)
 from .types import DatasetProfile, YamlConfig
 
 DATASET_PROFILES: dict[str, DatasetProfile] = {}
 """向后兼容保留的空字典；数据集专属配置请维护在 settings.yaml。"""
 
 DEFAULT_PROFILE: DatasetProfile = {
-    "min_request_interval": 2.0,
-    "sleep_between_fields": 5.0,
-    "max_concurrent_simulations": 1,
-    "max_concurrent_creates": 1,
-    "max_templates_per_field": 12,
-    "field_template_batch_size": 2,
-    "simulation_max_wait_seconds": 900,
-    "simulation_max_queue_seconds": 600,
-    "queue_busy_cooldown_seconds": 120,
-    "template_disable_after": 12,
+    "min_request_interval": DEFAULT_MIN_REQUEST_INTERVAL,
+    "sleep_between_fields": DEFAULT_SLEEP_BETWEEN_FIELDS,
+    "max_concurrent_simulations": DEFAULT_MAX_CONCURRENT_SIMULATIONS,
+    "max_concurrent_creates": DEFAULT_MAX_CONCURRENT_CREATES,
+    "max_templates_per_field": DEFAULT_MAX_TEMPLATES_PER_FIELD,
+    "field_template_batch_size": DEFAULT_FIELD_TEMPLATE_BATCH_SIZE,
+    "simulation_max_wait_seconds": DEFAULT_SIMULATION_MAX_WAIT_SECONDS,
+    "simulation_max_queue_seconds": DEFAULT_SIMULATION_MAX_QUEUE_SECONDS,
+    "queue_busy_cooldown_seconds": DEFAULT_QUEUE_BUSY_COOLDOWN_SECONDS,
+    "template_disable_after": DEFAULT_TEMPLATE_DISABLE_AFTER,
 }
 """未在 YAML dataset_profiles 中匹配时使用的默认运行参数。"""
 

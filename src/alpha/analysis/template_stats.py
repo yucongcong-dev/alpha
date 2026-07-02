@@ -28,6 +28,13 @@ from ..config.constants import (
     STATUS_ERROR,
     STATUS_SIMULATED,
     STATUS_SUBMITTED,
+    TEMPLATE_HISTORY_CONCENTRATED_PENALTY,
+    TEMPLATE_HISTORY_ERROR_PENALTY,
+    TEMPLATE_HISTORY_LOW_PERF_PENALTY,
+    TEMPLATE_HISTORY_SIMULATED_BASE,
+    TEMPLATE_HISTORY_SIMULATED_CAP,
+    TEMPLATE_HISTORY_SIMULATED_STEP,
+    TEMPLATE_HISTORY_SUBMITTABLE_BONUS,
 )
 from ..models.domain import FieldTestResult
 from .result_identity import is_queue_timeout_result
@@ -97,17 +104,17 @@ def historical_template_priority_bonus(
     if not stat:
         return 0
     if stat[STAT_FIELD_SUBMITTABLE] > 0:
-        return 200 * multiplier
+        return TEMPLATE_HISTORY_SUBMITTABLE_BONUS * multiplier
     if stat[STAT_FIELD_SIMULATED] > 0:
-        bonus = 40 + min(stat[STAT_FIELD_SIMULATED], 5) * 8
+        bonus = TEMPLATE_HISTORY_SIMULATED_BASE + min(stat[STAT_FIELD_SIMULATED], TEMPLATE_HISTORY_SIMULATED_CAP) * TEMPLATE_HISTORY_SIMULATED_STEP
         if stat.get(STAT_FIELD_SUBMITTABLE, 0) == 0 and stat.get(STAT_FIELD_SIMULATED, 0) >= 3:
             if stat.get(STAT_FIELD_LOW_SHARPE, 0) >= 3 and stat.get(STAT_FIELD_LOW_FITNESS, 0) >= 3:
-                bonus -= 90
+                bonus += TEMPLATE_HISTORY_LOW_PERF_PENALTY
             if stat.get(STAT_FIELD_CONCENTRATED_WEIGHT, 0) >= 2:
-                bonus -= 60
+                bonus += TEMPLATE_HISTORY_CONCENTRATED_PENALTY
         return bonus * multiplier
     if stat[STAT_FIELD_ERRORS] >= 3 and stat[STAT_FIELD_SIMULATED] == 0:
-        return -20 * multiplier
+        return TEMPLATE_HISTORY_ERROR_PENALTY * multiplier
     return 0
 
 

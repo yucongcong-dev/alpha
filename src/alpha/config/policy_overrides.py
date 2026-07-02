@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import replace
 from typing import Any
 
-from .constants import STATS_DEFAULT_SCORE
+from .constants import DEFAULT_SETTINGS_VARIANT_BUDGET, STATS_DEFAULT_SCORE
 from .models import (
     DatasetExpressionPolicy,
     FeedbackLoopPolicy,
@@ -107,9 +107,9 @@ def _coerce_feedback_phase_policy(value: Any) -> FeedbackPhasePolicy | None:
     except (TypeError, ValueError):
         min_best_score = STATS_DEFAULT_SCORE
     try:
-        settings_variant_budget = int(value.get("settings_variant_budget", 3) or 3)
+        settings_variant_budget = int(value.get("settings_variant_budget", DEFAULT_SETTINGS_VARIANT_BUDGET) or DEFAULT_SETTINGS_VARIANT_BUDGET)
     except (TypeError, ValueError):
-        settings_variant_budget = 3
+        settings_variant_budget = DEFAULT_SETTINGS_VARIANT_BUDGET
     return FeedbackPhasePolicy(
         min_attempted_templates=min_attempted_templates,
         min_best_score=min_best_score,

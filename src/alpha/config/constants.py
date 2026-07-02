@@ -139,6 +139,39 @@ PRIORITY_ADJ_VOL_SCALED_DELTA_NEARPASS: int = -8
 PRIORITY_ADJ_ACCOUNT_TEMPLATES: int = 22
 DOMINANT_FAILED_CHECK_LIMIT: int = 4
 
+# ---- 模板历史评分奖励/惩罚（template_stats） ----
+TEMPLATE_HISTORY_SUBMITTABLE_BONUS: int = 200  # submittable 模板的固定奖励
+TEMPLATE_HISTORY_SIMULATED_BASE: int = 40      # simulated 模板的基础奖励
+TEMPLATE_HISTORY_SIMULATED_CAP: int = 5         # simulated 次数奖励上限
+TEMPLATE_HISTORY_SIMULATED_STEP: int = 8        # 每多模拟一次增加的奖励
+TEMPLATE_HISTORY_LOW_PERF_PENALTY: int = -90    # low_sharpe + low_fitness 的惩罚
+TEMPLATE_HISTORY_CONCENTRATED_PENALTY: int = -60  # concentrated_weight 的惩罚
+TEMPLATE_HISTORY_ERROR_PENALTY: int = -20       # 多次 error 且未 simulated 的惩罚
+
+# ---- Mutation 阶段阈值（feedback_mutations） ----
+MUTATION_DOMINANT_CHECK_LIMIT: int = 3
+MUTATION_ACCOUNT_EXTEND_THRESHOLD: float = 0.45
+
+# ---- 参数回退默认值（generators/settings） ----
+TRUNCATION_WEB_DEFAULT: float = 0.08    # Brain 官网 truncation 默认值
+TRUNCATION_TIGHTER_MAX: float = 0.05    # 收紧模式下的 truncation 上限
+
+# ---- DEFAULT_PROFILE 回退值（config/profiles） ----
+DEFAULT_MIN_REQUEST_INTERVAL: float = 2.0
+DEFAULT_SLEEP_BETWEEN_FIELDS: float = 5.0
+DEFAULT_MAX_CONCURRENT_SIMULATIONS: int = 1
+DEFAULT_MAX_CONCURRENT_CREATES: int = 1
+DEFAULT_MAX_TEMPLATES_PER_FIELD: int = 12
+DEFAULT_FIELD_TEMPLATE_BATCH_SIZE: int = 2
+DEFAULT_SIMULATION_MAX_WAIT_SECONDS: int = 900
+DEFAULT_SIMULATION_MAX_QUEUE_SECONDS: int = 600
+DEFAULT_QUEUE_BUSY_COOLDOWN_SECONDS: int = 120
+DEFAULT_TEMPLATE_DISABLE_AFTER: int = 12
+
+# ---- 哨兵值 ----
+PREFERRED_FIELD_RANK_SENTINEL: int = 999        # 未匹配的 preferred_field_order 排名
+DEFAULT_SETTINGS_VARIANT_BUDGET: int = 3        # feedback 阶段 settings 变体生成上限
+
 SENTINEL_UNKNOWN: str = "UNKNOWN"
 SENTINEL_UNKNOWN_CHECK: str = "UNKNOWN"
 SENTINEL_UNKNOWN_STATUS: str = "unknown"

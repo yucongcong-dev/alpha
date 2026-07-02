@@ -24,6 +24,7 @@ from ..config.getters import (
     get_simulation_default_end_date,
     get_simulation_default_start_date,
 )
+from ..config.constants import TRUNCATION_TIGHTER_MAX, TRUNCATION_WEB_DEFAULT
 from ..config.yaml import (
     get_yaml_config,
 )
@@ -304,7 +305,7 @@ def build_setting_variants(
         str(check.get("name", "")).strip()
         for check in (refine_candidate.failed_checks if refine_candidate else [])
     }
-    tighter_truncation = min(float(base_settings.get("truncation", 0.08)), 0.05)
+    tighter_truncation = min(float(base_settings.get("truncation", TRUNCATION_WEB_DEFAULT)), TRUNCATION_TIGHTER_MAX)
 
     # 对容易集中持仓的表达式优先尝试更严格的 truncation。
     add_variant(truncation=tighter_truncation)
