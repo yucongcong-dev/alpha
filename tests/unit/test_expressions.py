@@ -23,6 +23,7 @@ from alpha.generators.expressions import (
     classify_expression_family,
     is_legacy_family,
 )
+from alpha.policy.template_blacklist import invalidate_default_avoid_rules_cache
 from alpha.generators.templates import load_template_library
 
 
@@ -218,7 +219,7 @@ def test_load_default_avoid_rules_ignores_invalid_json_shape(monkeypatch, tmp_pa
     (data_dir / "template_blacklist.json").write_text(json.dumps([]), encoding="utf-8")
 
     monkeypatch.chdir(tmp_path)
-    monkeypatch.setattr("alpha.generators.expressions._DEFAULT_AVOID_RULES_CACHE", None)
+    invalidate_default_avoid_rules_cache()
 
     assert _load_default_avoid_rules() == []
 

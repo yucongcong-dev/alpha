@@ -17,7 +17,7 @@ from ...config import (
     DatasetExpressionPolicy,
 )
 from ...models.base import NearPassCandidate, TemplateCandidate
-from ...policy.template_blacklist import blacklist_match_reason as _policy_blacklist_match_reason
+from ...policy.template_blacklist import is_blacklisted_template as _policy_is_blacklisted_template
 from .candidates import _candidate_metadata, _make_template_candidate
 from .classification import classify_expression_family, classify_template_stage
 
@@ -31,25 +31,14 @@ def _is_blacklisted_template(
     policy: DatasetExpressionPolicy | None = None,
 ) -> bool:
     """检查精修模板是否被当前策略或数据集黑名单拦截。"""
-    effective_dataset_id = policy.dataset_id if policy is not None else dataset_id
-    protected_templates = policy.protected_templates if policy is not None else set()
-    blocked_name_substrings = (
-        policy.blacklisted_template_name_substrings if policy is not None else ()
-    )
-    current_family = classify_expression_family(template_name, expression, template_metadata)
-    current_stage = classify_template_stage(template_name, expression, template_metadata)
-    return (
-        _policy_blacklist_match_reason(
-            template_name,
-            expression,
-            dataset_id=effective_dataset_id,
-            current_family=current_family,
-            current_stage=current_stage,
-            has_runtime_context=bool(template_metadata or expression),
-            protected_templates=set(protected_templates),
-            blocked_name_substrings=tuple(blocked_name_substrings),
-        )
-        is not None
+    return _policy_is_blacklisted_template(
+        template_name,
+        expression,
+        template_metadata=template_metadata,
+        dataset_id=dataset_id,
+        policy=policy,
+        current_family=classify_expression_family(template_name, expression, template_metadata),
+        current_stage=classify_template_stage(template_name, expression, template_metadata),
     )
 
 

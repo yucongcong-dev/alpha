@@ -10,6 +10,7 @@ from __future__ import annotations
 import json
 import os
 import re
+from typing import Any
 
 from ..io.common import resolve_runtime_data_dir, sanitize_dataset_id_for_filename
 from .types import (
@@ -42,6 +43,17 @@ def invalidate_blacklist_cache(dataset_id: str = "") -> None:
         _BLACKLIST_CACHE.pop(dataset_id, None)
         return
     _BLACKLIST_CACHE.clear()
+
+
+def invalidate_default_avoid_rules_cache() -> None:
+    """使跨数据集默认规避规则缓存失效。"""
+    global _DEFAULT_AVOID_RULES_CACHE
+    _DEFAULT_AVOID_RULES_CACHE = None
+
+
+def load_default_avoid_rules() -> list[BlacklistPatternRule]:
+    """加载跨数据集默认规避规则。"""
+    return _load_default_avoid_rules()
 
 
 def _load_default_avoid_rules() -> list[BlacklistPatternRule]:
@@ -180,6 +192,59 @@ def _load_blacklist(dataset_id: str) -> None:
         "dataset_signature": dataset_signature,
         "default_signature": default_cache_signature,
     }
+
+
+def runtime_blacklist_match_reason(
+    template_name: str,
+    expression: str = "",
+    *,
+    template_metadata: dict[str, Any] | None = None,
+    dataset_id: str = "",
+    policy: Any | None = None,
+    current_family: str = "",
+    current_stage: str = "",
+) -> str | None:
+    """Match a template against blacklist rules with optional runtime policy context."""
+    effective_dataset_id = policy.dataset_id if policy is not None else dataset_id
+    protected_templates = policy.protected_templates if policy is not None else set()
+    blocked_name_substrings = (
+        policy.blacklisted_template_name_substrings if policy is not None else ()
+    )
+    return blacklist_match_reason(
+        template_name,
+        expression,
+        dataset_id=effective_dataset_id,
+        current_family=current_family,
+        current_stage=current_stage,
+        has_runtime_context=bool(template_metadata or expression),
+        protected_templates=set(protected_templates),
+        blocked_name_substrings=tuple(blocked_name_substrings),
+    )
+
+
+def is_blacklisted_template(
+    template_name: str,
+    expression: str = "",
+    *,
+    template_metadata: dict[str, Any] | None = None,
+    dataset_id: str = "",
+    policy: Any | None = None,
+    current_family: str = "",
+    current_stage: str = "",
+) -> bool:
+    """Return whether the template is blocked by dataset or policy blacklist rules."""
+    return (
+        runtime_blacklist_match_reason(
+            template_name,
+            expression,
+            template_metadata=template_metadata,
+            dataset_id=dataset_id,
+            policy=policy,
+            current_family=current_family,
+            current_stage=current_stage,
+        )
+        is not None
+    )
 
 
 def blacklist_match_reason(

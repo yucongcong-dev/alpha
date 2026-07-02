@@ -44,21 +44,12 @@ from ..models.domain import (
     TemplateLibrary,
 )
 from ..models.runtime import TemplateFeedback, TemplateField
-from ..policy import template_blacklist as _template_blacklist_policy
-from ..policy.template_blacklist import (
-    _BLACKLIST_CACHE as _BLACKLIST_CACHE,
-)
-from ..policy.template_blacklist import (
-    _DEFAULT_AVOID_RULES_CACHE,
-)
-from ..policy.template_blacklist import (
-    _load_default_avoid_rules as _policy_load_default_avoid_rules,
-)
-from ..policy.template_blacklist import (
-    blacklist_match_reason as _policy_blacklist_match_reason,
-)
 from ..policy.template_blacklist import (
     invalidate_blacklist_cache as invalidate_blacklist_cache,
+    invalidate_default_avoid_rules_cache,
+    is_blacklisted_template as _policy_is_blacklisted_template,
+    load_default_avoid_rules,
+    runtime_blacklist_match_reason as _policy_runtime_blacklist_match_reason,
 )
 from ..utils.helpers import choose_field_name, choose_field_type, is_event_field_name
 from .templates.candidates import (
@@ -126,9 +117,7 @@ from .templates.variations import (
 
 def _load_default_avoid_rules() -> list[dict[str, str]]:
     """兼容导出：加载跨数据集默认规避规则。"""
-    if _DEFAULT_AVOID_RULES_CACHE is None:
-        _template_blacklist_policy._DEFAULT_AVOID_RULES_CACHE = None
-    return _policy_load_default_avoid_rules()
+    return list(load_default_avoid_rules())
 
 
 def _policy_template_priority_adjustment(
@@ -184,15 +173,14 @@ def _is_blacklisted_template(
     dataset_id: str = "",
     policy: DatasetExpressionPolicy | None = None,
 ) -> bool:
-    return (
-        _blacklist_match_reason(
-            template_name,
-            expression,
-            template_metadata=template_metadata,
-            dataset_id=dataset_id,
-            policy=policy,
-        )
-        is not None
+    return _policy_is_blacklisted_template(
+        template_name,
+        expression,
+        template_metadata=template_metadata,
+        dataset_id=dataset_id,
+        policy=policy,
+        current_family=classify_expression_family(template_name, expression, template_metadata),
+        current_stage=classify_template_stage(template_name, expression, template_metadata),
     )
 
 
@@ -214,22 +202,14 @@ def _blacklist_match_reason(
     Returns:
         bool: 在黑名单中返回 True。
     """
-    effective_dataset_id = policy.dataset_id if policy is not None else dataset_id
-    protected_templates = policy.protected_templates if policy is not None else set()
-    blocked_name_substrings = (
-        policy.blacklisted_template_name_substrings if policy is not None else ()
-    )
-    current_family = classify_expression_family(template_name, expression, template_metadata)
-    current_stage = classify_template_stage(template_name, expression, template_metadata)
-    return _policy_blacklist_match_reason(
+    return _policy_runtime_blacklist_match_reason(
         template_name,
         expression,
-        dataset_id=effective_dataset_id,
+        template_metadata=template_metadata,
+        dataset_id=dataset_id,
+        policy=policy,
         current_family=current_family,
         current_stage=current_stage,
-        has_runtime_context=bool(template_metadata or expression),
-        protected_templates=set(protected_templates),
-        blocked_name_substrings=tuple(blocked_name_substrings),
     )
 
 

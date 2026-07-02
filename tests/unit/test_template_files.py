@@ -10,7 +10,8 @@ from alpha.config import get_dataset_expression_policy
 from alpha.core.executor import build_pending_templates_for_field, inflight_template_keys
 from alpha.core.scheduler import handle_completed_future
 from alpha.generators import templates as template_module
-from alpha.generators.expressions import _BLACKLIST_CACHE, _is_blacklisted_template
+from alpha.generators.expressions import _is_blacklisted_template
+from alpha.policy.template_blacklist import invalidate_blacklist_cache
 from alpha.generators.settings import build_settings_fingerprint_from_payload
 from alpha.generators.templates import ensure_dataset_template_library, load_template_library
 from alpha.io.output import (
@@ -253,7 +254,7 @@ def test_auto_update_blacklist_is_visible_to_same_process(monkeypatch, tmp_path)
     data_dir = tmp_path / "data"
     data_dir.mkdir()
     monkeypatch.chdir(tmp_path)
-    _BLACKLIST_CACHE.clear()
+    invalidate_blacklist_cache()
 
     assert not _is_blacklisted_template("weak_template", "rank(close)", dataset_id="custom_ds")
 
@@ -306,7 +307,7 @@ def test_scheduler_dump_results_shrinks_next_template_queue(monkeypatch, tmp_pat
     data_dir.mkdir()
     results_path = tmp_path / "results.json"
     monkeypatch.chdir(tmp_path)
-    _BLACKLIST_CACHE.clear()
+    invalidate_blacklist_cache()
     _BLACKLIST_PATH_CACHE.clear()
     monkeypatch.setattr("alpha.io.output.DATA_DIR", data_dir)
     monkeypatch.setattr(
@@ -600,7 +601,7 @@ def test_blacklist_prefers_name_and_stage_over_name_only(monkeypatch, tmp_path) 
         encoding="utf-8",
     )
     monkeypatch.chdir(tmp_path)
-    _BLACKLIST_CACHE.clear()
+    invalidate_blacklist_cache()
 
     assert _is_blacklisted_template(
         "weak_template",
@@ -632,7 +633,7 @@ def test_legacy_blacklist_name_only_only_applies_without_runtime_metadata(monkey
         encoding="utf-8",
     )
     monkeypatch.chdir(tmp_path)
-    _BLACKLIST_CACHE.clear()
+    invalidate_blacklist_cache()
 
     assert _is_blacklisted_template("legacy_template", dataset_id="custom_ds")
     assert not _is_blacklisted_template(
@@ -798,7 +799,7 @@ def test_blacklist_pattern_rules_support_exact_and_regex(monkeypatch, tmp_path) 
         encoding="utf-8",
     )
     monkeypatch.chdir(tmp_path)
-    _BLACKLIST_CACHE.clear()
+    invalidate_blacklist_cache()
 
     assert _is_blacklisted_template("t1", "rank(close)", dataset_id="custom_ds")
     assert _is_blacklisted_template("t2", "rank(ts_delta(close, 5))", dataset_id="custom_ds")
