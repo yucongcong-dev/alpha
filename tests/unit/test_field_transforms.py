@@ -2,7 +2,11 @@ from __future__ import annotations
 
 from alpha.config import FieldTransformSpec, FieldTransformStage, get_dataset_expression_policy
 from alpha.generators.expressions import build_expression_candidates
-from alpha.generators.field_transforms import apply_transform_pipeline, build_field_view, iter_transform_stages
+from alpha.generators.field_transforms import (
+    apply_transform_pipeline,
+    build_field_view,
+    iter_transform_stages,
+)
 from alpha.generators.templates import load_template_library
 
 

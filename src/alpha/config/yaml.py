@@ -10,7 +10,7 @@ import os
 from pathlib import Path
 from typing import Optional
 
-from .types import YamlConfig, YamlConfigCacheEntry
+from .types import YamlConfig
 
 _YAML_SEARCH_PATHS: list[str] = [
     "settings.yaml",
@@ -52,7 +52,7 @@ def load_yaml_config(config_path: str = "") -> YamlConfig:
         return {}
 
     try:
-        with open(path, "r", encoding="utf-8") as fh:
+        with open(path, encoding="utf-8") as fh:
             data = yaml.safe_load(fh)
         if isinstance(data, dict):
             return data

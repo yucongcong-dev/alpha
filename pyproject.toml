@@ -106,11 +106,13 @@ select = [
 ignore = [
     "E501",   # line-too-long (handled by formatter)
     "UP006",  # non-pep585-annotation (requires py3.9+)
+    "UP007",  # non-pep604-annotation-union (project still runs on Python 3.9)
     "UP045",  # non-pep604-annotation-optional (requires py3.10+)
     "RUF001", # ambiguous-unicode-character-string (Chinese comments are legitimate)
     "RUF002", # ambiguous-unicode-character-docstring (Chinese docstrings are legitimate)
     "RUF003", # ambiguous-unicode-character-comment (Chinese comments are legitimate)
     "SIM105", # use-contextlib-suppress (not always clearer)
+    "PLW0603", # global-statement (used for shared request throttle/cache state)
     "PERF203", # try-except-in-loop (micro-optimization)
 ]
 fixable = ["ALL"]

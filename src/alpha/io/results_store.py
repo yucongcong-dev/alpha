@@ -4,12 +4,13 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from contextlib import suppress
 import json
 import logging
 import os
 import tempfile
-from typing import Any, Callable
+from typing import Any
 
 from ..analysis.report_builder import build_analysis_payload, build_results_summary_payload
 from ..models.base import FieldTestResult
@@ -27,8 +28,8 @@ def load_results_rows_from_journal(journal_path: str) -> list[dict[str, Any]]:
         return []
     rows: list[dict[str, Any]] = []
     with open(journal_path, encoding="utf-8") as handle:
-        for line in handle:
-            line = line.strip()
+        for raw_line in handle:
+            line = raw_line.strip()
             if not line:
                 continue
             row = json.loads(line)
@@ -154,4 +155,3 @@ def dump_results_incremental(
         len(new_results),
     )
     return persisted_result_count + len(new_results)
-

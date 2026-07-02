@@ -12,9 +12,9 @@ from alpha.analysis.feedback import (
     should_skip_field_template_family,
 )
 from alpha.analysis.stats import load_existing_results
+from alpha.config import get_dataset_expression_policy, resolve_feedback_stage
 from alpha.generators.expressions import build_refine_templates
 from alpha.generators.settings import build_setting_variants
-from alpha.config import get_dataset_expression_policy, resolve_feedback_stage
 from alpha.models.base import FieldTestResult, NearPassCandidate
 
 

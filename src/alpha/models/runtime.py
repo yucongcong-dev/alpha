@@ -220,7 +220,7 @@ class ApiClientOptions:
     login_retries: int = 0
 
     @classmethod
-    def from_args(cls, args: ApiClientArgs) -> "ApiClientOptions":
+    def from_args(cls, args: ApiClientArgs) -> ApiClientOptions:
         return cls(
             min_request_interval=float(getattr(args, "min_request_interval", 0.0) or 0.0),
             rate_limit_max_retries=int(getattr(args, "rate_limit_max_retries", 0) or 0),
@@ -253,7 +253,7 @@ class TemplateBuildOptions:
     end_date: str | None = None
 
     @classmethod
-    def from_args(cls, args: TemplateBuildArgs) -> "TemplateBuildOptions":
+    def from_args(cls, args: TemplateBuildArgs) -> TemplateBuildOptions:
         return cls(
             dataset_id=str(getattr(args, "dataset_id", "") or ""),
             max_templates_per_field=int(getattr(args, "max_templates_per_field", 0) or 0),
@@ -286,7 +286,7 @@ class ResultWriteOptions:
     auto_update_blacklist: bool = False
 
     @classmethod
-    def from_args(cls, args: ResultWriteArgs) -> "ResultWriteOptions":
+    def from_args(cls, args: ResultWriteArgs) -> ResultWriteOptions:
         return cls(
             dataset_id=str(getattr(args, "dataset_id", "") or ""),
             output_path=str(getattr(args, "output", "") or ""),
@@ -306,7 +306,7 @@ class FieldFetchOptions:
     delay: int = 0
 
     @classmethod
-    def from_args(cls, args: FieldFetchArgs) -> "FieldFetchOptions":
+    def from_args(cls, args: FieldFetchArgs) -> FieldFetchOptions:
         return cls(
             dataset_id=str(getattr(args, "dataset_id", "") or ""),
             page_size=int(getattr(args, "page_size", 0) or 0),

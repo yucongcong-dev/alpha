@@ -28,20 +28,38 @@ from typing import Any
 from ..config import (
     ALLOWED_EXTERNAL_RATIO_PARTNERS,
     DELTA_STD_PRIORITY_BOOST,
-    DatasetExpressionPolicy,
-    TEMPLATE_STAGE_EVENT_CONDITIONED,
     TEMPLATE_STAGE_FIRST_ORDER,
     TEMPLATE_STAGE_GROUP_SECOND_ORDER,
-    get_dataset_expression_policy,
+    DatasetExpressionPolicy,
     get_backfill_window,
+    get_dataset_expression_policy,
     resolve_feedback_stage,
 )
 from ..generators.field_transforms import build_field_view, build_ratio_expression
-from .templates.partner_fields import (
-    discover_partner_fields,
-    score_partner_candidate as score_partner_candidate,
-    tokenize_field_name as tokenize_field_name,
+from ..models.base import (
+    FieldView,
+    TemplateCandidate,
+    TemplateFeedback,
+    TemplateField,
+    TemplateLibrary,
 )
+from ..policy import template_blacklist as _template_blacklist_policy
+from ..policy.template_blacklist import (
+    _BLACKLIST_CACHE as _BLACKLIST_CACHE,
+)
+from ..policy.template_blacklist import (
+    _DEFAULT_AVOID_RULES_CACHE,
+)
+from ..policy.template_blacklist import (
+    _load_default_avoid_rules as _policy_load_default_avoid_rules,
+)
+from ..policy.template_blacklist import (
+    blacklist_match_reason as _policy_blacklist_match_reason,
+)
+from ..policy.template_blacklist import (
+    invalidate_blacklist_cache as invalidate_blacklist_cache,
+)
+from ..utils.helpers import choose_field_name, choose_field_type, is_event_field_name
 from .templates.candidates import (
     _candidate_metadata,
     _coerce_template_candidate,
@@ -51,41 +69,58 @@ from .templates.candidates import (
 from .templates.classification import (
     classify_expression_family,
     classify_template_stage,
-    is_legacy_family,
+)
+from .templates.classification import (
+    is_legacy_family as is_legacy_family,
 )
 from .templates.metadata import (
-    TemplateMetadataMap,
+    TemplateMetadataMap as TemplateMetadataMap,
+)
+from .templates.metadata import (
     _runtime_template_metadata,
     _select_template_items,
-    build_template_metadata_index,
-    get_template_metadata,
+)
+from .templates.metadata import (
+    build_template_metadata_index as build_template_metadata_index,
+)
+from .templates.metadata import (
+    get_template_metadata as get_template_metadata,
+)
+from .templates.partner_fields import (
+    discover_partner_fields,
+)
+from .templates.partner_fields import (
+    score_partner_candidate as score_partner_candidate,
+)
+from .templates.partner_fields import (
+    tokenize_field_name as tokenize_field_name,
 )
 from .templates.priority import (
     adaptive_template_priority_adjustment as adaptive_template_priority_adjustment,
+)
+from .templates.priority import (
     apply_adaptive_priority,
     apply_similarity_penalty,
     cap_templates_per_family,
+)
+from .templates.priority import (
     dominant_failed_check_names as dominant_failed_check_names,
+)
+from .templates.priority import (
     merge_failed_check_counts as merge_failed_check_counts,
 )
-from .templates.refine import build_refine_templates
+from .templates.refine import build_refine_templates as build_refine_templates
 from .templates.variations import (
     build_bucket_group_templates,
     build_feedback_mutations,
-    build_historical_reuse_templates,
     build_trade_when_templates,
-    invert_expression,
 )
-from ..models.base import FieldView, TemplateCandidate, TemplateFeedback, TemplateField, TemplateLibrary
-from ..policy import template_blacklist as _template_blacklist_policy
-from ..policy.template_blacklist import (
-    _BLACKLIST_CACHE,
-    _DEFAULT_AVOID_RULES_CACHE,
-    _load_default_avoid_rules as _policy_load_default_avoid_rules,
-    blacklist_match_reason as _policy_blacklist_match_reason,
-    invalidate_blacklist_cache,
+from .templates.variations import (
+    build_historical_reuse_templates as build_historical_reuse_templates,
 )
-from ..utils.helpers import choose_field_name, choose_field_type, is_event_field_name
+from .templates.variations import (
+    invert_expression as invert_expression,
+)
 
 
 def _load_default_avoid_rules() -> list[dict[str, str]]:
@@ -135,11 +170,9 @@ def _event_template_allowed(
         return True
     if policy.event_allowed_template_families and family in policy.event_allowed_template_families:
         return True
-    if policy.event_allowed_template_prefixes and any(
+    return bool(policy.event_allowed_template_prefixes and any(
         name.startswith(prefix) for prefix in policy.event_allowed_template_prefixes
-    ):
-        return True
-    return False
+    ))
 
 
 def _is_blacklisted_template(

@@ -9,7 +9,7 @@ from math import log1p
 from typing import Any
 
 from .analysis.stats import field_priority
-from .config import DatasetExpressionPolicy, SENTINEL_UNKNOWN, STATS_DEFAULT_SCORE
+from .config import SENTINEL_UNKNOWN, STATS_DEFAULT_SCORE, DatasetExpressionPolicy
 from .models.base import FieldSelectionArgs, HistoricalRunState, RunFilters, TemplateField
 from .utils.helpers import choose_field_name, first_non_empty, is_event_field_name
 

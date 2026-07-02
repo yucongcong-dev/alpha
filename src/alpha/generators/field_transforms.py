@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from typing import Any
-
 from ..config import DatasetExpressionPolicy, FieldTransformSpec, FieldTransformStage
 from ..models.base import FieldView, TemplateField
 from ..utils.helpers import choose_field_name, choose_field_type

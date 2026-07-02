@@ -263,11 +263,9 @@ def load_template_library(path: str) -> TemplateLibrary:
         优先级越高的模板在候选排序时越靠前。
     """
     # 回退：路径为空时使用内置基础模板库；指定路径不存在时由调用方先生成。
-    if not path:
-        path = _resolve_builtin_template_library_file()
-    elif not os.path.exists(path) and os.path.abspath(path) == os.path.abspath(
+    if not path or (not os.path.exists(path) and os.path.abspath(path) == os.path.abspath(
         _LEGACY_BUILTIN_TEMPLATE_LIBRARY_FILE
-    ):
+    )):
         path = _resolve_builtin_template_library_file()
 
     try:

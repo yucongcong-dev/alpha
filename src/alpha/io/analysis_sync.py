@@ -4,10 +4,10 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 import json
 import logging
 import os
-from typing import Callable
 
 from ..analysis.stats import load_existing_results
 from ..config import DEFAULT_DATASET_ID

@@ -28,11 +28,10 @@ from ..config import (
     CHECK_LOW_SHARPE,
     CHECK_LOW_SUB_UNIVERSE_SHARPE,
     CHECK_LOW_TURNOVER,
-    DatasetExpressionPolicy,
-    FEEDBACK_STAGE_GENERATE,
     FEEDBACK_STAGE_PRUNE,
     FEEDBACK_STAGE_RESIMULATE,
     FEEDBACK_TEMPLATE_MIN_PRIORITY,
+    DatasetExpressionPolicy,
     get_dataset_expression_policy,
     resolve_feedback_stage,
 )
@@ -57,9 +56,9 @@ from .stats import (
     attempted_template_keys,
     compile_field_feedback,
     compile_global_failed_check_counts,
-    failed_check_gap,
     compile_template_stats,
     current_submittable_count,
+    failed_check_gap,
     load_existing_results,
     score_failed_checks,
 )

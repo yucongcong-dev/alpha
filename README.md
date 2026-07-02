@@ -20,9 +20,12 @@ alpha/                     # 项目根目录
 │       │   ├── executor.py
 │       │   ├── scheduler.py
 │       │   ├── result_processing.py
+│       │   ├── simulation_parsing.py
+│       │   ├── simulation_results.py
+│       │   ├── simulation_stages.py
 │       │   ├── template_filters.py
 │       │   ├── template_queue.py
-│       │   └── simulation.py
+│       │   └── simulation.py   # 兼容导出层
 │       │
 │       ├── generators/    # Alpha 生成层
 │       │   ├── expressions.py
@@ -40,9 +43,15 @@ alpha/                     # 项目根目录
 │       │       └── variations.py
 │       │
 │       ├── analysis/      # 分析优化层
-│       │   ├── stats.py
 │       │   ├── feedback.py
-│       │   └── report_builder.py
+│       │   ├── failed_checks.py
+│       │   ├── feedback_stats.py
+│       │   ├── field_stats.py
+│       │   ├── report_builder.py
+│       │   ├── result_identity.py
+│       │   ├── results_loader.py
+│       │   ├── stats.py       # 兼容导出层
+│       │   └── template_stats.py
 │       │
 │       ├── api/           # API 客户端层
 │       │   ├── api_types.py
@@ -51,12 +60,18 @@ alpha/                     # 项目根目录
 │       │   └── timing.py
 │       │
 │       ├── io/            # 输入输出层
+│       │   ├── analysis_sync.py
 │       │   ├── common.py
 │       │   ├── credentials.py
-│       │   └── output.py
+│       │   ├── output_paths.py
+│       │   ├── results_store.py
+│       │   └── output.py      # 兼容导出层
 │       │
 │       ├── cli/           # 命令行接口层
+│       │   ├── constants.py
 │       │   ├── filters.py
+│       │   ├── path_resolution.py
+│       │   ├── run_config.py
 │       │   └── parser.py
 │       │
 │       ├── models/        # 数据模型层
@@ -66,16 +81,24 @@ alpha/                     # 项目根目录
 │       │   └── base.py    # 兼容导出层
 │       │
 │       ├── policy/        # 运行期策略层
-│       │   └── blacklist.py
+│       │   ├── blacklist.py
+│       │   ├── blacklist_runtime.py
+│       │   ├── blacklist_store.py
+│       │   ├── template_blacklist.py
+│       │   └── types.py
 │       │
 │       ├── utils/         # 工具函数层
 │       │   └── helpers.py
 │       │
 │       ├── config/        # 配置入口、YAML、模型、profiles、CLI defaults
 │       │   ├── __init__.py
+│       │   ├── constants.py
 │       │   ├── defaults.py
+│       │   ├── getters.py
 │       │   ├── models.py
+│       │   ├── policy.py
 │       │   ├── profiles.py
+│       │   ├── types.py
 │       │   └── yaml.py
 │       └── exceptions.py  # 自定义异常
 │
@@ -130,6 +153,7 @@ alpha/                     # 项目根目录
 
 - `main.py` 现在只保留精简入口和兼容导出，具体实现已经拆到 `bootstrap.py`、`run_loop.py`、`finalize.py`
 - `models/domain.py` 只放领域对象；`models/runtime.py` 放运行态上下文；`models/io_types.py` 放路径/过滤边界对象；`models/base.py` 仅保留兼容导出
+- `analysis/stats.py` 是兼容导出层；结果加载、失败检查评分、模板/字段统计、反馈画像已经分别拆到 `results_loader.py`、`failed_checks.py`、`template_stats.py`、`field_stats.py`、`feedback_stats.py`
 - `analysis/report_builder.py` 负责从结果构建 summary/analysis payload
 - `policy/blacklist.py` 负责黑名单策略、聚合与增量更新
 - `io/output.py` 负责结果持久化与分析边车编排，不再承载黑名单策略实现
@@ -356,9 +380,12 @@ python3 -m alpha --no-smoke-test --no-full-run
 配置入口仍然是 `alpha.config`，内部已拆成子模块：
 
 - `config/__init__.py`：公共兼容入口，集中导出常量、getter 和策略函数
+- `config/constants.py`：API、状态、统计字段和默认阈值常量
 - `config/models.py`：`DatasetExpressionPolicy`、`FieldTransformSpec`、`FeedbackLoopPolicy`
 - `config/yaml.py`：`settings.yaml` 查找、加载和缓存
 - `config/defaults.py`：把 YAML `global` 配置合并到 CLI 参数
+- `config/getters.py`：运行参数 getter
+- `config/policy.py`：dataset expression policy 构建与反馈阶段解析
 - `config/profiles.py`：dataset profile fallback
 
 实际运行配置优先维护在 `settings.yaml`、`data/templates/` 和 `data/blacklists/`，不要把数据集专属模板重新塞回 Python 常量。

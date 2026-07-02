@@ -12,7 +12,6 @@ from typing import Any
 
 from ...config import (
     TEMPLATE_STAGE_EVENT_CONDITIONED,
-    TEMPLATE_STAGE_FIRST_ORDER,
     TEMPLATE_STAGE_GROUP_SECOND_ORDER,
 )
 from ...models.base import TemplateCandidate

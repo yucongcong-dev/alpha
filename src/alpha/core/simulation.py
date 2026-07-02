@@ -8,7 +8,6 @@
 from __future__ import annotations
 
 import logging
-from typing import Any
 
 from ..api.client import BrainClient, WorkerClientFactory
 from ..config import SENTINEL_UNKNOWN

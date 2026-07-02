@@ -14,7 +14,12 @@ from ..analysis.feedback import (
     select_nearpass_candidates,
 )
 from ..analysis.stats import historical_template_priority_bonus
-from ..config import FEEDBACK_STAGE_RESIMULATE, get_dataset_expression_policy, resolve_feedback_stage
+from ..config import (
+    FEEDBACK_STAGE_RESIMULATE,
+    SENTINEL_UNKNOWN,
+    get_dataset_expression_policy,
+    resolve_feedback_stage,
+)
 from ..generators.expressions import (
     build_expression_candidates,
     build_refine_templates,
@@ -33,12 +38,11 @@ from ..models.base import (
     FieldTestResult,
     NearPassCandidate,
     SettingsVariant,
-    TemplateCandidate,
     TemplateBuildContext,
+    TemplateCandidate,
     TemplateFeedback,
 )
 from ..utils.helpers import choose_field_name, first_non_empty, is_event_field_name
-from ..config import SENTINEL_UNKNOWN
 
 
 def resolve_field_template_candidates(

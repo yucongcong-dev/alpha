@@ -69,7 +69,7 @@ def _replace_window_variants(
     seen: set[str] = set()
     for suffix, target in replacements:
         candidate = compiled.sub(
-            lambda m: f"{m.group(1)}{target}{m.group(3)}",
+            lambda m, replacement=target: f"{m.group(1)}{replacement}{m.group(3)}",
             expression,
             count=limit,
         )

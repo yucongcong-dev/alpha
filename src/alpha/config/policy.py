@@ -37,6 +37,8 @@ from .models import (
     FieldTransformStage,
 )
 from .types import ExpressionPolicyOverrides, YamlConfig
+
+
 def _tuple_tuple_int(value: Any, width: int) -> tuple[tuple[int, ...], ...]:
     if not isinstance(value, (list, tuple)):
         return ()

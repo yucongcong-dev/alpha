@@ -23,7 +23,8 @@ ruff-check:
 	@if $(PYTHON) -m ruff --version >/dev/null 2>&1; then \
 		$(PYTHON) -m ruff check .; \
 	else \
-		echo "[check] ruff not installed; skipping"; \
+		echo "[check] ruff not installed; run: $(PYTHON) -m pip install -r requirements.txt" >&2; \
+		exit 1; \
 	fi
 
 check: test help-check whitespace-check scan-secrets ruff-check

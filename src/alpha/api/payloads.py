@@ -7,8 +7,8 @@ from __future__ import annotations
 import json
 from typing import Any
 
-from .api_types import ApiPayload, ApiResultList
 from ..utils.helpers import first_non_empty
+from .api_types import ApiPayload, ApiResultList
 
 
 def safe_json_bytes(content: bytes) -> ApiPayload:

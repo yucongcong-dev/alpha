@@ -29,17 +29,8 @@ from ..config import (
 )
 from ..models.base import RunConfigArgs, RunPaths
 from .constants import (
-    CACHE_DIR,
-    CREDS_DIR,
-    DATA_DIR,
     DEFAULT_CREDS_FILE,
     DEFAULT_CREDS_KEY_FILE,
-    DEFAULT_FIELDS_CACHE_FILE,
-    DEFAULT_OUTPUT_FILE,
-    DEFAULT_TEMPLATE_LIBRARY_FILE,
-    PROJECT_ROOT,
-    RESULTS_DIR,
-    SCRIPT_DIR,
 )
 
 # 过滤器/日志函数已提取到 cli.filters，此处保留重导出以兼容
@@ -60,7 +51,7 @@ from .run_config import build_run_config_snapshot as _build_run_config_snapshot
 def collect_parser_defaults(parser: argparse.ArgumentParser) -> dict[str, Any]:
     """收集 argparse dest -> 默认值映射。"""
     defaults: dict[str, Any] = {}
-    for action in parser._actions:  # noqa: SLF001 - argparse exposes no public action iterator.
+    for action in parser._actions:
         dest = getattr(action, "dest", None)
         if not dest or dest == "help":
             continue
@@ -75,7 +66,7 @@ def collect_explicit_cli_keys(parser: argparse.ArgumentParser, argv: list[str]) 
     explicit_keys: set[str] = set()
     option_to_dest = {
         option: action.dest
-        for action in parser._actions  # noqa: SLF001 - argparse exposes no public action iterator.
+        for action in parser._actions
         for option in action.option_strings
     }
     for token in argv:

@@ -19,7 +19,12 @@ from alpha.core.scheduler import (
     register_queue_busy_field,
     throttle_before_submission,
 )
-from alpha.models.base import ExecutionState, PendingFutureContext, ResultWriteOptions, RuntimeConcurrencyState
+from alpha.models.base import (
+    ExecutionState,
+    PendingFutureContext,
+    ResultWriteOptions,
+    RuntimeConcurrencyState,
+)
 from tests.conftest import MockArgs
 
 # ============================================================================

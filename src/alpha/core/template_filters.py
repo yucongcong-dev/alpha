@@ -21,8 +21,8 @@ from ..config import (
     CHECK_LOW_FITNESS,
     CHECK_LOW_SHARPE,
     CHECK_LOW_SUB_UNIVERSE_SHARPE,
+    DatasetExpressionPolicy,
 )
-from ..config import DatasetExpressionPolicy
 from ..models.base import (
     FieldTestResult,
     RunFilters,
@@ -139,6 +139,4 @@ def is_template_actionable(
         template_metadata=template_metadata,
     ):
         return False
-    if should_skip_expression_by_history(field_id, template_name, expression, prior_results):
-        return False
-    return True
+    return not should_skip_expression_by_history(field_id, template_name, expression, prior_results)

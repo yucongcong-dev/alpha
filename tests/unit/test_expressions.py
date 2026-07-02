@@ -7,6 +7,7 @@
 from __future__ import annotations
 
 import json
+from pathlib import Path
 
 import pytest
 
@@ -23,7 +24,6 @@ from alpha.generators.expressions import (
     is_legacy_family,
 )
 from alpha.generators.templates import load_template_library
-from pathlib import Path
 
 
 class TestClassifyExpressionFamily:

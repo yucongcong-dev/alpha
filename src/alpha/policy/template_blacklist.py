@@ -61,7 +61,7 @@ def _load_default_avoid_rules() -> list[BlacklistPatternRule]:
                 if isinstance(cached_rules, list):
                     return cached_rules
             try:
-                with open(path, "r", encoding="utf-8") as fh:
+                with open(path, encoding="utf-8") as fh:
                     raw = json.load(fh)
                 if not isinstance(raw, dict):
                     continue
@@ -145,7 +145,7 @@ def _load_blacklist(dataset_id: str) -> None:
         return
     if blacklist_path:
         try:
-            with open(blacklist_path, "r", encoding="utf-8") as fh:
+            with open(blacklist_path, encoding="utf-8") as fh:
                 ds_raw = json.load(fh)
             if isinstance(ds_raw, dict):
                 for item in ds_raw.get("blacklisted_templates", []):

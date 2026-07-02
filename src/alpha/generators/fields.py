@@ -19,10 +19,11 @@ from collections.abc import Sequence
 import json
 import logging
 import os
-from typing import Any, Protocol
+from typing import Protocol
 
 from ..io.common import atomic_write_json
 from ..models.base import FieldFetchOptions, TemplateField
+
 logger = logging.getLogger(__name__)
 
 

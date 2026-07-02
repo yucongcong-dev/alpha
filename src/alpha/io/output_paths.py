@@ -11,9 +11,7 @@ import time
 from ..io.common import (
     CACHE_DIR,
     DATA_DIR,
-    PROJECT_ROOT,
     RESULTS_DIR,
-    SCRIPT_DIR,
     sanitize_dataset_id_for_filename,
 )
 
@@ -94,4 +92,3 @@ def cleanup_legacy_sidecar_files(output_path: str, *, verbose: bool = False) -> 
                 logger.info("[cleanup] removed legacy sidecar file %s", legacy_path)
         except FileNotFoundError:
             continue
-

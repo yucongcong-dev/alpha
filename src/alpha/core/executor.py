@@ -20,15 +20,6 @@ from collections.abc import Mapping, Sequence
 import logging
 
 from ..config import SENTINEL_UNKNOWN, get_dataset_expression_policy
-from .template_queue import (
-    build_pending_template_variants,
-    resolve_field_template_candidates,
-)
-from .template_filters import (
-    is_template_actionable,
-    should_skip_expression_by_history,
-    should_skip_field,
-)
 from ..generators.expressions import (
     build_expression_candidates,
     build_refine_templates,
@@ -42,17 +33,27 @@ from ..models.base import (
     FieldTestResult,
     HistoricalRunState,
     PendingFutureLike,
-    PendingFutureContext,
     RunFilters,
     SettingsVariant,
-    TemplateCandidate,
     TemplateBuildArgs,
     TemplateBuildContext,
     TemplateBuildOptions,
+    TemplateCandidate,
     TemplateField,
     TemplateLibrary,
 )
 from ..utils.helpers import choose_field_name, first_non_empty
+from .template_filters import (
+    is_template_actionable,
+    should_skip_field,
+)
+from .template_filters import (
+    should_skip_expression_by_history as should_skip_expression_by_history,
+)
+from .template_queue import (
+    build_pending_template_variants,
+    resolve_field_template_candidates,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -123,7 +124,6 @@ def build_pending_templates_for_field(
         - 模板按优先级降序排列
         - 已尝试的键会被跳过
     """
-    options = build_ctx.options
     field_id = str(first_non_empty(field.get("id"), SENTINEL_UNKNOWN))
     field_name = choose_field_name(field)
     templates, field_feedback, expression_policy = resolve_field_template_candidates(

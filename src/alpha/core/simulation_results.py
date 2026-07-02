@@ -58,7 +58,7 @@ def handle_stage_error(
     alpha_id: str | None = None,
 ) -> FieldTestResult:
     if isinstance(exc, (KeyboardInterrupt, SystemExit)):
-        raise
+        raise exc
     return ctx.failure(
         failed_stage=failed_stage,
         message=str(exc),

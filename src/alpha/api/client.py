@@ -53,13 +53,14 @@ from ..config import (
     get_retry_operation_default_wait,
     get_server_error_backoff_max,
     get_server_error_backoff_step,
-    get_simulation_retry_wait,
 )
 from ..exceptions import (
     BrainAPIError,
     BrainQueueBusyError,
     BrainRateLimitError,
 )
+from ..models.base import ApiClientOptions
+from ..utils.helpers import first_non_empty
 from .api_types import ApiParams, ApiPayload, FieldInfoDict, SimulationPayload
 from .payloads import (
     extract_total,
@@ -69,12 +70,9 @@ from .payloads import (
 )
 from .timing import (
     doubled_retry_after,
-    extract_retry_after,
     polling_retry_after,
     wait_seconds,
 )
-from ..utils.helpers import first_non_empty
-from ..models.base import ApiClientOptions
 
 logger = logging.getLogger(__name__)
 

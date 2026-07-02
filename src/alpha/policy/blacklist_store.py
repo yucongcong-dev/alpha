@@ -9,7 +9,11 @@ import logging
 import os
 import time
 
-from ..io.common import atomic_write_json, resolve_runtime_data_dir, sanitize_dataset_id_for_filename
+from ..io.common import (
+    atomic_write_json,
+    resolve_runtime_data_dir,
+    sanitize_dataset_id_for_filename,
+)
 from .types import BlacklistPayload
 
 logger = logging.getLogger(__name__)
@@ -45,7 +49,7 @@ def read_blacklist_payload(dataset_id: str, *, data_dir: str = "") -> BlacklistP
     blacklist_path = resolve_blacklist_path(dataset_id, data_dir=data_dir)
     try:
         if os.path.isfile(blacklist_path):
-            with open(blacklist_path, "r", encoding="utf-8") as fh:
+            with open(blacklist_path, encoding="utf-8") as fh:
                 payload = json.load(fh)
         else:
             payload = build_default_blacklist(dataset_id)

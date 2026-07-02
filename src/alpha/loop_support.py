@@ -10,7 +10,6 @@ from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
 import logging
 import time
 
-from .config import SENTINEL_UNKNOWN
 from .core import (
     drain_completed_futures,
     load_pipeline_state,
@@ -25,14 +24,13 @@ from .models.base import (
     ResultWriteOptions,
     RuntimeConcurrencyState,
     SchedulerRuntimeArgs,
+    SettingsVariant,
     SimulationStageArgs,
     TemplateBuildArgs,
-    SettingsVariant,
     TemplateBuildContext,
     TemplateBuildOptions,
     TemplateField,
 )
-from .utils.helpers import first_non_empty
 
 logger = logging.getLogger(__name__)
 

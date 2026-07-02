@@ -23,9 +23,9 @@ from alpha.models.base import (
     FieldTestResult,
     FutureCompletionContext,
     ResultWriteOptions,
-    TemplateCandidate,
     TemplateBuildContext,
     TemplateBuildOptions,
+    TemplateCandidate,
 )
 
 

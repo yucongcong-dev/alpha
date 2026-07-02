@@ -9,9 +9,8 @@
 
 from __future__ import annotations
 
-from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
+from concurrent.futures import ThreadPoolExecutor
 import logging
-import time
 
 from .analysis.feedback import should_stop_after_submittable
 from .analysis.stats import (
@@ -23,26 +22,11 @@ from .analysis.stats import (
 from .config import SENTINEL_UNKNOWN
 from .core import (
     build_pending_templates_for_field,
-    drain_completed_futures,
     inflight_template_keys,
-    load_pipeline_state,
     maybe_restore_runtime_concurrency,
     print_dry_run_plan,
-    run_field_test_in_worker,
-    save_checkpoint,
-    save_pipeline_state,
     should_skip_field,
     throttle_before_submission,
-)
-from .models.base import (
-    FieldTestResult,
-    InitializedRunContext,
-    ResultWriteOptions,
-    ResultWriteArgs,
-    RunLoopArgs,
-    RunPaths,
-    TemplateBuildContext,
-    TemplateField,
 )
 from .loop_support import (
     create_template_build_context,
@@ -52,6 +36,16 @@ from .loop_support import (
     restore_fields_from_state,
     save_runtime_checkpoint,
     submit_template_future,
+)
+from .models.base import (
+    FieldTestResult,
+    InitializedRunContext,
+    ResultWriteArgs,
+    ResultWriteOptions,
+    RunLoopArgs,
+    RunPaths,
+    TemplateBuildContext,
+    TemplateField,
 )
 from .utils.helpers import choose_field_name, choose_field_type, first_non_empty
 
@@ -149,7 +143,7 @@ def run_field_test_loop(
     field_resume_positions = build_field_resume_positions(original_fields)
     result_write_options = resolve_result_write_options(args, run_paths)
 
-    fields, resumed_index = restore_fields_from_state(
+    fields, _resumed_index = restore_fields_from_state(
         fields=fields,
         state_file=state_file,
         runtime_state=runtime_state,

@@ -9,6 +9,13 @@ from __future__ import annotations
 
 from typing import Any
 
+from ..models.base import (
+    AnalysisInputs,
+    AnalysisPayload,
+    FieldTestResult,
+    ResultRow,
+    SummaryPayload,
+)
 from .stats import (
     compile_failed_check_leaderboard,
     compile_field_performance_summary,
@@ -16,13 +23,6 @@ from .stats import (
     compile_optimization_hints,
     compile_template_performance_summary,
     is_queue_timeout_result,
-)
-from ..models.base import (
-    AnalysisInputs,
-    AnalysisPayload,
-    FieldTestResult,
-    ResultRow,
-    SummaryPayload,
 )
 
 

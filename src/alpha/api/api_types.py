@@ -26,7 +26,7 @@ class SimulationAlphaResult(TypedDict, total=False):
     settings: ApiPayload
     regular: str | None
     submittable: bool | None
-    failed_checks: list["CheckResultDict"] | None
+    failed_checks: list[CheckResultDict] | None
 
 
 class SimulationResponsePayload(TypedDict, total=False):
