@@ -138,20 +138,18 @@ def _load_yaml_file(path: str) -> YamlConfig:
     return {}
 
 
-def _deep_merge(base: dict, override: dict) -> dict:
+def _deep_merge(base: dict, override: dict, _max_depth: int = 6) -> dict:
     """深合并两个字典：override 中的值覆盖 base。
 
-    对于 expression_policies 和 dataset_profiles 的顶层 key，
-    当两边都是 dict 时进行深合并（而非简单覆盖），以支持 dataset 级别的增量覆盖。
+    对所有嵌套 dict 递归合并（不再硬编码特定 key），以支持任意逐数据集/逐配置段的增量覆盖。
+    _max_depth 防止循环引用导致栈溢出。
     """
+    if _max_depth <= 0:
+        return dict(override)  # 达到深度上限，直接覆盖
     result = dict(base)
     for key, value in override.items():
         if key in result and isinstance(result[key], dict) and isinstance(value, dict):
-            # 对已知的顶层合并段进行深合并
-            if key in ("expression_policies", "dataset_profiles"):
-                result[key] = _deep_merge(result[key], value)
-            else:
-                result[key] = value
+            result[key] = _deep_merge(result[key], value, _max_depth - 1)
         else:
             result[key] = value
     return result

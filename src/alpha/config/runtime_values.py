@@ -206,3 +206,50 @@ def load_submit_quality_runtime_config() -> QualityRuntimeConfig:
         max_weight=float(section.get("max_weight", SUBMIT_MAX_WEIGHT)),
     )
 
+
+# ---------------------------------------------------------------------------
+# 统一运行时配置复合对象 — 消除 30 个 getter 包装函数的冗余 YAML 查询
+# ---------------------------------------------------------------------------
+
+@dataclass(frozen=True)
+class RuntimeConfig:
+    """运行时配置的单一聚合快照。调用方直接通过属性访问，无需包装函数。"""
+    http: HttpRuntimeConfig
+    feedback: FeedbackRuntimeConfig
+    expression: ExpressionRuntimeConfig
+    simulation: SimulationRuntimeConfig
+    precheck_quality: QualityRuntimeConfig
+    submit_quality: QualityRuntimeConfig
+
+
+_runtime_config_cache: RuntimeConfig | None = None
+
+
+def _build_runtime_config() -> RuntimeConfig:
+    """构建完整的运行时配置。所有 7 个 section 一次加载。"""
+    return RuntimeConfig(
+        http=load_http_runtime_config(),
+        feedback=load_feedback_runtime_config(),
+        expression=load_expression_runtime_config(),
+        simulation=load_simulation_runtime_config(),
+        precheck_quality=load_precheck_quality_runtime_config(),
+        submit_quality=load_submit_quality_runtime_config(),
+    )
+
+
+def get_runtime_config() -> RuntimeConfig:
+    """获取完整运行时配置（惰性构建 + 缓存）。
+
+    取代原来 30 个独立的 get_*() 函数，消除 30→1 次 YAML 遍历的冗余。
+    """
+    global _runtime_config_cache
+    if _runtime_config_cache is None:
+        _runtime_config_cache = _build_runtime_config()
+    return _runtime_config_cache
+
+
+def clear_runtime_config_cache() -> None:
+    """清除运行时配置缓存，强制下次访问重新加载。"""
+    global _runtime_config_cache
+    _runtime_config_cache = None
+

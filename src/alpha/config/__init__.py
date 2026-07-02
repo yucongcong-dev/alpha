@@ -50,12 +50,6 @@ from .profiles import (
     get_dataset_profile as get_dataset_profile,
 )
 from .yaml import (
-    _config_file_signature as _config_file_signature,
-)
-from .yaml import (
-    _resolve_yaml_path as _resolve_yaml_path,
-)
-from .yaml import (
     clear_yaml_caches as clear_yaml_caches,
 )
 from .yaml import get_yaml_config as get_yaml_config
@@ -64,4 +58,13 @@ from .yaml import (
 )
 from .yaml import (
     validate_yaml_config as validate_yaml_config,
+)
+from .runtime_values import (
+    clear_runtime_config_cache as clear_runtime_config_cache,
+)
+from .runtime_values import (
+    get_runtime_config as get_runtime_config,
+)
+from .runtime_values import (
+    RuntimeConfig as RuntimeConfig,
 )
