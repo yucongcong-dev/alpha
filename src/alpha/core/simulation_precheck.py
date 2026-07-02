@@ -59,16 +59,35 @@ class PrecheckConfig:
         )
 
 
+def build_default_submit_precheck_config() -> PrecheckConfig:
+    """Load submit-grade precheck defaults from the current runtime config."""
+    return PrecheckConfig(
+        min_sharpe=get_submit_min_sharpe(),
+        min_fitness=get_submit_min_fitness(),
+        min_turnover=get_submit_min_turnover(),
+        max_turnover=get_submit_max_turnover(),
+        max_weight=get_submit_max_weight(),
+    )
+
+
 def precheck_simulation_metrics(
     simulation_result: SimulationPayload,
     *,
-    min_sharpe: float = get_submit_min_sharpe(),
-    min_fitness: float = get_submit_min_fitness(),
-    min_turnover: float = get_submit_min_turnover(),
-    max_turnover: float = get_submit_max_turnover(),
-    max_weight: float = get_submit_max_weight(),
+    min_sharpe: float | None = None,
+    min_fitness: float | None = None,
+    min_turnover: float | None = None,
+    max_turnover: float | None = None,
+    max_weight: float | None = None,
 ) -> tuple[bool, str, list[CheckResultDict]]:
     """Run local metric checks before calling check-submit."""
+    if any(value is None for value in (min_sharpe, min_fitness, min_turnover, max_turnover, max_weight)):
+        default_config = build_default_submit_precheck_config()
+        min_sharpe = default_config.min_sharpe if min_sharpe is None else min_sharpe
+        min_fitness = default_config.min_fitness if min_fitness is None else min_fitness
+        min_turnover = default_config.min_turnover if min_turnover is None else min_turnover
+        max_turnover = default_config.max_turnover if max_turnover is None else max_turnover
+        max_weight = default_config.max_weight if max_weight is None else max_weight
+
     is_section = simulation_result.get(_KEY_IS)
     if not isinstance(is_section, dict):
         return True, "", []

@@ -20,6 +20,7 @@ from alpha.config import (
     get_yaml_config,
     use_fundamental6_heuristics,
 )
+from alpha.config.runtime_values import load_submit_quality_runtime_config
 
 
 class TestConfigConstants:
@@ -251,3 +252,28 @@ def test_expression_policy_default_section_applies_to_non_curated_dataset(monkey
     assert policy.partner_limit == 7
     assert policy.preferred_partner_score_bonuses["assets"] == 33
     assert "curated_only" not in policy.disabled_templates
+
+
+def test_load_submit_quality_runtime_config_reads_yaml_globals(monkeypatch) -> None:
+    monkeypatch.setattr(
+        "alpha.config.get_yaml_config",
+        lambda config_path="": {
+            "global": {
+                "quality": {
+                    "min_sharpe": 1.7,
+                    "min_fitness": 1.2,
+                    "min_turnover": 0.03,
+                    "max_turnover": 0.55,
+                    "max_weight": 0.08,
+                }
+            }
+        },
+    )
+
+    quality = load_submit_quality_runtime_config()
+
+    assert quality.min_sharpe == 1.7
+    assert quality.min_fitness == 1.2
+    assert quality.min_turnover == 0.03
+    assert quality.max_turnover == 0.55
+    assert quality.max_weight == 0.08

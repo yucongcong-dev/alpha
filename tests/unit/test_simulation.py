@@ -8,11 +8,13 @@
 from __future__ import annotations
 
 from alpha.core.simulation import (
+    PrecheckConfig,
     build_failure_result,
     extract_alpha_id,
     extract_checks,
     extract_failed_checks,
     is_submittable_from_checks,
+    precheck_simulation_metrics,
     summarize_failure,
 )
 from alpha.models.base import FieldTestContext, FieldTestResult
@@ -251,6 +253,53 @@ class TestSummarizeFailure:
 
     def test_error_fallback(self) -> None:
         assert summarize_failure({"error": "Something wrong"}) == "Something wrong"
+
+
+def test_precheck_simulation_metrics_loads_runtime_defaults(monkeypatch) -> None:
+    payload = {"is": {"sharpe": 0.8, "fitness": 0.9, "turnover": 0.05, "maxWeight": 0.02}}
+
+    monkeypatch.setattr(
+        "alpha.core.simulation_precheck.build_default_submit_precheck_config",
+        lambda: PrecheckConfig(
+            min_sharpe=1.0,
+            min_fitness=1.0,
+            min_turnover=0.01,
+            max_turnover=0.7,
+            max_weight=0.01,
+        ),
+    )
+
+    passed, _reason, failures = precheck_simulation_metrics(payload)
+
+    assert passed is False
+    assert {item["name"] for item in failures} == {"LOW_SHARPE", "LOW_FITNESS", "CONCENTRATED_WEIGHT"}
+
+
+def test_precheck_simulation_metrics_preserves_explicit_thresholds(monkeypatch) -> None:
+    payload = {"is": {"sharpe": 0.8, "fitness": 1.2, "turnover": 0.05, "maxWeight": 0.02}}
+
+    monkeypatch.setattr(
+        "alpha.core.simulation_precheck.build_default_submit_precheck_config",
+        lambda: PrecheckConfig(
+            min_sharpe=5.0,
+            min_fitness=5.0,
+            min_turnover=5.0,
+            max_turnover=5.0,
+            max_weight=5.0,
+        ),
+    )
+
+    passed, _reason, failures = precheck_simulation_metrics(
+        payload,
+        min_sharpe=0.5,
+        min_fitness=1.0,
+        min_turnover=0.01,
+        max_turnover=0.7,
+        max_weight=0.01,
+    )
+
+    assert passed is False
+    assert {item["name"] for item in failures} == {"CONCENTRATED_WEIGHT"}
 
     # ---- 失败检查摘要 ----
     def test_failed_checks_summary(self) -> None:
