@@ -7,10 +7,11 @@ import json
 from pathlib import Path
 
 from alpha.config import get_dataset_expression_policy
-from alpha.core.executor import build_pending_templates_for_field
+from alpha.core.executor import build_pending_templates_for_field, inflight_template_keys
 from alpha.core.scheduler import handle_completed_future
 from alpha.generators import templates as template_module
 from alpha.generators.expressions import _BLACKLIST_CACHE, _is_blacklisted_template
+from alpha.generators.settings import build_settings_fingerprint_from_payload
 from alpha.generators.templates import ensure_dataset_template_library, load_template_library
 from alpha.io.output import (
     _BLACKLIST_PATH_CACHE,
@@ -454,6 +455,78 @@ def test_fundamental6_template_library_has_family_and_layer_metadata() -> None:
                 missing.append((section, item["name"]))
 
     assert missing == []
+
+
+def test_build_pending_templates_skips_inflight_duplicate(monkeypatch) -> None:
+    settings_payload = {"neutralization": "SUBINDUSTRY", "truncation": 0.08}
+    monkeypatch.setattr(
+        "alpha.core.executor.build_setting_variants",
+        lambda *args, **kwargs: [settings_payload],
+    )
+    monkeypatch.setattr(
+        "alpha.core.executor.build_expression_candidates",
+        lambda *args, **kwargs: [
+            TemplateCandidate(
+                "model51_market_zscore_decay_63",
+                "ts_decay_linear(group_neutralize(ts_zscore(winsorize(ts_backfill(unsystematic_risk_last_360_days, 504), std=4), 63), market), 20)",
+                1000,
+                {"family": "neutralize_decay", "stage": "group_second_order"},
+            )
+        ],
+    )
+    args = Namespace(
+        dataset_id="model51",
+        template_disable_after=0,
+        disable_legacy_after=0,
+        max_templates_per_field=3,
+        max_templates_per_family=1,
+        legacy_similarity_penalty=0,
+    )
+    build_ctx = TemplateBuildContext(
+        args=args,
+        all_fields=[
+            {
+                "id": "unsystematic_risk_last_360_days",
+                "type": "MATRIX",
+                "name": "unsystematic_risk_last_360_days",
+            }
+        ],
+        template_library={},
+        use_dataset_heuristics=False,
+        expression_policy=get_dataset_expression_policy("model51"),
+    )
+
+    pending_futures = {
+        object(): {
+            "field_id": "unsystematic_risk_last_360_days",
+            "field_name": "unsystematic_risk_last_360_days",
+            "field_type": "MATRIX",
+            "template_name": "model51_market_zscore_decay_63",
+                "template_family": "neutralize_decay",
+                "template_stage": "group_second_order",
+                "expression": "ts_decay_linear(group_neutralize(ts_zscore(winsorize(ts_backfill(unsystematic_risk_last_360_days, 504), std=4), 63), market), 20)",
+                "settings_fingerprint": build_settings_fingerprint_from_payload(
+                    settings_payload
+                ),
+            }
+        }
+
+    pending, disabled, total = build_pending_templates_for_field(
+        build_ctx,
+        {
+            "id": "unsystematic_risk_last_360_days",
+            "type": "MATRIX",
+            "name": "unsystematic_risk_last_360_days",
+        },
+        template_stats={},
+        attempted_keys=set(),
+        prior_results=[],
+        reserved_keys=inflight_template_keys(pending_futures),
+    )
+
+    assert total == 1
+    assert disabled == 0
+    assert pending == []
 
 
 def test_fundamental6_template_library_removes_known_weak_short_window_templates() -> None:

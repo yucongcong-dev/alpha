@@ -17,7 +17,7 @@
 from __future__ import annotations
 
 import argparse
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 import logging
 from typing import Any
 
@@ -71,6 +71,28 @@ logger = logging.getLogger(__name__)
 # ============================================================================
 
 
+def inflight_template_keys(
+    pending_futures: Mapping[Any, dict[str, Any]],
+) -> set[tuple[str, str, str, str]]:
+    """
+    从尚未完成的 future 上下文中提取去重键。
+
+    breadth-first 调度会在上一轮 future 尚未完成时继续进入下一轮，
+    因此不能只依赖已落盘结果与 attempted_keys；否则同一 field/template/settings
+    会在 pending 期间被再次加入队列。
+    """
+    reserved: set[tuple[str, str, str, str]] = set()
+    for context in pending_futures.values():
+        field_id = str(first_non_empty(context.get("field_id"), SENTINEL_UNKNOWN))
+        template_name = str(first_non_empty(context.get("template_name"), ""))
+        expression = str(first_non_empty(context.get("expression"), ""))
+        settings_fingerprint = str(first_non_empty(context.get("settings_fingerprint"), ""))
+        if not template_name or not expression:
+            continue
+        reserved.add((field_id, template_name, expression, settings_fingerprint))
+    return reserved
+
+
 def build_pending_templates_for_field(
     build_ctx: TemplateBuildContext,
     field: dict[str, Any],
@@ -78,6 +100,7 @@ def build_pending_templates_for_field(
     template_stats: dict[str, dict[str, int]],
     attempted_keys: set[tuple[str, str, str, str]],
     prior_results: Sequence[FieldTestResult],
+    reserved_keys: set[tuple[str, str, str, str]] | None = None,
 ) -> tuple[list[tuple[str, str, str, str, int, SettingsVariant, str]], int, int]:
     """
     为单个字段构建真正可执行的模板与 settings 队列。
@@ -92,6 +115,7 @@ def build_pending_templates_for_field(
         template_stats: 模板统计数据。
         attempted_keys: 已尝试的模板键集合。
         prior_results: 历史测试结果列表。
+        reserved_keys: 当前运行中已提交但尚未完成的组合键集合。
 
     Returns:
         tuple[list[tuple[str, str, int, SettingsVariant, str]], int, int]: 返回一个元组，包含：
@@ -168,6 +192,7 @@ def build_pending_templates_for_field(
     )
     pending_templates: list[tuple[str, str, str, str, int, SettingsVariant, str]] = []
     disabled_templates = 0
+    all_reserved_keys = attempted_keys | (reserved_keys or set())
     max_setting_variants = choose_settings_variant_budget(
         field_feedback,
         expression_policy=build_ctx.expression_policy,
@@ -251,7 +276,7 @@ def build_pending_templates_for_field(
             refine_candidate=refine_candidate,
         )[:max_setting_variants]:
             variant_fingerprint = build_settings_fingerprint_from_payload(settings_variant)
-            if (field_id, template_name, expression, variant_fingerprint) in attempted_keys:
+            if (field_id, template_name, expression, variant_fingerprint) in all_reserved_keys:
                 continue
             pending_templates.append(
                 (

@@ -11,6 +11,7 @@ from __future__ import annotations
 
 from .executor import (
     build_pending_templates_for_field,
+    inflight_template_keys,
     print_dry_run_plan,
     should_skip_expression_by_history,
     should_skip_field,
@@ -48,6 +49,7 @@ __all__ = [
     "apply_congestion_cooldown",
     "build_failure_result",
     "build_pending_templates_for_field",
+    "inflight_template_keys",
     "checksubmit_with_retry",
     "create_simulation_with_retry",
     "delete_pipeline_state",

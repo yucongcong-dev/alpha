@@ -81,6 +81,7 @@ from .core import (
     build_pending_templates_for_field,
     delete_pipeline_state,
     drain_completed_futures,
+    inflight_template_keys,
     load_pipeline_state,
     maybe_restore_runtime_concurrency,
     print_dry_run_plan,
@@ -811,6 +812,9 @@ def _run_field_test_loop(
                             template_stats=execution_state.template_stats,
                             attempted_keys=execution_state.attempted_keys,
                             prior_results=execution_state.results,
+                            reserved_keys=inflight_template_keys(
+                                execution_state.pending_futures
+                            ),
                         )
                     )
 
