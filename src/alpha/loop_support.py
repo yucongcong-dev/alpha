@@ -23,6 +23,7 @@ from .core import (
 from .models.base import (
     ExecutionState,
     InitializedRunContext,
+    PendingFutureContext,
     RuntimeConcurrencyState,
     TemplateBuildContext,
     TemplateBuildOptions,
@@ -150,16 +151,16 @@ def submit_template_future(
         run_ctx.create_semaphore,
     )
     execution_state.last_submission_at = time.monotonic()
-    execution_state.pending_futures[future] = {
-        "field_id": field_id,
-        "field_name": field_name,
-        "field_type": field_type,
-        "template_name": template_name,
-        "template_family": template_family,
-        "template_stage": template_stage,
-        "expression": expression,
-        "settings_fingerprint": variant_fingerprint,
-    }
+    execution_state.pending_futures[future] = PendingFutureContext(
+        field_id=field_id,
+        field_name=field_name,
+        field_type=field_type,
+        template_name=template_name,
+        template_family=template_family,
+        template_stage=template_stage,
+        expression=expression,
+        settings_fingerprint=variant_fingerprint,
+    )
 
 
 def persist_field_progress(

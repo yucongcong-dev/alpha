@@ -16,7 +16,6 @@ from __future__ import annotations
 
 import argparse
 import os
-from pathlib import Path
 import sys
 from typing import Any
 
@@ -26,12 +25,20 @@ from ..config import (
     get_dataset_profile,
     get_yaml_config,
 )
-from ..io.output_paths import (
-    build_dataset_scoped_paths,
-    build_output_sidecar_paths,
-    resolve_cli_path,
-)
 from ..models.base import RunPaths
+from .constants import (
+    CACHE_DIR,
+    CREDS_DIR,
+    DATA_DIR,
+    DEFAULT_CREDS_FILE,
+    DEFAULT_CREDS_KEY_FILE,
+    DEFAULT_FIELDS_CACHE_FILE,
+    DEFAULT_OUTPUT_FILE,
+    DEFAULT_TEMPLATE_LIBRARY_FILE,
+    PROJECT_ROOT,
+    RESULTS_DIR,
+    SCRIPT_DIR,
+)
 
 # 过滤器/日志函数已提取到 cli.filters，此处保留重导出以兼容
 from .filters import (  # noqa: F401
@@ -40,38 +47,8 @@ from .filters import (  # noqa: F401
     load_run_filters_extended,
     setup_runtime_logging,
 )
-
-# ============================================================================
-# 常量定义
-# ============================================================================
-
-SCRIPT_DIR = Path(__file__).resolve().parent
-"""脚本目录的绝对路径"""
-
-PROJECT_ROOT = SCRIPT_DIR.parent.parent.parent
-"""项目根目录的绝对路径（alpha/ 目录）"""
-
-# 运行时文件目录（相对于项目根目录）
-CREDS_DIR = PROJECT_ROOT / ".credentials"
-CACHE_DIR = PROJECT_ROOT / "cache"
-RESULTS_DIR = PROJECT_ROOT / "results"
-DATA_DIR = PROJECT_ROOT / "data"
-
-DEFAULT_CREDS_FILE = str(CREDS_DIR / "worldquant_brain_credentials.json")
-"""默认凭证文件路径"""
-
-DEFAULT_CREDS_KEY_FILE = str(CREDS_DIR / "worldquant_brain_credentials.key")
-"""默认凭证密钥文件路径"""
-
-DEFAULT_TEMPLATE_LIBRARY_FILE = ""
-"""默认模板库文件路径 — 空字符串让 normalize_args_paths 通过 build_dataset_scoped_paths 按 dataset_id 自动分流"""
-
-DEFAULT_FIELDS_CACHE_FILE = ""
-"""默认字段缓存文件路径"""
-
-DEFAULT_OUTPUT_FILE = ""
-"""默认输出文件路径"""
-
+from .path_resolution import normalize_args_paths as _normalize_args_paths
+from .run_config import build_run_config_snapshot as _build_run_config_snapshot
 
 # ============================================================================
 # 命令行参数解析函数
@@ -633,116 +610,8 @@ def parse_args() -> argparse.Namespace:
 
 
 def normalize_args_paths(args: argparse.Namespace) -> RunPaths:
-    """
-    标准化命令行参数中的文件路径，将相对路径转换为绝对路径。
-
-    处理所有与运行相关的文件路径，确保它们都是绝对路径，
-    并根据数据集 ID 派生默认的模板库、字段缓存和输出文件路径。
-
-    Args:
-        args (argparse.Namespace): 命令行参数对象，包含以下属性：
-            - dataset_id: 数据集 ID
-            - template_library_file: 模板库文件路径
-            - fields_cache_file: 字段缓存文件路径
-            - output: 输出文件路径
-            - feedback_output: 反馈输出文件路径
-            - creds_file: 凭证文件路径
-            - creds_key_file: 凭证密钥文件路径
-            - include_fields_file: 包含字段文件路径
-            - exclude_fields_file: 排除字段文件路径
-            - include_templates_file: 包含模板文件路径
-            - exclude_templates_file: 排除模板文件路径
-            - log_file: 日志文件路径
-
-    Returns:
-        RunPaths: 包含所有标准化路径的对象，包括：
-            - results_dir: 结果目录路径
-            - log_file: 日志文件路径
-            - state_file: 状态文件路径
-            - checkpoint_file: 检查点文件路径
-            - template_library_file: 模板库文件路径
-            - fields_cache_file: 字段缓存文件路径
-            - output: 输出文件路径
-            - feedback_output: 反馈输出文件路径
-            - creds_file: 凭证文件路径
-            - creds_key_file: 凭证密钥文件路径
-            - include_fields_file: 包含字段文件路径
-            - exclude_fields_file: 排除字段文件路径
-            - include_templates_file: 包含模板文件路径
-            - exclude_templates_file: 排除模板文件路径
-
-    Example:
-        >>> args = parse_args()
-        >>> paths = normalize_args_paths(args)
-        >>> print(paths.output)
-        /absolute/path/to/results.json
-
-    Note:
-        - 相对路径会相对于 SCRIPT_DIR 解析为绝对路径
-        - 如果未指定输出文件，会根据 dataset_id 派生默认路径
-        - 使用 resolve_cli_path 函数处理每个路径
-    """
-    # 根据数据集 ID 派生默认路径
-    scoped_paths = build_dataset_scoped_paths(
-        args.dataset_id,
-        region=args.region,
-        universe=args.universe,
-        instrument_type=args.instrument_type,
-        delay=args.delay,
-    )
-
-    # 标准化所有文件路径
-    template_library_file = (
-        resolve_cli_path(args.template_library_file, base_dir=os.getcwd())
-        or scoped_paths["template_library_file"]
-    )
-    fields_cache_file = (
-        resolve_cli_path(args.fields_cache_file, base_dir=os.getcwd()) or scoped_paths["fields_cache_file"]
-    )
-    output_file = resolve_cli_path(args.output, base_dir=os.getcwd()) or scoped_paths["output"]
-    
-    # 同步更新 args 对象，确保后续代码（如 scheduler.py）能使用正确的路径
-    args.output = output_file
-    args.fields_cache_file = fields_cache_file
-    args.template_library_file = template_library_file
-
-    feedback_output = resolve_cli_path(args.feedback_output, base_dir=os.getcwd()) or output_file
-    creds_file = resolve_cli_path(args.creds_file, base_dir=os.getcwd()) or DEFAULT_CREDS_FILE
-    creds_key_file = resolve_cli_path(args.creds_key_file, base_dir=os.getcwd()) or DEFAULT_CREDS_KEY_FILE
-    include_fields_file = resolve_cli_path(args.include_fields_file, base_dir=os.getcwd())
-    exclude_fields_file = resolve_cli_path(args.exclude_fields_file, base_dir=os.getcwd())
-    include_templates_file = resolve_cli_path(args.include_templates_file, base_dir=os.getcwd())
-    exclude_templates_file = resolve_cli_path(args.exclude_templates_file, base_dir=os.getcwd())
-
-    # 日志文件路径
-    sidecar_paths = build_output_sidecar_paths(output_file)
-    log_file = resolve_cli_path(args.log_file, base_dir=os.getcwd()) or sidecar_paths["run_log"]
-
-    # 结果目录
-    results_dir = str(Path(output_file).parent)
-
-    # 状态文件和检查点文件
-    output_stem = Path(output_file).stem
-    output_dir = Path(output_file).parent
-    state_file = str(output_dir / f"{output_stem}_state.json")
-    checkpoint_file = str(output_dir / f"{output_stem}_checkpoint.json")
-
-    return RunPaths(
-        results_dir=results_dir,
-        log_file=log_file,
-        state_file=state_file,
-        checkpoint_file=checkpoint_file,
-        fields_cache_file=fields_cache_file,
-        template_library_file=template_library_file,
-        output=output_file,
-        feedback_output=feedback_output,
-        creds_file=creds_file,
-        creds_key_file=creds_key_file,
-        include_fields_file=include_fields_file,
-        exclude_fields_file=exclude_fields_file,
-        include_templates_file=include_templates_file,
-        exclude_templates_file=exclude_templates_file,
-    )
+    """兼容导出：归一化运行路径，但不修改 args。"""
+    return _normalize_args_paths(args)
 
 
 # ============================================================================
@@ -751,110 +620,8 @@ def normalize_args_paths(args: argparse.Namespace) -> RunPaths:
 
 
 def build_run_config_snapshot(args: argparse.Namespace, run_paths: RunPaths) -> dict[str, Any]:
-    """
-    构建运行配置快照，记录所有影响结果的配置参数。
-
-    将命令行参数和路径信息合并为一个字典，用于保存到结果文件中，
-    确保结果的可重现性和可追溯性。
-
-    Args:
-        args (argparse.Namespace): 命令行参数对象。
-        run_paths (RunPaths): 运行路径对象。
-
-    Returns:
-        Dict[str, Any]: 配置快照字典，包含以下分组：
-            - dataset: 数据集相关配置
-            - settings: 模拟设置配置
-            - limits: 数量限制配置
-            - concurrency: 并发配置
-            - retries: 重试配置
-            - filters: 过滤器配置
-            - paths: 文件路径配置
-            - runtime: 运行时配置
-
-    Example:
-        >>> args = parse_args()
-        >>> paths = normalize_args_paths(args)
-        >>> config = build_run_config_snapshot(args, paths)
-        >>> print(config["dataset"]["dataset_id"])
-        fundamental6
-
-    Note:
-        - 配置快照会保存到结果文件中，用于后续分析
-        - 不包含敏感信息（如密码）
-        - 使用分组结构便于阅读和理解
-    """
-    return {
-        "dataset": {
-            "dataset_id": args.dataset_id,
-            "region": args.region,
-            "universe": args.universe,
-            "instrument_type": args.instrument_type,
-            "delay": args.delay,
-        },
-        "settings": {
-            "decay": args.decay,
-            "neutralization": args.neutralization,
-            "truncation": args.truncation,
-            "nan_handling": args.nan_handling,
-        },
-        "limits": {
-            "limit": args.limit,
-            "offset": args.offset,
-            "page_size": args.page_size,
-            "sleep_between_fields": args.sleep_between_fields,
-            "max_templates_per_field": args.max_templates_per_field,
-            "max_templates_per_family": args.max_templates_per_family,
-            "field_template_batch_size": args.field_template_batch_size,
-            "legacy_similarity_penalty": args.legacy_similarity_penalty,
-            "disable_legacy_after": args.disable_legacy_after,
-        },
-        "concurrency": {
-            "max_concurrent_simulations": args.max_concurrent_simulations,
-            "max_concurrent_creates": args.max_concurrent_creates,
-        },
-        "retries": {
-            "simulation_create_retries": args.simulation_create_retries,
-            "simulation_poll_retries": args.simulation_poll_retries,
-            "simulation_max_polls": args.simulation_max_polls,
-            "simulation_max_wait_seconds": args.simulation_max_wait_seconds,
-            "simulation_max_pending_cycles": args.simulation_max_pending_cycles,
-            "simulation_max_queue_seconds": args.simulation_max_queue_seconds,
-            "queue_busy_cooldown_seconds": args.queue_busy_cooldown_seconds,
-            "field_queue_busy_skip_after": args.field_queue_busy_skip_after,
-            "check_submit_retries": args.check_submit_retries,
-            "submit_retries": args.submit_retries,
-            "rate_limit_max_retries": args.rate_limit_max_retries,
-            "login_retries": args.login_retries,
-            "min_request_interval": args.min_request_interval,
-        },
-        "filters": {
-            "template_disable_after": args.template_disable_after,
-            "top_fields_by_feedback": args.top_fields_by_feedback,
-            "stop_after_submittable": args.stop_after_submittable,
-        },
-        "paths": {
-            "template_library_file": run_paths.template_library_file
-            if hasattr(run_paths, "template_library_file")
-            else "",
-            "fields_cache_file": run_paths.fields_cache_file
-            if hasattr(run_paths, "fields_cache_file")
-            else "",
-            "output": run_paths.output if hasattr(run_paths, "output") else "",
-            "feedback_output": run_paths.feedback_output
-            if hasattr(run_paths, "feedback_output")
-            else "",
-        },
-        "runtime": {
-            "submit": args.submit,
-            "auto_update_blacklist": args.auto_update_blacklist,
-            "smoke_test": args.smoke_test,
-            "dry_run_plan": args.dry_run_plan,
-            "full_run": args.full_run,
-            "verbose": args.verbose,
-            "quiet": args.quiet,
-        },
-    }
+    """兼容导出：构建运行配置快照。"""
+    return _build_run_config_snapshot(args, run_paths)
 
 
 # 过滤器函数和日志设置已提取到 cli/filters.py

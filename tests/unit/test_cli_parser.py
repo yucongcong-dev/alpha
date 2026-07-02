@@ -219,6 +219,28 @@ def test_normalize_args_paths_uses_dataset_scoped_defaults(monkeypatch, tmp_path
     assert paths.output.endswith("/results/pv1/test_results.json")
 
 
+def test_normalize_args_paths_does_not_mutate_original_args(monkeypatch, tmp_path) -> None:
+    """Path normalization should return RunPaths without rewriting raw CLI attrs in-place."""
+    clear_yaml_cache()
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(sys, "argv", ["alpha", "--dataset-id", "pv1"])
+
+    args = parse_args()
+    original_output = args.output
+    original_template_library = args.template_library_file
+    original_fields_cache = args.fields_cache_file
+
+    paths = normalize_args_paths(args)
+
+    assert original_output == ""
+    assert original_template_library == ""
+    assert original_fields_cache == ""
+    assert args.output == ""
+    assert args.template_library_file == ""
+    assert args.fields_cache_file == ""
+    assert paths.output.endswith("/results/pv1/test_results.json")
+
+
 def test_normalize_args_paths_resolves_relative_files_from_cwd(monkeypatch, tmp_path) -> None:
     """User-supplied relative file paths should resolve from the shell cwd."""
     clear_yaml_cache()

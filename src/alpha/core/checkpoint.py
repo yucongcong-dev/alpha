@@ -20,7 +20,7 @@ import os
 import time
 from typing import Any
 
-from ..models.base import ExecutionState, RuntimeConcurrencyState
+from ..models.base import ExecutionState, PendingFutureContext, RuntimeConcurrencyState
 
 logger = logging.getLogger(__name__)
 
@@ -211,11 +211,19 @@ def save_checkpoint(
     # 收集待处理任务摘要
     pending_summary: list[dict[str, str]] = []
     for meta in list(execution_state.pending_futures.values())[-50:]:
+        if isinstance(meta, dict):
+            field_id = str(meta.get("field_id", ""))
+            template_name = str(meta.get("template_name", ""))
+            expression = str(meta.get("expression", ""))
+        else:
+            field_id = str(meta.field_id)
+            template_name = str(meta.template_name)
+            expression = str(meta.expression)
         pending_summary.append(
             {
-                "field_id": str(meta.get("field_id", "")),
-                "template_name": str(meta.get("template_name", "")),
-                "expression": str(meta.get("expression", "")),
+                "field_id": field_id,
+                "template_name": template_name,
+                "expression": expression,
             }
         )
 

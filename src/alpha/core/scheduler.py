@@ -42,6 +42,13 @@ from .simulation import build_failure_result
 logger = logging.getLogger(__name__)
 
 
+def _pending_meta_value(context: Any, key: str) -> str:
+    """兼容读取旧 dict 形式和新 dataclass 形式的 pending future 元数据。"""
+    if isinstance(context, dict):
+        return str(context.get(key, ""))
+    return str(getattr(context, key, ""))
+
+
 @dataclass
 class DrainResult:
     """批量结果消费的结果对象（不可变）"""
@@ -84,23 +91,23 @@ def handle_completed_future(
         - 检测拥塞信号并返回给调用方
     """
     context = execution_state.pending_futures.pop(future)
-    field_id = context["field_id"]
-    template_name = context["template_name"]
+    field_id = _pending_meta_value(context, "field_id")
+    template_name = _pending_meta_value(context, "template_name")
 
     try:
         result = future.result()
     except Exception as exc:
         result = build_failure_result(
             field_id=field_id,
-            field_type=context["field_type"],
-            field_name=context["field_name"],
+            field_type=_pending_meta_value(context, "field_type"),
+            field_name=_pending_meta_value(context, "field_name"),
             template_name=template_name,
-            template_family=context.get("template_family", ""),
-            template_stage=context.get("template_stage", ""),
+            template_family=_pending_meta_value(context, "template_family"),
+            template_stage=_pending_meta_value(context, "template_stage"),
             simulation_id=None,
             alpha_id=None,
-            expression=context["expression"],
-            settings_fingerprint=context["settings_fingerprint"],
+            expression=_pending_meta_value(context, "expression"),
+            settings_fingerprint=_pending_meta_value(context, "settings_fingerprint"),
             template_library_fingerprint=completion_ctx.template_library_fingerprint,
             failed_stage="worker",
             message=str(exc),

@@ -99,6 +99,20 @@ class ResultWriteOptions:
         )
 
 
+@dataclass(frozen=True)
+class PendingFutureContext:
+    """尚未完成的 future 对应的只读元数据。"""
+
+    field_id: str = ""
+    field_name: str = ""
+    field_type: str = ""
+    template_name: str = ""
+    template_family: str = ""
+    template_stage: str = ""
+    expression: str = ""
+    settings_fingerprint: str = ""
+
+
 @dataclass
 class TemplateBuildContext:
     """模板队列构建的只读上下文数据类。"""
@@ -162,7 +176,7 @@ class ExecutionState:
     results: list[FieldTestResult]
     attempted_keys: set[tuple[str, str, str, str]]
     template_stats: dict[str, dict[str, int]]
-    pending_futures: dict[Any, dict[str, Any]]
+    pending_futures: dict[Any, PendingFutureContext]
     field_queue_busy_counts: dict[str, int]
     skipped_fields_due_to_queue: set[str]
     unique_field_ids: set[str] = field(default_factory=set)

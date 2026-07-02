@@ -23,6 +23,7 @@ from .bootstrap import (
     prepare_fields_for_execution,
 )
 from .cli.parser import normalize_args_paths, parse_args
+from .cli.path_resolution import apply_run_paths
 from .finalize import finalize_run
 from .run_loop import (
     build_field_resume_positions,
@@ -56,6 +57,7 @@ def main() -> int:
         return clean_runtime_artifacts(args)
 
     run_paths = normalize_args_paths(args)
+    apply_run_paths(args, run_paths)
 
     init_result = initialize_run_context(args, run_paths)
     if init_result is None:
