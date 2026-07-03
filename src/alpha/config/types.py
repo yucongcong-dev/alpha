@@ -55,11 +55,15 @@ class ConfigSource(Enum):
         return priority_map[self]
 
 
-class YamlConfig(TypedDict, total=False):
-    """完整合并 YAML 配置（TypedDict 提供键名自动补全）。"""
-    global_: ConfigSection  # type: ignore[name-defined]  # 对应合并 YAML global 段
-    dataset_profiles: dict[str, DatasetProfile]  # type: ignore[name-defined]
-    expression_policies: dict[str, ExpressionPolicyOverrides]  # type: ignore[name-defined]
+YamlConfig = dict[str, Any]
+"""完整合并 YAML 配置（dict 提供灵活的键名访问）。"""
+
+
+class YamlConfigTyped(TypedDict, total=False):
+    """YAML 配置 TypedDict（用于类型提示和自动补全）。"""
+    global_: ConfigSection
+    dataset_profiles: dict[str, DatasetProfile]
+    expression_policies: dict[str, ExpressionPolicyOverrides]
 
 
 class ConfigSection(TypedDict, total=False):

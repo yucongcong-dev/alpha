@@ -103,7 +103,7 @@ def apply_yaml_global_defaults(
 
 def _merge_section(
     args: DefaultsTarget,
-    section: dict[str, Any],
+    section: Any,
     keys: set[str],
     explicit_cli_keys: set[str] | None = None,
 ) -> None:

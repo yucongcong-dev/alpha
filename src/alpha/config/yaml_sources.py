@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
-from typing import Any
+from typing import cast
 
 from .types import YamlConfig
 
@@ -102,14 +102,14 @@ def load_yaml_file(path: str) -> YamlConfig:
     return {}
 
 
-def deep_merge(base: dict[str, Any], override: dict[str, Any], max_depth: int = 6) -> dict[str, Any]:
+def deep_merge(base: YamlConfig, override: YamlConfig, max_depth: int = 6) -> YamlConfig:
     """Deep-merge dictionaries with override winning."""
     if max_depth <= 0:
-        return dict(override)
-    result = dict(base)
+        return cast(YamlConfig, dict(override))
+    result: YamlConfig = cast(YamlConfig, dict(base))
     for key, value in override.items():
         if key in result and isinstance(result[key], dict) and isinstance(value, dict):
-            result[key] = deep_merge(result[key], value, max_depth - 1)
+            result[key] = deep_merge(cast(YamlConfig, result[key]), cast(YamlConfig, value), max_depth - 1)
         else:
             result[key] = value
     return result

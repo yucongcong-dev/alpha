@@ -5,12 +5,12 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from enum import Enum
 import re
-from typing import Any, Dict, List, Literal, Optional, Union, get_type_hints
+from typing import Any, Literal, Optional, Union
 
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field
 
 from .types import ConfigSource
 
@@ -44,12 +44,12 @@ class ConfigField:
     min_length: Optional[int] = None
     max_length: Optional[int] = None
     pattern: Optional[str] = None
-    enum_values: Optional[List[Any]] = None
-    allowed_sources: Optional[List[ConfigSource]] = None
+    enum_values: Optional[list[Any]] = None
+    allowed_sources: Optional[list[ConfigSource]] = None
     deprecated: bool = False
     deprecated_message: Optional[str] = None
 
-    def validate(self, value: Any, source: ConfigSource) -> List[str]:
+    def validate(self, value: Any, source: ConfigSource) -> list[str]:
         """验证字段值，返回错误信息列表"""
         errors = []
 
@@ -140,13 +140,42 @@ class ConfigField:
 
         return errors
 
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> ConfigField:
+        """从字典创建字段定义"""
+        return cls(
+            name=data.get('name', ''),
+            type=ConfigType(data.get('type', 'string')),
+            description=data.get('description', ''),
+            default=data.get('default'),
+            required=data.get('required', False),
+            min_value=data.get('min_value'),
+            max_value=data.get('max_value'),
+            min_length=data.get('min_length'),
+            max_length=data.get('max_length'),
+            pattern=data.get('pattern'),
+            enum_values=data.get('enum_values'),
+            allowed_sources=data.get('allowed_sources'),
+            deprecated=data.get('deprecated', False),
+            deprecated_message=data.get('deprecated_message'),
+        )
+
 
 class ConfigSchema:
     """配置schema定义"""
 
     def __init__(self):
-        self.fields: Dict[str, ConfigField] = {}
-        self.nested_schemas: Dict[str, ConfigSchema] = {}
+        self.fields: dict[str, ConfigField] = {}
+        self.nested_schemas: dict[str, ConfigSchema] = {}
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> ConfigSchema:
+        """从字典创建schema"""
+        schema = cls()
+        for value in data.values():
+            if isinstance(value, dict) and 'type' in value:
+                schema.add_field(ConfigField.from_dict(value))
+        return schema
 
     def add_field(self, field: ConfigField) -> None:
         """添加字段定义"""
@@ -156,7 +185,7 @@ class ConfigSchema:
         """添加嵌套schema"""
         self.nested_schemas[name] = schema
 
-    def validate(self, config: Dict[str, Any], source: ConfigSource, path: str = "") -> List[str]:
+    def validate(self, config: dict[str, Any], source: ConfigSource, path: str = "") -> list[str]:
         """验证配置数据，返回错误信息列表"""
         errors = []
 
@@ -189,23 +218,22 @@ class ConfigSchema:
 
             # 验证字段值
             field_errors = field.validate(value, source)
-            for error in field_errors:
-                errors.append(f"{full_path}: {error}")
+            errors.extend(f"{full_path}: {error}" for error in field_errors)
 
         # 检查必填字段
-        for field_name, field in self.fields.items():
-            if field.required and field_name not in config:
+        for field_name, field_def in self.fields.items():
+            if field_def.required and field_name not in config:
                 errors.append(f"Required field '{field_name}' is missing")
 
         return errors
 
-    def get_default_config(self) -> Dict[str, Any]:
+    def get_default_config(self) -> dict[str, Any]:
         """获取默认配置"""
         config = {}
 
-        for field_name, field in self.fields.items():
-            if field.default is not None:
-                config[field_name] = field.default
+        for field_name, field_def in self.fields.items():
+            if field_def.default is not None:
+                config[field_name] = field_def.default
 
         for schema_name, schema in self.nested_schemas.items():
             config[schema_name] = schema.get_default_config()
@@ -216,23 +244,22 @@ class ConfigSchema:
         """生成schema描述文档"""
         lines = ["Configuration Schema:"]
 
-        for field_name, field in sorted(self.fields.items()):
+        for field_name, field_def in sorted(self.fields.items()):
             lines.append(f"\n  {field_name}:")
-            lines.append(f"    Type: {field.type.value}")
-            lines.append(f"    Description: {field.description}")
-            if field.default is not None:
-                lines.append(f"    Default: {field.default}")
-            lines.append(f"    Required: {field.required}")
-            if field.deprecated:
+            lines.append(f"    Type: {field_def.type.value}")
+            lines.append(f"    Description: {field_def.description}")
+            if field_def.default is not None:
+                lines.append(f"    Default: {field_def.default}")
+            lines.append(f"    Required: {field_def.required}")
+            if field_def.deprecated:
                 lines.append("    Deprecated: Yes")
-                if field.deprecated_message:
-                    lines.append(f"    Deprecation message: {field.deprecated_message}")
+                if field_def.deprecated_message:
+                    lines.append(f"    Deprecation message: {field_def.deprecated_message}")
 
         for schema_name, schema in sorted(self.nested_schemas.items()):
             lines.append(f"\n  {schema_name} (nested):")
             nested_lines = schema.describe().split('\n')
-            for nested_line in nested_lines[1:]:  # Skip first line
-                lines.append(f"    {nested_line}")
+            lines.extend(f"    {nested_line}" for nested_line in nested_lines[1:])
 
         return '\n'.join(lines)
 
@@ -536,22 +563,22 @@ class FullConfig(BaseModel):
     runtime: RuntimeConfig = Field(default_factory=RuntimeConfig)
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> FullConfig:
+    def from_dict(cls, data: dict[str, Any]) -> FullConfig:
         """从字典创建配置模型"""
         return cls(**data)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """转换为字典"""
         return self.dict()
 
 
-def validate_config_with_schema(config: Dict[str, Any]) -> List[str]:
+def validate_config_with_schema(config: dict[str, Any]) -> list[str]:
     """使用schema验证配置"""
     schema = AlphaConfigSchemaBuilder.build_full_schema()
     return schema.validate(config, ConfigSource.SETTINGS)
 
 
-def get_default_config() -> Dict[str, Any]:
+def get_default_config() -> dict[str, Any]:
     """获取默认配置"""
     schema = AlphaConfigSchemaBuilder.build_full_schema()
     return schema.get_default_config()

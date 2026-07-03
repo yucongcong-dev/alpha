@@ -8,24 +8,18 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass, field
-from enum import Enum
-import os
 from pathlib import Path
 import threading
 import time
-from typing import Any, Dict, List, Optional, Set, Union, cast
+from typing import Any, Optional, Union, cast
 
 import yaml
 
 from .schema import ConfigSchema
 from .types import ConfigSource, YamlConfig
 from .yaml_sources import (
-    DEFAULT_CONFIG_NAMES,
     YAML_FILES,
-    all_files_signature,
     deep_merge,
-    load_all_yamls,
-    resolve_all_yaml_files,
 )
 
 
@@ -84,17 +78,18 @@ class UnifiedConfigManager:
 
     def __init__(self, project_root: Optional[Union[str, Path]] = None):
         """初始化配置管理器"""
-        if hasattr(self, '_initialized') and self._initialized:
+        self._initialized = getattr(self, '_initialized', False)
+        if self._initialized:
             return
 
         self.project_root = Path(project_root) if project_root else Path(__file__).parent.parent.parent.parent
         self.config_dir = self.project_root / "config"
 
-        self._config_by_source: Dict[ConfigSource, Dict[str, Any]] = {}
-        self._merged_config: Dict[str, Any] = {}
-        self._cached_values: Dict[str, ConfigValue] = {}
+        self._config_by_source: dict[ConfigSource, dict[str, Any]] = {}
+        self._merged_config: dict[str, Any] = {}
+        self._cached_values: dict[str, ConfigValue] = {}
 
-        self._change_listeners: List[Callable[[ConfigChangeEvent], None]] = []
+        self._change_listeners: list[Callable[[ConfigChangeEvent], None]] = []
 
         self._schema: Optional[ConfigSchema] = None
 
@@ -164,9 +159,8 @@ class UnifiedConfigManager:
             for attr_name in dir(config_constants):
                 if not attr_name.startswith("_"):
                     attr_value = getattr(config_constants, attr_name)
-                    if not callable(attr_value):
-                        if isinstance(attr_value, (int, float, str, bool, list, dict)):
-                            code_constants[attr_name] = attr_value
+                    if not callable(attr_value) and isinstance(attr_value, (int, float, str, bool, list, dict)):
+                        code_constants[attr_name] = attr_value
 
             self._config_by_source[ConfigSource.CODE_CONSTANTS] = code_constants
 
@@ -182,7 +176,10 @@ class UnifiedConfigManager:
         for source in sorted_sources:
             source_config = self._config_by_source.get(source, {})
             if source_config:
-                self._merged_config = deep_merge(self._merged_config, source_config)
+                self._merged_config = cast(dict[str, Any], deep_merge(
+                    cast(YamlConfig, self._merged_config),
+                    cast(YamlConfig, source_config)
+                ))
 
     def _validate_configs(self) -> None:
         """验证配置数据"""
@@ -197,13 +194,13 @@ class UnifiedConfigManager:
                     for error in errors:
                         print(f"  - {error}")
 
-    def set_schema(self, schema_def: Union[Dict[str, Any], ConfigSchema]) -> None:
+    def set_schema(self, schema_def: Union[dict[str, Any], ConfigSchema]) -> None:
         """设置配置schema"""
         with self._lock:
             if isinstance(schema_def, ConfigSchema):
                 self._schema = schema_def
             else:
-                self._schema = ConfigSchema(schema_def)
+                self._schema = ConfigSchema.from_dict(schema_def)
             self._validate_configs()
 
     def get(self, key: str, default: Any = None) -> Any:
@@ -271,7 +268,7 @@ class UnifiedConfigManager:
             )
             self._notify_listeners(event)
 
-    def set_command_line_args(self, args: Dict[str, Any]) -> None:
+    def set_command_line_args(self, args: dict[str, Any]) -> None:
         """设置命令行参数"""
         self._config_by_source[ConfigSource.COMMAND_LINE] = args
         self._merge_all_configs()
@@ -283,7 +280,7 @@ class UnifiedConfigManager:
             config_value = self.get_with_metadata(key)
             return config_value.source if config_value else None
 
-    def _get_nested_value(self, config: Dict[str, Any], key: str) -> Any:
+    def _get_nested_value(self, config: dict[str, Any], key: str) -> Any:
         """获取嵌套配置值"""
         keys = key.split('.')
         value = config
@@ -294,7 +291,7 @@ class UnifiedConfigManager:
                 return None
         return value
 
-    def _set_nested_value(self, config: Dict[str, Any], key: str, value: Any) -> None:
+    def _set_nested_value(self, config: dict[str, Any], key: str, value: Any) -> None:
         """设置嵌套配置值"""
         keys = key.split('.')
         for _i, k in enumerate(keys[:-1]):
@@ -335,12 +332,12 @@ class UnifiedConfigManager:
             except Exception as e:
                 print(f"Error in config change listener: {e}")
 
-    def get_all_sources(self) -> Dict[ConfigSource, Dict[str, Any]]:
+    def get_all_sources(self) -> dict[ConfigSource, dict[str, Any]]:
         """获取所有配置源"""
         with self._lock:
             return {k: v.copy() for k, v in self._config_by_source.items()}
 
-    def get_merged_config(self) -> Dict[str, Any]:
+    def get_merged_config(self) -> dict[str, Any]:
         """获取合并后的完整配置"""
         with self._lock:
             return self._merged_config.copy()

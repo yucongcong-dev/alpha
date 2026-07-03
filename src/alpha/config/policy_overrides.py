@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import replace
-from typing import Any
+from typing import Any, cast
 
 from .models import DatasetExpressionPolicy
 from .policy_coercers import (
@@ -89,7 +89,7 @@ def apply_yaml_expression_policy_overrides(
         return policy
 
     # 解析 priority_tiers 供 @tier_name 引用
-    tiers = resolve_priority_tiers(overrides)
+    tiers = resolve_priority_tiers(cast(dict[str, Any], overrides))
 
     update_map: dict[str, Any] = {}
     set_fields = {

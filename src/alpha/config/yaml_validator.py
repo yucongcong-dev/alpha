@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import threading
+from typing import Any
 
 from .types import YamlConfig
 from .yaml_sources import DEFAULT_CONFIG_NAMES, load_default_yamls, load_yaml_file
@@ -31,7 +32,7 @@ def clear_schema_cache() -> None:
         _schema_keys_cache = None
 
 
-def _collect_leaf_paths(data: dict, prefix: tuple[str, ...] = ()) -> set[tuple[str, ...]]:
+def _collect_leaf_paths(data: Any, prefix: tuple[str, ...] = ()) -> set[tuple[str, ...]]:
     """Collect all leaf key paths in a nested dict."""
     paths: set[tuple[str, ...]] = set()
     if not isinstance(data, dict):
@@ -45,7 +46,7 @@ def _collect_leaf_paths(data: dict, prefix: tuple[str, ...] = ()) -> set[tuple[s
     return paths
 
 
-def _collect_all_string_keys(data: dict) -> set[str]:
+def _collect_all_string_keys(data: Any) -> set[str]:
     """Collect every key name that appears in a nested dict."""
     keys: set[str] = set()
     if not isinstance(data, dict):
@@ -189,7 +190,7 @@ def _validate_nested_paths(config: YamlConfig) -> list[str]:
     return warnings
 
 
-def validate_merged_config(config: YamlConfig, resolved_files: dict[str, str]) -> list[str]:
+def validate_merged_config(config: Any, resolved_files: dict[str, str]) -> list[str]:
     """Validate merged YAML config and return warnings."""
     if not isinstance(config, dict):
         return []

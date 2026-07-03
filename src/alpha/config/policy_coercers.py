@@ -92,7 +92,7 @@ def coerce_feedback_phase_policy(value: Any) -> FeedbackPhasePolicy | None:
     if not isinstance(value, dict):
         return None
     preferred_raw = value.get("preferred_template_stages", ())
-    preferred_template_stages = ()
+    preferred_template_stages: tuple[str, ...] = ()
     if isinstance(preferred_raw, (list, tuple)):
         preferred_template_stages = tuple(str(item) for item in preferred_raw if str(item).strip())
     try:
@@ -167,6 +167,7 @@ def coerce_template_prefix_penalties(
     """Coerce template prefix penalties from dict or legacy list[dict] YAML."""
     tiers = tiers or {}
     coerced_prefix_penalties: dict[tuple[str, ...], int] = {}
+    iterable: Any
     if isinstance(value, dict):
         iterable = value.items()
     elif isinstance(value, (list, tuple)):

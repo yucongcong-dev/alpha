@@ -7,6 +7,8 @@ config/dataset_profiles.yaml 或 config/settings.yaml 的 dataset_profiles 段�
 
 from __future__ import annotations
 
+from typing import cast
+
 from .constants import (
     DEFAULT_FIELD_TEMPLATE_BATCH_SIZE,
     DEFAULT_MAX_CONCURRENT_CREATES,
@@ -51,4 +53,4 @@ def get_dataset_profile(
             yaml_profile = yaml_profiles.get(dataset_id)
             if isinstance(yaml_profile, dict):
                 profile.update(yaml_profile)
-    return profile
+    return cast(DatasetProfile, profile)

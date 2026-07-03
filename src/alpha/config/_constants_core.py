@@ -42,7 +42,7 @@ def _resolve_yaml_key(yaml_data: dict[str, Any], keys: tuple[str, ...]) -> Any:
     return node
 
 
-def _yaml_val(*keys: str, default: Any = None, cast: type = str) -> Any:
+def _yaml_val(*keys: str, default: Any = None, cast: type | None = str) -> Any:
     """从完整合并 YAML 配置中读取嵌套值。
 
     查找顺序：
@@ -54,7 +54,7 @@ def _yaml_val(*keys: str, default: Any = None, cast: type = str) -> Any:
     """
     from .yaml import get_yaml_config
 
-    yaml_data = get_yaml_config()
+    yaml_data: dict[str, Any] = dict(get_yaml_config())
     key_path = ".".join(keys)
 
     # 1. 优先查找 global.* 路径
@@ -83,15 +83,15 @@ def _yaml_val(*keys: str, default: Any = None, cast: type = str) -> Any:
 
 
 def _yaml_int(*keys: str, default: int = 0) -> int:
-    return _yaml_val(*keys, default=default, cast=int)
+    return int(_yaml_val(*keys, default=default, cast=int))
 
 
 def _yaml_float(*keys: str, default: float = 0.0) -> float:
-    return _yaml_val(*keys, default=default, cast=float)
+    return float(_yaml_val(*keys, default=default, cast=float))
 
 
 def _yaml_str(*keys: str, default: str = "") -> str:
-    return _yaml_val(*keys, default=default, cast=str)
+    return str(_yaml_val(*keys, default=default, cast=str))
 
 
 def _yaml_dict(*keys: str, default: dict | None = None) -> dict:
@@ -101,7 +101,11 @@ def _yaml_dict(*keys: str, default: dict | None = None) -> dict:
 
 def _yaml_list(*keys: str, default: list | None = None) -> list:
     result = _yaml_val(*keys, default=default, cast=None)
-    return result if isinstance(result, (list, tuple)) else (default or [])
+    if isinstance(result, list):
+        return result
+    elif isinstance(result, tuple):
+        return list(result)
+    return default or []
 
 
 def _yaml_set(*keys: str, default: set | None = None) -> set:

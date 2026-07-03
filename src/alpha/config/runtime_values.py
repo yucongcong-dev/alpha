@@ -46,10 +46,9 @@ from .constants import (
     SUBMIT_MIN_SHARPE,
     SUBMIT_MIN_TURNOVER,
 )
-from .types import ConfigSection
 
 
-def _get_yaml_global() -> dict:
+def _get_yaml_global() -> dict[str, Any]:
     """获取整个 global 段（一次查询，避免重复遍历）。"""
     from . import get_yaml_config
 
@@ -60,7 +59,7 @@ def _get_yaml_global() -> dict:
     return global_cfg if isinstance(global_cfg, dict) else {}
 
 
-def yaml_global_section(section: str) -> ConfigSection:
+def yaml_global_section(section: str) -> dict[str, Any]:
     """Load a normalized `global.<section>` dictionary from the active YAML config."""
     global_cfg = _get_yaml_global()
     sect = global_cfg.get(section, {})

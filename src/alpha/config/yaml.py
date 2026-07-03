@@ -10,6 +10,7 @@ from __future__ import annotations
 import logging
 import os
 import threading
+from typing import cast
 
 from .types import YamlConfig, YamlConfigCacheEntry
 from .yaml_sources import (
@@ -74,7 +75,7 @@ def get_yaml_config(config_path: str = "") -> YamlConfig:
             and cached_entry.get("signature") == signature
             and isinstance(cached_entry.get("data"), dict)
         ):
-            return cached_entry["data"]
+            return cast(YamlConfig, cached_entry["data"])
 
         data = _load_all_yamls(settings_path)
 

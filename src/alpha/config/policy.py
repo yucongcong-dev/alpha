@@ -166,10 +166,10 @@ def _yaml_curated_heuristics(dataset_id: str) -> bool:
     from . import get_yaml_config
 
     yaml_config = get_yaml_config() or {}
-    policies: dict = yaml_config.get("expression_policies", {})
+    policies = yaml_config.get("expression_policies", {})
     if not isinstance(policies, dict):
         return "fundamental6" in dataset_id.lower()
-    dataset_policy: dict = policies.get(dataset_id, {})
+    dataset_policy = policies.get(dataset_id, {})
     if isinstance(dataset_policy, dict) and "use_curated_heuristics" in dataset_policy:
         return bool(dataset_policy.get("use_curated_heuristics", False))
     return "fundamental6" in dataset_id.lower()
@@ -212,10 +212,10 @@ def use_curated_heuristics_for_dataset(
         from . import get_yaml_config
 
         yaml_config = get_yaml_config() or {}
-    policies: dict = yaml_config.get("expression_policies", {})
+    policies = yaml_config.get("expression_policies", {})
     if not isinstance(policies, dict):
         return False
-    dataset_policy: dict = policies.get(dataset_id, {})
+    dataset_policy = policies.get(dataset_id, {})
     if isinstance(dataset_policy, dict):
         return bool(dataset_policy.get("use_curated_heuristics", False))
     return False
