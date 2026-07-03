@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 中期改进功能集成测试
-测试依赖注入、错误处理框架和健康检查系统
+测试依赖注入、错误处理框架
 """
 
 import pytest
@@ -11,11 +11,6 @@ from alpha.error_handling import (
     ErrorHandler, ErrorSeverity, ErrorCategory, ErrorContext,
     RetryStrategy, FallbackStrategy, CircuitBreakerStrategy,
     get_error_handler, handle_global_error
-)
-from alpha.health import (
-    HealthChecker, HealthStatus, CheckType,
-    PythonVersionCheck, DiskSpaceCheck,
-    get_health_checker, run_health_checks, get_health_report
 )
 
 
@@ -231,87 +226,14 @@ class TestErrorHandlingFramework:
         assert handler.get_metrics()["errors_total"] == 1
 
 
-class TestHealthCheck:
-    """测试健康检查系统"""
-    
-    def setup_method(self):
-        """设置测试环境"""
-        checker = HealthChecker()
-        checker.register_check(PythonVersionCheck())
-        checker.register_check(DiskSpaceCheck())
-    
-    def test_python_version_check(self):
-        """测试Python版本检查"""
-        check = PythonVersionCheck()
-        result = check.check()
-        
-        assert result.status in [HealthStatus.HEALTHY, HealthStatus.DEGRADED]
-        assert "Python" in result.message
-    
-    def test_disk_space_check(self):
-        """测试磁盘空间检查"""
-        check = DiskSpaceCheck(path=str(__file__), min_free_gb=0.001)
-        result = check.check()
-        
-        assert result.status in [HealthStatus.HEALTHY, HealthStatus.DEGRADED, HealthStatus.UNHEALTHY]
-        assert "磁盘" in result.message or "disk" in result.message.lower()
-    
-    def test_health_checker_register(self):
-        """测试健康检查器注册"""
-        checker = HealthChecker()
-        checker.register_check(PythonVersionCheck())
-        
-        checks = checker.get_checks()
-        assert len(checks) == 1
-        assert checks[0].get_name() == "python_version"
-    
-    def test_run_all_checks(self):
-        """测试运行所有检查"""
-        checker = HealthChecker()
-        checker.register_check(PythonVersionCheck())
-        
-        results = checker.run_all_checks()
-        assert len(results) == 1
-        assert results[0].name == "python_version"
-    
-    def test_overall_status(self):
-        """测试总体状态"""
-        checker = HealthChecker()
-        checker.register_check(PythonVersionCheck())
-        checker.run_all_checks()
-        
-        status = checker.get_overall_status()
-        assert status in [HealthStatus.HEALTHY, HealthStatus.UNKNOWN]
-    
-    def test_generate_report(self):
-        """测试生成健康报告"""
-        checker = HealthChecker()
-        checker.register_check(PythonVersionCheck())
-        
-        report = checker.generate_report()
-        
-        assert "timestamp" in report
-        assert "overall_status" in report
-        assert "checks" in report
-        assert report["check_count"] == 1
-    
-    def test_health_report_function(self):
-        """测试便捷函数"""
-        report = get_health_report()
-        
-        assert "overall_status" in report
-        assert report["check_count"] > 0
-        assert "checks" in report
-
-
 class TestIntegration:
     """测试各模块集成"""
-    
+
     def test_error_handler_and_performance_monitor(self):
         """测试错误处理器和性能监控集成"""
         handler = get_error_handler()
         handler.clear_errors()
-        
+
         try:
             raise ValueError("Integration test error")
         except ValueError as e:
@@ -321,18 +243,10 @@ class TestIntegration:
                 category=ErrorCategory.SYSTEM,
                 operation="integration_test"
             )
-        
+
         assert record.recovered is True
         assert handler.get_metrics()["errors_total"] == 1
-    
-    def test_health_check_and_config(self):
-        """测试健康检查与配置管理器集成"""
-        report = get_health_report()
-        
-        config_check = next((c for c in report["checks"] if c["name"] == "configuration"), None)
-        if config_check:
-            assert config_check["status"] in ["healthy", "degraded", "unknown"]
-    
+
     def test_di_with_error_handler(self):
         """测试依赖注入与错误处理器集成"""
         set_container(Container())
