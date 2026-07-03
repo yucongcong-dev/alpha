@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import functools
 import logging
+import threading
 import time
 import traceback
 from abc import ABC, abstractmethod
@@ -16,7 +17,7 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import (
     Any, Callable, Dict, List, Optional, Type, TypeVar, Union, 
-    cast, Generic
+    Tuple, cast, Generic
 )
 from typing_extensions import ParamSpec
 
@@ -46,6 +47,7 @@ class ErrorCategory(Enum):
     RESOURCE = "RESOURCE"      # 资源错误（内存、磁盘等）
     TIMEOUT = "TIMEOUT"        # 超时错误
     CONCURRENCY = "CONCURRENCY" # 并发错误
+    SYSTEM = "SYSTEM"          # 系统错误
     UNKNOWN = "UNKNOWN"        # 未知错误
 
 
@@ -294,6 +296,7 @@ class ErrorHandler:
         self.strategies: List[RecoveryStrategy] = []
         self.error_records: List[ErrorRecord] = []
         self.metrics: Dict[str, Any] = defaultdict(int)
+        self._lock = threading.RLock()
         
         # 注册默认策略
         self.register_strategy(RetryStrategy())
@@ -302,7 +305,8 @@ class ErrorHandler:
     
     def register_strategy(self, strategy: RecoveryStrategy) -> None:
         """注册恢复策略"""
-        self.strategies.append(strategy)
+        with self._lock:
+            self.strategies.append(strategy)
         self.logger.debug(f"Registered recovery strategy: {strategy.get_description()}")
     
     def handle_error(self, exception: Exception, context: ErrorContext) -> ErrorRecord:
@@ -311,15 +315,17 @@ class ErrorHandler:
         error_record = ErrorRecord(exception=exception, context=context)
         
         # 更新指标
-        self.metrics[f"errors_total"] += 1
-        self.metrics[f"errors_{context.severity.value.lower()}"] += 1
-        self.metrics[f"errors_{context.category.value.lower()}"] += 1
+        with self._lock:
+            self.metrics[f"errors_total"] += 1
+            self.metrics[f"errors_{context.severity.value.lower()}"] += 1
+            self.metrics[f"errors_{context.category.value.lower()}"] += 1
         
         # 尝试恢复
         recovery_result = self._attempt_recovery(error_record)
         
         # 记录错误
-        self.error_records.append(error_record)
+        with self._lock:
+            self.error_records.append(error_record)
         
         # 记录日志
         self._log_error(error_record, recovery_result)
@@ -336,8 +342,9 @@ class ErrorHandler:
                     error_record.recovered = True
                     
                     # 更新恢复指标
-                    self.metrics["recoveries_total"] += 1
-                    self.metrics[f"recoveries_{error_record.recovery_action}"] += 1
+                    with self._lock:
+                        self.metrics["recoveries_total"] += 1
+                        self.metrics[f"recoveries_{error_record.recovery_action}"] += 1
                     
                     return result
                 except Exception as e:
@@ -366,31 +373,52 @@ class ErrorHandler:
     
     def get_metrics(self) -> Dict[str, Any]:
         """获取错误指标"""
-        return dict(self.metrics)
+        with self._lock:
+            return dict(self.metrics)
     
     def get_recent_errors(self, limit: int = 10) -> List[ErrorRecord]:
         """获取最近的错误"""
-        return self.error_records[-limit:] if self.error_records else []
+        with self._lock:
+            return list(self.error_records[-limit:]) if self.error_records else []
     
     def clear_errors(self) -> None:
         """清除错误记录"""
-        self.error_records.clear()
-        self.metrics.clear()
+        with self._lock:
+            self.error_records.clear()
+            self.metrics.clear()
     
     def generate_report(self) -> Dict[str, Any]:
         """生成错误报告"""
-        report = {
-            "timestamp": time.time(),
-            "metrics": self.get_metrics(),
-            "recent_errors": [],
-            "recovery_strategies": [s.get_description() for s in self.strategies]
-        }
-        
-        # 添加最近错误
-        for error in self.get_recent_errors(5):
-            report["recent_errors"].append(error.to_dict())
+        with self._lock:
+            report = {
+                "timestamp": time.time(),
+                "metrics": dict(self.metrics),
+                "recent_errors": [],
+                "recovery_strategies": [s.get_description() for s in self.strategies]
+            }
+            
+            # 添加最近错误
+            for error in self.error_records[-5:]:
+                report["recent_errors"].append(error.to_dict())
         
         return report
+    
+    def __call__(
+        self,
+        severity: ErrorSeverity = ErrorSeverity.ERROR,
+        category: ErrorCategory = ErrorCategory.UNKNOWN,
+        operation: str = "",
+        module: str = "",
+        **context_kwargs
+    ):
+        """使 ErrorHandler 实例可作为装饰器使用"""
+        return error_handler(
+            severity=severity,
+            category=category,
+            operation=operation,
+            module=module,
+            **context_kwargs
+        )
 
 
 # 装饰器
