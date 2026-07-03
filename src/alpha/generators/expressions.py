@@ -10,9 +10,28 @@ implementation now lives in focused modules under ``alpha.generators`` and
 
 历史上调用方会从本模块导入分类、优先级、变体构建和候选构建函数。现在真实
 实现已经拆到更聚焦的模块中；本文件只负责保持旧导入路径兼容。
+
+.. deprecated:: 1.0.0
+    This module is a compatibility facade. Import from specific modules instead:
+    ``alpha.generators.expression_builder``, ``alpha.generators.matrix_templates``,
+    ``alpha.generators.ratio_templates``, ``alpha.generators.templates.classification``,
+    ``alpha.generators.templates.metadata``, ``alpha.generators.templates.priority``,
+    ``alpha.generators.templates.refine``, ``alpha.generators.templates.variations``.
 """
 
 from __future__ import annotations
+
+import warnings
+
+warnings.warn(
+    "alpha.generators.expressions is deprecated. Import from specific modules instead: "
+    "alpha.generators.expression_builder, alpha.generators.matrix_templates, "
+    "alpha.generators.ratio_templates, alpha.generators.templates.classification, "
+    "alpha.generators.templates.metadata, alpha.generators.templates.priority, "
+    "alpha.generators.templates.refine, alpha.generators.templates.variations.",
+    DeprecationWarning,
+    stacklevel=2,
+)
 
 from ..policy.template_blacklist import (
     invalidate_blacklist_cache as invalidate_blacklist_cache,

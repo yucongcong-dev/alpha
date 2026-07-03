@@ -8,9 +8,23 @@
 - runtime.py: 运行时上下文与状态
 
 本模块保留统一导出，避免一次性改动全仓引用点。
+
+.. deprecated:: 1.0.0
+    This module is a compatibility facade. Import from specific modules instead:
+    ``alpha.models.domain``, ``alpha.models.io_types``, ``alpha.models.runtime``,
+    ``alpha.config.models``.
 """
 
 from __future__ import annotations
+
+import warnings
+
+warnings.warn(
+    "alpha.models.base is deprecated. Import from specific modules instead: "
+    "alpha.models.domain, alpha.models.io_types, alpha.models.runtime, alpha.config.models.",
+    DeprecationWarning,
+    stacklevel=2,
+)
 
 from ..config.models import DatasetExpressionPolicy
 from .domain import (

@@ -7,7 +7,7 @@ import os
 
 from ...config import get_backfill_window, get_dataset_expression_policy
 from ...exceptions import BrainAPIError
-from ...models.base import TemplateLibrary
+from ...models.domain import TemplateLibrary, TemplateLibraryItem
 from .library_paths import is_builtin_template_path, resolve_builtin_template_library_file
 
 _OPTIONAL_TEMPLATE_METADATA_KEYS = (
@@ -103,19 +103,19 @@ def load_template_library(path: str) -> TemplateLibrary:
             if not isinstance(priority, int):
                 raise BrainAPIError(f"模板 '{field_type}[{index}]' 的 priority 必须是整数。")
             resolved_expression = resolve_placeholders(item["expression"].strip(), backfill_window)
+            metadata = {
+                key: item[key]
+                for key in _OPTIONAL_TEMPLATE_METADATA_KEYS
+                if key in item
+            }
             validated[field_type].append(
-                dict(
-                    {
-                        "name": item["name"].strip(),
-                        "expression": resolved_expression,
-                        "priority": priority,
-                        "stage": infer_template_stage(item),
-                    },
-                    **{
-                        key: item[key]
-                        for key in _OPTIONAL_TEMPLATE_METADATA_KEYS
-                        if key in item and key != "stage"
-                    },
+                TemplateLibraryItem(
+                    name=item["name"].strip(),
+                    expression=resolved_expression,
+                    priority=priority,
+                    family=item.get("family"),
+                    stage=infer_template_stage(item),
+                    metadata=metadata,
                 )
             )
     return validated

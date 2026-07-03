@@ -5,9 +5,8 @@ from __future__ import annotations
 from collections.abc import Sequence
 from typing import Any, Protocol, Union
 
-from .domain import FieldFeedbackSummary, FieldTestResult, TemplateCandidate
+from .domain import FieldFeedbackSummary, FieldTestResult, TemplateCandidate, TemplateField
 
-TemplateField = dict[str, Any]
 TemplateFeedback = FieldFeedbackSummary
 TemplateStats = dict[str, dict[str, int]]
 RunConfig = dict[str, Any]

@@ -19,8 +19,8 @@ from ..config.getters import get_backfill_window
 from ..config.models import DatasetExpressionPolicy
 from ..config.policy import get_dataset_expression_policy, resolve_feedback_stage
 from ..generators.field_transforms import build_field_view
-from ..models.domain import TemplateCandidate, TemplateLibrary
-from ..models.runtime import TemplateFeedback, TemplateField
+from ..models.domain import TemplateCandidate, TemplateField, TemplateLibrary, TemplateLibraryItem
+from ..models.runtime import TemplateFeedback
 from ..policy.template_blacklist import (
     is_blacklisted_template as _policy_is_blacklisted_template,
 )
@@ -186,26 +186,23 @@ def build_expression_candidates(
     raw_templates = _select_template_items(template_library, field_type, policy.dataset_id)
     templates = [
         _make_template_candidate(
-            str(item["name"]),
-            str(item["expression"]).format(
+            item.name,
+            item.expression.format(
                 field=field_view.raw_expression,
                 field_preprocessed=field_view.preprocessed_expression,
                 ratio_numerator=field_view.ratio_numerator_expression,
                 ratio_denominator=field_view.ratio_denominator_expression,
                 backfill_window=get_backfill_window(),
             ),
-            int(item.get("priority", 0))
-            + _policy_template_priority_adjustment(str(item["name"]), policy),
+            item.priority + _policy_template_priority_adjustment(item.name, policy),
             metadata=_runtime_template_metadata(item),
         )
         for item in raw_templates
-        if isinstance(item, dict)
-        and "name" in item
-        and "expression" in item
-        and str(item["name"]) not in policy.disabled_templates
+        if isinstance(item, TemplateLibraryItem)
+        and item.name not in policy.disabled_templates
         and not _is_blacklisted_template(
-            str(item["name"]),
-            str(item["expression"]),
+            item.name,
+            item.expression,
             template_metadata=_runtime_template_metadata(item),
             policy=policy,
         )

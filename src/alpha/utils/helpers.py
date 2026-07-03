@@ -16,6 +16,7 @@ from __future__ import annotations
 from typing import Any
 
 from ..config.constants import SENTINEL_UNKNOWN
+from ..models.domain import TemplateField
 
 
 def first_non_empty(*values: Any) -> Any | None:
@@ -45,7 +46,7 @@ def first_non_empty(*values: Any) -> Any | None:
     return None
 
 
-def choose_field_name(field: dict[str, Any]) -> str:
+def choose_field_name(field: dict[str, Any] | TemplateField) -> str:
     """
     从异构字段元数据中解析标准字段名或标识。
 
@@ -53,7 +54,7 @@ def choose_field_name(field: dict[str, Any]) -> str:
     多个常见键中提取标准的字段标识符。
 
     Args:
-        field (Dict[str, Any]): 字段的元数据字典。
+        field (Dict[str, Any] | TemplateField): 字段的元数据字典或 TemplateField 对象。
 
     Returns:
         str: 字段的标准名称或标识符。
@@ -75,6 +76,8 @@ def choose_field_name(field: dict[str, Any]) -> str:
         >>> print(name)
         'ebitda'
     """
+    if isinstance(field, TemplateField):
+        return field.field_name
     return str(
         first_non_empty(
             field.get("id"),
@@ -85,7 +88,7 @@ def choose_field_name(field: dict[str, Any]) -> str:
     )
 
 
-def choose_field_type(field: dict[str, Any]) -> str:
+def choose_field_type(field: dict[str, Any] | TemplateField) -> str:
     """
     将字段类型标准化为统一的大写标签，便于模板分发。
 
@@ -93,7 +96,7 @@ def choose_field_type(field: dict[str, Any]) -> str:
     将其标准化为大写的统一标签，用于模板库路由。
 
     Args:
-        field (Dict[str, Any]): 字段的元数据字典。
+        field (Dict[str, Any] | TemplateField): 字段的元数据字典或 TemplateField 对象。
 
     Returns:
         str: 标准化的大写字段类型标签。
@@ -121,6 +124,8 @@ def choose_field_type(field: dict[str, Any]) -> str:
         >>> print(type_label)
         'UNKNOWN'
     """
+    if isinstance(field, TemplateField):
+        return field.field_type
     return str(
         first_non_empty(
             field.get("type"),

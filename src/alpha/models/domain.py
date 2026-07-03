@@ -12,8 +12,18 @@ from typing import Any
 
 from ..config.constants import STATUS_ERROR
 
-FailedCheck = dict[str, Any]
-"""单条失败检查项。"""
+@dataclass(frozen=True)
+class FailedCheck:
+    """单条失败检查项。"""
+
+    name: str
+    value: float | None = None
+    limit: float | None = None
+
+    def get(self, key: str, default: Any = None) -> Any:
+        """兼容 dict 风格的 get 方法。"""
+        return getattr(self, key, default)
+
 
 ResultRow = dict[str, Any]
 """结果落盘 / 分析阶段使用的通用行对象。"""
@@ -36,11 +46,104 @@ SummaryPayload = dict[str, Any]
 AnalysisPayload = dict[str, Any]
 """analysis sidecar payload。"""
 
-TemplateLibrary = dict[str, list[dict[str, Any]]]
-"""模板库类型别名。"""
 
-SettingsVariant = dict[str, Any]
-"""设置变体类型别名。"""
+@dataclass(frozen=True)
+class TemplateLibraryItem:
+    """模板库中的单个模板项。"""
+
+    name: str
+    expression: str
+    priority: int = 0
+    family: str | None = None
+    stage: str | None = None
+    metadata: TemplateMetadata = field(default_factory=dict)
+
+    @classmethod
+    def from_dict(cls, item: dict[str, Any]) -> "TemplateLibraryItem":
+        """从字典创建模板项。"""
+        return cls(
+            name=str(item["name"]),
+            expression=str(item["expression"]),
+            priority=int(item.get("priority", 0)),
+            family=item.get("family"),
+            stage=item.get("stage"),
+            metadata=item.get("metadata", {}),
+        )
+
+
+TemplateLibrary = dict[str, list[TemplateLibraryItem]]
+"""模板库类型：键为字段类型（如 "MATRIX"），值为模板项列表。"""
+
+
+@dataclass(frozen=True)
+class SettingsVariant:
+    """模拟设置变体数据类（不可变）。"""
+
+    decay: int | None = None
+    neutralization: str | None = None
+    truncation: float | None = None
+    pasteurization: bool | None = None
+    unit_handling: str | None = None
+    nan_handling: str | None = None
+    language: str | None = None
+    instrument_type: str | None = None
+    region: str | None = None
+    universe: str | None = None
+    delay: int | None = None
+    start_date: str | None = None
+    end_date: str | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        """转换为字典表示。"""
+        return {
+            k: v for k, v in self.__dict__.items() if v is not None
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> "SettingsVariant":
+        """从字典创建设置变体。"""
+        return cls(
+            decay=data.get("decay"),
+            neutralization=data.get("neutralization"),
+            truncation=data.get("truncation"),
+            pasteurization=data.get("pasteurization"),
+            unit_handling=data.get("unit_handling"),
+            nan_handling=data.get("nan_handling"),
+            language=data.get("language"),
+            instrument_type=data.get("instrument_type"),
+            region=data.get("region"),
+            universe=data.get("universe"),
+            delay=data.get("delay"),
+            start_date=data.get("start_date"),
+            end_date=data.get("end_date"),
+        )
+
+
+@dataclass(frozen=True)
+class TemplateField:
+    """字段元数据数据类（不可变）。"""
+
+    field_id: str
+    field_name: str
+    field_type: str
+    metadata: dict[str, Any] = field(default_factory=dict)
+
+    @classmethod
+    def from_dict(cls, field: dict[str, Any]) -> "TemplateField":
+        """从字典创建字段对象。"""
+        field_id = str(field.get("id") or field.get("name") or field.get("mnemonic") or "")
+        field_name = str(field.get("name") or field.get("id") or field.get("mnemonic") or "")
+        field_type = str(field.get("type") or field.get("fieldType") or field.get("category") or "UNKNOWN").upper()
+        return cls(
+            field_id=field_id,
+            field_name=field_name,
+            field_type=field_type,
+            metadata=dict(field),
+        )
+
+    def get(self, key: str, default: Any = None) -> Any:
+        """兼容 dict 风格的 get 方法。"""
+        return self.metadata.get(key, default)
 
 
 @dataclass

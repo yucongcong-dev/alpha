@@ -96,7 +96,49 @@ class HistoricalRunState:
 
 @dataclass
 class ExecutionState:
-    """执行过程中可变的待运行、跳过与累计结果状态。"""
+    """执行过程中可变的待运行、跳过与累计结果状态。
+
+    Thread Safety:
+    This class is shared across multiple threads and must be accessed with
+    proper synchronization. The following describes the ownership and access
+    patterns for each field:
+
+    Fields modified by the MAIN THREAD only:
+    - unique_field_ids: Populated during field preparation phase
+    - last_submission_at: Updated when submissions occur
+
+    Fields modified by WORKER THREADS (via handle_completed_future):
+    - results: Appended with completed FieldTestResult objects
+    - attempted_keys: Updated with (field_id, template_name, expression, fingerprint) tuples
+    - template_stats: Updated via update_template_stats_with_result
+    - pending_futures: Popped when futures complete
+    - field_queue_busy_counts: Updated when queue congestion is detected
+    - skipped_fields_due_to_queue: Updated when fields are skipped
+    - submittable_count: Incremented for submittable results
+    - submitted_count: Incremented for submitted results
+    - error_count: Incremented for failed results
+    - queue_timeout_count: Incremented for queue timeouts
+    - persisted_result_count: Incremented after result persistence
+    - blacklist_runtime_stats: Updated via build_blacklist_runtime_stats
+    - blacklisted_template_names: Updated when templates are blacklisted
+
+    Fields read by multiple threads:
+    - results: Read for progress tracking and checkpointing
+    - attempted_keys: Read to avoid duplicate submissions
+    - pending_futures: Read for inflight tracking
+    - submittable_count: Read for stop_after_submittable logic
+    - submitted_count: Read for progress reporting
+
+    Synchronization Protocol:
+    All modifications to this object must be performed under the lock provided
+    by the caller (typically a threading.Lock). The run_loop module is
+    responsible for acquiring/releasing the lock when accessing ExecutionState.
+
+    The following methods in alpha.core.scheduler are thread-safe when called
+    with proper locking:
+    - handle_completed_future()
+    - drain_completed_futures()
+    """
 
     results: list[FieldTestResult]
     attempted_keys: set[tuple[str, str, str, str]]

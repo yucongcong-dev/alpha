@@ -7,9 +7,26 @@
 - field_stats: 字段统计与字段优先级
 - failed_checks: 失败检查评分、near-pass 与优化建议
 - feedback_stats: 字段反馈画像与全局失败检查计数
+
+.. deprecated:: 1.0.0
+    This module is a compatibility facade. Import from the specific module
+    instead: ``alpha.analysis.results_loader``, ``alpha.analysis.result_identity``,
+    ``alpha.analysis.template_stats``, ``alpha.analysis.field_stats``,
+    ``alpha.analysis.failed_checks``, ``alpha.analysis.feedback_stats``.
 """
 
 from __future__ import annotations
+
+import warnings
+
+warnings.warn(
+    "alpha.analysis.stats is deprecated. Import from specific modules instead: "
+    "alpha.analysis.results_loader, alpha.analysis.result_identity, "
+    "alpha.analysis.template_stats, alpha.analysis.field_stats, "
+    "alpha.analysis.failed_checks, alpha.analysis.feedback_stats.",
+    DeprecationWarning,
+    stacklevel=2,
+)
 
 from .failed_checks import (
     compile_failed_check_leaderboard,

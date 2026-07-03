@@ -10,7 +10,7 @@ from __future__ import annotations
 from typing import Any
 
 from ...config import get_backfill_window
-from ...models.base import FieldView, TemplateLibrary
+from ...models.domain import FieldView, TemplateLibrary, TemplateLibraryItem
 
 TemplateMetadataMap = dict[tuple[str, str], dict[str, Any]]
 """表达式构建阶段使用的模板元数据映射。key=(template_name, expression)。"""
@@ -21,13 +21,14 @@ def _template_key(template_name: str, expression: str) -> tuple[str, str]:
     return (template_name, expression)
 
 
-def _runtime_template_metadata(item: dict[str, Any]) -> dict[str, Any]:
+def _runtime_template_metadata(item: TemplateLibraryItem) -> dict[str, Any]:
     """提取运行时需要的模板元数据。"""
-    return {
-        key: item[key]
-        for key in ("family", "layer", "stage", "requires_partner_field", "field_kinds", "dataset_tags")
-        if key in item
-    }
+    metadata = dict(item.metadata)
+    if item.family:
+        metadata["family"] = item.family
+    if item.stage:
+        metadata["stage"] = item.stage
+    return metadata
 
 
 def _dataset_template_keys(field_type: str, dataset_id: str) -> list[str]:
@@ -47,13 +48,13 @@ def _select_template_items(
     template_library: TemplateLibrary,
     field_type: str,
     dataset_id: str,
-) -> list[dict[str, Any]]:
+) -> list[TemplateLibraryItem]:
     """合并基础模板、字段类型模板和数据集专属模板，后者可覆盖前者。"""
-    merged: dict[str, dict[str, Any]] = {}
+    merged: dict[str, TemplateLibraryItem] = {}
     for key in _dataset_template_keys(field_type, dataset_id):
         for item in template_library.get(key, []):
-            if isinstance(item, dict) and "name" in item and "expression" in item:
-                merged[str(item["name"])] = item
+            if isinstance(item, TemplateLibraryItem):
+                merged[item.name] = item
     return list(merged.values())
 
 
@@ -67,9 +68,7 @@ def build_template_metadata_index(
     metadata_by_key: TemplateMetadataMap = {}
     raw_templates = _select_template_items(template_library, field_type, dataset_id)
     for item in raw_templates:
-        if not isinstance(item, dict) or "name" not in item or "expression" not in item:
-            continue
-        rendered_expression = str(item["expression"]).format(
+        rendered_expression = item.expression.format(
             field=field_view.raw_expression,
             field_preprocessed=field_view.preprocessed_expression,
             ratio_numerator=field_view.ratio_numerator_expression,
@@ -78,7 +77,7 @@ def build_template_metadata_index(
         )
         metadata = _runtime_template_metadata(item)
         if metadata:
-            metadata_by_key[_template_key(str(item["name"]), rendered_expression)] = metadata
+            metadata_by_key[_template_key(item.name, rendered_expression)] = metadata
     return metadata_by_key
 
 

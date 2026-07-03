@@ -1,8 +1,23 @@
 """
 结果输出兼容导出层。
+
+.. deprecated:: 1.0.0
+    This module is a compatibility facade. Import from specific modules instead:
+    ``alpha.io.results_store``, ``alpha.io.output_paths``, ``alpha.io.analysis_sync``,
+    ``alpha.io.common``, ``alpha.policy.blacklist``.
 """
 
 from __future__ import annotations
+
+import warnings
+
+warnings.warn(
+    "alpha.io.output is deprecated. Import from specific modules instead: "
+    "alpha.io.results_store, alpha.io.output_paths, alpha.io.analysis_sync, "
+    "alpha.io.common, alpha.policy.blacklist.",
+    DeprecationWarning,
+    stacklevel=2,
+)
 
 from ..io.common import CACHE_DIR, DATA_DIR, PROJECT_ROOT, RESULTS_DIR, SCRIPT_DIR
 from ..policy.blacklist import (

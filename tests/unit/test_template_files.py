@@ -18,7 +18,7 @@ from alpha.io.output import (
     ensure_template_blacklist_file,
     invalidate_blacklist_path_cache,
 )
-from alpha.models.domain import FieldTestResult, TemplateCandidate
+from alpha.models.domain import FieldTestResult, TemplateCandidate, TemplateLibraryItem
 from alpha.models.runtime import (
     ExecutionState,
     FutureCompletionContext,
@@ -59,7 +59,7 @@ def test_ensure_dataset_template_library_copies_base_when_missing(monkeypatch, t
     assert payload["default"][0]["priority"] == 123
 
     library = load_template_library(str(target))
-    assert library["default"][0]["priority"] == 123
+    assert library["default"][0].priority == 123
 
 
 def test_ensure_dataset_template_library_preserves_existing(monkeypatch, tmp_path) -> None:
@@ -105,10 +105,11 @@ def test_load_template_library_preserves_optional_metadata(tmp_path) -> None:
 
     library = load_template_library(str(template_file))
 
-    assert library["default"][0]["family"] == "custom_family"
-    assert library["default"][0]["layer"] == "ratio"
-    assert library["default"][0]["stage"] == "first_order"
-    assert library["default"][0]["requires_partner_field"] is False
+    item = library["default"][0]
+    assert item.family == "custom_family"
+    assert item.metadata.get("layer") == "ratio"
+    assert item.stage == "first_order"
+    assert item.metadata.get("requires_partner_field") is False
 
 
 def test_load_template_library_infers_stage_from_layer(tmp_path) -> None:
@@ -131,7 +132,7 @@ def test_load_template_library_infers_stage_from_layer(tmp_path) -> None:
 
     library = load_template_library(str(template_file))
 
-    assert library["default"][0]["stage"] == "group_second_order"
+    assert library["default"][0].stage == "group_second_order"
 
 
 def test_ensure_dataset_template_library_fills_missing_priorities(
@@ -193,7 +194,7 @@ def test_load_template_library_legacy_base_path_falls_back_to_new_location(
 
     library = load_template_library(str(legacy_base))
 
-    assert library["default"][0]["name"] == "base"
+    assert library["default"][0].name == "base"
 
 
 def test_ensure_template_blacklist_file_creates_empty_dataset_file(tmp_path) -> None:
@@ -336,13 +337,13 @@ def test_scheduler_dump_results_shrinks_next_template_queue(monkeypatch, tmp_pat
     )
     template_library = {
         "default": [
-            {
-                "name": "weak_template",
-                "expression": "rank(ts_backfill({field}, {backfill_window}))",
-                "priority": 9999,
-                "family": "legacy_level",
-                "stage": "first_order",
-            }
+            TemplateLibraryItem(
+                name="weak_template",
+                expression="rank(ts_backfill({field}, {backfill_window}))",
+                priority=9999,
+                family="legacy_level",
+                stage="first_order",
+            )
         ]
     }
     build_ctx = TemplateBuildContext(
@@ -661,13 +662,13 @@ def test_resimulate_stage_prefers_refine_templates_over_broad_generation(monkeyp
         all_fields=[{"id": "cash_st", "type": "MATRIX", "name": "cash_st"}],
         template_library={
             "default": [
-                {
-                    "name": "broad_template",
-                    "expression": "rank(ts_backfill({field}, {backfill_window}))",
-                    "priority": 9999,
-                    "family": "legacy_level",
-                    "stage": "first_order",
-                }
+                TemplateLibraryItem(
+                    name="broad_template",
+                    expression="rank(ts_backfill({field}, {backfill_window}))",
+                    priority=9999,
+                    family="legacy_level",
+                    stage="first_order",
+                )
             ]
         },
         field_feedback={

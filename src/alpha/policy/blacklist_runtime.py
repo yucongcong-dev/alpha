@@ -35,46 +35,35 @@ def _update_blacklist_runtime_stats_with_result(
     if not is_informative_result(result):
         return None
     template_name = result.template_name
-    summary = stats.setdefault(
-        template_name,
-        {
-            "template_name": template_name,
-            "field_type": result.field_type,
-            "template_family": result.template_family,
-            "template_stage": result.template_stage,
-            "fields_tested": [],
-            "_field_names_seen": set(),
-            "submittable": 0,
-            "low_sharpe": 0,
-            "low_fitness": 0,
-            "concentrated_weight": 0,
-            "sharpe_sum": 0.0,
-            "sharpe_count": 0,
-            "fitness_sum": 0.0,
-            "fitness_count": 0,
-        },
-    )
+    if template_name not in stats:
+        stats[template_name] = BlacklistRuntimeSummary(
+            template_name=template_name,
+            field_type=result.field_type,
+            template_family=result.template_family,
+            template_stage=result.template_stage,
+        )
+    summary = stats[template_name]
     field_name = str(result.field_name or "")
-    if field_name and field_name not in summary["_field_names_seen"]:
-        summary["_field_names_seen"].add(field_name)
-        summary["fields_tested"].append(field_name)
+    if field_name and field_name not in summary._field_names_seen:
+        summary._field_names_seen.add(field_name)
+        summary.fields_tested.append(field_name)
     if result.submittable:
-        summary["submittable"] += 1
+        summary.submittable += 1
     for check in result.failed_checks or []:
         name = str(check.get("name", ""))
         value = check.get("value")
         if name == CHECK_LOW_SHARPE:
-            summary["low_sharpe"] += 1
+            summary.low_sharpe += 1
             if isinstance(value, (int, float)):
-                summary["sharpe_sum"] += float(value)
-                summary["sharpe_count"] += 1
+                summary.sharpe_sum += float(value)
+                summary.sharpe_count += 1
         elif name == CHECK_LOW_FITNESS:
-            summary["low_fitness"] += 1
+            summary.low_fitness += 1
             if isinstance(value, (int, float)):
-                summary["fitness_sum"] += float(value)
-                summary["fitness_count"] += 1
+                summary.fitness_sum += float(value)
+                summary.fitness_count += 1
         elif name == CHECK_CONCENTRATED_WEIGHT:
-            summary["concentrated_weight"] += 1
+            summary.concentrated_weight += 1
     return summary
 
 
@@ -93,29 +82,29 @@ def _build_blacklist_entry_from_runtime_summary(
     min_fields_tested: int,
     min_fail_checks: int,
 ) -> BlacklistTemplateEntry | None:
-    template_name = str(summary.get("template_name", "")).strip()
+    template_name = str(summary.template_name).strip()
     if not template_name or template_name in policy.protected_templates:
         return None
-    fields_tested = list(summary.get("fields_tested", []))
+    fields_tested = list(summary.fields_tested)
     if len(fields_tested) < min_fields_tested:
         return None
-    if int(summary.get("submittable", 0)) > 0:
+    if summary.submittable > 0:
         return None
-    low_sharpe_count = int(summary.get("low_sharpe", 0))
-    low_fitness_count = int(summary.get("low_fitness", 0))
-    concentrated_count = int(summary.get("concentrated_weight", 0))
+    low_sharpe_count = summary.low_sharpe
+    low_fitness_count = summary.low_fitness
+    concentrated_count = summary.concentrated_weight
     total_fails = low_sharpe_count + low_fitness_count
     if total_fails < min_fail_checks:
         return None
-    sharpe_count = int(summary.get("sharpe_count", 0))
-    fitness_count = int(summary.get("fitness_count", 0))
+    sharpe_count = summary.sharpe_count
+    fitness_count = summary.fitness_count
     avg_sharpe = (
-        round(float(summary.get("sharpe_sum", 0.0)) / sharpe_count, 3)
+        round(summary.sharpe_sum / sharpe_count, 3)
         if sharpe_count > 0
         else None
     )
     avg_fitness = (
-        round(float(summary.get("fitness_sum", 0.0)) / fitness_count, 3)
+        round(summary.fitness_sum / fitness_count, 3)
         if fitness_count > 0
         else None
     )
@@ -138,25 +127,22 @@ def _build_blacklist_entry_from_runtime_summary(
         reason_parts.append(f"平均 Fitness {avg_fitness:.3f}")
     from datetime import datetime
 
-    entry: BlacklistTemplateEntry = {
-        "name": template_name,
-        "dataset_id": dataset_id,
-        "source": "auto_detected",
-        "field_type": str(summary.get("field_type", "")),
-        "template_family": str(summary.get("template_family", "")),
-        "template_stage": str(summary.get("template_stage", "")),
-        "reason": "。".join(reason_parts) + "。",
-        "fields_tested": fields_tested,
-        "low_sharpe": low_sharpe_count,
-        "low_fitness": low_fitness_count,
-        "date_blacklisted": datetime.now().strftime(DATE_FORMAT_ISO),
-    }
-    if avg_sharpe is not None:
-        entry["avg_sharpe"] = avg_sharpe
-    if avg_fitness is not None:
-        entry["avg_fitness"] = avg_fitness
-    if concentrated_count:
-        entry["concentrated_weight"] = concentrated_count
+    entry = BlacklistTemplateEntry(
+        name=template_name,
+        dataset_id=dataset_id,
+        source="auto_detected",
+        field_type=str(summary.field_type),
+        template_family=str(summary.template_family),
+        template_stage=str(summary.template_stage),
+        reason="。".join(reason_parts) + "。",
+        fields_tested=fields_tested,
+        low_sharpe=low_sharpe_count,
+        low_fitness=low_fitness_count,
+        date_blacklisted=datetime.now().strftime(DATE_FORMAT_ISO),
+        avg_sharpe=avg_sharpe,
+        avg_fitness=avg_fitness,
+        concentrated_weight=concentrated_count if concentrated_count else None,
+    )
     return entry
 
 
@@ -197,9 +183,9 @@ def auto_update_blacklist(
     }
     added = 0
     for entry in new_entries:
-        if entry["name"] not in existing_names:
-            bl_data["blacklisted_templates"].append(entry)
-            existing_names.add(entry["name"])
+        if entry.name not in existing_names:
+            bl_data["blacklisted_templates"].append(entry.to_dict())
+            existing_names.add(entry.name)
             added += 1
     if added == 0:
         return
@@ -234,7 +220,7 @@ def auto_update_blacklist_incremental(
     summary = _update_blacklist_runtime_stats_with_result(runtime_stats, result)
     if summary is None:
         return False
-    template_name = str(summary.get("template_name", "")).strip()
+    template_name = str(summary.template_name).strip()
     if not template_name or template_name in blacklisted_template_names:
         return False
     entry = _build_blacklist_entry_from_runtime_summary(
@@ -252,17 +238,17 @@ def auto_update_blacklist_incremental(
         for item in bl_data["blacklisted_templates"]
         if isinstance(item, dict) and item.get("name")
     }
-    if entry["name"] in existing_names:
-        blacklisted_template_names.add(entry["name"])
+    if entry.name in existing_names:
+        blacklisted_template_names.add(entry.name)
         return False
-    bl_data["blacklisted_templates"].append(entry)
+    bl_data["blacklisted_templates"].append(entry.to_dict())
     bl_data["_updated"] = datetime.now().strftime(DATE_FORMAT_ISO_MINUTES)
     blacklist_path = write_blacklist_payload(dataset_id, bl_data, data_dir=data_dir)
     invalidate_blacklist_runtime_cache(dataset_id)
-    blacklisted_template_names.add(entry["name"])
+    blacklisted_template_names.add(entry.name)
     logger.info(
         "[blacklist] incrementally added %s to %s (total=%d)",
-        entry["name"],
+        entry.name,
         blacklist_path,
         len(bl_data["blacklisted_templates"]),
     )

@@ -25,21 +25,15 @@ PROJECT_ROOT = find_project_root()
 
 DEFAULT_CONFIG_NAMES: set[str] = {
     "constants_defaults",
-    "api_defaults",
-    "simulation_defaults",
     "quality_feedback_defaults",
     "template_defaults",
-    "runtime_defaults",
 }
 """Logical names for code-level default YAML files."""
 
 YAML_FILES: list[tuple[str, list[str]]] = [
     ("constants_defaults", ["config/constants_defaults.yaml"]),
-    ("api_defaults", ["config/api.yaml"]),
-    ("simulation_defaults", ["config/simulation.yaml"]),
     ("quality_feedback_defaults", ["config/quality_feedback.yaml"]),
     ("template_defaults", ["config/templates.yaml"]),
-    ("runtime_defaults", ["config/runtime.yaml"]),
     ("dataset_profiles", ["config/dataset_profiles.yaml"]),
     ("expression_policies", ["config/expression_policies.yaml"]),
     ("settings", ["config/settings.yaml"]),
