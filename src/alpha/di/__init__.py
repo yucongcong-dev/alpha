@@ -12,16 +12,16 @@
 
 使用示例：
     from alpha.di import Container, Lifecycle, inject, register, resolve
-    
+
     # 注册依赖
     register(ConfigManager)
     register(Database, implementation=PostgreSQLDatabase, lifecycle=Lifecycle.SINGLETON)
-    
+
     # 使用装饰器注入
     @inject
     def process_data(db: Database, config: ConfigManager):
         pass
-    
+
     # 直接解析
     db = resolve(Database)
 """
@@ -32,10 +32,10 @@ from .container import (
     Container,
     Injector,
     Lifecycle,
+    get_container,
     inject,
     register,
     resolve,
-    get_container,
     set_container,
 )
 
@@ -43,9 +43,9 @@ __all__ = [
     "Container",
     "Injector",
     "Lifecycle",
+    "get_container",
     "inject",
     "register",
     "resolve",
-    "get_container",
     "set_container",
 ]

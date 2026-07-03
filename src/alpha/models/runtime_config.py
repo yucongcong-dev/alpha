@@ -155,7 +155,7 @@ class BootstrapConfig:
     quiet: bool = False
 
     @classmethod
-    def from_args(cls, args) -> "BootstrapConfig":
+    def from_args(cls, args) -> BootstrapConfig:
         """Build a BootstrapConfig from an argparse.Namespace."""
         api_client = ApiClientConfig(
             min_request_interval=float(getattr(args, "min_request_interval", 0.0) or 0.0),

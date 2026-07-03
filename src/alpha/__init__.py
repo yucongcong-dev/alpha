@@ -39,6 +39,20 @@ from .config import (
     SIMULATIONS_URL,
     VERSION_HEADER,
 )
+
+# 新增模块导出
+from .error_handling import (
+    ErrorCategory,
+    ErrorContext,
+    ErrorHandler,
+    ErrorRecord,
+    ErrorSeverity,
+    error_handler,
+    get_error_handler,
+    handle_global_error,
+    retry_on_error,
+    set_error_handler,
+)
 from .exceptions import (
     BrainAPIError,
     BrainQueueBusyError,
@@ -56,32 +70,17 @@ from .models import (
     SettingsVariant,
     TemplateLibrary,
 )
-from .utils import choose_field_name, choose_field_type, first_non_empty
-
-# 新增模块导出
-from .error_handling import (
-    ErrorHandler,
-    ErrorSeverity,
-    ErrorCategory,
-    ErrorContext,
-    ErrorRecord,
-    error_handler,
-    retry_on_error,
-    get_error_handler,
-    set_error_handler,
-    handle_global_error,
-)
-
 from .performance_monitor import (
-    PerformanceMonitor,
-    MetricType,
+    CriticalOperations,
     Metric,
+    MetricType,
+    PerformanceMonitor,
     TimerStats,
+    get_performance_monitor,
     monitor_performance,
     record_metric,
-    get_performance_monitor,
-    CriticalOperations,
 )
+from .utils import choose_field_name, choose_field_type, first_non_empty
 
 __version__ = "1.0.0"
 __author__ = "Alpha Generator Team"
@@ -99,39 +98,39 @@ __all__ = [
     "BrainAPIError",
     "BrainQueueBusyError",
     "BrainRateLimitError",
+    "CriticalOperations",
     "DatasetExpressionPolicy",
+    "ErrorCategory",
+    "ErrorContext",
+    # 错误处理模块
+    "ErrorHandler",
+    "ErrorRecord",
+    "ErrorSeverity",
     "ExecutionState",
     "FieldTestResult",
     "FieldView",
     "HistoricalRunState",
+    "Metric",
+    "MetricType",
+    # 性能监控模块
+    "PerformanceMonitor",
     "RunFilters",
     "RunPaths",
     "RuntimeConcurrencyState",
     "SettingsVariant",
     "TemplateLibrary",
+    "TimerStats",
     "__author__",
     "__version__",
     "choose_field_name",
     "choose_field_type",
-    "first_non_empty",
-    # 错误处理模块
-    "ErrorHandler",
-    "ErrorSeverity",
-    "ErrorCategory",
-    "ErrorContext",
-    "ErrorRecord",
     "error_handler",
-    "retry_on_error",
+    "first_non_empty",
     "get_error_handler",
-    "set_error_handler",
+    "get_performance_monitor",
     "handle_global_error",
-    # 性能监控模块
-    "PerformanceMonitor",
-    "MetricType",
-    "Metric",
-    "TimerStats",
     "monitor_performance",
     "record_metric",
-    "get_performance_monitor",
-    "CriticalOperations",
+    "retry_on_error",
+    "set_error_handler",
 ]

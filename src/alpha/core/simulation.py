@@ -10,8 +10,8 @@ from __future__ import annotations
 import logging
 import time
 
-from ..api.client import BrainClient, WorkerClientFactory
 from ..analysis.result_identity import STATUS_PENDING_SELF_CORRELATION
+from ..api.client import BrainClient, WorkerClientFactory
 from ..config.constants import SENTINEL_UNKNOWN
 from ..models.domain import (
     FieldTestContext,

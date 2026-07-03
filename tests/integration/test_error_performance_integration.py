@@ -37,11 +37,11 @@ class TestErrorPerformanceIntegration:
     def setup_method(self):
         """每个测试方法前重置"""
         # 重置全局实例
-        from alpha.error_handling import _global_error_handler
-        from alpha.performance_monitor import _global_monitor
+        import alpha.error_handling
+        import alpha.performance_monitor
         
-        _global_error_handler = None
-        _global_monitor = None
+        alpha.error_handling._global_error_handler = None
+        alpha.performance_monitor._global_monitor = None
         
         # 配置日志
         logging.basicConfig(level=logging.WARNING)

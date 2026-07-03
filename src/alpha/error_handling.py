@@ -10,18 +10,15 @@ import functools
 import logging
 import threading
 import time
-import traceback
 from abc import ABC, abstractmethod
 from collections import defaultdict
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import (
-    Any, Callable, Dict, List, Optional, Type, TypeVar, Union, 
-    Tuple, cast, Generic
-)
+from typing import Any, Optional, TypeVar, cast
 from typing_extensions import ParamSpec
 
-from alpha.exceptions import BrainAPIError, BrainRateLimitError, BrainQueueBusyError
+from alpha.exceptions import BrainRateLimitError, BrainQueueBusyError
 
 # 类型变量
 P = ParamSpec('P')
@@ -60,11 +57,11 @@ class ErrorContext:
     operation: str = ""
     module: str = ""
     function: str = ""
-    parameters: Dict[str, Any] = field(default_factory=dict)
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    parameters: dict[str, Any] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
     stack_trace: Optional[str] = None
     
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """转换为字典"""
         return {
             "timestamp": self.timestamp,
@@ -91,7 +88,7 @@ class ErrorRecord:
     recovery_action: Optional[str] = None
     recovered: bool = False
     
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """转换为字典"""
         return {
             "exception_type": type(self.exception).__name__,
@@ -138,21 +135,21 @@ class RetryStrategy(RecoveryStrategy):
         self.max_retries = max_retries
         self.delay = delay
         self.backoff_factor = backoff_factor
-        self._retry_counts: Dict[str, int] = defaultdict(int)
+        self._retry_counts: dict[str, int] = defaultdict(int)
     
     def can_recover(self, error: ErrorRecord) -> bool:
         """检查是否可以重试"""
         # 只对特定类型的错误重试
         if isinstance(error.exception, (BrainRateLimitError, BrainQueueBusyError)):
-            return True
+            operation_key = f"{error.context.module}.{error.context.function}"
+            return self._retry_counts[operation_key] < self.max_retries
         
         # 网络错误和超时错误也可以重试
         if error.context.category in [ErrorCategory.NETWORK, ErrorCategory.TIMEOUT]:
-            return True
+            operation_key = f"{error.context.module}.{error.context.function}"
+            return self._retry_counts[operation_key] < self.max_retries
         
-        # 检查重试次数
-        operation_key = f"{error.context.module}.{error.context.function}"
-        return self._retry_counts[operation_key] < self.max_retries
+        return False
     
     def recover(self, error: ErrorRecord) -> Any:
         """执行重试恢复"""
@@ -232,8 +229,8 @@ class CircuitBreakerStrategy(RecoveryStrategy):
                  recovery_timeout: float = 60.0):
         self.failure_threshold = failure_threshold
         self.recovery_timeout = recovery_timeout
-        self._failures: Dict[str, List[float]] = defaultdict(list)
-        self._open_circuits: Dict[str, float] = {}
+        self._failures: dict[str, list[float]] = defaultdict(list)
+        self._open_circuits: dict[str, float] = {}
     
     def can_recover(self, error: ErrorRecord) -> bool:
         """检查是否触发熔断"""
@@ -293,9 +290,9 @@ class ErrorHandler:
     
     def __init__(self, logger: Optional[logging.Logger] = None):
         self.logger = logger or logging.getLogger(__name__)
-        self.strategies: List[RecoveryStrategy] = []
-        self.error_records: List[ErrorRecord] = []
-        self.metrics: Dict[str, Any] = defaultdict(int)
+        self.strategies: list[RecoveryStrategy] = []
+        self.error_records: list[ErrorRecord] = []
+        self.metrics: dict[str, Any] = defaultdict(int)
         self._lock = threading.RLock()
         
         # 注册默认策略
@@ -332,27 +329,27 @@ class ErrorHandler:
         
         return error_record
     
-    def _attempt_recovery(self, error_record: ErrorRecord) -> Optional[Dict[str, Any]]:
+    def _attempt_recovery(self, error_record: ErrorRecord) -> Optional[dict[str, Any]]:
         """尝试恢复"""
         for strategy in self.strategies:
             if strategy.can_recover(error_record):
                 try:
                     result = strategy.recover(error_record)
-                    error_record.recovery_action = result.get("action", "unknown")
-                    error_record.recovered = True
-                    
-                    # 更新恢复指标
-                    with self._lock:
-                        self.metrics["recoveries_total"] += 1
-                        self.metrics[f"recoveries_{error_record.recovery_action}"] += 1
-                    
-                    return result
+                    if isinstance(result, dict):
+                        error_record.recovery_action = result.get("action", "unknown")
+                        error_record.recovered = True
+                        
+                        with self._lock:
+                            self.metrics["recoveries_total"] += 1
+                            self.metrics[f"recoveries_{error_record.recovery_action}"] += 1
+                        
+                        return result
                 except Exception as e:
                     self.logger.error(f"Recovery strategy failed: {e}")
         
         return None
     
-    def _log_error(self, error_record: ErrorRecord, recovery_result: Optional[Dict[str, Any]]) -> None:
+    def _log_error(self, error_record: ErrorRecord, recovery_result: Optional[dict[str, Any]]) -> None:
         """记录错误日志"""
         log_message = str(error_record)
         
@@ -371,12 +368,12 @@ class ErrorHandler:
         else:  # DEBUG
             self.logger.debug(log_message)
     
-    def get_metrics(self) -> Dict[str, Any]:
+    def get_metrics(self) -> dict[str, Any]:
         """获取错误指标"""
         with self._lock:
             return dict(self.metrics)
     
-    def get_recent_errors(self, limit: int = 10) -> List[ErrorRecord]:
+    def get_recent_errors(self, limit: int = 10) -> list[ErrorRecord]:
         """获取最近的错误"""
         with self._lock:
             return list(self.error_records[-limit:]) if self.error_records else []
@@ -387,10 +384,10 @@ class ErrorHandler:
             self.error_records.clear()
             self.metrics.clear()
     
-    def generate_report(self) -> Dict[str, Any]:
+    def generate_report(self) -> dict[str, Any]:
         """生成错误报告"""
         with self._lock:
-            report = {
+            report: dict[str, Any] = {
                 "timestamp": time.time(),
                 "metrics": dict(self.metrics),
                 "recent_errors": [],
@@ -456,20 +453,10 @@ def error_handler(
                 return func(*args, **kwargs)
             except Exception as e:
                 # 处理错误
-                error_record = handler.handle_error(e, context)
+                handler.handle_error(e, context)
                 
-                # 如果已恢复，返回降级值或重新抛出
-                if error_record.recovered:
-                    # 检查是否是重试操作
-                    if error_record.recovery_action == "retry":
-                        # 这里可以添加重试逻辑，但为了简化，我们先重新抛出
-                        raise
-                    else:
-                        # 对于其他恢复操作，返回None或适当的值
-                        return cast(R, None)
-                else:
-                    # 未恢复，重新抛出
-                    raise
+                # 总是重新抛出异常，让调用者决定如何处理
+                raise
         
         return wrapper
     
@@ -480,7 +467,7 @@ def retry_on_error(
     max_retries: int = 3,
     delay: float = 1.0,
     backoff_factor: float = 2.0,
-    exceptions: Tuple[Type[Exception], ...] = (Exception,)
+    exceptions: tuple[type[Exception], ...] = (Exception,)
 ):
     """重试装饰器"""
     

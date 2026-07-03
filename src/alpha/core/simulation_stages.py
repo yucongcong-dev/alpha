@@ -9,7 +9,6 @@ import re
 
 from ..api.api_types import CheckResultDict, SimulationPayload
 from ..api.client import BrainClient, retry_operation
-from ..models.domain import FailedCheck
 from ..api.timing import wait_seconds
 from ..config.constants import (
     API_KEY_FAILED,
@@ -23,6 +22,7 @@ from ..config.constants import (
 from ..config.getters import get_polling_default_wait
 from ..generators.payload import build_simulation_payload
 from ..models.domain import (
+    FailedCheck,
     FieldTestContext,
     FieldTestResult,
     SettingsVariant,

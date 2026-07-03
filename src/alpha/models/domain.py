@@ -12,6 +12,7 @@ from typing import Any
 
 from ..config.constants import STATUS_ERROR
 
+
 @dataclass(frozen=True)
 class FailedCheck:
     """单条失败检查项。"""
@@ -26,7 +27,7 @@ class FailedCheck:
         return getattr(self, key, default)
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> "FailedCheck":
+    def from_dict(cls, data: dict[str, Any]) -> FailedCheck:
         """从字典创建失败检查项。"""
         return cls(
             name=str(data.get("name", "")),
@@ -81,7 +82,7 @@ class TemplateLibraryItem:
     metadata: TemplateMetadata = field(default_factory=dict)
 
     @classmethod
-    def from_dict(cls, item: dict[str, Any]) -> "TemplateLibraryItem":
+    def from_dict(cls, item: dict[str, Any]) -> TemplateLibraryItem:
         """从字典创建模板项。"""
         return cls(
             name=str(item["name"]),
@@ -122,7 +123,7 @@ class SettingsVariant:
         }
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> "SettingsVariant":
+    def from_dict(cls, data: dict[str, Any]) -> SettingsVariant:
         """从字典创建设置变体。"""
         return cls(
             decay=data.get("decay"),
@@ -151,7 +152,7 @@ class TemplateField:
     metadata: dict[str, Any] = field(default_factory=dict)
 
     @classmethod
-    def from_dict(cls, field: dict[str, Any]) -> "TemplateField":
+    def from_dict(cls, field: dict[str, Any]) -> TemplateField:
         """从字典创建字段对象。"""
         field_id = str(field.get("id") or field.get("name") or field.get("mnemonic") or "")
         field_name = str(field.get("name") or field.get("id") or field.get("mnemonic") or "")

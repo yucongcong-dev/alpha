@@ -6,26 +6,27 @@
 
 from __future__ import annotations
 
-import os
-import threading
-import time
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from enum import Enum
+import os
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional, Set, Union, cast
+import threading
+import time
+from typing import Any, Dict, List, Optional, Set, Union, cast
 
 import yaml
 
-from .yaml_sources import (
-    YAML_FILES,
-    DEFAULT_CONFIG_NAMES,
-    resolve_all_yaml_files,
-    load_all_yamls,
-    deep_merge,
-    all_files_signature,
-)
-from .types import YamlConfig, ConfigSource
 from .schema import ConfigSchema
+from .types import ConfigSource, YamlConfig
+from .yaml_sources import (
+    DEFAULT_CONFIG_NAMES,
+    YAML_FILES,
+    all_files_signature,
+    deep_merge,
+    load_all_yamls,
+    resolve_all_yaml_files,
+)
 
 
 @dataclass(frozen=True)
@@ -64,10 +65,10 @@ class UnifiedConfigManager:
     提供一致的配置访问接口
     """
 
-    _instance: Optional["UnifiedConfigManager"] = None
+    _instance: Optional[UnifiedConfigManager] = None
     _lock = threading.RLock()
 
-    def __new__(cls, project_root: Optional[Union[str, Path]] = None) -> "UnifiedConfigManager":
+    def __new__(cls, project_root: Optional[Union[str, Path]] = None) -> UnifiedConfigManager:
         """单例模式"""
         if cls._instance is None:
             with cls._lock:
@@ -141,7 +142,7 @@ class UnifiedConfigManager:
                 file_path = self.config_dir / rel_path.split('/')[-1]
                 if file_path.exists():
                     try:
-                        with open(file_path, 'r', encoding='utf-8') as f:
+                        with open(file_path, encoding='utf-8') as f:
                             config_data = yaml.safe_load(f) or {}
 
                         source = ConfigSource.from_yaml_name(name)
@@ -296,7 +297,7 @@ class UnifiedConfigManager:
     def _set_nested_value(self, config: Dict[str, Any], key: str, value: Any) -> None:
         """设置嵌套配置值"""
         keys = key.split('.')
-        for i, k in enumerate(keys[:-1]):
+        for _i, k in enumerate(keys[:-1]):
             if k not in config or not isinstance(config[k], dict):
                 config[k] = {}
             config = config[k]
@@ -350,15 +351,11 @@ class UnifiedConfigManager:
             def convert_to_yaml_safe(obj):
                 if isinstance(obj, dict):
                     return {k: convert_to_yaml_safe(v) for k, v in obj.items()}
-                elif isinstance(obj, (tuple, frozenset)):
-                    return [convert_to_yaml_safe(item) for item in obj]
-                elif isinstance(obj, set):
-                    return [convert_to_yaml_safe(item) for item in obj]
-                elif isinstance(obj, list):
+                elif isinstance(obj, (tuple, frozenset, set, list)):
                     return [convert_to_yaml_safe(item) for item in obj]
                 else:
                     return obj
-            
+
             config_for_export = convert_to_yaml_safe(self._merged_config)
             with open(path, 'w', encoding='utf-8') as f:
                 yaml.dump(config_for_export, f, default_flow_style=False, allow_unicode=True)

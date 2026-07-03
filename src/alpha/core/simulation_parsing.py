@@ -9,7 +9,6 @@ import re
 from typing import Any, cast
 
 from ..api.api_types import ApiPayload, CheckResultDict
-from ..models.domain import FailedCheck
 from ..config.constants import (
     API_KEY_DETAIL,
     API_KEY_ERROR,
@@ -18,6 +17,7 @@ from ..config.constants import (
     MAX_FAILED_CHECK_NAMES,
     SENTINEL_UNKNOWN_CHECK,
 )
+from ..models.domain import FailedCheck
 from ..utils.helpers import first_non_empty
 
 _ALPHA_ID_REGEX: re.Pattern[str] = re.compile(r"/alphas/([^/]+)", re.IGNORECASE)

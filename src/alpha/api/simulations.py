@@ -16,7 +16,7 @@ from ..config.getters import (
     get_polling_default_wait,
     get_polling_no_retry_after_wait,
 )
-from ..error_handling import error_handler, ErrorSeverity, ErrorCategory
+from ..error_handling import ErrorCategory, ErrorSeverity, error_handler
 from ..exceptions import BrainAPIError, BrainQueueBusyError
 from ..utils.helpers import first_non_empty
 from .api_types import SimulationPayload

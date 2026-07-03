@@ -8,7 +8,7 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import Any, TypedDict, Optional
+from typing import Any, Optional, TypedDict
 
 
 class ConfigSource(Enum):
@@ -25,7 +25,7 @@ class ConfigSource(Enum):
     COMMAND_LINE = "command_line"               # 命令行参数 (最高优先级)
 
     @classmethod
-    def from_yaml_name(cls, name: str) -> Optional["ConfigSource"]:
+    def from_yaml_name(cls, name: str) -> Optional[ConfigSource]:
         """从YAML文件名转换为ConfigSource"""
         mapping = {
             "constants_defaults": cls.CONSTANTS_DEFAULTS,

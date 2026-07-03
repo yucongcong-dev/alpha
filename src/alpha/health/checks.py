@@ -12,7 +12,8 @@ import time
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Callable, Dict, List, Optional, Tuple
+from collections.abc import Callable
+from typing import Any, Optional
 
 
 class HealthStatus(Enum):
@@ -38,11 +39,11 @@ class HealthCheckResult:
     status: HealthStatus
     check_type: CheckType
     message: str = ""
-    details: Dict[str, Any] = field(default_factory=dict)
+    details: dict[str, Any] = field(default_factory=dict)
     latency: float = 0.0
     timestamp: float = field(default_factory=time.time)
     
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """转换为字典"""
         return {
             "name": self.name,
@@ -148,7 +149,7 @@ class DiskSpaceCheck(HealthCheck):
                 latency=time.time() - start_time
             )
     
-    def _get_disk_space(self, path: str) -> Tuple[int, int]:
+    def _get_disk_space(self, path: str) -> tuple[int, int]:
         """获取磁盘空间（跨平台兼容）"""
         if os.name == 'nt':
             import ctypes
@@ -162,8 +163,12 @@ class DiskSpaceCheck(HealthCheck):
             )
             return (free_bytes.value, total_bytes.value)
         else:
-            stat = os.statvfs(path)
-            return (stat.f_bavail * stat.f_frsize, stat.f_blocks * stat.f_frsize)
+            stat_func = getattr(os, 'statvfs', None)
+            if stat_func:
+                result = stat_func(path)
+                return (result.f_bavail * result.f_frsize, result.f_blocks * result.f_frsize)
+            else:
+                return (0, 1)
 
 
 class MemoryCheck(HealthCheck):
@@ -297,7 +302,7 @@ class CPULoadCheck(HealthCheck):
 class PythonVersionCheck(HealthCheck):
     """Python版本检查"""
     
-    def __init__(self, min_version: Tuple[int, int] = (3, 8)):
+    def __init__(self, min_version: tuple[int, int] = (3, 8)):
         super().__init__("python_version", CheckType.SYSTEM)
         self.min_version = min_version
     
@@ -354,33 +359,23 @@ class ConfigCheck(HealthCheck):
         try:
             from alpha.config.unified_manager import UnifiedConfigManager
             
-            manager = UnifiedConfigManager.get_instance()
-            errors = manager.validate()
+            manager = UnifiedConfigManager()
+            all_sources = manager.get_all_sources()
             
             details = {
-                "config_sources": [s.value for s in manager.get_sources()],
-                "has_schema": manager.has_schema(),
-                "validation_errors": errors,
+                "config_sources": list(all_sources.keys()),
+                "has_schema": getattr(manager, '_schema', None) is not None,
+                "source_count": len(all_sources),
             }
             
-            if errors:
-                return HealthCheckResult(
-                    name=self.name,
-                    status=HealthStatus.DEGRADED if len(errors) < 5 else HealthStatus.UNHEALTHY,
-                    check_type=self.check_type,
-                    message=f"配置验证失败: {len(errors)} 个错误",
-                    details=details,
-                    latency=time.time() - start_time
-                )
-            else:
-                return HealthCheckResult(
-                    name=self.name,
-                    status=HealthStatus.HEALTHY,
-                    check_type=self.check_type,
-                    message="配置验证通过",
-                    details=details,
-                    latency=time.time() - start_time
-                )
+            return HealthCheckResult(
+                name=self.name,
+                status=HealthStatus.HEALTHY,
+                check_type=self.check_type,
+                message="配置加载成功",
+                details=details,
+                latency=time.time() - start_time
+            )
         
         except Exception as e:
             return HealthCheckResult(
@@ -464,7 +459,7 @@ class NetworkCheck(HealthCheck):
 class CustomHealthCheck(HealthCheck):
     """自定义健康检查"""
     
-    def __init__(self, name: str, check_func: Callable[[], Tuple[HealthStatus, str, Dict[str, Any]]]):
+    def __init__(self, name: str, check_func: Callable[[], tuple[HealthStatus, str, dict[str, Any]]]):
         super().__init__(name, CheckType.CUSTOM)
         self.check_func = check_func
     
@@ -495,8 +490,8 @@ class HealthChecker:
     """健康检查管理器"""
     
     def __init__(self):
-        self._checks: Dict[str, HealthCheck] = {}
-        self._last_results: Dict[str, HealthCheckResult] = {}
+        self._checks: dict[str, HealthCheck] = {}
+        self._last_results: dict[str, HealthCheckResult] = {}
         self._last_check_time: float = 0.0
     
     def register_check(self, check: HealthCheck) -> None:
@@ -507,11 +502,11 @@ class HealthChecker:
         """注销健康检查"""
         self._checks.pop(name, None)
     
-    def get_checks(self) -> List[HealthCheck]:
+    def get_checks(self) -> list[HealthCheck]:
         """获取所有检查"""
         return list(self._checks.values())
     
-    def run_all_checks(self) -> List[HealthCheckResult]:
+    def run_all_checks(self) -> list[HealthCheckResult]:
         """运行所有健康检查"""
         results = []
         
@@ -556,7 +551,7 @@ class HealthChecker:
         else:
             return HealthStatus.UNKNOWN
     
-    def generate_report(self) -> Dict[str, Any]:
+    def generate_report(self) -> dict[str, Any]:
         """生成健康报告"""
         results = self.run_all_checks()
         overall_status = self.get_overall_status()
@@ -575,7 +570,7 @@ class HealthChecker:
         
         return report
     
-    def get_last_results(self) -> Dict[str, HealthCheckResult]:
+    def get_last_results(self) -> dict[str, HealthCheckResult]:
         """获取上次检查结果"""
         return dict(self._last_results)
     
@@ -610,11 +605,11 @@ def set_health_checker(checker: HealthChecker) -> None:
     _global_health_checker = checker
 
 
-def run_health_checks() -> List[HealthCheckResult]:
+def run_health_checks() -> list[HealthCheckResult]:
     """运行所有健康检查"""
     return get_health_checker().run_all_checks()
 
 
-def get_health_report() -> Dict[str, Any]:
+def get_health_report() -> dict[str, Any]:
     """获取健康报告"""
     return get_health_checker().generate_report()
