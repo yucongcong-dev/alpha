@@ -1,9 +1,0 @@
-{
-  "_version": "v2",
-  "_comment": "Template blacklist for model51 — auto-populated from test results.",
-  "_created": "2026-07-03",
-  "_updated": "2026-07-03",
-  "dataset_id": "model51",
-  "blacklisted_templates": [],
-  "auto_avoid_rules": []
-}
