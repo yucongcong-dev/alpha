@@ -67,6 +67,7 @@ Current local evidence behind this narrower focus:
 - `unsystematic_risk_last_360_days + model51_industry_zscore_decay_63` has already produced `submittable=true`.
 - `unsystematic_risk_last_60/90_days + model51_group_zscore_market_126` repeatedly landed near the platform threshold on fitness.
 - `beta_last_*_spy` and `correlation_last_*_spy` have been consistently weak in both broad and focused runs, so they are no longer part of the default refine whitelist.
+- `systematic_risk_last_360_days + model51_market_zscore_decay_63` failed clearly in focused validation, so current refine should stay centered on the unsystematic branch.
 
 Suggested commands:
 ```bash
@@ -94,6 +95,11 @@ Local evidence:
 - `unsystematic_risk_last_360_days + model51_industry_zscore_decay_63` has already produced a `submittable=true` result locally.
 - `beta/correlation` families have shown clearly weaker quality than the risk families in repeated runs.
 - The neighboring `market` window sweep (`56/63/70`, `d12`) also produced `submittable=true` on all three tested points, so the winning branch is now better understood as a local robust region rather than a single lucky window.
+- The matching `industry` window sweep (`56/63/70`, `d12`) also produced `submittable=true` on all three tested points.
+- Current local ranking favors the `63` window variants first:
+  - `model51_market_zscore_decay_63_d12` and `model51_industry_zscore_decay_63_d12` are the strongest current pair by local IS metrics.
+  - `56`-window variants are viable backups.
+  - `70`-window variants still pass, but are slightly weaker than `63`.
 - That makes `model51` a better candidate for continued refine than `fundamental6` under the current template framework, but specifically along the risk-field branch rather than the broader SPY beta/correlation branch.
 
 ## Things To Revisit Later

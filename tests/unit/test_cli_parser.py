@@ -220,6 +220,17 @@ def test_normalize_args_paths_uses_dataset_scoped_defaults(monkeypatch, tmp_path
     assert paths.output.endswith("/results/pv1/test_results.json")
 
 
+def test_self_correlation_poll_defaults(monkeypatch) -> None:
+    """Self-correlation follow-up polling should have stable CLI defaults."""
+    clear_yaml_cache()
+    monkeypatch.setattr(sys, "argv", ["alpha"])
+
+    args = parse_args()
+
+    assert args.self_correlation_max_polls == 12
+    assert args.self_correlation_poll_seconds == 10.0
+
+
 def test_normalize_args_paths_does_not_mutate_original_args(monkeypatch, tmp_path) -> None:
     """Path normalization should return RunPaths without rewriting raw CLI attrs in-place."""
     clear_yaml_cache()

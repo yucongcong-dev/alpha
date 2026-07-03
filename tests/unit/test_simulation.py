@@ -10,14 +10,18 @@ from __future__ import annotations
 from alpha.core.simulation import (
     PrecheckConfig,
     build_failure_result,
+    checksubmit_with_retry,
     extract_alpha_id,
     extract_checks,
     extract_failed_checks,
+    extract_pending_checks,
     is_submittable_from_checks,
+    run_checksubmit_stage,
     precheck_simulation_metrics,
     summarize_failure,
 )
 from alpha.models.domain import FieldTestContext, FieldTestResult
+from tests.conftest import MockArgs
 
 # ============================================================================
 # extract_alpha_id 测试
@@ -181,6 +185,22 @@ class TestExtractFailedChecks:
         assert extract_failed_checks({"status": "OK"}) == []
 
 
+class TestExtractPendingChecks:
+    """extract_pending_checks 函数测试"""
+
+    def test_only_pending_checks(self) -> None:
+        payload = {
+            "checks": [
+                {"name": "SELF_CORRELATION", "result": "PENDING"},
+                {"name": "LOW_SHARPE", "result": "PASS", "value": 1.3, "limit": 1.25},
+            ]
+        }
+        result = extract_pending_checks(payload)
+        assert result == [
+            {"name": "SELF_CORRELATION", "result": "PENDING", "value": None, "limit": None}
+        ]
+
+
 # ============================================================================
 # is_submittable_from_checks 测试
 # ============================================================================
@@ -201,6 +221,75 @@ class TestIsSubmittableFromChecks:
                 ]
             )
             is False
+        )
+
+
+class TestChecksubmitWithRetry:
+    """checksubmit_with_retry 自相关轮询测试"""
+
+    def test_pending_self_correlation_eventually_passes(self, monkeypatch) -> None:
+        responses = iter(
+            [
+                {"is": {"checks": [{"name": "SELF_CORRELATION", "result": "PENDING"}]}},
+                {"is": {"checks": [{"name": "SELF_CORRELATION", "result": "PASS"}]}},
+            ]
+        )
+
+        class DummyClient:
+            def get_alpha_detail(self, _alpha_id: str) -> dict[str, object]:
+                return next(responses)
+
+        monkeypatch.setattr("alpha.core.simulation_stages.retry_operation", lambda *a, **k: a[2]())
+        monkeypatch.setattr("alpha.core.simulation_stages.wait_seconds", lambda *a, **k: None)
+
+        result = checksubmit_with_retry(
+            DummyClient(),
+            "alpha_1",
+            retries=3,
+            self_correlation_max_polls=2,
+            self_correlation_poll_seconds=0.0,
+        )
+
+        assert result == (True, "checks passed", [])
+
+    def test_pending_self_correlation_eventually_fails(self, monkeypatch) -> None:
+        responses = iter(
+            [
+                {"is": {"checks": [{"name": "SELF_CORRELATION", "result": "PENDING"}]}},
+                {
+                    "is": {
+                        "checks": [
+                            {
+                                "name": "SELF_CORRELATION",
+                                "result": "FAIL",
+                                "value": 0.91,
+                                "limit": 0.7,
+                            }
+                        ]
+                    }
+                },
+            ]
+        )
+
+        class DummyClient:
+            def get_alpha_detail(self, _alpha_id: str) -> dict[str, object]:
+                return next(responses)
+
+        monkeypatch.setattr("alpha.core.simulation_stages.retry_operation", lambda *a, **k: a[2]())
+        monkeypatch.setattr("alpha.core.simulation_stages.wait_seconds", lambda *a, **k: None)
+
+        result = checksubmit_with_retry(
+            DummyClient(),
+            "alpha_1",
+            retries=3,
+            self_correlation_max_polls=2,
+            self_correlation_poll_seconds=0.0,
+        )
+
+        assert result == (
+            False,
+            "checks failed",
+            [{"name": "SELF_CORRELATION", "result": "FAIL", "value": 0.91, "limit": 0.7}],
         )
 
     def test_empty_list(self) -> None:
@@ -507,6 +596,50 @@ class TestFieldTestContext:
             failed_checks=checks,
         )
         assert result.failed_checks == checks
+
+
+def test_run_checksubmit_stage_rejects_pending_self_correlation(monkeypatch) -> None:
+    ctx = FieldTestContext(
+        field_id="f1",
+        field_type="MATRIX",
+        field_name="f1",
+        template_name="t1",
+        expression="rank(f1)",
+        settings_fingerprint="s1",
+        template_library_fingerprint="tlib1",
+    )
+    args = MockArgs(
+        check_submit_retries=3,
+        self_correlation_max_polls=1,
+        self_correlation_poll_seconds=0.0,
+        min_sharpe=1.25,
+        min_fitness=1.0,
+        min_turnover=0.01,
+        max_turnover=0.7,
+        max_weight=0.1,
+    )
+
+    class DummyClient:
+        def get_alpha_detail(self, _alpha_id: str) -> dict[str, object]:
+            return {"is": {"checks": [{"name": "SELF_CORRELATION", "result": "PENDING"}]}}
+
+    monkeypatch.setattr("alpha.core.simulation_stages.retry_operation", lambda *a, **k: a[2]())
+    monkeypatch.setattr("alpha.core.simulation_stages.wait_seconds", lambda *a, **k: None)
+
+    result = run_checksubmit_stage(
+        ctx,
+        DummyClient(),
+        args,
+        alpha_id="alpha_1",
+        simulation_id="sim_1",
+        simulation_result=None,
+    )
+
+    assert result == (
+        False,
+        "self correlation pending",
+        [{"name": "SELF_CORRELATION", "result": "PENDING", "value": None, "limit": None}],
+    )
 
     def test_context_fields_independent(self) -> None:
         """不同 context 实例的字段相互独立。"""

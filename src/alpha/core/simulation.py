@@ -26,6 +26,7 @@ from .simulation_parsing import (
     extract_alpha_id,
     extract_checks,
     extract_failed_checks,
+    extract_pending_checks,
     is_submittable_from_checks,
     summarize_failure,
 )
@@ -191,6 +192,7 @@ __all__ = [
     "extract_alpha_id",
     "extract_checks",
     "extract_failed_checks",
+    "extract_pending_checks",
     "is_submittable_from_checks",
     "poll_simulation_with_retry",
     "precheck_simulation_metrics",

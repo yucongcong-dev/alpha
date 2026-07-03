@@ -51,6 +51,8 @@ def build_run_config_snapshot(args: RunConfigArgs, run_paths: RunPaths) -> dict[
             "queue_busy_cooldown_seconds": args.queue_busy_cooldown_seconds,
             "field_queue_busy_skip_after": args.field_queue_busy_skip_after,
             "check_submit_retries": args.check_submit_retries,
+            "self_correlation_max_polls": args.self_correlation_max_polls,
+            "self_correlation_poll_seconds": args.self_correlation_poll_seconds,
             "submit_retries": args.submit_retries,
             "rate_limit_max_retries": args.rate_limit_max_retries,
             "login_retries": args.login_retries,

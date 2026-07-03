@@ -16,6 +16,18 @@ Current packs:
 - `local_refine_decay_density_round10.json`: denser decay sweep around the strongest families.
 - `local_refine_window_sweep_round11.json`: neighboring zscore-window sweep (`56/63/70`) around the strongest decay branch.
 
+Current preference order from local results:
+
+- Primary:
+  - `model51_market_zscore_decay_63_d12`
+  - `model51_industry_zscore_decay_63_d12`
+- Secondary:
+  - `model51_market_zscore_decay_56_d12`
+  - `model51_industry_zscore_decay_56_d12`
+- Tertiary but still passing:
+  - `model51_market_zscore_decay_70_d12`
+  - `model51_industry_zscore_decay_70_d12`
+
 Curated field fixtures:
 
 - `fields/unsystematic_only_round11_fields.json`: single-field fixture used to force window-sweep experiments onto `unsystematic_risk_last_360_days` without relying on transient include-file state.

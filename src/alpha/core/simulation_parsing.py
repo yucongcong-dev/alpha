@@ -35,6 +35,7 @@ _KEY_THRESHOLD: str = "threshold"
 _KEY_TYPE: str = "type"
 _KEY_VALUE: str = "value"
 _TYPE_ALPHA: str = "ALPHA"
+_RESULT_PENDING: str = "PENDING"
 
 
 def extract_alpha_id(payload: ApiPayload) -> str | None:
@@ -99,6 +100,22 @@ def extract_failed_checks(alpha_payload: ApiPayload) -> list[CheckResultDict]:
     return failed_checks
 
 
+def extract_pending_checks(alpha_payload: ApiPayload) -> list[CheckResultDict]:
+    pending_checks: list[CheckResultDict] = []
+    for check in extract_checks(alpha_payload):
+        if str(check.get(_KEY_RESULT, "")).upper() != _RESULT_PENDING:
+            continue
+        pending_checks.append(
+            {
+                _KEY_NAME: check.get(_KEY_NAME),
+                _KEY_RESULT: check.get(_KEY_RESULT),
+                _KEY_VALUE: check.get(_KEY_VALUE),
+                _KEY_LIMIT: first_non_empty(check.get(_KEY_LIMIT), check.get(_KEY_THRESHOLD)),
+            }
+        )
+    return pending_checks
+
+
 def is_submittable_from_checks(checks: list[CheckResultDict]) -> bool | None:
     if not checks:
         return None
@@ -135,6 +152,7 @@ __all__ = [
     "extract_alpha_id",
     "extract_checks",
     "extract_failed_checks",
+    "extract_pending_checks",
     "is_submittable_from_checks",
     "summarize_failure",
 ]

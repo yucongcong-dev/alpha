@@ -196,6 +196,18 @@ def add_api_runtime_arguments(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--queue-busy-cooldown-seconds", type=float, default=300.0, help="队列拥塞后的冷却时间（秒，增大以避免重复触发限流）")
     parser.add_argument("--field-queue-busy-skip-after", type=int, default=2, help="字段队列拥塞后跳过阈值；0 表示不跳过")
     parser.add_argument("--check-submit-retries", type=int, default=3, help="检查提交重试次数")
+    parser.add_argument(
+        "--self-correlation-max-polls",
+        type=int,
+        default=12,
+        help="checksubmit 后额外轮询 SELF_CORRELATION 终态的最大次数；0 表示不等待",
+    )
+    parser.add_argument(
+        "--self-correlation-poll-seconds",
+        type=float,
+        default=10.0,
+        help="SELF_CORRELATION 仍为 PENDING 时，两次 alpha detail 轮询之间的等待秒数",
+    )
     parser.add_argument("--submit-retries", type=int, default=3, help="提交重试次数")
 
 

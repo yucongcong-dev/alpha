@@ -9,6 +9,7 @@ import re
 
 from ..api.api_types import CheckResultDict, SimulationPayload
 from ..api.client import BrainClient, retry_operation
+from ..api.timing import wait_seconds
 from ..config.constants import (
     API_KEY_FAILED,
     API_KEY_PROGRESS,
@@ -18,6 +19,7 @@ from ..config.constants import (
     STATUS_SIMULATED,
     STATUS_SUBMITTED,
 )
+from ..config.getters import get_polling_default_wait
 from ..generators.payload import build_simulation_payload
 from ..models.domain import (
     FieldTestContext,
@@ -33,6 +35,7 @@ from .simulation_parsing import (
     extract_alpha_id,
     extract_checks,
     extract_failed_checks,
+    extract_pending_checks,
     is_submittable_from_checks,
     summarize_failure,
 )
@@ -42,6 +45,47 @@ from .simulation_results import handle_stage_error
 logger = logging.getLogger(__name__)
 
 _SIM_ID_REGEX: re.Pattern[str] = re.compile(r"/simulations/([^/]+)", re.IGNORECASE)
+_CHECK_SELF_CORRELATION: str = "SELF_CORRELATION"
+
+
+def _pending_self_correlation_checks(alpha_payload: SimulationPayload) -> list[CheckResultDict]:
+    return [
+        check
+        for check in extract_pending_checks(alpha_payload)
+        if str(check.get("name", "")).upper() == _CHECK_SELF_CORRELATION
+    ]
+
+
+def _resolve_self_correlation_checks(
+    client: BrainClient,
+    alpha_id: str,
+    retries: int,
+    *,
+    max_polls: int,
+    poll_seconds: float,
+    alpha_detail: SimulationPayload,
+) -> SimulationPayload:
+    remaining_polls = max(max_polls, 0)
+    latest_payload = alpha_detail
+    pending_checks = _pending_self_correlation_checks(latest_payload)
+    while pending_checks and remaining_polls > 0:
+        logger.info(
+            "[checksubmit] alpha_id=%s self-correlation pending; remaining_polls=%d",
+            alpha_id,
+            remaining_polls,
+        )
+        wait_seconds(max(poll_seconds, 0.0), "self correlation pending")
+        latest_payload = retry_operation(
+            "checksubmit self correlation",
+            retries,
+            lambda: client.get_alpha_detail(alpha_id),
+            retry_wait_seconds=SIMULATION_RETRY_WAIT,
+        )
+        pending_checks = _pending_self_correlation_checks(latest_payload)
+        remaining_polls -= 1
+    return latest_payload
+
+
 def create_simulation_with_retry(
     client: BrainClient, payload: SimulationPayload, retries: int
 ) -> tuple[str, str]:
@@ -89,6 +133,9 @@ def checksubmit_with_retry(
     client: BrainClient,
     alpha_id: str,
     retries: int,
+    *,
+    self_correlation_max_polls: int = 0,
+    self_correlation_poll_seconds: float | None = None,
 ) -> tuple[bool | None, str, list[CheckResultDict]]:
     alpha_detail = retry_operation(
         "checksubmit",
@@ -96,7 +143,26 @@ def checksubmit_with_retry(
         lambda: client.get_alpha_detail(alpha_id),
         retry_wait_seconds=SIMULATION_RETRY_WAIT,
     )
+    alpha_detail = _resolve_self_correlation_checks(
+        client,
+        alpha_id,
+        retries,
+        max_polls=self_correlation_max_polls,
+        poll_seconds=(
+            get_polling_default_wait()
+            if self_correlation_poll_seconds is None
+            else self_correlation_poll_seconds
+        ),
+        alpha_detail=alpha_detail,
+    )
     checks = extract_checks(alpha_detail)
+    pending_self_corr = _pending_self_correlation_checks(alpha_detail)
+    if pending_self_corr:
+        logger.info(
+            "[checksubmit] alpha_id=%s self-correlation still pending after polling; excluding candidate",
+            alpha_id,
+        )
+        return False, "self correlation pending", pending_self_corr
     submittable = is_submittable_from_checks(checks)
     failed_checks = extract_failed_checks(alpha_detail)
     message = (
@@ -237,7 +303,16 @@ def run_checksubmit_stage(
             return False, f"precheck_failed: {reason}", precheck_failed_checks
 
     try:
-        return checksubmit_with_retry(client, alpha_id, args.check_submit_retries)
+        return checksubmit_with_retry(
+            client,
+            alpha_id,
+            args.check_submit_retries,
+            self_correlation_max_polls=int(getattr(args, "self_correlation_max_polls", 0) or 0),
+            self_correlation_poll_seconds=float(
+                getattr(args, "self_correlation_poll_seconds", get_polling_default_wait())
+                or get_polling_default_wait()
+            ),
+        )
     except Exception as exc:
         return handle_stage_error(
             ctx,
