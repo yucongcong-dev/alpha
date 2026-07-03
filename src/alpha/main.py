@@ -27,6 +27,9 @@ from .app.bootstrap import (
     prepare_fields_for_execution as prepare_fields_for_execution,
 )
 from .app.finalize import finalize_run
+from .app.finalize import (
+    recheck_pending_self_correlation_results as recheck_pending_self_correlation_results,
+)
 from .app.run_loop import (
     build_field_resume_positions as build_field_resume_positions,
 )
@@ -72,6 +75,20 @@ def main() -> int:
     init_result = initialize_run_context(args, run_paths)
     if init_result is None:
         return 1
+
+    if getattr(args, "recheck_pending_self_correlation_only", False):
+        refreshed = recheck_pending_self_correlation_results(args, init_result)
+        logger.info(
+            "[recheck] pending self-correlation only mode refreshed=%d results=%d",
+            refreshed,
+            len(init_result.execution_state.results),
+        )
+        finalize_run(
+            args=args,
+            run_ctx=init_result,
+            run_paths=run_paths,
+        )
+        return 0
 
     run_field_test_loop(
         args=args,

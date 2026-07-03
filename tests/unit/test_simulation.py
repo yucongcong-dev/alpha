@@ -636,7 +636,7 @@ def test_run_checksubmit_stage_rejects_pending_self_correlation(monkeypatch) -> 
     )
 
     assert result == (
-        False,
+        None,
         "self correlation pending",
         [{"name": "SELF_CORRELATION", "result": "PENDING", "value": None, "limit": None}],
     )

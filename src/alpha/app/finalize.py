@@ -10,10 +10,17 @@
 from __future__ import annotations
 
 import logging
+import time
 
+from ..analysis.result_identity import (
+    STATUS_PENDING_SELF_CORRELATION,
+    is_self_correlation_pending_result,
+)
 from ..analysis.stats import current_submittable_count
-from ..config.constants import STATUS_ERROR
+from ..config.constants import STATUS_ERROR, STATUS_SIMULATED, STATUS_SUBMITTED
+from ..config.getters import get_polling_default_wait
 from ..core import delete_pipeline_state
+from ..core.simulation_stages import checksubmit_with_retry, submit_with_retry
 from ..io.results_store import dump_results
 from ..models.io_types import RunPaths
 from ..models.runtime import InitializedRunContext, ResultWriteArgs
@@ -30,6 +37,85 @@ def _run_path_value(run_paths: object | None, attr: str) -> str:
     return str(value or "")
 
 
+def _refresh_pending_self_correlation_results(
+    args: ResultWriteArgs,
+    run_ctx: InitializedRunContext,
+) -> int:
+    """在最终落盘前统一复查仍处于 SELF_CORRELATION=PENDING 的结果。"""
+    client_factory = run_ctx.client_factory
+    if client_factory is None:
+        return 0
+    pending_results = [
+        result
+        for result in run_ctx.execution_state.results
+        if result.alpha_id and is_self_correlation_pending_result(result)
+    ]
+    if not pending_results:
+        return 0
+
+    logger.info(
+        "[finalize] rechecking %d pending self-correlation candidates before final flush",
+        len(pending_results),
+    )
+    client = client_factory.get_client()
+    refreshed_count = 0
+    for result in pending_results:
+        alpha_id = str(result.alpha_id or "")
+        if not alpha_id:
+            continue
+        refreshed_count += 1
+        result.self_correlation_recheck_count += 1
+        result.self_correlation_last_recheck_at = time.time()
+        submittable, message, failed_checks = checksubmit_with_retry(
+            client,
+            alpha_id,
+            retries=int(getattr(args, "check_submit_retries", 3) or 3),
+            self_correlation_max_polls=int(getattr(args, "self_correlation_max_polls", 0) or 0),
+            self_correlation_poll_seconds=float(
+                getattr(args, "self_correlation_poll_seconds", get_polling_default_wait())
+                or get_polling_default_wait()
+            ),
+        )
+        result.submittable = submittable
+        result.message = message
+        result.failed_checks = failed_checks
+        if submittable is None:
+            result.status = STATUS_PENDING_SELF_CORRELATION
+        else:
+            result.status = STATUS_SIMULATED
+            result.self_correlation_pending_since = 0.0
+        if submittable and bool(getattr(args, "submit", False)) and not result.submitted:
+            submit_message = submit_with_retry(
+                client,
+                alpha_id,
+                retries=int(getattr(args, "submit_retries", 3) or 3),
+            )
+            result.submitted = True
+            result.status = STATUS_SUBMITTED
+            result.message = submit_message
+        logger.info(
+            "[finalize] alpha_id=%s self-correlation recheck count=%d submittable=%s message=%s",
+            alpha_id,
+            result.self_correlation_recheck_count,
+            result.submittable,
+            result.message,
+        )
+    return refreshed_count
+
+
+def recheck_pending_self_correlation_results(
+    args: ResultWriteArgs,
+    run_ctx: InitializedRunContext,
+) -> int:
+    """公开的 pending SELF_CORRELATION 复查入口。"""
+    return _refresh_pending_self_correlation_results(args, run_ctx)
+
+
+def should_finalize_recheck_pending_self_correlation(args: ResultWriteArgs) -> bool:
+    """判断 finalize 阶段是否应同步复查 pending self-correlation 结果。"""
+    return bool(getattr(args, "finalize_recheck_pending_self_correlation", False))
+
+
 def finalize_run(
     args: ResultWriteArgs,
     run_ctx: InitializedRunContext,
@@ -39,6 +125,8 @@ def finalize_run(
     execution_state = run_ctx.execution_state
     output_path = _run_path_value(run_paths, "output") or args.output
     state_file = _run_path_value(run_paths, "state_file")
+    if should_finalize_recheck_pending_self_correlation(args):
+        _refresh_pending_self_correlation_results(args, run_ctx)
     logger.info(
         "[done] 测试完成：tested=%d submittable=%d errors=%d",
         len(execution_state.results),

@@ -26,7 +26,7 @@ from ..config.constants import (
     STATUS_ERROR,
 )
 from ..models.domain import FieldFeedbackMap, FieldTestResult
-from .result_identity import is_queue_timeout_result
+from .result_identity import is_queue_timeout_result, is_self_correlation_pending_result
 
 
 def compile_field_performance_summary(results: Sequence[FieldTestResult]) -> list[dict[str, Any]]:
@@ -49,6 +49,8 @@ def compile_field_performance_summary(results: Sequence[FieldTestResult]) -> lis
         )
         if is_queue_timeout_result(result):
             summary[STAT_FIELD_QUEUE_TIMEOUTS] += 1
+            continue
+        if is_self_correlation_pending_result(result):
             continue
         summary[STAT_FIELD_ATTEMPTED_TEMPLATES] += 1
         if result.submittable:

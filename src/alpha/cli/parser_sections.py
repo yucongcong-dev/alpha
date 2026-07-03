@@ -114,6 +114,20 @@ def add_run_mode_arguments(parser: argparse.ArgumentParser) -> None:
         default=False,
         help="关闭全量运行模式（覆盖 YAML runtime.full_run=true）",
     )
+    add_bool_argument(
+        parser,
+        "--recheck-pending-self-correlation-only",
+        dest="recheck_pending_self_correlation_only",
+        help_enable="仅复查历史结果中仍为 SELF_CORRELATION=PENDING 的候选，不发起新的字段探索",
+        help_disable="关闭仅复查 pending self-correlation 模式（覆盖 YAML runtime.recheck_pending_self_correlation_only=true）",
+    )
+    add_bool_argument(
+        parser,
+        "--finalize-recheck-pending-self-correlation",
+        dest="finalize_recheck_pending_self_correlation",
+        help_enable="在 finalize 阶段同步复查 pending self-correlation 候选",
+        help_disable="关闭 finalize 阶段的 pending self-correlation 同步复查（覆盖 YAML runtime.finalize_recheck_pending_self_correlation=true）",
+    )
 
 
 def add_search_arguments(parser: argparse.ArgumentParser) -> None:

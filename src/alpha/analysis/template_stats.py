@@ -37,7 +37,7 @@ from ..config.constants import (
     TEMPLATE_HISTORY_SUBMITTABLE_BONUS,
 )
 from ..models.domain import FieldTestResult
-from .result_identity import is_queue_timeout_result
+from .result_identity import is_queue_timeout_result, is_self_correlation_pending_result
 
 
 def compile_template_stats(results: Sequence[FieldTestResult]) -> dict[str, dict[str, int]]:
@@ -68,6 +68,8 @@ def update_template_stats_with_result(
             STAT_FIELD_LOW_SUB_UNIVERSE_SHARPE: 0,
         },
     )
+    if is_self_correlation_pending_result(result):
+        return stats
     if result.template_family and "template_family" not in stat:
         stat["template_family"] = result.template_family
     if is_queue_timeout_result(result):
@@ -138,6 +140,8 @@ def compile_template_performance_summary(
         )
         if is_queue_timeout_result(result):
             summary[STAT_FIELD_QUEUE_TIMEOUTS] += 1
+            continue
+        if is_self_correlation_pending_result(result):
             continue
         summary[STAT_FIELD_ATTEMPTED] += 1
         if result.submittable:

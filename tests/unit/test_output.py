@@ -6,6 +6,7 @@ import json
 from pathlib import Path
 
 from alpha.analysis.stats import load_existing_results
+from alpha.analysis.template_stats import compile_template_stats
 from alpha.io.output import (
     auto_update_blacklist_incremental,
     build_blacklist_runtime_stats,
@@ -182,6 +183,61 @@ def test_dump_results_incremental_can_flip_existing_summary_to_journal_mode(tmp_
     assert payload["results_embedded"] is False
     assert "results" not in payload
     assert load_existing_results(str(output_path))[0].field_id == "field_3"
+
+
+def test_load_existing_results_preserves_self_correlation_pending_metadata(tmp_path) -> None:
+    output_path = tmp_path / "results.json"
+    result = FieldTestResult(
+        field_id="field_pending",
+        field_type="MATRIX",
+        field_name="field_pending",
+        template_name="tpl",
+        status="pending_self_correlation",
+        submittable=None,
+        expression="rank(field_pending)",
+        failed_checks=[{"name": "SELF_CORRELATION", "result": "PENDING", "value": None, "limit": None}],
+        self_correlation_pending_since=111.0,
+        self_correlation_last_recheck_at=222.0,
+        self_correlation_recheck_count=3,
+    )
+
+    dump_results(
+        str(output_path),
+        "fundamental6",
+        [result],
+        settings_fingerprint="settings",
+        template_library_fingerprint="templates",
+        include_analysis=False,
+    )
+
+    loaded = load_existing_results(str(output_path))
+
+    assert len(loaded) == 1
+    assert loaded[0].status == "pending_self_correlation"
+    assert loaded[0].self_correlation_pending_since == 111.0
+    assert loaded[0].self_correlation_last_recheck_at == 222.0
+    assert loaded[0].self_correlation_recheck_count == 3
+
+
+def test_compile_template_stats_skips_pending_self_correlation_results() -> None:
+    stats = compile_template_stats(
+        [
+            FieldTestResult(
+                field_id="field_pending",
+                field_type="MATRIX",
+                field_name="field_pending",
+                template_name="tpl",
+                status="pending_self_correlation",
+                submittable=None,
+                expression="rank(field_pending)",
+                failed_checks=[
+                    {"name": "SELF_CORRELATION", "result": "PENDING", "value": None, "limit": None}
+                ],
+            )
+        ]
+    )
+
+    assert stats["tpl"]["attempted"] == 0
 
 
 def test_load_existing_results_falls_back_to_orphaned_journal_when_summary_missing(tmp_path) -> None:

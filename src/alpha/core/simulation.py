@@ -8,8 +8,10 @@
 from __future__ import annotations
 
 import logging
+import time
 
 from ..api.client import BrainClient, WorkerClientFactory
+from ..analysis.result_identity import STATUS_PENDING_SELF_CORRELATION
 from ..config.constants import SENTINEL_UNKNOWN
 from ..models.domain import (
     FieldTestContext,
@@ -147,7 +149,7 @@ def run_field_test(
             simulation_location,
         )
 
-    return ctx.success(
+    result = ctx.success(
         simulation_id=simulation_id,
         alpha_id=alpha_id,
         submittable=submittable,
@@ -156,6 +158,11 @@ def run_field_test(
         status=status,
         failed_checks=failed_checks,
     )
+    if submittable is None:
+        result.status = STATUS_PENDING_SELF_CORRELATION
+        if result.self_correlation_pending_since <= 0:
+            result.self_correlation_pending_since = time.time()
+    return result
 
 
 def run_field_test_in_worker(

@@ -159,10 +159,10 @@ def checksubmit_with_retry(
     pending_self_corr = _pending_self_correlation_checks(alpha_detail)
     if pending_self_corr:
         logger.info(
-            "[checksubmit] alpha_id=%s self-correlation still pending after polling; excluding candidate",
+            "[checksubmit] alpha_id=%s self-correlation still pending after polling; deferring candidate",
             alpha_id,
         )
-        return False, "self correlation pending", pending_self_corr
+        return None, "self correlation pending", pending_self_corr
     submittable = is_submittable_from_checks(checks)
     failed_checks = extract_failed_checks(alpha_detail)
     message = (

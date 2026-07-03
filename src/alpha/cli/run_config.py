@@ -75,6 +75,12 @@ def build_run_config_snapshot(args: RunConfigArgs, run_paths: RunPaths) -> dict[
             "smoke_test": args.smoke_test,
             "dry_run_plan": args.dry_run_plan,
             "full_run": args.full_run,
+            "recheck_pending_self_correlation_only": getattr(
+                args, "recheck_pending_self_correlation_only", False
+            ),
+            "finalize_recheck_pending_self_correlation": getattr(
+                args, "finalize_recheck_pending_self_correlation", False
+            ),
             "verbose": args.verbose,
             "quiet": args.quiet,
         },
