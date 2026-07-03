@@ -1,0 +1,38 @@
+{
+  "cache_key": {
+    "dataset_id": "model51",
+    "region": "USA",
+    "universe": "TOP3000",
+    "instrument_type": "EQUITY",
+    "delay": 1
+  },
+  "count": 1,
+  "fields": [
+    {
+      "id": "unsystematic_risk_last_360_days",
+      "description": "The portion of return variance not explained by SPY (idiosyncratic risk), calculated as 1 minus R\u00b2 over the last 360 calendar days",
+      "dataset": {
+        "id": "model51",
+        "name": "Systematic Risk Metrics"
+      },
+      "category": {
+        "id": "model",
+        "name": "Model"
+      },
+      "subcategory": {
+        "id": "model-risk-models",
+        "name": "Risk Models"
+      },
+      "region": "USA",
+      "delay": 1,
+      "universe": "TOP3000",
+      "type": "MATRIX",
+      "dateCoverage": 1.0,
+      "coverage": 0.937,
+      "userCount": 4549,
+      "alphaCount": 14503,
+      "themes": [],
+      "dateCreated": "2022-05-01"
+    }
+  ]
+}

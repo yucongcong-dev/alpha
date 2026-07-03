@@ -55,11 +55,13 @@ Focused refine:
 - [refine/local_refine_round7.json](refine/local_refine_round7.json) keeps a small set of proven local refine variants around the same risk-field branch. It is stored here instead of the repository root because it is reusable dataset knowledge, not a one-off temporary file.
 - [refine/local_refine_industry_decay_triplet_round9.json](refine/local_refine_industry_decay_triplet_round9.json) and [refine/local_refine_market_decay_triplet_round9.json](refine/local_refine_market_decay_triplet_round9.json) keep a tighter decay sweep (`10/15/20`) around the `ts_zscore(..., 63)` branch for industry and market neutralization.
 - [refine/local_refine_decay_density_round10.json](refine/local_refine_decay_density_round10.json) keeps a denser decay sweep (`8/12/18/24`) around the same `ts_zscore(..., 63)` branch.
+- [refine/local_refine_window_sweep_round11.json](refine/local_refine_window_sweep_round11.json) compares neighboring `ts_zscore` windows (`56/63/70`) at the same decay branch.
 
 Refine pack convention:
 - Keep `library.json` as the default narrow production library.
 - Keep targeted local sweeps under `refine/`.
 - Load refine packs explicitly with `--template-library-file data/templates/model51/refine/<file>.json`.
+- If a focused experiment needs a stable hand-curated field cache, keep it under `refine/fields/` instead of `cache/`.
 
 Current local evidence behind this narrower focus:
 - `unsystematic_risk_last_360_days + model51_industry_zscore_decay_63` has already produced `submittable=true`.
@@ -91,6 +93,7 @@ python3 -m alpha --dataset-id model51 \
 Local evidence:
 - `unsystematic_risk_last_360_days + model51_industry_zscore_decay_63` has already produced a `submittable=true` result locally.
 - `beta/correlation` families have shown clearly weaker quality than the risk families in repeated runs.
+- The neighboring `market` window sweep (`56/63/70`, `d12`) also produced `submittable=true` on all three tested points, so the winning branch is now better understood as a local robust region rather than a single lucky window.
 - That makes `model51` a better candidate for continued refine than `fundamental6` under the current template framework, but specifically along the risk-field branch rather than the broader SPY beta/correlation branch.
 
 ## Things To Revisit Later

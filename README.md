@@ -177,6 +177,7 @@ alpha/                     # 项目根目录
 
 - `config/*.yaml`：统一配置入口，按职责维护默认运行参数、数据集 profile、表达式策略、API、simulation、质量阈值、模板参数和运行约定。
 - `data/templates/base/` 与 `data/templates/<dataset_id>/`：基础模板、数据集专属模板、聚焦字段/模板白名单，以及经过验证值得复用的本地 refine 模板。
+- `data/templates/<dataset_id>/refine/fields/*.json`：少量、可复用、人工裁剪的字段 fixture；它们服务于稳定复现实验，不应再混入 `cache/`。
 - `data/blacklists/<dataset_id>/blacklist.json`：统一黑名单。脚本会自动追加，也允许人工维护；空黑名单也可以进仓，用于固定数据集目录边界。
 
 哪些文件不进仓：
@@ -188,6 +189,17 @@ alpha/                     # 项目根目录
 - `.credentials/`：本地加密凭证和密钥。
 
 根目录只保留项目入口和说明文件。配置统一放 `config/`；临时文件不要放根目录。如果只是一次性实验，放 `tmp/`；如果已经验证值得长期复用，再整理命名后放入 `data/templates/<dataset_id>/`。
+
+## 结果目录约定
+
+`results/` 仍然是纯运行产物目录，不进仓；但建议在数据集子目录下按意图分层，避免长期扁平堆叠：
+
+- `results/<dataset_id>/explore/`：广泛探索、overnight sweep、初筛轮次
+- `results/<dataset_id>/refine/`：局部精修、triplet/density/window 等 focused 轮次
+- `results/<dataset_id>/compare/`：同一字段或同一家族的对照实验
+- `results/<dataset_id>/scratch/`：短期排障、filter probe、临时验证
+
+如果暂时没迁移旧文件，至少在新命名中保持阶段前缀一致；一旦某轮结果成为长期参考，再把对应模板/字段知识沉淀回 `data/templates/<dataset_id>/`，而不是继续让 `results/` 承担知识库角色。
 
 ## 模板目录
 

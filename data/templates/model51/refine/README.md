@@ -6,6 +6,7 @@ This folder stores curated local-refine template packs for `model51`.
 - Put small, evidence-backed local sweeps here instead of the dataset root.
 - Load a pack explicitly with `--template-library-file data/templates/model51/refine/<file>.json`.
 - Move a template into `../library.json` only after repeated near-pass or submittable evidence.
+- If a run needs a manually curated field fixture rather than a regenerated API cache, keep it under `fields/` here instead of `cache/`.
 
 Current packs:
 
@@ -13,4 +14,8 @@ Current packs:
 - `local_refine_market_decay_triplet_round9.json`: market-neutral decay triplet sweep.
 - `local_refine_industry_decay_triplet_round9.json`: industry-neutral decay triplet sweep.
 - `local_refine_decay_density_round10.json`: denser decay sweep around the strongest families.
-- `local_refine_window_sweep_round11.json`: focused `56/63/70` zscore-window sweep with fixed decay 12.
+- `local_refine_window_sweep_round11.json`: neighboring zscore-window sweep (`56/63/70`) around the strongest decay branch.
+
+Curated field fixtures:
+
+- `fields/unsystematic_only_round11_fields.json`: single-field fixture used to force window-sweep experiments onto `unsystematic_risk_last_360_days` without relying on transient include-file state.
