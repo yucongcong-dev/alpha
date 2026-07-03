@@ -50,8 +50,8 @@ def _update_blacklist_runtime_stats_with_result(
     if result.submittable:
         summary.submittable += 1
     for check in result.failed_checks or []:
-        name = str(check.get("name", ""))
-        value = check.get("value")
+        name = str(check.name)
+        value = check.value
         if name == CHECK_LOW_SHARPE:
             summary.low_sharpe += 1
             if isinstance(value, (int, float)):

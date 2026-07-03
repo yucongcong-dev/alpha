@@ -9,6 +9,7 @@ import re
 from typing import Any, cast
 
 from ..api.api_types import ApiPayload, CheckResultDict
+from ..models.domain import FailedCheck
 from ..config.constants import (
     API_KEY_DETAIL,
     API_KEY_ERROR,
@@ -84,42 +85,42 @@ def extract_checks(alpha_payload: ApiPayload) -> list[CheckResultDict]:
     return []
 
 
-def extract_failed_checks(alpha_payload: ApiPayload) -> list[CheckResultDict]:
-    failed_checks: list[CheckResultDict] = []
+def extract_failed_checks(alpha_payload: ApiPayload) -> list[FailedCheck]:
+    failed_checks: list[FailedCheck] = []
     for check in extract_checks(alpha_payload):
         if str(check.get(_KEY_RESULT, "")).upper() != _RESULT_FAIL:
             continue
         failed_checks.append(
-            {
-                _KEY_NAME: check.get(_KEY_NAME),
-                _KEY_RESULT: check.get(_KEY_RESULT),
-                _KEY_VALUE: check.get(_KEY_VALUE),
-                _KEY_LIMIT: first_non_empty(check.get(_KEY_LIMIT), check.get(_KEY_THRESHOLD)),
-            }
+            FailedCheck(
+                name=str(check.get(_KEY_NAME, "")),
+                result=check.get(_KEY_RESULT),
+                value=check.get(_KEY_VALUE),
+                limit=first_non_empty(check.get(_KEY_LIMIT), check.get(_KEY_THRESHOLD)),
+            )
         )
     return failed_checks
 
 
-def extract_pending_checks(alpha_payload: ApiPayload) -> list[CheckResultDict]:
-    pending_checks: list[CheckResultDict] = []
+def extract_pending_checks(alpha_payload: ApiPayload) -> list[FailedCheck]:
+    pending_checks: list[FailedCheck] = []
     for check in extract_checks(alpha_payload):
         if str(check.get(_KEY_RESULT, "")).upper() != _RESULT_PENDING:
             continue
         pending_checks.append(
-            {
-                _KEY_NAME: check.get(_KEY_NAME),
-                _KEY_RESULT: check.get(_KEY_RESULT),
-                _KEY_VALUE: check.get(_KEY_VALUE),
-                _KEY_LIMIT: first_non_empty(check.get(_KEY_LIMIT), check.get(_KEY_THRESHOLD)),
-            }
+            FailedCheck(
+                name=str(check.get(_KEY_NAME, "")),
+                result=check.get(_KEY_RESULT),
+                value=check.get(_KEY_VALUE),
+                limit=first_non_empty(check.get(_KEY_LIMIT), check.get(_KEY_THRESHOLD)),
+            )
         )
     return pending_checks
 
 
-def is_submittable_from_checks(checks: list[CheckResultDict]) -> bool | None:
+def is_submittable_from_checks(checks: list[FailedCheck]) -> bool | None:
     if not checks:
         return None
-    return all(str(check.get(_KEY_RESULT, "")).upper() != _RESULT_FAIL for check in checks)
+    return all(str(check.result or "").upper() != _RESULT_FAIL for check in checks)
 
 
 def summarize_failure(payload: ApiPayload | list[Any] | Any) -> str:

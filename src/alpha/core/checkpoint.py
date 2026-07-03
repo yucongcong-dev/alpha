@@ -212,19 +212,11 @@ def save_checkpoint(
     # 收集待处理任务摘要
     pending_summary: list[dict[str, str]] = []
     for meta in list(execution_state.pending_futures.values())[-CHECKPOINT_PENDING_FUTURES_LIMIT:]:
-        if isinstance(meta, dict):
-            field_id = str(meta.get("field_id", ""))
-            template_name = str(meta.get("template_name", ""))
-            expression = str(meta.get("expression", ""))
-        else:
-            field_id = str(meta.field_id)
-            template_name = str(meta.template_name)
-            expression = str(meta.expression)
         pending_summary.append(
             {
-                "field_id": field_id,
-                "template_name": template_name,
-                "expression": expression,
+                "field_id": str(meta.field_id),
+                "template_name": str(meta.template_name),
+                "expression": str(meta.expression),
             }
         )
 

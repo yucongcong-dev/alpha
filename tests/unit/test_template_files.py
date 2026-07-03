@@ -18,10 +18,11 @@ from alpha.io.output import (
     ensure_template_blacklist_file,
     invalidate_blacklist_path_cache,
 )
-from alpha.models.domain import FieldTestResult, TemplateCandidate, TemplateLibraryItem
+from alpha.models.domain import FailedCheck, FieldTestResult, TemplateCandidate, TemplateLibraryItem
 from alpha.models.runtime import (
     ExecutionState,
     FutureCompletionContext,
+    PendingFutureContext,
     ResultWriteOptions,
     TemplateBuildContext,
     TemplateBuildOptions,
@@ -221,8 +222,8 @@ def test_auto_update_blacklist_appends_low_quality_template_once(tmp_path) -> No
             expression="rank(sales)",
             submittable=False,
             failed_checks=[
-                {"name": "LOW_SHARPE", "value": 0.1},
-                {"name": "LOW_FITNESS", "value": 0.2},
+                FailedCheck(name="LOW_SHARPE", value=0.1),
+                FailedCheck(name="LOW_FITNESS", value=0.2),
             ],
         ),
         FieldTestResult(
@@ -234,8 +235,8 @@ def test_auto_update_blacklist_appends_low_quality_template_once(tmp_path) -> No
             expression="rank(assets)",
             submittable=False,
             failed_checks=[
-                {"name": "LOW_SHARPE", "value": 0.2},
-                {"name": "LOW_FITNESS", "value": 0.3},
+                FailedCheck(name="LOW_SHARPE", value=0.2),
+                FailedCheck(name="LOW_FITNESS", value=0.3),
             ],
         ),
     ]
@@ -269,8 +270,8 @@ def test_auto_update_blacklist_is_visible_to_same_process(monkeypatch, tmp_path)
             expression="rank(sales)",
             submittable=False,
             failed_checks=[
-                {"name": "LOW_SHARPE", "value": 0.1},
-                {"name": "LOW_FITNESS", "value": 0.2},
+                FailedCheck(name="LOW_SHARPE", value=0.1),
+                FailedCheck(name="LOW_FITNESS", value=0.2),
             ],
         ),
         FieldTestResult(
@@ -283,8 +284,8 @@ def test_auto_update_blacklist_is_visible_to_same_process(monkeypatch, tmp_path)
             expression="rank(assets)",
             submittable=False,
             failed_checks=[
-                {"name": "LOW_SHARPE", "value": 0.2},
-                {"name": "LOW_FITNESS", "value": 0.3},
+                FailedCheck(name="LOW_SHARPE", value=0.2),
+                FailedCheck(name="LOW_FITNESS", value=0.3),
             ],
         ),
     ]
@@ -378,8 +379,8 @@ def test_scheduler_dump_results_shrinks_next_template_queue(monkeypatch, tmp_pat
             status="simulated",
             submittable=False,
             failed_checks=[
-                {"name": "LOW_SHARPE", "value": 0.1},
-                {"name": "LOW_FITNESS", "value": 0.2},
+                FailedCheck(name="LOW_SHARPE", value=0.1),
+                FailedCheck(name="LOW_FITNESS", value=0.2),
             ],
         )
     ]
@@ -397,8 +398,8 @@ def test_scheduler_dump_results_shrinks_next_template_queue(monkeypatch, tmp_pat
                 status="simulated",
                 submittable=False,
                 failed_checks=[
-                    {"name": "LOW_SHARPE", "value": 0.1},
-                    {"name": "LOW_FITNESS", "value": 0.2},
+                    FailedCheck(name="LOW_SHARPE", value=0.1),
+                    FailedCheck(name="LOW_FITNESS", value=0.2),
                 ],
             )
 
@@ -408,16 +409,16 @@ def test_scheduler_dump_results_shrinks_next_template_queue(monkeypatch, tmp_pat
         attempted_keys=set(),
         template_stats={},
         pending_futures={
-            future: {
-                "field_id": "field_b",
-                "field_name": "field_b",
-                "field_type": "MATRIX",
-                "template_name": "weak_template",
-                "template_family": "legacy_level",
-                "template_stage": "first_order",
-                "expression": "rank(ts_backfill(field_b, 240))",
-                "settings_fingerprint": "variant_fp",
-            }
+            future: PendingFutureContext(
+                field_id="field_b",
+                field_name="field_b",
+                field_type="MATRIX",
+                template_name="weak_template",
+                template_family="legacy_level",
+                template_stage="first_order",
+                expression="rank(ts_backfill(field_b, 240))",
+                settings_fingerprint="variant_fp",
+            )
         },
         field_queue_busy_counts={},
         skipped_fields_due_to_queue=set(),
@@ -504,19 +505,19 @@ def test_build_pending_templates_skips_inflight_duplicate(monkeypatch) -> None:
     )
 
     pending_futures = {
-        object(): {
-            "field_id": "unsystematic_risk_last_360_days",
-            "field_name": "unsystematic_risk_last_360_days",
-            "field_type": "MATRIX",
-            "template_name": "model51_market_zscore_decay_63",
-                "template_family": "neutralize_decay",
-                "template_stage": "group_second_order",
-                "expression": "ts_decay_linear(group_neutralize(ts_zscore(winsorize(ts_backfill(unsystematic_risk_last_360_days, 504), std=4), 63), market), 20)",
-                "settings_fingerprint": build_settings_fingerprint_from_payload(
-                    settings_payload
-                ),
-            }
-        }
+        object(): PendingFutureContext(
+            field_id="unsystematic_risk_last_360_days",
+            field_name="unsystematic_risk_last_360_days",
+            field_type="MATRIX",
+            template_name="model51_market_zscore_decay_63",
+            template_family="neutralize_decay",
+            template_stage="group_second_order",
+            expression="ts_decay_linear(group_neutralize(ts_zscore(winsorize(ts_backfill(unsystematic_risk_last_360_days, 504), std=4), 63), market), 20)",
+            settings_fingerprint=build_settings_fingerprint_from_payload(
+                settings_payload
+            ),
+        )
+    }
 
     pending, disabled, total = build_pending_templates_for_field(
         build_ctx,
@@ -697,8 +698,8 @@ def test_resimulate_stage_prefers_refine_templates_over_broad_generation(monkeyp
             submittable=False,
             expression="group_rank(ts_zscore(ts_backfill(cash_st, 504), 60), subindustry)",
             failed_checks=[
-                {"name": "LOW_SHARPE", "value": 1.21, "limit": 1.25},
-                {"name": "LOW_FITNESS", "value": 0.64, "limit": 1.0},
+                FailedCheck(name="LOW_SHARPE", value=1.21, limit=1.25),
+                FailedCheck(name="LOW_FITNESS", value=0.64, limit=1.0),
             ],
         )
     ]

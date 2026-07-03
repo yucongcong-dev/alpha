@@ -37,7 +37,7 @@ from .parser_schema import (
     collect_parser_defaults,
 )
 from .path_resolution import normalize_args_paths as _normalize_args_paths
-from .run_config import build_run_config_snapshot as _build_run_config_snapshot
+from .run_config import build_run_config_snapshot  # noqa: F401
 
 # ============================================================================
 # 命令行参数解析函数
@@ -161,15 +161,8 @@ def normalize_args_paths(args: argparse.Namespace) -> RunPaths:
     return _normalize_args_paths(args)
 
 
-# ============================================================================
-# 运行配置快照函数
-# ============================================================================
-
-
-def build_run_config_snapshot(args: RunConfigArgs, run_paths: RunPaths) -> dict[str, Any]:
-    """兼容导出：构建运行配置快照。"""
-    return _build_run_config_snapshot(args, run_paths)
-
+# 运行配置快照函数已提取到 cli/run_config.py
+# 通过顶部的 from .run_config import build_run_config_snapshot 提供重导出兼容
 
 # 过滤器函数和日志设置已提取到 cli/filters.py
 # 通过顶部的 from .filters import ... 提供重导出兼容

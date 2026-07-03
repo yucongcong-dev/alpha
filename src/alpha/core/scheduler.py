@@ -27,7 +27,6 @@ from ..analysis.stats import (
     update_template_stats_with_result,
 )
 from ..api.timing import wait_seconds
-from ..io.results_store import dump_results_incremental
 from ..models.runtime import (
     ExecutionState,
     FutureCompletionContext,
@@ -35,7 +34,6 @@ from ..models.runtime import (
     RuntimeConcurrencyState,
     SchedulerRuntimeArgs,
 )
-from ..policy import auto_update_blacklist_incremental, build_blacklist_runtime_stats
 from .result_processing import apply_completed_result
 from .simulation import build_failure_result
 
@@ -183,9 +181,6 @@ def handle_completed_future(
         is_queue_timeout_result_fn=is_queue_timeout_result,
         result_identity_fn=result_identity,
         update_template_stats_with_result_fn=update_template_stats_with_result,
-        build_blacklist_runtime_stats_fn=build_blacklist_runtime_stats,
-        auto_update_blacklist_incremental_fn=auto_update_blacklist_incremental,
-        dump_results_incremental_fn=dump_results_incremental,
     )
 
 

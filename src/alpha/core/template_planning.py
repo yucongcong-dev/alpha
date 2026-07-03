@@ -34,6 +34,7 @@ from ..generators.templates.priority import cap_templates_per_family
 from ..generators.templates.refine import build_refine_templates
 from ..generators.variants import build_setting_variants
 from ..models.domain import (
+    FailedCheck,
     FieldTestResult,
     NearPassCandidate,
     SettingsVariant,
@@ -170,7 +171,7 @@ def build_pending_template_variants(
                 template_stage=template_stage,
                 score=float(template_metadata.get("refine_score", 0.0) or 0.0),
                 failed_checks=[
-                    check for check in refine_failed_checks if isinstance(check, dict)
+                    FailedCheck.from_dict(check) for check in refine_failed_checks
                 ],
             )
         for settings_variant in build_setting_variants_fn(

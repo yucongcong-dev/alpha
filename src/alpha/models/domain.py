@@ -19,10 +19,32 @@ class FailedCheck:
     name: str
     value: float | None = None
     limit: float | None = None
+    result: str | None = None
 
     def get(self, key: str, default: Any = None) -> Any:
         """兼容 dict 风格的 get 方法。"""
         return getattr(self, key, default)
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> "FailedCheck":
+        """从字典创建失败检查项。"""
+        return cls(
+            name=str(data.get("name", "")),
+            value=data.get("value"),
+            limit=data.get("limit"),
+            result=data.get("result"),
+        )
+
+    def to_dict(self) -> dict[str, Any]:
+        """转换为字典表示。"""
+        result = {"name": self.name}
+        if self.value is not None:
+            result["value"] = self.value
+        if self.limit is not None:
+            result["limit"] = self.limit
+        if self.result is not None:
+            result["result"] = self.result
+        return result
 
 
 ResultRow = dict[str, Any]
@@ -192,7 +214,7 @@ class FieldTestResult:
             "settings_fingerprint": self.settings_fingerprint,
             "template_library_fingerprint": self.template_library_fingerprint,
             "failed_stage": self.failed_stage,
-            "failed_checks": self.failed_checks,
+            "failed_checks": [check.to_dict() for check in self.failed_checks] if self.failed_checks else None,
             "self_correlation_pending_since": self.self_correlation_pending_since,
             "self_correlation_last_recheck_at": self.self_correlation_last_recheck_at,
             "self_correlation_recheck_count": self.self_correlation_recheck_count,

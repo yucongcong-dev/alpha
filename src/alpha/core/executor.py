@@ -30,7 +30,7 @@ from ..models.io_types import RunFilters
 from ..models.runtime import (
     ExecutionState,
     HistoricalRunState,
-    PendingFutureLike,
+    PendingFutureContext,
     TemplateBuildArgs,
     TemplateBuildContext,
     TemplateBuildOptions,
@@ -57,7 +57,7 @@ logger = logging.getLogger(__name__)
 
 
 def inflight_template_keys(
-    pending_futures: Mapping[object, PendingFutureLike],
+    pending_futures: Mapping[object, PendingFutureContext],
 ) -> set[tuple[str, str, str, str]]:
     """
     从尚未完成的 future 上下文中提取去重键。
@@ -68,18 +68,10 @@ def inflight_template_keys(
     """
     reserved: set[tuple[str, str, str, str]] = set()
     for context in pending_futures.values():
-        if isinstance(context, dict):
-            field_id = str(first_non_empty(context.get("field_id"), SENTINEL_UNKNOWN))
-            template_name = str(first_non_empty(context.get("template_name"), ""))
-            expression = str(first_non_empty(context.get("expression"), ""))
-            settings_fingerprint = str(first_non_empty(context.get("settings_fingerprint"), ""))
-        else:
-            field_id = str(first_non_empty(context.field_id, SENTINEL_UNKNOWN))
-            template_name = str(first_non_empty(context.template_name, ""))
-            expression = str(first_non_empty(context.expression, ""))
-            settings_fingerprint = str(first_non_empty(context.settings_fingerprint, ""))
-        if not template_name or not expression:
-            continue
+        field_id = str(first_non_empty(context.field_id, SENTINEL_UNKNOWN))
+        template_name = str(first_non_empty(context.template_name, ""))
+        expression = str(first_non_empty(context.expression, ""))
+        settings_fingerprint = str(first_non_empty(context.settings_fingerprint, ""))
         reserved.add((field_id, template_name, expression, settings_fingerprint))
     return reserved
 

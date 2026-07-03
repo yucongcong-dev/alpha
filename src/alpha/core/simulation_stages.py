@@ -9,6 +9,7 @@ import re
 
 from ..api.api_types import CheckResultDict, SimulationPayload
 from ..api.client import BrainClient, retry_operation
+from ..models.domain import FailedCheck
 from ..api.timing import wait_seconds
 from ..config.constants import (
     API_KEY_FAILED,
@@ -163,7 +164,9 @@ def checksubmit_with_retry(
             alpha_id,
         )
         return None, "self correlation pending", pending_self_corr
-    submittable = is_submittable_from_checks(checks)
+    submittable = is_submittable_from_checks(
+        [FailedCheck.from_dict(c) for c in checks]
+    )
     failed_checks = extract_failed_checks(alpha_detail)
     message = (
         "checks unavailable"

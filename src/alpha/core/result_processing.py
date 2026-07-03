@@ -16,7 +16,6 @@ from ..analysis.stats import (
     update_template_stats_with_result,
 )
 from ..config.constants import STATUS_ERROR
-from ..io.results_store import dump_results_incremental
 from ..models.domain import FieldTestResult
 from ..models.runtime import ExecutionState, FutureCompletionContext
 from ..policy import auto_update_blacklist_incremental, build_blacklist_runtime_stats
@@ -58,7 +57,7 @@ def apply_completed_result(
     update_template_stats_with_result_fn=update_template_stats_with_result,
     build_blacklist_runtime_stats_fn=build_blacklist_runtime_stats,
     auto_update_blacklist_incremental_fn=auto_update_blacklist_incremental,
-    dump_results_incremental_fn=dump_results_incremental,
+    dump_results_incremental_fn=None,
 ) -> tuple[dict[str, dict[str, int]], bool, str | None]:
     """把单条结果并入执行状态，并执行增量持久化与策略副作用。"""
     result_write_options = completion_ctx.result_write_options
@@ -116,6 +115,10 @@ def apply_completed_result(
             result_write_options.dataset_id,
         )
 
+    if dump_results_incremental_fn is None:
+        from ..io.results_store import dump_results_incremental
+
+        dump_results_incremental_fn = dump_results_incremental
     execution_state.persisted_result_count = dump_results_incremental_fn(
         result_write_options.output_path,
         result_write_options.dataset_id,

@@ -20,7 +20,7 @@ from alpha.core.simulation import (
     precheck_simulation_metrics,
     summarize_failure,
 )
-from alpha.models.domain import FieldTestContext, FieldTestResult
+from alpha.models.domain import FailedCheck, FieldTestContext, FieldTestResult
 from tests.conftest import MockArgs
 
 # ============================================================================
@@ -152,7 +152,7 @@ class TestExtractFailedChecks:
         }
         result = extract_failed_checks(payload)
         assert len(result) == 1
-        assert result[0]["name"] == "LOW_SHARPE"
+        assert result[0].name == "LOW_SHARPE"
 
     def test_all_pass(self) -> None:
         payload = {"checks": [{"name": "LOW_SHARPE", "result": "PASS", "value": 1.5, "limit": 1.0}]}
@@ -166,7 +166,7 @@ class TestExtractFailedChecks:
     def test_uses_threshold_when_no_limit(self) -> None:
         payload = {"checks": [{"name": "TEST", "result": "FAIL", "value": 0.5, "threshold": 1.0}]}
         result = extract_failed_checks(payload)
-        assert result[0]["limit"] == 1.0
+        assert result[0].limit == 1.0
 
     def test_limit_over_threshold(self) -> None:
         payload = {
@@ -175,7 +175,7 @@ class TestExtractFailedChecks:
             ]
         }
         result = extract_failed_checks(payload)
-        assert result[0]["limit"] == 2.0
+        assert result[0].limit == 2.0
 
     def test_no_result_field(self) -> None:
         assert extract_failed_checks({"checks": [{"name": "TEST"}]}) == []
@@ -196,9 +196,9 @@ class TestExtractPendingChecks:
             ]
         }
         result = extract_pending_checks(payload)
-        assert result == [
-            {"name": "SELF_CORRELATION", "result": "PENDING", "value": None, "limit": None}
-        ]
+        assert len(result) == 1
+        assert result[0].name == "SELF_CORRELATION"
+        assert result[0].result == "PENDING"
 
 
 # ============================================================================
@@ -210,14 +210,14 @@ class TestIsSubmittableFromChecks:
     """is_submittable_from_checks 函数测试"""
 
     def test_all_pass(self) -> None:
-        assert is_submittable_from_checks([{"name": "LOW_SHARPE", "result": "PASS"}]) is True
+        assert is_submittable_from_checks([FailedCheck(name="LOW_SHARPE", result="PASS")]) is True
 
     def test_any_fail(self) -> None:
         assert (
             is_submittable_from_checks(
                 [
-                    {"name": "LOW_SHARPE", "result": "PASS"},
-                    {"name": "LOW_FITNESS", "result": "FAIL"},
+                    FailedCheck(name="LOW_SHARPE", result="PASS"),
+                    FailedCheck(name="LOW_FITNESS", result="FAIL"),
                 ]
             )
             is False
@@ -289,21 +289,21 @@ class TestChecksubmitWithRetry:
         assert result == (
             False,
             "checks failed",
-            [{"name": "SELF_CORRELATION", "result": "FAIL", "value": 0.91, "limit": 0.7}],
+            [FailedCheck(name="SELF_CORRELATION", result="FAIL", value=0.91, limit=0.7)],
         )
 
     def test_empty_list(self) -> None:
         assert is_submittable_from_checks([]) is None
 
     def test_case_insensitive(self) -> None:
-        assert is_submittable_from_checks([{"name": "LOW_SHARPE", "result": "fail"}]) is False
+        assert is_submittable_from_checks([FailedCheck(name="LOW_SHARPE", result="fail")]) is False
 
     def test_multiple_fail_first_wins(self) -> None:
         assert (
             is_submittable_from_checks(
                 [
-                    {"name": "A", "result": "FAIL"},
-                    {"name": "B", "result": "PASS"},
+                    FailedCheck(name="A", result="FAIL"),
+                    FailedCheck(name="B", result="PASS"),
                 ]
             )
             is False
@@ -314,8 +314,8 @@ class TestChecksubmitWithRetry:
         assert (
             is_submittable_from_checks(
                 [
-                    {"name": "A", "result": "PASS"},
-                    {"name": "B"},  # no result field
+                    FailedCheck(name="A", result="PASS"),
+                    FailedCheck(name="B", result=None),  # no result field
                 ]
             )
             is True
@@ -638,7 +638,7 @@ def test_run_checksubmit_stage_rejects_pending_self_correlation(monkeypatch) -> 
     assert result == (
         None,
         "self correlation pending",
-        [{"name": "SELF_CORRELATION", "result": "PENDING", "value": None, "limit": None}],
+        [FailedCheck(name="SELF_CORRELATION", result="PENDING", value=None, limit=None)],
     )
 
     def test_context_fields_independent(self) -> None:

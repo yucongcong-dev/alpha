@@ -28,6 +28,7 @@ from alpha.models.io_types import RunFilters
 from alpha.models.runtime import (
     ExecutionState,
     FutureCompletionContext,
+    PendingFutureContext,
     ResultWriteOptions,
     RuntimeConcurrencyState,
     TemplateBuildContext,
@@ -82,21 +83,21 @@ class TestCongestionSignalPropagation:
             attempted_keys=set(),
             template_stats={},
             pending_futures={
-                future: {
-                    "field_id": "test_field",
-                    "field_type": "MATRIX",
-                    "field_name": "test",
-                    "template_name": "test_tpl",
-                    "expression": "rank(test)",
-                    "settings_fingerprint": "abc",
-                }
+                future: PendingFutureContext(
+                    field_id="test_field",
+                    field_type="MATRIX",
+                    field_name="test",
+                    template_name="test_tpl",
+                    expression="rank(test)",
+                    settings_fingerprint="abc",
+                )
             },
             field_queue_busy_counts={},
             skipped_fields_due_to_queue=set(),
         )
 
         with (
-            patch("alpha.core.scheduler.dump_results_incremental"),
+            patch("alpha.io.results_store.dump_results_incremental"),
         ):
             _stats, congestion_detected, queue_busy_field_id = handle_completed_future(
                 future,
@@ -142,21 +143,21 @@ class TestCongestionSignalPropagation:
             attempted_keys=set(),
             template_stats={},
             pending_futures={
-                future: {
-                    "field_id": "test_field",
-                    "field_type": "MATRIX",
-                    "field_name": "test",
-                    "template_name": "test_tpl",
-                    "expression": "rank(test)",
-                    "settings_fingerprint": "abc",
-                }
+                future: PendingFutureContext(
+                    field_id="test_field",
+                    field_type="MATRIX",
+                    field_name="test",
+                    template_name="test_tpl",
+                    expression="rank(test)",
+                    settings_fingerprint="abc",
+                )
             },
             field_queue_busy_counts={},
             skipped_fields_due_to_queue=set(),
         )
 
         with (
-            patch("alpha.core.scheduler.dump_results_incremental"),
+            patch("alpha.io.results_store.dump_results_incremental"),
         ):
             _stats, congestion_detected, _queue_busy_field_id = handle_completed_future(
                 future,
@@ -367,18 +368,18 @@ class TestDrainCompletedFuturesFlow:
         future.result.return_value = result
 
         empty_execution_state.pending_futures = {
-            future: {
-                "field_id": "f1",
-                "field_type": "MATRIX",
-                "field_name": "test",
-                "template_name": "tpl",
-                "expression": "rank(test)",
-                "settings_fingerprint": "abc",
-            }
+            future: PendingFutureContext(
+                field_id="f1",
+                field_type="MATRIX",
+                field_name="test",
+                template_name="tpl",
+                expression="rank(test)",
+                settings_fingerprint="abc",
+            )
         }
 
         with (
-            patch("alpha.core.scheduler.dump_results_incremental"),
+            patch("alpha.io.results_store.dump_results_incremental"),
             patch("alpha.core.scheduler.is_informative_result", return_value=True),
             patch(
                 "alpha.core.scheduler.result_identity",
@@ -421,18 +422,18 @@ class TestDrainCompletedFuturesFlow:
         future.result.return_value = result
 
         empty_execution_state.pending_futures = {
-            future: {
-                "field_id": "f1",
-                "field_type": "MATRIX",
-                "field_name": "test",
-                "template_name": "tpl",
-                "expression": "rank(test)",
-                "settings_fingerprint": "abc",
-            }
+            future: PendingFutureContext(
+                field_id="f1",
+                field_type="MATRIX",
+                field_name="test",
+                template_name="tpl",
+                expression="rank(test)",
+                settings_fingerprint="abc",
+            )
         }
 
         with (
-            patch("alpha.core.scheduler.dump_results_incremental"),
+            patch("alpha.io.results_store.dump_results_incremental"),
             patch("alpha.core.scheduler.is_informative_result", return_value=False),
         ):
             drain_completed_futures(
@@ -470,7 +471,7 @@ class TestDrainCompletedFuturesFlow:
         }
 
         with (
-            patch("alpha.core.scheduler.dump_results_incremental"),
+            patch("alpha.io.results_store.dump_results_incremental"),
             patch("alpha.core.scheduler.is_informative_result", return_value=False),
         ):
             drain_completed_futures(
