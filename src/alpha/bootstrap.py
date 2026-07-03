@@ -12,15 +12,13 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 import logging
-from pathlib import Path
-import shutil
 import threading
 
 from .analysis.feedback_history import build_historical_run_state
 from .api.client import BrainClient, WorkerClientFactory, login_with_retry
+from .bootstrap_cleanup import clean_runtime_artifacts as clean_runtime_artifacts
 from .bootstrap_fields import prepare_fields_for_execution
 from .bootstrap_state import build_execution_state
-from .cli.constants import PROJECT_ROOT
 from .cli.filters import load_run_filters_extended, setup_runtime_logging
 from .cli.run_config import build_run_config_snapshot
 from .config.policy import get_dataset_expression_policy
@@ -35,7 +33,6 @@ from .models.runtime import (
     ApiClientArgs,
     ApiClientOptions,
     BootstrapRuntimeArgs,
-    CleanRuntimeArgs,
     FieldFetchOptions,
     InitializedRunContext,
     RuntimeConcurrencyState,
@@ -257,44 +254,6 @@ def _log_field_selection_stats(
         )
         return
     logger.info("[data] 从数据集 %s 获取 %d 个字段", args.dataset_id, len(fields))
-
-
-def clean_runtime_artifacts(
-    args: CleanRuntimeArgs,
-    *,
-    project_root: Path = PROJECT_ROOT,
-) -> int:
-    """清理本地运行产物，默认保留加密凭据。"""
-    targets: list[Path] = [
-        project_root / "cache",
-        project_root / "results",
-        project_root / ".pytest_cache",
-        project_root / ".mypy_cache",
-        project_root / ".ruff_cache",
-        project_root / ".coverage",
-        project_root / "htmlcov",
-    ]
-    if args.include_credentials:
-        targets.append(project_root / ".credentials")
-
-    existing_targets = [target for target in targets if target.exists()]
-    if not existing_targets:
-        print("[clean] no runtime artifacts found")
-        return 0
-
-    for target in existing_targets:
-        if args.dry_run_clean:
-            print(f"[clean] would remove {target}")
-            continue
-        if target.is_dir():
-            shutil.rmtree(target)
-        else:
-            target.unlink()
-        print(f"[clean] removed {target}")
-
-    if not args.include_credentials:
-        print("[clean] credentials preserved (.credentials/)")
-    return 0
 
 
 def create_and_login_client(

@@ -107,6 +107,31 @@ class HttpxHttpBackend:
                 "httpx 后端需要安装 httpx 包: pip install httpx"
             ) from exc
 
+    def _sync_cookies_to_client(self) -> None:
+        """Copy CookieJar state into the lazy httpx client before a request."""
+        client = self._client
+        if client is None:
+            return
+        for cookie in self._cookies:
+            client.cookies.set(
+                cookie.name,
+                cookie.value,
+                domain=cookie.domain or None,
+                path=cookie.path or "/",
+            )
+
+    def _sync_cookies_from_client(self) -> None:
+        """Copy cookies learned by httpx back into the backend CookieJar."""
+        client = self._client
+        if client is None:
+            return
+        jar = getattr(client.cookies, "jar", None)
+        if jar is None:
+            return
+        for cookie in jar:
+            if isinstance(cookie, Cookie):
+                self._cookies.set_cookie(cookie)
+
     def request(
         self,
         method: str,
@@ -116,50 +141,18 @@ class HttpxHttpBackend:
         data: bytes | None = None,
         timeout: float = 90.0,
     ) -> tuple[int, dict[str, str], bytes]:
-        from http.cookiejar import Cookie
-
         client = self._get_client()
         try:
-            # 将 CookieJar 序列化为请求头
-            request_cookies: dict[str, str] = {}
-            for cookie in self._cookies:
-                if isinstance(cookie, Cookie):
-                    request_cookies[cookie.name] = cookie.value
-
+            self._sync_cookies_to_client()
             response = client.request(
                 method=method,
                 url=url,
                 headers=headers,
                 content=data,
-                cookies=request_cookies if request_cookies else None,
+                timeout=timeout,
             )
             response_headers = dict(response.headers.items())
-            # 更新 CookieJar
-            for _set_cookie_value in response.headers.get_list("set-cookie"):
-                try:
-                    self._cookies.set_cookie(
-                        Cookie(
-                            version=0,
-                            name="",
-                            value="",
-                            port=None,
-                            port_specified=False,
-                            domain="",
-                            domain_specified=False,
-                            domain_initial_dot=False,
-                            path="/",
-                            path_specified=True,
-                            secure=False,
-                            expires=0,
-                            discard=True,
-                            comment=None,
-                            comment_url=None,
-                            rest={},
-                            rfc2109=False,
-                        )
-                    )
-                except Exception:
-                    pass  # ignore malformed cookies
+            self._sync_cookies_from_client()
             return response.status_code, response_headers, response.content
         except Exception as exc:
             from ..exceptions import BrainAPIError
@@ -168,10 +161,12 @@ class HttpxHttpBackend:
 
     def set_cookie(self, cookie: Cookie) -> None:
         self._cookies.set_cookie(cookie)
+        self._sync_cookies_to_client()
 
     def load_cookies(self, cookies: CookieJar) -> None:
         for cookie in cookies:
             self._cookies.set_cookie(cookie)
+        self._sync_cookies_to_client()
 
 
 def create_http_backend(backend_name: str = "") -> HttpBackend:
