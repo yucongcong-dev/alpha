@@ -1,0 +1,33 @@
+{
+  "_comment": "Industry decay triplet around the proven model51 unsystematic risk winner.",
+  "_dataset_id": "model51",
+  "default": [
+    {
+      "name": "model51_industry_zscore_decay_63_d10",
+      "expression": "ts_decay_linear(group_neutralize(ts_zscore({field_preprocessed}, 63), industry), 10)",
+      "priority": 1200,
+      "family": "neutralize_decay_industry_local",
+      "layer": "composite",
+      "stage": "group_second_order",
+      "dataset_tags": ["model51", "risk_metrics", "local_refine"]
+    },
+    {
+      "name": "model51_industry_zscore_decay_63_d15",
+      "expression": "ts_decay_linear(group_neutralize(ts_zscore({field_preprocessed}, 63), industry), 15)",
+      "priority": 1199,
+      "family": "neutralize_decay_industry_local",
+      "layer": "composite",
+      "stage": "group_second_order",
+      "dataset_tags": ["model51", "risk_metrics", "local_refine"]
+    },
+    {
+      "name": "model51_industry_zscore_decay_63_d20",
+      "expression": "ts_decay_linear(group_neutralize(ts_zscore({field_preprocessed}, 63), industry), 20)",
+      "priority": 1198,
+      "family": "neutralize_decay_industry_local",
+      "layer": "composite",
+      "stage": "group_second_order",
+      "dataset_tags": ["model51", "risk_metrics", "local_refine"]
+    }
+  ]
+}
