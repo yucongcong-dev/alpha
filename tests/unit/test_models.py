@@ -1,4 +1,4 @@
-"""models/base.py 数据类单元测试"""
+"""模型数据类单元测试。"""
 
 from __future__ import annotations
 
@@ -7,16 +7,13 @@ import time
 
 import pytest
 
-from alpha.models.base import (
+from alpha.models.domain import FieldTestContext, FieldTestResult
+from alpha.models.io_types import RunFilters
+from alpha.models.runtime import ExecutionState, HistoricalRunState, RuntimeConcurrencyState
+from alpha.models.runtime_options import (
     ApiClientOptions,
-    ExecutionState,
     FieldFetchOptions,
-    FieldTestContext,
-    FieldTestResult,
-    HistoricalRunState,
     ResultWriteOptions,
-    RunFilters,
-    RuntimeConcurrencyState,
     TemplateBuildOptions,
 )
 

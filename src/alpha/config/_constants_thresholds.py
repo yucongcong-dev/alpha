@@ -1,6 +1,6 @@
 """质量阈值 + 检查名称 + 统计值 + 哨兵常量。
 
-来源: constants_defaults.yaml 的 quality.* / feedback.* / stats.* / sentinel.* 等段。
+来源: config/constants_defaults.yaml 的 quality.* / feedback.* / stats.* / sentinel.* 等段。
 """
 
 from __future__ import annotations

@@ -52,8 +52,14 @@ Focused refine:
   - `model51_industry_zscore_decay_63`
   - `model51_market_zscore_decay_63`
   - `model51_group_zscore_market_126`
-- [local_refine_round7.json](local_refine_round7.json) keeps a small set of proven local refine variants around the same risk-field branch. It is stored here instead of the repository root because it is reusable dataset knowledge, not a one-off temporary file.
-- [local_refine_industry_decay_triplet_round9.json](local_refine_industry_decay_triplet_round9.json) and [local_refine_market_decay_triplet_round9.json](local_refine_market_decay_triplet_round9.json) keep a tighter decay sweep (`10/15/20`) around the `ts_zscore(..., 63)` branch for industry and market neutralization.
+- [refine/local_refine_round7.json](refine/local_refine_round7.json) keeps a small set of proven local refine variants around the same risk-field branch. It is stored here instead of the repository root because it is reusable dataset knowledge, not a one-off temporary file.
+- [refine/local_refine_industry_decay_triplet_round9.json](refine/local_refine_industry_decay_triplet_round9.json) and [refine/local_refine_market_decay_triplet_round9.json](refine/local_refine_market_decay_triplet_round9.json) keep a tighter decay sweep (`10/15/20`) around the `ts_zscore(..., 63)` branch for industry and market neutralization.
+- [refine/local_refine_decay_density_round10.json](refine/local_refine_decay_density_round10.json) keeps a denser decay sweep (`8/12/18/24`) around the same `ts_zscore(..., 63)` branch.
+
+Refine pack convention:
+- Keep `library.json` as the default narrow production library.
+- Keep targeted local sweeps under `refine/`.
+- Load refine packs explicitly with `--template-library-file data/templates/model51/refine/<file>.json`.
 
 Current local evidence behind this narrower focus:
 - `unsystematic_risk_last_360_days + model51_industry_zscore_decay_63` has already produced `submittable=true`.

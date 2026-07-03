@@ -4,7 +4,7 @@
   - UrllibHttpBackend：基于 urllib.request 的兼容后端（默认）
   - HttpxHttpBackend：基于 httpx 的现代后端（连接池、HTTP/2）
 
-通过 settings.yaml global.http.backend 选择后端：
+通过 config/settings.yaml global.http.backend 选择后端：
   http:
     backend: "httpx"  # 或 "urllib"（默认）
 """

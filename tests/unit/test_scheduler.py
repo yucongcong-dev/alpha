@@ -19,7 +19,7 @@ from alpha.core.scheduler import (
     register_queue_busy_field,
     throttle_before_submission,
 )
-from alpha.models.base import (
+from alpha.models.runtime import (
     ExecutionState,
     PendingFutureContext,
     ResultWriteOptions,

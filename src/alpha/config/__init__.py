@@ -4,8 +4,8 @@
 保留原有 `alpha.config` 导入面，内部实现按静态常量、策略构建、
 YAML getter 等职责拆分到子模块。
 
-所有常量现已统一从 YAML 文件读取 (constants_defaults.yaml 提供默认值，
-settings.yaml 提供覆盖)。修改 YAML 后重启即可生效。
+所有常量现已统一从 YAML 文件读取 (config/constants_defaults.yaml 提供默认值，
+config/settings.yaml 提供覆盖)。修改 YAML 后重启即可生效。
 """
 
 from __future__ import annotations

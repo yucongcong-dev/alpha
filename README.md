@@ -11,10 +11,25 @@ alpha/                     # 项目根目录
 │       ├── __init__.py    # 包入口（导出基础公共 API）
 │       ├── __main__.py    # python3 -m alpha / alpha 命令入口
 │       ├── main.py        # 精简入口与兼容导出
-│       ├── bootstrap.py   # 初始化阶段：参数、字段、模板、历史状态
-│       ├── run_loop.py    # 主运行循环：调度、反馈刷新、续跑推进
-│       ├── run_loop_state.py # run_loop 状态辅助：反馈刷新、续跑索引、写入路径
-│       ├── finalize.py    # 收尾阶段：最终落盘与清理
+│       ├── bootstrap.py   # 兼容导出层，真实实现见 app/
+│       ├── run_loop.py    # 兼容导出层，真实实现见 app/
+│       ├── finalize.py    # 兼容导出层，真实实现见 app/
+│       │
+│       ├── app/           # 应用编排层：初始化、运行循环、收尾、clean
+│       │   ├── bootstrap.py
+│       │   ├── bootstrap_cleanup.py
+│       │   ├── bootstrap_fields.py
+│       │   ├── bootstrap_state.py
+│       │   ├── finalize.py
+│       │   ├── loop_future_support.py
+│       │   ├── loop_persistence.py
+│       │   ├── loop_support.py
+│       │   ├── run_loop.py
+│       │   ├── run_loop_feedback.py
+│       │   ├── run_loop_paths.py
+│       │   ├── run_loop_resume.py
+│       │   ├── run_loop_rounds.py
+│       │   └── run_loop_state.py
 │       │
 │       ├── core/          # 核心业务层
 │       │   ├── checkpoint.py
@@ -138,8 +153,11 @@ alpha/                     # 项目根目录
 ├── README.md              # 项目说明
 ├── requirements.txt       # 依赖
 ├── pyproject.toml         # 项目配置
-├── settings.yaml          # 默认运行配置
-├── config/                # 按职责拆分的代码级默认 YAML
+├── config/                # 按职责拆分的 YAML 配置
+│   ├── settings.yaml      # 默认运行配置
+│   ├── dataset_profiles.yaml # 数据集运行 profile
+│   ├── expression_policies.yaml # 数据集表达式策略
+│   ├── constants_defaults.yaml # 代码级常量默认值
 │   ├── api.yaml           # API endpoint、headers、HTTP 超时与退避
 │   ├── simulation.yaml    # simulation 状态、默认日期、表达式窗口
 │   ├── quality_feedback.yaml # 质量阈值、反馈、统计、checkpoint 默认值
@@ -159,8 +177,7 @@ alpha/                     # 项目根目录
 
 哪些文件进仓：
 
-- `config/*.yaml`：代码级默认配置，按职责维护 API、simulation、质量阈值、模板参数和运行约定。
-- `settings.yaml`、`dataset_profiles.yaml`、`expression_policies.yaml`：默认运行参数、数据集 profile 和表达式策略。
+- `config/*.yaml`：统一配置入口，按职责维护默认运行参数、数据集 profile、表达式策略、API、simulation、质量阈值、模板参数和运行约定。
 - `data/templates/base/` 与 `data/templates/<dataset_id>/`：基础模板、数据集专属模板、聚焦字段/模板白名单，以及经过验证值得复用的本地 refine 模板。
 - `data/blacklists/<dataset_id>/blacklist.json`：统一黑名单。脚本会自动追加，也允许人工维护；空黑名单也可以进仓，用于固定数据集目录边界。
 
@@ -172,7 +189,7 @@ alpha/                     # 项目根目录
 - `scratch/`：外部脚本、对照材料、手工实验草稿。
 - `.credentials/`：本地加密凭证和密钥。
 
-根目录只保留项目入口、配置入口和说明文件。临时文件不要放根目录；如果只是一次性实验，放 `tmp/`；如果已经验证值得长期复用，再整理命名后放入 `data/templates/<dataset_id>/`。
+根目录只保留项目入口和说明文件。配置统一放 `config/`；临时文件不要放根目录。如果只是一次性实验，放 `tmp/`；如果已经验证值得长期复用，再整理命名后放入 `data/templates/<dataset_id>/`。
 
 ## 模板目录
 
@@ -206,7 +223,8 @@ alpha/                     # 项目根目录
 
 ## 当前代码分层
 
-- `main.py` 现在只保留精简入口和兼容导出，具体实现已经拆到 `bootstrap.py`、`run_loop.py`、`finalize.py`
+- `main.py` 现在只保留精简入口和兼容导出，具体应用编排已经拆到 `app/bootstrap.py`、`app/run_loop.py`、`app/finalize.py`
+- 根目录的 `bootstrap.py`、`run_loop.py`、`finalize.py`、`loop_*` 和 `run_loop_*` 仅保留兼容导出，新代码应直接依赖 `alpha.app.*`
 - `models/domain.py` 只放领域对象；`models/io_types.py` 放路径/过滤边界对象；`models/runtime_options.py`、`models/runtime_protocols.py`、`models/runtime_state.py` 分别放运行配置、协议和运行态上下文；`models/runtime.py` / `models/base.py` 仅保留兼容导出
 - `analysis/stats.py` 是兼容导出层；结果加载、失败检查评分、模板/字段统计、反馈画像已经分别拆到 `results_loader.py`、`failed_checks.py`、`template_stats.py`、`field_stats.py`、`feedback_stats.py`
 - `analysis/feedback.py` 是兼容导出层；历史状态/near-pass 选择放在 `feedback_history.py`，模板禁用/保留/跳过策略放在 `feedback_filters.py`
@@ -284,7 +302,7 @@ python3 -m alpha
 - `themes`：主题标签数量仅作很弱的辅助加分
 
 **表达式策略配置**：
-- 数据集级表达式搜索策略可在 `settings.yaml` 的 `expression_policies.<dataset_id>` 下覆盖
+- 数据集级表达式搜索策略可在 `config/expression_policies.yaml` 或 `config/settings.yaml` 的 `expression_policies.<dataset_id>` 下覆盖
 - 适合放这里的参数包括：`partner_limit`、字段质量阈值、反馈阶段设置、少量运行期策略开关
 - 模板本身优先放在 `data/templates/base/` 或 `data/templates/<dataset_id>/` 下维护，而不是继续把模板内容塞回 Python 常量
 
@@ -443,15 +461,15 @@ python3 -m alpha --no-smoke-test --no-full-run
 - `config/__init__.py`：公共兼容入口，集中导出常量、getter 和策略函数
 - `config/constants.py`：API、状态、统计字段和默认阈值常量
 - `config/models.py`：`DatasetExpressionPolicy`、`FieldTransformSpec`、`FeedbackLoopPolicy`
-- `config/yaml.py`：`settings.yaml` 查找、加载和缓存
+- `config/yaml.py`：`config/*.yaml` 查找、加载和缓存
 - `config/defaults.py`：把 YAML `global` 配置合并到 CLI 参数
 - `config/getters.py`：运行参数 getter
 - `config/policy.py`：dataset expression policy 构建与反馈阶段解析
 - `config/profiles.py`：dataset profile fallback
 
-YAML 分层优先级为：`settings.yaml` > `expression_policies.yaml` > `dataset_profiles.yaml` > `config/*.yaml` > legacy `constants_defaults.yaml`。其中 `settings.yaml` 面向日常运行调参，`config/*.yaml` 面向代码级默认值，`data/templates/` 面向表达式模板，`data/blacklists/` 面向低质量模板过滤。
+YAML 分层优先级为：`config/settings.yaml` > `config/expression_policies.yaml` > `config/dataset_profiles.yaml` > `config/runtime.yaml` / `config/templates.yaml` / `config/quality_feedback.yaml` / `config/simulation.yaml` / `config/api.yaml` > `config/constants_defaults.yaml`。其中 `config/settings.yaml` 面向日常运行调参，其他 `config/*.yaml` 面向按职责拆分的默认值，`data/templates/` 面向表达式模板，`data/blacklists/` 面向低质量模板过滤。
 
-实际运行配置优先维护在 `settings.yaml`、`config/*.yaml`、`data/templates/` 和 `data/blacklists/`，不要把数据集专属模板重新塞回 Python 常量。
+实际运行配置优先维护在 `config/*.yaml`、`data/templates/` 和 `data/blacklists/`，不要把数据集专属模板重新塞回 Python 常量。
 
 ## 结果解读
 

@@ -43,7 +43,7 @@ def add_base_arguments(parser: argparse.ArgumentParser) -> None:
     parser.add_argument(
         "--config",
         default="",
-        help="YAML 配置文件路径（留空自动搜索 settings.yaml）。所有参数可在此文件中配置。",
+        help="YAML 配置文件路径（留空自动搜索 config/settings.yaml）。所有参数可在此文件中配置。",
     )
 
 

@@ -1,6 +1,6 @@
 """API 端点 + HTTP 超时 + 响应头常量。
 
-来源: constants_defaults.yaml 的 api.* / http.* 段。
+来源: config/constants_defaults.yaml 的 api.* / http.* 段。
 """
 
 from __future__ import annotations

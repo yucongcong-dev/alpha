@@ -96,7 +96,7 @@ def _validate_top_level_keys(
 
 
 def _validate_global_section(config: YamlConfig, resolved_files: dict[str, str]) -> list[str]:
-    """Validate settings.yaml global subsection names."""
+    """Validate merged YAML global subsection names."""
     if "settings" not in resolved_files:
         return []
 
@@ -105,7 +105,7 @@ def _validate_global_section(config: YamlConfig, resolved_files: dict[str, str])
         return []
 
     return [
-        f"settings.yaml: global 段存在未知 key '{gkey}'，已知 key: {sorted(GLOBAL_KNOWN_KEYS)}"
+        f"YAML global 段存在未知 key '{gkey}'，已知 key: {sorted(GLOBAL_KNOWN_KEYS)}"
         for gkey in global_section
         if gkey not in GLOBAL_KNOWN_KEYS
     ]
@@ -161,7 +161,7 @@ def _validate_cross_consistency(
 
         if extra:
             warnings.append(
-                f"交叉一致性警告: settings.yaml global.{section} 中的 key "
+                f"交叉一致性警告: YAML global.{section} 中的 key "
                 + f"{sorted(extra)} 在默认 YAML 的 {section} 段中不存在。"
                 + f"可能是键名拼写错误。已知 key: {sorted(defaults_keys)}"
             )

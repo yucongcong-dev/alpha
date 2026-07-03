@@ -6,13 +6,12 @@ import argparse
 from threading import Semaphore
 from unittest.mock import patch
 
-from alpha.finalize import finalize_run
-from alpha.models.base import (
+from alpha.app.finalize import finalize_run
+from alpha.models.io_types import RunFilters, RunPaths
+from alpha.models.runtime import (
     ExecutionState,
     HistoricalRunState,
     InitializedRunContext,
-    RunFilters,
-    RunPaths,
     RuntimeConcurrencyState,
 )
 
@@ -59,8 +58,8 @@ def test_finalize_run_prefers_run_paths_output(monkeypatch) -> None:
     run_ctx = _build_run_ctx()
 
     with (
-        patch("alpha.finalize.dump_results") as mock_dump,
-        patch("alpha.finalize.delete_pipeline_state") as mock_delete,
+        patch("alpha.app.finalize.dump_results") as mock_dump,
+        patch("alpha.app.finalize.delete_pipeline_state") as mock_delete,
     ):
         finalize_run(args, run_ctx, run_paths=run_paths)
 

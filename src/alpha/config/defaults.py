@@ -1,7 +1,7 @@
 """
 YAML global 默认值合并。
 
-本模块负责把 settings.yaml 的 global 配置应用到 argparse namespace。
+本模块负责把合并 YAML 配置中的 global 配置应用到 argparse namespace。
 """
 
 from __future__ import annotations

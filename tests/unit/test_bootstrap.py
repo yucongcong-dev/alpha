@@ -4,8 +4,9 @@ from __future__ import annotations
 
 import argparse
 
-from alpha.bootstrap import initialize_run_context
-from alpha.models.base import ExecutionState, HistoricalRunState, RunFilters, RunPaths
+from alpha.app.bootstrap import initialize_run_context
+from alpha.models.io_types import RunFilters, RunPaths
+from alpha.models.runtime import ExecutionState, HistoricalRunState
 
 
 def _build_args() -> argparse.Namespace:
@@ -47,18 +48,18 @@ def test_initialize_run_context_prefers_run_paths_for_cache_and_credentials(monk
     )
     captured: dict[str, str] = {}
 
-    monkeypatch.setattr("alpha.bootstrap.setup_runtime_logging", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr("alpha.app.bootstrap.setup_runtime_logging", lambda *_args, **_kwargs: None)
     monkeypatch.setattr(
-        "alpha.bootstrap.cleanup_legacy_sidecar_files", lambda *_args, **_kwargs: None
+        "alpha.app.bootstrap.cleanup_legacy_sidecar_files", lambda *_args, **_kwargs: None
     )
-    monkeypatch.setattr("alpha.bootstrap.ensure_analysis_synced", lambda *_args, **_kwargs: None)
-    monkeypatch.setattr("alpha.bootstrap.build_run_config_snapshot", lambda *_args, **_kwargs: {})
+    monkeypatch.setattr("alpha.app.bootstrap.ensure_analysis_synced", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr("alpha.app.bootstrap.build_run_config_snapshot", lambda *_args, **_kwargs: {})
     monkeypatch.setattr(
-        "alpha.bootstrap.ensure_dataset_template_library",
+        "alpha.app.bootstrap.ensure_dataset_template_library",
         lambda template_library_file, _dataset_id: template_library_file,
     )
     monkeypatch.setattr(
-        "alpha.bootstrap.ensure_template_blacklist_file", lambda *_args, **_kwargs: None
+        "alpha.app.bootstrap.ensure_template_blacklist_file", lambda *_args, **_kwargs: None
     )
 
     def _capture_credentials(passed_args):
@@ -66,23 +67,25 @@ def test_initialize_run_context_prefers_run_paths_for_cache_and_credentials(monk
         captured["creds_key_file"] = passed_args.creds_key_file
         return "user@example.com", "secret"
 
-    monkeypatch.setattr("alpha.bootstrap.load_credentials", _capture_credentials)
+    monkeypatch.setattr("alpha.app.bootstrap.load_credentials", _capture_credentials)
     monkeypatch.setattr(
-        "alpha.bootstrap.create_and_login_client",
+        "alpha.app.bootstrap.create_and_login_client",
         lambda *_args, **_kwargs: ("bootstrap-client", "worker-factory"),
     )
-    monkeypatch.setattr("alpha.bootstrap.load_template_library", lambda *_args, **_kwargs: {})
-    monkeypatch.setattr("alpha.bootstrap.load_run_filters_extended", lambda *_args, **_kwargs: RunFilters())
+    monkeypatch.setattr("alpha.app.bootstrap.load_template_library", lambda *_args, **_kwargs: {})
     monkeypatch.setattr(
-        "alpha.bootstrap.get_dataset_expression_policy",
+        "alpha.app.bootstrap.load_run_filters_extended", lambda *_args, **_kwargs: RunFilters()
+    )
+    monkeypatch.setattr(
+        "alpha.app.bootstrap.get_dataset_expression_policy",
         lambda *_args, **_kwargs: type("Policy", (), {"use_curated_heuristics": False})(),
     )
-    monkeypatch.setattr("alpha.bootstrap.stable_fingerprint", lambda *_args, **_kwargs: "tpl-fp")
+    monkeypatch.setattr("alpha.app.bootstrap.stable_fingerprint", lambda *_args, **_kwargs: "tpl-fp")
     monkeypatch.setattr(
-        "alpha.bootstrap.build_settings_fingerprint", lambda *_args, **_kwargs: "settings-fp"
+        "alpha.app.bootstrap.build_settings_fingerprint", lambda *_args, **_kwargs: "settings-fp"
     )
     monkeypatch.setattr(
-        "alpha.bootstrap.build_historical_run_state",
+        "alpha.app.bootstrap.build_historical_run_state",
         lambda *_args, **_kwargs: HistoricalRunState(),
     )
 
@@ -90,13 +93,13 @@ def test_initialize_run_context_prefers_run_paths_for_cache_and_credentials(monk
         captured["fields_cache_file"] = cache_path
         return []
 
-    monkeypatch.setattr("alpha.bootstrap.load_fields_cache", _capture_cache_path)
+    monkeypatch.setattr("alpha.app.bootstrap.load_fields_cache", _capture_cache_path)
     monkeypatch.setattr(
-        "alpha.bootstrap.fetch_fields_with_cache",
+        "alpha.app.bootstrap.fetch_fields_with_cache",
         lambda *_args, **_kwargs: [{"id": "field_1", "type": "MATRIX", "name": "field_1"}],
     )
     monkeypatch.setattr(
-        "alpha.bootstrap.prepare_fields_for_execution",
+        "alpha.app.bootstrap.prepare_fields_for_execution",
         lambda fields, **_kwargs: (
             fields,
             {
@@ -112,7 +115,7 @@ def test_initialize_run_context_prefers_run_paths_for_cache_and_credentials(monk
         ),
     )
     monkeypatch.setattr(
-        "alpha.bootstrap.build_execution_state",
+        "alpha.app.bootstrap.build_execution_state",
         lambda **_kwargs: ExecutionState(
             results=[],
             attempted_keys=set(),

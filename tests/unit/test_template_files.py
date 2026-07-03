@@ -18,14 +18,13 @@ from alpha.io.output import (
     ensure_template_blacklist_file,
     invalidate_blacklist_path_cache,
 )
-from alpha.models.base import (
+from alpha.models.domain import FieldTestResult, TemplateCandidate
+from alpha.models.runtime import (
     ExecutionState,
-    FieldTestResult,
     FutureCompletionContext,
     ResultWriteOptions,
     TemplateBuildContext,
     TemplateBuildOptions,
-    TemplateCandidate,
 )
 from alpha.policy.template_blacklist import invalidate_blacklist_cache
 

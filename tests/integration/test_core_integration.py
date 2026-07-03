@@ -23,13 +23,12 @@ from alpha.core.scheduler import (
     register_queue_busy_field,
 )
 from alpha.core.simulation import build_failure_result, summarize_failure
-from alpha.models.base import (
+from alpha.models.domain import FieldTestContext, FieldTestResult
+from alpha.models.io_types import RunFilters
+from alpha.models.runtime import (
     ExecutionState,
-    FieldTestContext,
-    FieldTestResult,
     FutureCompletionContext,
     ResultWriteOptions,
-    RunFilters,
     RuntimeConcurrencyState,
     TemplateBuildContext,
 )

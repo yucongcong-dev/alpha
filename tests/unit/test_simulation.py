@@ -17,7 +17,7 @@ from alpha.core.simulation import (
     precheck_simulation_metrics,
     summarize_failure,
 )
-from alpha.models.base import FieldTestContext, FieldTestResult
+from alpha.models.domain import FieldTestContext, FieldTestResult
 
 # ============================================================================
 # extract_alpha_id 测试

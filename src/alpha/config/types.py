@@ -11,8 +11,8 @@ from typing import Any, TypedDict
 
 
 class YamlConfig(TypedDict, total=False):
-    """完整 settings.yaml 合并配置（TypedDict 提供键名自动补全）。"""
-    global_: ConfigSection  # type: ignore[name-defined]  # 对应 settings.yaml global 段
+    """完整合并 YAML 配置（TypedDict 提供键名自动补全）。"""
+    global_: ConfigSection  # type: ignore[name-defined]  # 对应合并 YAML global 段
     dataset_profiles: dict[str, DatasetProfile]  # type: ignore[name-defined]
     expression_policies: dict[str, ExpressionPolicyOverrides]  # type: ignore[name-defined]
 

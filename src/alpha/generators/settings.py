@@ -72,14 +72,14 @@ def stable_fingerprint(payload: Any) -> str:
 
 
 # ---------------------------------------------------------------------------
-# 硬编码官网默认值 —— settings.yaml 不可用时回退
+# 硬编码官网默认值 —— 合并 YAML 配置不可用时回退
 # 与 Brain 官网 Settings 面板默认值严格一致:
 #   LANGUAGE=Fast Expression, INSTRUMENT TYPE=Equity, REGION=USA,
 #   UNIVERSE=TOP3000, DELAY=1, NEUTRALIZATION=Subindustry,
 #   DECAY=4, TRUNCATION=0.08, PASTEURIZATION=On,
 #   UNIT HANDLING=Verify, NAN HANDLING=Off, TEST PERIOD=1Y 0M
 # ---------------------------------------------------------------------------
-# key = Brain API 参数名 (camelCase)，与 settings.yaml 命名一致
+# key = Brain API 参数名 (camelCase)，与 config/settings.yaml 命名一致
 _WEBSITE_DEFAULTS: dict[str, Any] = {
     "language": "FASTEXPR",
     "instrumentType": "EQUITY",
@@ -120,7 +120,7 @@ _TEST_PERIOD_DEFAULTS = {"testPeriodYears": 1, "testPeriodMonths": 0}
 
 
 def _read_simulation_from_yaml() -> dict[str, Any] | None:
-    """从 settings.yaml 读取 global.simulation 节点，不可用时返回 None。"""
+    """从合并 YAML 配置读取 global.simulation 节点，不可用时返回 None。"""
     yaml_cfg = get_yaml_config()
     if not yaml_cfg:
         return None
@@ -154,9 +154,9 @@ def _resolve_setting(
 
 def build_simulation_payload(args: SimulationSettingsArgs, expression: str) -> dict[str, Any]:
     """
-    从 settings.yaml 读取配置，构建模拟请求体。
+    从合并 YAML 配置读取设置，构建模拟请求体。
 
-    优先级: CLI 参数 > settings.yaml > 硬编码官网默认值。
+    优先级: CLI 参数 > config/settings.yaml > 硬编码官网默认值。
     YAML key 即为 Brain API payload key (camelCase)，无需翻译。
 
     Args:

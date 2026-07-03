@@ -1,6 +1,6 @@
 """字符串常量 — 检查名称、API key、状态、字段统计、模板 stage 等。
 
-来源: constants_defaults.yaml 的 strings.* / misc.* / sentinel.* 段。
+来源: config/constants_defaults.yaml 的 strings.* / misc.* / sentinel.* 段。
 """
 
 from __future__ import annotations

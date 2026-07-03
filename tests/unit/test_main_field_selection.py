@@ -11,7 +11,9 @@ from alpha.main import (
     prepare_fields_for_execution,
     refresh_runtime_feedback,
 )
-from alpha.models.base import FieldTestResult, HistoricalRunState, RunFilters, TemplateBuildContext
+from alpha.models.domain import FieldTestResult
+from alpha.models.io_types import RunFilters
+from alpha.models.runtime import HistoricalRunState, TemplateBuildContext
 
 
 def test_prepare_fields_for_execution_filters_before_limit() -> None:

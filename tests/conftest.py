@@ -11,12 +11,8 @@ from typing import Any
 
 import pytest
 
-from alpha.models.base import (
-    ExecutionState,
-    FieldTestContext,
-    FieldTestResult,
-    RuntimeConcurrencyState,
-)
+from alpha.models.domain import FieldTestContext, FieldTestResult
+from alpha.models.runtime import ExecutionState, RuntimeConcurrencyState
 
 # ============================================================================
 # 常量定义

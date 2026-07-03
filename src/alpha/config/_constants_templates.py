@@ -1,6 +1,6 @@
 """模板优先级 + 比率生成配置 + Legacy Matrix 参数。
 
-来源: constants_defaults.yaml 的 templates.* / ratio.* 段。
+来源: config/constants_defaults.yaml 的 templates.* / ratio.* 段。
 """
 
 from __future__ import annotations

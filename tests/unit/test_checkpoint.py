@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 
 from alpha.core.checkpoint import load_pipeline_state
-from alpha.models.base import ExecutionState, RuntimeConcurrencyState
+from alpha.models.runtime import ExecutionState, RuntimeConcurrencyState
 
 
 def _build_execution_state() -> ExecutionState:

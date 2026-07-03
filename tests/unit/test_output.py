@@ -17,7 +17,7 @@ from alpha.io.output import (
     load_blacklisted_template_names,
     resolve_cli_path,
 )
-from alpha.models.base import FieldTestResult
+from alpha.models.domain import FieldTestResult
 
 
 def test_dump_results_does_not_update_blacklist_by_default(monkeypatch, tmp_path) -> None:

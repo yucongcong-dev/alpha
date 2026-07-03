@@ -46,8 +46,8 @@ def _yaml_val(*keys: str, default: Any = None, cast: type = str) -> Any:
     """从完整合并 YAML 配置中读取嵌套值。
 
     查找顺序：
-      1. global.<keys> — settings.yaml 中的用户覆盖（高优先级）
-      2. <keys> — constants_defaults.yaml 中的基础默认值
+      1. global.<keys> — config/settings.yaml 中的用户覆盖（高优先级）
+      2. <keys> — config/constants_defaults.yaml 中的基础默认值
       3. 代码内 default
 
     cast=None 表示不做类型转换，直接返回 YAML 原始值。
@@ -66,7 +66,7 @@ def _yaml_val(*keys: str, default: Any = None, cast: type = str) -> Any:
 
     if node is None:
         _warn_once(key_path, "YAML 配置 key '%s' 未找到，使用代码默认值。"
-                   "建议在 constants_defaults.yaml 中添加此项。", key_path)
+                   "建议在 config/constants_defaults.yaml 中添加此项。", key_path)
         return default
 
     if cast is None:

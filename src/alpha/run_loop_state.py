@@ -1,20 +1,9 @@
-"""Compatibility exports for run-loop helper state modules."""
+"""Compatibility alias for :mod:`alpha.app.run_loop_state`."""
 
 from __future__ import annotations
 
-from .run_loop_feedback import refresh_runtime_feedback
-from .run_loop_paths import resolve_result_write_options, run_path_value
-from .run_loop_resume import (
-    build_field_resume_positions,
-    clamp_resume_index,
-    normalize_resume_index,
-)
+import sys
 
-__all__ = [
-    "build_field_resume_positions",
-    "clamp_resume_index",
-    "normalize_resume_index",
-    "refresh_runtime_feedback",
-    "resolve_result_write_options",
-    "run_path_value",
-]
+from .app import run_loop_state as _module
+
+sys.modules[__name__] = _module

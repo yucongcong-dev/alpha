@@ -2,7 +2,7 @@
 数据集运行参数 profiles。
 
 本模块维护 dataset_profiles 的代码 fallback；数据集专属配置仍以
-settings.yaml 的 dataset_profiles 段为唯一推荐来源。
+config/dataset_profiles.yaml 或 config/settings.yaml 的 dataset_profiles 段为推荐来源。
 """
 
 from __future__ import annotations
@@ -22,7 +22,7 @@ from .constants import (
 from .types import DatasetProfile, YamlConfig
 
 DATASET_PROFILES: dict[str, DatasetProfile] = {}
-"""向后兼容保留的空字典；数据集专属配置请维护在 settings.yaml。"""
+"""向后兼容保留的空字典；数据集专属配置请维护在 config/*.yaml。"""
 
 DEFAULT_PROFILE: DatasetProfile = {
     "min_request_interval": DEFAULT_MIN_REQUEST_INTERVAL,

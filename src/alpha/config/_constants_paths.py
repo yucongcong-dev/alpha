@@ -1,6 +1,6 @@
 """文件系统路径常量。
 
-来源: constants_defaults.yaml 的 paths.* 段。
+来源: config/constants_defaults.yaml 的 paths.* 段。
 """
 
 from __future__ import annotations

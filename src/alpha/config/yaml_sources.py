@@ -10,10 +10,10 @@ from .types import YamlConfig
 
 
 def find_project_root() -> Path:
-    """Find the project root by walking up to settings.yaml or pyproject.toml."""
+    """Find the project root by walking up to pyproject.toml or config/settings.yaml."""
     current = Path(__file__).resolve().parent
     for _ in range(8):
-        if (current / "settings.yaml").is_file() or (current / "pyproject.toml").is_file():
+        if (current / "pyproject.toml").is_file() or (current / "config" / "settings.yaml").is_file():
             return current
         if current.parent == current:
             break
@@ -34,15 +34,15 @@ DEFAULT_CONFIG_NAMES: set[str] = {
 """Logical names for code-level default YAML files."""
 
 YAML_FILES: list[tuple[str, list[str]]] = [
-    ("constants_defaults", ["constants_defaults.yaml", "config/constants_defaults.yaml"]),
+    ("constants_defaults", ["config/constants_defaults.yaml"]),
     ("api_defaults", ["config/api.yaml"]),
     ("simulation_defaults", ["config/simulation.yaml"]),
     ("quality_feedback_defaults", ["config/quality_feedback.yaml"]),
     ("template_defaults", ["config/templates.yaml"]),
     ("runtime_defaults", ["config/runtime.yaml"]),
-    ("dataset_profiles", ["dataset_profiles.yaml", "config/dataset_profiles.yaml"]),
-    ("expression_policies", ["expression_policies.yaml", "config/expression_policies.yaml"]),
-    ("settings", ["settings.yaml", "config/settings.yaml"]),
+    ("dataset_profiles", ["config/dataset_profiles.yaml"]),
+    ("expression_policies", ["config/expression_policies.yaml"]),
+    ("settings", ["config/settings.yaml"]),
 ]
 """YAML files in ascending priority order."""
 
@@ -71,7 +71,7 @@ def resolve_all_yaml_files(settings_path: str | None = None) -> dict[str, str]:
 
 
 def resolve_yaml_path() -> str | None:
-    """Resolve the main settings.yaml path."""
+    """Resolve the main config/settings.yaml path."""
     env_path = os.environ.get(ENV_CONFIG_PATH)
     if env_path and os.path.isfile(env_path):
         return os.path.abspath(env_path)
@@ -81,7 +81,7 @@ def resolve_yaml_path() -> str | None:
     if settings_path:
         return settings_path
 
-    candidate = PROJECT_ROOT / "settings.yaml"
+    candidate = PROJECT_ROOT / "config" / "settings.yaml"
     if candidate.is_file():
         return str(candidate)
     return None
