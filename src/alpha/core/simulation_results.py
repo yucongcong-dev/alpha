@@ -4,10 +4,10 @@ simulation 结果构建辅助模块。
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, cast
 
 from ..config.constants import STATUS_ERROR
-from ..models.domain import FieldTestContext, FieldTestResult
+from ..models.domain import FailedCheck, FieldTestContext, FieldTestResult
 
 
 def build_failure_result(
@@ -45,7 +45,7 @@ def build_failure_result(
         settings_fingerprint=settings_fingerprint,
         template_library_fingerprint=template_library_fingerprint,
         failed_stage=failed_stage,
-        failed_checks=failed_checks,
+        failed_checks=cast(list[FailedCheck], failed_checks),
     )
 
 

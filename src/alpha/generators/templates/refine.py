@@ -7,7 +7,7 @@ Near-pass 精修模板生成。
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 import re
 from typing import Any
 
@@ -51,6 +51,14 @@ def _is_blacklisted_template(
     )
 
 
+def _make_window_replacer(replacement: int) -> Callable[[re.Match[str]], str]:
+    """构建时间窗替换回调，显式绑定 replacement 避免循环闭包问题。"""
+    def replacer(m: re.Match[str]) -> str:
+        return f"{m.group(1)}{replacement}{m.group(3)}"
+
+    return replacer
+
+
 def _replace_window_variants(
     expression: str,
     pattern: str,
@@ -67,7 +75,7 @@ def _replace_window_variants(
     seen: set[str] = set()
     for suffix, target in replacements:
         candidate = compiled.sub(
-            lambda m, replacement=target: f"{m.group(1)}{replacement}{m.group(3)}",
+            _make_window_replacer(target),
             expression,
             count=limit,
         )

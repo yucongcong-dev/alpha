@@ -5,6 +5,7 @@ from __future__ import annotations
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 import logging
+from typing import cast
 
 from ..analysis.feedback_history import should_stop_after_submittable
 from ..config.constants import SENTINEL_UNKNOWN
@@ -15,6 +16,7 @@ from ..core import (
     should_skip_field,
     throttle_before_submission,
 )
+from ..models.domain import SettingsVariant
 from ..models.runtime import (
     ExecutionState,
     InitializedRunContext,
@@ -231,7 +233,7 @@ def _dispatch_templates_for_field(
     field_id: str,
     field_name: str,
     field_type: str,
-    scheduled_templates: list[tuple[str, str, str, str, int, object, str]],
+    scheduled_templates: list[tuple[str, str, str, str, int, SettingsVariant, str]],
 ) -> bool:
     """Dispatch scheduled templates for a single field; return whether a stop was requested."""
     for template_index, (
@@ -287,7 +289,7 @@ def _dispatch_templates_for_field(
             template_family=template_family,
             template_stage=template_stage,
             expression=expression,
-            settings_variant=settings_variant,
+            settings_variant=cast("SettingsVariant", settings_variant),
             variant_fingerprint=variant_fingerprint,
         )
     return False

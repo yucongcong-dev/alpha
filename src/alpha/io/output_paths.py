@@ -42,13 +42,13 @@ def build_dataset_scoped_paths(
     dataset_key = sanitize_dataset_id_for_filename(dataset_id)
     cache_parts = [CACHE_DIR / "fields" / dataset_key]
     if region:
-        cache_parts.append(sanitize_dataset_id_for_filename(region))
+        cache_parts.append(Path(sanitize_dataset_id_for_filename(region)))
     if universe:
-        cache_parts.append(sanitize_dataset_id_for_filename(universe))
+        cache_parts.append(Path(sanitize_dataset_id_for_filename(universe)))
     if instrument_type:
-        cache_parts.append(sanitize_dataset_id_for_filename(instrument_type))
+        cache_parts.append(Path(sanitize_dataset_id_for_filename(instrument_type)))
     if delay is not None:
-        cache_parts.append(f"delay{int(delay)}")
+        cache_parts.append(Path(f"delay{int(delay)}"))
     fields_cache_path = Path(*cache_parts) / "fields.json"
     return {
         "template_library_file": str(DATA_DIR / "templates" / dataset_key / "library.json"),

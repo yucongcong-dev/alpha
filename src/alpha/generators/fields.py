@@ -219,7 +219,7 @@ def fetch_fields_with_cache(
         instrument_type=options.instrument_type,
         delay=options.delay,
     )
-    fields = fetched_fields
+    fields = [TemplateField.from_dict(f) if isinstance(f, dict) else f for f in fetched_fields]
     save_fields_cache(
         fields_cache_file,
         dataset_id=options.dataset_id,

@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
-from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
+from concurrent.futures import FIRST_COMPLETED, Future, ThreadPoolExecutor, wait
+import dataclasses
 import time
+from typing import TYPE_CHECKING, Any, cast
 
 from ..core import drain_completed_futures, run_field_test_in_worker, save_pipeline_state
 from ..models.domain import SettingsVariant
@@ -18,6 +20,9 @@ from ..models.runtime import (
     TemplateField,
 )
 
+if TYPE_CHECKING:
+    from ..api.client import WorkerClientFactory
+
 
 def drain_until_capacity(
     *,
@@ -30,7 +35,15 @@ def drain_until_capacity(
 ) -> bool:
     """Drain completed futures until runtime concurrency has available capacity."""
     while len(executor_state.pending_futures) >= runtime_state.runtime_max_workers:
-        done, _ = wait(set(executor_state.pending_futures), return_when=FIRST_COMPLETED)
+        done, _ = wait(
+            set(
+                cast(
+                    "dict[Future[Any], PendingFutureContext]",
+                    executor_state.pending_futures,
+                )
+            ),
+            return_when=FIRST_COMPLETED,
+        )
         drain_completed_futures(
             completed_futures=list(done),
             execution_state=executor_state,
@@ -64,12 +77,13 @@ def submit_template_future(
     variant_fingerprint: str,
 ) -> None:
     """Submit one simulation future and register its pending metadata."""
-    field_with_template = dict(field)
-    field_with_template["template_family"] = template_family
-    field_with_template["template_stage"] = template_stage
+    field_with_template = dataclasses.replace(
+        field,
+        metadata={**field.metadata, "template_family": template_family, "template_stage": template_stage},
+    )
     future = executor.submit(
         run_field_test_in_worker,
-        run_ctx.client_factory,
+        cast("WorkerClientFactory", run_ctx.client_factory),
         args,
         field_with_template,
         template_name,
@@ -105,7 +119,15 @@ def drain_remaining_futures(
 ) -> None:
     """Drain all remaining futures and persist terminal pipeline state when needed."""
     while execution_state.pending_futures:
-        done, _ = wait(set(execution_state.pending_futures), return_when=FIRST_COMPLETED)
+        done, _ = wait(
+            set(
+                cast(
+                    "dict[Future[Any], PendingFutureContext]",
+                    execution_state.pending_futures,
+                )
+            ),
+            return_when=FIRST_COMPLETED,
+        )
         drain_completed_futures(
             completed_futures=list(done),
             execution_state=execution_state,

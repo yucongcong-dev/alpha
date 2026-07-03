@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from datetime import date
 from math import log1p
-from typing import Any
+from typing import Any, cast
 
 from ..analysis.stats import field_priority
 from ..config.constants import PREFERRED_FIELD_RANK_SENTINEL, SENTINEL_UNKNOWN, STATS_DEFAULT_SCORE
@@ -204,7 +204,10 @@ def prepare_fields_for_execution(
         )
 
     fields.sort(key=field_sort_key)
-    if args.top_fields_by_feedback > 0:
+    top_fields_by_feedback = cast(int, args.top_fields_by_feedback)
+    offset = cast(int, args.offset)
+    limit = cast(int, args.limit)
+    if top_fields_by_feedback > 0:
         focused_fields = [
             field
             for field in fields
@@ -214,13 +217,13 @@ def prepare_fields_for_execution(
             )
             > -999.0
         ]
-        fields = focused_fields[: args.top_fields_by_feedback]
+        fields = focused_fields[:top_fields_by_feedback]
 
     ranked_field_count = len(fields)
-    if args.offset > 0:
-        fields = fields[args.offset :]
-    if args.limit > 0:
-        fields = fields[: args.limit]
+    if offset > 0:
+        fields = fields[offset:]
+    if limit > 0:
+        fields = fields[:limit]
 
     return fields, {
         "cached_field_count": cached_field_count,

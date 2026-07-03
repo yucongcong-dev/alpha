@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, cast
 
 from ..config.constants import (
     GROUP_NAME_SUBINDUSTRY,
@@ -35,14 +35,15 @@ def build_setting_variants(
     """
     _ = template_name, field_feedback
     base_settings = build_simulation_payload(args, expression)["settings"]
-    variants: list[SettingsVariant] = [dict(base_settings)]
+    variants: list[SettingsVariant] = [cast(SettingsVariant, dict(base_settings))]
     lower_expr = expression.lower()
 
     def add_variant(**updates: Any) -> None:
         candidate = dict(base_settings)
         candidate.update(updates)
-        if candidate not in variants:
-            variants.append(candidate)
+        casted = cast(SettingsVariant, candidate)
+        if casted not in variants:
+            variants.append(casted)
 
     nearpass_failed_names = {
         str(check.get("name", "")).strip()

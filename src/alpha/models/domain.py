@@ -38,7 +38,7 @@ class FailedCheck:
 
     def to_dict(self) -> dict[str, Any]:
         """转换为字典表示。"""
-        result = {"name": self.name}
+        result: dict[str, Any] = {"name": self.name}
         if self.value is not None:
             result["value"] = self.value
         if self.limit is not None:

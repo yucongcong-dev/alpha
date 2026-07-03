@@ -40,18 +40,18 @@ from ..models.domain import FieldTestResult
 from .result_identity import is_queue_timeout_result, is_self_correlation_pending_result
 
 
-def compile_template_stats(results: Sequence[FieldTestResult]) -> dict[str, dict[str, int]]:
+def compile_template_stats(results: Sequence[FieldTestResult]) -> dict[str, dict[str, Any]]:
     """按模板名聚合历史上的粗粒度统计信息。"""
-    stats: dict[str, dict[str, int]] = {}
+    stats: dict[str, dict[str, Any]] = {}
     for result in results:
         update_template_stats_with_result(stats, result)
     return stats
 
 
 def update_template_stats_with_result(
-    stats: dict[str, dict[str, int]],
+    stats: dict[str, dict[str, Any]],
     result: FieldTestResult,
-) -> dict[str, dict[str, int]]:
+) -> dict[str, dict[str, Any]]:
     """将单条结果增量合并到模板统计中。"""
     stat = stats.setdefault(
         result.template_name,

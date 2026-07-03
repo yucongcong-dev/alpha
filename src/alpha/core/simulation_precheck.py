@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import cast
 
 from ..api.api_types import CheckResultDict, SimulationPayload
 from ..config.constants import (
@@ -88,6 +89,12 @@ def precheck_simulation_metrics(
         max_turnover = default_config.max_turnover if max_turnover is None else max_turnover
         max_weight = default_config.max_weight if max_weight is None else max_weight
 
+    min_sharpe = cast(float, min_sharpe)
+    min_fitness = cast(float, min_fitness)
+    min_turnover = cast(float, min_turnover)
+    max_turnover = cast(float, max_turnover)
+    max_weight = cast(float, max_weight)
+
     is_section = simulation_result.get(_KEY_IS)
     if not isinstance(is_section, dict):
         return True, "", []
@@ -106,10 +113,10 @@ def precheck_simulation_metrics(
     def _add_failure(check_name: str, v: int | float, limit: float) -> None:
         failures.append(
             {
-                _KEY_NAME: check_name,
-                _KEY_RESULT: _RESULT_FAIL,
-                _KEY_VALUE: float(v),
-                _KEY_LIMIT: limit,
+                "name": check_name,
+                "result": _RESULT_FAIL,
+                "value": float(v),
+                "limit": limit,
             }
         )
 
@@ -129,6 +136,6 @@ def precheck_simulation_metrics(
         return True, "", []
 
     reason_parts = [
-        f"{f[_KEY_NAME].lower()}: {f[_KEY_VALUE]:.4f} vs limit {f[_KEY_LIMIT]}" for f in failures
+        f"{f['name'].lower()}: {cast(float, f['value']):.4f} vs limit {f['limit']}" for f in failures
     ]
     return False, "; ".join(reason_parts), failures

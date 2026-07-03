@@ -146,7 +146,7 @@ def sort_templates_by_priority(
 
 
 def limit_templates(
-    templates: list[TemplateCandidate | tuple[str, str, int]],
+    templates: Sequence[TemplateCandidate | tuple[str, str, int]],
     max_templates_per_field: int,
 ) -> list[TemplateCandidate]:
     """应用字段级模板数量上限；小于等于 0 表示不限制。"""

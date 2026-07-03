@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import logging
 import time
+from typing import cast
 
 from ..config.constants import (
     API_BASE,
@@ -36,14 +37,14 @@ class BrainSimulationsMixin:
     )
     def create_simulation(self, payload: SimulationPayload) -> str:
         """创建模拟任务并返回后续轮询使用的 Location 地址。"""
-        _, response_headers, _ = self.request(
+        _, response_headers, _ = self.request(  # type: ignore[attr-defined]
             "POST",
             SIMULATIONS_URL,
             data=json.dumps(payload),
             headers=SIM_ACCEPT_HEADER,
             expected={201},
         )
-        location = response_headers.get("Location")
+        location = cast(str, response_headers.get("Location"))
         if not location:
             raise BrainAPIError("Simulation created but Location header is missing.")
         return location
@@ -105,7 +106,7 @@ class BrainSimulationsMixin:
                     f"Simulation polling exceeded max wait "
                     f"({max_wait_seconds:.1f}s) for {url}; skip current template."
                 )
-            _, response_headers, content = self.request(
+            _, response_headers, content = self.request(  # type: ignore[attr-defined]
                 "GET",
                 url,
                 headers=SIM_ACCEPT_HEADER,

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
-from typing import Any
+from typing import Any, cast
 
 from ..config.constants import (
     CHECK_CONCENTRATED_WEIGHT,
@@ -20,7 +20,7 @@ from ..config.constants import (
 )
 from ..config.models import DatasetExpressionPolicy
 from ..config.policy import get_dataset_expression_policy, resolve_feedback_stage
-from ..models.domain import FieldTestResult, NearPassCandidate
+from ..models.domain import FailedCheck, FieldTestResult, NearPassCandidate
 from ..models.runtime import HistoricalRunState, StopAfterSubmittableArgs
 from .stats import (
     attempted_template_keys,
@@ -71,7 +71,7 @@ def choose_settings_variant_budget(
     return policy.feedback_loop_policy.generate.settings_variant_budget
 
 
-def _nearpass_penalty(failed_checks: Sequence[dict[str, Any]] | None) -> float:
+def _nearpass_penalty(failed_checks: Sequence[FailedCheck] | None) -> float:
     """对明显不适合继续 refine 的失败模式施加惩罚。"""
     penalty = 0.0
     for check in failed_checks or []:
@@ -131,7 +131,7 @@ def select_nearpass_candidates(
         if current_rank is None or rank > current_rank:
             best_by_key[key] = candidate
             rank_by_key[key] = rank
-    ordered_keys = sorted(rank_by_key, key=rank_by_key.get, reverse=True)
+    ordered_keys = sorted(rank_by_key, key=lambda k: rank_by_key[k], reverse=True)
     return [best_by_key[key] for key in ordered_keys[:limit]]
 
 
@@ -140,7 +140,7 @@ def should_stop_after_submittable(
     results: Sequence[FieldTestResult],
 ) -> bool:
     """判断当前运行是否已达到要求的可提交数量上限。"""
-    stop_threshold = args.stop_after_submittable
+    stop_threshold = cast(int, args.stop_after_submittable)
     if stop_threshold <= 0:
         return False
     current_count = current_submittable_count(results)

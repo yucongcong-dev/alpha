@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+from typing import cast
 
 from ..config.constants import DATA_FIELDS_URL, VERSION_HEADER
 from ..exceptions import BrainAPIError
@@ -54,7 +55,7 @@ class BrainFieldsMixin:
             if not batch:
                 break
 
-            fields.extend(batch)
+            fields.extend(cast(list[FieldInfoDict], batch))
             current_offset += len(batch)
 
             total = extract_total(payload)
@@ -149,7 +150,7 @@ class BrainFieldsMixin:
 
         for params in candidate_params:
             try:
-                _, _, content = self.request(
+                _, _, content = self.request(  # type: ignore[attr-defined]
                     "GET",
                     DATA_FIELDS_URL,
                     params=params,

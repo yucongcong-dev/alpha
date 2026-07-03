@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from .domain import TemplateField
 from .runtime_config import (
     ApiClientConfig,
     BootstrapConfig,
@@ -42,7 +43,6 @@ from .runtime_protocols import (
     StopAfterSubmittableArgs,
     TemplateBuildArgs,
     TemplateFeedback,
-    TemplateField,
     TemplateSequence,
     TemplateStats,
 )

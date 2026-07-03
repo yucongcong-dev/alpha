@@ -64,7 +64,7 @@ class UrllibHttpBackend:
 
         request = UrllibRequest(url=url, data=data, headers=headers or {}, method=method)
         try:
-            with self._opener.open(request, timeout=timeout) as response:  # type: ignore[arg-type]
+            with self._opener.open(request, timeout=timeout) as response:
                 return response.getcode(), dict(response.headers.items()), response.read()
         except HTTPError as exc:
             return exc.code, dict(exc.headers.items()), exc.read()

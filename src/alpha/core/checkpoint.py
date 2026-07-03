@@ -210,15 +210,14 @@ def save_checkpoint(
         return False
 
     # 收集待处理任务摘要
-    pending_summary: list[dict[str, str]] = []
-    for meta in list(execution_state.pending_futures.values())[-CHECKPOINT_PENDING_FUTURES_LIMIT:]:
-        pending_summary.append(
-            {
-                "field_id": str(meta.field_id),
-                "template_name": str(meta.template_name),
-                "expression": str(meta.expression),
-            }
-        )
+    pending_summary: list[dict[str, str]] = [
+        {
+            "field_id": str(meta.field_id),
+            "template_name": str(meta.template_name),
+            "expression": str(meta.expression),
+        }
+        for meta in list(execution_state.pending_futures.values())[-CHECKPOINT_PENDING_FUTURES_LIMIT:]
+    ]
 
     payload: dict[str, Any] = {
         "version": STATE_VERSION,

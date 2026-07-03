@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+from typing import cast
 
 from ..config.constants import SMOKE_TEST_MAX_PENDING_CYCLES, SMOKE_TEST_MAX_QUEUE_SECONDS
 from ..config.defaults import apply_yaml_global_defaults
@@ -51,17 +52,18 @@ def apply_dataset_profile_defaults(
 ) -> None:
     """Apply dataset profile defaults without overriding explicit CLI input."""
     profile = get_dataset_profile(args.dataset_id, yaml_config)
+    profile_dict = cast(dict[str, object], profile)
     yaml_profiles = (yaml_config or {}).get("dataset_profiles", {})
     yaml_dataset_cfg = yaml_profiles.get(args.dataset_id, {}) if isinstance(yaml_profiles, dict) else {}
 
     for key in DATASET_PROFILE_KEYS:
-        if key in explicit_cli_keys or key not in profile:
+        if key in explicit_cli_keys or key not in profile_dict:
             continue
         if key in yaml_dataset_cfg:
-            setattr(args, key, profile[key])
+            setattr(args, key, profile_dict[key])
             continue
         if getattr(args, key, None) == parser_defaults.get(key):
-            setattr(args, key, profile[key])
+            setattr(args, key, profile_dict[key])
 
 
 def apply_run_mode_overrides(args: argparse.Namespace) -> None:

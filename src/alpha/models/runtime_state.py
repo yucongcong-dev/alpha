@@ -8,7 +8,7 @@ import time
 from typing import Union
 
 from ..config.models import DatasetExpressionPolicy
-from .domain import FieldFeedbackMap, FieldTestResult, TemplateLibrary
+from .domain import FieldFeedbackMap, FieldTestResult, TemplateField, TemplateLibrary
 from .io_types import RunFilters
 from .runtime_options import ResultWriteOptions, TemplateBuildOptions
 from .runtime_protocols import (
@@ -16,7 +16,6 @@ from .runtime_protocols import (
     ClientFactoryLike,
     RunConfig,
     SemaphoreLike,
-    TemplateField,
     TemplateStats,
 )
 from .runtime_protocols import (

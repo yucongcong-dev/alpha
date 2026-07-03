@@ -4,6 +4,8 @@ bootstrap 执行态与历史结果装配辅助模块。
 
 from __future__ import annotations
 
+from typing import Any, cast
+
 from ..analysis.stats import is_queue_timeout_result
 from ..config.constants import STATUS_ERROR
 from ..io.results_store import dump_results_incremental, initialize_results_journal
@@ -47,8 +49,9 @@ def build_execution_state(
         output_file,
         execution_state.results,
     )
-    execution_state.blacklist_runtime_stats = build_blacklist_runtime_stats(
-        execution_state.results,
+    execution_state.blacklist_runtime_stats = cast(
+        dict[str, dict[str, Any]],
+        build_blacklist_runtime_stats(execution_state.results),
     )
     execution_state.blacklisted_template_names = load_blacklisted_template_names(dataset_id)
     execution_state.persisted_result_count = dump_results_incremental(

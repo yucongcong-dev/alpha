@@ -93,8 +93,8 @@ def extract_failed_checks(alpha_payload: ApiPayload) -> list[FailedCheck]:
         failed_checks.append(
             FailedCheck(
                 name=str(check.get(_KEY_NAME, "")),
-                result=check.get(_KEY_RESULT),
-                value=check.get(_KEY_VALUE),
+                result=cast(str | None, check.get(_KEY_RESULT)),
+                value=cast(float | None, check.get(_KEY_VALUE)),
                 limit=first_non_empty(check.get(_KEY_LIMIT), check.get(_KEY_THRESHOLD)),
             )
         )
@@ -109,8 +109,8 @@ def extract_pending_checks(alpha_payload: ApiPayload) -> list[FailedCheck]:
         pending_checks.append(
             FailedCheck(
                 name=str(check.get(_KEY_NAME, "")),
-                result=check.get(_KEY_RESULT),
-                value=check.get(_KEY_VALUE),
+                result=cast(str | None, check.get(_KEY_RESULT)),
+                value=cast(float | None, check.get(_KEY_VALUE)),
                 limit=first_non_empty(check.get(_KEY_LIMIT), check.get(_KEY_THRESHOLD)),
             )
         )

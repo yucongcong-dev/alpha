@@ -18,7 +18,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 import logging
 import time
-from typing import Any
+from typing import Any, cast
 
 from ..analysis.stats import (
     is_informative_result,
@@ -79,7 +79,7 @@ def maybe_restore_runtime_concurrency(state: RuntimeConcurrencyState) -> None:
 def apply_congestion_cooldown(args: SchedulerRuntimeArgs, state: RuntimeConcurrencyState) -> None:
     """检测到拥塞后，临时切换到单 worker 运行模式。"""
     state.runtime_max_workers = 1
-    state.cooldown_until = time.monotonic() + max(args.queue_busy_cooldown_seconds, 0.0)
+    state.cooldown_until = time.monotonic() + max(cast(float, args.queue_busy_cooldown_seconds), 0.0)
     logger.info(
         "[cooldown] detected queue congestion, runtime concurrency -> 1 for %.0fs",
         args.queue_busy_cooldown_seconds,
@@ -93,10 +93,10 @@ def register_queue_busy_field(
     skipped_fields_due_to_queue: set[str],
 ) -> None:
     """记录重复的排队拥塞字段，并在达到阈值后跳过该字段。"""
-    if not field_id or args.field_queue_busy_skip_after <= 0:
+    if not field_id or cast(int, args.field_queue_busy_skip_after) <= 0:
         return
     field_queue_busy_counts[field_id] = field_queue_busy_counts.get(field_id, 0) + 1
-    if field_queue_busy_counts[field_id] >= args.field_queue_busy_skip_after:
+    if field_queue_busy_counts[field_id] >= cast(int, args.field_queue_busy_skip_after):
         skipped_fields_due_to_queue.add(field_id)
         logger.info(
             "[skip] field=%s hit queue-busy limit %d/%d",
@@ -108,12 +108,12 @@ def register_queue_busy_field(
 
 def throttle_before_submission(args: SchedulerRuntimeArgs, execution_state: ExecutionState) -> None:
     """在提交新任务前控制节奏，避免阻塞已完成任务处理。"""
-    if args.sleep_between_fields <= 0:
+    if cast(float, args.sleep_between_fields) <= 0:
         return
     if execution_state.last_submission_at <= 0:
         return
     elapsed = time.monotonic() - execution_state.last_submission_at
-    remaining = args.sleep_between_fields - elapsed
+    remaining = cast(float, args.sleep_between_fields) - elapsed
     if remaining > 0:
         wait_seconds(remaining, "before next template submission")
 

@@ -15,7 +15,7 @@ import functools
 import logging
 import threading
 import time
-from typing import Any, Optional, TypeVar, cast
+from typing import Any, Optional, TypeVar
 
 from typing_extensions import ParamSpec
 

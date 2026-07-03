@@ -6,8 +6,9 @@ from __future__ import annotations
 
 import logging
 import re
+from typing import Any, cast
 
-from ..api.api_types import CheckResultDict, SimulationPayload
+from ..api.api_types import SimulationPayload
 from ..api.client import BrainClient, retry_operation
 from ..api.timing import wait_seconds
 from ..config.constants import (
@@ -49,7 +50,7 @@ _SIM_ID_REGEX: re.Pattern[str] = re.compile(r"/simulations/([^/]+)", re.IGNORECA
 _CHECK_SELF_CORRELATION: str = "SELF_CORRELATION"
 
 
-def _pending_self_correlation_checks(alpha_payload: SimulationPayload) -> list[CheckResultDict]:
+def _pending_self_correlation_checks(alpha_payload: SimulationPayload) -> list[FailedCheck]:
     return [
         check
         for check in extract_pending_checks(alpha_payload)
@@ -137,7 +138,7 @@ def checksubmit_with_retry(
     *,
     self_correlation_max_polls: int = 0,
     self_correlation_poll_seconds: float | None = None,
-) -> tuple[bool | None, str, list[CheckResultDict]]:
+) -> tuple[bool | None, str, list[FailedCheck]]:
     alpha_detail = retry_operation(
         "checksubmit",
         retries,
@@ -165,7 +166,7 @@ def checksubmit_with_retry(
         )
         return None, "self correlation pending", pending_self_corr
     submittable = is_submittable_from_checks(
-        [FailedCheck.from_dict(c) for c in checks]
+        [FailedCheck.from_dict(cast(dict[str, Any], c)) for c in checks]
     )
     failed_checks = extract_failed_checks(alpha_detail)
     message = (
@@ -207,7 +208,7 @@ def run_simulation_create_stage(
     try:
         payload = build_simulation_payload(args, ctx.expression)
         if simulation_settings is not None:
-            payload["settings"] = dict(simulation_settings)
+            payload["settings"] = cast(dict[str, Any], simulation_settings)
         if create_semaphore is not None:
             logger.info(
                 "[simulation] waiting for create slot field=%s template=%s",
@@ -216,7 +217,7 @@ def run_simulation_create_stage(
             )
             _ = create_semaphore.acquire()
         try:
-            create_retries: int = args.simulation_create_retries
+            create_retries: int = cast(int, args.simulation_create_retries)
             simulation_location, simulation_id = create_simulation_with_retry(
                 client,
                 payload,
@@ -242,11 +243,11 @@ def run_simulation_poll_stage(
         simulation_result = poll_simulation_with_retry(
             client,
             simulation_location,
-            args.simulation_poll_retries,
-            max_polls=args.simulation_max_polls,
-            max_wait_seconds=args.simulation_max_wait_seconds,
-            max_pending_cycles=args.simulation_max_pending_cycles,
-            max_queue_seconds=args.simulation_max_queue_seconds,
+            cast(int, args.simulation_poll_retries),
+            max_polls=cast(int, args.simulation_max_polls),
+            max_wait_seconds=cast(float, args.simulation_max_wait_seconds),
+            max_pending_cycles=cast(int, args.simulation_max_pending_cycles),
+            max_queue_seconds=cast(float, args.simulation_max_queue_seconds),
         )
         progress = first_non_empty(
             simulation_result.get(API_KEY_PROGRESS),
@@ -285,7 +286,7 @@ def run_checksubmit_stage(
     alpha_id: str,
     simulation_id: str,
     simulation_result: SimulationPayload | None = None,
-) -> FieldTestResult | tuple[bool | None, str, list[CheckResultDict]]:
+) -> FieldTestResult | tuple[bool | None, str, list[FailedCheck]]:
     if simulation_result:
         config = PrecheckConfig.from_args(args)
         passed, reason, precheck_failed_checks = precheck_simulation_metrics(
@@ -303,13 +304,13 @@ def run_checksubmit_stage(
                 simulation_id,
                 reason,
             )
-            return False, f"precheck_failed: {reason}", precheck_failed_checks
+            return False, f"precheck_failed: {reason}", cast(list[FailedCheck], precheck_failed_checks)
 
     try:
         return checksubmit_with_retry(
             client,
             alpha_id,
-            args.check_submit_retries,
+            cast(int, args.check_submit_retries),
             self_correlation_max_polls=int(getattr(args, "self_correlation_max_polls", 0) or 0),
             self_correlation_poll_seconds=float(
                 getattr(args, "self_correlation_poll_seconds", get_polling_default_wait())
@@ -336,7 +337,7 @@ def run_submit_stage(
     simulation_location: str,
     submittable: bool | None,
 ) -> FieldTestResult | tuple[bool, str, str]:
-    should_submit: bool = args.submit
+    should_submit: bool = cast(bool, args.submit)
     if not (should_submit and submittable):
         return False, STATUS_SIMULATED, ""
     try:
@@ -346,7 +347,7 @@ def run_submit_stage(
             simulation_id,
             simulation_location,
         )
-        message = submit_with_retry(client, alpha_id, args.submit_retries)
+        message = submit_with_retry(client, alpha_id, cast(int, args.submit_retries))
         return True, STATUS_SUBMITTED, message
     except Exception as exc:
         return handle_stage_error(

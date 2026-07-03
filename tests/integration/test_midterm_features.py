@@ -229,8 +229,8 @@ class TestErrorHandlingFramework:
 class TestIntegration:
     """测试各模块集成"""
 
-    def test_error_handler_and_performance_monitor(self):
-        """测试错误处理器和性能监控集成"""
+    def test_error_handler_integration(self):
+        """测试错误处理器集成"""
         handler = get_error_handler()
         handler.clear_errors()
 

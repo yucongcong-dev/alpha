@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import logging
 import time
+from typing import TYPE_CHECKING, cast
 
 from ..analysis.result_identity import (
     STATUS_PENDING_SELF_CORRELATION,
@@ -25,6 +26,9 @@ from ..io.results_store import dump_results
 from ..models.io_types import RunPaths
 from ..models.runtime import InitializedRunContext, ResultWriteArgs
 from ..policy import auto_update_blacklist
+
+if TYPE_CHECKING:
+    from ..api.client import WorkerClientFactory
 
 logger = logging.getLogger(__name__)
 
@@ -42,7 +46,7 @@ def _refresh_pending_self_correlation_results(
     run_ctx: InitializedRunContext,
 ) -> int:
     """在最终落盘前统一复查仍处于 SELF_CORRELATION=PENDING 的结果。"""
-    client_factory = run_ctx.client_factory
+    client_factory = cast("WorkerClientFactory | None", run_ctx.client_factory)
     if client_factory is None:
         return 0
     pending_results = [
@@ -123,7 +127,7 @@ def finalize_run(
 ) -> None:
     """写出最终结果并清理运行中间状态。"""
     execution_state = run_ctx.execution_state
-    output_path = _run_path_value(run_paths, "output") or args.output
+    output_path = cast("str", _run_path_value(run_paths, "output") or args.output)
     state_file = _run_path_value(run_paths, "state_file")
     if should_finalize_recheck_pending_self_correlation(args):
         _refresh_pending_self_correlation_results(args, run_ctx)
@@ -135,7 +139,7 @@ def finalize_run(
     )
     dump_results(
         output_path,
-        args.dataset_id,
+        cast("str", args.dataset_id),
         execution_state.results,
         settings_fingerprint=run_ctx.settings_fingerprint,
         template_library_fingerprint=run_ctx.template_library_fingerprint,

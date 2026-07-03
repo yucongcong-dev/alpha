@@ -13,27 +13,34 @@ from __future__ import annotations
 from dataclasses import dataclass
 import logging
 import threading
+from typing import cast
 
 from ..analysis.feedback_history import build_historical_run_state
 from ..api.client import BrainClient, WorkerClientFactory, login_with_retry
 from ..cli.filters import load_run_filters_extended, setup_runtime_logging
 from ..cli.run_config import build_run_config_snapshot
+from ..config.models import DatasetExpressionPolicy
 from ..config.policy import get_dataset_expression_policy
-from ..generators.fields import fetch_fields_with_cache, load_fields_cache
+from ..generators.fields import DatasetFieldClient, fetch_fields_with_cache, load_fields_cache
 from ..generators.fingerprint import stable_fingerprint
 from ..generators.payload import build_settings_fingerprint
 from ..generators.templates import ensure_dataset_template_library, load_template_library
 from ..io.analysis_sync import ensure_analysis_synced
 from ..io.credentials import load_credentials
 from ..io.output_paths import cleanup_legacy_sidecar_files
-from ..models.io_types import RunPaths
+from ..models.domain import TemplateField, TemplateLibrary
+from ..models.io_types import RunFilters, RunPaths
 from ..models.runtime import (
     ApiClientArgs,
     ApiClientOptions,
     BootstrapRuntimeArgs,
+    ClientFactoryLike,
+    CredentialsArgs,
     FieldFetchOptions,
+    HistoricalRunState,
     InitializedRunContext,
     RuntimeConcurrencyState,
+    SimulationSettingsArgs,
 )
 from ..policy import ensure_template_blacklist_file
 from .bootstrap_cleanup import clean_runtime_artifacts as clean_runtime_artifacts
@@ -77,7 +84,7 @@ class PreparedBootstrapResources:
     template_library_fingerprint: str
     settings_fingerprint: str
     historical_state: object
-    fields: list[object]
+    fields: list[TemplateField]
     run_config: dict[str, object]
 
 
@@ -118,7 +125,7 @@ def prepare_runtime_outputs(
         setup_runtime_logging(paths.log_file)
     cleanup_legacy_sidecar_files(paths.output_file, verbose=True)
     ensure_analysis_synced(paths.output_file)
-    run_config = build_run_config_snapshot(args, run_paths)
+    run_config = build_run_config_snapshot(args, cast(RunPaths, run_paths))
     logger.info("[config] 运行配置将嵌入主结果文件")
     return run_config
 
@@ -134,7 +141,7 @@ def resolve_credentials(
         creds_file=paths.creds_file,
         creds_key_file=paths.creds_key_file,
     )
-    return load_credentials(credentials_args)
+    return cast(tuple[str, str], load_credentials(cast(CredentialsArgs, credentials_args)))
 
 
 def prepare_bootstrap_resources(
@@ -146,28 +153,29 @@ def prepare_bootstrap_resources(
     run_paths: RunPaths | object | None,
 ) -> PreparedBootstrapResources | None:
     """Load template, feedback, and field resources needed to build the run context."""
-    template_library_file = ensure_dataset_template_library(paths.template_library_file, args.dataset_id)
-    ensure_template_blacklist_file(args.dataset_id)
+    dataset_id = cast(str, args.dataset_id)
+    template_library_file = ensure_dataset_template_library(paths.template_library_file, dataset_id)
+    ensure_template_blacklist_file(dataset_id)
 
     template_library = load_template_library(template_library_file)
-    filters_dict = load_run_filters_extended(run_paths)
-    expression_policy = get_dataset_expression_policy(args.dataset_id)
+    filters_dict = load_run_filters_extended(cast(RunPaths, run_paths))
+    expression_policy = get_dataset_expression_policy(dataset_id)
     use_dataset_heuristics = expression_policy.use_curated_heuristics
     template_library_fingerprint = stable_fingerprint(template_library)
-    settings_fingerprint = build_settings_fingerprint(args)
+    settings_fingerprint = build_settings_fingerprint(cast(SimulationSettingsArgs, args))
     historical_state = build_historical_run_state(paths.output_file, paths.feedback_output)
 
     cached_fields = load_fields_cache(
         paths.fields_cache_file,
-        dataset_id=args.dataset_id,
-        region=args.region,
-        universe=args.universe,
-        instrument_type=args.instrument_type,
-        delay=args.delay,
+        dataset_id=dataset_id,
+        region=cast(str, args.region),
+        universe=cast(str, args.universe),
+        instrument_type=cast(str, args.instrument_type),
+        delay=cast(int, args.delay),
     )
     field_fetch_options = FieldFetchOptions.from_args(args)
     fields = fetch_fields_with_cache(
-        bootstrap_client,
+        cast(DatasetFieldClient, bootstrap_client),
         field_fetch_options,
         paths.fields_cache_file,
         cached_fields,
@@ -209,7 +217,7 @@ def prepare_bootstrap_resources(
 def _log_field_selection_stats(
     args: BootstrapRuntimeArgs,
     field_stats: dict[str, int],
-    fields: list[object],
+    fields: list[TemplateField],
 ) -> None:
     """Emit field-filtering and ranking diagnostics."""
     if field_stats["prefiltered_count"] > 0:
@@ -235,7 +243,7 @@ def _log_field_selection_stats(
     if not fields:
         logger.error("[error] 数据集 %s 在字段过滤后没有可运行字段", args.dataset_id)
         return
-    if args.top_fields_by_feedback > 0:
+    if cast(int, args.top_fields_by_feedback) > 0:
         logger.info("[focus] 限制运行到按反馈排序的前 %d 个字段", len(fields))
     logger.info(
         "[data] 当前上下文缓存共 %d 个字段，过滤后共 %d 个字段，优先级排序后共 %d 个字段，本次按 offset=%d limit=%d 取 %d 个字段",
@@ -301,7 +309,7 @@ def initialize_run_context(
         return None
 
     execution_state = build_execution_state(
-        dataset_id=args.dataset_id,
+        dataset_id=cast(str, args.dataset_id),
         output_file=paths.output_file,
         historical_state=prepared.historical_state,
         settings_fingerprint=prepared.settings_fingerprint,
@@ -309,12 +317,12 @@ def initialize_run_context(
         run_config=prepared.run_config,
     )
 
-    max_workers = max(1, args.max_concurrent_simulations)
+    max_workers = max(1, cast(int, args.max_concurrent_simulations))
     runtime_state = RuntimeConcurrencyState(
         max_workers=max_workers,
         runtime_max_workers=max_workers,
     )
-    max_create_workers = max(1, args.max_concurrent_creates)
+    max_create_workers = max(1, cast(int, args.max_concurrent_creates))
     create_semaphore = threading.Semaphore(max_create_workers)
 
     logger.info("[config] max_concurrent_simulations=%d", max_workers)
@@ -322,14 +330,14 @@ def initialize_run_context(
     logger.info("[config] simulation_max_pending_cycles=%d", args.simulation_max_pending_cycles)
 
     return InitializedRunContext(
-        client_factory=client_factory,
-        template_library=prepared.template_library,
-        filters=prepared.filters,
-        expression_policy=prepared.expression_policy,
+        client_factory=cast(ClientFactoryLike, client_factory),
+        template_library=cast(TemplateLibrary, prepared.template_library),
+        filters=cast(RunFilters, prepared.filters),
+        expression_policy=cast(DatasetExpressionPolicy, prepared.expression_policy),
         use_dataset_heuristics=prepared.use_dataset_heuristics,
         template_library_fingerprint=prepared.template_library_fingerprint,
         settings_fingerprint=prepared.settings_fingerprint,
-        historical_state=prepared.historical_state,
+        historical_state=cast(HistoricalRunState, prepared.historical_state),
         fields=prepared.fields,
         execution_state=execution_state,
         runtime_state=runtime_state,

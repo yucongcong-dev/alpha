@@ -77,7 +77,7 @@ def build_field_view(
         preprocessed_expression=preprocessed_expression,
         ratio_numerator_expression=ratio_numerator_expression,
         ratio_denominator_expression=ratio_denominator_expression,
-        metadata=dict(field),
+        metadata=field.metadata,
     )
 
 

@@ -8,6 +8,7 @@ import json
 import logging
 import os
 import time
+from typing import cast
 
 from ..config.constants import BLACKLIST_SCHEMA_VERSION, DATE_FORMAT_ISO
 from ..io.common import (
@@ -70,7 +71,7 @@ def read_blacklist_payload(dataset_id: str, *, data_dir: str = "") -> BlacklistP
     payload.setdefault("dataset_id", dataset_id)
     payload.setdefault("blacklisted_templates", [])
     payload.setdefault("auto_avoid_rules", [])
-    return payload
+    return cast(BlacklistPayload, payload)
 
 
 def write_blacklist_payload(

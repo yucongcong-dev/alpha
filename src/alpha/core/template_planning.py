@@ -39,6 +39,7 @@ from ..models.domain import (
     NearPassCandidate,
     SettingsVariant,
     TemplateCandidate,
+    TemplateField,
 )
 from ..models.runtime import TemplateBuildContext, TemplateFeedback
 from ..utils.helpers import choose_field_name, first_non_empty, is_event_field_name
@@ -46,7 +47,7 @@ from ..utils.helpers import choose_field_name, first_non_empty, is_event_field_n
 
 def resolve_field_template_candidates(
     build_ctx: TemplateBuildContext,
-    field: dict[str, object],
+    field: TemplateField,
     *,
     prior_results: Sequence[FieldTestResult],
     build_refine_templates_fn=build_refine_templates,
@@ -121,7 +122,7 @@ def resolve_field_template_candidates(
 
 def build_pending_template_variants(
     build_ctx: TemplateBuildContext,
-    field: dict[str, object],
+    field: TemplateField,
     *,
     templates: Sequence[TemplateCandidate],
     template_stats: dict[str, dict[str, int]],

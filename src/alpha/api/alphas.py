@@ -18,7 +18,7 @@ class BrainAlphasMixin:
 
     def get_alpha_detail(self, alpha_id: str) -> ApiPayload:
         """获取 Alpha 详情，包括可用时的 check-submit 结果。"""
-        _, _, content = self.request(
+        _, _, content = self.request(  # type: ignore[attr-defined]
             "GET",
             f"{ALPHAS_URL}/{alpha_id}",
             headers=SIM_ACCEPT_HEADER,
@@ -32,7 +32,7 @@ class BrainAlphasMixin:
         method = "POST"
 
         while True:
-            _, response_headers, content = self.request(
+            _, response_headers, content = self.request(  # type: ignore[attr-defined]
                 method,
                 url,
                 headers=SIM_ACCEPT_HEADER,

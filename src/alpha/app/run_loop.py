@@ -11,12 +11,14 @@ from __future__ import annotations
 
 from concurrent.futures import ThreadPoolExecutor
 import logging
+from typing import cast
 
 from ..core import print_dry_run_plan
 from ..models.io_types import RunPaths
 from ..models.runtime import (
     InitializedRunContext,
     RunLoopArgs,
+    TemplateBuildArgs,
 )
 from .loop_future_support import drain_remaining_futures
 from .loop_persistence import (
@@ -63,7 +65,7 @@ def run_field_test_loop(
 
     if args.dry_run_plan:
         print_dry_run_plan(
-            args=args,
+            args=cast("TemplateBuildArgs", args),
             fields=fields,
             filters=run_ctx.filters,
             template_library=run_ctx.template_library,
@@ -74,7 +76,7 @@ def run_field_test_loop(
         return
 
     template_build_ctx = create_template_build_context(
-        args=args,
+        args=cast("TemplateBuildArgs", args),
         run_ctx=run_ctx,
         fields=fields,
         existing_results_count=len(execution_state.results),

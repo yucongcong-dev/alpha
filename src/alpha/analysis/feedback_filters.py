@@ -72,10 +72,7 @@ def is_legacy_family_disabled(
     attempted = 0
     submittable = 0
     for prior_template_name, stat in template_stats.items():
-        prior_metadata = {}
-        prior_family = stat.get("template_family")
-        if isinstance(prior_family, str) and prior_family.strip():
-            prior_metadata = {"family": prior_family}
+        prior_metadata: dict[str, Any] = {}
         if not is_legacy_family(prior_template_name, "", prior_metadata):
             continue
         attempted += int(stat.get("attempted", 0))

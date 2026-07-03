@@ -70,16 +70,6 @@ from .models import (
     SettingsVariant,
     TemplateLibrary,
 )
-from .performance_monitor import (
-    CriticalOperations,
-    Metric,
-    MetricType,
-    PerformanceMonitor,
-    TimerStats,
-    get_performance_monitor,
-    monitor_performance,
-    record_metric,
-)
 from .utils import choose_field_name, choose_field_type, first_non_empty
 
 __version__ = "1.0.0"
@@ -110,16 +100,11 @@ __all__ = [
     "FieldTestResult",
     "FieldView",
     "HistoricalRunState",
-    "Metric",
-    "MetricType",
-    # 性能监控模块
-    "PerformanceMonitor",
     "RunFilters",
     "RunPaths",
     "RuntimeConcurrencyState",
     "SettingsVariant",
     "TemplateLibrary",
-    "TimerStats",
     "__author__",
     "__version__",
     "choose_field_name",
@@ -127,10 +112,7 @@ __all__ = [
     "error_handler",
     "first_non_empty",
     "get_error_handler",
-    "get_performance_monitor",
     "handle_global_error",
-    "monitor_performance",
-    "record_metric",
     "retry_on_error",
     "set_error_handler",
 ]
