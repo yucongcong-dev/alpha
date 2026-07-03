@@ -320,8 +320,16 @@ python3 -m alpha
 - `near_pass_summary`：接近通过的候选（按 score 排序）
 - `failed_check_leaderboard`：主要失败原因分布
 - `optimization_hints`：自动生成的优化建议
+- `pending_self_correlation` 结果会保留在主结果文件 / journal 中，但默认不会被当作有效反馈去驱动下一轮模板统计和字段排序
 
 **预估时间**：30-70 分钟（默认先覆盖 200 字段，但每轮每字段只浅试少量高优模板）
+
+**关于 `SELF_CORRELATION=PENDING` 的当前流程**：
+- 阶段 2 主探索只做短轮询，不再默认在 `finalize` 阶段同步卡住等待所有 pending alpha
+- 若 `SELF_CORRELATION` 仍为 `PENDING`，结果会以 `pending_self_correlation` 状态落盘，并保留 `pending_since / last_recheck_at / recheck_count` 元数据
+- 这类结果默认不会参与模板统计、字段反馈画像、near-pass 排行和 failed-check 学习
+- 如需同步复查 pending 结果，可显式加 `--finalize-recheck-pending-self-correlation`
+- 更推荐把复查独立成后处理命令，见下方“Pending 复查”
 
 #### 阶段 3：聚焦深挖（针对高反馈字段）
 
@@ -349,6 +357,7 @@ python3 -m alpha --top-fields-by-feedback 10 --max-templates-per-field 15
 - 默认读取同一输出文件（`results/model51/test_results.json`）
 - 阶段 2 的结果会自动用于字段优先级排序和 near-pass 候选筛选
 - 可多次运行，每次自动续跑（不重复已完成的组合）
+- 如果阶段 2 产生了较多 `pending_self_correlation` 结果，建议先单独复查，再决定是否继续 refine，而不是直接把这些 pending 结果当作普通 near-pass 历史
 
 **当前实现状态**：
 - 阶段 1：环境验证
@@ -411,6 +420,23 @@ python3 -m alpha --full-run
 - 新结果追加到同一输出文件
 - 中断后再次运行自动继续
 - 如需重新开始，使用不同的 `--output` 路径
+
+### Pending 复查
+
+当结果里出现较多 `pending_self_correlation` 时，推荐把复查与主探索拆开：
+
+```bash
+python3 -m alpha --dataset-id model51 \
+  --output results/model51/stage2_explore_clean.json \
+  --feedback-output results/model51/stage2_explore_clean.json \
+  --recheck-pending-self-correlation-only \
+  --no-auto-update-blacklist
+```
+
+说明：
+- 该模式只会读取历史结果并复查 `SELF_CORRELATION=PENDING` 的 alpha
+- 不会发起新的字段探索
+- 若只是想在本次运行结束前顺手复查，可显式加 `--finalize-recheck-pending-self-correlation`
 
 ---
 

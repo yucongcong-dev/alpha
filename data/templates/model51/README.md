@@ -21,6 +21,8 @@ Local structural inference:
 Local run evidence:
 - Short-window and generic delta families were weak enough to be explicitly disabled in policy.
 - Curated long-window market/industry-normalized templates were more consistent with the intended use of this dataset.
+- After tightening the checksubmit gate to wait for `SELF_CORRELATION`, the current risk-field branches no longer look production-viable: recent rechecks on both `unsystematic_risk_last_*` and `systematic_risk_last_*` were excluded because self-correlation never reached a terminal state within the poll budget.
+- The workflow now preserves these candidates as `pending_self_correlation` results instead of pretending they are normal simulated failures, so they can be rechecked later without polluting template feedback.
 
 Public-script inspiration:
 - Bucket grouping was worth absorbing for more stable relative comparisons.
@@ -43,19 +45,17 @@ What was removed:
 Broad exploration:
 - `model51` has already shown enough structure that wide template sweeps should stay narrow and curated.
 - Prefer the dataset library over the shared base library.
+- Do not keep spending broad-search budget on the current risk-field families until the self-correlation behavior is understood better.
+- If you still run a broad sweep for diagnostics, treat it as a producer of `pending_self_correlation` backlog first and an alpha-discovery run second.
 
 Focused refine:
-- Use [focused_fields.txt](focused_fields.txt) to keep the run centered on the strongest local field family:
-  - `unsystematic_risk_last_360_days`
-  - `systematic_risk_last_360_days`
-- Use [focused_templates.txt](focused_templates.txt) to keep the run centered on the strongest template family:
-  - `model51_industry_zscore_decay_63`
-  - `model51_market_zscore_decay_63`
-  - `model51_group_zscore_market_126`
+- Historical focused fixtures remain in the repo for auditability, but they should currently be treated as diagnostic inputs rather than preferred production refine defaults.
 - [refine/local_refine_round7.json](refine/local_refine_round7.json) keeps a small set of proven local refine variants around the same risk-field branch. It is stored here instead of the repository root because it is reusable dataset knowledge, not a one-off temporary file.
 - [refine/local_refine_industry_decay_triplet_round9.json](refine/local_refine_industry_decay_triplet_round9.json) and [refine/local_refine_market_decay_triplet_round9.json](refine/local_refine_market_decay_triplet_round9.json) keep a tighter decay sweep (`10/15/20`) around the `ts_zscore(..., 63)` branch for industry and market neutralization.
 - [refine/local_refine_decay_density_round10.json](refine/local_refine_decay_density_round10.json) keeps a denser decay sweep (`8/12/18/24`) around the same `ts_zscore(..., 63)` branch.
 - [refine/local_refine_window_sweep_round11.json](refine/local_refine_window_sweep_round11.json) compares neighboring `ts_zscore` windows (`56/63/70`) at the same decay branch.
+- [refine/fields/unsystematic_group_branch_round12_fields.txt](refine/fields/unsystematic_group_branch_round12_fields.txt) and [refine/group_branch_round12_templates.txt](refine/group_branch_round12_templates.txt) capture the non-decay recheck on the unsystematic branch.
+- [refine/fields/systematic_branch_round13_fields.txt](refine/fields/systematic_branch_round13_fields.txt) and [refine/systematic_branch_round13_templates.txt](refine/systematic_branch_round13_templates.txt) capture the corresponding systematic-branch recheck.
 
 Refine pack convention:
 - Keep `library.json` as the default narrow production library.
@@ -64,44 +64,46 @@ Refine pack convention:
 - If a focused experiment needs a stable hand-curated field cache, keep it under `refine/fields/` instead of `cache/`.
 
 Current local evidence behind this narrower focus:
-- `unsystematic_risk_last_360_days + model51_industry_zscore_decay_63` has already produced `submittable=true`.
-- `unsystematic_risk_last_60/90_days + model51_group_zscore_market_126` repeatedly landed near the platform threshold on fitness.
+- Historical runs once showed `submittable=true` or near-pass behavior on the risk-field branch, but those signals are no longer sufficient by themselves after the self-correlation gate was tightened.
 - `beta_last_*_spy` and `correlation_last_*_spy` have been consistently weak in both broad and focused runs, so they are no longer part of the default refine whitelist.
-- `systematic_risk_last_360_days + model51_market_zscore_decay_63` failed clearly in focused validation, so current refine should stay centered on the unsystematic branch.
+- `window_sweep_round11_selfcorr_recheck` revalidated the `unsystematic_risk_last_360_days` decay-window branch (`market/industry`, `56/63/70`) and all 6 candidates were excluded because `SELF_CORRELATION` stayed `PENDING`.
+- `group_branch_round12_recheck` then retried `unsystematic_risk_last_60/90/360_days` with non-decay group/bucket/time-series templates, and the first 9 tested candidates were again excluded for the same reason.
+- `systematic_branch_round13_recheck` repeated the same non-decay template families on `systematic_risk_last_30/60/90_days`, and all 9 tested candidates were likewise excluded because `SELF_CORRELATION` never reached a terminal state.
 
-Suggested commands:
+Suggested diagnostic command:
 ```bash
 python3 -m alpha --dataset-id model51 --dry-run-plan \
-  --include-fields-file data/templates/model51/focused_fields.txt \
-  --include-templates-file data/templates/model51/focused_templates.txt \
-  --limit 2 --max-templates-per-field 3 --max-templates-per-family 1 \
-  --output results/model51/focused_validation.json \
-  --feedback-output results/model51/focused_validation.json \
+  --include-fields-file data/templates/model51/refine/fields/systematic_branch_round13_fields.txt \
+  --include-templates-file data/templates/model51/refine/systematic_branch_round13_templates.txt \
+  --limit 1 --max-templates-per-field 1 --max-templates-per-family 1 \
+  --self-correlation-max-polls 36 --self-correlation-poll-seconds 10 \
+  --output results/model51/diagnostic_selfcorr_probe.json \
+  --feedback-output results/model51/diagnostic_selfcorr_probe.json \
   --no-auto-update-blacklist
 ```
 
+Suggested post-run recheck command:
 ```bash
 python3 -m alpha --dataset-id model51 \
-  --include-fields-file data/templates/model51/focused_fields.txt \
-  --include-templates-file data/templates/model51/focused_templates.txt \
-  --limit 2 --max-templates-per-field 3 --max-templates-per-family 1 \
-  --max-concurrent-simulations 1 --max-concurrent-creates 1 \
-  --output results/model51/focused_validation.json \
-  --feedback-output results/model51/focused_validation.json \
+  --output results/model51/stage2_explore_clean.json \
+  --feedback-output results/model51/stage2_explore_clean.json \
+  --recheck-pending-self-correlation-only \
   --no-auto-update-blacklist
 ```
 
-Local evidence:
-- `unsystematic_risk_last_360_days + model51_industry_zscore_decay_63` has already produced a `submittable=true` result locally.
-- `beta/correlation` families have shown clearly weaker quality than the risk families in repeated runs.
-- The neighboring `market` window sweep (`56/63/70`, `d12`) also produced `submittable=true` on all three tested points, so the winning branch is now better understood as a local robust region rather than a single lucky window.
-- The matching `industry` window sweep (`56/63/70`, `d12`) also produced `submittable=true` on all three tested points.
-- Current local ranking favors the `63` window variants first:
-  - `model51_market_zscore_decay_63_d12` and `model51_industry_zscore_decay_63_d12` are the strongest current pair by local IS metrics.
-  - `56`-window variants are viable backups.
-  - `70`-window variants still pass, but are slightly weaker than `63`.
-- That makes `model51` a better candidate for continued refine than `fundamental6` under the current template framework, but specifically along the risk-field branch rather than the broader SPY beta/correlation branch.
+Only run a full non-diagnostic `model51` exploration after a small probe like the command above proves that `SELF_CORRELATION` can actually resolve to a terminal state on the current branch, or after an explicit recheck pass converts a meaningful share of pending candidates into terminal outcomes.
+
+Current assessment:
+- `beta/correlation` families are still weak and do not become attractive just because the risk-field branches stalled.
+- The more important update is that the entire currently-tested risk-field family is now blocked by self-correlation resolution rather than by ordinary Sharpe/Fitness checks.
+- Until a later diagnostic run proves that `SELF_CORRELATION` eventually resolves to `PASS`, the historical `submittable=true` records on these branches should be treated as stale under the current workflow.
+- That makes `model51` a lower-priority exploration target than datasets that can actually complete the full `simulation -> checksubmit -> self-correlation -> submit` path cleanly.
+- Operationally, this now means:
+  - keep the main exploration run short and non-blocking
+  - persist pending results
+  - recheck them in a separate pass instead of forcing `finalize` to wait on every branch
 
 ## Things To Revisit Later
+- Run a tiny diagnostic job with a much larger self-correlation poll budget only if we specifically want to learn whether these alphas eventually resolve to `PASS` or `FAIL`.
 - Add regime-aware variants only if later runs show that risk fields respond to separate high-vol / low-vol pathways.
 - Re-check whether one of the plain first-order rank/zscore templates can be demoted behind grouped bucket variants.
