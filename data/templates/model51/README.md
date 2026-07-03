@@ -52,6 +52,7 @@ Focused refine:
   - `model51_industry_zscore_decay_63`
   - `model51_market_zscore_decay_63`
   - `model51_group_zscore_market_126`
+- [local_refine_round7.json](local_refine_round7.json) keeps a small set of proven local refine variants around the same risk-field branch. It is stored here instead of the repository root because it is reusable dataset knowledge, not a one-off temporary file.
 
 Current local evidence behind this narrower focus:
 - `unsystematic_risk_last_360_days + model51_industry_zscore_decay_63` has already produced `submittable=true`.

@@ -122,10 +122,13 @@ alpha/                     # 项目根目录
 │       │   ├── getters.py
 │       │   ├── models.py
 │       │   ├── policy.py
+│       │   ├── policy_coercers.py
 │       │   ├── policy_overrides.py
 │       │   ├── profiles.py
 │       │   ├── types.py
-│       │   └── yaml.py
+│       │   ├── yaml.py
+│       │   ├── yaml_sources.py
+│       │   └── yaml_validator.py
 │       └── exceptions.py  # 自定义异常
 │
 ├── tests/                 # 测试目录
@@ -152,6 +155,25 @@ alpha/                     # 项目根目录
 └── .gitignore
 ```
 
+## 仓库边界
+
+哪些文件进仓：
+
+- `config/*.yaml`：代码级默认配置，按职责维护 API、simulation、质量阈值、模板参数和运行约定。
+- `settings.yaml`、`dataset_profiles.yaml`、`expression_policies.yaml`：默认运行参数、数据集 profile 和表达式策略。
+- `data/templates/base/` 与 `data/templates/<dataset_id>/`：基础模板、数据集专属模板、聚焦字段/模板白名单，以及经过验证值得复用的本地 refine 模板。
+- `data/blacklists/<dataset_id>/blacklist.json`：统一黑名单。脚本会自动追加，也允许人工维护；空黑名单也可以进仓，用于固定数据集目录边界。
+
+哪些文件不进仓：
+
+- `results/`：每次运行的结果、分析、日志、checkpoint 和 state。
+- `cache/`：字段缓存等可重新生成数据。
+- `tmp/`：一次性实验输入、临时 include/exclude 列表、临时模板库。
+- `scratch/`：外部脚本、对照材料、手工实验草稿。
+- `.credentials/`：本地加密凭证和密钥。
+
+根目录只保留项目入口、配置入口和说明文件。临时文件不要放根目录；如果只是一次性实验，放 `tmp/`；如果已经验证值得长期复用，再整理命名后放入 `data/templates/<dataset_id>/`。
+
 ## 模板目录
 
 当前模板目录统一放在 `data/templates/`：
@@ -161,6 +183,7 @@ alpha/                     # 项目根目录
 - 数据集专属模板库：`data/templates/<dataset_id>/library.json`
 - 数据集专属模板说明：`data/templates/<dataset_id>/README.md`
 - 数据集聚焦白名单：可选放在 `data/templates/<dataset_id>/*.txt`
+- 数据集 refine 模板库：可选放在 `data/templates/<dataset_id>/*refine*.json`
 
 其中 `base` 只负责提供共享 fallback 模板，真正的搜索方向应尽量在数据集专属目录里定制和收敛。
 
@@ -192,7 +215,7 @@ alpha/                     # 项目根目录
 - `policy/blacklist.py` 负责黑名单策略、聚合与增量更新
 - `io/output.py` 负责结果持久化与分析边车编排，不再承载黑名单策略实现
 - `io/common.py` 放更底层的 JSON 原子写入、路径常量、dataset 文件名安全化与运行时 `data/` 目录解析
-- `config/` 是配置子包：`__init__.py` 保留旧的 `alpha.config` 入口，`models.py` 放配置 dataclass，`yaml.py` 放 YAML 查找/加载/缓存，`defaults.py` 放 YAML global 到 CLI 参数的合并，`policy.py` 放策略构建和反馈阶段判断，`policy_overrides.py` 放 YAML expression policy 覆盖解析，`profiles.py` 放 dataset profile fallback。
+- `config/` 是配置子包：`__init__.py` 保留旧的 `alpha.config` 入口，`models.py` 放配置 dataclass，`yaml.py` 只保留线程安全缓存和公共 API，`yaml_sources.py` 放 YAML 查找/加载/合并/签名，`yaml_validator.py` 放 schema 和交叉一致性校验，`defaults.py` 放 YAML global 到 CLI 参数的合并，`policy.py` 放策略构建和反馈阶段判断，`policy_coercers.py` 放 YAML 类型转换，`policy_overrides.py` 放 expression policy 覆盖解析，`profiles.py` 放 dataset profile fallback。
 - `generators/templates/` 是模板子包：`__init__.py` 管理 JSON 模板库，`candidates.py` 构造 `TemplateCandidate`，`classification.py` 做模板 family/stage 分类，`metadata.py` 建模板元数据索引，`partner_fields.py` 发现 ratio 配对字段，`priority.py` 做自适应优先级和 family 裁剪，`refine.py` 生成 near-pass 精修模板，`feedback_mutations.py` 编排反馈 mutation，`feedback_mutation_sets.py` 放具体 mutation 集合，`feedback_best_expression.py` 放历史最佳表达式变异，`historical_reuse.py`、`wrappers.py` 和 `variation_common.py` 拆分模板变体策略，`variations.py` 保留组合入口。
 - `generators/expression_builder.py` 是表达式候选编排层，负责把字段、模板库、策略和反馈组合成候选表达式。
 - `generators/matrix_templates.py` 负责 MATRIX 字段的多样化、ratio、bucket、trade_when 和 legacy 模板构造。
