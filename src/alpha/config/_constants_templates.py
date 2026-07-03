@@ -8,7 +8,6 @@ from __future__ import annotations
 from ._constants_core import (
     _yaml_dict,
     _yaml_dict_tuple,
-    _yaml_float,
     _yaml_int,
     _yaml_set,
     _yaml_tuple_int2,

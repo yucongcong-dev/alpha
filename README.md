@@ -136,6 +136,12 @@ alpha/                     # 项目根目录
 ├── requirements.txt       # 依赖
 ├── pyproject.toml         # 项目配置
 ├── settings.yaml          # 默认运行配置
+├── config/                # 按职责拆分的代码级默认 YAML
+│   ├── api.yaml           # API endpoint、headers、HTTP 超时与退避
+│   ├── simulation.yaml    # simulation 状态、默认日期、表达式窗口
+│   ├── quality_feedback.yaml # 质量阈值、反馈、统计、checkpoint 默认值
+│   ├── templates.yaml     # 模板优先级、ratio/partner 生成参数
+│   └── runtime.yaml       # 路径、状态字符串、哨兵值等运行约定
 ├── data/                  # 模板库与黑名单
 │   ├── templates/
 │   │   ├── base/          # 基础共享模板库与说明
@@ -420,7 +426,9 @@ python3 -m alpha --no-smoke-test --no-full-run
 - `config/policy.py`：dataset expression policy 构建与反馈阶段解析
 - `config/profiles.py`：dataset profile fallback
 
-实际运行配置优先维护在 `settings.yaml`、`data/templates/` 和 `data/blacklists/`，不要把数据集专属模板重新塞回 Python 常量。
+YAML 分层优先级为：`settings.yaml` > `expression_policies.yaml` > `dataset_profiles.yaml` > `config/*.yaml` > legacy `constants_defaults.yaml`。其中 `settings.yaml` 面向日常运行调参，`config/*.yaml` 面向代码级默认值，`data/templates/` 面向表达式模板，`data/blacklists/` 面向低质量模板过滤。
+
+实际运行配置优先维护在 `settings.yaml`、`config/*.yaml`、`data/templates/` 和 `data/blacklists/`，不要把数据集专属模板重新塞回 Python 常量。
 
 ## 结果解读
 

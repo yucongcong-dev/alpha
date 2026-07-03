@@ -121,6 +121,10 @@ unfixable = [
     "F401",   # unused-import (review manually)
 ]
 
+[tool.ruff.lint.per-file-ignores]
+"src/alpha/config/__init__.py" = ["F401", "F403", "I001"]
+"src/alpha/config/constants.py" = ["F401", "I001"]
+
 [tool.ruff.lint.isort]
 known-first-party = ["alpha"]
 force-single-line = false

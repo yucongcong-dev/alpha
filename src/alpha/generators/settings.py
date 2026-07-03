@@ -20,10 +20,6 @@ import hashlib
 import json
 from typing import Any
 
-from ..config.getters import (
-    get_simulation_default_end_date,
-    get_simulation_default_start_date,
-)
 from ..config.constants import (
     GROUP_NAME_SUBINDUSTRY,
     MONTHS_PER_YEAR,
@@ -36,6 +32,10 @@ from ..config.constants import (
     STABLE_FINGERPRINT_HEX_LEN,
     TRUNCATION_TIGHTER_MAX,
     TRUNCATION_WEB_DEFAULT,
+)
+from ..config.getters import (
+    get_simulation_default_end_date,
+    get_simulation_default_start_date,
 )
 from ..config.yaml import (
     get_yaml_config,

@@ -2,24 +2,26 @@
 YAML 配置文件加载与缓存。
 
 本模块负责查找 settings.yaml、expression_policies.yaml、dataset_profiles.yaml、
-constant_defaults.yaml，解析 YAML 内容并合并为统一配置。
+config/*.yaml 和 legacy constant_defaults.yaml，解析 YAML 内容并合并为统一配置。
 
 合并优先级 (高 → 低)：
   1. settings.yaml           — 用户主配置 (模拟、运维、运行时)
   2. expression_policies.yaml — 表达式策略
   3. dataset_profiles.yaml   — 数据集 profiles
-  4. constants_defaults.yaml — 代码常量默认值
+  4. config/*.yaml           — 按职责拆分的代码常量默认值
+  5. constants_defaults.yaml — legacy 代码常量默认值
 
 同级 key 合并策略：settings.yaml 覆盖 expression_policies.yaml 覆盖 ...
-深合并仅用于 expression_policies、dataset_profiles 顶层的 dataset key。
+深合并用于所有 dict，以支持按职责文件和用户配置的增量覆盖。
 """
 
 from __future__ import annotations
 
 import logging
 import os
-import threading
 from pathlib import Path
+import threading
+
 from .types import YamlConfig, YamlConfigCacheEntry
 
 _log = logging.getLogger("alpha.config.yaml")
@@ -61,13 +63,32 @@ _PROJECT_ROOT = _find_project_root()
 # YAML 文件定义
 # ---------------------------------------------------------------------------
 
+_DEFAULT_CONFIG_NAMES: set[str] = {
+    "constants_defaults",
+    "api_defaults",
+    "simulation_defaults",
+    "quality_feedback_defaults",
+    "template_defaults",
+    "runtime_defaults",
+}
+"""代码级默认配置文件逻辑名称集合。"""
+
 _YAML_FILES: list[tuple[str, list[str]]] = [
     ("constants_defaults", ["constants_defaults.yaml", "config/constants_defaults.yaml"]),
+    ("api_defaults", ["config/api.yaml"]),
+    ("simulation_defaults", ["config/simulation.yaml"]),
+    ("quality_feedback_defaults", ["config/quality_feedback.yaml"]),
+    ("template_defaults", ["config/templates.yaml"]),
+    ("runtime_defaults", ["config/runtime.yaml"]),
     ("dataset_profiles", ["dataset_profiles.yaml", "config/dataset_profiles.yaml"]),
     ("expression_policies", ["expression_policies.yaml", "config/expression_policies.yaml"]),
     ("settings", ["settings.yaml", "config/settings.yaml"]),
 ]
-"""YAML 文件定义：(逻辑名称, [相对搜索路径])，按优先级升序排列。"""
+"""YAML 文件定义：(逻辑名称, [相对搜索路径])，按优先级升序排列。
+
+legacy constants_defaults.yaml 先加载，新拆分的 config/*.yaml 后加载，因此拆分文件
+可以覆盖 legacy fallback；settings.yaml 仍保持最高优先级。
+"""
 
 _ENV_CONFIG_PATH: str = "ALPHA_CONFIG_FILE"
 """可通过该环境变量指定主配置文件路径。"""
@@ -171,6 +192,21 @@ def _load_all_yamls(settings_path: str | None = None) -> YamlConfig:
     return merged
 
 
+def _load_default_yamls(resolved_files: dict[str, str]) -> YamlConfig:
+    """加载所有代码级默认 YAML，用于 schema 交叉校验。"""
+    merged: YamlConfig = {}
+    for name, _search_paths in _YAML_FILES:
+        if name not in _DEFAULT_CONFIG_NAMES:
+            continue
+        path = resolved_files.get(name)
+        if not path:
+            continue
+        data = _load_yaml_file(path)
+        if data:
+            merged = _deep_merge(merged, data)
+    return merged
+
+
 def _config_file_signature(path: str | None) -> tuple[int, int] | None:
     """返回配置文件签名：(mtime_ns, size)。"""
     if not path or not os.path.isfile(path):
@@ -213,7 +249,7 @@ def _collect_leaf_paths(data: dict, prefix: tuple[str, ...] = ()) -> set[tuple[s
     if not isinstance(data, dict):
         return paths
     for key, value in data.items():
-        full = prefix + (key,)
+        full = (*prefix, key)
         if isinstance(value, dict) and value:
             paths.update(_collect_leaf_paths(value, full))
         else:
@@ -244,7 +280,7 @@ def _get_schema_keys(resolved_files: dict[str, str]) -> dict[str, set[str]]:
         # settings.yaml 的已知顶层 key（结构固定）
         keys_by_file["settings"] = {"global", "dataset_profiles", "expression_policies"}
 
-        for name in ("constants_defaults", "dataset_profiles", "expression_policies"):
+        for name in _DEFAULT_CONFIG_NAMES | {"dataset_profiles", "expression_policies"}:
             path = resolved_files.get(name)
             if path:
                 data = _load_yaml_file(path)
@@ -282,11 +318,11 @@ def _validate_global_section(config: YamlConfig, resolved_files: dict[str, str])
     if not isinstance(global_section, dict):
         return warnings
 
-    for gkey in global_section:
-        if gkey not in _GLOBAL_KNOWN_KEYS:
-            warnings.append(
-                f"settings.yaml: global 段存在未知 key '{gkey}'，已知 key: {sorted(_GLOBAL_KNOWN_KEYS)}"
-            )
+    warnings.extend(
+        f"settings.yaml: global 段存在未知 key '{gkey}'，已知 key: {sorted(_GLOBAL_KNOWN_KEYS)}"
+        for gkey in global_section
+        if gkey not in _GLOBAL_KNOWN_KEYS
+    )
     return warnings
 
 
@@ -294,16 +330,16 @@ def _validate_cross_consistency(
     config: YamlConfig,
     resolved_files: dict[str, str],
 ) -> list[str]:
-    """交叉一致性检查：验证 settings.yaml global.* 和 constants_defaults.yaml 之间的键名一致性。
+    """交叉一致性检查：验证 settings.yaml global.* 和默认 YAML 之间的键名一致性。
 
     仅检查重叠段（quality, http, expression, feedback）——这些段在两处均有定义，
     键名应保持一致。settings-only 段（simulation, limits, concurrency, retries, filters, runtime）
     不参与此检查，因为它们使用的是与 constants_defaults 完全不同的键空间。
     """
     # 仅对这些重叠段进行交叉检查
-    _OVERLAP_SECTIONS = {"quality", "http", "expression", "feedback"}
+    overlap_sections = {"quality", "http", "expression", "feedback"}
     # 已知的命名变体映射：settings.yaml 键名 → constants_defaults 键名（非 typo，只是命名风格差异）
-    _KNOWN_ALIASES: dict[str, dict[str, str]] = {
+    known_aliases: dict[str, dict[str, str]] = {
         "feedback": {
             "feedback_mutation_nearpass_threshold": "mutation_nearpass_threshold",
             "feedback_mutation_highscore_threshold": "mutation_highscore_threshold",
@@ -316,19 +352,15 @@ def _validate_cross_consistency(
 
     warnings: list[str] = []
 
-    defaults_path = resolved_files.get("constants_defaults")
-    if not defaults_path:
-        return warnings
-
-    defaults_data = _load_yaml_file(defaults_path)
-    if not isinstance(defaults_data, dict):
+    defaults_data = _load_default_yamls(resolved_files)
+    if not defaults_data:
         return warnings
 
     global_section = config.get("global", {})
     if not isinstance(global_section, dict):
         return warnings
 
-    for section in _OVERLAP_SECTIONS:
+    for section in overlap_sections:
         gdata = global_section.get(section)
         if not isinstance(gdata, dict):
             continue
@@ -341,10 +373,10 @@ def _validate_cross_consistency(
         if not defaults_keys:
             continue
 
-        aliases = _KNOWN_ALIASES.get(section, {})
+        aliases = known_aliases.get(section, {})
         # 筛选出既不在 defaults_keys 也不在 aliases 中的 settings key
         extra = []
-        for skey in gdata.keys():
+        for skey in gdata:
             if skey in defaults_keys:
                 continue
             if skey in aliases and (aliases[skey] in defaults_keys or aliases[skey] == "@settings_only"):
@@ -354,7 +386,7 @@ def _validate_cross_consistency(
         if extra:
             warnings.append(
                 f"交叉一致性警告: settings.yaml global.{section} 中的 key "
-                + f"{sorted(extra)} 在 constants_defaults.yaml 的 {section} 段中不存在。"
+                + f"{sorted(extra)} 在默认 YAML 的 {section} 段中不存在。"
                 + f"可能是键名拼写错误。已知 key: {sorted(defaults_keys)}"
             )
 
@@ -380,11 +412,11 @@ def _validate_nested_paths(config: YamlConfig) -> list[str]:
         if section in _GLOBAL_KNOWN_KEYS:
             leaf_paths = _collect_leaf_paths(section_data, (section,))
             # 每个叶子路径应不超过合理深度（3 层：section.sub.key）
-            for path in leaf_paths:
-                if len(path) > 4:
-                    warnings.append(
-                        f"嵌套过深: {' > '.join(path)}，请检查 constants_defaults.yaml 中 {section} 段的结构。"
-                    )
+            warnings.extend(
+                f"嵌套过深: {' > '.join(path)}，请检查默认 YAML 中 {section} 段的结构。"
+                for path in leaf_paths
+                if len(path) > 4
+            )
 
     return warnings
 
@@ -416,7 +448,7 @@ def clear_yaml_caches() -> None:
 
     用于测试或运行时配置热重载场景。
     """
-    global _config_cache, _config_validated, _schema_keys_cache
+    global _config_validated, _schema_keys_cache
     with _config_lock:
         _config_cache.clear()
         _config_validated = False
@@ -450,7 +482,7 @@ def get_yaml_config(config_path: str = "") -> YamlConfig:
     缓存基于所有 YAML 文件的聚合签名，任一文件变化即触发重载。
     首次加载时自动运行 schema 验证，检测 YAML 键名拼写错误。
     """
-    global _config_cache, _config_validated
+    global _config_validated
 
     settings_path = (
         os.path.abspath(config_path) if config_path else _resolve_yaml_path()
@@ -460,11 +492,12 @@ def get_yaml_config(config_path: str = "") -> YamlConfig:
 
     with _config_lock:
         cached_entry = _config_cache.get(cache_key)
-        if isinstance(cached_entry, dict):
-            if cached_entry.get("signature") == signature and isinstance(
-                cached_entry.get("data"), dict
-            ):
-                return cached_entry["data"]
+        if (
+            isinstance(cached_entry, dict)
+            and cached_entry.get("signature") == signature
+            and isinstance(cached_entry.get("data"), dict)
+        ):
+            return cached_entry["data"]
 
         # 缓存未命中或已过期 → 重新加载
         data = _load_all_yamls(settings_path)

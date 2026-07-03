@@ -60,8 +60,8 @@ __all__ = [
     "dump_results_incremental",
     "ensure_analysis_synced",
     "ensure_template_blacklist_file",
-    "invalidate_blacklist_path_cache",
     "initialize_results_journal",
+    "invalidate_blacklist_path_cache",
     "load_blacklisted_template_names",
     "resolve_cli_path",
 ]

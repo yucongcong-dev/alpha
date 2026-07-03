@@ -159,7 +159,7 @@ def get_dataset_expression_policy(
 def _yaml_curated_heuristics(dataset_id: str) -> bool:
     """从 YAML expression_policies.<dataset>.use_curated_heuristics 读取精选启发式开关。
 
-    默认关闭；仅当 YAML 中该数据集显式配置 use_curated_heuristics: true 时启用。
+    YAML 显式配置优先；未配置时保留 fundamental6 历史兼容默认。
     """
     if not dataset_id:
         return False
@@ -168,11 +168,11 @@ def _yaml_curated_heuristics(dataset_id: str) -> bool:
     yaml_config = get_yaml_config() or {}
     policies: dict = yaml_config.get("expression_policies", {})
     if not isinstance(policies, dict):
-        return False
+        return "fundamental6" in dataset_id.lower()
     dataset_policy: dict = policies.get(dataset_id, {})
-    if isinstance(dataset_policy, dict):
+    if isinstance(dataset_policy, dict) and "use_curated_heuristics" in dataset_policy:
         return bool(dataset_policy.get("use_curated_heuristics", False))
-    return False
+    return "fundamental6" in dataset_id.lower()
 
 
 def resolve_feedback_stage(
@@ -208,7 +208,10 @@ def use_curated_heuristics_for_dataset(
     """
     if not dataset_id:
         return False
-    yaml_config = yaml_config or {}
+    if yaml_config is None:
+        from . import get_yaml_config
+
+        yaml_config = get_yaml_config() or {}
     policies: dict = yaml_config.get("expression_policies", {})
     if not isinstance(policies, dict):
         return False
@@ -218,5 +221,23 @@ def use_curated_heuristics_for_dataset(
     return False
 
 
-# 向后兼容别名
-use_fundamental6_heuristics = use_curated_heuristics_for_dataset
+def use_fundamental6_heuristics(dataset_id: str | None = None) -> bool:
+    """Backward-compatible curated-heuristic helper for fundamental6-style datasets."""
+    if dataset_id is None:
+        dataset_id = "fundamental6"
+    if not dataset_id:
+        return False
+    if "fundamental6" not in dataset_id.lower():
+        return False
+    if use_curated_heuristics_for_dataset(dataset_id):
+        return True
+    if dataset_id.lower() == "fundamental6":
+        return True
+
+    from . import get_yaml_config
+
+    yaml_config = get_yaml_config() or {}
+    policies = yaml_config.get("expression_policies", {})
+    if not isinstance(policies, dict) or dataset_id not in policies:
+        return use_curated_heuristics_for_dataset("fundamental6", yaml_config=yaml_config)
+    return False

@@ -10,9 +10,9 @@ settings.yaml 提供覆盖)。修改 YAML 后重启即可生效。
 
 from __future__ import annotations
 
-from .constants import *  # noqa: F403 - compatibility export surface
+from .constants import *
 from .defaults import apply_yaml_global_defaults as apply_yaml_global_defaults
-from .getters import *  # noqa: F403 - compatibility export surface
+from .getters import *
 from .models import (
     DatasetExpressionPolicy as DatasetExpressionPolicy,
 )

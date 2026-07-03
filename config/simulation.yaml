@@ -1,0 +1,31 @@
+# ============================================================================
+# Simulation / expression defaults
+# ============================================================================
+# Defaults for Alpha simulation metadata and expression rendering.
+
+simulation:
+  default_dataset_id: "fundamental6"
+  default_start_date: "2020-01-01"
+  default_end_date: "2025-12-31"
+  states:
+    pending: "PENDING"
+    running: "RUNNING"
+    queued: "QUEUED"
+    completed: "COMPLETED"
+    failed: "FAILED"
+    error: "ERROR"
+    cancelled: "CANCELLED"
+  neutralization:
+    none: "NONE"
+    industry: "INDUSTRY"
+    market: "MARKET"
+    subindustry: "SUBINDUSTRY"
+  group_names:
+    subindustry: "subindustry"
+    industry: "industry"
+  truncation:
+    web_default: 0.08
+    tighter_max: 0.05
+
+expression:
+  backfill_window: 504

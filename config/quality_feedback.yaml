@@ -1,0 +1,92 @@
+# ============================================================================
+# Quality / feedback / analysis defaults
+# ============================================================================
+# Thresholds used by local precheck, feedback-driven template generation,
+# analysis summaries, checkpointing, and smoke-test safety limits.
+
+quality:
+  submit:
+    min_fitness: 1.00
+    min_sharpe: 1.25
+    min_turnover: 0.01
+    max_turnover: 0.70
+    max_weight: 0.10
+  precheck:
+    min_sharpe: 1.25
+    min_fitness: 1.00
+    min_turnover: 0.01
+    max_turnover: 0.70
+    max_weight: 0.10
+
+feedback:
+  settings_variant_budget_high: 0.35
+  settings_variant_budget_mid: 0.10
+  mutation_nearpass_threshold: 0.08
+  mutation_highscore_threshold: 0.25
+  template_min_priority: 105
+  delta_std_priority_boost: 15
+  settings_nearpass_threshold: 0.45
+  settings_close_threshold: 0.65
+  expr_nearpass_boost_threshold: 0.50
+  expr_iter_boost_threshold: 0.20
+  expr_ratio_penalty_threshold: 0.30
+  expr_mutation_extend_threshold: 0.15
+
+nearpass:
+  penalty_concentrated_weight: 0.35
+  penalty_concentrated_weight_gap_threshold: 0.20
+  penalty_concentrated_weight_extra: 0.55
+  penalty_low_turnover: 0.10
+  penalty_low_sub_universe_sharpe: 0.05
+  default_limit: 3
+
+stats:
+  default_score: -999.0
+  failed_check_default_score: -10.0
+  nearpass_summary_limit: 50
+  performance_top_n: 10
+  fields_cache_ttl_hours: 24
+
+failed_check:
+  epsilon: 1.0e-9
+  max_example_ids: 5
+  optimization_hint_top_n: 3
+  dominant_check_limit: 4
+  max_failed_check_names: 5
+  failure_summary_max_len: 300
+
+mutation:
+  dominant_check_limit: 3
+  account_extend_threshold: 0.45
+
+field:
+  priority:
+    attempted_high: 8
+    score_high: 0.70
+    attempted_low: 5
+    score_low: 0.40
+
+checkpoint:
+  resume_safety_seconds: 30.0
+  pending_futures_limit: 50
+  dry_run_sample_limit: 20
+
+settings_variant:
+  decay_fast: 2
+  decay_slow: 6
+
+smoke_test:
+  max_pending_cycles: 60
+  max_queue_seconds: 300
+
+default_profile:
+  min_request_interval: 2.0
+  sleep_between_fields: 5.0
+  max_concurrent_simulations: 1
+  max_concurrent_creates: 1
+  max_templates_per_field: 12
+  field_template_batch_size: 2
+  simulation_max_wait_seconds: 900
+  simulation_max_queue_seconds: 600
+  queue_busy_cooldown_seconds: 120
+  template_disable_after: 12

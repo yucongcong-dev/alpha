@@ -58,7 +58,7 @@ def _yaml_val(*keys: str, default: Any = None, cast: type = str) -> Any:
     key_path = ".".join(keys)
 
     # 1. 优先查找 global.* 路径
-    node = _resolve_yaml_key(yaml_data, ("global",) + keys)
+    node = _resolve_yaml_key(yaml_data, ("global", *keys))
 
     # 2. 回退到扁平路径
     if node is None:

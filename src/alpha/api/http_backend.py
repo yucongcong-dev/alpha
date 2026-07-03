@@ -11,15 +11,11 @@
 
 from __future__ import annotations
 
-import logging
 from http.cookiejar import Cookie, CookieJar
+import logging
 from typing import Any, Protocol
-from urllib.request import (
-    HTTPCookieProcessor,
-    ProxyHandler,
-    Request as UrllibRequest,
-    build_opener,
-)
+from urllib.request import HTTPCookieProcessor, ProxyHandler, build_opener
+from urllib.request import Request as UrllibRequest
 
 logger = logging.getLogger(__name__)
 
@@ -124,8 +120,6 @@ class HttpxHttpBackend:
 
         client = self._get_client()
         try:
-            import httpx
-
             # 将 CookieJar 序列化为请求头
             request_cookies: dict[str, str] = {}
             for cookie in self._cookies:
@@ -141,7 +135,7 @@ class HttpxHttpBackend:
             )
             response_headers = dict(response.headers.items())
             # 更新 CookieJar
-            for set_cookie_value in response.headers.get_list("set-cookie"):
+            for _set_cookie_value in response.headers.get_list("set-cookie"):
                 try:
                     self._cookies.set_cookie(
                         Cookie(

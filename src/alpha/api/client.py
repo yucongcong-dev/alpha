@@ -17,7 +17,7 @@ from ..exceptions import BrainAPIError
 from ..models.runtime import ApiClientOptions
 from .alphas import BrainAlphasMixin
 from .fields import BrainFieldsMixin
-from .http_backend import UrllibHttpBackend, create_http_backend
+from .http_backend import create_http_backend
 from .retry import (
     is_invalid_credentials_error,
     login_with_retry,

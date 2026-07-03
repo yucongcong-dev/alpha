@@ -47,5 +47,4 @@ class ExpressionPolicyOverrides(TypedDict, total=False):
 
 
 # 保留旧式别名向后兼容
-YamlConfigCacheEntry = dict[str, Any]  # noqa: invalid-name - backward-compat
-
+YamlConfigCacheEntry = dict[str, Any]
