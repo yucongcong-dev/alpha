@@ -36,6 +36,7 @@ from ..models.runtime import (
     TemplateBuildOptions,
     TemplateField,
 )
+from ..performance_monitor import monitor_performance, record_metric
 from ..utils.helpers import choose_field_name, first_non_empty
 from .execution_filters import (
     is_template_actionable,
@@ -76,6 +77,7 @@ def inflight_template_keys(
     return reserved
 
 
+@monitor_performance("executor.build_templates_for_field")
 def build_pending_templates_for_field(
     build_ctx: TemplateBuildContext,
     field: TemplateField,
@@ -158,6 +160,7 @@ def build_pending_templates_for_field(
 # ============================================================================
 
 
+@monitor_performance("executor.dry_run_plan")
 def print_dry_run_plan(
     *,
     args: TemplateBuildArgs,

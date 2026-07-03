@@ -68,3 +68,31 @@ from .runtime_values import (
 from .runtime_values import (
     RuntimeConfig as RuntimeConfig,
 )
+
+# 统一配置管理器接口
+from .unified_manager import (
+    ConfigSource as ConfigSource,
+    ConfigValue as ConfigValue,
+    ConfigChangeEvent as ConfigChangeEvent,
+    UnifiedConfigManager as UnifiedConfigManager,
+    get_config_manager as get_config_manager,
+    get_config as get_config,
+    set_config as set_config,
+    reload_config as reload_config,
+)
+
+from .schema import (
+    ConfigType as ConfigType,
+    ConfigField as ConfigField,
+    ConfigSchema as ConfigSchema,
+    AlphaConfigSchemaBuilder as AlphaConfigSchemaBuilder,
+    APIConfig as APIConfig,
+    SimulationConfig as SimulationConfig,
+    QualityConfig as QualityConfig,
+    OperationConfig as OperationConfig,
+    RuntimeConfig as RuntimeConfig,
+    FullConfig as FullConfig,
+    validate_config_with_schema as validate_config_with_schema,
+    get_default_config as get_default_config,
+    describe_schema as describe_schema,
+)
