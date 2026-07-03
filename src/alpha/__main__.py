@@ -7,7 +7,7 @@ Usage:
     python3 -m alpha [OPTIONS]
 
 Example:
-    python3 -m alpha --dataset-id fundamental6 --region USA --universe TOP3000
+    python3 -m alpha --dataset-id model51 --region USA --universe TOP3000
 """
 
 from __future__ import annotations

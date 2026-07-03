@@ -34,7 +34,7 @@ class TestConfigConstants:
         assert AUTH_URL.startswith(API_BASE)
 
     def test_default_dataset_id(self) -> None:
-        assert DEFAULT_DATASET_ID == "fundamental6"
+        assert DEFAULT_DATASET_ID == "model51"
 
     def test_version_header_format(self) -> None:
         assert isinstance(VERSION_HEADER, dict)

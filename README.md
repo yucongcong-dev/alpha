@@ -295,7 +295,7 @@ python3 -m alpha --top-fields-by-feedback 10 --max-templates-per-field 15
   - 对换手问题尝试更快或更慢的 `decay`
 
 **反馈循环**：
-- 默认读取同一输出文件（`results/fundamental6/test_results.json`）
+- 默认读取同一输出文件（`results/model51/test_results.json`）
 - 阶段 2 的结果会自动用于字段优先级排序和 near-pass 候选筛选
 - 可多次运行，每次自动续跑（不重复已完成的组合）
 
