@@ -18,7 +18,7 @@ from ..config.constants import (
     STATUS_SIMULATED,
     STATUS_SUBMITTED,
 )
-from ..generators.settings import build_simulation_payload
+from ..generators.payload import build_simulation_payload
 from ..models.domain import (
     FieldTestContext,
     FieldTestResult,

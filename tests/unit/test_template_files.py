@@ -11,7 +11,7 @@ from alpha.core.executor import build_pending_templates_for_field, inflight_temp
 from alpha.core.scheduler import handle_completed_future
 from alpha.generators import templates as template_module
 from alpha.generators.expressions import _is_blacklisted_template
-from alpha.generators.settings import build_settings_fingerprint_from_payload
+from alpha.generators.payload import build_settings_fingerprint_from_payload
 from alpha.generators.templates import ensure_dataset_template_library, load_template_library
 from alpha.io.output import (
     auto_update_blacklist,

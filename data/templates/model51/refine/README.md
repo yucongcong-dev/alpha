@@ -13,3 +13,4 @@ Current packs:
 - `local_refine_market_decay_triplet_round9.json`: market-neutral decay triplet sweep.
 - `local_refine_industry_decay_triplet_round9.json`: industry-neutral decay triplet sweep.
 - `local_refine_decay_density_round10.json`: denser decay sweep around the strongest families.
+- `local_refine_window_sweep_round11.json`: focused `56/63/70` zscore-window sweep with fixed decay 12.

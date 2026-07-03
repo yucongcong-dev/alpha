@@ -14,7 +14,7 @@ from alpha.analysis.feedback import (
 from alpha.analysis.stats import load_existing_results
 from alpha.config import get_dataset_expression_policy, resolve_feedback_stage
 from alpha.generators.expressions import build_refine_templates
-from alpha.generators.settings import build_setting_variants
+from alpha.generators.variants import build_setting_variants
 from alpha.models.domain import FieldTestResult, NearPassCandidate
 
 

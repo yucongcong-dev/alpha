@@ -25,16 +25,14 @@ from ..generators.expression_builder import (
     limit_templates,
     sort_templates_by_priority,
 )
-from ..generators.settings import (
-    build_setting_variants,
-    build_settings_fingerprint_from_payload,
-)
+from ..generators.payload import build_settings_fingerprint_from_payload
 from ..generators.templates.classification import (
     classify_expression_family,
     classify_template_stage,
 )
 from ..generators.templates.priority import cap_templates_per_family
 from ..generators.templates.refine import build_refine_templates
+from ..generators.variants import build_setting_variants
 from ..models.domain import (
     FieldTestResult,
     NearPassCandidate,

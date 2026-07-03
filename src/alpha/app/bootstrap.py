@@ -20,7 +20,8 @@ from ..cli.filters import load_run_filters_extended, setup_runtime_logging
 from ..cli.run_config import build_run_config_snapshot
 from ..config.policy import get_dataset_expression_policy
 from ..generators.fields import fetch_fields_with_cache, load_fields_cache
-from ..generators.settings import build_settings_fingerprint, stable_fingerprint
+from ..generators.fingerprint import stable_fingerprint
+from ..generators.payload import build_settings_fingerprint
 from ..generators.templates import ensure_dataset_template_library, load_template_library
 from ..io.analysis_sync import ensure_analysis_synced
 from ..io.credentials import load_credentials

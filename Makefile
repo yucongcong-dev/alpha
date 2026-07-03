@@ -1,4 +1,4 @@
-.PHONY: test help-check whitespace-check scan-secrets repo-boundary-check compat-import-check arch-boundary-check ruff-check check clean-runtime
+.PHONY: test help-check whitespace-check scan-secrets repo-boundary-check removed-compat-file-check compat-import-check arch-boundary-check todo-check ruff-check check clean-runtime
 
 PYTHON ?= python3
 PYTHONPATH ?= src
@@ -25,31 +25,52 @@ repo-boundary-check:
 		exit 1; \
 	fi
 
+removed-compat-file-check:
+	@if find src/alpha -maxdepth 1 -type f \( \
+		-name 'bootstrap*.py' -o \
+		-name 'finalize.py' -o \
+		-name 'loop_*.py' -o \
+		-name 'run_loop*.py' \
+	\) | rg -n .; then \
+		echo "[check] root app compatibility files were removed; use src/alpha/app/* directly" >&2; \
+		exit 1; \
+	fi
+	@if find src/alpha/app -maxdepth 1 -type f \( \
+		-name 'loop_support.py' -o \
+		-name 'run_loop_state.py' \
+	\) | rg -n .; then \
+		echo "[check] app aggregate compatibility files were removed; import concrete app modules" >&2; \
+		exit 1; \
+	fi
+
 compat-import-check:
-	@if rg -n "from alpha\.models\.base|from alpha\.(bootstrap|run_loop|finalize|loop_)" tests; then \
+	@if rg -n "from alpha\.models\.base|from alpha\.(bootstrap|run_loop|finalize|loop_)|from alpha\.generators\.settings" tests; then \
 		echo "[check] tests should import canonical modules instead of compatibility exports" >&2; \
+		exit 1; \
+	fi
+	@if rg -n "from alpha\.(bootstrap|bootstrap_cleanup|bootstrap_fields|bootstrap_state|finalize|loop_|run_loop)|import alpha\.(bootstrap|bootstrap_cleanup|bootstrap_fields|bootstrap_state|finalize|loop_|run_loop)" src/alpha \
+		--glob '!app/**'; then \
+		echo "[check] internal code should import alpha.app modules instead of root compatibility exports" >&2; \
+		exit 1; \
+	fi
+	@if rg -n "from \.\.generators\.settings|from \.generators\.settings|from alpha\.generators\.settings|import alpha\.generators\.settings" src/alpha \
+		--glob '!generators/settings.py'; then \
+		echo "[check] internal code should import generators.payload/fingerprint/variants instead of generators.settings" >&2; \
 		exit 1; \
 	fi
 
 arch-boundary-check:
 	@if rg -n "(from alpha\.app|import alpha\.app|from \.\.app|from \.app)" src/alpha \
 		--glob '!app/**' \
-		--glob '!bootstrap.py' \
-		--glob '!bootstrap_cleanup.py' \
-		--glob '!bootstrap_fields.py' \
-		--glob '!bootstrap_state.py' \
-		--glob '!finalize.py' \
 		--glob '!main.py' \
-		--glob '!loop_future_support.py' \
-		--glob '!loop_persistence.py' \
-		--glob '!loop_support.py' \
-		--glob '!run_loop.py' \
-		--glob '!run_loop_feedback.py' \
-		--glob '!run_loop_paths.py' \
-		--glob '!run_loop_resume.py' \
-		--glob '!run_loop_rounds.py' \
-		--glob '!run_loop_state.py'; then \
+		--glob '!__main__.py'; then \
 		echo "[check] lower-level modules must not import alpha.app orchestration modules" >&2; \
+		exit 1; \
+	fi
+
+todo-check:
+	@if rg -n "TODO|FIXME|HACK" src tests; then \
+		echo "[check] avoid stale TODO/FIXME/HACK comments; document follow-up work explicitly" >&2; \
 		exit 1; \
 	fi
 
@@ -61,7 +82,7 @@ ruff-check:
 		exit 1; \
 	fi
 
-check: test help-check whitespace-check scan-secrets repo-boundary-check compat-import-check arch-boundary-check ruff-check
+check: test help-check whitespace-check scan-secrets repo-boundary-check removed-compat-file-check compat-import-check arch-boundary-check todo-check ruff-check
 
 clean-runtime:
 	PYTHONPATH=$(PYTHONPATH) $(PYTHON) -m alpha clean

@@ -1,4 +1,4 @@
-"""run_loop / loop_support 续跑边界测试。"""
+"""run_loop resume and persistence boundary tests."""
 
 from __future__ import annotations
 
@@ -8,8 +8,8 @@ from threading import Semaphore
 from types import SimpleNamespace
 from unittest.mock import patch
 
-from alpha.app.loop_support import (
-    drain_remaining_futures,
+from alpha.app.loop_future_support import drain_remaining_futures
+from alpha.app.loop_persistence import (
     persist_field_progress,
     restore_fields_from_state,
 )

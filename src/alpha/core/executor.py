@@ -22,11 +22,9 @@ import logging
 from ..config.constants import DRY_RUN_SAMPLE_LIMIT, SENTINEL_UNKNOWN
 from ..config.policy import get_dataset_expression_policy
 from ..generators.expression_builder import build_expression_candidates
-from ..generators.settings import (
-    build_setting_variants,
-    build_settings_fingerprint_from_payload,
-)
+from ..generators.payload import build_settings_fingerprint_from_payload
 from ..generators.templates.refine import build_refine_templates
+from ..generators.variants import build_setting_variants
 from ..models.domain import FieldTestResult, SettingsVariant, TemplateCandidate, TemplateLibrary
 from ..models.io_types import RunFilters
 from ..models.runtime import (

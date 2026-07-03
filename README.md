@@ -10,10 +10,7 @@ alpha/                     # 项目根目录
 │   └── alpha/             # 主包
 │       ├── __init__.py    # 包入口（导出基础公共 API）
 │       ├── __main__.py    # python3 -m alpha / alpha 命令入口
-│       ├── main.py        # 精简入口与兼容导出
-│       ├── bootstrap.py   # 兼容导出层，真实实现见 app/
-│       ├── run_loop.py    # 兼容导出层，真实实现见 app/
-│       ├── finalize.py    # 兼容导出层，真实实现见 app/
+│       ├── main.py        # 精简入口，调用 app 编排层
 │       │
 │       ├── app/           # 应用编排层：初始化、运行循环、收尾、clean
 │       │   ├── bootstrap.py
@@ -23,13 +20,11 @@ alpha/                     # 项目根目录
 │       │   ├── finalize.py
 │       │   ├── loop_future_support.py
 │       │   ├── loop_persistence.py
-│       │   ├── loop_support.py
 │       │   ├── run_loop.py
 │       │   ├── run_loop_feedback.py
 │       │   ├── run_loop_paths.py
 │       │   ├── run_loop_resume.py
-│       │   ├── run_loop_rounds.py
-│       │   └── run_loop_state.py
+│       │   └── run_loop_rounds.py
 │       │
 │       ├── core/          # 核心业务层
 │       │   ├── checkpoint.py
@@ -49,9 +44,12 @@ alpha/                     # 项目根目录
 │       │   ├── expression_builder.py
 │       │   ├── field_transforms.py
 │       │   ├── fields.py
+│       │   ├── fingerprint.py
 │       │   ├── matrix_templates.py
+│       │   ├── payload.py
 │       │   ├── ratio_templates.py
-│       │   ├── settings.py
+│       │   ├── settings.py # 兼容导出层
+│       │   ├── variants.py
 │       │   └── templates/ # 模板库、候选构造、分类、优先级、refine 变体
 │       │       ├── __init__.py
 │       │       ├── candidates.py
@@ -223,8 +221,8 @@ alpha/                     # 项目根目录
 
 ## 当前代码分层
 
-- `main.py` 现在只保留精简入口和兼容导出，具体应用编排已经拆到 `app/bootstrap.py`、`app/run_loop.py`、`app/finalize.py`
-- 根目录的 `bootstrap.py`、`run_loop.py`、`finalize.py`、`loop_*` 和 `run_loop_*` 仅保留兼容导出，新代码应直接依赖 `alpha.app.*`
+- `main.py` 现在只保留精简入口，具体应用编排已经拆到 `app/bootstrap.py`、`app/run_loop.py`、`app/finalize.py`
+- 根目录的 `bootstrap.py`、`run_loop.py`、`finalize.py`、`loop_*` 和 `run_loop_*` 兼容壳已经移除；代码应直接依赖 `alpha.app.*`
 - `models/domain.py` 只放领域对象；`models/io_types.py` 放路径/过滤边界对象；`models/runtime_options.py`、`models/runtime_protocols.py`、`models/runtime_state.py` 分别放运行配置、协议和运行态上下文；`models/runtime.py` / `models/base.py` 仅保留兼容导出
 - `analysis/stats.py` 是兼容导出层；结果加载、失败检查评分、模板/字段统计、反馈画像已经分别拆到 `results_loader.py`、`failed_checks.py`、`template_stats.py`、`field_stats.py`、`feedback_stats.py`
 - `analysis/feedback.py` 是兼容导出层；历史状态/near-pass 选择放在 `feedback_history.py`，模板禁用/保留/跳过策略放在 `feedback_filters.py`

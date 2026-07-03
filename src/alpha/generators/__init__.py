@@ -7,7 +7,10 @@ Alpha 生成器包
     - templates: 模板库管理
     - expressions: 表达式构建与家族分类
     - fields: 字段缓存与配对发现
-    - settings: 参数变体构建
+    - fingerprint: 稳定指纹生成
+    - payload: 模拟请求体构建
+    - variants: settings 变体构建
+    - settings: 兼容导出层
 """
 
 from __future__ import annotations
