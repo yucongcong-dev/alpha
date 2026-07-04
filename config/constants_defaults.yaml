@@ -52,6 +52,8 @@ simulation:
   truncation:
     web_default: 0.08
     tighter_max: 0.05
+    tighter_min: 0.03
+    loose: 0.10
 
 # ---------------------------------------------------------------------------
 # quality — 提交质量阈值 (已由 settings.yaml 覆盖，此处仅作文档级 fallback)
@@ -64,8 +66,8 @@ quality:
     max_turnover: 0.70
     max_weight: 0.10
   precheck:
-    min_sharpe: 1.25
-    min_fitness: 1.00
+    min_sharpe: 1.15
+    min_fitness: 0.90
     min_turnover: 0.01
     max_turnover: 0.70
     max_weight: 0.10

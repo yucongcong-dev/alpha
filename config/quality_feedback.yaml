@@ -12,8 +12,8 @@ quality:
     max_turnover: 0.70
     max_weight: 0.10
   precheck:
-    min_sharpe: 1.25
-    min_fitness: 1.00
+    min_sharpe: 1.15
+    min_fitness: 0.90
     min_turnover: 0.01
     max_turnover: 0.70
     max_weight: 0.10

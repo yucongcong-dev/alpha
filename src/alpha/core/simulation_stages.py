@@ -311,7 +311,7 @@ def run_checksubmit_stage(
             client,
             alpha_id,
             cast(int, args.check_submit_retries),
-            self_correlation_max_polls=int(getattr(args, "self_correlation_max_polls", 0) or 0),
+            self_correlation_max_polls=int(getattr(args, "self_correlation_max_polls", 3) or 3),
             self_correlation_poll_seconds=float(
                 getattr(args, "self_correlation_poll_seconds", get_polling_default_wait())
                 or get_polling_default_wait()

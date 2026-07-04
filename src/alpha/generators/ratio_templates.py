@@ -177,6 +177,35 @@ def extend_ratio_templates(
             backfill_window,
         )
 
+    if not diversified:
+        partner = "cap"
+        ratio_expr = f"{field_view.ratio_numerator_expression}/{partner}"
+        ratio_label = f"{field_name}_over_{partner}"
+        _extend_ratio_delta_rank_templates(
+            diversified,
+            ratio_expr,
+            ratio_label,
+            0,
+            expression_policy,
+        )
+        _extend_ratio_delta_over_std_templates(
+            diversified,
+            ratio_expr,
+            ratio_label,
+            0,
+            expression_policy,
+        )
+        _extend_rendered_ratio_templates(
+            diversified,
+            legacy,
+            ratio_expr,
+            ratio_label,
+            preprocessed_expression,
+            0,
+            expression_policy,
+            backfill_window,
+        )
+
 
 def _extend_high_conviction_templates(
     diversified: list[TemplateCandidate],

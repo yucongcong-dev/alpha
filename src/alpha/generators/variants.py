@@ -11,7 +11,9 @@ from ..config.constants import (
     NEUTRALIZATION_NONE,
     SETTINGS_VARIANT_DECAY_FAST,
     SETTINGS_VARIANT_DECAY_SLOW,
+    TRUNCATION_LOOSE,
     TRUNCATION_TIGHTER_MAX,
+    TRUNCATION_TIGHTER_MIN,
     TRUNCATION_WEB_DEFAULT,
 )
 from ..models.domain import NearPassCandidate, SettingsVariant
@@ -64,10 +66,17 @@ def build_setting_variants(
         if {"CONCENTRATED_WEIGHT", "LOW_SUB_UNIVERSE_SHARPE"} & nearpass_failed_names:
             add_variant(neutralization=NEUTRALIZATION_INDUSTRY, truncation=tighter_truncation)
             add_variant(neutralization=NEUTRALIZATION_MARKET, truncation=tighter_truncation)
+            add_variant(truncation=TRUNCATION_TIGHTER_MIN)
         if "LOW_TURNOVER" in nearpass_failed_names:
             add_variant(decay=SETTINGS_VARIANT_DECAY_FAST, truncation=tighter_truncation)
+            add_variant(delay=0, decay=SETTINGS_VARIANT_DECAY_FAST)
         elif "HIGH_TURNOVER" in nearpass_failed_names:
             add_variant(decay=SETTINGS_VARIANT_DECAY_SLOW, truncation=tighter_truncation)
+            add_variant(delay=2, truncation=tighter_truncation)
+        elif {"LOW_SHARPE", "LOW_FITNESS"} & nearpass_failed_names:
+            add_variant(decay=0, truncation=tighter_truncation)
+            add_variant(delay=0)
+            add_variant(truncation=TRUNCATION_LOOSE)
         else:
             add_variant(decay=SETTINGS_VARIANT_DECAY_FAST)
             add_variant(decay=SETTINGS_VARIANT_DECAY_SLOW, truncation=tighter_truncation)

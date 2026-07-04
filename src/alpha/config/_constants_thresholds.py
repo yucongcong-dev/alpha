@@ -19,8 +19,8 @@ SUBMIT_MAX_TURNOVER: float = _yaml_float("quality", "submit", "max_turnover", de
 SUBMIT_MAX_WEIGHT: float = _yaml_float("quality", "submit", "max_weight", default=0.10)
 
 # ---- 预检回退质量阈值 ----
-PRECHECK_FALLBACK_MIN_SHARPE: float = _yaml_float("quality", "precheck", "min_sharpe", default=1.25)
-PRECHECK_FALLBACK_MIN_FITNESS: float = _yaml_float("quality", "precheck", "min_fitness", default=1.00)
+PRECHECK_FALLBACK_MIN_SHARPE: float = _yaml_float("quality", "precheck", "min_sharpe", default=1.15)
+PRECHECK_FALLBACK_MIN_FITNESS: float = _yaml_float("quality", "precheck", "min_fitness", default=0.90)
 PRECHECK_FALLBACK_MIN_TURNOVER: float = _yaml_float("quality", "precheck", "min_turnover", default=0.01)
 PRECHECK_FALLBACK_MAX_TURNOVER: float = _yaml_float("quality", "precheck", "max_turnover", default=0.70)
 PRECHECK_FALLBACK_MAX_WEIGHT: float = _yaml_float("quality", "precheck", "max_weight", default=0.10)
@@ -121,6 +121,8 @@ SIMULATION_DEFAULT_START_DATE: str = _yaml_str("simulation", "default_start_date
 SIMULATION_DEFAULT_END_DATE: str = _yaml_str("simulation", "default_end_date", default="2025-12-31")
 TRUNCATION_WEB_DEFAULT: float = _yaml_float("simulation", "truncation", "web_default", default=0.08)
 TRUNCATION_TIGHTER_MAX: float = _yaml_float("simulation", "truncation", "tighter_max", default=0.05)
+TRUNCATION_TIGHTER_MIN: float = _yaml_float("simulation", "truncation", "tighter_min", default=0.03)
+TRUNCATION_LOOSE: float = _yaml_float("simulation", "truncation", "loose", default=0.10)
 
 # ---- 伙伴字段配对 ----
 PARTNER_SELF_MATCH_PENALTY: int = _yaml_int("partner", "self_match_penalty", default=-10000)
