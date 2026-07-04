@@ -456,6 +456,10 @@ expression_policies:
       revision: 6
       yield: 7
     promising_field_min_priority: 0.55
+    field_min_coverage: 0.10
+    field_min_date_coverage: 0.90
+    field_min_alpha_count: 10
+    field_min_user_count: 3
     field_priority_weights:
       field_count_weight: 0.0
       user_count_weight: 0.10
@@ -579,6 +583,6 @@ expression_policies:
       - "model51_stddev_126"
       - "model51_stddev_252"
     field_min_coverage: 0.05
-    field_min_date_coverage: 0.85
-    field_min_alpha_count: 5
-    field_min_user_count: 2
+    field_min_date_coverage: 0.0
+    field_min_alpha_count: 0
+    field_min_user_count: 0

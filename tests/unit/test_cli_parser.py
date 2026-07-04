@@ -227,7 +227,7 @@ def test_self_correlation_poll_defaults(monkeypatch) -> None:
 
     args = parse_args()
 
-    assert args.self_correlation_max_polls == 12
+    assert args.self_correlation_max_polls == 30
     assert args.self_correlation_poll_seconds == 10.0
 
 

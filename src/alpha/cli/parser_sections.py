@@ -213,7 +213,7 @@ def add_api_runtime_arguments(parser: argparse.ArgumentParser) -> None:
     parser.add_argument(
         "--self-correlation-max-polls",
         type=int,
-        default=12,
+        default=30,
         help="checksubmit 后额外轮询 SELF_CORRELATION 终态的最大次数；0 表示不等待",
     )
     parser.add_argument(
