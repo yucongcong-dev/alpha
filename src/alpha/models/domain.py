@@ -164,7 +164,15 @@ class TemplateField:
 
     @classmethod
     def from_dict(cls, field: dict[str, Any]) -> TemplateField:
-        """从字典创建字段对象。"""
+        """从字典创建字段对象，兼容 API 原始格式和旧版序列化格式。"""
+        if "field_id" in field and "metadata" in field and isinstance(field.get("metadata"), dict):
+            nested = field["metadata"]
+            return cls(
+                field_id=str(field.get("field_id", "")),
+                field_name=str(field.get("field_name", "")),
+                field_type=str(field.get("field_type", "UNKNOWN")).upper(),
+                metadata=dict(nested),
+            )
         field_id = str(field.get("id") or field.get("name") or field.get("mnemonic") or "")
         field_name = str(field.get("name") or field.get("id") or field.get("mnemonic") or "")
         field_type = str(field.get("type") or field.get("fieldType") or field.get("category") or "UNKNOWN").upper()
