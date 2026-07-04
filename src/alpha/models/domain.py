@@ -180,13 +180,8 @@ class TemplateField:
         return self.metadata.get(key, default)
 
     def to_dict(self) -> dict[str, Any]:
-        """序列化为可 JSON 化的字典。"""
-        return {
-            "field_id": self.field_id,
-            "field_name": self.field_name,
-            "field_type": self.field_type,
-            "metadata": self.metadata,
-        }
+        """序列化为可 JSON 化的字典，保留 API 返回的完整元数据。"""
+        return dict(self.metadata)
 
 
 @dataclass

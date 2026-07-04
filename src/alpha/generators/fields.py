@@ -221,7 +221,7 @@ def fetch_fields_with_cache(
         使用重试机制处理临时 API 不稳定性。
     """
     if cached_fields:
-        fields = list(cached_fields)
+        fields = [TemplateField.from_dict(f) if isinstance(f, dict) else f for f in cached_fields]
         logger.info("[cache] 从 %s 加载 %d 个字段", os.path.basename(fields_cache_file), len(fields))
         return fields
 
