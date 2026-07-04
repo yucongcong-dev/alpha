@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 import logging
+import logging.handlers
 import os
 
 from ..models.io_types import RunFilters, RunPaths
@@ -113,7 +114,9 @@ def setup_runtime_logging(log_path: str) -> None:
         plain_fmt = logging.Formatter(
             "[%(asctime)s] %(levelname)-8s %(message)s", datefmt="%H:%M:%S"
         )
-        file_handler = logging.FileHandler(log_path, encoding="utf-8")
+        file_handler = logging.handlers.TimedRotatingFileHandler(
+            log_path, when="midnight", backupCount=7, encoding="utf-8"
+        )
         file_handler.setFormatter(plain_fmt)
         root.addHandler(file_handler)
 
