@@ -29,10 +29,8 @@ from .domain import (
 )
 from .io_types import RunFilters, RunPaths
 from .result_predicates import (
-    STATUS_PENDING_SELF_CORRELATION,
     is_informative_result,
     is_queue_timeout_result,
-    is_self_correlation_pending_result,
 )
 from .runtime import (
     ApiClientArgs,
@@ -100,7 +98,7 @@ __all__ = [
     "RunLoopArgs",
     "RunPaths",
     "RuntimeConcurrencyState",
-    "STATUS_PENDING_SELF_CORRELATION",
+
     "SchedulerRuntimeArgs",
     "SemaphoreLike",
     "SettingsVariant",
@@ -119,5 +117,5 @@ __all__ = [
     "TemplateSequence",
     "is_informative_result",
     "is_queue_timeout_result",
-    "is_self_correlation_pending_result",
+
 ]

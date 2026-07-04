@@ -114,20 +114,6 @@ def add_run_mode_arguments(parser: argparse.ArgumentParser) -> None:
         default=False,
         help="关闭全量运行模式（覆盖 YAML runtime.full_run=true）",
     )
-    add_bool_argument(
-        parser,
-        "--recheck-pending-self-correlation-only",
-        dest="recheck_pending_self_correlation_only",
-        help_enable="仅复查历史结果中仍为 SELF_CORRELATION=PENDING 的候选，不发起新的字段探索",
-        help_disable="关闭仅复查 pending self-correlation 模式（覆盖 YAML runtime.recheck_pending_self_correlation_only=true）",
-    )
-    add_bool_argument(
-        parser,
-        "--finalize-recheck-pending-self-correlation",
-        dest="finalize_recheck_pending_self_correlation",
-        help_enable="在 finalize 阶段同步复查 pending self-correlation 候选",
-        help_disable="关闭 finalize 阶段的 pending self-correlation 同步复查（覆盖 YAML runtime.finalize_recheck_pending_self_correlation=true）",
-    )
 
 
 def add_search_arguments(parser: argparse.ArgumentParser) -> None:
@@ -210,18 +196,7 @@ def add_api_runtime_arguments(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--queue-busy-cooldown-seconds", type=float, default=300.0, help="队列拥塞后的冷却时间（秒，增大以避免重复触发限流）")
     parser.add_argument("--field-queue-busy-skip-after", type=int, default=2, help="字段队列拥塞后跳过阈值；0 表示不跳过")
     parser.add_argument("--check-submit-retries", type=int, default=3, help="检查提交重试次数")
-    parser.add_argument(
-        "--self-correlation-max-polls",
-        type=int,
-        default=30,
-        help="checksubmit 后额外轮询 SELF_CORRELATION 终态的最大次数；0 表示不等待",
-    )
-    parser.add_argument(
-        "--self-correlation-poll-seconds",
-        type=float,
-        default=10.0,
-        help="SELF_CORRELATION 仍为 PENDING 时，两次 alpha detail 轮询之间的等待秒数",
-    )
+
     parser.add_argument("--submit-retries", type=int, default=3, help="提交重试次数")
 
 

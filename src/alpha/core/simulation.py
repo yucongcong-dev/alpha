@@ -8,9 +8,7 @@
 from __future__ import annotations
 
 import logging
-import time
 
-from ..analysis.result_identity import STATUS_PENDING_SELF_CORRELATION
 from ..api.client import BrainClient, WorkerClientFactory
 from ..config.constants import SENTINEL_UNKNOWN
 from ..generators.fields import choose_field_type
@@ -159,10 +157,7 @@ def run_field_test(
         status=status,
         failed_checks=failed_checks,
     )
-    if submittable is None:
-        result.status = STATUS_PENDING_SELF_CORRELATION
-        if result.self_correlation_pending_since <= 0:
-            result.self_correlation_pending_since = time.time()
+
     return result
 
 

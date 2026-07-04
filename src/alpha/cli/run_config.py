@@ -51,8 +51,7 @@ def build_run_config_snapshot(args: RunConfigArgs, run_paths: RunPaths) -> dict[
             "queue_busy_cooldown_seconds": args.queue_busy_cooldown_seconds,
             "field_queue_busy_skip_after": args.field_queue_busy_skip_after,
             "check_submit_retries": args.check_submit_retries,
-            "self_correlation_max_polls": args.self_correlation_max_polls,
-            "self_correlation_poll_seconds": args.self_correlation_poll_seconds,
+
             "submit_retries": args.submit_retries,
             "rate_limit_max_retries": args.rate_limit_max_retries,
             "login_retries": args.login_retries,
@@ -75,12 +74,7 @@ def build_run_config_snapshot(args: RunConfigArgs, run_paths: RunPaths) -> dict[
             "smoke_test": args.smoke_test,
             "dry_run_plan": args.dry_run_plan,
             "full_run": args.full_run,
-            "recheck_pending_self_correlation_only": getattr(
-                args, "recheck_pending_self_correlation_only", False
-            ),
-            "finalize_recheck_pending_self_correlation": getattr(
-                args, "finalize_recheck_pending_self_correlation", False
-            ),
+
             "verbose": args.verbose,
             "quiet": args.quiet,
         },

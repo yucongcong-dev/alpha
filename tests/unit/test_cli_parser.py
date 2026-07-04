@@ -220,35 +220,6 @@ def test_normalize_args_paths_uses_dataset_scoped_defaults(monkeypatch, tmp_path
     assert paths.output.replace("\\", "/").endswith("/results/pv1/test_results.json")
 
 
-def test_self_correlation_poll_defaults(monkeypatch) -> None:
-    """Self-correlation follow-up polling should have stable CLI defaults."""
-    clear_yaml_cache()
-    monkeypatch.setattr(sys, "argv", ["alpha"])
-
-    args = parse_args()
-
-    assert args.self_correlation_max_polls == 30
-    assert args.self_correlation_poll_seconds == 10.0
-
-
-def test_recheck_pending_self_correlation_only_flag(monkeypatch) -> None:
-    """The dedicated pending-self-correlation recheck mode should parse as a stable boolean flag."""
-    clear_yaml_cache()
-    monkeypatch.setattr(sys, "argv", ["alpha", "--recheck-pending-self-correlation-only"])
-
-    args = parse_args()
-
-    assert args.recheck_pending_self_correlation_only is True
-
-
-def test_finalize_recheck_pending_self_correlation_flag(monkeypatch) -> None:
-    """Finalize-stage pending-self-correlation recheck should require an explicit opt-in flag."""
-    clear_yaml_cache()
-    monkeypatch.setattr(sys, "argv", ["alpha", "--finalize-recheck-pending-self-correlation"])
-
-    args = parse_args()
-
-    assert args.finalize_recheck_pending_self_correlation is True
 
 
 def test_normalize_args_paths_does_not_mutate_original_args(monkeypatch, tmp_path) -> None:

@@ -191,13 +191,10 @@ def test_load_existing_results_preserves_self_correlation_pending_metadata(tmp_p
         field_type="MATRIX",
         field_name="field_pending",
         template_name="tpl",
-        status="pending_self_correlation",
-        submittable=None,
+        status="simulated",
+        submittable=True,
         expression="rank(field_pending)",
         failed_checks=[FailedCheck(name="SELF_CORRELATION", result="PENDING", value=None, limit=None)],
-        self_correlation_pending_since=111.0,
-        self_correlation_last_recheck_at=222.0,
-        self_correlation_recheck_count=3,
     )
 
     dump_results(
@@ -212,13 +209,11 @@ def test_load_existing_results_preserves_self_correlation_pending_metadata(tmp_p
     loaded = load_existing_results(str(output_path))
 
     assert len(loaded) == 1
-    assert loaded[0].status == "pending_self_correlation"
-    assert loaded[0].self_correlation_pending_since == 111.0
-    assert loaded[0].self_correlation_last_recheck_at == 222.0
-    assert loaded[0].self_correlation_recheck_count == 3
+    assert loaded[0].status == "simulated"
+    assert loaded[0].submittable is True
 
 
-def test_compile_template_stats_skips_pending_self_correlation_results() -> None:
+def test_compile_template_stats_includes_self_correlation_pending_results() -> None:
     stats = compile_template_stats(
         [
             FieldTestResult(
@@ -226,8 +221,8 @@ def test_compile_template_stats_skips_pending_self_correlation_results() -> None
                 field_type="MATRIX",
                 field_name="field_pending",
                 template_name="tpl",
-                status="pending_self_correlation",
-                submittable=None,
+                status="simulated",
+                submittable=True,
                 expression="rank(field_pending)",
                 failed_checks=[
                     {"name": "SELF_CORRELATION", "result": "PENDING", "value": None, "limit": None}
@@ -236,7 +231,7 @@ def test_compile_template_stats_skips_pending_self_correlation_results() -> None
         ]
     )
 
-    assert stats["tpl"]["attempted"] == 0
+    assert stats["tpl"]["attempted"] == 1
 
 
 def test_load_existing_results_falls_back_to_orphaned_journal_when_summary_missing(tmp_path) -> None:

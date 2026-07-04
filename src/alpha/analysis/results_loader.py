@@ -73,15 +73,7 @@ def _rows_to_results(rows: list[Any]) -> list[FieldTestResult]:
                     template_library_fingerprint=str(row.get("template_library_fingerprint", "")),
                     failed_stage=row.get("failed_stage"),
                     failed_checks=row.get("failed_checks"),
-                    self_correlation_pending_since=float(
-                        row.get("self_correlation_pending_since", 0.0) or 0.0
-                    ),
-                    self_correlation_last_recheck_at=float(
-                        row.get("self_correlation_last_recheck_at", 0.0) or 0.0
-                    ),
-                    self_correlation_recheck_count=int(
-                        row.get("self_correlation_recheck_count", 0) or 0
-                    ),
+
                 )
             )
         except Exception:

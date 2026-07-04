@@ -15,7 +15,7 @@ from ..config.constants import (
 )
 from ..models.domain import FieldFeedbackMap, FieldTestResult
 from .failed_checks import score_failed_checks
-from .result_identity import is_queue_timeout_result, is_self_correlation_pending_result
+from .result_identity import is_queue_timeout_result
 
 
 def compile_field_feedback(results: Sequence[FieldTestResult]) -> FieldFeedbackMap:
@@ -31,7 +31,7 @@ def update_field_feedback_with_result(
     result: FieldTestResult,
 ) -> FieldFeedbackMap:
     """将单条结果增量合并到字段反馈画像中。"""
-    if is_self_correlation_pending_result(result):
+    if is_queue_timeout_result(result):
         return feedback
     summary: dict[str, Any] = feedback.setdefault(
         result.field_id,
@@ -77,7 +77,7 @@ def update_global_failed_check_counts_with_result(
     result: FieldTestResult,
 ) -> dict[str, int]:
     """将单条结果增量合并到全局失败检查计数中。"""
-    if is_queue_timeout_result(result) or is_self_correlation_pending_result(result):
+    if is_queue_timeout_result(result):
         return counts
     for check in result.failed_checks or []:
         name = str(check.get("name", SENTINEL_UNKNOWN_CHECK))

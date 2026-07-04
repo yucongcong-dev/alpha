@@ -73,14 +73,16 @@ def test_compile_field_feedback_tracks_best_score_and_template_info() -> None:
     assert summary["failed_check_counts"]["LOW_SHARPE"] == 2
 
 
-def test_update_field_feedback_skips_self_correlation_pending() -> None:
+def test_update_field_feedback_includes_self_correlation_pending() -> None:
     feedback: dict = {}
     result = _make_result(
-        status="error",
+        status="simulated",
+        submittable=True,
         failed_checks=[{"name": "SELF_CORRELATION", "result": "PENDING", "value": None, "limit": None}],
     )
     update_field_feedback_with_result(feedback, result)
-    assert feedback == {}
+    assert "cash_st" in feedback
+    assert feedback["cash_st"]["attempted_templates"] == 1
 
 
 def test_update_field_feedback_non_simulated_increments_attempted_only() -> None:

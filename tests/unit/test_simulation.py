@@ -225,38 +225,27 @@ class TestIsSubmittableFromChecks:
 
 
 class TestChecksubmitWithRetry:
-    """checksubmit_with_retry 自相关轮询测试"""
+    """checksubmit_with_retry 测试"""
 
-    def test_pending_self_correlation_eventually_passes(self, monkeypatch) -> None:
-        responses = iter(
-            [
-                {"is": {"checks": [{"name": "SELF_CORRELATION", "result": "PENDING"}]}},
-                {"is": {"checks": [{"name": "SELF_CORRELATION", "result": "PASS"}]}},
-            ]
-        )
-
+    def test_all_pass(self, monkeypatch) -> None:
         class DummyClient:
             def get_alpha_detail(self, _alpha_id: str) -> dict[str, object]:
-                return next(responses)
+                return {"is": {"checks": [{"name": "LOW_SHARPE", "result": "PASS"}]}}
 
         monkeypatch.setattr("alpha.core.simulation_stages.retry_operation", lambda *a, **k: a[2]())
-        monkeypatch.setattr("alpha.core.simulation_stages.wait_seconds", lambda *a, **k: None)
 
         result = checksubmit_with_retry(
             DummyClient(),
             "alpha_1",
             retries=3,
-            self_correlation_max_polls=2,
-            self_correlation_poll_seconds=0.0,
         )
 
         assert result == (True, "checks passed", [])
 
-    def test_pending_self_correlation_eventually_fails(self, monkeypatch) -> None:
-        responses = iter(
-            [
-                {"is": {"checks": [{"name": "SELF_CORRELATION", "result": "PENDING"}]}},
-                {
+    def test_checks_failed(self, monkeypatch) -> None:
+        class DummyClient:
+            def get_alpha_detail(self, _alpha_id: str) -> dict[str, object]:
+                return {
                     "is": {
                         "checks": [
                             {
@@ -267,23 +256,14 @@ class TestChecksubmitWithRetry:
                             }
                         ]
                     }
-                },
-            ]
-        )
-
-        class DummyClient:
-            def get_alpha_detail(self, _alpha_id: str) -> dict[str, object]:
-                return next(responses)
+                }
 
         monkeypatch.setattr("alpha.core.simulation_stages.retry_operation", lambda *a, **k: a[2]())
-        monkeypatch.setattr("alpha.core.simulation_stages.wait_seconds", lambda *a, **k: None)
 
         result = checksubmit_with_retry(
             DummyClient(),
             "alpha_1",
             retries=3,
-            self_correlation_max_polls=2,
-            self_correlation_poll_seconds=0.0,
         )
 
         assert result == (
@@ -598,7 +578,7 @@ class TestFieldTestContext:
         assert result.failed_checks == checks
 
 
-def test_run_checksubmit_stage_rejects_pending_self_correlation(monkeypatch) -> None:
+def test_run_checksubmit_stage_with_self_correlation_pending(monkeypatch) -> None:
     ctx = FieldTestContext(
         field_id="f1",
         field_type="MATRIX",
@@ -610,8 +590,6 @@ def test_run_checksubmit_stage_rejects_pending_self_correlation(monkeypatch) -> 
     )
     args = MockArgs(
         check_submit_retries=3,
-        self_correlation_max_polls=1,
-        self_correlation_poll_seconds=0.0,
         min_sharpe=1.25,
         min_fitness=1.0,
         min_turnover=0.01,
@@ -624,7 +602,6 @@ def test_run_checksubmit_stage_rejects_pending_self_correlation(monkeypatch) -> 
             return {"is": {"checks": [{"name": "SELF_CORRELATION", "result": "PENDING"}]}}
 
     monkeypatch.setattr("alpha.core.simulation_stages.retry_operation", lambda *a, **k: a[2]())
-    monkeypatch.setattr("alpha.core.simulation_stages.wait_seconds", lambda *a, **k: None)
 
     result = run_checksubmit_stage(
         ctx,
@@ -636,9 +613,9 @@ def test_run_checksubmit_stage_rejects_pending_self_correlation(monkeypatch) -> 
     )
 
     assert result == (
-        None,
-        "self correlation pending",
-        [FailedCheck(name="SELF_CORRELATION", result="PENDING", value=None, limit=None)],
+        True,
+        "checks passed",
+        [],
     )
 
     def test_context_fields_independent(self) -> None:

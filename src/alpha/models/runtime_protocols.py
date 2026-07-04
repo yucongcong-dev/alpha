@@ -104,8 +104,6 @@ class RunConfigArgs(Protocol):
     queue_busy_cooldown_seconds: object
     field_queue_busy_skip_after: object
     check_submit_retries: object
-    self_correlation_max_polls: object
-    self_correlation_poll_seconds: object
     submit_retries: object
     rate_limit_max_retries: object
     login_retries: object
@@ -165,8 +163,6 @@ class SimulationStageArgs(SimulationSettingsArgs, Protocol):
     simulation_max_pending_cycles: object
     simulation_max_queue_seconds: object
     check_submit_retries: object
-    self_correlation_max_polls: object
-    self_correlation_poll_seconds: object
     submit_retries: object
     submit: object
     min_sharpe: object

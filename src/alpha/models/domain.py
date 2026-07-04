@@ -213,9 +213,7 @@ class FieldTestResult:
     template_library_fingerprint: str = ""
     failed_stage: str | None = None
     failed_checks: list[FailedCheck] | None = None
-    self_correlation_pending_since: float = 0.0
-    self_correlation_last_recheck_at: float = 0.0
-    self_correlation_recheck_count: int = 0
+
 
     def is_successful(self) -> bool:
         return self.submittable is True
@@ -239,9 +237,7 @@ class FieldTestResult:
             "template_library_fingerprint": self.template_library_fingerprint,
             "failed_stage": self.failed_stage,
             "failed_checks": [check.to_dict() if hasattr(check, "to_dict") else check for check in self.failed_checks] if self.failed_checks else None,
-            "self_correlation_pending_since": self.self_correlation_pending_since,
-            "self_correlation_last_recheck_at": self.self_correlation_last_recheck_at,
-            "self_correlation_recheck_count": self.self_correlation_recheck_count,
+
         }
 
     def __str__(self) -> str:
