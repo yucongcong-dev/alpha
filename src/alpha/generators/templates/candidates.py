@@ -14,7 +14,7 @@ from ...config import (
     TEMPLATE_STAGE_EVENT_CONDITIONED,
     TEMPLATE_STAGE_GROUP_SECOND_ORDER,
 )
-from ...models.base import TemplateCandidate
+from ...models.domain import TemplateCandidate
 from .classification import classify_expression_family, classify_template_stage
 from .metadata import TemplateMetadataMap, _template_key
 

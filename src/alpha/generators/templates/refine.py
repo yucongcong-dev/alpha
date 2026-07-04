@@ -25,7 +25,7 @@ from ...config import (
     TEMPLATE_STAGE_GROUP_SECOND_ORDER,
     DatasetExpressionPolicy,
 )
-from ...models.base import NearPassCandidate, TemplateCandidate
+from ...models.domain import NearPassCandidate, TemplateCandidate
 from ...policy.template_blacklist import is_blacklisted_template as _policy_is_blacklisted_template
 from .candidates import _candidate_metadata, _make_template_candidate
 from .classification import classify_expression_family, classify_template_stage

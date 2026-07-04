@@ -18,7 +18,7 @@ from ...config import (
     DatasetExpressionPolicy,
     get_backfill_window,
 )
-from ...models.base import TemplateCandidate
+from ...models.domain import TemplateCandidate
 from .feedback_best_expression import build_best_expression_mutations
 from .feedback_mutation_sets import (
     build_account_resimulation_mutations,

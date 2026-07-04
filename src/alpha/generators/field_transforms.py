@@ -5,7 +5,7 @@ from __future__ import annotations
 from ..config.models import DatasetExpressionPolicy, FieldTransformSpec, FieldTransformStage
 from ..models.domain import FieldView
 from ..models.runtime import TemplateField
-from ..utils.helpers import choose_field_name, choose_field_type
+from .fields import choose_field_name, choose_field_type
 
 
 def iter_transform_stages(transform_spec: FieldTransformSpec) -> tuple[FieldTransformStage, ...]:

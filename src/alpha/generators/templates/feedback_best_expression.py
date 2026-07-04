@@ -7,7 +7,7 @@ from ...config import (
     TEMPLATE_STAGE_FIRST_ORDER,
     TEMPLATE_STAGE_GROUP_SECOND_ORDER,
 )
-from ...models.base import TemplateCandidate
+from ...models.domain import TemplateCandidate
 from .candidates import _candidate_metadata, _make_template_candidate
 from .wrappers import invert_expression
 

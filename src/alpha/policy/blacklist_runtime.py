@@ -14,7 +14,7 @@ from ..config.constants import (
     DATE_FORMAT_ISO_MINUTES,
 )
 from ..config.models import DatasetExpressionPolicy
-from ..config.policy import get_dataset_expression_policy
+from .expression import get_dataset_expression_policy
 from ..models.domain import FieldTestResult
 from .blacklist_store import (
     invalidate_blacklist_runtime_cache,

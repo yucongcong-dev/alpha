@@ -20,7 +20,7 @@ from ..api.client import BrainClient, WorkerClientFactory, login_with_retry
 from ..cli.filters import load_run_filters_extended, setup_runtime_logging
 from ..cli.run_config import build_run_config_snapshot
 from ..config.models import DatasetExpressionPolicy
-from ..config.policy import get_dataset_expression_policy
+from ..policy.expression import get_dataset_expression_policy
 from ..generators.fields import DatasetFieldClient, fetch_fields_with_cache, load_fields_cache
 from ..generators.fingerprint import stable_fingerprint
 from ..generators.payload import build_settings_fingerprint

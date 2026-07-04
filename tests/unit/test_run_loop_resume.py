@@ -8,13 +8,15 @@ from threading import Semaphore
 from types import SimpleNamespace
 from unittest.mock import patch
 
-from alpha.app.loop_future_support import drain_remaining_futures
-from alpha.app.loop_persistence import (
+from alpha.app.run_loop import (
+    ScheduleRoundResult,
+    clamp_resume_index,
+    drain_remaining_futures,
     persist_field_progress,
+    resolve_result_write_options,
     restore_fields_from_state,
+    run_field_test_loop,
 )
-from alpha.app.run_loop import clamp_resume_index, resolve_result_write_options, run_field_test_loop
-from alpha.app.run_loop_rounds import ScheduleRoundResult
 from alpha.models.io_types import RunFilters, RunPaths
 from alpha.models.runtime import (
     ExecutionState,
@@ -76,7 +78,7 @@ def test_restore_fields_from_state_returns_empty_when_all_fields_completed(tmp_p
 
 
 def test_persist_field_progress_keeps_terminal_index() -> None:
-    with patch("alpha.app.loop_persistence.save_pipeline_state") as mock_save:
+    with patch("alpha.app.run_loop.save_pipeline_state") as mock_save:
         persist_field_progress(
             state_file="/tmp/state.json",
             field_id="f3",
@@ -99,9 +101,9 @@ def test_drain_remaining_futures_persists_total_field_count() -> None:
         execution_state.pending_futures.clear()
 
     with (
-        patch("alpha.app.loop_future_support.wait", return_value=({future}, set())),
-        patch("alpha.app.loop_future_support.drain_completed_futures", side_effect=_drain),
-        patch("alpha.app.loop_future_support.save_pipeline_state") as mock_save,
+        patch("alpha.app.run_loop.wait", return_value=({future}, set())),
+        patch("alpha.app.run_loop.drain_completed_futures", side_effect=_drain),
+        patch("alpha.app.run_loop.save_pipeline_state") as mock_save,
     ):
         drain_remaining_futures(
             state_file="/tmp/state.json",

@@ -6,10 +6,9 @@
 
 from __future__ import annotations
 
-from .helpers import choose_field_name, choose_field_type, first_non_empty
+from .helpers import first_non_empty, is_event_field_name
 
 __all__ = [
-    "choose_field_name",
-    "choose_field_type",
     "first_non_empty",
+    "is_event_field_name",
 ]

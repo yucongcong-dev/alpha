@@ -17,7 +17,7 @@ from typing import Any
 
 from ..config.getters import get_backfill_window
 from ..config.models import DatasetExpressionPolicy
-from ..config.policy import get_dataset_expression_policy, resolve_feedback_stage
+from ..policy.expression import get_dataset_expression_policy, resolve_feedback_stage
 from ..generators.field_transforms import build_field_view
 from ..models.domain import TemplateCandidate, TemplateField, TemplateLibrary, TemplateLibraryItem
 from ..models.runtime import TemplateFeedback
@@ -28,7 +28,8 @@ from ..policy.template_blacklist import load_default_avoid_rules
 from ..policy.template_blacklist import (
     runtime_blacklist_match_reason as _policy_runtime_blacklist_match_reason,
 )
-from ..utils.helpers import choose_field_name, choose_field_type, is_event_field_name
+from .fields import choose_field_name, choose_field_type
+from ..utils.helpers import is_event_field_name
 from .matrix_templates import build_matrix_templates
 from .templates.candidates import (
     _coerce_template_candidate,

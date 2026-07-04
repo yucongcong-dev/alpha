@@ -10,7 +10,7 @@ from enum import Enum
 import re
 from typing import Any, Literal, Optional, Union
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from .types import ConfigSource
 
@@ -500,58 +500,48 @@ class AlphaConfigSchemaBuilder:
 # Pydantic模型用于类型安全的配置访问
 class APIConfig(BaseModel):
     """API配置模型"""
+    model_config = ConfigDict(extra="forbid")
     base_url: str = Field(default="https://api.brain.worldquant.com")
     timeout: int = Field(default=30, ge=1, le=300)
     max_retries: int = Field(default=3, ge=0, le=10)
     retry_delay: float = Field(default=1.0, ge=0.1, le=10.0)
 
-    class Config:
-        extra = "forbid"  # 禁止额外字段
-
 
 class SimulationConfig(BaseModel):
     """模拟配置模型"""
+    model_config = ConfigDict(extra="forbid")
     language: Literal["python", "matlab", "r"] = "python"
     universe: Literal["TOP3000", "TOP2000", "TOP1000", "TOP500"] = "TOP3000"
     neutralization: Literal["SUBINDUSTRY", "INDUSTRY", "COUNTRY", "SECTOR", "NONE"] = "SUBINDUSTRY"
     delay: int = Field(default=1, ge=0, le=10)
 
-    class Config:
-        extra = "forbid"
-
 
 class QualityConfig(BaseModel):
     """质量配置模型"""
+    model_config = ConfigDict(extra="forbid")
     min_sharpe: float = Field(default=1.0, ge=0.0, le=10.0)
     min_fitness: float = Field(default=0.5, ge=0.0, le=1.0)
     max_turnover: float = Field(default=0.5, ge=0.0, le=1.0)
     max_weight: float = Field(default=0.1, ge=0.0, le=1.0)
 
-    class Config:
-        extra = "forbid"
-
 
 class OperationConfig(BaseModel):
     """运维配置模型"""
+    model_config = ConfigDict(extra="forbid")
     concurrent_jobs: int = Field(default=4, ge=1, le=32)
     batch_size: int = Field(default=10, ge=1, le=100)
     checkpoint_interval: int = Field(default=300, ge=60, le=3600)
     max_runtime_hours: float = Field(default=24.0, ge=0.1, le=168.0)
 
-    class Config:
-        extra = "forbid"
-
 
 class RuntimeConfig(BaseModel):
     """运行时配置模型"""
+    model_config = ConfigDict(extra="forbid")
     submit_enabled: bool = False
     smoke_test: bool = False
     full_run: bool = True
     debug_mode: bool = False
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = "INFO"
-
-    class Config:
-        extra = "forbid"
 
 
 class FullConfig(BaseModel):

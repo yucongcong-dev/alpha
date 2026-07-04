@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from .constants import (
+from ..config.constants import (
     BACKFILL_WINDOW,
     DEFAULT_MATRIX_DELTA_OVER_STD_WINDOWS,
     DEFAULT_MATRIX_DIVERSIFIED_TEMPLATE_SPECS,
@@ -26,14 +26,14 @@ from .constants import (
     TEMPLATE_STAGE_EVENT_CONDITIONED,
     TEMPLATE_STAGE_GROUP_SECOND_ORDER,
 )
-from .models import (
+from ..config.models import (
     DatasetExpressionPolicy,
     FeedbackLoopPolicy,
     FeedbackPhasePolicy,
     FieldTransformSpec,
     FieldTransformStage,
 )
-from .policy_overrides import apply_yaml_expression_policy_overrides
+from ..config.policy_overrides import apply_yaml_expression_policy_overrides
 
 
 def _default_transform_specs() -> tuple[
@@ -163,7 +163,7 @@ def _yaml_curated_heuristics(dataset_id: str) -> bool:
     """
     if not dataset_id:
         return False
-    from . import get_yaml_config
+    from ..config.yaml import get_yaml_config
 
     yaml_config = get_yaml_config() or {}
     policies = yaml_config.get("expression_policies", {})
@@ -209,7 +209,7 @@ def use_curated_heuristics_for_dataset(
     if not dataset_id:
         return False
     if yaml_config is None:
-        from . import get_yaml_config
+        from ..config.yaml import get_yaml_config
 
         yaml_config = get_yaml_config() or {}
     policies = yaml_config.get("expression_policies", {})
@@ -234,7 +234,7 @@ def use_fundamental6_heuristics(dataset_id: str | None = None) -> bool:
     if dataset_id.lower() == "fundamental6":
         return True
 
-    from . import get_yaml_config
+    from ..config.yaml import get_yaml_config
 
     yaml_config = get_yaml_config() or {}
     policies = yaml_config.get("expression_policies", {})

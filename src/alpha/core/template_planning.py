@@ -19,7 +19,7 @@ from ..config.constants import (
     SENTINEL_UNKNOWN,
 )
 from ..config.models import DatasetExpressionPolicy
-from ..config.policy import get_dataset_expression_policy, resolve_feedback_stage
+from ..policy.expression import get_dataset_expression_policy, resolve_feedback_stage
 from ..generators.expression_builder import (
     build_expression_candidates,
     limit_templates,
@@ -42,7 +42,8 @@ from ..models.domain import (
     TemplateField,
 )
 from ..models.runtime import TemplateBuildContext, TemplateFeedback
-from ..utils.helpers import choose_field_name, first_non_empty, is_event_field_name
+from ..generators.fields import choose_field_name
+from ..utils.helpers import first_non_empty, is_event_field_name
 
 
 def resolve_field_template_candidates(

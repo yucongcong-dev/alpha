@@ -20,7 +20,7 @@ from collections.abc import Mapping, Sequence
 import logging
 
 from ..config.constants import DRY_RUN_SAMPLE_LIMIT, SENTINEL_UNKNOWN
-from ..config.policy import get_dataset_expression_policy
+from ..policy.expression import get_dataset_expression_policy
 from ..generators.expression_builder import build_expression_candidates
 from ..generators.payload import build_settings_fingerprint_from_payload
 from ..generators.templates.refine import build_refine_templates
@@ -36,7 +36,8 @@ from ..models.runtime import (
     TemplateBuildOptions,
     TemplateField,
 )
-from ..utils.helpers import choose_field_name, first_non_empty
+from ..generators.fields import choose_field_name
+from ..utils.helpers import first_non_empty
 from .execution_filters import (
     is_template_actionable,
     should_skip_field,

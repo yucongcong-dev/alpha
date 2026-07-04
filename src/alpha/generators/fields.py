@@ -20,13 +20,31 @@ import json
 import logging
 import os
 import time
-from typing import Protocol
+from typing import Any, Protocol
 
-from ..config.constants import FIELDS_CACHE_TTL_HOURS
+from ..config.constants import FIELDS_CACHE_TTL_HOURS, SENTINEL_UNKNOWN
 from ..io.common import atomic_write_json
 from ..models.runtime import FieldFetchOptions, TemplateField
 
 logger = logging.getLogger(__name__)
+
+
+def choose_field_name(field: dict[str, Any] | TemplateField) -> str:
+    if isinstance(field, TemplateField):
+        return field.field_name
+    for key in ("id", "name", "mnemonic", "field"):
+        if key in field:
+            return str(field[key])
+    return ""
+
+
+def choose_field_type(field: dict[str, Any] | TemplateField) -> str:
+    if isinstance(field, TemplateField):
+        return field.field_type
+    for key in ("type", "fieldType", "category"):
+        if key in field:
+            return str(field[key]).upper()
+    return str(SENTINEL_UNKNOWN).upper()
 
 
 class DatasetFieldClient(Protocol):

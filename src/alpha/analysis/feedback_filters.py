@@ -19,7 +19,7 @@ from ..config.constants import (
     TEMPLATE_DISABLE_MIN_SIMULATED,
 )
 from ..config.models import DatasetExpressionPolicy
-from ..config.policy import get_dataset_expression_policy, resolve_feedback_stage
+from ..policy.expression import get_dataset_expression_policy, resolve_feedback_stage
 from ..generators.expression_builder import _is_blacklisted_template
 from ..generators.templates.classification import (
     classify_expression_family,

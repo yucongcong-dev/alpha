@@ -23,7 +23,8 @@ from ..models.runtime import (
     SimulationStageArgs,
     TemplateField,
 )
-from ..utils.helpers import choose_field_type, first_non_empty
+from ..generators.fields import choose_field_type
+from ..utils.helpers import first_non_empty
 from .simulation_parsing import (
     extract_alpha_id,
     extract_checks,

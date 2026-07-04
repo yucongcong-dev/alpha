@@ -70,7 +70,8 @@ from .models import (
     SettingsVariant,
     TemplateLibrary,
 )
-from .utils import choose_field_name, choose_field_type, first_non_empty
+from .generators.fields import choose_field_name, choose_field_type
+from .utils import first_non_empty
 
 __version__ = "1.0.0"
 __author__ = "Alpha Generator Team"

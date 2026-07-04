@@ -28,17 +28,17 @@ from .models import (
 from .models import (
     FieldTransformStage as FieldTransformStage,
 )
-from .policy import (
+from ..policy.expression import (
     get_dataset_expression_policy as get_dataset_expression_policy,
 )
-from .policy import (
+from ..policy.expression import (
     resolve_feedback_stage as resolve_feedback_stage,
 )
-from .policy import (
+from ..policy.expression import (
     use_curated_heuristics_for_dataset as use_curated_heuristics_for_dataset,
 )
-from .policy import (
-    use_fundamental6_heuristics as use_fundamental6_heuristics,  # deprecated backward-compat alias
+from ..policy.expression import (
+    use_fundamental6_heuristics as use_fundamental6_heuristics,
 )
 from .profiles import (
     DATASET_PROFILES as DATASET_PROFILES,

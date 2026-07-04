@@ -12,7 +12,7 @@ from ...config import (
     TEMPLATE_STAGE_GROUP_SECOND_ORDER,
     DatasetExpressionPolicy,
 )
-from ...models.base import TemplateCandidate
+from ...models.domain import TemplateCandidate
 from .candidates import _candidate_metadata, _make_template_candidate
 from .variation_common import is_blacklisted_template
 from .wrappers import build_bucket_group_templates, build_trade_when_templates

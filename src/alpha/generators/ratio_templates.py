@@ -18,7 +18,7 @@ from ..models.runtime import TemplateField
 from ..policy.template_blacklist import (
     is_blacklisted_template as _policy_is_blacklisted_template,
 )
-from ..utils.helpers import choose_field_name
+from .fields import choose_field_name
 from .templates.candidates import (
     _candidate_metadata,
     _make_template_candidate,
