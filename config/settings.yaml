@@ -54,7 +54,10 @@ global:
 
     # 7. DECAY — 官网: Decay
     #    指数加权衰减天数, 0=无衰减, 官网默认=4
-    decay: 4
+    #    注意: 模板库已内置 ts_decay_linear 信号级衰减，若此处也设 decay>0
+    #    会形成双重衰减导致信号过度平滑。设为 0 让模板自身控制衰减；
+    #    若模板不含 ts_decay_linear，可恢复为 4。
+    decay: 0
 
     # 8. TRUNCATION — 官网: Truncation
     #    截断阈值 0.0~1.0, 官网默认=0.08 (8%)

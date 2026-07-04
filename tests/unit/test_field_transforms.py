@@ -91,8 +91,8 @@ def test_fundamental6_account_templates_use_preprocessed_field_view() -> None:
     assert by_name["account_group_backfill_504_subindustry"] == (
         "group_rank(winsorize(ts_backfill(cash_st, 120), std=4), subindustry)"
     )
-    assert by_name["account_bucket_cap_zscore_63"] == (
-        "group_rank(ts_zscore(winsorize(ts_backfill(cash_st, 120), std=4), 63), bucket(rank(cap), range='0.1, 1, 0.1'))"
+    assert by_name["account_bucket_cap_zscore_60"] == (
+        "group_rank(ts_zscore(winsorize(ts_backfill(cash_st, 120), std=4), 60), bucket(rank(cap), range='0.1, 1, 0.1'))"
     )
 
 
@@ -113,8 +113,8 @@ def test_model16_templates_include_bucket_groups() -> None:
     )
 
     by_name = {name: expression for name, expression, _ in candidates}
-    assert by_name["model16_bucket_cap_zscore_126"] == (
-        "group_rank(ts_zscore(winsorize(ts_backfill(value_score, 252), std=4), 126), bucket(rank(cap), range='0.1, 1, 0.1'))"
+    assert by_name["model16_bucket_cap_zscore_120"] == (
+        "group_rank(ts_zscore(winsorize(ts_backfill(value_score, 252), std=4), 120), bucket(rank(cap), range='0.1, 1, 0.1'))"
     )
 
 
@@ -135,6 +135,6 @@ def test_model51_templates_include_bucket_groups() -> None:
     )
 
     by_name = {name: expression for name, expression, _ in candidates}
-    assert by_name["model51_bucket_cap_zscore_126"] == (
-        "group_rank(ts_zscore(winsorize(ts_backfill(risk_metric, 504), std=4), 126), bucket(rank(cap), range='0.1, 1, 0.1'))"
+    assert by_name["model51_bucket_cap_zscore_120"] == (
+        "group_rank(ts_zscore(winsorize(ts_backfill(risk_metric, 504), std=4), 120), bucket(rank(cap), range='0.1, 1, 0.1'))"
     )

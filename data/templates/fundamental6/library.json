@@ -9,36 +9,65 @@
     {
       "_comment": "=== Tier 2 (193-189): 三层嵌套 — 社区遗传算法验证, ts→group→decay 管线, fundamental官方示例Sharpe2.03 ===",
       "name": "3layer_zscore_sector_decay",
-      "expression": "ts_decay_linear(group_neutralize(ts_zscore(ts_backfill({field}, {backfill_window}), 63), industry), 20)",
+      "expression": "ts_decay_linear(group_neutralize(ts_zscore(ts_backfill({field}, {backfill_window}), 60), industry), 20)",
       "priority": 995,
       "family": "neutralize_decay",
       "layer": "composite"
     },
     {
       "name": "3layer_zscore_market_decay",
-      "expression": "ts_decay_linear(group_neutralize(ts_zscore(ts_backfill({field}, {backfill_window}), 63), market), 20)",
+      "expression": "ts_decay_linear(group_neutralize(ts_zscore(ts_backfill({field}, {backfill_window}), 60), market), 20)",
       "priority": 994,
       "family": "neutralize_decay",
       "layer": "composite"
     },
     {
       "name": "3layer_rank_sector_decay",
-      "expression": "ts_decay_linear(group_neutralize(ts_rank({field}, 63), industry), 20)",
+      "expression": "ts_decay_linear(group_neutralize(ts_rank({field}, 60), industry), 20)",
       "priority": 993,
       "family": "neutralize_decay",
       "layer": "composite"
     },
     {
       "name": "3layer_zscore_subind_decay",
-      "expression": "ts_decay_linear(group_rank(ts_zscore(ts_backfill({field}, {backfill_window}), 63), subindustry), 20)",
+      "expression": "ts_decay_linear(group_rank(ts_zscore(ts_backfill({field}, {backfill_window}), 60), subindustry), 20)",
       "priority": 992,
       "family": "neutralize_decay",
       "layer": "composite"
     },
     {
+      "_comment": "=== Tier 2.5: hump — 平台核心推荐, 降低 Turnover ===",
+      "name": "hump_zscore_60",
+      "expression": "rank(hump(ts_zscore({field}, 60), 0.3))",
+      "priority": 991,
+      "family": "hump",
+      "layer": "time_series"
+    },
+    {
+      "name": "hump_decay_zscore_60",
+      "expression": "rank(hump_decay(ts_zscore({field}, 60), 0.3, 20))",
+      "priority": 990,
+      "family": "hump",
+      "layer": "time_series"
+    },
+    {
+      "name": "hump_group_zscore_60_market",
+      "expression": "group_rank(hump(ts_zscore({field}, 60), 0.3), market)",
+      "priority": 989,
+      "family": "hump",
+      "layer": "group"
+    },
+    {
+      "name": "hump_group_zscore_60_industry",
+      "expression": "group_rank(hump(ts_zscore({field}, 60), 0.3), industry)",
+      "priority": 988,
+      "family": "hump",
+      "layer": "group"
+    },
+    {
       "_comment": "=== Tier 5 (167-156): ts_rank — 成熟因子, 新增22/66窗口 ===",
-      "name": "ts_rank_after_group_63",
-      "expression": "rank(ts_rank(group_neutralize(ts_backfill({field}, {backfill_window}), industry), 63))",
+      "name": "ts_rank_after_group_60",
+      "expression": "rank(ts_rank(group_neutralize(ts_backfill({field}, {backfill_window}), industry), 60))",
       "priority": 971,
       "family": "ts_rank",
       "layer": "composite"
@@ -51,23 +80,9 @@
       "layer": "time_series"
     },
     {
-      "name": "ts_rank_63",
-      "expression": "rank(ts_rank({field}, 63))",
-      "priority": 969,
-      "family": "ts_rank",
-      "layer": "time_series"
-    },
-    {
-      "name": "ts_rank_22",
-      "expression": "rank(ts_rank({field}, 22))",
+      "name": "ts_rank_20",
+      "expression": "rank(ts_rank({field}, 20))",
       "priority": 968,
-      "family": "ts_rank",
-      "layer": "time_series"
-    },
-    {
-      "name": "ts_rank_66",
-      "expression": "rank(ts_rank({field}, 66))",
-      "priority": 967,
       "family": "ts_rank",
       "layer": "time_series"
     },
@@ -93,16 +108,9 @@
       "layer": "time_series"
     },
     {
-      "name": "ts_rank_21",
-      "expression": "rank(ts_rank({field}, 21))",
-      "priority": 963,
-      "family": "ts_rank",
-      "layer": "time_series"
-    },
-    {
       "_comment": "=== Tier 6 (155-142): ts_zscore — 标准归一化, 新增22/66窗口 + MARKET/INDUSTRY中性化变体 ===",
-      "name": "ts_zscore_after_group_63",
-      "expression": "rank(ts_zscore(group_neutralize(ts_backfill({field}, {backfill_window}), industry), 63))",
+      "name": "ts_zscore_after_group_60",
+      "expression": "rank(ts_zscore(group_neutralize(ts_backfill({field}, {backfill_window}), industry), 60))",
       "priority": 962,
       "family": "zscore_time",
       "layer": "composite"
@@ -111,20 +119,6 @@
       "name": "ts_zscore_backfill",
       "expression": "rank(ts_zscore(ts_backfill({field}, {backfill_window}), {backfill_window}))",
       "priority": 961,
-      "family": "zscore_time",
-      "layer": "time_series"
-    },
-    {
-      "name": "ts_zscore_63",
-      "expression": "rank(ts_zscore({field}, 63))",
-      "priority": 960,
-      "family": "zscore_time",
-      "layer": "time_series"
-    },
-    {
-      "name": "ts_zscore_66",
-      "expression": "rank(ts_zscore({field}, 66))",
-      "priority": 959,
       "family": "zscore_time",
       "layer": "time_series"
     },
@@ -143,8 +137,8 @@
       "layer": "time_series"
     },
     {
-      "name": "ts_zscore_22",
-      "expression": "rank(ts_zscore({field}, 22))",
+      "name": "ts_zscore_20",
+      "expression": "rank(ts_zscore({field}, 20))",
       "priority": 956,
       "family": "zscore_time",
       "layer": "time_series"
@@ -157,29 +151,22 @@
       "layer": "time_series"
     },
     {
-      "name": "ts_zscore_126",
-      "expression": "rank(ts_zscore({field}, 126))",
+      "name": "ts_zscore_120",
+      "expression": "rank(ts_zscore({field}, 120))",
       "priority": 954,
       "family": "zscore_time",
       "layer": "time_series"
     },
     {
-      "name": "ts_zscore_21",
-      "expression": "rank(ts_zscore({field}, 21))",
-      "priority": 953,
-      "family": "zscore_time",
-      "layer": "time_series"
-    },
-    {
-      "name": "group_zscore_63_sector",
-      "expression": "group_rank(ts_zscore({field}, 63), industry)",
+      "name": "group_zscore_60_sector",
+      "expression": "group_rank(ts_zscore({field}, 60), industry)",
       "priority": 952,
       "family": "group_zscore",
       "layer": "group"
     },
     {
-      "name": "group_zscore_63_MARKET",
-      "expression": "group_rank(ts_zscore({field}, 63), market)",
+      "name": "group_zscore_60_MARKET",
+      "expression": "group_rank(ts_zscore({field}, 60), market)",
       "priority": 951,
       "family": "group_zscore",
       "layer": "group"
@@ -200,8 +187,8 @@
       "layer": "composite"
     },
     {
-      "name": "decay_10",
-      "expression": "rank(ts_decay_linear(ts_backfill({field}, {backfill_window}), 10))",
+      "name": "decay_5",
+      "expression": "rank(ts_decay_linear(ts_backfill({field}, {backfill_window}), 5))",
       "priority": 948,
       "family": "decay_level",
       "layer": "time_series"
@@ -214,13 +201,6 @@
       "layer": "group"
     },
     {
-      "name": "decay_22",
-      "expression": "rank(ts_decay_linear(ts_backfill({field}, {backfill_window}), 22))",
-      "priority": 946,
-      "family": "decay_level",
-      "layer": "time_series"
-    },
-    {
       "name": "decay_252",
       "expression": "rank(ts_decay_linear(ts_backfill({field}, {backfill_window}), 252))",
       "priority": 945,
@@ -228,22 +208,15 @@
       "layer": "time_series"
     },
     {
-      "name": "decay_63",
-      "expression": "rank(ts_decay_linear(ts_backfill({field}, {backfill_window}), 63))",
+      "name": "decay_60",
+      "expression": "rank(ts_decay_linear(ts_backfill({field}, {backfill_window}), 60))",
       "priority": 944,
       "family": "decay_level",
       "layer": "time_series"
     },
     {
-      "name": "decay_66",
-      "expression": "rank(ts_decay_linear(ts_backfill({field}, {backfill_window}), 66))",
-      "priority": 943,
-      "family": "decay_level",
-      "layer": "time_series"
-    },
-    {
-      "name": "group_decay_63",
-      "expression": "group_rank(ts_decay_linear(ts_backfill({field}, {backfill_window}), 63), subindustry)",
+      "name": "group_decay_60",
+      "expression": "group_rank(ts_decay_linear(ts_backfill({field}, {backfill_window}), 60), subindustry)",
       "priority": 942,
       "family": "decay_level",
       "layer": "group"
@@ -257,13 +230,6 @@
       "layer": "time_series"
     },
     {
-      "name": "stddev_63",
-      "expression": "rank(ts_std_dev({field}, 63))",
-      "priority": 932,
-      "family": "stddev",
-      "layer": "time_series"
-    },
-    {
       "name": "ir_60",
       "expression": "rank(ts_mean({field}, 60) / ts_std_dev({field}, 60))",
       "priority": 931,
@@ -271,8 +237,8 @@
       "layer": "time_series"
     },
     {
-      "name": "stddev_22",
-      "expression": "rank(ts_std_dev({field}, 22))",
+      "name": "stddev_20",
+      "expression": "rank(ts_std_dev({field}, 20))",
       "priority": 930,
       "family": "stddev",
       "layer": "time_series"
@@ -285,17 +251,39 @@
       "layer": "time_series"
     },
     {
-      "name": "ir_63",
-      "expression": "rank(ts_mean({field}, 63) / ts_std_dev({field}, 63))",
-      "priority": 928,
+      "name": "ir_20",
+      "expression": "rank(ts_mean({field}, 20) / ts_std_dev({field}, 20))",
+      "priority": 927,
       "family": "mean_ratio",
       "layer": "time_series"
     },
     {
-      "name": "ir_22",
-      "expression": "rank(ts_mean({field}, 22) / ts_std_dev({field}, 22))",
-      "priority": 927,
-      "family": "mean_ratio",
+      "_comment": "=== Tier 10.6: 平台推荐缺失算子 ===",
+      "name": "exp_decay_zscore_60",
+      "expression": "rank(ts_decay_exp_window(ts_zscore({field}, 60), 60, factor=0.5))",
+      "priority": 926,
+      "family": "exp_decay",
+      "layer": "time_series"
+    },
+    {
+      "name": "vector_neut_market_zscore_60",
+      "expression": "rank(vector_neut(ts_zscore({field}, 60), market))",
+      "priority": 925,
+      "family": "vector_neut",
+      "layer": "time_series"
+    },
+    {
+      "name": "adv20_liquidity_rank_60",
+      "expression": "rank(ts_zscore({field}, 60) / rank(adv20))",
+      "priority": 924,
+      "family": "liquidity_adjusted",
+      "layer": "composite"
+    },
+    {
+      "name": "days_from_change_decay_20",
+      "expression": "rank(ts_decay_linear(days_from_last_change({field}), 20))",
+      "priority": 923,
+      "family": "event_decay",
       "layer": "time_series"
     },
     {
@@ -327,34 +315,13 @@
       "priority": 916,
       "family": "ts_sum",
       "layer": "time_series"
-    },
-    {
-      "name": "skewness_60",
-      "expression": "rank(ts_skewness({field}, 60))",
-      "priority": 915,
-      "family": "skewness",
-      "layer": "time_series"
-    },
-    {
-      "name": "kurtosis_60",
-      "expression": "rank(ts_kurtosis({field}, 60))",
-      "priority": 914,
-      "family": "kurtosis",
-      "layer": "time_series"
-    },
-    {
-      "name": "skewness_252",
-      "expression": "rank(ts_skewness({field}, 252))",
-      "priority": 913,
-      "family": "skewness",
-      "layer": "time_series"
     }
   ],
   "VECTOR": [
     {
       "_comment": "=== VECTOR: 事件字段专属 event_conditioned / trade_when 模板，优先服务 fnd6_cptnewqeventv110_* 这类低频事件流 ===",
-      "name": "event_trade_when_volume_rank_66",
-      "expression": "trade_when(ts_mean(volume, 10) > ts_mean(volume, 60), rank(ts_rank({field_preprocessed}, 66)), -1)",
+      "name": "event_trade_when_volume_rank_60",
+      "expression": "trade_when(ts_mean(volume, 10) > ts_mean(volume, 60), rank(ts_rank({field_preprocessed}, 60)), -1)",
       "priority": 1006,
       "family": "event_trade_when",
       "layer": "event",
@@ -362,8 +329,8 @@
       "dataset_tags": ["event"]
     },
     {
-      "name": "event_trade_when_breakout_zscore_66",
-      "expression": "trade_when(ts_arg_max(close, 20) == 0, rank(ts_zscore({field_preprocessed}, 66)), -1)",
+      "name": "event_trade_when_breakout_zscore_60",
+      "expression": "trade_when(ts_arg_max(close, 20) == 0, rank(ts_zscore({field_preprocessed}, 60)), -1)",
       "priority": 1004,
       "family": "event_trade_when",
       "layer": "event",
@@ -380,8 +347,8 @@
       "dataset_tags": ["event"]
     },
     {
-      "name": "event_trade_when_sector_vol_rank_126",
-      "expression": "trade_when(group_rank(ts_std_dev(returns, 60), sector) > 0.7, rank(ts_rank({field_preprocessed}, 126)), -1)",
+      "name": "event_trade_when_sector_vol_rank_120",
+      "expression": "trade_when(group_rank(ts_std_dev(returns, 60), sector) > 0.7, rank(ts_rank({field_preprocessed}, 120)), -1)",
       "priority": 1000,
       "family": "event_trade_when",
       "layer": "event",
@@ -390,31 +357,10 @@
     },
     {
       "_comment": "=== VECTOR: fundamental6 仅保留事件字段相对稳健的 rank / zscore / decay 结构 ===",
-      "name": "vec_avg_ts_rank_63",
-      "expression": "rank(ts_rank({field_preprocessed}, 63))",
-      "priority": 990,
-      "family": "ts_rank",
-      "layer": "vector"
-    },
-    {
       "name": "vec_avg_ts_rank_60",
       "expression": "rank(ts_rank({field_preprocessed}, 60))",
       "priority": 989,
       "family": "ts_rank",
-      "layer": "vector"
-    },
-    {
-      "name": "vec_avg_ts_rank_66",
-      "expression": "rank(ts_rank({field_preprocessed}, 66))",
-      "priority": 987,
-      "family": "ts_rank",
-      "layer": "vector"
-    },
-    {
-      "name": "vec_avg_ts_zscore_63",
-      "expression": "rank(ts_zscore({field_preprocessed}, 63))",
-      "priority": 986,
-      "family": "zscore_time",
       "layer": "vector"
     },
     {
@@ -430,42 +376,21 @@
       "priority": 983,
       "family": "ts_rank",
       "layer": "vector"
-    },
-    {
-      "name": "vec_avg_ts_zscore_66",
-      "expression": "rank(ts_zscore({field_preprocessed}, 66))",
-      "priority": 982,
-      "family": "zscore_time",
-      "layer": "vector"
     }
   ],
   "GROUP": [
     {
       "_comment": "=== GROUP: 新增22/66窗口, fundamental6 去掉明显偏弱的 vec_avg 自相关 / ts_mean / 原始排名结构 ===",
       "name": "vec_avg_3layer_zs_sector_decay",
-      "expression": "ts_decay_linear(group_neutralize(ts_zscore(vec_avg({field}), 63), industry), 20)",
+      "expression": "ts_decay_linear(group_neutralize(ts_zscore(vec_avg({field}), 60), industry), 20)",
       "priority": 1000,
       "family": "neutralize_decay",
-      "layer": "group"
-    },
-    {
-      "name": "vec_avg_ts_rank_63",
-      "expression": "rank(ts_rank(vec_avg({field}), 63))",
-      "priority": 998,
-      "family": "ts_rank",
       "layer": "group"
     },
     {
       "name": "vec_avg_ts_rank_60",
       "expression": "rank(ts_rank(vec_avg({field}), 60))",
       "priority": 997,
-      "family": "ts_rank",
-      "layer": "group"
-    },
-    {
-      "name": "vec_avg_ts_rank_66",
-      "expression": "rank(ts_rank(vec_avg({field}), 66))",
-      "priority": 995,
       "family": "ts_rank",
       "layer": "group"
     },
@@ -481,13 +406,6 @@
       "expression": "rank(ts_rank(vec_avg({field}), 120))",
       "priority": 993,
       "family": "ts_rank",
-      "layer": "group"
-    },
-    {
-      "name": "vec_avg_ts_zscore_63",
-      "expression": "rank(ts_zscore(vec_avg({field}), 63))",
-      "priority": 992,
-      "family": "zscore_time",
       "layer": "group"
     },
     {
@@ -502,29 +420,15 @@
     {
       "_comment": "=== SET: 同 GROUP, 稍低优先级；fundamental6 去掉明显偏弱的 vec_avg 自相关 / ts_mean / 原始排名结构 ===",
       "name": "vec_avg_3layer_zs_sector_decay",
-      "expression": "ts_decay_linear(group_neutralize(ts_zscore(vec_avg({field}), 63), industry), 20)",
+      "expression": "ts_decay_linear(group_neutralize(ts_zscore(vec_avg({field}), 60), industry), 20)",
       "priority": 1000,
       "family": "neutralize_decay",
-      "layer": "set"
-    },
-    {
-      "name": "vec_avg_ts_rank_63",
-      "expression": "rank(ts_rank(vec_avg({field}), 63))",
-      "priority": 998,
-      "family": "ts_rank",
       "layer": "set"
     },
     {
       "name": "vec_avg_ts_rank_60",
       "expression": "rank(ts_rank(vec_avg({field}), 60))",
       "priority": 997,
-      "family": "ts_rank",
-      "layer": "set"
-    },
-    {
-      "name": "vec_avg_ts_rank_66",
-      "expression": "rank(ts_rank(vec_avg({field}), 66))",
-      "priority": 995,
       "family": "ts_rank",
       "layer": "set"
     },
@@ -540,13 +444,6 @@
       "expression": "rank(ts_rank(vec_avg({field}), 120))",
       "priority": 993,
       "family": "ts_rank",
-      "layer": "set"
-    },
-    {
-      "name": "vec_avg_ts_zscore_63",
-      "expression": "rank(ts_zscore(vec_avg({field}), 63))",
-      "priority": 992,
-      "family": "zscore_time",
       "layer": "set"
     },
     {
@@ -624,8 +521,8 @@
   "DATASET_FUNDAMENTAL6_MATRIX": [
     {
       "_comment": "fundamental6 高优先级长窗/近门槛模板，优先服务 cash_st、debt_lt、cogs、cashflow_op 等季度字段",
-      "name": "account_neutralize_zscore_decay_63_industry",
-      "expression": "ts_decay_linear(group_neutralize(ts_zscore({field_preprocessed}, 63), industry), 20)",
+      "name": "account_neutralize_zscore_decay_60_industry",
+      "expression": "ts_decay_linear(group_neutralize(ts_zscore({field_preprocessed}, 60), industry), 20)",
       "priority": 214,
       "family": "neutralize_decay",
       "layer": "account"
@@ -652,22 +549,22 @@
       "layer": "account"
     },
     {
-      "name": "account_bucket_cap_zscore_63",
-      "expression": "group_rank(ts_zscore({field_preprocessed}, 63), bucket(rank(cap), range='0.1, 1, 0.1'))",
+      "name": "account_bucket_cap_zscore_60",
+      "expression": "group_rank(ts_zscore({field_preprocessed}, 60), bucket(rank(cap), range='0.1, 1, 0.1'))",
       "priority": 206,
       "family": "bucket_group_rank",
       "layer": "account"
     },
     {
-      "name": "account_backfill_zscore_decay_63_subindustry",
-      "expression": "group_rank(ts_decay_linear(ts_zscore({field_preprocessed}, 63), 20), subindustry)",
+      "name": "account_backfill_zscore_decay_60_subindustry",
+      "expression": "group_rank(ts_decay_linear(ts_zscore({field_preprocessed}, 60), 20), subindustry)",
       "priority": 205,
       "family": "group_zscore",
       "layer": "account"
     },
     {
-      "name": "account_bucket_liquidity_ts_rank_126",
-      "expression": "group_rank(ts_rank({field_preprocessed}, 126), bucket(rank(close * volume), range='0.1, 1, 0.1'))",
+      "name": "account_bucket_liquidity_ts_rank_120",
+      "expression": "group_rank(ts_rank({field_preprocessed}, 120), bucket(rank(close * volume), range='0.1, 1, 0.1'))",
       "priority": 205,
       "family": "bucket_group_rank",
       "layer": "account"
@@ -680,15 +577,15 @@
       "layer": "account"
     },
     {
-      "name": "account_bucket_volatility_zscore_63",
-      "expression": "group_rank(ts_zscore({field_preprocessed}, 63), bucket(rank(ts_std_dev(returns, 20)), range='0.1, 1, 0.1'))",
+      "name": "account_bucket_volatility_zscore_60",
+      "expression": "group_rank(ts_zscore({field_preprocessed}, 60), bucket(rank(ts_std_dev(returns, 20)), range='0.1, 1, 0.1'))",
       "priority": 204,
       "family": "bucket_group_rank",
       "layer": "account"
     },
     {
-      "name": "account_ts_rank_200",
-      "expression": "rank(ts_rank({field_preprocessed}, 200))",
+      "name": "account_ts_rank_252",
+      "expression": "rank(ts_rank({field_preprocessed}, 252))",
       "priority": 204,
       "family": "ts_rank",
       "layer": "account"
@@ -701,8 +598,8 @@
       "layer": "account"
     },
     {
-      "name": "account_rank_zscore_240",
-      "expression": "rank(ts_zscore({field_preprocessed}, 240))",
+      "name": "account_rank_zscore_252",
+      "expression": "rank(ts_zscore({field_preprocessed}, 252))",
       "priority": 202,
       "family": "zscore_time",
       "layer": "account"
@@ -715,8 +612,8 @@
       "layer": "account"
     },
     {
-      "name": "account_group_decay_63_subindustry",
-      "expression": "group_rank(ts_decay_linear({field_preprocessed}, 63), subindustry)",
+      "name": "account_group_decay_60_subindustry",
+      "expression": "group_rank(ts_decay_linear({field_preprocessed}, 60), subindustry)",
       "priority": 198,
       "family": "decay_level",
       "layer": "account"

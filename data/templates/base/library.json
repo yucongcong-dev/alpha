@@ -1,13 +1,10 @@
 {
-  "_comment": "模板库 v3 — 基于 WorldQuant 101 Alpha + 社区遗传算法框架 + 官方示例(MARKET Sharpe2.03) + 2026-06 公开资料汇总",
-  "_comment_placeholders": "{field}=字段名, {backfill_window}=settings.yaml expression.backfill_window",
-  "_comment_tiers": "Tier1=vol-scaled-delta(+MARKET) > Tier2=三层嵌套(+MARKET) > Tier3=delta(+22/66) > Tier4=group_delta(+MARKET) > Tier5=ts_rank(+22/66) > Tier5.5=bucket分桶 > Tier6=ts_zscore(+22/66+MARKET) > Tier7=decay_linear(+22/66) > Tier8=mean_reversion(+22) > Tier9=mean_diff(+22_66) > Tier10=volatility+IR(+22) > Tier11=截面标准化 > Tier12=ts_mean(+22/66) > Tier13=sum+exotic > Tier15=STRING/TEXT/BOOL",
-  "_comment_community_refs": "xiegengcai/world-quant-brain(SuperAlpha工厂), phyphy-quant/WorldQuant-Genetic-Algorithm(4层嵌套), WorldQuant官方alpha-examples(基本面Sharpe2.03), CSDN量化Amy(Sharpe>2.5标准)",
-  "_comment_v3_changelog": "MARKET中性化变体(vol_scaled_delta/3layer/group_delta/ts_zscore) + 窗口22/66全覆盖 + INDUSTRY中性化变体",
-  "_comment_neutralization": "模板库保留 subindustry / market / industry 变体；实际默认 neutralization 以 settings.yaml 为准",
+  "_comment": "模板库 v4 — 结构性去重: 同 family 保留 1-2 个代表窗口, 移除不存在运算符(ts_skewness/ts_kurtosis/vec_select_nth), 压缩 VECTOR 冗余, 简化特殊类型区段",
+  "_comment_placeholders": "{field}=字段名, {field_preprocessed}=预处理字段, {backfill_window}=settings.yaml expression.backfill_window",
+  "_comment_v4_changes": "移除: ts_skewness/ts_kurtosis(不存在), vol_change(嵌套过深), 窗口重复(delta 20/21/22→保留22), vec_select_nth(不存在), 冗余 ts_mean(5→2)",
   "default": [
     {
-      "_comment": "=== Tier 1: 保留相对更稳的中窗 vol-scaled delta；移除已过时的 5/20 短窗默认模板 ===",
+      "_comment": "=== Tier 1: vol-scaled delta — 三种中性化变体 ===",
       "name": "vol_scaled_delta_20_60",
       "expression": "group_rank(ts_delta({field_preprocessed}, 20) / ts_std_dev({field_preprocessed}, 60), subindustry)",
       "priority": 1000
@@ -23,50 +20,46 @@
       "priority": 1000
     },
     {
-      "_comment": "=== Tier 2 (193-189): 三层嵌套 — 社区遗传算法验证, ts→group→decay 管线, fundamental官方示例Sharpe2.03 ===",
+      "_comment": "=== Tier 1.5: hump — 平台核心推荐, 降低 Turnover ===",
+      "name": "hump_zscore_60",
+      "expression": "rank(hump(ts_zscore({field_preprocessed}, 60), 0.3))",
+      "priority": 998
+    },
+    {
+      "name": "hump_decay_zscore_60",
+      "expression": "rank(hump_decay(ts_zscore({field_preprocessed}, 60), 0.3, 20))",
+      "priority": 997
+    },
+    {
+      "name": "hump_group_zscore_60",
+      "expression": "group_rank(hump(ts_zscore({field_preprocessed}, 60), 0.3), subindustry)",
+      "priority": 996
+    },
+    {
+      "name": "hump_group_zscore_60_MARKET",
+      "expression": "group_rank(hump(ts_zscore({field_preprocessed}, 60), 0.3), market)",
+      "priority": 995
+    },
+    {
+      "_comment": "=== Tier 2: 三层嵌套 — ts→group→decay 管线, 保留 industry/market/subindustry 变体 ===",
       "name": "3layer_zscore_sector_decay",
-      "expression": "ts_decay_linear(group_neutralize(ts_zscore({field_preprocessed}, 63), industry), 20)",
+      "expression": "ts_decay_linear(group_neutralize(ts_zscore({field_preprocessed}, 60), industry), 20)",
       "priority": 990
     },
     {
       "name": "3layer_zscore_market_decay",
-      "expression": "ts_decay_linear(group_neutralize(ts_zscore({field_preprocessed}, 63), market), 20)",
-      "priority": 990
-    },
-    {
-      "name": "3layer_rank_sector_decay",
-      "expression": "ts_decay_linear(group_neutralize(ts_rank({field_preprocessed}, 63), industry), 20)",
+      "expression": "ts_decay_linear(group_neutralize(ts_zscore({field_preprocessed}, 60), market), 20)",
       "priority": 990
     },
     {
       "name": "3layer_zscore_subind_decay",
-      "expression": "ts_decay_linear(group_rank(ts_zscore({field_preprocessed}, 63), subindustry), 20)",
+      "expression": "ts_decay_linear(group_rank(ts_zscore({field_preprocessed}, 60), subindustry), 20)",
       "priority": 990
     },
     {
-      "_comment": "=== Tier 3: 保留中长窗 delta；移除 5 日短窗与 rank-delta-5 默认模板 ===",
-      "name": "delta_22",
-      "expression": "rank(ts_delta({field_preprocessed}, 22))",
-      "priority": 960
-    },
-    {
-      "name": "delta_21",
-      "expression": "rank(ts_delta({field_preprocessed}, 21))",
-      "priority": 960
-    },
-    {
+      "_comment": "=== Tier 3: delta — 保留 22(短)/63(中) 两个代表窗口 ===",
       "name": "delta_20",
       "expression": "rank(ts_delta({field_preprocessed}, 20))",
-      "priority": 960
-    },
-    {
-      "name": "delta_63",
-      "expression": "rank(ts_delta({field_preprocessed}, 63))",
-      "priority": 960
-    },
-    {
-      "name": "delta_66",
-      "expression": "rank(ts_delta({field_preprocessed}, 66))",
       "priority": 960
     },
     {
@@ -75,7 +68,7 @@
       "priority": 960
     },
     {
-      "_comment": "=== Tier 4: group_delta 仅保留中长窗版本 ===",
+      "_comment": "=== Tier 4: group_delta — 保留 subindustry/market × 20/60 ===",
       "name": "group_delta_20",
       "expression": "group_rank(ts_delta({field_preprocessed}, 20), subindustry)",
       "priority": 940
@@ -91,19 +84,9 @@
       "priority": 940
     },
     {
-      "name": "group_delta_60_MARKET",
-      "expression": "group_rank(ts_delta({field_preprocessed}, 60), market)",
-      "priority": 940
-    },
-    {
-      "name": "group_delta_20_INDUSTRY",
-      "expression": "group_rank(ts_delta({field_preprocessed}, 20), industry)",
-      "priority": 940
-    },
-    {
-      "_comment": "=== Tier 5 (167-156): ts_rank — 成熟因子, 新增22/66窗口 ===",
-      "name": "ts_rank_after_group_63",
-      "expression": "rank(ts_rank(group_neutralize({field_preprocessed}, industry), 63))",
+      "_comment": "=== Tier 5: ts_rank — 保留 22/63/252 三个窗口 + group 变体 ===",
+      "name": "ts_rank_20",
+      "expression": "rank(ts_rank({field_preprocessed}, 20))",
       "priority": 930
     },
     {
@@ -112,23 +95,13 @@
       "priority": 930
     },
     {
-      "name": "ts_rank_63",
-      "expression": "rank(ts_rank({field_preprocessed}, 63))",
-      "priority": 930
-    },
-    {
-      "name": "ts_rank_22",
-      "expression": "rank(ts_rank({field_preprocessed}, 22))",
-      "priority": 930
-    },
-    {
-      "name": "ts_rank_66",
-      "expression": "rank(ts_rank({field_preprocessed}, 66))",
-      "priority": 930
-    },
-    {
       "name": "ts_rank_252",
       "expression": "rank(ts_rank({field_preprocessed}, 252))",
+      "priority": 930
+    },
+    {
+      "name": "ts_rank_after_group_60",
+      "expression": "rank(ts_rank(group_neutralize({field_preprocessed}, industry), 60))",
       "priority": 930
     },
     {
@@ -137,60 +110,20 @@
       "priority": 930
     },
     {
-      "_comment": "=== Tier 5.5: 更现代的 bucket/group 分桶模板，吸收旧回测脚本里的 cap/波动率/流动性分层思路 ===",
-      "name": "bucket_cap_group_ts_zscore_63",
-      "expression": "group_rank(ts_zscore({field_preprocessed}, 63), bucket(rank(cap), range='0.1, 1, 0.1'))",
+      "_comment": "=== Tier 5.5: bucket 分桶 — cap + 波动率 各 1 个 ===",
+      "name": "bucket_cap_group_ts_zscore_60",
+      "expression": "group_rank(ts_zscore({field_preprocessed}, 60), bucket(rank(cap), range='0.1, 1, 0.1'))",
       "priority": 925
     },
     {
-      "name": "bucket_liquidity_group_ts_rank_126",
-      "expression": "group_rank(ts_rank({field_preprocessed}, 126), bucket(rank(close * volume), range='0.1, 1, 0.1'))",
+      "name": "bucket_volatility_group_ts_zscore_60",
+      "expression": "group_rank(ts_zscore({field_preprocessed}, 60), bucket(rank(ts_std_dev(returns, 20)), range='0.1, 1, 0.1'))",
       "priority": 925
     },
     {
-      "name": "bucket_volatility_group_ts_zscore_63",
-      "expression": "group_rank(ts_zscore({field_preprocessed}, 63), bucket(rank(ts_std_dev(returns, 20)), range='0.1, 1, 0.1'))",
-      "priority": 925
-    },
-    {
-      "name": "bucket_sector_cap_group_ts_zscore_63",
-      "expression": "group_rank(ts_zscore({field_preprocessed}, 63), bucket(group_rank(cap, sector), range='0.1, 1, 0.1'))",
-      "priority": 925
-    },
-    {
-      "name": "ts_rank_120",
-      "expression": "rank(ts_rank({field_preprocessed}, 120))",
-      "priority": 930
-    },
-    {
-      "name": "ts_rank_21",
-      "expression": "rank(ts_rank({field_preprocessed}, 21))",
-      "priority": 930
-    },
-    {
-      "_comment": "=== Tier 6 (155-142): ts_zscore — 标准归一化, 新增22/66窗口 + MARKET/INDUSTRY中性化变体 ===",
-      "name": "ts_zscore_after_group_63",
-      "expression": "rank(ts_zscore(group_neutralize({field_preprocessed}, industry), 63))",
-      "priority": 920
-    },
-    {
-      "name": "ts_zscore_backfill",
-      "expression": "rank(ts_zscore({field_preprocessed}, {backfill_window}))",
-      "priority": 920
-    },
-    {
-      "name": "ts_zscore_63",
-      "expression": "rank(ts_zscore({field_preprocessed}, 63))",
-      "priority": 920
-    },
-    {
-      "name": "ts_zscore_66",
-      "expression": "rank(ts_zscore({field_preprocessed}, 66))",
-      "priority": 920
-    },
-    {
-      "name": "group_zscore_60",
-      "expression": "group_rank(ts_zscore({field_preprocessed}, 60), subindustry)",
+      "_comment": "=== Tier 6: ts_zscore — 保留 22/63/252 三个窗口 + group 变体 ===",
+      "name": "ts_zscore_20",
+      "expression": "rank(ts_zscore({field_preprocessed}, 20))",
       "priority": 920
     },
     {
@@ -199,49 +132,29 @@
       "priority": 920
     },
     {
-      "name": "ts_zscore_22",
-      "expression": "rank(ts_zscore({field_preprocessed}, 22))",
-      "priority": 920
-    },
-    {
       "name": "ts_zscore_252",
       "expression": "rank(ts_zscore({field_preprocessed}, 252))",
       "priority": 920
     },
     {
-      "name": "ts_zscore_126",
-      "expression": "rank(ts_zscore({field_preprocessed}, 126))",
+      "name": "group_zscore_60_sector",
+      "expression": "group_rank(ts_zscore({field_preprocessed}, 60), industry)",
       "priority": 920
     },
     {
-      "name": "ts_zscore_21",
-      "expression": "rank(ts_zscore({field_preprocessed}, 21))",
+      "name": "group_zscore_60_MARKET",
+      "expression": "group_rank(ts_zscore({field_preprocessed}, 60), market)",
       "priority": 920
     },
     {
-      "name": "group_zscore_63_sector",
-      "expression": "group_rank(ts_zscore({field_preprocessed}, 63), industry)",
-      "priority": 920
-    },
-    {
-      "name": "group_zscore_63_MARKET",
-      "expression": "group_rank(ts_zscore({field_preprocessed}, 63), market)",
-      "priority": 920
-    },
-    {
-      "_comment": "=== Tier 7 (141-130): decay_linear — 新增 residual group_mean 去均值 + 22/66窗口 ===",
+      "_comment": "=== Tier 7: decay_linear — 保留 20/63 两个窗口 + group 变体 ===",
       "name": "decay_20",
       "expression": "rank(ts_decay_linear({field_preprocessed}, 20))",
       "priority": 900
     },
     {
-      "name": "resid_group_mean_decay_20",
-      "expression": "rank(ts_decay_linear(group_neutralize({field_preprocessed} - group_mean({field_preprocessed}, industry), subindustry), 20))",
-      "priority": 900
-    },
-    {
-      "name": "decay_10",
-      "expression": "rank(ts_decay_linear({field_preprocessed}, 10))",
+      "name": "decay_60",
+      "expression": "rank(ts_decay_linear({field_preprocessed}, 60))",
       "priority": 900
     },
     {
@@ -250,39 +163,9 @@
       "priority": 900
     },
     {
-      "name": "decay_22",
-      "expression": "rank(ts_decay_linear({field_preprocessed}, 22))",
-      "priority": 900
-    },
-    {
-      "name": "decay_252",
-      "expression": "rank(ts_decay_linear({field_preprocessed}, 252))",
-      "priority": 900
-    },
-    {
-      "name": "decay_63",
-      "expression": "rank(ts_decay_linear({field_preprocessed}, 63))",
-      "priority": 900
-    },
-    {
-      "name": "decay_66",
-      "expression": "rank(ts_decay_linear({field_preprocessed}, 66))",
-      "priority": 900
-    },
-    {
-      "name": "group_decay_63",
-      "expression": "group_rank(ts_decay_linear({field_preprocessed}, 63), subindustry)",
-      "priority": 900
-    },
-    {
-      "_comment": "=== Tier 8 (129-123): mean_reversion — 反转信号, 新增22窗口 ===",
+      "_comment": "=== Tier 8: mean_reversion — 保留 22/63 两个窗口 ===",
       "name": "mean_reversion_20",
       "expression": "group_rank(-1 * ts_zscore({field_preprocessed}, 20), subindustry)",
-      "priority": 890
-    },
-    {
-      "name": "mean_reversion_22",
-      "expression": "group_rank(-1 * ts_zscore({field_preprocessed}, 22), subindustry)",
       "priority": 890
     },
     {
@@ -291,19 +174,9 @@
       "priority": 890
     },
     {
-      "name": "mean_reversion_63",
-      "expression": "group_rank(-1 * ts_zscore({field_preprocessed}, 63), subindustry)",
-      "priority": 890
-    },
-    {
-      "_comment": "=== Tier 9 (122-114): mean_diff — 动量交叉/价差 ===",
+      "_comment": "=== Tier 9: mean_diff — 保留 22_66/5_20 短中两档 ===",
       "name": "mean_diff_5_20",
       "expression": "rank(ts_mean({field_preprocessed}, 5) - ts_mean({field_preprocessed}, 20))",
-      "priority": 880
-    },
-    {
-      "name": "mean_diff_22_66",
-      "expression": "rank(ts_mean({field_preprocessed}, 22) - ts_mean({field_preprocessed}, 66))",
       "priority": 880
     },
     {
@@ -312,18 +185,19 @@
       "priority": 880
     },
     {
-      "name": "mean_diff_21_63",
-      "expression": "rank(ts_mean({field_preprocessed}, 21) - ts_mean({field_preprocessed}, 63))",
-      "priority": 880
+      "_comment": "=== Tier 10: 波动率 & 信息比率 — 各保留 22/63 两个窗口 ===",
+      "name": "stddev_20",
+      "expression": "rank(ts_std_dev({field_preprocessed}, 20))",
+      "priority": 870
     },
-    {"_comment": "=== Tier 10 (113-102): 波动率 & 信息比率, 新增22/66窗口 ===",
+    {
       "name": "stddev_60",
       "expression": "rank(ts_std_dev({field_preprocessed}, 60))",
       "priority": 870
     },
     {
-      "name": "stddev_63",
-      "expression": "rank(ts_std_dev({field_preprocessed}, 63))",
+      "name": "ir_20",
+      "expression": "rank(ts_mean({field_preprocessed}, 20) / ts_std_dev({field_preprocessed}, 20))",
       "priority": 870
     },
     {
@@ -332,34 +206,9 @@
       "priority": 870
     },
     {
-      "name": "stddev_22",
-      "expression": "rank(ts_std_dev({field_preprocessed}, 22))",
-      "priority": 870
-    },
-    {
-      "name": "stddev_252",
-      "expression": "rank(ts_std_dev({field_preprocessed}, 252))",
-      "priority": 870
-    },
-    {
-      "name": "ir_63",
-      "expression": "rank(ts_mean({field_preprocessed}, 63) / ts_std_dev({field_preprocessed}, 63))",
-      "priority": 870
-    },
-    {
-      "name": "ir_22",
-      "expression": "rank(ts_mean({field_preprocessed}, 22) / ts_std_dev({field_preprocessed}, 22))",
-      "priority": 870
-    },
-    {
-      "_comment": "=== Tier 10.5: 量价因子 — ts_corr(volume, returns, N) 捕捉价量联动 ===",
+      "_comment": "=== Tier 10.5: 量价因子 — 保留 20/63 两个窗口 ===",
       "name": "vol_corr_20",
       "expression": "rank(ts_corr(volume, returns, 20))",
-      "priority": 865
-    },
-    {
-      "name": "vol_corr_22",
-      "expression": "rank(ts_corr(volume, returns, 22))",
       "priority": 865
     },
     {
@@ -368,33 +217,28 @@
       "priority": 865
     },
     {
-      "name": "vol_corr_63",
-      "expression": "rank(ts_corr(volume, returns, 63))",
-      "priority": 865
+      "_comment": "=== Tier 10.6: 平台推荐缺失算子 — ts_decay_exp_window / vector_neut / days_from_last_change / adv20 ===",
+      "name": "exp_decay_zscore_60",
+      "expression": "rank(ts_decay_exp_window(ts_zscore({field_preprocessed}, 60), 60, factor=0.5))",
+      "priority": 864
     },
     {
-      "_comment": "=== Tier 10.5: 波动率变化 — ts_delta(ts_std_dev(...), M) 捕捉波动突变 ===",
-      "name": "vol_change_20",
-      "expression": "rank(ts_delta(ts_std_dev({field_preprocessed}, 60), 20))",
-      "priority": 865
+      "name": "vector_neut_market_zscore_60",
+      "expression": "rank(vector_neut(ts_zscore({field_preprocessed}, 60), market))",
+      "priority": 863
     },
     {
-      "name": "vol_change_22",
-      "expression": "rank(ts_delta(ts_std_dev({field_preprocessed}, 63), 22))",
-      "priority": 865
+      "name": "adv20_liquidity_rank_60",
+      "expression": "rank(ts_zscore({field_preprocessed}, 60) / rank(adv20))",
+      "priority": 862
     },
     {
-      "name": "vol_change_60",
-      "expression": "rank(ts_delta(ts_std_dev({field_preprocessed}, 60), 60))",
-      "priority": 865
+      "name": "days_from_change_decay_20",
+      "expression": "rank(ts_decay_linear(days_from_last_change({field_preprocessed}), 20))",
+      "priority": 861
     },
     {
-      "name": "group_vol_change_20",
-      "expression": "group_rank(ts_delta(ts_std_dev({field_preprocessed}, 60), 20), subindustry)",
-      "priority": 865
-    },
-    {
-      "_comment": "=== Tier 11 (101-92): 截面标准化 & 基本预处理 ===",
+      "_comment": "=== Tier 11: 截面标准化 & 基本预处理 ===",
       "name": "zscore",
       "expression": "rank(zscore({field_preprocessed}))",
       "priority": 860
@@ -410,19 +254,9 @@
       "priority": 860
     },
     {
-      "_comment": "=== Tier 12 (91-80): ts_mean — 移动平均, 新增22/66窗口 ===",
+      "_comment": "=== Tier 12: ts_mean — 保留 22/63 两个窗口 ===",
       "name": "ts_mean_20",
       "expression": "rank(ts_mean({field_preprocessed}, 20))",
-      "priority": 850
-    },
-    {
-      "name": "ts_mean_22",
-      "expression": "rank(ts_mean({field_preprocessed}, 22))",
-      "priority": 850
-    },
-    {
-      "name": "ts_mean_63",
-      "expression": "rank(ts_mean({field_preprocessed}, 63))",
       "priority": 850
     },
     {
@@ -431,100 +265,23 @@
       "priority": 850
     },
     {
-      "name": "ts_mean_66",
-      "expression": "rank(ts_mean({field_preprocessed}, 66))",
-      "priority": 850
-    },
-    {
-      "name": "ts_mean_252",
-      "expression": "rank(ts_mean({field_preprocessed}, 252))",
-      "priority": 850
-    },
-    {
-      "name": "ts_mean_120",
-      "expression": "rank(ts_mean({field_preprocessed}, 120))",
-      "priority": 850
-    },
-    {
-      "_comment": "=== Tier 13 (79-68): sum + 偏度/峰度 — 低频但独特信号 ===",
+      "_comment": "=== Tier 13: sum — 低频独特信号 ===",
       "name": "sum_20",
       "expression": "rank(ts_sum({field_preprocessed}, 20))",
-      "priority": 840
-    },
-    {
-      "name": "skewness_60",
-      "expression": "rank(ts_skewness({field_preprocessed}, 60))",
-      "priority": 840
-    },
-    {
-      "name": "kurtosis_60",
-      "expression": "rank(ts_kurtosis({field_preprocessed}, 60))",
-      "priority": 840
-    },
-    {
-      "name": "skewness_252",
-      "expression": "rank(ts_skewness({field_preprocessed}, 252))",
       "priority": 840
     }
   ],
   "VECTOR": [
     {
-      "_comment": "=== VECTOR: vec_select_nth 向量选择器 — 提取第N个元素，适用于时序多因子组合 ===",
-      "name": "vec_select_nth_0_rank",
-      "expression": "rank(vec_select_nth({field_preprocessed}, 0))",
-      "priority": 980
-    },
-    {
-      "name": "vec_select_nth_1_rank",
-      "expression": "rank(vec_select_nth({field_preprocessed}, 1))",
-      "priority": 980
-    },
-    {
-      "name": "vec_select_nth_0_delta_22",
-      "expression": "rank(ts_delta(vec_select_nth({field_preprocessed}, 0), 22))",
-      "priority": 980
-    },
-    {
-      "name": "vec_select_nth_1_delta_22",
-      "expression": "rank(ts_delta(vec_select_nth({field_preprocessed}, 1), 22))",
-      "priority": 980
-    },
-    {
-      "_comment": "=== VECTOR: vec_count 向量计数 — 统计非零/非NaN元素数量，衡量数据质量 ===",
-      "name": "vec_count_rank",
-      "expression": "rank(vec_count({field_preprocessed}))",
-      "priority": 970
-    },
-    {
-      "name": "vec_count_delta_22",
-      "expression": "rank(ts_delta(vec_count({field_preprocessed}), 22))",
-      "priority": 970
-    },
-    {
-      "_comment": "=== VECTOR: vec_avg 聚合，仅保留相对稳健的中长窗 rank / zscore / decay 结构 ===",
+      "_comment": "=== VECTOR: 高频模板 + 代表性中窗结构 ===",
       "name": "vec_avg_vol_scaled_delta_20_60",
       "expression": "rank(ts_delta(vec_avg({field_preprocessed}), 20) / ts_std_dev(vec_avg({field_preprocessed}), 60))",
       "priority": 1000
     },
     {
       "name": "vec_avg_3layer_zs_sector_decay",
-      "expression": "ts_decay_linear(group_neutralize(ts_zscore(vec_avg({field_preprocessed}), 63), industry), 20)",
+      "expression": "ts_decay_linear(group_neutralize(ts_zscore(vec_avg({field_preprocessed}), 60), industry), 20)",
       "priority": 990
-    },
-    {
-      "name": "vec_avg_3layer_zs_MARKET_decay",
-      "expression": "ts_decay_linear(group_neutralize(ts_zscore(vec_avg({field_preprocessed}), 63), market), 20)",
-      "priority": 990
-    },
-    {
-      "name": "vec_avg_delta_22",
-      "expression": "rank(ts_delta(vec_avg({field_preprocessed}), 22))",
-      "priority": 960
-    },
-    {
-      "name": "vec_avg_delta_21",
-      "expression": "rank(ts_delta(vec_avg({field_preprocessed}), 21))",
-      "priority": 960
     },
     {
       "name": "vec_avg_delta_20",
@@ -532,29 +289,9 @@
       "priority": 960
     },
     {
-      "name": "vec_avg_delta_66",
-      "expression": "rank(ts_delta(vec_avg({field_preprocessed}), 66))",
-      "priority": 960
-    },
-    {
-      "name": "vec_avg_ts_rank_63",
-      "expression": "rank(ts_rank(vec_avg({field_preprocessed}), 63))",
-      "priority": 930
-    },
-    {
       "name": "vec_avg_ts_rank_60",
       "expression": "rank(ts_rank(vec_avg({field_preprocessed}), 60))",
       "priority": 930
-    },
-    {
-      "name": "vec_avg_ts_rank_66",
-      "expression": "rank(ts_rank(vec_avg({field_preprocessed}), 66))",
-      "priority": 930
-    },
-    {
-      "name": "vec_avg_ts_zscore_63",
-      "expression": "rank(ts_zscore(vec_avg({field_preprocessed}), 63))",
-      "priority": 920
     },
     {
       "name": "vec_avg_ts_zscore_60",
@@ -562,23 +299,13 @@
       "priority": 920
     },
     {
-      "name": "vec_avg_ts_rank_252",
-      "expression": "rank(ts_rank(vec_avg({field_preprocessed}), 252))",
-      "priority": 930
-    },
-    {
-      "name": "vec_avg_ts_zscore_66",
-      "expression": "rank(ts_zscore(vec_avg({field_preprocessed}), 66))",
-      "priority": 920
+      "name": "vec_count_rank",
+      "expression": "rank(vec_count({field_preprocessed}))",
+      "priority": 910
     },
     {
       "name": "vec_avg_zscore",
       "expression": "rank(zscore(vec_avg({field_preprocessed})))",
-      "priority": 860
-    },
-    {
-      "name": "vec_avg_backfill",
-      "expression": "rank(ts_backfill(vec_avg({field_preprocessed}), {backfill_window}))",
       "priority": 860
     },
     {
@@ -589,15 +316,10 @@
   ],
   "GROUP": [
     {
-      "_comment": "=== GROUP: vec_avg 仅保留中长窗 rank / zscore 和三层稳态结构 ===",
+      "_comment": "=== GROUP: 中长窗 rank/zscore + 三层稳态结构 ===",
       "name": "vec_avg_3layer_zs_sector_decay",
-      "expression": "ts_decay_linear(group_neutralize(ts_zscore(vec_avg({field_preprocessed}), 63), industry), 20)",
+      "expression": "ts_decay_linear(group_neutralize(ts_zscore(vec_avg({field_preprocessed}), 60), industry), 20)",
       "priority": 990
-    },
-    {
-      "name": "vec_avg_ts_rank_63",
-      "expression": "rank(ts_rank(vec_avg({field_preprocessed}), 63))",
-      "priority": 930
     },
     {
       "name": "vec_avg_ts_rank_60",
@@ -605,24 +327,9 @@
       "priority": 930
     },
     {
-      "name": "vec_avg_ts_rank_66",
-      "expression": "rank(ts_rank(vec_avg({field_preprocessed}), 66))",
-      "priority": 930
-    },
-    {
       "name": "vec_avg_ts_rank_252",
       "expression": "rank(ts_rank(vec_avg({field_preprocessed}), 252))",
       "priority": 930
-    },
-    {
-      "name": "vec_avg_ts_rank_120",
-      "expression": "rank(ts_rank(vec_avg({field_preprocessed}), 120))",
-      "priority": 930
-    },
-    {
-      "name": "vec_avg_ts_zscore_63",
-      "expression": "rank(ts_zscore(vec_avg({field_preprocessed}), 63))",
-      "priority": 920
     },
     {
       "name": "vec_avg_ts_zscore_60",
@@ -632,15 +339,10 @@
   ],
   "SET": [
     {
-      "_comment": "=== SET: 同 GROUP，仅保留中长窗 rank / zscore 和三层稳态结构 ===",
+      "_comment": "=== SET: 与 GROUP 相同结构，适配 SET 类型字段 ===",
       "name": "vec_avg_3layer_zs_sector_decay",
-      "expression": "ts_decay_linear(group_neutralize(ts_zscore(vec_avg({field_preprocessed}), 63), industry), 20)",
+      "expression": "ts_decay_linear(group_neutralize(ts_zscore(vec_avg({field_preprocessed}), 60), industry), 20)",
       "priority": 990
-    },
-    {
-      "name": "vec_avg_ts_rank_63",
-      "expression": "rank(ts_rank(vec_avg({field_preprocessed}), 63))",
-      "priority": 930
     },
     {
       "name": "vec_avg_ts_rank_60",
@@ -648,24 +350,9 @@
       "priority": 930
     },
     {
-      "name": "vec_avg_ts_rank_66",
-      "expression": "rank(ts_rank(vec_avg({field_preprocessed}), 66))",
-      "priority": 930
-    },
-    {
       "name": "vec_avg_ts_rank_252",
       "expression": "rank(ts_rank(vec_avg({field_preprocessed}), 252))",
       "priority": 930
-    },
-    {
-      "name": "vec_avg_ts_rank_120",
-      "expression": "rank(ts_rank(vec_avg({field_preprocessed}), 120))",
-      "priority": 930
-    },
-    {
-      "name": "vec_avg_ts_zscore_63",
-      "expression": "rank(ts_zscore(vec_avg({field_preprocessed}), 63))",
-      "priority": 920
     },
     {
       "name": "vec_avg_ts_zscore_60",

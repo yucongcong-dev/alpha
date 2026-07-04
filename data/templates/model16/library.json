@@ -6,8 +6,8 @@
   "_comment_dataset_template": "Curated dataset-specific template library for model16. Keep this library focused on stable long-window score transforms.",
   "default": [
     {
-      "name": "model16_rank_zscore_decay_126",
-      "expression": "rank(ts_decay_linear(ts_zscore({field_preprocessed}, 126), 20))",
+      "name": "model16_rank_zscore_decay_120",
+      "expression": "rank(ts_decay_linear(ts_zscore({field_preprocessed}, 120), 20))",
       "priority": 1000,
       "family": "zscore_decay",
       "layer": "time_series",
@@ -15,8 +15,8 @@
       "dataset_tags": ["model16", "fundamental_scores"]
     },
     {
-      "name": "model16_rank_ts_rank_126",
-      "expression": "rank(ts_rank({field_preprocessed}, 126))",
+      "name": "model16_rank_ts_rank_120",
+      "expression": "rank(ts_rank({field_preprocessed}, 120))",
       "priority": 999,
       "family": "ts_rank",
       "layer": "time_series",
@@ -24,8 +24,8 @@
       "dataset_tags": ["model16", "fundamental_scores"]
     },
     {
-      "name": "model16_market_neutral_zscore_decay_126",
-      "expression": "ts_decay_linear(group_neutralize(ts_zscore({field_preprocessed}, 126), market), 20)",
+      "name": "model16_market_neutral_zscore_decay_120",
+      "expression": "ts_decay_linear(group_neutralize(ts_zscore({field_preprocessed}, 120), market), 20)",
       "priority": 998,
       "family": "neutralize_decay",
       "layer": "composite",
@@ -33,8 +33,26 @@
       "dataset_tags": ["model16", "fundamental_scores"]
     },
     {
-      "name": "model16_group_ts_rank_market_126",
-      "expression": "group_rank(ts_rank({field_preprocessed}, 126), market)",
+      "name": "model16_hump_zscore_120",
+      "expression": "rank(hump(ts_zscore({field_preprocessed}, 120), 0.3))",
+      "priority": 997,
+      "family": "hump",
+      "layer": "time_series",
+      "stage": "first_order",
+      "dataset_tags": ["model16", "fundamental_scores"]
+    },
+    {
+      "name": "model16_hump_decay_zscore_120",
+      "expression": "rank(hump_decay(ts_zscore({field_preprocessed}, 120), 0.3, 20))",
+      "priority": 996,
+      "family": "hump",
+      "layer": "time_series",
+      "stage": "first_order",
+      "dataset_tags": ["model16", "fundamental_scores"]
+    },
+    {
+      "name": "model16_group_ts_rank_market_120",
+      "expression": "group_rank(ts_rank({field_preprocessed}, 120), market)",
       "priority": 997,
       "family": "group_ts_rank",
       "layer": "group",
@@ -42,8 +60,8 @@
       "dataset_tags": ["model16", "fundamental_scores"]
     },
     {
-      "name": "model16_group_zscore_sector_126",
-      "expression": "group_rank(ts_zscore({field_preprocessed}, 126), sector)",
+      "name": "model16_group_zscore_sector_120",
+      "expression": "group_rank(ts_zscore({field_preprocessed}, 120), sector)",
       "priority": 996,
       "family": "group_zscore",
       "layer": "group",
@@ -51,8 +69,8 @@
       "dataset_tags": ["model16", "fundamental_scores"]
     },
     {
-      "name": "model16_rank_decay_126",
-      "expression": "rank(ts_decay_linear({field_preprocessed}, 126))",
+      "name": "model16_rank_decay_120",
+      "expression": "rank(ts_decay_linear({field_preprocessed}, 120))",
       "priority": 995,
       "family": "decay",
       "layer": "time_series",
@@ -60,8 +78,8 @@
       "dataset_tags": ["model16", "fundamental_scores"]
     },
     {
-      "name": "model16_rank_ir_126",
-      "expression": "rank(ts_mean({field_preprocessed}, 126) / ts_std_dev({field_preprocessed}, 126))",
+      "name": "model16_rank_ir_120",
+      "expression": "rank(ts_mean({field_preprocessed}, 120) / ts_std_dev({field_preprocessed}, 120))",
       "priority": 994,
       "family": "information_ratio",
       "layer": "time_series",
@@ -69,8 +87,8 @@
       "dataset_tags": ["model16", "fundamental_scores"]
     },
     {
-      "name": "model16_bucket_cap_zscore_126",
-      "expression": "group_rank(ts_zscore({field_preprocessed}, 126), bucket(rank(cap), range='0.1, 1, 0.1'))",
+      "name": "model16_bucket_cap_zscore_120",
+      "expression": "group_rank(ts_zscore({field_preprocessed}, 120), bucket(rank(cap), range='0.1, 1, 0.1'))",
       "priority": 993,
       "family": "bucket_group_rank",
       "layer": "group",
@@ -78,10 +96,55 @@
       "dataset_tags": ["model16", "fundamental_scores"]
     },
     {
-      "name": "model16_bucket_liquidity_ts_rank_126",
-      "expression": "group_rank(ts_rank({field_preprocessed}, 126), bucket(rank(close * volume), range='0.1, 1, 0.1'))",
+      "name": "model16_bucket_liquidity_ts_rank_120",
+      "expression": "group_rank(ts_rank({field_preprocessed}, 120), bucket(rank(close * volume), range='0.1, 1, 0.1'))",
       "priority": 992,
       "family": "bucket_group_rank",
+      "layer": "group",
+      "stage": "group_second_order",
+      "dataset_tags": ["model16", "fundamental_scores"]
+    },
+    {
+      "name": "model16_rank_ts_rank_60",
+      "expression": "rank(ts_rank({field_preprocessed}, 60))",
+      "priority": 991,
+      "family": "ts_rank",
+      "layer": "time_series",
+      "stage": "first_order",
+      "dataset_tags": ["model16", "fundamental_scores"]
+    },
+    {
+      "name": "model16_rank_decay_60",
+      "expression": "rank(ts_decay_linear({field_preprocessed}, 60))",
+      "priority": 990,
+      "family": "decay",
+      "layer": "time_series",
+      "stage": "first_order",
+      "dataset_tags": ["model16", "fundamental_scores"]
+    },
+    {
+      "name": "model16_exp_decay_zscore_120",
+      "expression": "rank(ts_decay_exp_window(ts_zscore({field_preprocessed}, 120), 60, factor=0.5))",
+      "priority": 990,
+      "family": "exp_decay",
+      "layer": "time_series",
+      "stage": "first_order",
+      "dataset_tags": ["model16", "fundamental_scores"]
+    },
+    {
+      "name": "model16_vector_neut_market_zscore_120",
+      "expression": "rank(vector_neut(ts_zscore({field_preprocessed}, 120), market))",
+      "priority": 989,
+      "family": "vector_neut",
+      "layer": "time_series",
+      "stage": "first_order",
+      "dataset_tags": ["model16", "fundamental_scores"]
+    },
+    {
+      "name": "model16_group_zscore_subindustry_60",
+      "expression": "group_rank(ts_zscore({field_preprocessed}, 60), subindustry)",
+      "priority": 989,
+      "family": "group_zscore",
       "layer": "group",
       "stage": "group_second_order",
       "dataset_tags": ["model16", "fundamental_scores"]

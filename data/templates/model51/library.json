@@ -6,8 +6,8 @@
   "_comment_dataset_template": "Curated dataset-specific template library for model51. Keep this file narrow; do not reintroduce short-window delta families unless new evidence supports them.",
   "default": [
     {
-      "name": "model51_market_zscore_decay_63",
-      "expression": "ts_decay_linear(group_neutralize(ts_zscore({field_preprocessed}, 63), market), 20)",
+      "name": "model51_market_zscore_decay_60",
+      "expression": "ts_decay_linear(group_neutralize(ts_zscore({field_preprocessed}, 60), market), 20)",
       "priority": 1000,
       "family": "neutralize_decay",
       "layer": "composite",
@@ -18,8 +18,8 @@
       ]
     },
     {
-      "name": "model51_industry_zscore_decay_63",
-      "expression": "ts_decay_linear(group_neutralize(ts_zscore({field_preprocessed}, 63), industry), 20)",
+      "name": "model51_industry_zscore_decay_60",
+      "expression": "ts_decay_linear(group_neutralize(ts_zscore({field_preprocessed}, 60), industry), 20)",
       "priority": 999,
       "family": "neutralize_decay",
       "layer": "composite",
@@ -30,8 +30,44 @@
       ]
     },
     {
-      "name": "model51_market_zscore_decay_126",
-      "expression": "ts_decay_linear(group_neutralize(ts_zscore({field_preprocessed}, 126), market), 20)",
+      "name": "model51_hump_zscore_60",
+      "expression": "rank(hump(ts_zscore({field_preprocessed}, 60), 0.3))",
+      "priority": 998,
+      "family": "hump",
+      "layer": "time_series",
+      "stage": "first_order",
+      "dataset_tags": [
+        "model51",
+        "risk_metrics"
+      ]
+    },
+    {
+      "name": "model51_hump_decay_zscore_60",
+      "expression": "rank(hump_decay(ts_zscore({field_preprocessed}, 60), 0.3, 20))",
+      "priority": 997,
+      "family": "hump",
+      "layer": "time_series",
+      "stage": "first_order",
+      "dataset_tags": [
+        "model51",
+        "risk_metrics"
+      ]
+    },
+    {
+      "name": "model51_hump_group_zscore_60_market",
+      "expression": "group_rank(hump(ts_zscore({field_preprocessed}, 60), 0.3), market)",
+      "priority": 996,
+      "family": "hump",
+      "layer": "group",
+      "stage": "group_second_order",
+      "dataset_tags": [
+        "model51",
+        "risk_metrics"
+      ]
+    },
+    {
+      "name": "model51_market_zscore_decay_120",
+      "expression": "ts_decay_linear(group_neutralize(ts_zscore({field_preprocessed}, 120), market), 20)",
       "priority": 998,
       "family": "neutralize_decay",
       "layer": "composite",
@@ -42,8 +78,8 @@
       ]
     },
     {
-      "name": "model51_group_zscore_market_63",
-      "expression": "group_rank(ts_zscore({field_preprocessed}, 63), market)",
+      "name": "model51_group_zscore_market_60",
+      "expression": "group_rank(ts_zscore({field_preprocessed}, 60), market)",
       "priority": 997,
       "family": "group_zscore",
       "layer": "group",
@@ -54,8 +90,8 @@
       ]
     },
     {
-      "name": "model51_group_zscore_market_126",
-      "expression": "group_rank(ts_zscore({field_preprocessed}, 126), market)",
+      "name": "model51_group_zscore_market_120",
+      "expression": "group_rank(ts_zscore({field_preprocessed}, 120), market)",
       "priority": 996,
       "family": "group_zscore",
       "layer": "group",
@@ -66,8 +102,8 @@
       ]
     },
     {
-      "name": "model51_bucket_cap_zscore_126",
-      "expression": "group_rank(ts_zscore({field_preprocessed}, 126), bucket(rank(cap), range='0.1, 1, 0.1'))",
+      "name": "model51_bucket_cap_zscore_120",
+      "expression": "group_rank(ts_zscore({field_preprocessed}, 120), bucket(rank(cap), range='0.1, 1, 0.1'))",
       "priority": 995,
       "family": "bucket_group_rank",
       "layer": "group",
@@ -78,8 +114,8 @@
       ]
     },
     {
-      "name": "model51_bucket_volatility_rank_126",
-      "expression": "group_rank(ts_rank({field_preprocessed}, 126), bucket(rank(ts_std_dev(returns, 20)), range='0.1, 1, 0.1'))",
+      "name": "model51_bucket_volatility_rank_120",
+      "expression": "group_rank(ts_rank({field_preprocessed}, 120), bucket(rank(ts_std_dev(returns, 20)), range='0.1, 1, 0.1'))",
       "priority": 994,
       "family": "bucket_group_rank",
       "layer": "group",
@@ -90,8 +126,8 @@
       ]
     },
     {
-      "name": "model51_ts_rank_126",
-      "expression": "rank(ts_rank({field_preprocessed}, 126))",
+      "name": "model51_ts_rank_120",
+      "expression": "rank(ts_rank({field_preprocessed}, 120))",
       "priority": 993,
       "family": "ts_rank",
       "layer": "time_series",
@@ -114,8 +150,8 @@
       ]
     },
     {
-      "name": "model51_ts_zscore_126",
-      "expression": "rank(ts_zscore({field_preprocessed}, 126))",
+      "name": "model51_ts_zscore_120",
+      "expression": "rank(ts_zscore({field_preprocessed}, 120))",
       "priority": 991,
       "family": "zscore_time",
       "layer": "time_series",
@@ -138,8 +174,8 @@
       ]
     },
     {
-      "name": "model51_decay_63",
-      "expression": "rank(ts_decay_linear({field_preprocessed}, 63))",
+      "name": "model51_decay_60",
+      "expression": "rank(ts_decay_linear({field_preprocessed}, 60))",
       "priority": 989,
       "family": "decay",
       "layer": "time_series",
@@ -150,8 +186,8 @@
       ]
     },
     {
-      "name": "model51_decay_126",
-      "expression": "rank(ts_decay_linear({field_preprocessed}, 126))",
+      "name": "model51_decay_120",
+      "expression": "rank(ts_decay_linear({field_preprocessed}, 120))",
       "priority": 988,
       "family": "decay",
       "layer": "time_series",
@@ -174,8 +210,8 @@
       ]
     },
     {
-      "name": "model51_ir_63",
-      "expression": "rank(ts_mean({field_preprocessed}, 63) / ts_std_dev({field_preprocessed}, 63))",
+      "name": "model51_ir_60",
+      "expression": "rank(ts_mean({field_preprocessed}, 60) / ts_std_dev({field_preprocessed}, 60))",
       "priority": 986,
       "family": "information_ratio",
       "layer": "time_series",
@@ -186,12 +222,85 @@
       ]
     },
     {
-      "name": "model51_ir_126",
-      "expression": "rank(ts_mean({field_preprocessed}, 126) / ts_std_dev({field_preprocessed}, 126))",
+      "name": "model51_ir_120",
+      "expression": "rank(ts_mean({field_preprocessed}, 120) / ts_std_dev({field_preprocessed}, 120))",
       "priority": 985,
       "family": "information_ratio",
       "layer": "time_series",
       "stage": "first_order",
+      "dataset_tags": [
+        "model51",
+        "risk_metrics"
+      ]
+    },
+    {
+
+      "name": "model51_ts_rank_60",
+      "expression": "rank(ts_rank({field_preprocessed}, 60))",
+      "priority": 983,
+      "family": "ts_rank",
+      "layer": "time_series",
+      "stage": "first_order",
+      "dataset_tags": [
+        "model51",
+        "risk_metrics"
+      ]
+    },
+    {
+      "name": "model51_ts_zscore_60",
+      "expression": "rank(ts_zscore({field_preprocessed}, 60))",
+      "priority": 982,
+      "family": "zscore_time",
+      "layer": "time_series",
+      "stage": "first_order",
+      "dataset_tags": [
+        "model51",
+        "risk_metrics"
+      ]
+    },
+    {
+      "name": "model51_mean_diff_20_60",
+      "expression": "rank(ts_mean({field_preprocessed}, 20) - ts_mean({field_preprocessed}, 60))",
+      "priority": 981,
+      "family": "mean_diff",
+      "layer": "time_series",
+      "stage": "first_order",
+      "dataset_tags": [
+        "model51",
+        "risk_metrics"
+      ]
+    },
+    {
+      "name": "model51_exp_decay_zscore_60",
+      "expression": "rank(ts_decay_exp_window(ts_zscore({field_preprocessed}, 60), 60, factor=0.5))",
+      "priority": 981,
+      "family": "exp_decay",
+      "layer": "time_series",
+      "stage": "first_order",
+      "dataset_tags": [
+        "model51",
+        "risk_metrics"
+      ]
+    },
+    {
+      "name": "model51_vector_neut_market_zscore_60",
+      "expression": "rank(vector_neut(ts_zscore({field_preprocessed}, 60), market))",
+      "priority": 980,
+      "family": "vector_neut",
+      "layer": "time_series",
+      "stage": "first_order",
+      "dataset_tags": [
+        "model51",
+        "risk_metrics"
+      ]
+    },
+    {
+      "name": "model51_subindustry_zscore_rank_60",
+      "expression": "group_rank(ts_zscore({field_preprocessed}, 60), subindustry)",
+      "priority": 980,
+      "family": "group_zscore",
+      "layer": "group",
+      "stage": "group_second_order",
       "dataset_tags": [
         "model51",
         "risk_metrics"
