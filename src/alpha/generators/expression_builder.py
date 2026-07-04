@@ -21,13 +21,8 @@ from ..generators.field_transforms import build_field_view
 from ..models.domain import TemplateCandidate, TemplateField, TemplateLibraryItem
 from ..models.runtime import TemplateBuildContext, TemplateFeedback
 from ..policy.expression import get_dataset_expression_policy, resolve_feedback_stage
-from ..policy.template_blacklist import (
-    is_blacklisted_template as _policy_is_blacklisted_template,
-)
 from ..policy.template_blacklist import load_default_avoid_rules
-from ..policy.template_blacklist import (
-    runtime_blacklist_match_reason as _policy_runtime_blacklist_match_reason,
-)
+from .templates.variation_common import is_blacklisted_template as _is_blacklisted_template
 from ..utils.helpers import is_event_field_name
 from .fields import choose_field_name, choose_field_type
 from .matrix_templates import build_matrix_templates
@@ -95,47 +90,6 @@ def _event_template_allowed(
         and any(name.startswith(prefix) for prefix in policy.event_allowed_template_prefixes)
     )
 
-
-def _is_blacklisted_template(
-    template_name: str,
-    expression: str = "",
-    *,
-    template_metadata: dict[str, Any] | None = None,
-    dataset_id: str = "",
-    policy: DatasetExpressionPolicy | None = None,
-) -> bool:
-    """判断模板是否命中默认或运行期黑名单。"""
-    return _policy_is_blacklisted_template(
-        template_name,
-        expression,
-        template_metadata=template_metadata,
-        dataset_id=dataset_id,
-        policy=policy,
-        current_family=classify_expression_family(template_name, expression, template_metadata),
-        current_stage=classify_template_stage(template_name, expression, template_metadata),
-    )
-
-
-def _blacklist_match_reason(
-    template_name: str,
-    expression: str = "",
-    *,
-    template_metadata: dict[str, Any] | None = None,
-    dataset_id: str = "",
-    policy: DatasetExpressionPolicy | None = None,
-) -> str | None:
-    """返回模板命中黑名单的原因；未命中则返回 None。"""
-    current_family = classify_expression_family(template_name, expression, template_metadata)
-    current_stage = classify_template_stage(template_name, expression, template_metadata)
-    return _policy_runtime_blacklist_match_reason(
-        template_name,
-        expression,
-        template_metadata=template_metadata,
-        dataset_id=dataset_id,
-        policy=policy,
-        current_family=current_family,
-        current_stage=current_stage,
-    )
 
 
 def sort_templates_by_priority(

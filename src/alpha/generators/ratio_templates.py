@@ -15,9 +15,6 @@ from ..config.models import DatasetExpressionPolicy
 from ..generators.field_transforms import build_field_view, build_ratio_expression
 from ..models.domain import FieldView, TemplateCandidate
 from ..models.runtime import TemplateField
-from ..policy.template_blacklist import (
-    is_blacklisted_template as _policy_is_blacklisted_template,
-)
 from .fields import choose_field_name
 from .templates.candidates import (
     _candidate_metadata,
@@ -26,24 +23,8 @@ from .templates.candidates import (
 )
 from .templates.classification import classify_expression_family, classify_template_stage
 from .templates.partner_fields import discover_partner_fields
+from .templates.variation_common import is_blacklisted_template as _is_blacklisted_template
 
-
-def _is_blacklisted_template(
-    template_name: str,
-    expression: str = "",
-    *,
-    template_metadata: dict[str, Any] | None = None,
-    policy: DatasetExpressionPolicy | None = None,
-) -> bool:
-    """判断 ratio 模板是否命中黑名单。"""
-    return _policy_is_blacklisted_template(
-        template_name,
-        expression,
-        template_metadata=template_metadata,
-        policy=policy,
-        current_family=classify_expression_family(template_name, expression, template_metadata),
-        current_stage=classify_template_stage(template_name, expression, template_metadata),
-    )
 
 
 def build_high_conviction_ratio_templates(

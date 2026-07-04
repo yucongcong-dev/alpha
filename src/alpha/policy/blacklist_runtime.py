@@ -15,6 +15,7 @@ from ..config.constants import (
 )
 from ..config.models import DatasetExpressionPolicy
 from ..models.domain import FieldTestResult
+from ..models.result_predicates import is_informative_result
 from .blacklist_store import (
     invalidate_blacklist_runtime_cache,
     read_blacklist_payload,
@@ -30,7 +31,6 @@ def _update_blacklist_runtime_stats_with_result(
     stats: BlacklistRuntimeStats,
     result: FieldTestResult,
 ) -> BlacklistRuntimeSummary | None:
-    from ..analysis.result_identity import is_informative_result
 
     if not is_informative_result(result):
         return None

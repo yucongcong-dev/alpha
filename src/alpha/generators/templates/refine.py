@@ -26,29 +26,9 @@ from ...config import (
     DatasetExpressionPolicy,
 )
 from ...models.domain import NearPassCandidate, TemplateCandidate
-from ...policy.template_blacklist import is_blacklisted_template as _policy_is_blacklisted_template
 from .candidates import _candidate_metadata, _make_template_candidate
-from .classification import classify_expression_family, classify_template_stage
+from .variation_common import is_blacklisted_template as _is_blacklisted_template
 
-
-def _is_blacklisted_template(
-    template_name: str,
-    expression: str = "",
-    *,
-    template_metadata: dict[str, Any] | None = None,
-    dataset_id: str = "",
-    policy: DatasetExpressionPolicy | None = None,
-) -> bool:
-    """检查精修模板是否被当前策略或数据集黑名单拦截。"""
-    return _policy_is_blacklisted_template(
-        template_name,
-        expression,
-        template_metadata=template_metadata,
-        dataset_id=dataset_id,
-        policy=policy,
-        current_family=classify_expression_family(template_name, expression, template_metadata),
-        current_stage=classify_template_stage(template_name, expression, template_metadata),
-    )
 
 
 def _make_window_replacer(replacement: int) -> Callable[[re.Match[str]], str]:

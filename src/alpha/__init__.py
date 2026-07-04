@@ -58,7 +58,7 @@ from .exceptions import (
     BrainQueueBusyError,
     BrainRateLimitError,
 )
-from .generators.fields import choose_field_name, choose_field_type
+from .generators import choose_field_name, choose_field_type
 from .models import (
     DatasetExpressionPolicy,
     ExecutionState,

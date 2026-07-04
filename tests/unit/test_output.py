@@ -5,26 +5,23 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from alpha.analysis.stats import load_existing_results
+from alpha.analysis.results_loader import load_existing_results
 from alpha.analysis.template_stats import compile_template_stats
-from alpha.io.output import (
-    auto_update_blacklist_incremental,
-    build_blacklist_runtime_stats,
-    build_dataset_scoped_paths,
+from alpha.analysis.analysis_sync import ensure_analysis_synced
+from alpha.io.output_paths import build_dataset_scoped_paths, resolve_cli_path
+from alpha.io.results_store import (
     dump_results,
     dump_results_incremental,
-    ensure_analysis_synced,
     initialize_results_journal,
-    load_blacklisted_template_names,
-    resolve_cli_path,
 )
 from alpha.models.domain import FailedCheck, FieldTestResult
+from alpha.policy import blacklist_runtime, blacklist_store
 
 
 def test_dump_results_does_not_update_blacklist_by_default(monkeypatch, tmp_path) -> None:
     """Runtime result writes must not mutate tracked blacklist files unless requested."""
     calls: list[tuple[object, ...]] = []
-    monkeypatch.setattr("alpha.io.output.auto_update_blacklist", lambda *args, **kwargs: calls.append(args))
+    monkeypatch.setattr(blacklist_runtime, "auto_update_blacklist", lambda *args, **kwargs: calls.append(args))
 
     dump_results(
         str(tmp_path / "results.json"),
@@ -32,6 +29,7 @@ def test_dump_results_does_not_update_blacklist_by_default(monkeypatch, tmp_path
         [],
         settings_fingerprint="settings",
         template_library_fingerprint="templates",
+        auto_update_blacklist_fn=blacklist_runtime.auto_update_blacklist,
     )
 
     assert calls == []
@@ -40,7 +38,7 @@ def test_dump_results_does_not_update_blacklist_by_default(monkeypatch, tmp_path
 def test_dump_results_updates_blacklist_when_enabled(monkeypatch, tmp_path) -> None:
     """The explicit opt-in flag should preserve the previous auto-update capability."""
     calls: list[tuple[object, ...]] = []
-    monkeypatch.setattr("alpha.io.output.auto_update_blacklist", lambda *args, **kwargs: calls.append(args))
+    monkeypatch.setattr(blacklist_runtime, "auto_update_blacklist", lambda *args, **kwargs: calls.append(args))
 
     dump_results(
         str(tmp_path / "results.json"),
@@ -49,6 +47,7 @@ def test_dump_results_updates_blacklist_when_enabled(monkeypatch, tmp_path) -> N
         settings_fingerprint="settings",
         template_library_fingerprint="templates",
         auto_update_template_blacklist=True,
+        auto_update_blacklist_fn=blacklist_runtime.auto_update_blacklist,
     )
 
     assert len(calls) == 1
@@ -331,8 +330,8 @@ def test_ensure_analysis_synced_skips_invalid_main_summary_shape(tmp_path) -> No
 
 def test_auto_update_blacklist_incremental_blacklists_only_changed_template(tmp_path) -> None:
     """Incremental blacklist updates should blacklist qualifying templates without full rescans."""
-    runtime_stats = build_blacklist_runtime_stats([])
-    blacklisted_names = load_blacklisted_template_names("custom_ds", data_dir=str(tmp_path))
+    runtime_stats = blacklist_runtime.build_blacklist_runtime_stats([])
+    blacklisted_names = blacklist_store.load_blacklisted_template_names("custom_ds", data_dir=str(tmp_path))
     first = FieldTestResult(
         field_id="f1",
         field_type="MATRIX",
@@ -362,14 +361,14 @@ def test_auto_update_blacklist_incremental_blacklists_only_changed_template(tmp_
         ],
     )
 
-    added_after_first = auto_update_blacklist_incremental(
+    added_after_first = blacklist_runtime.auto_update_blacklist_incremental(
         runtime_stats,
         blacklisted_names,
         first,
         "custom_ds",
         data_dir=str(tmp_path),
     )
-    added_after_second = auto_update_blacklist_incremental(
+    added_after_second = blacklist_runtime.auto_update_blacklist_incremental(
         runtime_stats,
         blacklisted_names,
         second,

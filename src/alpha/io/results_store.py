@@ -12,7 +12,7 @@ import os
 import tempfile
 from typing import Any
 
-from ..analysis.report_builder import build_analysis_payload, build_results_summary_payload
+
 from ..models.domain import FieldTestResult
 from .common import atomic_write_json
 from .output_paths import build_output_sidecar_paths, cleanup_legacy_sidecar_files
@@ -84,6 +84,8 @@ def dump_results(
 ) -> None:
     """持久化完整运行结果，并按需同步分析边车文件。"""
     sidecar_paths = build_output_sidecar_paths(path)
+    from ..analysis.report_builder import build_analysis_payload, build_results_summary_payload
+
     summary, analysis_inputs = build_results_summary_payload(
         dataset_id,
         results,

@@ -10,22 +10,15 @@ _BUILTIN_TEMPLATE_LIBRARY_FILE = _library_paths._BUILTIN_TEMPLATE_LIBRARY_FILE
 _LEGACY_BUILTIN_TEMPLATE_LIBRARY_FILE = _library_paths._LEGACY_BUILTIN_TEMPLATE_LIBRARY_FILE
 
 
-def _sync_builtin_template_paths() -> None:
-    """Keep split resource modules aligned with compatibility-level monkeypatches."""
-    _library_paths._BUILTIN_TEMPLATE_LIBRARY_FILE = _BUILTIN_TEMPLATE_LIBRARY_FILE
-    _library_paths._LEGACY_BUILTIN_TEMPLATE_LIBRARY_FILE = _LEGACY_BUILTIN_TEMPLATE_LIBRARY_FILE
-
-
 def ensure_dataset_template_library(path: str, dataset_id: str) -> str:
     """Compatibility wrapper around the split template-library store."""
-    _sync_builtin_template_paths()
     return _library_store.ensure_dataset_template_library(path, dataset_id)
 
 
 def load_template_library(path: str):
     """Compatibility wrapper around the split template-library loader."""
-    _sync_builtin_template_paths()
     return _library_loader.load_template_library(path)
+
 
 __all__ = [
     "_BUILTIN_TEMPLATE_LIBRARY_FILE",

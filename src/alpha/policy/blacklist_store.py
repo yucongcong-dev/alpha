@@ -16,6 +16,7 @@ from ..io.common import (
     resolve_runtime_data_dir,
     sanitize_dataset_id_for_filename,
 )
+from .template_blacklist import invalidate_blacklist_cache
 from .types import BlacklistPayload
 
 logger = logging.getLogger(__name__)
@@ -86,7 +87,6 @@ def write_blacklist_payload(
 
 
 def invalidate_blacklist_runtime_cache(dataset_id: str) -> None:
-    from .template_blacklist import invalidate_blacklist_cache
 
     invalidate_blacklist_cache(dataset_id)
 

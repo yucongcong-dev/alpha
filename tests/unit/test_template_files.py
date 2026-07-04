@@ -9,14 +9,12 @@ from pathlib import Path
 from alpha.core.executor import build_pending_templates_for_field, inflight_template_keys
 from alpha.core.scheduler import handle_completed_future
 from alpha.generators import templates as template_module
-from alpha.generators.expressions import _is_blacklisted_template
+from alpha.generators.expression_builder import _is_blacklisted_template
 from alpha.generators.payload import build_settings_fingerprint_from_payload
 from alpha.generators.templates import ensure_dataset_template_library, load_template_library
-from alpha.io.output import (
-    auto_update_blacklist,
-    ensure_template_blacklist_file,
-    invalidate_blacklist_path_cache,
-)
+from alpha.generators.templates import library_paths as _library_paths
+from alpha.policy.blacklist_runtime import auto_update_blacklist
+from alpha.policy.blacklist_store import ensure_template_blacklist_file, invalidate_blacklist_path_cache
 from alpha.models.domain import FailedCheck, FieldTestResult, TemplateCandidate, TemplateLibraryItem
 from alpha.models.runtime import (
     ExecutionState,
@@ -49,7 +47,7 @@ def test_ensure_dataset_template_library_copies_base_when_missing(monkeypatch, t
         ),
         encoding="utf-8",
     )
-    monkeypatch.setattr(template_module, "_BUILTIN_TEMPLATE_LIBRARY_FILE", str(base))
+    monkeypatch.setattr(_library_paths, "_BUILTIN_TEMPLATE_LIBRARY_FILE", str(base))
 
     resolved = ensure_dataset_template_library(str(target), "custom_ds")
 
@@ -75,7 +73,7 @@ def test_ensure_dataset_template_library_preserves_existing(monkeypatch, tmp_pat
         json.dumps({"default": [{"name": "custom", "expression": "zscore({field})"}]}),
         encoding="utf-8",
     )
-    monkeypatch.setattr(template_module, "_BUILTIN_TEMPLATE_LIBRARY_FILE", str(base))
+    monkeypatch.setattr(_library_paths, "_BUILTIN_TEMPLATE_LIBRARY_FILE", str(base))
 
     ensure_dataset_template_library(str(target), "custom_ds")
 
@@ -155,7 +153,7 @@ def test_ensure_dataset_template_library_fills_missing_priorities(
         ),
         encoding="utf-8",
     )
-    monkeypatch.setattr(template_module, "_BUILTIN_TEMPLATE_LIBRARY_FILE", str(base))
+    monkeypatch.setattr(_library_paths, "_BUILTIN_TEMPLATE_LIBRARY_FILE", str(base))
 
     ensure_dataset_template_library(str(target), "custom_ds")
 
@@ -172,7 +170,7 @@ def test_ensure_dataset_template_library_does_not_mutate_base_template(
         json.dumps({"default": [{"name": "base", "expression": "rank({field})"}]}),
         encoding="utf-8",
     )
-    monkeypatch.setattr(template_module, "_BUILTIN_TEMPLATE_LIBRARY_FILE", str(base))
+    monkeypatch.setattr(_library_paths, "_BUILTIN_TEMPLATE_LIBRARY_FILE", str(base))
 
     ensure_dataset_template_library(str(base), "custom_ds")
 
@@ -190,8 +188,8 @@ def test_load_template_library_legacy_base_path_falls_back_to_new_location(
         json.dumps({"default": [{"name": "base", "expression": "rank({field})"}]}),
         encoding="utf-8",
     )
-    monkeypatch.setattr(template_module, "_BUILTIN_TEMPLATE_LIBRARY_FILE", str(new_base))
-    monkeypatch.setattr(template_module, "_LEGACY_BUILTIN_TEMPLATE_LIBRARY_FILE", str(legacy_base))
+    monkeypatch.setattr(_library_paths, "_BUILTIN_TEMPLATE_LIBRARY_FILE", str(new_base))
+    monkeypatch.setattr(_library_paths, "_LEGACY_BUILTIN_TEMPLATE_LIBRARY_FILE", str(legacy_base))
 
     library = load_template_library(str(legacy_base))
 
@@ -310,7 +308,7 @@ def test_scheduler_dump_results_shrinks_next_template_queue(monkeypatch, tmp_pat
     monkeypatch.chdir(tmp_path)
     invalidate_blacklist_cache()
     invalidate_blacklist_path_cache()
-    monkeypatch.setattr("alpha.io.output.DATA_DIR", data_dir)
+    monkeypatch.setattr("alpha.io.common.DATA_DIR", data_dir)
     monkeypatch.setattr(
         "alpha.core.executor.build_setting_variants",
         lambda *args, **kwargs: [{"neutralization": "SUBINDUSTRY", "truncation": 0.08}],

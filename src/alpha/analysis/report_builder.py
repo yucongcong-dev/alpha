@@ -17,13 +17,14 @@ from ..models.domain import (
     ResultRow,
     SummaryPayload,
 )
+from ..models.result_predicates import is_queue_timeout_result
 from .failed_checks import (
     compile_failed_check_leaderboard,
     compile_near_pass_summary,
     compile_optimization_hints,
 )
 from .field_stats import compile_field_performance_summary
-from .result_identity import is_queue_timeout_result
+
 from .template_stats import compile_template_performance_summary
 
 

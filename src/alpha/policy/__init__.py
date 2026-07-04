@@ -3,15 +3,19 @@
 
 集中管理所有策略相关逻辑：
 - expression: 数据集表达式策略构建与反馈阶段解析
-- blacklist: 模板黑名单管理
+- blacklist_runtime: 黑名单运行态聚合与自动更新规则
+- blacklist_store: 黑名单文件存取与缓存失效
+- template_blacklist: 模板黑名单匹配策略
 """
 
 from __future__ import annotations
 
-from .blacklist import (
+from .blacklist_runtime import (
     auto_update_blacklist,
     auto_update_blacklist_incremental,
     build_blacklist_runtime_stats,
+)
+from .blacklist_store import (
     ensure_template_blacklist_file,
     invalidate_blacklist_path_cache,
     load_blacklisted_template_names,

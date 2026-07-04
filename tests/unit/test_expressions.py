@@ -1,7 +1,8 @@
 """
 表达式构建模块单元测试（pytest 风格）
 
-测试 alpha.generators.expressions 中的表达式分类和构建函数。
+测试 alpha.generators.expression_builder 和 templates 子模块中的
+表达式分类和构建函数。
 """
 
 from __future__ import annotations

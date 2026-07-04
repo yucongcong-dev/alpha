@@ -1,5 +1,8 @@
-"""
-分析边车文件同步实现。
+"""分析边车文件同步实现。
+
+本模块负责确保 analysis 派生文件与主结果文件一致。
+从 io 包迁入 analysis 包，因为其核心职责是分析结果重建，
+而非底层文件 I/O。
 """
 
 from __future__ import annotations
@@ -9,10 +12,10 @@ import json
 import logging
 import os
 
-from ..analysis.results_loader import load_existing_results
 from ..config.constants import DEFAULT_DATASET_ID
-from .output_paths import build_output_sidecar_paths
-from .results_store import dump_results as dump_results_store
+from ..io.output_paths import build_output_sidecar_paths
+from ..io.results_store import dump_results as dump_results_store
+from .results_loader import load_existing_results
 
 logger = logging.getLogger(__name__)
 

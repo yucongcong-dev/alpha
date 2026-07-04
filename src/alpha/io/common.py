@@ -1,8 +1,9 @@
 """
 IO 基础公共工具。
 
-本模块承载更底层、无策略语义的公共能力，供 output、policy、
-generator 等上层模块复用，避免它们彼此形成反向依赖。
+本模块承载更底层、无策略语义的公共能力，供 output_paths、
+results_store、policy、generator 等上层模块复用，
+避免它们彼此形成反向依赖。
 """
 
 from __future__ import annotations
