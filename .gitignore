@@ -10,6 +10,7 @@ build/
 dist/
 .DS_Store
 .env
+.venv/
 
 # Credentials and secrets
 .credentials/

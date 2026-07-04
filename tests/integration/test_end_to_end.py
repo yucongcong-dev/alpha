@@ -11,130 +11,22 @@
 from __future__ import annotations
 
 import json
-import tempfile
-from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
-import yaml
 
-from alpha.config.unified_manager import (
-    UnifiedConfigManager,
-    ConfigSource,
-    get_config_manager,
-    get_config,
-    set_config,
-)
-from alpha.config.schema import (
-    ConfigSchema,
-    ConfigField,
-    ConfigType,
-    AlphaConfigSchemaBuilder,
-)
+from alpha.core.result_processing import apply_completed_result
 from alpha.models.domain import (
+    FailedCheck,
     FieldTestContext,
     FieldTestResult,
     TemplateLibraryItem,
-    FailedCheck,
 )
 from alpha.models.runtime import (
     ExecutionState,
     PendingFutureContext,
     RuntimeConcurrencyState,
 )
-from alpha.core.result_processing import apply_completed_result
-
-
-class TestConfigurationEndToEnd:
-    """
-    测试配置管理器的完整生命周期：
-    加载 → 获取 → 修改 → 验证 → 重新加载
-    """
-
-    def setup_method(self):
-        UnifiedConfigManager.reset()
-        self.temp_dir = tempfile.mkdtemp()
-        self.config_dir = Path(self.temp_dir) / "config"
-        self.config_dir.mkdir(exist_ok=True)
-
-        constants_defaults = {
-            "api": {
-                "base_url": "https://api.test.com",
-                "timeout": 30,
-                "max_retries": 3,
-            },
-            "quality": {
-                "min_sharpe": 1.0,
-                "min_fitness": 0.5,
-            }
-        }
-        with open(self.config_dir / "constants_defaults.yaml", "w") as f:
-            yaml.dump(constants_defaults, f)
-
-        settings = {
-            "api": {"timeout": 60},
-            "operation": {"concurrent_jobs": 8},
-        }
-        with open(self.config_dir / "settings.yaml", "w") as f:
-            yaml.dump(settings, f)
-
-        self.manager = UnifiedConfigManager(self.temp_dir)
-
-    def teardown_method(self):
-        import shutil
-        shutil.rmtree(self.temp_dir, ignore_errors=True)
-        UnifiedConfigManager.reset()
-
-    def test_config_full_lifecycle(self):
-        """测试配置的完整生命周期"""
-        assert self.manager.get("api.base_url") == "https://api.test.com"
-        assert self.manager.get("api.timeout") == 60
-        assert self.manager.get("quality.min_sharpe") == 1.0
-
-        self.manager.set("api.timeout", 90, ConfigSource.RUNTIME_OVERRIDE)
-        assert self.manager.get("api.timeout") == 90
-
-        new_settings = {"api": {"timeout": 120}, "operation": {"concurrent_jobs": 16}}
-        with open(self.config_dir / "settings.yaml", "w") as f:
-            yaml.dump(new_settings, f)
-
-        self.manager.reload(force=True)
-        assert self.manager.get("api.timeout") == 120
-        assert self.manager.get("operation.concurrent_jobs") == 16
-
-    def test_config_schema_validation(self):
-        """测试配置schema验证"""
-        schema = ConfigSchema()
-        schema.add_field(ConfigField(
-            name="api.timeout",
-            type=ConfigType.INTEGER,
-            description="API超时时间",
-            default=30,
-            min_value=1,
-            max_value=300
-        ))
-        schema.add_field(ConfigField(
-            name="api.base_url",
-            type=ConfigType.URL,
-            description="API基础URL",
-            required=True
-        ))
-
-        self.manager.set_schema(schema)
-
-        self.manager.set("api.timeout", -1, ConfigSource.RUNTIME_OVERRIDE)
-        assert self.manager.get("api.timeout") == -1
-
-    def test_config_priority_override(self):
-        """测试配置优先级覆盖"""
-        assert self.manager.get("api.timeout") == 60
-        assert self.manager.get("api.base_url") == "https://api.test.com"
-
-        self.manager.set("api.timeout", 90, ConfigSource.RUNTIME_OVERRIDE)
-        assert self.manager.get("api.timeout") == 90
-
-        self.manager.set("api.timeout", 120, ConfigSource.COMMAND_LINE)
-        assert self.manager.get("api.timeout") == 120
 
 
 class TestDataClassSerialization:
@@ -298,7 +190,7 @@ class TestExecutionStateManagement:
         state.pending_futures[mock_future] = ctx
 
         assert len(state.pending_futures) == 1
-        assert "test_field" in str(list(state.pending_futures.values())[0].field_id)
+        assert "test_field" in str(next(iter(state.pending_futures.values())).field_id)
 
     def test_runtime_concurrency_state(self):
         """测试运行时并发状态管理"""
@@ -362,34 +254,6 @@ class TestResultProcessingFlow:
 
         assert len(state.results) == 1
         assert state.submittable_count == 1
-
-
-class TestAlphaConfigSchemaBuilder:
-    """
-    测试Alpha配置schema构建器的完整功能
-    """
-
-    def test_build_full_schema(self):
-        """测试构建完整的配置schema"""
-        schema = AlphaConfigSchemaBuilder.build_full_schema()
-
-        assert "api" in schema.nested_schemas
-        assert "simulation" in schema.nested_schemas
-        assert "quality" in schema.nested_schemas
-
-        default_config = schema.get_default_config()
-        assert "api" in default_config
-        assert "simulation" in default_config
-        assert "quality" in default_config
-
-    def test_default_config_values(self):
-        """测试默认配置值"""
-        default_config = AlphaConfigSchemaBuilder.build_full_schema().get_default_config()
-
-        assert default_config["api"]["base_url"] == "https://api.brain.worldquant.com"
-        assert default_config["api"]["timeout"] == 30
-        assert default_config["simulation"]["language"] == "python"
-        assert default_config["quality"]["min_sharpe"] == 1.0
 
 
 if __name__ == "__main__":

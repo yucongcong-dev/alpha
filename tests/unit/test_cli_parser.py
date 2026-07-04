@@ -216,8 +216,8 @@ def test_normalize_args_paths_uses_dataset_scoped_defaults(monkeypatch, tmp_path
     args = parse_args()
     paths = normalize_args_paths(args)
 
-    assert paths.fields_cache_file.endswith("/cache/fields/pv1/USA/TOP1000/EQUITY/delay2/fields.json")
-    assert paths.output.endswith("/results/pv1/test_results.json")
+    assert paths.fields_cache_file.replace("\\", "/").endswith("/cache/fields/pv1/USA/TOP1000/EQUITY/delay2/fields.json")
+    assert paths.output.replace("\\", "/").endswith("/results/pv1/test_results.json")
 
 
 def test_self_correlation_poll_defaults(monkeypatch) -> None:
@@ -270,7 +270,7 @@ def test_normalize_args_paths_does_not_mutate_original_args(monkeypatch, tmp_pat
     assert args.output == ""
     assert args.template_library_file == ""
     assert args.fields_cache_file == ""
-    assert paths.output.endswith("/results/pv1/test_results.json")
+    assert paths.output.replace("\\", "/").endswith("/results/pv1/test_results.json")
 
 
 def test_normalize_args_paths_resolves_relative_files_from_cwd(monkeypatch, tmp_path) -> None:

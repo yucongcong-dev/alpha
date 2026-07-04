@@ -86,7 +86,7 @@ def write_blacklist_payload(
 
 
 def invalidate_blacklist_runtime_cache(dataset_id: str) -> None:
-    from ..generators.expressions import invalidate_blacklist_cache
+    from .template_blacklist import invalidate_blacklist_cache
 
     invalidate_blacklist_cache(dataset_id)
 

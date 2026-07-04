@@ -1,13 +1,15 @@
 from __future__ import annotations
 
-from alpha.config import FieldTransformSpec, FieldTransformStage, get_dataset_expression_policy
-from alpha.generators.expressions import build_expression_candidates
+from alpha.config import FieldTransformSpec, FieldTransformStage
+from alpha.generators.expression_builder import build_expression_candidates
 from alpha.generators.field_transforms import (
     apply_transform_pipeline,
     build_field_view,
     iter_transform_stages,
 )
 from alpha.generators.templates import load_template_library
+from alpha.models.runtime import TemplateBuildContext, TemplateBuildOptions
+from alpha.policy.expression import get_dataset_expression_policy
 
 
 def test_apply_transform_pipeline_backfill_then_winsorize() -> None:
@@ -47,14 +49,16 @@ def test_build_field_view_uses_vec_avg_for_vector_fields() -> None:
 def test_build_expression_candidates_uses_preprocessed_raw_field_view() -> None:
     policy = get_dataset_expression_policy("fundamental6")
     template_library = {"default": []}
+    build_ctx = TemplateBuildContext(
+        options=TemplateBuildOptions(dataset_id="fundamental6", legacy_similarity_penalty=0),
+        all_fields=[{"id": "assets_curr", "type": "MATRIX"}],
+        template_library=template_library,
+    )
     candidates = build_expression_candidates(
         field={"id": "cash_st", "type": "MATRIX"},
-        template_library=template_library,
+        build_ctx=build_ctx,
         max_templates_per_field=200,
         max_templates_per_family=200,
-        legacy_similarity_penalty=0,
-        all_fields=[{"id": "assets_curr", "type": "MATRIX"}],
-        dataset_id="fundamental6",
         expression_policy=policy,
     )
 
@@ -69,14 +73,16 @@ def test_build_expression_candidates_uses_preprocessed_raw_field_view() -> None:
 def test_fundamental6_account_templates_use_preprocessed_field_view() -> None:
     policy = get_dataset_expression_policy("fundamental6")
     template_library = load_template_library("data/templates/fundamental6/library.json")
+    build_ctx = TemplateBuildContext(
+        options=TemplateBuildOptions(dataset_id="fundamental6", legacy_similarity_penalty=0),
+        all_fields=[{"id": "assets_curr", "type": "MATRIX"}],
+        template_library=template_library,
+    )
     candidates = build_expression_candidates(
         field={"id": "cash_st", "type": "MATRIX"},
-        template_library=template_library,
+        build_ctx=build_ctx,
         max_templates_per_field=50,
         max_templates_per_family=50,
-        legacy_similarity_penalty=0,
-        all_fields=[{"id": "assets_curr", "type": "MATRIX"}],
-        dataset_id="fundamental6",
         expression_policy=policy,
     )
 
@@ -93,14 +99,16 @@ def test_fundamental6_account_templates_use_preprocessed_field_view() -> None:
 def test_model16_templates_include_bucket_groups() -> None:
     policy = get_dataset_expression_policy("model16")
     template_library = load_template_library("data/templates/model16/library.json")
+    build_ctx = TemplateBuildContext(
+        options=TemplateBuildOptions(dataset_id="model16", legacy_similarity_penalty=0),
+        all_fields=[{"id": "quality_score", "type": "MATRIX"}],
+        template_library=template_library,
+    )
     candidates = build_expression_candidates(
         field={"id": "value_score", "type": "MATRIX"},
-        template_library=template_library,
+        build_ctx=build_ctx,
         max_templates_per_field=50,
         max_templates_per_family=50,
-        legacy_similarity_penalty=0,
-        all_fields=[{"id": "quality_score", "type": "MATRIX"}],
-        dataset_id="model16",
         expression_policy=policy,
     )
 
@@ -113,14 +121,16 @@ def test_model16_templates_include_bucket_groups() -> None:
 def test_model51_templates_include_bucket_groups() -> None:
     policy = get_dataset_expression_policy("model51")
     template_library = load_template_library("data/templates/model51/library.json")
+    build_ctx = TemplateBuildContext(
+        options=TemplateBuildOptions(dataset_id="model51", legacy_similarity_penalty=0),
+        all_fields=[{"id": "market_beta", "type": "MATRIX"}],
+        template_library=template_library,
+    )
     candidates = build_expression_candidates(
         field={"id": "risk_metric", "type": "MATRIX"},
-        template_library=template_library,
+        build_ctx=build_ctx,
         max_templates_per_field=50,
         max_templates_per_family=50,
-        legacy_similarity_penalty=0,
-        all_fields=[{"id": "market_beta", "type": "MATRIX"}],
-        dataset_id="model51",
         expression_policy=policy,
     )
 

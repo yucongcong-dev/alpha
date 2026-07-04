@@ -16,11 +16,13 @@ from alpha.config import (
     SIM_ACCEPT_HEADER,
     VERSION_HEADER,
     FieldTransformStage,
-    get_dataset_expression_policy,
     get_yaml_config,
-    use_fundamental6_heuristics,
 )
 from alpha.config.runtime_values import load_submit_quality_runtime_config
+from alpha.policy.expression import (
+    get_dataset_expression_policy,
+    use_fundamental6_heuristics,
+)
 
 
 class TestConfigConstants:

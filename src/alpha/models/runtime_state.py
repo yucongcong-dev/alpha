@@ -8,7 +8,13 @@ import time
 from typing import Union
 
 from ..config.models import DatasetExpressionPolicy
-from .domain import FieldFeedbackMap, FieldTestResult, TemplateField, TemplateLibrary
+from .domain import (
+    FieldFeedbackMap,
+    FieldTestResult,
+    SettingsVariant,
+    TemplateField,
+    TemplateLibrary,
+)
 from .io_types import RunFilters
 from .runtime_options import ResultWriteOptions, TemplateBuildOptions
 from .runtime_protocols import (
@@ -35,6 +41,19 @@ class PendingFutureContext:
     template_stage: str = ""
     expression: str = ""
     settings_fingerprint: str = ""
+
+
+@dataclass(frozen=True)
+class PendingTemplateEntry:
+    """单个待执行模板的完整信息（替代裸 tuple）。"""
+
+    template_name: str
+    template_family: str
+    template_stage: str
+    expression: str
+    priority: int
+    settings_variant: SettingsVariant
+    variant_fingerprint: str
 
 
 @dataclass

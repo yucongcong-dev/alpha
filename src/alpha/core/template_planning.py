@@ -13,18 +13,18 @@ from ..analysis.feedback_history import (
     choose_settings_variant_budget,
     select_nearpass_candidates,
 )
-from ..analysis.stats import historical_template_priority_bonus
+from ..analysis.template_stats import historical_template_priority_bonus
 from ..config.constants import (
     FEEDBACK_STAGE_RESIMULATE,
     SENTINEL_UNKNOWN,
 )
 from ..config.models import DatasetExpressionPolicy
-from ..policy.expression import get_dataset_expression_policy, resolve_feedback_stage
 from ..generators.expression_builder import (
     build_expression_candidates,
     limit_templates,
     sort_templates_by_priority,
 )
+from ..generators.fields import choose_field_name
 from ..generators.payload import build_settings_fingerprint_from_payload
 from ..generators.templates.classification import (
     classify_expression_family,
@@ -37,12 +37,11 @@ from ..models.domain import (
     FailedCheck,
     FieldTestResult,
     NearPassCandidate,
-    SettingsVariant,
     TemplateCandidate,
     TemplateField,
 )
-from ..models.runtime import TemplateBuildContext, TemplateFeedback
-from ..generators.fields import choose_field_name
+from ..models.runtime import PendingTemplateEntry, TemplateBuildContext, TemplateFeedback
+from ..policy.expression import get_dataset_expression_policy, resolve_feedback_stage
 from ..utils.helpers import first_non_empty, is_event_field_name
 
 
@@ -100,15 +99,10 @@ def resolve_field_template_candidates(
     else:
         templates = build_expression_candidates_fn(
             field,
-            build_ctx.template_library,
-            max_templates_per_field,
-            max_templates_per_family,
-            options.legacy_similarity_penalty,
-            all_fields=build_ctx.all_fields,
+            build_ctx,
+            max_templates_per_field=max_templates_per_field,
+            max_templates_per_family=max_templates_per_family,
             field_feedback=field_feedback,
-            global_failed_check_counts=build_ctx.global_failed_check_counts,
-            use_dataset_heuristics=build_ctx.use_dataset_heuristics,
-            dataset_id=options.dataset_id,
             expression_policy=expression_policy,
         )
     templates = limit_templates(
@@ -132,12 +126,12 @@ def build_pending_template_variants(
     field_feedback: TemplateFeedback | None,
     build_setting_variants_fn=build_setting_variants,
     build_settings_fingerprint_fn=build_settings_fingerprint_from_payload,
-) -> list[tuple[str, str, str, str, int, SettingsVariant, str]]:
+) -> list[PendingTemplateEntry]:
     """把模板候选展开为真正待执行的 settings 变体队列。"""
     options = build_ctx.options
     field_id = str(first_non_empty(field.get("id"), SENTINEL_UNKNOWN))
     field_name = choose_field_name(field)
-    pending_templates: list[tuple[str, str, str, str, int, SettingsVariant, str]] = []
+    pending_templates: list[PendingTemplateEntry] = []
     all_reserved_keys = attempted_keys | reserved_keys
     max_setting_variants = choose_settings_variant_budget(
         field_feedback,
@@ -187,15 +181,15 @@ def build_pending_template_variants(
             if (field_id, template_name, expression, variant_fingerprint) in all_reserved_keys:
                 continue
             pending_templates.append(
-                (
-                    template_name,
-                    template_family,
-                    template_stage,
-                    expression,
-                    effective_priority,
-                    settings_variant,
-                    variant_fingerprint,
+                PendingTemplateEntry(
+                    template_name=template_name,
+                    template_family=template_family,
+                    template_stage=template_stage,
+                    expression=expression,
+                    priority=effective_priority,
+                    settings_variant=settings_variant,
+                    variant_fingerprint=variant_fingerprint,
                 )
             )
-    pending_templates.sort(key=lambda item: (-item[4], item[0], item[3], item[6]))
+    pending_templates.sort(key=lambda item: (-item.priority, item.template_name, item.expression, item.variant_fingerprint))
     return pending_templates

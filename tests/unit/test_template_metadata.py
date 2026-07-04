@@ -1,10 +1,12 @@
 from __future__ import annotations
 
-from alpha.generators.expressions import (
-    apply_similarity_penalty,
-    cap_templates_per_family,
+from alpha.generators.templates.classification import (
     classify_expression_family,
     classify_template_stage,
+)
+from alpha.generators.templates.priority import (
+    apply_similarity_penalty,
+    cap_templates_per_family,
 )
 
 

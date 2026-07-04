@@ -17,10 +17,10 @@ from typing import Any
 
 from ..config.getters import get_backfill_window
 from ..config.models import DatasetExpressionPolicy
-from ..policy.expression import get_dataset_expression_policy, resolve_feedback_stage
 from ..generators.field_transforms import build_field_view
-from ..models.domain import TemplateCandidate, TemplateField, TemplateLibrary, TemplateLibraryItem
-from ..models.runtime import TemplateFeedback
+from ..models.domain import TemplateCandidate, TemplateField, TemplateLibraryItem
+from ..models.runtime import TemplateBuildContext, TemplateFeedback
+from ..policy.expression import get_dataset_expression_policy, resolve_feedback_stage
 from ..policy.template_blacklist import (
     is_blacklisted_template as _policy_is_blacklisted_template,
 )
@@ -28,8 +28,8 @@ from ..policy.template_blacklist import load_default_avoid_rules
 from ..policy.template_blacklist import (
     runtime_blacklist_match_reason as _policy_runtime_blacklist_match_reason,
 )
-from .fields import choose_field_name, choose_field_type
 from ..utils.helpers import is_event_field_name
+from .fields import choose_field_name, choose_field_type
 from .matrix_templates import build_matrix_templates
 from .templates.candidates import (
     _coerce_template_candidate,
@@ -159,32 +159,28 @@ def limit_templates(
 
 def build_expression_candidates(
     field: TemplateField,
-    template_library: TemplateLibrary,
+    build_ctx: TemplateBuildContext,
+    *,
     max_templates_per_field: int,
     max_templates_per_family: int,
-    legacy_similarity_penalty: int,
-    all_fields: Sequence[TemplateField] | None = None,
     field_feedback: TemplateFeedback | None = None,
-    global_failed_check_counts: dict[str, int] | None = None,
-    use_dataset_heuristics: bool = True,
-    *,
-    dataset_id: str = "",
     expression_policy: DatasetExpressionPolicy | None = None,
 ) -> list[TemplateCandidate]:
     """为单个字段构建、变异、多样化并排序表达式候选。"""
+    options = build_ctx.options
     field_name = choose_field_name(field)
     field_type = choose_field_type(field)
-    all_fields = all_fields or []
-    global_failed_check_counts = global_failed_check_counts or {}
+    all_fields = list(build_ctx.all_fields)
+    global_failed_check_counts = dict(build_ctx.global_failed_check_counts)
     policy = expression_policy or get_dataset_expression_policy(
-        dataset_id,
-        use_curated_heuristics=use_dataset_heuristics,
+        options.dataset_id,
+        use_curated_heuristics=build_ctx.use_dataset_heuristics,
     )
     feedback_stage = resolve_feedback_stage(field_feedback, policy.feedback_loop_policy)
     field_view = build_field_view(field, policy)
     is_event_field = _is_event_field(field_name, policy)
 
-    raw_templates = _select_template_items(template_library, field_type, policy.dataset_id)
+    raw_templates = _select_template_items(build_ctx.template_library, field_type, policy.dataset_id)
     templates = [
         _make_template_candidate(
             item.name,
@@ -229,7 +225,7 @@ def build_expression_candidates(
     if is_event_field:
         templates = [item for item in templates if _event_template_allowed(item, policy)]
 
-    templates = apply_similarity_penalty(templates, legacy_similarity_penalty)
+    templates = apply_similarity_penalty(templates, options.legacy_similarity_penalty)
     templates = apply_adaptive_priority(
         templates,
         field_feedback=field_feedback,

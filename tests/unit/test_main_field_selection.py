@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from argparse import Namespace
 
-from alpha.config import get_dataset_expression_policy
 from alpha.main import (
     build_field_resume_positions,
     normalize_resume_index,
@@ -14,6 +13,7 @@ from alpha.main import (
 from alpha.models.domain import FieldTestResult
 from alpha.models.io_types import RunFilters
 from alpha.models.runtime import HistoricalRunState, TemplateBuildContext
+from alpha.policy.expression import get_dataset_expression_policy
 
 
 def test_prepare_fields_for_execution_filters_before_limit() -> None:

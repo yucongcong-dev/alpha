@@ -58,6 +58,7 @@ from .exceptions import (
     BrainQueueBusyError,
     BrainRateLimitError,
 )
+from .generators.fields import choose_field_name, choose_field_type
 from .models import (
     DatasetExpressionPolicy,
     ExecutionState,
@@ -70,7 +71,6 @@ from .models import (
     SettingsVariant,
     TemplateLibrary,
 )
-from .generators.fields import choose_field_name, choose_field_type
 from .utils import first_non_empty
 
 __version__ = "1.0.0"

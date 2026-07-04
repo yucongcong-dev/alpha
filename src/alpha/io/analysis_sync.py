@@ -9,7 +9,7 @@ import json
 import logging
 import os
 
-from ..analysis.stats import load_existing_results
+from ..analysis.results_loader import load_existing_results
 from ..config.constants import DEFAULT_DATASET_ID
 from .output_paths import build_output_sidecar_paths
 from .results_store import dump_results as dump_results_store

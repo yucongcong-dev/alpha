@@ -5,9 +5,10 @@ from __future__ import annotations
 import json
 import os
 
-from ...config import get_backfill_window, get_dataset_expression_policy
+from ...config import get_backfill_window
 from ...exceptions import BrainAPIError
 from ...models.domain import TemplateLibrary, TemplateLibraryItem
+from ...policy.expression import get_dataset_expression_policy
 from .library_paths import is_builtin_template_path, resolve_builtin_template_library_file
 
 _OPTIONAL_TEMPLATE_METADATA_KEYS = (

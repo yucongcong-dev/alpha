@@ -17,7 +17,7 @@ from ..analysis.result_identity import (
     STATUS_PENDING_SELF_CORRELATION,
     is_self_correlation_pending_result,
 )
-from ..analysis.stats import current_submittable_count
+from ..analysis.field_stats import current_submittable_count
 from ..config.constants import STATUS_ERROR, STATUS_SIMULATED, STATUS_SUBMITTED
 from ..config.getters import get_polling_default_wait
 from ..core import delete_pipeline_state
@@ -33,8 +33,8 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-def _run_path_value(run_paths: object | None, attr: str) -> str:
-    """兼容 RunPaths 与历史 attr-style 对象的路径读取。"""
+def _run_path_value(run_paths: RunPaths | None, attr: str) -> str:
+    """从 RunPaths 读取路径属性。"""
     if run_paths is None:
         return ""
     value = getattr(run_paths, attr, "")
@@ -123,7 +123,7 @@ def should_finalize_recheck_pending_self_correlation(args: ResultWriteArgs) -> b
 def finalize_run(
     args: ResultWriteArgs,
     run_ctx: InitializedRunContext,
-    run_paths: RunPaths | object | None = None,
+    run_paths: RunPaths | None = None,
 ) -> None:
     """写出最终结果并清理运行中间状态。"""
     execution_state = run_ctx.execution_state

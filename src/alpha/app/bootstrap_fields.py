@@ -8,12 +8,12 @@ from datetime import date
 from math import log1p
 from typing import Any, cast
 
-from ..analysis.stats import field_priority
+from ..analysis.field_stats import field_priority
 from ..config.constants import PREFERRED_FIELD_RANK_SENTINEL, SENTINEL_UNKNOWN, STATS_DEFAULT_SCORE
 from ..config.models import DatasetExpressionPolicy
+from ..generators.fields import choose_field_name
 from ..models.io_types import RunFilters
 from ..models.runtime import FieldSelectionArgs, HistoricalRunState, TemplateField
-from ..generators.fields import choose_field_name
 from ..utils.helpers import first_non_empty, is_event_field_name
 
 

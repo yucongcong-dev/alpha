@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from typing import Any
-
 from ...config import (
     CHECK_CONCENTRATED_WEIGHT,
     CHECK_LOW_SUB_UNIVERSE_SHARPE,
@@ -18,7 +16,7 @@ from ...config import (
     DatasetExpressionPolicy,
     get_backfill_window,
 )
-from ...models.domain import TemplateCandidate
+from ...models.domain import FieldFeedbackSummary, TemplateCandidate
 from .feedback_best_expression import build_best_expression_mutations
 from .feedback_mutation_sets import (
     build_account_resimulation_mutations,
@@ -34,7 +32,7 @@ from .priority import dominant_failed_check_names
 
 def build_feedback_mutations(
     field_name: str,
-    field_feedback: dict[str, Any] | None,
+    field_feedback: FieldFeedbackSummary | None,
     *,
     expression_policy: DatasetExpressionPolicy | None = None,
     feedback_stage: str = FEEDBACK_STAGE_GENERATE,

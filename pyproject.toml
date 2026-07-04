@@ -127,11 +127,8 @@ unfixable = [
 # Facade modules: imports after __deprecated__ warning are intentional
 "src/alpha/analysis/feedback.py" = ["E402"]
 "src/alpha/analysis/stats.py" = ["E402"]
-"src/alpha/core/template_filters.py" = ["E402"]
-"src/alpha/core/template_queue.py" = ["E402"]
 "src/alpha/generators/expressions.py" = ["E402"]
 "src/alpha/io/output.py" = ["E402"]
-"src/alpha/models/base.py" = ["E402"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["alpha"]
@@ -165,7 +162,6 @@ module = [
     "alpha.core.simulation",
     "alpha.core.scheduler",
     "alpha.generators.expressions",
-    "alpha.models.base",
 ]
 warn_return_any = true
 check_untyped_defs = true

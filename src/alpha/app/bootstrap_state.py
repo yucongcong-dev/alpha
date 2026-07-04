@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from typing import Any, cast
 
-from ..analysis.stats import is_queue_timeout_result
+from ..analysis.result_identity import is_queue_timeout_result
 from ..config.constants import STATUS_ERROR
 from ..io.results_store import dump_results_incremental, initialize_results_journal
 from ..models.runtime import ExecutionState

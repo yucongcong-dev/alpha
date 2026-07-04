@@ -9,12 +9,12 @@ from __future__ import annotations
 
 import logging
 
-from ..analysis.stats import (
+from ..analysis.result_identity import (
     is_informative_result,
     is_queue_timeout_result,
     result_identity,
-    update_template_stats_with_result,
 )
+from ..analysis.template_stats import update_template_stats_with_result
 from ..config.constants import STATUS_ERROR
 from ..models.domain import FieldTestResult
 from ..models.runtime import ExecutionState, FutureCompletionContext

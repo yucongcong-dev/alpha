@@ -6,7 +6,6 @@ from argparse import Namespace
 import json
 from pathlib import Path
 
-from alpha.config import get_dataset_expression_policy
 from alpha.core.executor import build_pending_templates_for_field, inflight_template_keys
 from alpha.core.scheduler import handle_completed_future
 from alpha.generators import templates as template_module
@@ -27,6 +26,7 @@ from alpha.models.runtime import (
     TemplateBuildContext,
     TemplateBuildOptions,
 )
+from alpha.policy.expression import get_dataset_expression_policy
 from alpha.policy.template_blacklist import invalidate_blacklist_cache
 
 
@@ -715,8 +715,8 @@ def test_resimulate_stage_prefers_refine_templates_over_broad_generation(monkeyp
     assert total > 0
     assert disabled == 0
     assert pending
-    assert pending[0][0].startswith("refine_")
-    assert all(template_name != "broad_template" for template_name, *_ in pending)
+    assert pending[0].template_name.startswith("refine_")
+    assert all(entry.template_name != "broad_template" for entry in pending)
 
 
 def test_event_field_uses_narrower_template_budget(monkeypatch) -> None:

@@ -53,6 +53,7 @@ from .runtime_state import (
     InitializedRunContext,
     PendingFutureContext,
     PendingFutureLike,
+    PendingTemplateEntry,
     RuntimeConcurrencyState,
     TemplateBuildContext,
 )
@@ -80,6 +81,7 @@ __all__ = [
     "InitializedRunContext",
     "PendingFutureContext",
     "PendingFutureLike",
+    "PendingTemplateEntry",
     "ResultWriteArgs",
     "ResultWriteConfig",
     "ResultWriteOptions",

@@ -20,23 +20,24 @@ from collections.abc import Mapping, Sequence
 import logging
 
 from ..config.constants import DRY_RUN_SAMPLE_LIMIT, SENTINEL_UNKNOWN
-from ..policy.expression import get_dataset_expression_policy
 from ..generators.expression_builder import build_expression_candidates
+from ..generators.fields import choose_field_name
 from ..generators.payload import build_settings_fingerprint_from_payload
 from ..generators.templates.refine import build_refine_templates
 from ..generators.variants import build_setting_variants
-from ..models.domain import FieldTestResult, SettingsVariant, TemplateCandidate, TemplateLibrary
+from ..models.domain import FieldTestResult, TemplateCandidate, TemplateLibrary
 from ..models.io_types import RunFilters
 from ..models.runtime import (
     ExecutionState,
     HistoricalRunState,
     PendingFutureContext,
+    PendingTemplateEntry,
     TemplateBuildArgs,
     TemplateBuildContext,
     TemplateBuildOptions,
     TemplateField,
 )
-from ..generators.fields import choose_field_name
+from ..policy.expression import get_dataset_expression_policy
 from ..utils.helpers import first_non_empty
 from .execution_filters import (
     is_template_actionable,
@@ -85,7 +86,7 @@ def build_pending_templates_for_field(
     attempted_keys: set[tuple[str, str, str, str]],
     prior_results: Sequence[FieldTestResult],
     reserved_keys: set[tuple[str, str, str, str]] | None = None,
-) -> tuple[list[tuple[str, str, str, str, int, SettingsVariant, str]], int, int]:
+) -> tuple[list[PendingTemplateEntry], int, int]:
     """
     为单个字段构建真正可执行的模板与 settings 队列。
 
@@ -242,25 +243,17 @@ def print_dry_run_plan(
         planned_fields += 1
         planned_templates += len(pending_templates)
         disabled_templates += disabled_count
-        for (
-            template_name,
-            _template_family,
-            _template_stage,
-            expression,
-            priority,
-            _settings_variant,
-            variant_fingerprint,
-        ) in pending_templates:
+        for entry in pending_templates:
             if len(samples) >= sample_limit:
                 break
             samples.append(
                 {
                     "field_id": field_id,
                     "field_name": field_name,
-                    "template_name": template_name,
-                    "priority": priority,
-                    "settings": variant_fingerprint,
-                    "expression": expression,
+                    "template_name": entry.template_name,
+                    "priority": entry.priority,
+                    "settings": entry.variant_fingerprint,
+                    "expression": entry.expression,
                 }
             )
 

@@ -16,8 +16,8 @@ from alpha.core.simulation import (
     extract_failed_checks,
     extract_pending_checks,
     is_submittable_from_checks,
-    run_checksubmit_stage,
     precheck_simulation_metrics,
+    run_checksubmit_stage,
     summarize_failure,
 )
 from alpha.models.domain import FailedCheck, FieldTestContext, FieldTestResult

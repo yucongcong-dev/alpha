@@ -17,14 +17,14 @@ from ..models.domain import (
     ResultRow,
     SummaryPayload,
 )
-from .stats import (
+from .failed_checks import (
     compile_failed_check_leaderboard,
-    compile_field_performance_summary,
     compile_near_pass_summary,
     compile_optimization_hints,
-    compile_template_performance_summary,
-    is_queue_timeout_result,
 )
+from .field_stats import compile_field_performance_summary
+from .result_identity import is_queue_timeout_result
+from .template_stats import compile_template_performance_summary
 
 
 def build_results_summary_payload(

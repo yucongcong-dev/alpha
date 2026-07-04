@@ -4,18 +4,20 @@ from __future__ import annotations
 
 import json
 
-from alpha.analysis.feedback import (
-    choose_settings_variant_budget,
+from alpha.analysis.feedback_filters import (
     is_legacy_family_disabled,
-    select_nearpass_candidates,
     should_keep_template_for_feedback,
     should_skip_field_template_family,
 )
-from alpha.analysis.stats import load_existing_results
-from alpha.config import get_dataset_expression_policy, resolve_feedback_stage
-from alpha.generators.expressions import build_refine_templates
+from alpha.analysis.feedback_history import (
+    choose_settings_variant_budget,
+    select_nearpass_candidates,
+)
+from alpha.analysis.results_loader import load_existing_results
+from alpha.generators.templates.refine import build_refine_templates
 from alpha.generators.variants import build_setting_variants
 from alpha.models.domain import FieldTestResult, NearPassCandidate
+from alpha.policy.expression import get_dataset_expression_policy, resolve_feedback_stage
 
 
 def test_should_skip_field_template_family_prefers_metadata_family() -> None:

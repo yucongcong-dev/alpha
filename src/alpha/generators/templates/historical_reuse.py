@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from typing import Any
-
 from ...config import (
     EXPR_MUTATION_EXTEND_THRESHOLD,
     FEEDBACK_MUTATION_HIGHSCORE_THRESHOLD,
@@ -12,7 +10,7 @@ from ...config import (
     TEMPLATE_STAGE_GROUP_SECOND_ORDER,
     DatasetExpressionPolicy,
 )
-from ...models.domain import TemplateCandidate
+from ...models.domain import FieldFeedbackSummary, TemplateCandidate
 from .candidates import _candidate_metadata, _make_template_candidate
 from .variation_common import is_blacklisted_template
 from .wrappers import build_bucket_group_templates, build_trade_when_templates
@@ -20,7 +18,7 @@ from .wrappers import build_bucket_group_templates, build_trade_when_templates
 
 def build_historical_reuse_templates(
     field_name: str,
-    field_feedback: dict[str, Any] | None,
+    field_feedback: FieldFeedbackSummary | None,
     *,
     feedback_stage: str,
     expression_policy: DatasetExpressionPolicy | None = None,

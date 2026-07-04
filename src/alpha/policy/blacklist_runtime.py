@@ -14,13 +14,13 @@ from ..config.constants import (
     DATE_FORMAT_ISO_MINUTES,
 )
 from ..config.models import DatasetExpressionPolicy
-from .expression import get_dataset_expression_policy
 from ..models.domain import FieldTestResult
 from .blacklist_store import (
     invalidate_blacklist_runtime_cache,
     read_blacklist_payload,
     write_blacklist_payload,
 )
+from .expression import get_dataset_expression_policy
 from .types import BlacklistRuntimeStats, BlacklistRuntimeSummary, BlacklistTemplateEntry
 
 logger = logging.getLogger(__name__)
@@ -30,7 +30,7 @@ def _update_blacklist_runtime_stats_with_result(
     stats: BlacklistRuntimeStats,
     result: FieldTestResult,
 ) -> BlacklistRuntimeSummary | None:
-    from ..analysis.stats import is_informative_result
+    from ..analysis.result_identity import is_informative_result
 
     if not is_informative_result(result):
         return None
@@ -50,8 +50,8 @@ def _update_blacklist_runtime_stats_with_result(
     if result.submittable:
         summary.submittable += 1
     for check in result.failed_checks or []:
-        name = str(check.name)
-        value = check.value
+        name = str(check.get("name", "")) if isinstance(check, dict) else str(check.name)
+        value = check.get("value") if isinstance(check, dict) else check.value
         if name == CHECK_LOW_SHARPE:
             summary.low_sharpe += 1
             if isinstance(value, (int, float)):

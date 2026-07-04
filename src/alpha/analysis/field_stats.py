@@ -84,11 +84,11 @@ def compile_field_performance_summary(results: Sequence[FieldTestResult]) -> lis
 
 def field_priority(field_id: str, field_feedback: FieldFeedbackMap) -> float:
     """返回字段在续跑排序中使用的历史优先级分数。"""
-    summary = field_feedback.get(field_id)
+    summary: dict[str, Any] | None = field_feedback.get(field_id)
     if not summary:
         return STATS_DEFAULT_SCORE
     best_score = float(summary.get("best_score", STATS_DEFAULT_SCORE))
-    attempted_templates = int(summary.get(STAT_FIELD_ATTEMPTED_TEMPLATES, 0))
+    attempted_templates = int(summary.get(STAT_FIELD_ATTEMPTED_TEMPLATES, 0) or 0)
     if attempted_templates >= FIELD_PRIORITY_ATTEMPTED_HIGH and best_score < FIELD_PRIORITY_SCORE_HIGH:
         return STATS_DEFAULT_SCORE - float(attempted_templates)
     if attempted_templates >= FIELD_PRIORITY_ATTEMPTED_LOW and best_score < FIELD_PRIORITY_SCORE_LOW:

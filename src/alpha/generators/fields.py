@@ -33,17 +33,19 @@ def choose_field_name(field: dict[str, Any] | TemplateField) -> str:
     if isinstance(field, TemplateField):
         return field.field_name
     for key in ("id", "name", "mnemonic", "field"):
-        if key in field:
-            return str(field[key])
-    return ""
+        value = field.get(key)
+        if value is not None and value != "":
+            return str(value)
+    return "None"
 
 
 def choose_field_type(field: dict[str, Any] | TemplateField) -> str:
     if isinstance(field, TemplateField):
         return field.field_type
     for key in ("type", "fieldType", "category"):
-        if key in field:
-            return str(field[key]).upper()
+        value = field.get(key)
+        if value is not None and value != "":
+            return str(value).upper()
     return str(SENTINEL_UNKNOWN).upper()
 
 

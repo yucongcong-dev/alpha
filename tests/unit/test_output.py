@@ -18,7 +18,7 @@ from alpha.io.output import (
     load_blacklisted_template_names,
     resolve_cli_path,
 )
-from alpha.models.domain import FieldTestResult
+from alpha.models.domain import FailedCheck, FieldTestResult
 
 
 def test_dump_results_does_not_update_blacklist_by_default(monkeypatch, tmp_path) -> None:
@@ -195,7 +195,7 @@ def test_load_existing_results_preserves_self_correlation_pending_metadata(tmp_p
         status="pending_self_correlation",
         submittable=None,
         expression="rank(field_pending)",
-        failed_checks=[{"name": "SELF_CORRELATION", "result": "PENDING", "value": None, "limit": None}],
+        failed_checks=[FailedCheck(name="SELF_CORRELATION", result="PENDING", value=None, limit=None)],
         self_correlation_pending_since=111.0,
         self_correlation_last_recheck_at=222.0,
         self_correlation_recheck_count=3,
@@ -343,8 +343,8 @@ def test_auto_update_blacklist_incremental_blacklists_only_changed_template(tmp_
         expression="rank(sales)",
         submittable=False,
         failed_checks=[
-            {"name": "LOW_SHARPE", "value": 0.1},
-            {"name": "LOW_FITNESS", "value": 0.2},
+            FailedCheck(name="LOW_SHARPE", value=0.1),
+            FailedCheck(name="LOW_FITNESS", value=0.2),
         ],
     )
     second = FieldTestResult(
@@ -357,8 +357,8 @@ def test_auto_update_blacklist_incremental_blacklists_only_changed_template(tmp_
         expression="rank(assets)",
         submittable=False,
         failed_checks=[
-            {"name": "LOW_SHARPE", "value": 0.2},
-            {"name": "LOW_FITNESS", "value": 0.3},
+            FailedCheck(name="LOW_SHARPE", value=0.2),
+            FailedCheck(name="LOW_FITNESS", value=0.3),
         ],
     )
 

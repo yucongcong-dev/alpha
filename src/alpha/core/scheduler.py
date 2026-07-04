@@ -20,12 +20,12 @@ import logging
 import time
 from typing import Any, cast
 
-from ..analysis.stats import (
+from ..analysis.result_identity import (
     is_informative_result,
     is_queue_timeout_result,
     result_identity,
-    update_template_stats_with_result,
 )
+from ..analysis.template_stats import update_template_stats_with_result
 from ..api.timing import wait_seconds
 from ..models.runtime import (
     ExecutionState,

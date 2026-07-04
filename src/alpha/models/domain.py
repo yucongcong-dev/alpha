@@ -12,6 +12,9 @@ from typing import Any
 
 from ..config.constants import STATUS_ERROR
 
+FieldFeedbackSummary = dict[str, Any]
+"""单个字段的历史反馈画像。"""
+
 
 @dataclass(frozen=True)
 class FailedCheck:
@@ -53,9 +56,6 @@ ResultRow = dict[str, Any]
 
 TemplateMetadata = dict[str, Any]
 """模板候选或字段视图附带的元数据。"""
-
-FieldFeedbackSummary = dict[str, Any]
-"""单个字段的历史反馈画像。"""
 
 FieldFeedbackMap = dict[str, FieldFeedbackSummary]
 """按字段 ID 聚合的反馈画像映射。"""
@@ -215,7 +215,7 @@ class FieldTestResult:
             "settings_fingerprint": self.settings_fingerprint,
             "template_library_fingerprint": self.template_library_fingerprint,
             "failed_stage": self.failed_stage,
-            "failed_checks": [check.to_dict() for check in self.failed_checks] if self.failed_checks else None,
+            "failed_checks": [check.to_dict() if hasattr(check, "to_dict") else check for check in self.failed_checks] if self.failed_checks else None,
             "self_correlation_pending_since": self.self_correlation_pending_since,
             "self_correlation_last_recheck_at": self.self_correlation_last_recheck_at,
             "self_correlation_recheck_count": self.self_correlation_recheck_count,

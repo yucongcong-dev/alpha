@@ -18,7 +18,7 @@ import time
 from typing import TYPE_CHECKING, Any, cast
 
 from ..analysis.feedback_history import should_stop_after_submittable
-from ..analysis.stats import (
+from ..analysis.feedback_stats import (
     compile_field_feedback,
     compile_global_failed_check_counts,
     update_field_feedback_with_result,
@@ -45,6 +45,7 @@ from ..models.runtime import (
     ExecutionState,
     InitializedRunContext,
     PendingFutureContext,
+    PendingTemplateEntry,
     ResultWriteArgs,
     ResultWriteOptions,
     RunLoopArgs,
@@ -73,8 +74,8 @@ class ScheduleRoundResult:
     last_field_id: str
 
 
-def run_path_value(run_paths: object | None, attr: str) -> str:
-    """Read a path from RunPaths or a legacy attr-style object."""
+def run_path_value(run_paths: RunPaths | None, attr: str) -> str:
+    """Read a path from RunPaths."""
     if run_paths is None:
         return ""
     value = getattr(run_paths, attr, "")
@@ -83,7 +84,7 @@ def run_path_value(run_paths: object | None, attr: str) -> str:
 
 def resolve_result_write_options(
     args: ResultWriteArgs,
-    run_paths: RunPaths | object | None,
+    run_paths: RunPaths | None,
 ) -> ResultWriteOptions:
     """Prefer run_paths output over raw args output to avoid legacy mutation coupling."""
     options = ResultWriteOptions.from_args(args)
@@ -559,18 +560,10 @@ def _dispatch_templates_for_field(
     field_id: str,
     field_name: str,
     field_type: str,
-    scheduled_templates: list[tuple[str, str, str, str, int, SettingsVariant, str]],
+    scheduled_templates: list[PendingTemplateEntry],
 ) -> bool:
     """Dispatch scheduled templates for a single field; return whether a stop was requested."""
-    for template_index, (
-        template_name,
-        template_family,
-        template_stage,
-        expression,
-        priority,
-        settings_variant,
-        variant_fingerprint,
-    ) in enumerate(scheduled_templates, start=1):
+    for template_index, entry in enumerate(scheduled_templates, start=1):
         if should_stop_after_submittable(args, execution_state.results):
             logger.info("[stop] 达到 stop-after-submittable=%d", args.stop_after_submittable)
             return True
@@ -595,11 +588,11 @@ def _dispatch_templates_for_field(
             field_id,
             template_index,
             len(scheduled_templates),
-            template_name,
-            priority,
+            entry.template_name,
+            entry.priority,
             len(execution_state.pending_futures) + 1,
             runtime_state.runtime_max_workers,
-            variant_fingerprint,
+            entry.variant_fingerprint,
         )
         throttle_before_submission(args, execution_state)
         submit_template_future(
@@ -611,12 +604,12 @@ def _dispatch_templates_for_field(
             field_id=field_id,
             field_name=field_name,
             field_type=field_type,
-            template_name=template_name,
-            template_family=template_family,
-            template_stage=template_stage,
-            expression=expression,
-            settings_variant=cast("SettingsVariant", settings_variant),
-            variant_fingerprint=variant_fingerprint,
+            template_name=entry.template_name,
+            template_family=entry.template_family,
+            template_stage=entry.template_stage,
+            expression=entry.expression,
+            settings_variant=entry.settings_variant,
+            variant_fingerprint=entry.variant_fingerprint,
         )
     return False
 
@@ -624,7 +617,7 @@ def _dispatch_templates_for_field(
 def run_field_test_loop(
     args: RunLoopArgs,
     run_ctx: InitializedRunContext,
-    run_paths: RunPaths | object | None = None,
+    run_paths: RunPaths | None = None,
 ) -> None:
     """线程池中遍历字段并提交模拟任务，实时消费结果。"""
     state_file = run_path_value(run_paths, "state_file")

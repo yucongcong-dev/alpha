@@ -11,19 +11,24 @@ from pathlib import Path
 
 import pytest
 
-from alpha.config import get_dataset_expression_policy
-from alpha.generators.expressions import (
+from alpha.generators.expression_builder import (
     _load_default_avoid_rules,
-    build_bucket_group_templates,
     build_expression_candidates,
-    build_feedback_mutations,
-    build_high_conviction_ratio_templates,
-    build_historical_reuse_templates,
-    build_trade_when_templates,
+)
+from alpha.generators.ratio_templates import build_high_conviction_ratio_templates
+from alpha.generators.templates.classification import (
     classify_expression_family,
     is_legacy_family,
 )
+from alpha.generators.templates.variations import (
+    build_bucket_group_templates,
+    build_feedback_mutations,
+    build_historical_reuse_templates,
+    build_trade_when_templates,
+)
 from alpha.generators.templates import load_template_library
+from alpha.models.runtime import TemplateBuildContext, TemplateBuildOptions
+from alpha.policy.expression import get_dataset_expression_policy
 from alpha.policy.template_blacklist import invalidate_default_avoid_rules_cache
 
 
@@ -125,13 +130,16 @@ def test_build_expression_candidates_preserve_generated_metadata() -> None:
     field = {"id": "cash_st", "type": "MATRIX"}
     template_library = {"default": []}
 
+    build_ctx = TemplateBuildContext(
+        options=TemplateBuildOptions(legacy_similarity_penalty=0),
+        all_fields=[field],
+        template_library=template_library,
+    )
     candidates = build_expression_candidates(
         field,
-        template_library,
+        build_ctx,
         max_templates_per_field=0,
         max_templates_per_family=0,
-        legacy_similarity_penalty=0,
-        all_fields=[field],
         expression_policy=policy,
     )
 
@@ -197,13 +205,16 @@ def test_build_expression_candidates_adds_financial_ratio_templates() -> None:
         {"id": "enterprise_value", "type": "MATRIX"},
     ]
 
+    build_ctx = TemplateBuildContext(
+        options=TemplateBuildOptions(legacy_similarity_penalty=0),
+        all_fields=all_fields,
+        template_library={"default": []},
+    )
     candidates = build_expression_candidates(
         field,
-        {"default": []},
+        build_ctx,
         max_templates_per_field=0,
         max_templates_per_family=0,
-        legacy_similarity_penalty=0,
-        all_fields=all_fields,
         expression_policy=policy,
     )
 
@@ -230,13 +241,16 @@ def test_build_expression_candidates_narrows_event_field_template_pool() -> None
     template_file = Path(__file__).resolve().parents[2] / "data" / "templates" / "fundamental6" / "library.json"
     template_library = load_template_library(str(template_file))
 
+    build_ctx = TemplateBuildContext(
+        options=TemplateBuildOptions(legacy_similarity_penalty=0),
+        all_fields=[field],
+        template_library=template_library,
+    )
     candidates = build_expression_candidates(
         field,
-        template_library,
+        build_ctx,
         max_templates_per_field=0,
         max_templates_per_family=0,
-        legacy_similarity_penalty=0,
-        all_fields=[field],
         expression_policy=policy,
     )
 

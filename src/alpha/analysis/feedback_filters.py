@@ -19,7 +19,6 @@ from ..config.constants import (
     TEMPLATE_DISABLE_MIN_SIMULATED,
 )
 from ..config.models import DatasetExpressionPolicy
-from ..policy.expression import get_dataset_expression_policy, resolve_feedback_stage
 from ..generators.expression_builder import _is_blacklisted_template
 from ..generators.templates.classification import (
     classify_expression_family,
@@ -29,6 +28,8 @@ from ..generators.templates.classification import (
 from ..generators.templates.priority import (
     dominant_failed_check_names,
 )
+from ..models.domain import FieldFeedbackSummary
+from ..policy.expression import get_dataset_expression_policy, resolve_feedback_stage
 
 
 def is_template_disabled(
@@ -73,6 +74,9 @@ def is_legacy_family_disabled(
     submittable = 0
     for prior_template_name, stat in template_stats.items():
         prior_metadata: dict[str, Any] = {}
+        family = stat.get("template_family")
+        if family:
+            prior_metadata = {"family": family}
         if not is_legacy_family(prior_template_name, "", prior_metadata):
             continue
         attempted += int(stat.get("attempted", 0))
@@ -90,7 +94,7 @@ def should_keep_template_for_feedback(
     template_name: str,
     expression: str,
     priority: int,
-    field_feedback: dict[str, Any] | None,
+    field_feedback: FieldFeedbackSummary | None,
     *,
     dataset_id: str = "",
     expression_policy: DatasetExpressionPolicy | None = None,

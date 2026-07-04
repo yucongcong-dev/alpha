@@ -51,7 +51,7 @@ from ...config import (
     SIMILARITY_PENALTY_OFFSET_LEGACY_RATIO,
     STATS_DEFAULT_SCORE,
 )
-from ...models.domain import TemplateCandidate
+from ...models.domain import FieldFeedbackSummary, TemplateCandidate
 from .candidates import _coerce_template_candidate, _make_template_candidate
 from .classification import classify_expression_family
 from .metadata import TemplateMetadataMap
@@ -213,7 +213,7 @@ def adaptive_template_priority_adjustment(
     template_name: str,
     expression: str,
     *,
-    field_feedback: dict[str, Any] | None,
+    field_feedback: FieldFeedbackSummary | None,
     global_failed_check_counts: dict[str, int],
     metadata: dict[str, Any] | None = None,
 ) -> int:
@@ -282,7 +282,7 @@ def adaptive_template_priority_adjustment(
 def apply_adaptive_priority(
     templates: Sequence[TemplateCandidate | tuple[str, str, int]],
     *,
-    field_feedback: dict[str, Any] | None,
+    field_feedback: FieldFeedbackSummary | None,
     global_failed_check_counts: dict[str, int],
     metadata_by_key: TemplateMetadataMap | None = None,
 ) -> list[TemplateCandidate]:

@@ -13,6 +13,7 @@ import time
 from ..analysis.result_identity import STATUS_PENDING_SELF_CORRELATION
 from ..api.client import BrainClient, WorkerClientFactory
 from ..config.constants import SENTINEL_UNKNOWN
+from ..generators.fields import choose_field_type
 from ..models.domain import (
     FieldTestContext,
     FieldTestResult,
@@ -23,7 +24,6 @@ from ..models.runtime import (
     SimulationStageArgs,
     TemplateField,
 )
-from ..generators.fields import choose_field_type
 from ..utils.helpers import first_non_empty
 from .simulation_parsing import (
     extract_alpha_id,

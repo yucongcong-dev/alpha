@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
-from typing import Any, cast
+from typing import cast
 
 from ..config.constants import (
     CHECK_CONCENTRATED_WEIGHT,
@@ -19,19 +19,15 @@ from ..config.constants import (
     NEARPASS_PENALTY_LOW_TURNOVER,
 )
 from ..config.models import DatasetExpressionPolicy
-from ..policy.expression import get_dataset_expression_policy, resolve_feedback_stage
-from ..models.domain import FailedCheck, FieldTestResult, NearPassCandidate
+from ..models.domain import FailedCheck, FieldFeedbackSummary, FieldTestResult, NearPassCandidate
 from ..models.runtime import HistoricalRunState, StopAfterSubmittableArgs
-from .stats import (
-    attempted_template_keys,
-    compile_field_feedback,
-    compile_global_failed_check_counts,
-    compile_template_stats,
-    current_submittable_count,
-    failed_check_gap,
-    load_existing_results,
-    score_failed_checks,
-)
+from ..policy.expression import get_dataset_expression_policy, resolve_feedback_stage
+from .failed_checks import failed_check_gap, score_failed_checks
+from .feedback_stats import compile_field_feedback, compile_global_failed_check_counts
+from .field_stats import current_submittable_count
+from .result_identity import attempted_template_keys
+from .results_loader import load_existing_results
+from .template_stats import compile_template_stats
 
 
 def build_historical_run_state(output_path: str, feedback_output_path: str) -> HistoricalRunState:
@@ -56,7 +52,7 @@ def build_historical_run_state(output_path: str, feedback_output_path: str) -> H
 
 
 def choose_settings_variant_budget(
-    field_feedback: dict[str, Any] | None,
+    field_feedback: FieldFeedbackSummary | None,
     *,
     expression_policy: DatasetExpressionPolicy | None = None,
     dataset_id: str = "",

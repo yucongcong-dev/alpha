@@ -20,7 +20,6 @@ from ..api.client import BrainClient, WorkerClientFactory, login_with_retry
 from ..cli.filters import load_run_filters_extended, setup_runtime_logging
 from ..cli.run_config import build_run_config_snapshot
 from ..config.models import DatasetExpressionPolicy
-from ..policy.expression import get_dataset_expression_policy
 from ..generators.fields import DatasetFieldClient, fetch_fields_with_cache, load_fields_cache
 from ..generators.fingerprint import stable_fingerprint
 from ..generators.payload import build_settings_fingerprint
@@ -43,6 +42,7 @@ from ..models.runtime import (
     SimulationSettingsArgs,
 )
 from ..policy import ensure_template_blacklist_file
+from ..policy.expression import get_dataset_expression_policy
 from .bootstrap_cleanup import clean_runtime_artifacts as clean_runtime_artifacts
 from .bootstrap_fields import prepare_fields_for_execution
 from .bootstrap_state import build_execution_state
@@ -88,8 +88,8 @@ class PreparedBootstrapResources:
     run_config: dict[str, object]
 
 
-def _run_path_value(run_paths: object | None, attr: str) -> str:
-    """兼容 RunPaths 与历史 attr-style 对象的路径读取。"""
+def _run_path_value(run_paths: RunPaths | None, attr: str) -> str:
+    """从 RunPaths 读取路径属性。"""
     if run_paths is None:
         return ""
     value = getattr(run_paths, attr, "")
@@ -98,7 +98,7 @@ def _run_path_value(run_paths: object | None, attr: str) -> str:
 
 def resolve_bootstrap_paths(
     args: BootstrapRuntimeArgs,
-    run_paths: RunPaths | object | None,
+    run_paths: RunPaths | None,
 ) -> BootstrapPaths:
     """Resolve all runtime-sensitive paths up front."""
     output_file = _run_path_value(run_paths, "output") or str(args.output)
@@ -117,7 +117,7 @@ def resolve_bootstrap_paths(
 
 def prepare_runtime_outputs(
     args: BootstrapRuntimeArgs,
-    run_paths: RunPaths | object | None,
+    run_paths: RunPaths | None,
     paths: BootstrapPaths,
 ) -> dict[str, object]:
     """Prepare logging/output side effects and capture the embedded run config."""
@@ -150,7 +150,7 @@ def prepare_bootstrap_resources(
     bootstrap_client: BrainClient,
     *,
     run_config: dict[str, object],
-    run_paths: RunPaths | object | None,
+    run_paths: RunPaths | None,
 ) -> PreparedBootstrapResources | None:
     """Load template, feedback, and field resources needed to build the run context."""
     dataset_id = cast(str, args.dataset_id)
@@ -287,7 +287,7 @@ def create_and_login_client(
 
 def initialize_run_context(
     args: BootstrapRuntimeArgs,
-    run_paths: RunPaths | object | None,
+    run_paths: RunPaths | None,
 ) -> InitializedRunContext | None:
     """执行主流程的初始化阶段，返回结构化运行上下文。"""
     paths = resolve_bootstrap_paths(args, run_paths)

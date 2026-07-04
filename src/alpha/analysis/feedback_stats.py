@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
+from typing import Any
 
 from ..config.constants import (
     SENTINEL_UNKNOWN_CHECK,
@@ -32,7 +33,7 @@ def update_field_feedback_with_result(
     """将单条结果增量合并到字段反馈画像中。"""
     if is_self_correlation_pending_result(result):
         return feedback
-    summary = feedback.setdefault(
+    summary: dict[str, Any] = feedback.setdefault(
         result.field_id,
         {
             STAT_FIELD_FIELD_NAME: result.field_name,
@@ -45,14 +46,12 @@ def update_field_feedback_with_result(
             STAT_FIELD_FAILED_CHECK_COUNTS: {},
         },
     )
-    summary[STAT_FIELD_ATTEMPTED_TEMPLATES] = (
-        int(summary.get(STAT_FIELD_ATTEMPTED_TEMPLATES, 0)) + 1
-    )
+    current_attempted = summary.get(STAT_FIELD_ATTEMPTED_TEMPLATES, 0)
+    summary[STAT_FIELD_ATTEMPTED_TEMPLATES] = int(current_attempted or 0) + 1
     for check in result.failed_checks or []:
         name = str(check.get("name", SENTINEL_UNKNOWN_CHECK))
-        summary[STAT_FIELD_FAILED_CHECK_COUNTS][name] = (
-            summary[STAT_FIELD_FAILED_CHECK_COUNTS].get(name, 0) + 1
-        )
+        current_count = summary[STAT_FIELD_FAILED_CHECK_COUNTS].get(name, 0)
+        summary[STAT_FIELD_FAILED_CHECK_COUNTS][name] = int(current_count or 0) + 1
     if result.status != STATUS_SIMULATED or not result.failed_checks:
         return feedback
     score = score_failed_checks(result.failed_checks)

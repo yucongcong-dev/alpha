@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 from ..config.models import DatasetExpressionPolicy, FieldTransformSpec, FieldTransformStage
 from ..models.domain import FieldView
 from ..models.runtime import TemplateField
@@ -38,10 +40,12 @@ def apply_transform_pipeline(expression: str, transform_spec: FieldTransformSpec
 
 
 def build_field_view(
-    field: TemplateField,
+    field: TemplateField | dict[str, Any],
     policy: DatasetExpressionPolicy,
 ) -> FieldView:
     """为字段构建统一视图。"""
+    if isinstance(field, dict):
+        field = TemplateField.from_dict(field)
     field_name = choose_field_name(field)
     field_type = choose_field_type(field)
 

@@ -34,6 +34,7 @@ from ..config.models import (
     FieldTransformStage,
 )
 from ..config.policy_overrides import apply_yaml_expression_policy_overrides
+from ..models.domain import FieldFeedbackSummary
 
 
 def _default_transform_specs() -> tuple[
@@ -176,14 +177,15 @@ def _yaml_curated_heuristics(dataset_id: str) -> bool:
 
 
 def resolve_feedback_stage(
-    field_feedback: dict[str, Any] | None,
+    field_feedback: FieldFeedbackSummary | None,
     loop_policy: FeedbackLoopPolicy,
 ) -> str:
     """Resolve whether a field should generate, prune, or resimulate templates."""
     if not field_feedback:
         return FEEDBACK_STAGE_GENERATE
-    attempted = int(field_feedback.get(STAT_FIELD_ATTEMPTED_TEMPLATES, 0))
-    best_score = float(field_feedback.get("best_score", STATS_DEFAULT_SCORE))
+    feedback: dict[str, Any] = dict(field_feedback)
+    attempted = int(feedback.get(STAT_FIELD_ATTEMPTED_TEMPLATES, 0) or 0)
+    best_score = float(feedback.get("best_score", STATS_DEFAULT_SCORE) or STATS_DEFAULT_SCORE)
     if (
         attempted >= loop_policy.resimulate.min_attempted_templates
         and best_score >= loop_policy.resimulate.min_best_score
