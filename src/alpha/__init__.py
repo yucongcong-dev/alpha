@@ -89,7 +89,6 @@ __all__ = [
     "BrainAPIError",
     "BrainQueueBusyError",
     "BrainRateLimitError",
-    "CriticalOperations",
     "DatasetExpressionPolicy",
     "ErrorCategory",
     "ErrorContext",

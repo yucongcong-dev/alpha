@@ -6,7 +6,8 @@
 
 from __future__ import annotations
 
-from alpha.utils import choose_field_name, choose_field_type, first_non_empty
+from alpha.generators.fields import choose_field_name, choose_field_type
+from alpha.utils import first_non_empty
 
 # ============================================================================
 # first_non_empty 测试
