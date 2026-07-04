@@ -201,7 +201,7 @@ def test_ensure_template_blacklist_file_creates_empty_dataset_file(tmp_path) -> 
     path = ensure_template_blacklist_file("custom_ds", data_dir=str(tmp_path))
 
     blacklist_file = tmp_path / "blacklists" / "custom_ds" / "blacklist.json"
-    payload = json.loads(blacklist_file.read_text())
+    payload = json.loads(blacklist_file.read_text(encoding="utf-8"))
     assert path == str(blacklist_file)
     assert payload["dataset_id"] == "custom_ds"
     assert payload["blacklisted_templates"] == []
@@ -242,7 +242,7 @@ def test_auto_update_blacklist_appends_low_quality_template_once(tmp_path) -> No
     auto_update_blacklist(results, "custom_ds", data_dir=str(tmp_path))
     auto_update_blacklist(results, "custom_ds", data_dir=str(tmp_path))
 
-    payload = json.loads((tmp_path / "blacklists" / "custom_ds" / "blacklist.json").read_text())
+    payload = json.loads((tmp_path / "blacklists" / "custom_ds" / "blacklist.json").read_text(encoding="utf-8"))
     entries = payload["blacklisted_templates"]
     assert [entry["name"] for entry in entries] == ["weak_template"]
     assert entries[0]["template_family"] == "group_vol_scaled_delta"

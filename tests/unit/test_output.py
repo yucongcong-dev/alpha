@@ -376,7 +376,7 @@ def test_auto_update_blacklist_incremental_blacklists_only_changed_template(tmp_
         data_dir=str(tmp_path),
     )
 
-    payload = json.loads((tmp_path / "blacklists" / "custom_ds" / "blacklist.json").read_text())
+    payload = json.loads((tmp_path / "blacklists" / "custom_ds" / "blacklist.json").read_text(encoding="utf-8"))
     assert added_after_first is False
     assert added_after_second is True
     assert [entry["name"] for entry in payload["blacklisted_templates"]] == ["weak_template"]

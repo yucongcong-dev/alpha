@@ -93,6 +93,17 @@ class TemplateLibraryItem:
             metadata=item.get("metadata", {}),
         )
 
+    def to_dict(self) -> dict[str, Any]:
+        """序列化为可 JSON 化的字典。"""
+        return {
+            "name": self.name,
+            "expression": self.expression,
+            "priority": self.priority,
+            "family": self.family,
+            "stage": self.stage,
+            "metadata": self.metadata,
+        }
+
 
 TemplateLibrary = dict[str, list[TemplateLibraryItem]]
 """模板库类型：键为字段类型（如 "MATRIX"），值为模板项列表。"""
@@ -167,6 +178,15 @@ class TemplateField:
     def get(self, key: str, default: Any = None) -> Any:
         """兼容 dict 风格的 get 方法。"""
         return self.metadata.get(key, default)
+
+    def to_dict(self) -> dict[str, Any]:
+        """序列化为可 JSON 化的字典。"""
+        return {
+            "field_id": self.field_id,
+            "field_name": self.field_name,
+            "field_type": self.field_type,
+            "metadata": self.metadata,
+        }
 
 
 @dataclass

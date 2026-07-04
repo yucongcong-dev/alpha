@@ -179,7 +179,7 @@ def save_fields_cache(
             },
             "cached_at": time.time(),
             "count": len(fields),
-            "fields": list(fields),
+            "fields": [f.to_dict() if hasattr(f, "to_dict") else f for f in fields],
         },
     )
 
