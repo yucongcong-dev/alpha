@@ -96,7 +96,7 @@ global:
   limits:
     limit: 200                     # 默认先覆盖更广的排序后字段，0=不限制 (全部字段)
     offset: 0                      # 字段起始偏移量 (跳过前 N 个)
-    page_size: 50                  # API 分页大小 (每次请求字段数)
+    page_size: 50                  # API 分页大小 (平台上限 50)
     sleep_between_fields: 3.0      # 字段间休眠 (秒)，增大以降低限流风险
     max_templates_per_field: 6     # 每字段先测试少量高优模板，后续轮次再继续补
     max_templates_per_family: 2    # 每表达式家族保留的最大候选数
