@@ -531,26 +531,26 @@ class TestFieldTestContext:
             simulation_id="sim_1",
             alpha_id="alpha_1",
             submittable=True,
-            submitted=True,
-            message="submitted",
-            status="submitted",
+            submitted=False,
+            message="checks passed",
+            status="simulated",
         )
         assert result.field_id == "sales"
         assert result.submittable is True
-        assert result.submitted is True
-        assert result.status == "submitted"
+        assert result.submitted is False
+        assert result.status == "simulated"
 
     def test_failure_with_optional_fields(self, minimal_test_context: FieldTestContext) -> None:
         result = minimal_test_context.failure(
-            failed_stage="submit",
+            failed_stage="checksubmit",
             message="err",
             simulation_id="sim_1",
             alpha_id="alpha_1",
-            status="submit_failed",
+            status="checksubmit_failed",
         )
         assert result.simulation_id == "sim_1"
         assert result.alpha_id == "alpha_1"
-        assert result.status == "submit_failed"
+        assert result.status == "checksubmit_failed"
 
     def test_failure_default_status_is_error(self, minimal_test_context: FieldTestContext) -> None:
         result = minimal_test_context.failure(failed_stage="simulation", message="err")

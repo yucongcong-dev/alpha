@@ -103,16 +103,16 @@ def parse_args() -> argparse.Namespace:
             --queue-busy-cooldown-seconds: 队列冷却时间
             --field-queue-busy-skip-after: 字段队列跳过阈值
             --check-submit-retries: 检查提交重试次数
-            --submit-retries: 提交重试次数
+
             --rate-limit-max-retries: 速率限制重试次数
             --login-retries: 登录重试次数
             --min-request-interval: 最小请求间隔
 
         输出参数：
             --output: 输出文件路径
-            --submit: 是否提交可提交的 Alpha
+
             --stop-after-submittable: 达到目标后停止
-            --target-submittable: 目标可提交数量
+
 
         运行模式参数：
             --smoke-test: 冒烟测试模式

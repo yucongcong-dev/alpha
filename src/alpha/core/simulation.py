@@ -41,8 +41,7 @@ from .simulation_stages import (
     run_checksubmit_stage,
     run_simulation_create_stage,
     run_simulation_poll_stage,
-    run_submit_stage,
-    submit_with_retry,
+
 )
 
 logger = logging.getLogger(__name__)
@@ -59,7 +58,7 @@ def run_field_test(
     simulation_settings: SettingsVariant | None = None,
     create_semaphore: SemaphoreLike | None = None,
 ) -> FieldTestResult:
-    """执行单个候选表达式的 simulation / checksubmit / submit 三阶段流程。"""
+    """执行单个候选表达式的 simulation / checksubmit 两阶段流程。"""
     if not expression or not expression.strip():
         raise ValueError("expression cannot be empty")
     if not template_name or not template_name.strip():
@@ -125,24 +124,9 @@ def run_field_test(
         return check_result
     submittable, message, failed_checks = check_result
 
-    submit_result = run_submit_stage(
-        ctx,
-        client,
-        args,
-        alpha_id=alpha_id,
-        simulation_id=simulation_id,
-        simulation_location=simulation_location,
-        submittable=submittable,
-    )
-    if isinstance(submit_result, FieldTestResult):
-        return submit_result
-    submitted, status, submit_message = submit_result
-    if submitted:
-        message = submit_message
-
     if submittable:
         logger.info(
-            "[submit] submittable alpha_id=%s simulation_id=%s simulation_location=%s",
+            "[checksubmit] submittable alpha_id=%s simulation_id=%s simulation_location=%s",
             alpha_id,
             simulation_id,
             simulation_location,
@@ -152,9 +136,9 @@ def run_field_test(
         simulation_id=simulation_id,
         alpha_id=alpha_id,
         submittable=submittable,
-        submitted=submitted,
+        submitted=False,
         message=message,
-        status=status,
+        status="simulated",
         failed_checks=failed_checks,
     )
 
@@ -201,6 +185,6 @@ __all__ = [
     "precheck_simulation_metrics",
     "run_field_test",
     "run_field_test_in_worker",
-    "submit_with_retry",
+
     "summarize_failure",
 ]

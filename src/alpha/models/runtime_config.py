@@ -104,8 +104,7 @@ class SimulationStageConfig(SimulationSettingsConfig):
     simulation_max_queue_seconds: int = 0
     check_submit_retries: int = 0
 
-    submit_retries: int = 0
-    submit: bool = False
+
     min_sharpe: float = 0.0
     min_fitness: float = 0.0
     min_turnover: float = 0.0
@@ -222,8 +221,7 @@ class BootstrapConfig:
             simulation_max_pending_cycles=int(getattr(args, "simulation_max_pending_cycles", 0) or 0),
             simulation_max_queue_seconds=int(getattr(args, "simulation_max_queue_seconds", 0) or 0),
             check_submit_retries=int(getattr(args, "check_submit_retries", 0) or 0),
-            submit_retries=int(getattr(args, "submit_retries", 0) or 0),
-            submit=bool(getattr(args, "submit", False)),
+
             min_sharpe=float(getattr(args, "min_sharpe", 0.0) or 0.0),
             min_fitness=float(getattr(args, "min_fitness", 0.0) or 0.0),
             min_turnover=float(getattr(args, "min_turnover", 0.0) or 0.0),
@@ -259,8 +257,7 @@ class BootstrapConfig:
             simulation_max_pending_cycles=int(getattr(args, "simulation_max_pending_cycles", 0) or 0),
             simulation_max_queue_seconds=int(getattr(args, "simulation_max_queue_seconds", 0) or 0),
             check_submit_retries=int(getattr(args, "check_submit_retries", 0) or 0),
-            submit_retries=int(getattr(args, "submit_retries", 0) or 0),
-            submit=bool(getattr(args, "submit", False)),
+
             min_sharpe=float(getattr(args, "min_sharpe", 0.0) or 0.0),
             min_fitness=float(getattr(args, "min_fitness", 0.0) or 0.0),
             min_turnover=float(getattr(args, "min_turnover", 0.0) or 0.0),

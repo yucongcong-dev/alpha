@@ -8,7 +8,7 @@
 # 快速索引:
 #   1. 模拟设置 (Simulation Settings)  —— 与官网参数一一对应
 #   2. 运维参数 (Operational)          —— 字段筛选、并发、重试、过滤、质量、HTTP、反馈
-#   3. 运行时开关 (Runtime)            —— submit, smoke_test, full_run 等
+#   3. 运行时开关 (Runtime)            —— smoke_test, full_run 等
 #   4. 数据集 Profiles (Dataset Profiles) —— 各数据集的专属参数
 # ============================================================================
 
@@ -126,7 +126,7 @@ global:
     queue_busy_cooldown_seconds: 60      # 队列繁忙后冷却时间 (秒)
     field_queue_busy_skip_after: 2       # 字段连续队列拥挤 N 次后跳过，0=不跳过
     check_submit_retries: 3              # 检查提交结果的重试次数
-    submit_retries: 3                    # 提交 Alpha 的重试次数
+
     rate_limit_max_retries: 5            # 触发限流 (429) 的最大重试次数
     login_retries: 3                     # 登录失败重试次数
 
@@ -193,10 +193,9 @@ global:
     expr_mutation_extend_threshold: 0.15  # 表达式额外 nearpass 变异阈值
 
   # --------------------------------------------------------------------------
-  # 运行时开关 —— 对应 CLI --submit / --smoke-test / --dry-run-plan / --full-run / --verbose / --quiet
+  # 运行时开关 —— 对应 CLI --smoke-test / --dry-run-plan / --full-run / --verbose / --quiet
   # --------------------------------------------------------------------------
   runtime:
-    submit: false          # 是否自动提交通过预检的 Alpha
     auto_update_blacklist: true   # 自动追加低质量模板到 data/blacklists/<dataset>/blacklist.json，下次自动跳过
     smoke_test: false      # 冒烟测试模式 (1字段/1模板，快速验证)
     dry_run_plan: false    # 干运行模式 (仅打印计划，不创建模拟)

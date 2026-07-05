@@ -18,7 +18,7 @@ from ..config.constants import (
     API_KEY_STATUS,
     SIMULATION_RETRY_WAIT,
     STATUS_SIMULATED,
-    STATUS_SUBMITTED,
+
 )
 
 from ..generators.payload import build_simulation_payload
@@ -124,17 +124,6 @@ def checksubmit_with_retry(
     )
     return submittable, message, failed_checks
 
-
-def submit_with_retry(client: BrainClient, alpha_id: str, retries: int) -> str:
-    submit_result = retry_operation(
-        "submit",
-        retries,
-        lambda: client.submit_alpha(alpha_id),
-        retry_wait_seconds=SIMULATION_RETRY_WAIT,
-    )
-    if submit_result.get(API_KEY_STATUS) == API_KEY_FAILED:
-        return summarize_failure(submit_result)
-    return STATUS_SUBMITTED
 
 
 def run_simulation_create_stage(
@@ -263,38 +252,6 @@ def run_checksubmit_stage(
         )
 
 
-def run_submit_stage(
-    ctx: FieldTestContext,
-    client: BrainClient,
-    args: SimulationStageArgs,
-    *,
-    alpha_id: str,
-    simulation_id: str,
-    simulation_location: str,
-    submittable: bool | None,
-) -> FieldTestResult | tuple[bool, str, str]:
-    should_submit: bool = cast(bool, args.submit)
-    if not (should_submit and submittable):
-        return False, STATUS_SIMULATED, ""
-    try:
-        logger.info(
-            "[submit] eligible alpha_id=%s simulation_id=%s simulation_location=%s",
-            alpha_id,
-            simulation_id,
-            simulation_location,
-        )
-        message = submit_with_retry(client, alpha_id, cast(int, args.submit_retries))
-        return True, STATUS_SUBMITTED, message
-    except Exception as exc:
-        return handle_stage_error(
-            ctx,
-            "submit",
-            exc,
-            simulation_id=simulation_id,
-            alpha_id=alpha_id,
-        )
-
-
 __all__ = [
     "PrecheckConfig",
     "checksubmit_with_retry",
@@ -304,6 +261,4 @@ __all__ = [
     "run_checksubmit_stage",
     "run_simulation_create_stage",
     "run_simulation_poll_stage",
-    "run_submit_stage",
-    "submit_with_retry",
 ]

@@ -123,7 +123,6 @@ def test_cli_no_flag_overrides_yaml_true(monkeypatch, tmp_path) -> None:
         """
 global:
   runtime:
-    submit: true
     auto_update_blacklist: true
     dry_run_plan: true
     verbose: true
@@ -138,7 +137,6 @@ global:
             "alpha",
             "--config",
             str(config_path),
-            "--no-submit",
             "--no-auto-update-blacklist",
             "--no-dry-run-plan",
             "--no-verbose",
@@ -148,7 +146,6 @@ global:
 
     args = parse_args()
 
-    assert args.submit is False
     assert args.auto_update_blacklist is False
     assert args.dry_run_plan is False
     assert args.verbose is False

@@ -197,7 +197,6 @@ def add_api_runtime_arguments(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--field-queue-busy-skip-after", type=int, default=2, help="字段队列拥塞后跳过阈值；0 表示不跳过")
     parser.add_argument("--check-submit-retries", type=int, default=3, help="检查提交重试次数")
 
-    parser.add_argument("--submit-retries", type=int, default=3, help="提交重试次数")
 
 
 def add_precheck_arguments(parser: argparse.ArgumentParser) -> None:
@@ -211,14 +210,7 @@ def add_precheck_arguments(parser: argparse.ArgumentParser) -> None:
 
 
 def add_output_logging_arguments(parser: argparse.ArgumentParser) -> None:
-    """Add submit, output, logging, and clean arguments."""
-    add_bool_argument(
-        parser,
-        "--submit",
-        dest="submit",
-        help_enable="检查通过时提交 Alpha",
-        help_disable="不提交 Alpha（覆盖 YAML runtime.submit=true）",
-    )
+    """Add output, logging, and clean arguments."""
     add_bool_argument(
         parser,
         "--auto-update-blacklist",

@@ -52,7 +52,7 @@ def build_run_config_snapshot(args: RunConfigArgs, run_paths: RunPaths) -> dict[
             "field_queue_busy_skip_after": args.field_queue_busy_skip_after,
             "check_submit_retries": args.check_submit_retries,
 
-            "submit_retries": args.submit_retries,
+
             "rate_limit_max_retries": args.rate_limit_max_retries,
             "login_retries": args.login_retries,
             "min_request_interval": args.min_request_interval,
@@ -69,7 +69,7 @@ def build_run_config_snapshot(args: RunConfigArgs, run_paths: RunPaths) -> dict[
             "feedback_output": run_paths.feedback_output,
         },
         "runtime": {
-            "submit": args.submit,
+
             "auto_update_blacklist": args.auto_update_blacklist,
             "smoke_test": args.smoke_test,
             "dry_run_plan": args.dry_run_plan,

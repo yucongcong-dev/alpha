@@ -1,10 +1,9 @@
 """
-WorldQuant BRAIN Alpha 自动生成与提交工具包。
+WorldQuant BRAIN Alpha 自动生成与测试工具包。
 
 本工具包用于：
 - 自动生成 Alpha 表达式
 - 批量回测并筛选可提交的 Alpha
-- 提交符合平台检查标准的 Alpha
 - 分析失败原因并迭代优化策略
 
 包结构：
@@ -23,7 +22,7 @@ WorldQuant BRAIN Alpha 自动生成与提交工具包。
 使用方式：
     python3 -m alpha --smoke-test
     python3 -m alpha --dry-run-plan
-    python3 -m alpha --limit 50 --submit
+    python3 -m alpha --limit 50
 """
 
 from __future__ import annotations

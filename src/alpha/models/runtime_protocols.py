@@ -104,14 +104,14 @@ class RunConfigArgs(Protocol):
     queue_busy_cooldown_seconds: object
     field_queue_busy_skip_after: object
     check_submit_retries: object
-    submit_retries: object
+
     rate_limit_max_retries: object
     login_retries: object
     min_request_interval: object
     template_disable_after: object
     top_fields_by_feedback: object
     stop_after_submittable: object
-    submit: object
+
     auto_update_blacklist: object
     smoke_test: object
     dry_run_plan: object
@@ -163,8 +163,7 @@ class SimulationStageArgs(SimulationSettingsArgs, Protocol):
     simulation_max_pending_cycles: object
     simulation_max_queue_seconds: object
     check_submit_retries: object
-    submit_retries: object
-    submit: object
+
     min_sharpe: object
     min_fitness: object
     min_turnover: object

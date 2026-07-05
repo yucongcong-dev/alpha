@@ -77,7 +77,7 @@ def apply_yaml_global_defaults(
         "simulation_max_polls", "simulation_max_wait_seconds",
         "simulation_max_pending_cycles", "simulation_max_queue_seconds",
         "queue_busy_cooldown_seconds", "field_queue_busy_skip_after",
-        "check_submit_retries", "submit_retries",
+        "check_submit_retries",
         "rate_limit_max_retries", "login_retries", "min_request_interval",
     }, explicit_cli_keys)
 
@@ -96,7 +96,7 @@ def apply_yaml_global_defaults(
     }, explicit_cli_keys)
 
     _merge_section(args, global_cfg.get("runtime", {}), {
-        "submit", "auto_update_blacklist", "smoke_test", "dry_run_plan", "full_run",
+        "auto_update_blacklist", "smoke_test", "dry_run_plan", "full_run",
         "verbose", "quiet",
     }, explicit_cli_keys)
 

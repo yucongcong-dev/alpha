@@ -33,7 +33,7 @@ from .scheduler import (
 )
 from .simulation import (
     build_failure_result,
-    checksubmit_with_retry,
+
     create_simulation_with_retry,
     extract_alpha_id,
     extract_checks,
@@ -42,7 +42,7 @@ from .simulation import (
     poll_simulation_with_retry,
     run_field_test,
     run_field_test_in_worker,
-    submit_with_retry,
+
     summarize_failure,
 )
 from .template_planning import (
@@ -56,7 +56,7 @@ __all__ = [
     "build_failure_result",
     "build_pending_template_variants",
     "build_pending_templates_for_field",
-    "checksubmit_with_retry",
+
     "create_simulation_with_retry",
     "delete_pipeline_state",
     "detect_result_congestion",
@@ -79,7 +79,7 @@ __all__ = [
     "save_pipeline_state",
     "should_skip_expression_by_history",
     "should_skip_field",
-    "submit_with_retry",
+
     "summarize_failure",
     "throttle_before_submission",
 ]
