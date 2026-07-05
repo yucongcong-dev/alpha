@@ -9,7 +9,7 @@ from ...config import get_backfill_window
 from ...exceptions import BrainAPIError
 from ...models.domain import TemplateLibrary, TemplateLibraryItem
 from ...policy.expression import get_dataset_expression_policy
-from .library_paths import is_builtin_template_path, resolve_builtin_template_library_file
+
 
 _OPTIONAL_TEMPLATE_METADATA_KEYS = (
     "family",
@@ -65,8 +65,11 @@ def resolve_template_backfill_window(payload: dict[str, object], field_type: str
 
 def load_template_library(path: str) -> TemplateLibrary:
     """Load and validate a JSON template library."""
-    if not path or (not os.path.exists(path) and is_builtin_template_path(path)):
-        path = resolve_builtin_template_library_file()
+    if not path:
+        raise BrainAPIError("模板库文件路径为空，请指定有效的模板库文件。")
+
+    if not os.path.exists(path):
+        raise BrainAPIError(f"模板库文件不存在: {path}")
 
     try:
         with open(path, encoding="utf-8") as handle:

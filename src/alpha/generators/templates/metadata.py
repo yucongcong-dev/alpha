@@ -71,6 +71,7 @@ def build_template_metadata_index(
         rendered_expression = item.expression.format(
             field=field_view.raw_expression,
             field_preprocessed=field_view.preprocessed_expression,
+            field_groupfill=field_view.groupfill_expression,
             ratio_numerator=field_view.ratio_numerator_expression,
             ratio_denominator=field_view.ratio_denominator_expression,
             backfill_window=get_backfill_window(),

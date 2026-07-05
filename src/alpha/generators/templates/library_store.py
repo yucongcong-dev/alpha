@@ -4,12 +4,10 @@ from __future__ import annotations
 
 import json
 import logging
-import os
 from pathlib import Path
 
 from ...exceptions import BrainAPIError
 from ...io.common import atomic_write_json
-from .library_paths import is_builtin_template_path, resolve_builtin_template_library_file
 
 logger = logging.getLogger(__name__)
 
@@ -42,53 +40,34 @@ def add_missing_template_priorities(payload: dict[str, object]) -> bool:
 
 
 def ensure_dataset_template_library(path: str, dataset_id: str) -> str:
-    """Ensure a dataset-specific template library exists."""
-    target_path = path or resolve_builtin_template_library_file()
-    if Path(target_path).exists():
-        if is_builtin_template_path(target_path):
-            return target_path
-        try:
-            with open(target_path, encoding="utf-8") as handle:
-                existing_payload = json.load(handle)
-            if isinstance(existing_payload, dict) and add_missing_template_priorities(
-                existing_payload
-            ):
-                atomic_write_json(target_path, existing_payload)
-                logger.info("[templates] filled missing template priorities: %s", target_path)
-        except Exception as exc:
-            raise BrainAPIError(f"读取模板库文件失败 {target_path}: {exc}") from exc
-        return target_path
+    """Ensure a dataset-specific template library exists.
 
-    base_path = resolve_builtin_template_library_file()
-    if not Path(base_path).exists():
-        raise BrainAPIError(f"基础模板库文件不存在，无法生成专属模板库: {base_path}")
+    Each dataset must have its own independent template library file.
+    No base template inheritance — templates are designed per-dataset.
+    """
+    if not path:
+        raise BrainAPIError(
+            f"数据集 {dataset_id} 缺少模板库文件路径。"
+            "请通过 --template-library-file 指定，或在 data/templates/{dataset_id}/library.json 创建专属模板库。"
+        )
+
+    if not Path(path).exists():
+        raise BrainAPIError(
+            f"模板库文件不存在: {path}。"
+            f"请为数据集 {dataset_id} 创建专属模板库文件，不再支持从基础模板自动生成。"
+        )
 
     try:
-        with open(base_path, encoding="utf-8") as handle:
-            payload = json.load(handle)
+        with open(path, encoding="utf-8") as handle:
+            existing_payload = json.load(handle)
+        if isinstance(existing_payload, dict) and add_missing_template_priorities(
+            existing_payload
+        ):
+            atomic_write_json(path, existing_payload)
+            logger.info("[templates] filled missing template priorities: %s", path)
     except Exception as exc:
-        raise BrainAPIError(f"读取基础模板库文件失败 {base_path}: {exc}") from exc
-
-    if not isinstance(payload, dict):
-        raise BrainAPIError(f"基础模板库文件 {base_path} 必须包含一个 JSON 对象。")
-
-    generated = dict(payload)
-    generated.setdefault("_generated_from", os.path.relpath(base_path, Path(target_path).parent))
-    generated["_dataset_id"] = dataset_id
-    generated["_comment_dataset_template"] = (
-        "Auto-generated dataset-specific template library. "
-        "Edit this file for dataset-level template tuning; base templates remain unchanged."
-    )
-    add_missing_template_priorities(generated)
-
-    Path(target_path).parent.mkdir(parents=True, exist_ok=True)
-    atomic_write_json(target_path, generated)
-    logger.info(
-        "[templates] generated dataset template library from base: %s -> %s",
-        base_path,
-        target_path,
-    )
-    return target_path
+        raise BrainAPIError(f"读取模板库文件失败 {path}: {exc}") from exc
+    return path
 
 
 __all__ = [

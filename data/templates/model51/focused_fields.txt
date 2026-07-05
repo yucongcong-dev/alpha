@@ -1,2 +1,0 @@
-unsystematic_risk_last_360_days
-systematic_risk_last_360_days

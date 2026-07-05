@@ -64,6 +64,7 @@ def build_field_view(
         transform_spec = policy.default_field_transform
 
     preprocessed_expression = apply_transform_pipeline(raw_expression, transform_spec)
+    groupfill_expression = f"group_backfill({raw_expression}, subindustry, 252, std=4)"
     ratio_numerator_expression = apply_transform_pipeline(
         raw_expression,
         policy.ratio_numerator_transform,
@@ -79,6 +80,7 @@ def build_field_view(
         field_type=field_type,
         raw_expression=raw_expression,
         preprocessed_expression=preprocessed_expression,
+        groupfill_expression=groupfill_expression,
         ratio_numerator_expression=ratio_numerator_expression,
         ratio_denominator_expression=ratio_denominator_expression,
         metadata=field.metadata,

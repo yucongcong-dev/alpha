@@ -1,7 +1,6 @@
 {
-  "_comment": "模板库 v4 — fundamental6 专项优化: 去模板内中性化(依赖settings)、删短窗口、增预处理变体、增ratio/pair、bucket加densify、事件字段自身变化触发、增vec_sum/hump参数扫描",
+  "_comment": "fundamental6 独立模板库 — 去模板内中性化(依赖settings)、删短窗口/hump/无效算子、增预处理变体、增ratio/pair、bucket加densify、事件字段自身变化触发、增vec_sum",
   "_comment_placeholders": "{field}=字段名, {field_preprocessed}=winsorize(ts_backfill({field}, 120), std=4), {field_longfill}=winsorize(ts_backfill({field}, 252), std=3), {field_rawfill}=ts_backfill({field}, 120), {backfill_window}=settings.yaml expression.backfill_window",
-  "_comment_v4_changelog": "1.去模板内group_neutralize(与settings双重中性化) 2.删ts_rank_20/ts_zscore_20/decay_5/stddev_20/ir_20(季度字段短窗口无区分度) 3.增{field_longfill}/{field_rawfill}预处理变体 4.增ratio_cap/ratio_assets模板族 5.bucket加densify() 6.VECTOR增vec_sum+事件自身变化触发 7.hump增0.2/0.4/0.5参数 8.增ts_rank_504/ts_zscore_126/decay_120长窗口",
   "default": [
     {
       "_comment": "=== Tier 2: 三层嵌套 — 去模板内中性化, 依赖 settings neutralization ===",
@@ -26,42 +25,7 @@
       "layer": "composite"
     },
     {
-      "_comment": "=== Tier 2.5: hump — 平台核心推荐, 降低 Turnover, 多参数扫描 ===",
-      "name": "hump_zscore_60_03",
-      "expression": "rank(hump(ts_zscore({field}, 60), 0.3))",
-      "priority": 991,
-      "family": "hump",
-      "layer": "time_series"
-    },
-    {
-      "name": "hump_zscore_60_02",
-      "expression": "rank(hump(ts_zscore({field}, 60), 0.2))",
-      "priority": 990,
-      "family": "hump",
-      "layer": "time_series"
-    },
-    {
-      "name": "hump_zscore_60_04",
-      "expression": "rank(hump(ts_zscore({field}, 60), 0.4))",
-      "priority": 989,
-      "family": "hump",
-      "layer": "time_series"
-    },
-    {
-      "name": "hump_zscore_60_05",
-      "expression": "rank(hump(ts_zscore({field}, 60), 0.5))",
-      "priority": 988,
-      "family": "hump",
-      "layer": "time_series"
-    },
-    {
-      "name": "hump_decay_zscore_60",
-      "expression": "rank(hump_decay(ts_zscore({field}, 60), 0.3, 20))",
-      "priority": 987,
-      "family": "hump",
-      "layer": "time_series"
-    },
-    {
+
       "_comment": "=== Tier 5: ts_rank — 删短窗口, 增长窗口 ===",
       "name": "ts_rank_60",
       "expression": "rank(ts_rank({field}, 60))",
@@ -178,21 +142,7 @@
       "layer": "time_series"
     },
     {
-      "_comment": "=== Tier 10.6: 平台推荐算子 ===",
-      "name": "exp_decay_zscore_60",
-      "expression": "rank(ts_decay_exp_window(ts_zscore({field}, 60), 60, factor=0.5))",
-      "priority": 926,
-      "family": "exp_decay",
-      "layer": "time_series"
-    },
-    {
-      "name": "vector_neut_market_zscore_60",
-      "expression": "rank(vector_neut(ts_zscore({field}, 60), market))",
-      "priority": 925,
-      "family": "vector_neut",
-      "layer": "time_series"
-    },
-    {
+
       "name": "adv20_liquidity_rank_60",
       "expression": "rank(ts_zscore({field}, 60) / rank(adv20))",
       "priority": 924,
@@ -548,20 +498,7 @@
       "layer": "account"
     },
     {
-      "name": "account_hump_zscore_60",
-      "expression": "rank(hump(ts_zscore({field_preprocessed}, 60), 0.3))",
-      "priority": 194,
-      "family": "hump",
-      "layer": "account"
-    },
-    {
-      "name": "account_hump_zscore_60_05",
-      "expression": "rank(hump(ts_zscore({field_preprocessed}, 60), 0.5))",
-      "priority": 192,
-      "family": "hump",
-      "layer": "account"
-    },
-    {
+
       "name": "account_decay_60",
       "expression": "rank(ts_decay_linear({field_preprocessed}, 60))",
       "priority": 190,
@@ -590,7 +527,5 @@
       "layer": "account"
     }
   ],
-  "_generated_from": "../base/library.json",
-  "_dataset_id": "fundamental6",
-  "_comment_dataset_template": "Auto-generated dataset-specific template library. Edit this file for dataset-level template tuning; base templates remain unchanged."
+  "_dataset_id": "fundamental6"
 }

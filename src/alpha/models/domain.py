@@ -254,6 +254,7 @@ class FieldView:
     field_type: str
     raw_expression: str
     preprocessed_expression: str
+    groupfill_expression: str
     ratio_numerator_expression: str
     ratio_denominator_expression: str
     metadata: TemplateMetadata = field(default_factory=dict)

@@ -6,13 +6,14 @@ from argparse import Namespace
 import json
 from pathlib import Path
 
+import pytest
+
 from alpha.core.executor import build_pending_templates_for_field, inflight_template_keys
 from alpha.core.scheduler import handle_completed_future
-from alpha.generators import templates as template_module
+from alpha.exceptions import BrainAPIError
 from alpha.generators.expression_builder import _is_blacklisted_template
 from alpha.generators.payload import build_settings_fingerprint_from_payload
 from alpha.generators.templates import ensure_dataset_template_library, load_template_library
-from alpha.generators.templates import library_paths as _library_paths
 from alpha.policy.blacklist_runtime import auto_update_blacklist
 from alpha.policy.blacklist_store import ensure_template_blacklist_file, invalidate_blacklist_path_cache
 from alpha.models.domain import FailedCheck, FieldTestResult, TemplateCandidate, TemplateLibraryItem
@@ -28,52 +29,27 @@ from alpha.policy.expression import get_dataset_expression_policy
 from alpha.policy.template_blacklist import invalidate_blacklist_cache
 
 
-def test_ensure_dataset_template_library_copies_base_when_missing(monkeypatch, tmp_path) -> None:
-    """Missing dataset-specific template files should be generated from the base library."""
-    base = tmp_path / "worldquant_template_library.json"
-    target = tmp_path / "worldquant_template_library_custom_ds.json"
-    base.write_text(
-        json.dumps(
-            {
-                "_comment": "base",
-                "default": [
-                    {
-                        "name": "rank_backfill",
-                        "expression": "rank(ts_backfill({field}, {backfill_window}))",
-                        "priority": 123,
-                    }
-                ],
-            }
-        ),
-        encoding="utf-8",
-    )
-    monkeypatch.setattr(_library_paths, "_BUILTIN_TEMPLATE_LIBRARY_FILE", str(base))
+def test_ensure_dataset_template_library_raises_when_missing(tmp_path) -> None:
+    """Missing dataset-specific template files should raise an error, not auto-generate."""
+    target = tmp_path / "nonexistent_library.json"
 
-    resolved = ensure_dataset_template_library(str(target), "custom_ds")
-
-    assert resolved == str(target)
-    payload = json.loads(target.read_text(encoding="utf-8"))
-    assert payload["_dataset_id"] == "custom_ds"
-    assert payload["default"][0]["name"] == "rank_backfill"
-    assert payload["default"][0]["priority"] == 123
-
-    library = load_template_library(str(target))
-    assert library["default"][0].priority == 123
+    with pytest.raises(BrainAPIError, match="模板库文件不存在"):
+        ensure_dataset_template_library(str(target), "custom_ds")
 
 
-def test_ensure_dataset_template_library_preserves_existing(monkeypatch, tmp_path) -> None:
-    """Existing dataset template files should not be overwritten by the base library."""
-    base = tmp_path / "worldquant_template_library.json"
-    target = tmp_path / "worldquant_template_library_custom_ds.json"
-    base.write_text(
-        json.dumps({"default": [{"name": "base", "expression": "rank({field})"}]}),
-        encoding="utf-8",
-    )
+def test_ensure_dataset_template_library_raises_when_path_empty() -> None:
+    """Empty path should raise an error requiring explicit template library."""
+    with pytest.raises(BrainAPIError, match="缺少模板库文件路径"):
+        ensure_dataset_template_library("", "custom_ds")
+
+
+def test_ensure_dataset_template_library_preserves_existing(tmp_path) -> None:
+    """Existing dataset template files should not be overwritten."""
+    target = tmp_path / "library.json"
     target.write_text(
         json.dumps({"default": [{"name": "custom", "expression": "zscore({field})"}]}),
         encoding="utf-8",
     )
-    monkeypatch.setattr(_library_paths, "_BUILTIN_TEMPLATE_LIBRARY_FILE", str(base))
 
     ensure_dataset_template_library(str(target), "custom_ds")
 
@@ -134,13 +110,9 @@ def test_load_template_library_infers_stage_from_layer(tmp_path) -> None:
     assert library["default"][0].stage == "group_second_order"
 
 
-def test_ensure_dataset_template_library_fills_missing_priorities(
-    monkeypatch, tmp_path
-) -> None:
+def test_ensure_dataset_template_library_fills_missing_priorities(tmp_path) -> None:
     """Missing priorities should be filled by file order without overwriting manual values."""
-    base = tmp_path / "worldquant_template_library.json"
-    target = tmp_path / "worldquant_template_library_custom_ds.json"
-    base.write_text(json.dumps({"default": []}), encoding="utf-8")
+    target = tmp_path / "library.json"
     target.write_text(
         json.dumps(
             {
@@ -153,7 +125,6 @@ def test_ensure_dataset_template_library_fills_missing_priorities(
         ),
         encoding="utf-8",
     )
-    monkeypatch.setattr(_library_paths, "_BUILTIN_TEMPLATE_LIBRARY_FILE", str(base))
 
     ensure_dataset_template_library(str(target), "custom_ds")
 
@@ -161,39 +132,18 @@ def test_ensure_dataset_template_library_fills_missing_priorities(
     assert [item["priority"] for item in payload["default"]] == [1000, 999, 998]
 
 
-def test_ensure_dataset_template_library_does_not_mutate_base_template(
-    monkeypatch, tmp_path
-) -> None:
-    """The tracked base template library should not be rewritten by priority filling."""
-    base = tmp_path / "worldquant_template_library.json"
-    base.write_text(
-        json.dumps({"default": [{"name": "base", "expression": "rank({field})"}]}),
-        encoding="utf-8",
-    )
-    monkeypatch.setattr(_library_paths, "_BUILTIN_TEMPLATE_LIBRARY_FILE", str(base))
+def test_load_template_library_raises_on_missing_file(tmp_path) -> None:
+    """Loading a non-existent template file should raise an error."""
+    missing = tmp_path / "nonexistent.json"
 
-    ensure_dataset_template_library(str(base), "custom_ds")
-
-    payload = json.loads(base.read_text(encoding="utf-8"))
-    assert "priority" not in payload["default"][0]
+    with pytest.raises(BrainAPIError, match="模板库文件不存在"):
+        load_template_library(str(missing))
 
 
-def test_load_template_library_legacy_base_path_falls_back_to_new_location(
-    monkeypatch, tmp_path
-) -> None:
-    new_base = tmp_path / "templates" / "base" / "library.json"
-    legacy_base = tmp_path / "worldquant_template_library.json"
-    new_base.parent.mkdir(parents=True, exist_ok=True)
-    new_base.write_text(
-        json.dumps({"default": [{"name": "base", "expression": "rank({field})"}]}),
-        encoding="utf-8",
-    )
-    monkeypatch.setattr(_library_paths, "_BUILTIN_TEMPLATE_LIBRARY_FILE", str(new_base))
-    monkeypatch.setattr(_library_paths, "_LEGACY_BUILTIN_TEMPLATE_LIBRARY_FILE", str(legacy_base))
-
-    library = load_template_library(str(legacy_base))
-
-    assert library["default"][0].name == "base"
+def test_load_template_library_raises_on_empty_path() -> None:
+    """Loading with an empty path should raise an error."""
+    with pytest.raises(BrainAPIError, match="模板库文件路径为空"):
+        load_template_library("")
 
 
 def test_ensure_template_blacklist_file_creates_empty_dataset_file(tmp_path) -> None:
