@@ -3,7 +3,7 @@
 
 包含 Alpha 测试的核心执行逻辑，分为三个子模块：
 - executor: 高层协调，负责任务队列构建和干运行计划
-- simulation: 模拟生命周期管理，负责单个模拟任务的创建、轮询、检查和提交
+- simulation: 模拟生命周期管理，负责单个模拟任务的创建、轮询和检查
 - scheduler: 并发调度与拥塞控制，负责动态调整并发数和任务节流
 """
 
@@ -33,7 +33,6 @@ from .scheduler import (
 )
 from .simulation import (
     build_failure_result,
-
     create_simulation_with_retry,
     extract_alpha_id,
     extract_checks,

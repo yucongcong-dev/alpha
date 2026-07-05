@@ -126,7 +126,6 @@ global:
     queue_busy_cooldown_seconds: 60      # 队列繁忙后冷却时间 (秒)
     field_queue_busy_skip_after: 2       # 字段连续队列拥挤 N 次后跳过，0=不跳过
     check_submit_retries: 3              # 检查提交结果的重试次数
-
     rate_limit_max_retries: 5            # 触发限流 (429) 的最大重试次数
     login_retries: 3                     # 登录失败重试次数
 

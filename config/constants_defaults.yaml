@@ -471,7 +471,7 @@ strings:
     progress: "progress"
     state: "state"
   status:
-    submitted: "submitted"
+
     simulated: "simulated"
     error: "error"
   stat_fields:

@@ -17,7 +17,6 @@ from ..config.constants import (
     API_KEY_STATE,
     API_KEY_STATUS,
     SIMULATION_RETRY_WAIT,
-    STATUS_SIMULATED,
 
 )
 
@@ -123,7 +122,6 @@ def checksubmit_with_retry(
         message,
     )
     return submittable, message, failed_checks
-
 
 
 def run_simulation_create_stage(

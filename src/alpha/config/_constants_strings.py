@@ -27,7 +27,7 @@ API_KEY_PROGRESS: str = _yaml_str("strings", "api_keys", "progress", default="pr
 API_KEY_STATE: str = _yaml_str("strings", "api_keys", "state", default="state")
 
 # ---- 状态字符串 ----
-STATUS_SUBMITTED: str = _yaml_str("strings", "status", "submitted", default="submitted")
+
 STATUS_SIMULATED: str = _yaml_str("strings", "status", "simulated", default="simulated")
 STATUS_ERROR: str = _yaml_str("strings", "status", "error", default="error")
 

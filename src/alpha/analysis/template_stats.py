@@ -27,7 +27,7 @@ from ..config.constants import (
     STATS_PERFORMANCE_TOP_N,
     STATUS_ERROR,
     STATUS_SIMULATED,
-    STATUS_SUBMITTED,
+
     TEMPLATE_HISTORY_CONCENTRATED_PENALTY,
     TEMPLATE_HISTORY_ERROR_PENALTY,
     TEMPLATE_HISTORY_LOW_PERF_PENALTY,
@@ -79,7 +79,7 @@ def update_template_stats_with_result(
         stat[STAT_FIELD_SUBMITTABLE] += 1
     if result.submitted:
         stat[STAT_FIELD_SUBMITTED] += 1
-    if result.status in {STATUS_SIMULATED, STATUS_SUBMITTED}:
+    if result.status == STATUS_SIMULATED:
         stat[STAT_FIELD_SIMULATED] += 1
     if result.status == STATUS_ERROR:
         stat[STAT_FIELD_ERRORS] += 1
