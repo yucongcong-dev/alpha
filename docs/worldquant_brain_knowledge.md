@@ -145,13 +145,17 @@
 
 ### 5.2 标准窗口参数
 
-| 窗口 | 含义 | 适用场景 |
-|------|------|----------|
-| 5 | 1 周 | 超短期信号、快速衰减 |
-| 20 | 1 月 | 短期信号、月度动量 |
-| 60 | 1 季 | 中期信号、季度趋势 |
-| 120 | 半年 | 中长期信号 |
-| 252 | 1 年 | 长期信号、年度趋势 |
+> **官方 FAQ 来源** (`debt-liabilities-past-value`): "You could use ts_delay(fundamental data, 60) to get last quarter's value since we could have 20 as work day for one month." / "You could keep simple parameter like 20/60/250 to save your time rather than fit for parameter like 20 to 22."
+
+| 窗口 | 含义 | 官方推荐 | 适用场景 |
+|------|------|----------|----------|
+| 5 | 1 周 | - | 超短期信号、快速衰减 |
+| 20 | 1 月 | ✅ | 短期信号、月度动量 |
+| 60 | 1 季 | ✅ | 中期信号、季度趋势（官方：20工作日/月 × 3） |
+| 120 | 半年 | - | 中长期信号（60的2倍，合理延伸） |
+| 252 | 1 年 | ✅ | 长期信号、年度趋势 |
+
+> **官方 FAQ 来源** (`decay_overfit`): "Changing the decay from 1 to 5 is okay, but not say, changing it from 5 to 6. There is no 'exact' definition, but you should keep in mind that it is not over-fitting if it makes sense to you."
 
 ---
 
