@@ -26,10 +26,10 @@ def _make_result(
     *,
     field_id: str = "cash_st",
     field_name: str = "cash_st",
-    template_name: str = "ts_rank_60",
+    template_name: str = "ts_rank_63",
     template_family: str = "ts_rank",
     template_stage: str = "first_order",
-    expression: str = "rank(ts_rank(cash_st, 60))",
+    expression: str = "rank(ts_rank(cash_st, 63))",
     status: str = "simulated",
     submittable: bool = False,
     failed_checks: list[dict[str, object]] | None = None,
@@ -57,19 +57,19 @@ def test_compile_field_feedback_tracks_best_score_and_template_info() -> None:
             failed_checks=[{"name": "LOW_SHARPE", "value": 0.9, "limit": 1.25}],
         ),
         _make_result(
-            template_name="group_zscore_60",
+            template_name="group_zscore_63",
             template_family="group_zscore",
             template_stage="group_second_order",
-            expression="group_rank(ts_zscore(cash_st, 60), subindustry)",
+            expression="group_rank(ts_zscore(cash_st, 63), subindustry)",
             failed_checks=[{"name": "LOW_SHARPE", "value": 1.1, "limit": 1.25}],
         ),
     ]
     feedback = compile_field_feedback(results)
     summary = feedback["cash_st"]
     assert summary["attempted_templates"] == 2
-    assert summary["best_template_name"] == "group_zscore_60"
+    assert summary["best_template_name"] == "group_zscore_63"
     assert summary["best_template_family"] == "group_zscore"
-    assert summary["best_expression"] == "group_rank(ts_zscore(cash_st, 60), subindustry)"
+    assert summary["best_expression"] == "group_rank(ts_zscore(cash_st, 63), subindustry)"
     assert summary["failed_check_counts"]["LOW_SHARPE"] == 2
 
 
@@ -248,8 +248,8 @@ def test_build_feedback_mutations_generates_mutations_in_resimulate() -> None:
 
 def test_adaptive_priority_returns_zero_for_no_feedback_and_no_failures() -> None:
     adj = adaptive_template_priority_adjustment(
-        "ts_rank_60",
-        "rank(ts_rank(cash_st, 60))",
+        "ts_rank_63",
+        "rank(ts_rank(cash_st, 63))",
         field_feedback=None,
         global_failed_check_counts={},
     )

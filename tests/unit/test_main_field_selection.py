@@ -154,12 +154,12 @@ def test_refresh_runtime_feedback_rebuilds_feedback_from_current_results() -> No
             field_id="cash_st",
             field_type="MATRIX",
             field_name="cash_st",
-            template_name="group_zscore_subindustry_60",
+            template_name="group_zscore_subindustry_63",
             template_family="group_zscore",
             template_stage="group_second_order",
             status="simulated",
             submittable=False,
-            expression="group_rank(ts_zscore(cash_st, 60), subindustry)",
+            expression="group_rank(ts_zscore(cash_st, 63), subindustry)",
             failed_checks=[{"name": "LOW_SHARPE", "value": 0.9, "limit": 1.25}],
         )
     ]

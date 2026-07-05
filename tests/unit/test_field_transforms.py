@@ -103,8 +103,8 @@ def test_fundamental6_account_templates_use_preprocessed_field_view() -> None:
 
     by_name = {name: expression for name, expression, _ in candidates}
     assert by_name["account_rank_backfill_504"] == "rank(winsorize(ts_backfill(cash_st, 120), std=4))"
-    assert by_name["account_bucket_cap_zscore_60"] == (
-        "group_rank(ts_zscore(winsorize(ts_backfill(cash_st, 120), std=4), 60), densify(bucket(rank(cap), range='0.1, 1, 0.1')))"
+    assert by_name["account_bucket_cap_zscore_63"] == (
+        "group_rank(ts_zscore(winsorize(ts_backfill(cash_st, 120), std=4), 63), densify(bucket(rank(cap), range='0.1, 1, 0.1')))"
     )
 
 

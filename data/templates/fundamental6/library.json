@@ -1,41 +1,41 @@
 {
-  "_comment": "fundamental6 独立模板库 — 去模板内中性化(依赖settings)、删短窗口/hump/无效算子、增预处理变体、增ratio/pair、bucket加densify、事件字段自身变化触发、增vec_sum",
-  "_comment_placeholders": "{field}=字段名, {field_preprocessed}=winsorize(ts_backfill({field}, 120), std=4), {field_longfill}=winsorize(ts_backfill({field}, 252), std=3), {field_rawfill}=ts_backfill({field}, 120), {backfill_window}=settings.yaml expression.backfill_window",
+  "_comment": "fundamental6 独立模板库 — 时序窗口对齐季度周期(63/126/252/504)、去模板内中性化(依赖settings)、删hump/无效算子、增预处理变体、增ratio/pair、bucket加densify、事件字段自身变化触发、增vec_sum",
+  "_comment_placeholders": "{field}=字段名, {field_preprocessed}=winsorize(ts_backfill({field}, {backfill_window}), std=4), {field_longfill}=winsorize(ts_backfill({field}, 252), std=3), {field_rawfill}=ts_backfill({field}, {backfill_window}), {backfill_window}=settings.yaml expression.backfill_window",
   "default": [
     {
       "_comment": "=== Tier 2: 三层嵌套 — 去模板内中性化, 依赖 settings neutralization ===",
       "name": "3layer_zscore_decay",
-      "expression": "ts_decay_linear(ts_zscore(ts_backfill({field}, {backfill_window}), 60), 20)",
+      "expression": "ts_decay_linear(ts_zscore(ts_backfill({field}, {backfill_window}), 63), 20)",
       "priority": 995,
       "family": "neutralize_decay",
       "layer": "composite"
     },
     {
       "name": "3layer_rank_decay",
-      "expression": "ts_decay_linear(ts_rank(ts_backfill({field}, {backfill_window}), 60), 20)",
+      "expression": "ts_decay_linear(ts_rank(ts_backfill({field}, {backfill_window}), 63), 20)",
       "priority": 994,
       "family": "neutralize_decay",
       "layer": "composite"
     },
     {
       "name": "3layer_zscore_longfill_decay",
-      "expression": "ts_decay_linear(ts_zscore(winsorize(ts_backfill({field}, 252), std=3), 60), 20)",
+      "expression": "ts_decay_linear(ts_zscore(winsorize(ts_backfill({field}, 252), std=3), 63), 20)",
       "priority": 993,
       "family": "neutralize_decay",
       "layer": "composite"
     },
     {
 
-      "_comment": "=== Tier 5: ts_rank — 删短窗口, 增长窗口 ===",
-      "name": "ts_rank_60",
-      "expression": "rank(ts_rank({field}, 60))",
+      "_comment": "=== Tier 5: ts_rank — 窗口对齐季度周期 ===",
+      "name": "ts_rank_63",
+      "expression": "rank(ts_rank({field}, 63))",
       "priority": 970,
       "family": "ts_rank",
       "layer": "time_series"
     },
     {
-      "name": "ts_rank_120",
-      "expression": "rank(ts_rank({field}, 120))",
+      "name": "ts_rank_126",
+      "expression": "rank(ts_rank({field}, 126))",
       "priority": 968,
       "family": "ts_rank",
       "layer": "time_series"
@@ -55,17 +55,10 @@
       "layer": "time_series"
     },
     {
-      "_comment": "=== Tier 6: ts_zscore — 删短窗口, 增长窗口 ===",
-      "name": "ts_zscore_60",
-      "expression": "rank(ts_zscore({field}, 60))",
+      "_comment": "=== Tier 6: ts_zscore — 窗口对齐季度周期 ===",
+      "name": "ts_zscore_63",
+      "expression": "rank(ts_zscore({field}, 63))",
       "priority": 957,
-      "family": "zscore_time",
-      "layer": "time_series"
-    },
-    {
-      "name": "ts_zscore_120",
-      "expression": "rank(ts_zscore({field}, 120))",
-      "priority": 956,
       "family": "zscore_time",
       "layer": "time_series"
     },
@@ -91,7 +84,7 @@
       "layer": "time_series"
     },
     {
-      "_comment": "=== Tier 7: decay_linear — 删短窗口, 增长窗口 ===",
+      "_comment": "=== Tier 7: decay_linear — 窗口对齐季度周期 ===",
       "name": "decay_20",
       "expression": "rank(ts_decay_linear(ts_backfill({field}, {backfill_window}), 20))",
       "priority": 950,
@@ -99,15 +92,15 @@
       "layer": "time_series"
     },
     {
-      "name": "decay_60",
-      "expression": "rank(ts_decay_linear(ts_backfill({field}, {backfill_window}), 60))",
+      "name": "decay_63",
+      "expression": "rank(ts_decay_linear(ts_backfill({field}, {backfill_window}), 63))",
       "priority": 948,
       "family": "decay_level",
       "layer": "time_series"
     },
     {
-      "name": "decay_120",
-      "expression": "rank(ts_decay_linear(ts_backfill({field}, {backfill_window}), 120))",
+      "name": "decay_126",
+      "expression": "rank(ts_decay_linear(ts_backfill({field}, {backfill_window}), 126))",
       "priority": 946,
       "family": "decay_level",
       "layer": "time_series"
@@ -120,16 +113,16 @@
       "layer": "time_series"
     },
     {
-      "_comment": "=== Tier 10: 波动率 & 信息比率 — 删短窗口 ===",
-      "name": "stddev_60",
-      "expression": "rank(ts_std_dev({field}, 60))",
+      "_comment": "=== Tier 10: 波动率 & 信息比率 — 窗口对齐季度周期 ===",
+      "name": "stddev_63",
+      "expression": "rank(ts_std_dev({field}, 63))",
       "priority": 933,
       "family": "stddev",
       "layer": "time_series"
     },
     {
-      "name": "ir_60",
-      "expression": "rank(ts_mean({field}, 60) / ts_std_dev({field}, 60))",
+      "name": "ir_63",
+      "expression": "rank(ts_mean({field}, 63) / ts_std_dev({field}, 63))",
       "priority": 931,
       "family": "mean_ratio",
       "layer": "time_series"
@@ -143,8 +136,8 @@
     },
     {
 
-      "name": "adv20_liquidity_rank_60",
-      "expression": "rank(ts_zscore({field}, 60) / rank(adv20))",
+      "name": "adv20_liquidity_rank_63",
+      "expression": "rank(ts_zscore({field}, 63) / rank(adv20))",
       "priority": 924,
       "family": "liquidity_adjusted",
       "layer": "composite"
@@ -175,8 +168,8 @@
   "VECTOR": [
     {
       "_comment": "=== VECTOR: 事件字段自身变化触发 — 替代通用 volume/returns 条件 ===",
-      "name": "event_trade_when_field_change_rank_60",
-      "expression": "trade_when(ts_delta({field}) != 0, rank(ts_rank({field_preprocessed}, 60)), -1)",
+      "name": "event_trade_when_field_change_rank_63",
+      "expression": "trade_when(ts_delta({field}) != 0, rank(ts_rank({field_preprocessed}, 63)), -1)",
       "priority": 1008,
       "family": "event_trade_when",
       "layer": "event",
@@ -184,8 +177,8 @@
       "dataset_tags": ["event"]
     },
     {
-      "name": "event_trade_when_recent_change_zscore_60",
-      "expression": "trade_when(days_from_last_change({field}) <= 5, rank(ts_zscore({field_preprocessed}, 60)), -1)",
+      "name": "event_trade_when_recent_change_zscore_63",
+      "expression": "trade_when(days_from_last_change({field}) <= 5, rank(ts_zscore({field_preprocessed}, 63)), -1)",
       "priority": 1006,
       "family": "event_trade_when",
       "layer": "event",
@@ -193,8 +186,8 @@
       "dataset_tags": ["event"]
     },
     {
-      "name": "event_trade_when_breakout_zscore_60",
-      "expression": "trade_when(ts_arg_max(close, 20) == 0, rank(ts_zscore({field_preprocessed}, 60)), -1)",
+      "name": "event_trade_when_breakout_zscore_63",
+      "expression": "trade_when(ts_arg_max(close, 20) == 0, rank(ts_zscore({field_preprocessed}, 63)), -1)",
       "priority": 1004,
       "family": "event_trade_when",
       "layer": "event",
@@ -203,7 +196,7 @@
     },
     {
       "name": "event_trade_when_high_return_decay_252",
-      "expression": "trade_when(ts_zscore(returns, 60) > 2, rank(ts_decay_linear({field_preprocessed}, 252)), -1)",
+      "expression": "trade_when(ts_zscore(returns, 63) > 2, rank(ts_decay_linear({field_preprocessed}, 252)), -1)",
       "priority": 1002,
       "family": "event_trade_when",
       "layer": "event",
@@ -212,29 +205,29 @@
     },
     {
       "_comment": "=== VECTOR: vec_avg + vec_sum 双通道 ===",
-      "name": "vec_avg_ts_rank_60",
-      "expression": "rank(ts_rank({field_preprocessed}, 60))",
+      "name": "vec_avg_ts_rank_63",
+      "expression": "rank(ts_rank({field_preprocessed}, 63))",
       "priority": 989,
       "family": "ts_rank",
       "layer": "vector"
     },
     {
-      "name": "vec_sum_ts_rank_60",
-      "expression": "rank(ts_rank(winsorize(ts_backfill(vec_sum({field}), 120), std=4), 60))",
+      "name": "vec_sum_ts_rank_63",
+      "expression": "rank(ts_rank(winsorize(ts_backfill(vec_sum({field}), {backfill_window}), std=4), 63))",
       "priority": 987,
       "family": "ts_rank",
       "layer": "vector"
     },
     {
-      "name": "vec_avg_ts_zscore_60",
-      "expression": "rank(ts_zscore({field_preprocessed}, 60))",
+      "name": "vec_avg_ts_zscore_63",
+      "expression": "rank(ts_zscore({field_preprocessed}, 63))",
       "priority": 985,
       "family": "zscore_time",
       "layer": "vector"
     },
     {
-      "name": "vec_sum_ts_zscore_60",
-      "expression": "rank(ts_zscore(winsorize(ts_backfill(vec_sum({field}), 120), std=4), 60))",
+      "name": "vec_sum_ts_zscore_63",
+      "expression": "rank(ts_zscore(winsorize(ts_backfill(vec_sum({field}), {backfill_window}), std=4), 63))",
       "priority": 983,
       "family": "zscore_time",
       "layer": "vector"
@@ -251,28 +244,28 @@
     {
       "_comment": "=== GROUP: 去模板内中性化, 增 vec_sum ===",
       "name": "vec_avg_3layer_zscore_decay",
-      "expression": "ts_decay_linear(ts_zscore(vec_avg({field}), 60), 20)",
+      "expression": "ts_decay_linear(ts_zscore(vec_avg({field}), 63), 20)",
       "priority": 1000,
       "family": "neutralize_decay",
       "layer": "group"
     },
     {
       "name": "vec_sum_3layer_zscore_decay",
-      "expression": "ts_decay_linear(ts_zscore(vec_sum({field}), 60), 20)",
+      "expression": "ts_decay_linear(ts_zscore(vec_sum({field}), 63), 20)",
       "priority": 999,
       "family": "neutralize_decay",
       "layer": "group"
     },
     {
-      "name": "vec_avg_ts_rank_60",
-      "expression": "rank(ts_rank(vec_avg({field}), 60))",
+      "name": "vec_avg_ts_rank_63",
+      "expression": "rank(ts_rank(vec_avg({field}), 63))",
       "priority": 997,
       "family": "ts_rank",
       "layer": "group"
     },
     {
-      "name": "vec_sum_ts_rank_60",
-      "expression": "rank(ts_rank(vec_sum({field}), 60))",
+      "name": "vec_sum_ts_rank_63",
+      "expression": "rank(ts_rank(vec_sum({field}), 63))",
       "priority": 996,
       "family": "ts_rank",
       "layer": "group"
@@ -285,8 +278,8 @@
       "layer": "group"
     },
     {
-      "name": "vec_avg_ts_zscore_60",
-      "expression": "rank(ts_zscore(vec_avg({field}), 60))",
+      "name": "vec_avg_ts_zscore_63",
+      "expression": "rank(ts_zscore(vec_avg({field}), 63))",
       "priority": 991,
       "family": "zscore_time",
       "layer": "group"
@@ -296,28 +289,28 @@
     {
       "_comment": "=== SET: 同 GROUP, 稍低优先级 ===",
       "name": "vec_avg_3layer_zscore_decay",
-      "expression": "ts_decay_linear(ts_zscore(vec_avg({field}), 60), 20)",
+      "expression": "ts_decay_linear(ts_zscore(vec_avg({field}), 63), 20)",
       "priority": 1000,
       "family": "neutralize_decay",
       "layer": "set"
     },
     {
       "name": "vec_sum_3layer_zscore_decay",
-      "expression": "ts_decay_linear(ts_zscore(vec_sum({field}), 60), 20)",
+      "expression": "ts_decay_linear(ts_zscore(vec_sum({field}), 63), 20)",
       "priority": 999,
       "family": "neutralize_decay",
       "layer": "set"
     },
     {
-      "name": "vec_avg_ts_rank_60",
-      "expression": "rank(ts_rank(vec_avg({field}), 60))",
+      "name": "vec_avg_ts_rank_63",
+      "expression": "rank(ts_rank(vec_avg({field}), 63))",
       "priority": 997,
       "family": "ts_rank",
       "layer": "set"
     },
     {
-      "name": "vec_sum_ts_rank_60",
-      "expression": "rank(ts_rank(vec_sum({field}), 60))",
+      "name": "vec_sum_ts_rank_63",
+      "expression": "rank(ts_rank(vec_sum({field}), 63))",
       "priority": 996,
       "family": "ts_rank",
       "layer": "set"
@@ -330,8 +323,8 @@
       "layer": "set"
     },
     {
-      "name": "vec_avg_ts_zscore_60",
-      "expression": "rank(ts_zscore(vec_avg({field}), 60))",
+      "name": "vec_avg_ts_zscore_63",
+      "expression": "rank(ts_zscore(vec_avg({field}), 63))",
       "priority": 991,
       "family": "zscore_time",
       "layer": "set"
@@ -403,30 +396,30 @@
   ],
   "DATASET_FUNDAMENTAL6_MATRIX": [
     {
-      "_comment": "=== Account: 去模板内中性化, 依赖 settings neutralization ===",
-      "name": "account_zscore_decay_60",
-      "expression": "ts_decay_linear(ts_zscore({field_preprocessed}, 60), 20)",
+      "_comment": "=== Account: 去模板内中性化, 依赖 settings neutralization, 窗口对齐季度 ===",
+      "name": "account_zscore_decay_63",
+      "expression": "ts_decay_linear(ts_zscore({field_preprocessed}, 63), 20)",
       "priority": 220,
       "family": "neutralize_decay",
       "layer": "account"
     },
     {
-      "name": "account_zscore_decay_60_longfill",
-      "expression": "ts_decay_linear(ts_zscore(winsorize(ts_backfill({field}, 252), std=3), 60), 20)",
+      "name": "account_zscore_decay_63_longfill",
+      "expression": "ts_decay_linear(ts_zscore(winsorize(ts_backfill({field}, 252), std=3), 63), 20)",
       "priority": 218,
       "family": "neutralize_decay",
       "layer": "account"
     },
     {
-      "name": "account_zscore_60_rawfill",
-      "expression": "rank(ts_zscore(ts_backfill({field}, 120), 60))",
+      "name": "account_zscore_63_rawfill",
+      "expression": "rank(ts_zscore(ts_backfill({field}, {backfill_window}), 63))",
       "priority": 216,
       "family": "zscore_time",
       "layer": "account"
     },
     {
-      "name": "account_ts_rank_60",
-      "expression": "rank(ts_rank({field_preprocessed}, 60))",
+      "name": "account_ts_rank_63",
+      "expression": "rank(ts_rank({field_preprocessed}, 63))",
       "priority": 214,
       "family": "ts_rank",
       "layer": "account"
@@ -447,67 +440,67 @@
     },
     {
       "_comment": "=== Account: bucket 分组加 densify ===",
-      "name": "account_bucket_cap_zscore_60",
-      "expression": "group_rank(ts_zscore({field_preprocessed}, 60), densify(bucket(rank(cap), range='0.1, 1, 0.1')))",
+      "name": "account_bucket_cap_zscore_63",
+      "expression": "group_rank(ts_zscore({field_preprocessed}, 63), densify(bucket(rank(cap), range='0.1, 1, 0.1')))",
       "priority": 208,
       "family": "bucket_group_rank",
       "layer": "account"
     },
     {
-      "name": "account_bucket_liquidity_ts_rank_120",
-      "expression": "group_rank(ts_rank({field_preprocessed}, 120), densify(bucket(rank(close * volume), range='0.1, 1, 0.1')))",
+      "name": "account_bucket_liquidity_ts_rank_126",
+      "expression": "group_rank(ts_rank({field_preprocessed}, 126), densify(bucket(rank(close * volume), range='0.1, 1, 0.1')))",
       "priority": 206,
       "family": "bucket_group_rank",
       "layer": "account"
     },
     {
-      "name": "account_bucket_volatility_zscore_60",
-      "expression": "group_rank(ts_zscore({field_preprocessed}, 60), densify(bucket(rank(ts_std_dev(returns, 20)), range='0.1, 1, 0.1')))",
+      "name": "account_bucket_volatility_zscore_63",
+      "expression": "group_rank(ts_zscore({field_preprocessed}, 63), densify(bucket(rank(ts_std_dev(returns, 20)), range='0.1, 1, 0.1')))",
       "priority": 204,
       "family": "bucket_group_rank",
       "layer": "account"
     },
     {
       "_comment": "=== Account: ratio/pair 模板族 — 跨字段组合降低自相关 ===",
-      "name": "account_ratio_cap_zscore_60",
-      "expression": "rank(ts_zscore({field_preprocessed} / ts_backfill(cap, 120), 60))",
+      "name": "account_ratio_cap_zscore_63",
+      "expression": "rank(ts_zscore({field_preprocessed} / ts_backfill(cap, {backfill_window}), 63))",
       "priority": 202,
       "family": "ratio_cap",
       "layer": "account"
     },
     {
-      "name": "account_ratio_assets_delta_66",
-      "expression": "rank(ts_delta({field_preprocessed} / ts_backfill(assets, 120), 66) / ts_std_dev({field_preprocessed} / ts_backfill(assets, 120), 252))",
+      "name": "account_ratio_assets_delta_63",
+      "expression": "rank(ts_delta({field_preprocessed} / ts_backfill(assets, {backfill_window}), 63) / ts_std_dev({field_preprocessed} / ts_backfill(assets, {backfill_window}), 252))",
       "priority": 200,
       "family": "ratio_assets",
       "layer": "account"
     },
     {
-      "name": "account_bucket_cap_ratio_zscore_60",
-      "expression": "group_rank(ts_zscore({field_preprocessed} / ts_backfill(cap, 120), 60), densify(bucket(rank(cap), range='0.1, 1, 0.1')))",
+      "name": "account_bucket_cap_ratio_zscore_63",
+      "expression": "group_rank(ts_zscore({field_preprocessed} / ts_backfill(cap, {backfill_window}), 63), densify(bucket(rank(cap), range='0.1, 1, 0.1')))",
       "priority": 198,
       "family": "bucket_ratio",
       "layer": "account"
     },
     {
-      "_comment": "=== Account: IR / decay / hump ===",
-      "name": "account_ir_60_decay_20",
-      "expression": "rank(ts_decay_linear(ts_mean({field_preprocessed}, 60) / ts_std_dev({field_preprocessed}, 60), 20))",
+      "_comment": "=== Account: IR / decay ===",
+      "name": "account_ir_63_decay_20",
+      "expression": "rank(ts_decay_linear(ts_mean({field_preprocessed}, 63) / ts_std_dev({field_preprocessed}, 63), 20))",
       "priority": 196,
       "family": "decayed_ratio",
       "layer": "account"
     },
     {
 
-      "name": "account_decay_60",
-      "expression": "rank(ts_decay_linear({field_preprocessed}, 60))",
+      "name": "account_decay_63",
+      "expression": "rank(ts_decay_linear({field_preprocessed}, 63))",
       "priority": 190,
       "family": "decay_level",
       "layer": "account"
     },
     {
-      "name": "account_ir_60",
-      "expression": "rank(ts_mean({field_preprocessed}, 60) / ts_std_dev({field_preprocessed}, 60))",
+      "name": "account_ir_63",
+      "expression": "rank(ts_mean({field_preprocessed}, 63) / ts_std_dev({field_preprocessed}, 63))",
       "priority": 188,
       "family": "mean_ratio",
       "layer": "account"
