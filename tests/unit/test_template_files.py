@@ -676,7 +676,7 @@ def test_resimulate_stage_prefers_refine_templates_over_broad_generation(monkeyp
             template_stage="group_second_order",
             status="simulated",
             submittable=False,
-            expression="group_rank(ts_zscore(ts_backfill(cash_st, 504), 63), subindustry)",
+            expression="group_rank(ts_zscore(ts_backfill(cash_st, 504), 60), subindustry)",
             failed_checks=[
                 FailedCheck(name="LOW_SHARPE", value=1.21, limit=1.25),
                 FailedCheck(name="LOW_FITNESS", value=0.64, limit=1.0),

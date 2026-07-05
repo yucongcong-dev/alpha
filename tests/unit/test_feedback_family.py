@@ -67,14 +67,14 @@ def test_load_existing_results_reads_template_family(tmp_path) -> None:
                         "field_id": "cash_st",
                         "field_type": "MATRIX",
                         "field_name": "cash_st",
-                        "template_name": "ts_rank_63",
+                        "template_name": "ts_rank_60",
                         "template_family": "ts_rank",
                         "template_stage": "first_order",
                         "status": "simulated",
                         "submittable": False,
                         "submitted": False,
                         "message": "LOW_SHARPE",
-                        "expression": "rank(ts_rank(cash_st, 63))",
+                        "expression": "rank(ts_rank(cash_st, 60))",
                         "settings_fingerprint": "settings",
                         "template_library_fingerprint": "library",
                         "failed_checks": [{"name": "LOW_SHARPE", "value": 0.9}],
@@ -145,12 +145,12 @@ def test_select_nearpass_candidates_penalizes_concentration_failures() -> None:
             field_id="cash_st",
             field_type="MATRIX",
             field_name="cash_st",
-            template_name="account_group_zscore_63_subindustry",
+            template_name="account_group_zscore_60_subindustry",
             template_family="group_zscore",
             template_stage="group_second_order",
             status="simulated",
             submittable=False,
-            expression="group_rank(ts_zscore(ts_backfill(cash_st, 504), 63), subindustry)",
+            expression="group_rank(ts_zscore(ts_backfill(cash_st, 504), 60), subindustry)",
             failed_checks=[
                 {"name": "LOW_SHARPE", "value": 1.21, "limit": 1.25},
                 {"name": "LOW_FITNESS", "value": 0.64, "limit": 1.0},
@@ -160,12 +160,12 @@ def test_select_nearpass_candidates_penalizes_concentration_failures() -> None:
             field_id="cash_st",
             field_type="MATRIX",
             field_name="cash_st",
-            template_name="account_ts_rank_63",
+            template_name="account_ts_rank_60",
             template_family="ts_rank",
             template_stage="first_order",
             status="simulated",
             submittable=False,
-            expression="rank(ts_rank(ts_backfill(cash_st, 504), 63))",
+            expression="rank(ts_rank(ts_backfill(cash_st, 504), 60))",
             failed_checks=[
                 {"name": "LOW_SHARPE", "value": 1.20, "limit": 1.25},
                 {"name": "CONCENTRATED_WEIGHT", "value": 0.500001, "limit": 0.10},
@@ -181,7 +181,7 @@ def test_select_nearpass_candidates_penalizes_concentration_failures() -> None:
     )
 
     assert len(candidates) >= 1
-    assert candidates[0].template_name == "account_group_zscore_63_subindustry"
+    assert candidates[0].template_name == "account_group_zscore_60_subindustry"
 
 
 def test_build_setting_variants_expands_candidate_centric_refine_settings() -> None:
@@ -203,12 +203,12 @@ def test_build_setting_variants_expands_candidate_centric_refine_settings() -> N
     variants = build_setting_variants(
         _Args(),
         "refine_exact",
-        "group_rank(ts_zscore(ts_backfill(cash_st, 504), 63), subindustry)",
+        "group_rank(ts_zscore(ts_backfill(cash_st, 504), 60), subindustry)",
         refine_candidate=NearPassCandidate(
             field_id="cash_st",
             field_name="cash_st",
-            template_name="account_group_zscore_63_subindustry",
-            expression="group_rank(ts_zscore(ts_backfill(cash_st, 504), 63), subindustry)",
+            template_name="account_group_zscore_60_subindustry",
+            expression="group_rank(ts_zscore(ts_backfill(cash_st, 504), 60), subindustry)",
             template_family="group_zscore",
             template_stage="group_second_order",
             score=0.80,
@@ -231,8 +231,8 @@ def test_build_refine_templates_generates_localized_mutations_from_nearpass_cand
             NearPassCandidate(
                 field_id="cash_st",
                 field_name="cash_st",
-                template_name="account_group_zscore_63_subindustry",
-                expression="group_rank(ts_zscore(ts_backfill(cash_st, 504), 63), subindustry)",
+                template_name="account_group_zscore_60_subindustry",
+                expression="group_rank(ts_zscore(ts_backfill(cash_st, 504), 60), subindustry)",
                 template_family="group_zscore",
                 template_stage="group_second_order",
                 score=0.80,
@@ -248,8 +248,8 @@ def test_build_refine_templates_generates_localized_mutations_from_nearpass_cand
     names = {template.name for template in templates}
     expressions = {template.expression for template in templates}
 
-    assert "refine_exact_1_account_group_zscore_63_subindustry" in names
-    assert "refine_industry_1_account_group_zscore_63_subindustry" in names
+    assert "refine_exact_1_account_group_zscore_60_subindustry" in names
+    assert "refine_industry_1_account_group_zscore_60_subindustry" in names
     assert any("trade_when(" in expression for expression in expressions)
     assert any("ts_decay_linear(" in expression for expression in expressions)
 
@@ -261,8 +261,8 @@ def test_build_refine_templates_skips_recursive_refine_candidates() -> None:
             NearPassCandidate(
                 field_id="cash_st",
                 field_name="cash_st",
-                template_name="refine_exact_1_account_group_zscore_63_subindustry",
-                expression="group_rank(ts_zscore(cash_st, 63), subindustry)",
+                template_name="refine_exact_1_account_group_zscore_60_subindustry",
+                expression="group_rank(ts_zscore(cash_st, 60), subindustry)",
                 template_family="group_zscore",
                 template_stage="group_second_order",
                 score=0.80,

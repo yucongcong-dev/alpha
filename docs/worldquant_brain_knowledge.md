@@ -95,6 +95,7 @@
 - **参数搜索限制在简单合理值：5, 20, 60, 120, 252（天数）**，而非 37, 14 等
 - **专注改进想法，而非拟合参数** — 不要靠添加参数/因子/回归元素
 - 新颖想法降低相关性，尝试未用过的算子和设置
+- > **官方 FAQ 来源** (`debt-liabilities-past-value`): "You could use ts_delay(fundamental data, 60) to get last quarter's value since we could have 20 as work day for one month." / "You could keep simple parameter like 20/60/250 to save your time rather than fit for parameter like 20 to 22."
 
 ### 4.3 Neutralization
 
