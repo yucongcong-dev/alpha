@@ -66,7 +66,7 @@ def add_dataset_arguments(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--universe", default="TOP3000", help="宇宙代码")
     parser.add_argument("--instrument-type", default="EQUITY", help="工具类型")
     parser.add_argument("--delay", type=int, default=1, help="延迟天数")
-    parser.add_argument("--decay", type=int, default=0, help="衰减天数 (Decay)")
+    parser.add_argument("--decay", type=int, default=4, help="衰减天数 (Decay)")
     parser.add_argument("--neutralization", default=NEUTRALIZATION_SUBINDUSTRY, help="中性化类型 (Neutralization)")
     parser.add_argument("--truncation", type=float, default=0.05, help="截断阈值 (Truncation)")
     parser.add_argument("--nan-handling", default="ON", help="NaN 处理方式 (NaN Handling)")

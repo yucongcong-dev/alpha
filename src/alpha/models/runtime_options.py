@@ -43,7 +43,7 @@ class TemplateBuildOptions:
     universe: str = ""
     instrument_type: str = ""
     delay: int = 0
-    decay: int = 0
+    decay: int = 4
     neutralization: str = ""
     truncation: float = 0.0
     pasteurization: str = ""
