@@ -153,11 +153,7 @@ def test_fundamental6_default_policy_is_loaded_from_settings_yaml() -> None:
 
     assert policy.partner_limit == 6
     assert "account_rank_backfill_504" in policy.protected_templates
-    assert policy.disabled_templates == {
-        "iter_group_vol_scaled_delta_63_126",
-        "iter_group_vol_scaled_delta_63_126_bf180",
-        "iter_group_vol_scaled_delta_63_126_bf260",
-    }
+    assert policy.disabled_templates == set()
     assert ("cashflow_op", "fnd6_mkvalt") in policy.high_conviction_ratio_pairs
     assert ("cashflow_op", "assets") in policy.high_conviction_ratio_pairs
     assert ("ebitda", "enterprise_value") in policy.high_conviction_ratio_pairs
@@ -200,8 +196,8 @@ def test_model16_policy_uses_long_backfill_with_winsorize() -> None:
         FieldTransformStage(kind="backfill", window=252, std=None),
         FieldTransformStage(kind="winsorize", window=0, std=4.0),
     )
-    assert "model16_bucket_cap_zscore_126" in policy.protected_templates
-    assert "model16_bucket_liquidity_ts_rank_126" in policy.protected_templates
+    assert "model16_bucket_cap_zscore_120" in policy.protected_templates
+    assert "model16_bucket_liquidity_ts_rank_120" in policy.protected_templates
 
 
 def test_model51_policy_uses_risk_metric_winsorize_and_bucket_templates() -> None:
@@ -212,9 +208,9 @@ def test_model51_policy_uses_risk_metric_winsorize_and_bucket_templates() -> Non
         FieldTransformStage(kind="backfill", window=504, std=None),
         FieldTransformStage(kind="winsorize", window=0, std=4.0),
     )
-    assert "model51_market_zscore_decay_126" in policy.protected_templates
-    assert "model51_bucket_cap_zscore_126" in policy.protected_templates
-    assert "model51_bucket_volatility_rank_126" in policy.protected_templates
+    assert "model51_bucket_cap_zscore_120" in policy.protected_templates
+    assert "model51_bucket_volatility_rank_120" in policy.protected_templates
+    assert "model51_group_zscore_market_120" in policy.protected_templates
 
 
 def test_get_yaml_config_reloads_when_file_changes(tmp_path) -> None:

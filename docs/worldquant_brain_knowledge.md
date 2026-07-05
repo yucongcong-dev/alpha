@@ -85,9 +85,10 @@
 ### 4.1 Turnover 优化
 
 - 提交较低 Turnover 的 Alpha
-- 使用 `trade_when` 或 `hump` 算子降低 Turnover
+- 使用 `trade_when` 算子降低 Turnover
 - 使用 `rank()` 降低非流动部分的 Turnover（以 adv20 为流动性代理）
-- 使用 `hump_decay`、`ts_decay_linear`、`ts_decay_exp_window` 获得合理 Margin
+- 使用 `ts_decay_linear` 获得合理 Margin
+- **注意**: `hump`/`hump_decay`/`ts_decay_exp_window`/`vector_neut` 在 FASTEXPR 模式下不可用，会导致模拟失败
 
 ### 4.2 参数选择
 
@@ -99,7 +100,7 @@
 
 - 实验不同 Neutralization 设置（Country 和 Sector 通常都有效）
 - 使用 `bucket()` 算子进行自定义组 Neutralization
-- 使用 `vector_neut` 中性化市场因子
+- 使用 `group_neutralize()` 中性化指定分组
 
 ### 4.4 信号构建
 
@@ -125,11 +126,7 @@
 
 | 算子 | 用途 | 示例 |
 |------|------|------|
-| `hump(expr, threshold)` | 限制权重变化幅度，降低 Turnover | `hump(ts_zscore(field, 60), 0.3)` |
-| `hump_decay(expr, threshold, window)` | hump + 衰减，兼顾低 Turnover 和合理 Margin | `hump_decay(ts_zscore(field, 60), 0.3, 20)` |
 | `ts_decay_linear(expr, window)` | 线性衰减加权 | `ts_decay_linear(expr, 20)` |
-| `ts_decay_exp_window(expr, window, factor)` | 指数衰减加权 | `ts_decay_exp_window(expr, 60, factor=0.5)` |
-| `vector_neut(expr, factor)` | 中性化指定因子 | `vector_neut(expr, market)` |
 | `days_from_last_change(expr)` | 距上次变化的天数 | `days_from_last_change(field)` |
 | `trade_when(condition, expr, default)` | 条件交易 | `trade_when(volume > threshold, expr, -1)` |
 | `bucket(expr, range)` | 自定义分桶 | `bucket(rank(cap), range='0.1, 1, 0.1')` |
@@ -138,7 +135,12 @@
 | `group_neutralize(expr, group)` | 组内中性化 | `group_neutralize(expr, market)` |
 | `ts_zscore(expr, window)` | 时序 Z-Score | `ts_zscore(field, 60)` |
 | `ts_rank(expr, window)` | 时序排名 | `ts_rank(field, 60)` |
+| `ts_quantile(expr, window)` | 时序分位数 | `ts_quantile(expr, 60)` |
+| `normalize(expr, useStd, limit)` | 截面标准化 | `normalize(expr, useStd=true, limit=3.0)` |
+| `ts_regression(y, x, window, rettype)` | 时序回归残差 | `ts_regression(field, market, 60, rettype=2)` |
 | `adv20` | 20 日平均成交量（流动性代理） | `rank(expr / rank(adv20))` |
+
+> **不可用算子**: `hump`（仅接受1个参数，2参数形式报错）、`hump_decay`（不存在）、`ts_decay_exp_window`（不存在）、`vector_neut`（不存在）。使用这些算子会导致模拟创建失败。
 
 ### 5.2 标准窗口参数
 
@@ -158,8 +160,8 @@
 |----------|----------|----------|
 | `LOW_SHARPE` | 信号质量差、缺乏经济学含义 | 改进信号逻辑、添加 group_neutralize |
 | `LOW_FITNESS` | Sharpe 低或 Turnover 异常 | 同 LOW_SHARPE + 调整 Turnover |
-| `LOW_TURNOVER` | 纯截面操作、无时序变化 | 添加 `hump`/`trade_when`、使用时序算子 |
-| `HIGH_TURNOVER` | 短窗口 delta、无平滑 | 使用 `rank()`/`hump()`/`ts_decay_linear` |
+| `LOW_TURNOVER` | 纯截面操作、无时序变化 | 添加 `trade_when`、使用时序算子 |
+| `HIGH_TURNOVER` | 短窗口 delta、无平滑 | 使用 `rank()`/`ts_decay_linear` |
 | `CONCENTRATED_WEIGHT` | 无中性化、裸除法 | 添加 `group_neutralize`/`rank()` |
 | `SELF_CORRELATION` | 同族模板高度相关 | 减少同族变体、尝试不同算子组合 |
 | `PROD_CORRELATION` | 与全平台 Alpha 高相关 | 使用新颖算子、换数据集/Region |

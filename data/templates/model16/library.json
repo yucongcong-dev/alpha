@@ -1,5 +1,5 @@
 {
-  "_comment": "model16 独立模板库 — 去双重中性化、删hump/无效算子、bucket加densify、增ratio/pair、增group_backfill预处理、增ts_quantile/normalize、增长窗口504",
+  "_comment": "model16 独立模板库 — 去双重中性化、删hump/无效算子、bucket加densify、增ratio/pair、增group_backfill预处理、增ts_quantile/normalize、增长窗口504、增derivative反转模板",
   "_comment_placeholders": "{field}=字段名, {field_preprocessed}=winsorize(ts_backfill({field}, {backfill_window}), std=4), {field_groupfill}=group_backfill({field}, subindustry, 252, std=4), {backfill_window}=settings.yaml expression.backfill_window",
   "_dataset_id": "model16",
   "default": [
@@ -42,6 +42,46 @@
       "family": "decay",
       "layer": "time_series",
       "dataset_tags": ["model16", "fundamental_scores"]
+    },
+    {
+      "name": "model16_mean_reversion_zscore_120",
+      "expression": "rank(-1 * ts_zscore({field_preprocessed}, 120))",
+      "priority": 996,
+      "family": "mean_reversion",
+      "layer": "time_series",
+      "dataset_tags": ["model16", "derivative"]
+    },
+    {
+      "name": "model16_mean_reversion_ts_rank_120",
+      "expression": "rank(-1 * ts_rank({field_preprocessed}, 120))",
+      "priority": 995,
+      "family": "mean_reversion",
+      "layer": "time_series",
+      "dataset_tags": ["model16", "derivative"]
+    },
+    {
+      "name": "model16_mean_reversion_decay_120",
+      "expression": "rank(-1 * ts_decay_linear({field_preprocessed}, 120))",
+      "priority": 994,
+      "family": "mean_reversion",
+      "layer": "time_series",
+      "dataset_tags": ["model16", "derivative"]
+    },
+    {
+      "name": "model16_mean_reversion_ir_120",
+      "expression": "rank(-1 * ts_mean({field_preprocessed}, 120) / ts_std_dev({field_preprocessed}, 120))",
+      "priority": 993,
+      "family": "mean_reversion",
+      "layer": "time_series",
+      "dataset_tags": ["model16", "derivative"]
+    },
+    {
+      "name": "model16_mean_reversion_group_zscore_sector_120",
+      "expression": "group_rank(-1 * ts_zscore({field_preprocessed}, 120), sector)",
+      "priority": 992,
+      "family": "mean_reversion",
+      "layer": "group",
+      "dataset_tags": ["model16", "derivative"]
     },
     {
       "name": "model16_rank_ir_120",

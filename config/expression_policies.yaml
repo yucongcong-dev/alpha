@@ -75,7 +75,7 @@ expression_policies:
         enable_template_pruning: true
       resimulate:
         min_attempted_templates: 3
-        min_best_score: 0.25
+        min_best_score: 0.50
         settings_variant_budget: 3
         enable_template_pruning: true
         enable_resimulation_mutations: true
@@ -84,20 +84,16 @@ expression_policies:
           - "event_conditioned"
     account_template_boost: "@account_boost"
     high_conviction_ratio_priority_boost: "@high_conviction_boost"
-    disabled_templates:
-      - "iter_group_vol_scaled_delta_63_126"
-      - "iter_group_vol_scaled_delta_63_126_bf180"
-      - "iter_group_vol_scaled_delta_63_126_bf260"
+    disabled_templates: []
     protected_templates:
       - "account_rank_backfill_504"
       - "account_ir_60"
-      - "account_group_backfill_504_subindustry"
-      - "account_group_zscore_60_subindustry"
-      - "account_group_ir_60_subindustry"
       - "account_ts_rank_60"
-      - "account_group_decay_63_subindustry"
       - "account_ir_60_decay_20"
-      - "account_backfill_zscore_decay_63_subindustry"
+      - "account_zscore_decay_60"
+      - "account_zscore_decay_60_longfill"
+      - "account_bucket_cap_zscore_60"
+      - "account_ratio_cap_zscore_60"
     high_conviction_ratio_pairs:
       - ["cash", "assets"]
       - ["cash_st", "assets_curr"]
@@ -415,7 +411,7 @@ expression_policies:
         enable_template_pruning: true
       resimulate:
         min_attempted_templates: 3
-        min_best_score: 0.20
+        min_best_score: 0.50
         settings_variant_budget: 3
         enable_template_pruning: true
         enable_resimulation_mutations: true
@@ -423,25 +419,15 @@ expression_policies:
           - "group_second_order"
           - "first_order"
     disabled_templates:
-      - "vol_scaled_delta_5_20"
-      - "vol_scaled_delta_20_60"
-      - "delta_5"
-      - "delta_20"
-      - "group_delta_5"
-      - "group_delta_20"
-      - "rank_delta_5"
-      - "rank_delta_20"
-      - "mean_reversion_5_20"
-      - "mean_diff_5_20"
-      - "ts_corr_self_60"
+      - "model16_zscore_decay_120"
     protected_templates:
-      - "model16_rank_zscore_decay_126"
-      - "model16_rank_ts_rank_126"
-      - "model16_market_neutral_zscore_decay_126"
-      - "model16_group_ts_rank_market_126"
-      - "model16_group_zscore_sector_126"
-      - "model16_bucket_cap_zscore_126"
-      - "model16_bucket_liquidity_ts_rank_126"
+      - "model16_zscore_decay_120"
+      - "model16_rank_ts_rank_120"
+      - "model16_group_ts_rank_market_120"
+      - "model16_group_zscore_sector_120"
+      - "model16_bucket_cap_zscore_120"
+      - "model16_bucket_liquidity_ts_rank_120"
+      - "model16_normalize_zscore_120"
     template_prefix_penalties:
       "delta_|group_delta_|rank_delta_|vol_scaled_delta_": "@heavy_penalty"
       "mean_reversion_|mean_diff_": "@mild_penalty"
@@ -512,7 +498,7 @@ expression_policies:
         enable_template_pruning: true
       resimulate:
         min_attempted_templates: 3
-        min_best_score: 0.15
+        min_best_score: 0.50
         settings_variant_budget: 2
         enable_template_pruning: true
         enable_resimulation_mutations: true
@@ -530,58 +516,22 @@ expression_policies:
       - ["rank_mean_reversion_21_126", "rank(ts_mean({field_preprocessed}, 21) - ts_mean({field_preprocessed}, 126))", 156]
       - ["rank_ir_63", "rank(ts_mean({field_preprocessed}, 63) / ts_std_dev({field_preprocessed}, 63))", 152]
     disabled_templates:
-      - "vol_scaled_delta_5_20"
-      - "vol_scaled_delta_20_60"
-      - "vol_scaled_delta_5_20_MARKET"
-      - "vol_scaled_delta_20_60_MARKET"
-      - "vol_scaled_delta_20_60_INDUSTRY"
-      - "delta_5"
-      - "delta_20"
-      - "delta_21"
-      - "delta_22"
-      - "delta_60"
-      - "delta_63"
-      - "delta_66"
-      - "rank_delta_5"
-      - "group_delta_5"
-      - "group_delta_5_MARKET"
-      - "group_delta_20"
-      - "group_delta_20_MARKET"
-      - "group_delta_20_INDUSTRY"
-      - "group_delta_60"
-      - "group_delta_60_MARKET"
-      - "mean_diff_5_20"
-      - "mean_diff_20_60"
-      - "mean_diff_21_63"
-      - "mean_diff_22_66"
-      - "mean_reversion_20"
-      - "mean_reversion_22"
-      - "mean_reversion_60"
-      - "mean_reversion_63"
-      - "ts_corr_self_rank_60"
-      - "ts_corr_self_60"
-      - "ts_corr_self_rank_252"
-      - "ts_corr_self_120"
-      - "ts_corr_self_252"
+      - "model51_zscore_decay_60"
+      - "model51_zscore_decay_120"
     protected_templates:
-      - "model51_market_zscore_decay_63"
-      - "model51_market_zscore_decay_126"
-      - "model51_industry_zscore_decay_63"
-      - "model51_group_zscore_market_63"
-      - "model51_group_zscore_market_126"
-      - "model51_bucket_cap_zscore_126"
-      - "model51_bucket_volatility_rank_126"
-      - "model51_ts_rank_126"
+      - "model51_ts_rank_120"
       - "model51_ts_rank_252"
-      - "model51_ts_zscore_126"
+      - "model51_ts_zscore_120"
       - "model51_ts_zscore_252"
-      - "model51_decay_63"
-      - "model51_decay_126"
+      - "model51_decay_60"
+      - "model51_decay_120"
       - "model51_decay_252"
-      - "model51_ir_63"
-      - "model51_ir_126"
-      - "model51_stddev_126"
-      - "model51_stddev_252"
+      - "model51_ir_60"
+      - "model51_ir_120"
+      - "model51_group_zscore_market_60"
+      - "model51_group_zscore_market_120"
+      - "model51_bucket_cap_zscore_120"
+      - "model51_bucket_volatility_rank_120"
     field_min_coverage: 0.05
     field_min_date_coverage: 0.0
     field_min_alpha_count: 0

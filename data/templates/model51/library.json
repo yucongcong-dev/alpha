@@ -1,6 +1,6 @@
 {
   "_comment": "model51 独立模板库 — 去双重中性化(依赖settings)、删hump/无效算子、bucket加densify、增ratio/pair降低自相关、增长窗口504",
-  "_comment_placeholders": "{field}=字段名, {field_preprocessed}=winsorize(ts_backfill({field}, 120), std=4), {backfill_window}=settings.yaml expression.backfill_window",
+  "_comment_placeholders": "{field}=字段名, {field_preprocessed}=winsorize(ts_backfill({field}, {backfill_window}), std=4), {backfill_window}=settings.yaml expression.backfill_window",
   "_dataset_id": "model51",
   "default": [
     {

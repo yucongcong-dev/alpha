@@ -656,8 +656,7 @@ def test_resimulate_stage_prefers_refine_templates_over_broad_generation(monkeyp
         field_feedback={
             "cash_st": {
                 "field_name": "cash_st",
-                "best_score": 0.30,
-                "best_expression": "group_rank(ts_zscore(ts_backfill(cash_st, 504), 60), subindustry)",
+                "best_score": 0.55,
                 "best_template_name": "account_group_zscore_60_subindustry",
                 "best_template_family": "group_zscore",
                 "best_template_stage": "group_second_order",
