@@ -33,46 +33,46 @@ class ApiClientOptions:
 class TemplateBuildOptions:
     """模板选择、反馈回路与 settings 变体展开所需的窄配置。"""
 
+    region: str
+    universe: str
+    instrument_type: str
+    delay: int
+    decay: int
+    neutralization: str
+    truncation: float
+    pasteurization: str
+    unit_handling: str
+    nan_handling: str
+    language: str
     dataset_id: str = ""
     max_templates_per_field: int = 0
     max_templates_per_family: int = 0
     legacy_similarity_penalty: int = 0
     template_disable_after: int = 0
     disable_legacy_after: int = 0
-    region: str = ""
-    universe: str = ""
-    instrument_type: str = "EQUITY"
-    delay: int = 1
-    decay: int = 4
-    neutralization: str = "SUBINDUSTRY"
-    truncation: float = 0.08
-    pasteurization: str = "ON"
-    unit_handling: str = "VERIFY"
-    nan_handling: str = "OFF"
-    language: str = "FASTEXPR"
     start_date: str | None = None
     end_date: str | None = None
 
     @classmethod
     def from_args(cls, args: TemplateBuildArgs) -> TemplateBuildOptions:
         return cls(
-            dataset_id=str(getattr(args, "dataset_id", "") or ""),
+            region=args.region,
+            universe=args.universe,
+            instrument_type=args.instrument_type,
+            delay=args.delay,
+            decay=args.decay,
+            neutralization=args.neutralization,
+            truncation=args.truncation,
+            pasteurization=args.pasteurization,
+            unit_handling=args.unit_handling,
+            nan_handling=args.nan_handling,
+            language=args.language,
+            dataset_id=args.dataset_id,
             max_templates_per_field=int(getattr(args, "max_templates_per_field", 0) or 0),
             max_templates_per_family=int(getattr(args, "max_templates_per_family", 0) or 0),
             legacy_similarity_penalty=int(getattr(args, "legacy_similarity_penalty", 0) or 0),
             template_disable_after=int(getattr(args, "template_disable_after", 0) or 0),
             disable_legacy_after=int(getattr(args, "disable_legacy_after", 0) or 0),
-            region=str(getattr(args, "region", "USA") or "USA"),
-            universe=str(getattr(args, "universe", "TOP3000") or "TOP3000"),
-            instrument_type=str(getattr(args, "instrument_type", "EQUITY") or "EQUITY"),
-            delay=int(getattr(args, "delay", 1) or 1),
-            decay=int(getattr(args, "decay", 4) or 4),
-            neutralization=str(getattr(args, "neutralization", "SUBINDUSTRY") or "SUBINDUSTRY"),
-            truncation=float(getattr(args, "truncation", 0.08) or 0.08),
-            pasteurization=str(getattr(args, "pasteurization", "ON") or "ON"),
-            unit_handling=str(getattr(args, "unit_handling", "VERIFY") or "VERIFY"),
-            nan_handling=str(getattr(args, "nan_handling", "OFF") or "OFF"),
-            language=str(getattr(args, "language", "FASTEXPR") or "FASTEXPR"),
             start_date=getattr(args, "start_date", None),
             end_date=getattr(args, "end_date", None),
         )
@@ -99,20 +99,20 @@ class ResultWriteOptions:
 class FieldFetchOptions:
     """字段缓存校验与字段列表拉取所需的窄配置。"""
 
+    region: str
+    universe: str
+    instrument_type: str
+    delay: int
     dataset_id: str = ""
     page_size: int = 0
-    region: str = ""
-    universe: str = ""
-    instrument_type: str = ""
-    delay: int = 0
 
     @classmethod
     def from_args(cls, args: FieldFetchArgs) -> FieldFetchOptions:
         return cls(
-            dataset_id=str(getattr(args, "dataset_id", "") or ""),
+            region=args.region,
+            universe=args.universe,
+            instrument_type=args.instrument_type,
+            delay=args.delay,
+            dataset_id=args.dataset_id,
             page_size=int(getattr(args, "page_size", 0) or 0),
-            region=str(getattr(args, "region", "") or ""),
-            universe=str(getattr(args, "universe", "") or ""),
-            instrument_type=str(getattr(args, "instrument_type", "") or ""),
-            delay=int(getattr(args, "delay", 0) or 0),
         )

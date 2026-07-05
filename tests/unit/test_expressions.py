@@ -32,6 +32,20 @@ from alpha.models.runtime import TemplateBuildContext, TemplateBuildOptions
 from alpha.policy.expression import get_dataset_expression_policy
 from alpha.policy.template_blacklist import invalidate_default_avoid_rules_cache
 
+_DEFAULT_SIM_SETTINGS = dict(
+    region="USA",
+    universe="TOP3000",
+    instrument_type="EQUITY",
+    delay=1,
+    decay=4,
+    neutralization="SUBINDUSTRY",
+    truncation=0.08,
+    pasteurization="ON",
+    unit_handling="VERIFY",
+    nan_handling="OFF",
+    language="FASTEXPR",
+)
+
 
 class TestClassifyExpressionFamily:
     """classify_expression_family 函数测试用例"""
@@ -132,7 +146,7 @@ def test_build_expression_candidates_preserve_generated_metadata() -> None:
     template_library = {"default": []}
 
     build_ctx = TemplateBuildContext(
-        options=TemplateBuildOptions(legacy_similarity_penalty=0),
+        options=TemplateBuildOptions(**_DEFAULT_SIM_SETTINGS, legacy_similarity_penalty=0),
         all_fields=[field],
         template_library=template_library,
     )
@@ -207,7 +221,7 @@ def test_build_expression_candidates_adds_financial_ratio_templates() -> None:
     ]
 
     build_ctx = TemplateBuildContext(
-        options=TemplateBuildOptions(legacy_similarity_penalty=0),
+        options=TemplateBuildOptions(**_DEFAULT_SIM_SETTINGS, legacy_similarity_penalty=0),
         all_fields=all_fields,
         template_library={"default": []},
     )
@@ -243,7 +257,7 @@ def test_build_expression_candidates_narrows_event_field_template_pool() -> None
     template_library = load_template_library(str(template_file))
 
     build_ctx = TemplateBuildContext(
-        options=TemplateBuildOptions(legacy_similarity_penalty=0),
+        options=TemplateBuildOptions(**_DEFAULT_SIM_SETTINGS, legacy_similarity_penalty=0),
         all_fields=[field],
         template_library=template_library,
     )

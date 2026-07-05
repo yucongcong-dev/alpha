@@ -12,8 +12,22 @@ from alpha.main import (
 )
 from alpha.models.domain import FieldTestResult
 from alpha.models.io_types import RunFilters
-from alpha.models.runtime import HistoricalRunState, TemplateBuildContext
+from alpha.models.runtime import HistoricalRunState, TemplateBuildContext, TemplateBuildOptions
 from alpha.policy.expression import get_dataset_expression_policy
+
+_DEFAULT_SIM_SETTINGS = dict(
+    region="USA",
+    universe="TOP3000",
+    instrument_type="EQUITY",
+    delay=1,
+    decay=4,
+    neutralization="SUBINDUSTRY",
+    truncation=0.08,
+    pasteurization="ON",
+    unit_handling="VERIFY",
+    nan_handling="OFF",
+    language="FASTEXPR",
+)
 
 
 def test_prepare_fields_for_execution_filters_before_limit() -> None:
@@ -134,7 +148,7 @@ def test_prepare_fields_for_execution_applies_stricter_event_field_filters() -> 
 
 def test_refresh_runtime_feedback_rebuilds_feedback_from_current_results() -> None:
     """Same-process results should be converted into fresh field/global feedback."""
-    build_ctx = TemplateBuildContext()
+    build_ctx = TemplateBuildContext(options=TemplateBuildOptions(**_DEFAULT_SIM_SETTINGS))
     results = [
         FieldTestResult(
             field_id="cash_st",
@@ -160,6 +174,7 @@ def test_refresh_runtime_feedback_rebuilds_feedback_from_current_results() -> No
 def test_refresh_runtime_feedback_preserves_seed_feedback_and_only_adds_new_results() -> None:
     """Seeded feedback from a dedicated feedback file should not be overwritten at runtime."""
     build_ctx = TemplateBuildContext(
+        options=TemplateBuildOptions(**_DEFAULT_SIM_SETTINGS),
         field_feedback={
             "seed_field": {
                 "field_name": "seed_field",

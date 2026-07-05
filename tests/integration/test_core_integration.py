@@ -32,9 +32,24 @@ from alpha.models.runtime import (
     ResultWriteOptions,
     RuntimeConcurrencyState,
     TemplateBuildContext,
+    TemplateBuildOptions,
 )
 from alpha.utils.helpers import first_non_empty
 from tests.conftest import MockArgs
+
+_DEFAULT_SIM_SETTINGS = dict(
+    region="USA",
+    universe="TOP3000",
+    instrument_type="EQUITY",
+    delay=1,
+    decay=4,
+    neutralization="SUBINDUSTRY",
+    truncation=0.08,
+    pasteurization="ON",
+    unit_handling="VERIFY",
+    nan_handling="OFF",
+    language="FASTEXPR",
+)
 
 # ============================================================================
 # simulation ↔ scheduler 拥塞信号传递测试
@@ -549,7 +564,7 @@ class TestContextConsistency:
 
     def test_template_build_context_defaults(self) -> None:
         """TemplateBuildContext 默认值正确。"""
-        ctx = TemplateBuildContext()
+        ctx = TemplateBuildContext(options=TemplateBuildOptions(**_DEFAULT_SIM_SETTINGS))
         assert ctx.all_fields == []
         assert ctx.template_library == {}
         assert ctx.field_feedback == {}

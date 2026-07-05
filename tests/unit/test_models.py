@@ -91,10 +91,10 @@ class TestRuntimeOptionBuilders:
             region = "USA"
             universe = "TOP3000"
             instrument_type = "EQUITY"
-            delay = "1"
-            decay = "7"
+            delay = 1
+            decay = 7
             neutralization = "SUBINDUSTRY"
-            truncation = "0.08"
+            truncation = 0.08
             pasteurization = "OFF"
             unit_handling = "VERIFY"
             nan_handling = "OFF"
@@ -120,7 +120,7 @@ class TestRuntimeOptionBuilders:
             region = "USA"
             universe = "TOP1000"
             instrument_type = "EQUITY"
-            delay = "2"
+            delay = 2
 
         assert ResultWriteOptions.from_args(_Args()) == ResultWriteOptions(
             dataset_id="model51",
