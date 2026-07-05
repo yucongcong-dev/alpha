@@ -171,19 +171,34 @@
 | **条件/事件** | trade_when, days_from_last_change, bucket |
 | **其他** | adv20, kth_element, ts_percentage, ts_entropy |
 
-### 5.2 标准窗口参数
+### 5.3 标准窗口参数
 
+> **官方视频来源** (`how-to-avoid-overfitting`): "You can also use 20 days, which is a month or 60 days for a quarter, 120 for half a year, 250 for a year, and so on."
+>
 > **官方 FAQ 来源** (`debt-liabilities-past-value`): "You could use ts_delay(fundamental data, 60) to get last quarter's value since we could have 20 as work day for one month." / "You could keep simple parameter like 20/60/250 to save your time rather than fit for parameter like 20 to 22."
+>
+> **官方视频来源** (`group_neutralize-operator`): "60 days roughly represents the number of trading days in a quarter."
+>
+> **官方视频来源** (`simulation-results`): "The 252 parameter represents the estimated number of trading days in a year."
+>
+> **官方视频来源** (`sentiment-strength`): "254 days represent the number of trading days in a year."
+>
+> **官方 FAQ 来源** (`example-quarterly-statements`): "Quarterly data means the data is released approximately once a quarter. The consecutive releases are not exactly equal to a quarter of a year as the release dates are not fixed."
 
-| 窗口 | 含义 | 官方推荐 | 适用场景 |
-|------|------|----------|----------|
-| 5 | 1 周 | - | 超短期信号、快速衰减 |
-| 20 | 1 月 | ✅ | 短期信号、月度动量 |
-| 60 | 1 季 | ✅ | 中期信号、季度趋势（官方：20工作日/月 × 3） |
-| 120 | 半年 | - | 中长期信号（60的2倍，合理延伸） |
-| 252 | 1 年 | ✅ | 长期信号、年度趋势 |
+| 窗口 | 含义 | 官方推荐 | 官方来源 | 适用场景 |
+|------|------|----------|----------|----------|
+| 5 | 1 周 | - | - | 超短期信号、快速衰减 |
+| 20 | 1 月 | ✅ | FAQ + Video | 短期信号、月度动量 |
+| 60 | 1 季 | ✅ | FAQ + Video | 中期信号、季度趋势 |
+| 120 | 半年 | ✅ | Video | 中长期信号 |
+| 250 | 1 年 | ✅ | FAQ + Video | 长期信号、年度趋势 |
+| 252 | 1 年(精确) | - | Video | Sharpe 年化因子（252交易日/年） |
 
+> **注意**: 官方在不同场合使用了 250、252、254 作为"1年交易日数"。FAQ 推荐"简单参数 20/60/250"，视频说"252 = 一年交易日数"，另有视频用"254天"。实践中 252 是最常用的年化基准，250 是 FAQ 推荐的简单参数值。
+>
 > **官方 FAQ 来源** (`decay_overfit`): "Changing the decay from 1 to 5 is okay, but not say, changing it from 5 to 6. There is no 'exact' definition, but you should keep in mind that it is not over-fitting if it makes sense to you."
+>
+> **官方视频来源** (`how-to-avoid-overfitting`): 避免过拟合的核心原则——使用简单合理的参数值，不要拟合到非标准值。
 
 ---
 
