@@ -49,17 +49,17 @@ class TemplateBuildConfig:
     legacy_similarity_penalty: int = 0
     template_disable_after: int = 0
     disable_legacy_after: int = 0
-    region: str = ""
-    universe: str = ""
-    instrument_type: str = ""
-    delay: int = 0
+    region: str = "USA"
+    universe: str = "TOP3000"
+    instrument_type: str = "EQUITY"
+    delay: int = 1
     decay: int = 4
-    neutralization: str = ""
-    truncation: float = 0.0
-    pasteurization: str = ""
-    unit_handling: str = ""
-    nan_handling: str = ""
-    language: str = ""
+    neutralization: str = "SUBINDUSTRY"
+    truncation: float = 0.08
+    pasteurization: str = "ON"
+    unit_handling: str = "VERIFY"
+    nan_handling: str = "OFF"
+    language: str = "FASTEXPR"
     start_date: str | None = None
     end_date: str | None = None
 
@@ -79,17 +79,17 @@ class CleanConfig:
 
 @dataclass(frozen=True)
 class SimulationSettingsConfig:
-    instrument_type: str = ""
-    region: str = ""
-    universe: str = ""
-    delay: int = 0
+    instrument_type: str = "EQUITY"
+    region: str = "USA"
+    universe: str = "TOP3000"
+    delay: int = 1
     decay: int = 4
-    neutralization: str = ""
-    truncation: float = 0.0
-    pasteurization: str = ""
-    unit_handling: str = ""
-    nan_handling: str = ""
-    language: str = ""
+    neutralization: str = "SUBINDUSTRY"
+    truncation: float = 0.08
+    pasteurization: str = "ON"
+    unit_handling: str = "VERIFY"
+    nan_handling: str = "OFF"
+    language: str = "FASTEXPR"
     start_date: str | None = None
     end_date: str | None = None
 
@@ -187,17 +187,17 @@ class BootstrapConfig:
             legacy_similarity_penalty=int(getattr(args, "legacy_similarity_penalty", 0) or 0),
             template_disable_after=int(getattr(args, "template_disable_after", 0) or 0),
             disable_legacy_after=int(getattr(args, "disable_legacy_after", 0) or 0),
-            region=str(getattr(args, "region", "") or ""),
-            universe=str(getattr(args, "universe", "") or ""),
-            instrument_type=str(getattr(args, "instrument_type", "") or ""),
-            delay=int(getattr(args, "delay", 0) or 0),
-            decay=int(getattr(args, "decay", 0) or 0),
-            neutralization=str(getattr(args, "neutralization", "") or ""),
-            truncation=float(getattr(args, "truncation", 0.0) or 0.0),
-            pasteurization=str(getattr(args, "pasteurization", "") or ""),
-            unit_handling=str(getattr(args, "unit_handling", "") or ""),
-            nan_handling=str(getattr(args, "nan_handling", "") or ""),
-            language=str(getattr(args, "language", "") or ""),
+            region=str(getattr(args, "region", "USA") or "USA"),
+            universe=str(getattr(args, "universe", "TOP3000") or "TOP3000"),
+            instrument_type=str(getattr(args, "instrument_type", "EQUITY") or "EQUITY"),
+            delay=int(getattr(args, "delay", 1) or 1),
+            decay=int(getattr(args, "decay", 4) or 4),
+            neutralization=str(getattr(args, "neutralization", "SUBINDUSTRY") or "SUBINDUSTRY"),
+            truncation=float(getattr(args, "truncation", 0.08) or 0.08),
+            pasteurization=str(getattr(args, "pasteurization", "ON") or "ON"),
+            unit_handling=str(getattr(args, "unit_handling", "VERIFY") or "VERIFY"),
+            nan_handling=str(getattr(args, "nan_handling", "OFF") or "OFF"),
+            language=str(getattr(args, "language", "FASTEXPR") or "FASTEXPR"),
             start_date=getattr(args, "start_date", None),
             end_date=getattr(args, "end_date", None),
         )

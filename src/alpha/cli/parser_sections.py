@@ -62,17 +62,17 @@ def add_credentials_arguments(parser: argparse.ArgumentParser) -> None:
 def add_dataset_arguments(parser: argparse.ArgumentParser) -> None:
     """Add dataset and simulation settings arguments."""
     parser.add_argument("--dataset-id", default=DEFAULT_DATASET_ID, help="数据集 ID")
-    parser.add_argument("--region", default="USA", help="地区代码")
-    parser.add_argument("--universe", default="TOP3000", help="宇宙代码")
-    parser.add_argument("--instrument-type", default="EQUITY", help="工具类型")
-    parser.add_argument("--delay", type=int, default=1, help="延迟天数")
-    parser.add_argument("--decay", type=int, default=4, help="衰减天数 (Decay)")
-    parser.add_argument("--neutralization", default=NEUTRALIZATION_SUBINDUSTRY, help="中性化类型 (Neutralization)")
-    parser.add_argument("--truncation", type=float, default=0.05, help="截断阈值 (Truncation)")
-    parser.add_argument("--nan-handling", default="ON", help="NaN 处理方式 (NaN Handling)")
-    parser.add_argument("--pasteurization", default="ON", help="Pasteurization 开关 (ON/OFF)")
-    parser.add_argument("--unit-handling", default="VERIFY", help="单位验证 (Unit Handling)")
-    parser.add_argument("--language", default="FASTEXPR", help="表达式语言 (Language)")
+    parser.add_argument("--region", default=None, help="地区代码")
+    parser.add_argument("--universe", default=None, help="宇宙代码")
+    parser.add_argument("--instrument-type", default=None, help="工具类型")
+    parser.add_argument("--delay", type=int, default=None, help="延迟天数")
+    parser.add_argument("--decay", type=int, default=None, help="衰减天数 (Decay)")
+    parser.add_argument("--neutralization", default=None, help="中性化类型 (Neutralization)")
+    parser.add_argument("--truncation", type=float, default=None, help="截断阈值 (Truncation)")
+    parser.add_argument("--nan-handling", default=None, help="NaN 处理方式 (NaN Handling)")
+    parser.add_argument("--pasteurization", default=None, help="Pasteurization 开关 (ON/OFF)")
+    parser.add_argument("--unit-handling", default=None, help="单位验证 (Unit Handling)")
+    parser.add_argument("--language", default=None, help="表达式语言 (Language)")
     parser.add_argument(
         "--start-date",
         default=None,
