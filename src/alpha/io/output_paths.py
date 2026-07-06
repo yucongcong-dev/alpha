@@ -19,6 +19,26 @@ from ..io.common import (
 logger = logging.getLogger(__name__)
 
 
+def build_fields_cache_scope_key(
+    *,
+    region: str = "",
+    universe: str = "",
+    instrument_type: str = "",
+    delay: int | None = None,
+) -> str:
+    """Build a short, readable scope key for field-cache directories."""
+    parts: list[str] = []
+    if region:
+        parts.append(sanitize_dataset_id_for_filename(region).lower())
+    if universe:
+        parts.append(sanitize_dataset_id_for_filename(universe).lower())
+    if instrument_type:
+        parts.append(sanitize_dataset_id_for_filename(instrument_type).lower())
+    if delay is not None:
+        parts.append(f"d{int(delay)}")
+    return "_".join(parts) or "default"
+
+
 def resolve_cli_path(path: str, *, base_dir: str | None = None) -> str:
     """将 CLI 路径解析为绝对路径。"""
     if not path:
@@ -40,16 +60,13 @@ def build_dataset_scoped_paths(
 ) -> dict[str, str]:
     """根据 dataset_id 派生默认缓存、结果与模板库路径。"""
     dataset_key = sanitize_dataset_id_for_filename(dataset_id)
-    cache_parts = [CACHE_DIR / "fields" / dataset_key]
-    if region:
-        cache_parts.append(Path(sanitize_dataset_id_for_filename(region)))
-    if universe:
-        cache_parts.append(Path(sanitize_dataset_id_for_filename(universe)))
-    if instrument_type:
-        cache_parts.append(Path(sanitize_dataset_id_for_filename(instrument_type)))
-    if delay is not None:
-        cache_parts.append(Path(f"delay{int(delay)}"))
-    fields_cache_path = Path(*cache_parts) / "fields.json"
+    cache_scope_key = build_fields_cache_scope_key(
+        region=region,
+        universe=universe,
+        instrument_type=instrument_type,
+        delay=delay,
+    )
+    fields_cache_path = CACHE_DIR / "fields" / dataset_key / cache_scope_key / "fields.json"
     return {
         "template_library_file": str(DATA_DIR / "templates" / dataset_key / "library.json"),
         "fields_cache_file": str(fields_cache_path),

@@ -190,7 +190,7 @@ alpha/                     # 项目根目录
 哪些文件不进仓：
 
 - `results/`：每次运行的结果、分析、日志、checkpoint 和 state。
-- `cache/`：字段缓存等可重新生成数据。
+- `cache/`：磁盘上的可重建缓存目录。当前主要承载字段缓存；内存态的 YAML / blacklist / runtime cache 不落在这里。
 - `tmp/`：一次性实验输入、临时 include/exclude 列表、临时模板库。
 - `scratch/`：外部脚本、对照材料、手工实验草稿。
 - `.credentials/`：本地加密凭证和密钥。
@@ -297,8 +297,10 @@ python3.10 -m alpha
 ```
 
 不传参时使用内置默认值（`--limit 200 --max-templates-per-field 6 --field-template-batch-size 2`）。
-首次运行会先按当前数据集上下文全量拉取字段并写入
-`cache/fields/<dataset>/<region>/<universe>/<instrument_type>/delay<delay>/fields.json`，
+首次运行会先按当前数据集上下文全量拉取字段并写入磁盘缓存
+`cache/fields/<dataset>/<cache_key>/fields.json`，
+其中 `cache_key` 由 `region + universe + instrument_type + delay` 生成，例如
+`usa_top3000_equity_d1`，
 后续同一 `dataset_id + region + universe + instrument_type + delay` 组合直接复用缓存。
 
 **目标**：从数据集中找出有潜力的字段和模板家族。

@@ -19,6 +19,8 @@ from ..config.constants import DEFAULT_DATASET_ID
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 PROJECT_ROOT = SCRIPT_DIR.parent.parent.parent
+# Disk-backed, reproducible runtime cache root. In-memory YAML / blacklist /
+# runtime caches use separate module-level state and do not live here.
 CACHE_DIR = PROJECT_ROOT / "cache"
 RESULTS_DIR = PROJECT_ROOT / "results"
 DATA_DIR = PROJECT_ROOT / "data"

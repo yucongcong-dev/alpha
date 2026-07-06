@@ -8,7 +8,11 @@ from pathlib import Path
 from alpha.analysis.results_loader import load_existing_results
 from alpha.analysis.template_stats import compile_template_stats
 from alpha.analysis.analysis_sync import ensure_analysis_synced
-from alpha.io.output_paths import build_dataset_scoped_paths, resolve_cli_path
+from alpha.io.output_paths import (
+    build_dataset_scoped_paths,
+    build_fields_cache_scope_key,
+    resolve_cli_path,
+)
 from alpha.io.results_store import (
     dump_results,
     dump_results_incremental,
@@ -399,14 +403,16 @@ def test_build_dataset_scoped_paths_includes_runtime_context_in_cache_path() -> 
     template_path = Path(paths["template_library_file"])
     assert template_path.parts[-4:] == ("data", "templates", "fundamental6", "library.json")
     cache_path = Path(paths["fields_cache_file"])
-    assert cache_path.parent.parts[-7:] == (
-        "cache",
-        "fields",
-        "fundamental6",
-        "USA",
-        "TOP3000",
-        "EQUITY",
-        "delay1",
-    )
+    assert cache_path.parent.parts[-4:] == ("cache", "fields", "fundamental6", "usa_top3000_equity_d1")
     assert cache_path.name == "fields.json"
     assert Path(paths["output"]).name == "test_results.json"
+
+
+def test_build_fields_cache_scope_key_uses_short_readable_context_key() -> None:
+    assert build_fields_cache_scope_key(
+        region="USA",
+        universe="TOP3000",
+        instrument_type="EQUITY",
+        delay=1,
+    ) == "usa_top3000_equity_d1"
+    assert build_fields_cache_scope_key() == "default"
