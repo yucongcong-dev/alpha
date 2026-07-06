@@ -16,6 +16,7 @@ from ..models.domain import (
     FieldTestResult,
     ResultRow,
     SummaryPayload,
+    serialize_failed_check,
 )
 from ..models.result_predicates import is_queue_timeout_result
 from .failed_checks import (
@@ -69,7 +70,7 @@ def build_results_summary_payload(
                     "field_id": result.field_id,
                     "template_name": result.template_name,
                     "expression": result.expression,
-                    "failed_checks": result.failed_checks,
+                    "failed_checks": [serialize_failed_check(check) for check in result.failed_checks],
                 }
             )
 

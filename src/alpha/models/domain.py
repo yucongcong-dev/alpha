@@ -51,6 +51,25 @@ class FailedCheck:
         return result
 
 
+def coerce_failed_check(check: Any) -> FailedCheck:
+    """把任意 failed check 兼容对象归一化为领域 FailedCheck。"""
+    if isinstance(check, FailedCheck):
+        return check
+    if isinstance(check, dict):
+        return FailedCheck.from_dict(check)
+    return FailedCheck(
+        name=str(getattr(check, "name", "") or ""),
+        value=getattr(check, "value", None),
+        limit=getattr(check, "limit", getattr(check, "threshold", None)),
+        result=getattr(check, "result", None),
+    )
+
+
+def serialize_failed_check(check: Any) -> dict[str, Any]:
+    """把 failed check 归一化为可 JSON 序列化的字典。"""
+    return coerce_failed_check(check).to_dict()
+
+
 ResultRow = dict[str, Any]
 """结果落盘 / 分析阶段使用的通用行对象。"""
 
@@ -214,6 +233,9 @@ class FieldTestResult:
     failed_stage: str | None = None
     failed_checks: list[FailedCheck] | None = None
 
+    def __post_init__(self) -> None:
+        if self.failed_checks is not None:
+            self.failed_checks = [coerce_failed_check(check) for check in self.failed_checks]
 
     def is_successful(self) -> bool:
         return self.submittable is True
@@ -236,7 +258,9 @@ class FieldTestResult:
             "settings_fingerprint": self.settings_fingerprint,
             "template_library_fingerprint": self.template_library_fingerprint,
             "failed_stage": self.failed_stage,
-            "failed_checks": [check.to_dict() if hasattr(check, "to_dict") else check for check in self.failed_checks] if self.failed_checks else None,
+            "failed_checks": [serialize_failed_check(check) for check in self.failed_checks]
+            if self.failed_checks
+            else None,
 
         }
 
