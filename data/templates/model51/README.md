@@ -32,14 +32,22 @@ Public-script inspiration:
 Preprocessing:
 - `504`-day backfill plus `winsorize(std=4)`.
 
+Current default-library goal:
+- keep only a small production candidate pool with meaningfully different structures
+- avoid filling the default queue with near-neighbor window variants around the same crowded risk branch
+
 Core default shapes:
-- market-neutral and industry-neutral zscore decay
-- market-group zscore
-- long-window rank / zscore / decay / IR
-- bucket cap and bucket volatility grouped templates
+- first-order long-window `ts_rank / ts_zscore / decay`
+- one bucket-cap grouped template
+- one cap-ratio template plus one bucket-cap-ratio template that are less identical to the old risk-field branch
 
 What was removed:
 - Default `stddev`-only templates were dropped from the curated main library because they were less targeted than the newer bucket/risk-aware shapes.
+- most extra grouped/decay/window neighbors should now be treated as refine or diagnostic inputs, not default broad-search seeds
+- `IR` is no longer kept in the tiny default queue; it moved behind the ratio-oriented branch in `refine/`
+
+Field ordering:
+- crowded risk fields now rely on explicit `alphaCount/userCount` crowding penalties in policy instead of floating to the front just because they are historically common
 
 ## Recommended Workflow
 Broad exploration:
@@ -61,7 +69,9 @@ Refine pack convention:
 - Keep `library.json` as the default narrow production library.
 - Keep targeted local sweeps under `refine/`.
 - Load refine packs explicitly with `--template-library-file data/templates/model51/refine/<file>.json`.
+- The current broadening pack is `data/templates/model51/refine/broad_search_neighbors.json`.
 - If a focused experiment needs a stable hand-curated field cache, keep it under `refine/fields/` instead of `cache/`.
+- grouped `market` zscore families, extra decay-window families, and bucket-volatility variants belong here once they stop earning a place in the default queue
 
 Current local evidence behind this narrower focus:
 - Historical runs once showed `submittable=true` or near-pass behavior on the risk-field branch, but those signals are no longer sufficient by themselves after the self-correlation gate was tightened.

@@ -41,6 +41,15 @@ Local run evidence:
 8. **Added hump parameter scan**: 0.2/0.3/0.4/0.5 thresholds.
 9. **Added long-window variants**: `ts_rank_504`, `ts_zscore_126`, `decay_120`.
 
+## Default Library Boundary
+
+The default library should now be read as the narrow production queue for broad exploration:
+- keep only a handful of core slow-frequency templates in `default`
+- treat vector/event-conditioned families as specialty lanes rather than generic broad-search seeds
+- keep cross-field ratio/pair exploration concentrated in the dedicated account/matrix lane instead of bloating scalar `default`
+- treat extra long-window neighbors, rawfill/longfill alternates, and legacy cross-sectional wrappers as refine candidates unless they prove repeatedly useful
+- the current recovery pack for these demoted defaults is `data/templates/fundamental6/refine/default_neighbors.json`
+
 ## Things To Revisit Later
 - Continue shifting from single-field transforms toward field-relation templates.
 - Reassess whether remaining generic `ts_rank/ts_zscore/stddev` defaults should be narrowed even further.

@@ -28,15 +28,21 @@ Local run / policy evidence:
 Preprocessing:
 - `252`-day backfill plus `winsorize(std=4)`.
 
+Current default-library goal:
+- keep a compact production candidate pool centered on the strongest slow-score hypotheses
+- avoid letting many close cousins of the same `120/126`-day idea crowd out true idea diversity
+
 Core default shapes:
-- `rank_zscore_decay_126`
-- `rank_ts_rank_126`
-- market-neutral zscore decay
+- `zscore_decay_120`
+- `rank_ts_rank_120`
 - market/sector group ranking
-- bucket cap / bucket liquidity long-window grouped templates
+- cap-ratio / bucket-cap-ratio representatives
+- one `mean_spread` branch plus one groupfill representative
 
 Legacy handling:
 - Older weaker fallback templates live in `legacy.json`, not the main default library.
+- mean-reversion, `information_ratio`, normalize/quantile wrappers, and extra long-window neighbors are better treated as refine/experimental branches unless new evidence promotes them
+- The current recovery pack is `data/templates/model16/refine/broad_search_neighbors.json`.
 
 ## Things To Revisit Later
 - Add a small sector-relative spread family if later runs show enough differentiation between value/quality/growth-style fields.

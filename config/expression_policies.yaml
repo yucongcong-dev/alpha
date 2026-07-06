@@ -418,16 +418,16 @@ expression_policies:
         preferred_template_stages:
           - "group_second_order"
           - "first_order"
-    disabled_templates:
-      - "model16_zscore_decay_120"
+    disabled_templates: []
     protected_templates:
       - "model16_zscore_decay_120"
       - "model16_rank_ts_rank_120"
       - "model16_group_ts_rank_market_120"
       - "model16_group_zscore_sector_120"
-      - "model16_bucket_cap_zscore_120"
-      - "model16_bucket_liquidity_ts_rank_120"
-      - "model16_normalize_zscore_120"
+      - "model16_ratio_cap_zscore_120"
+      - "model16_bucket_cap_ratio_zscore_120"
+      - "model16_groupfill_ts_rank_120"
+      - "model16_mean_spread_over_std_120_252"
     template_prefix_penalties:
       "delta_|group_delta_|rank_delta_|vol_scaled_delta_": "@heavy_penalty"
       "mean_reversion_|mean_diff_": "@mild_penalty"
@@ -519,20 +519,34 @@ expression_policies:
       - "model51_zscore_decay_60"
       - "model51_zscore_decay_120"
     protected_templates:
-      - "model51_ts_rank_120"
-      - "model51_ts_rank_252"
-      - "model51_ts_zscore_120"
-      - "model51_ts_zscore_252"
-      - "model51_decay_60"
-      - "model51_decay_120"
-      - "model51_decay_252"
-      - "model51_ir_60"
-      - "model51_ir_120"
-      - "model51_group_zscore_market_60"
-      - "model51_group_zscore_market_120"
       - "model51_bucket_cap_zscore_120"
-      - "model51_bucket_volatility_rank_120"
+      - "model51_ts_rank_120"
+      - "model51_ts_zscore_120"
+      - "model51_decay_120"
+      - "model51_ratio_cap_zscore_60"
+      - "model51_bucket_cap_ratio_zscore_60"
     field_min_coverage: 0.05
     field_min_date_coverage: 0.0
     field_min_alpha_count: 0
     field_min_user_count: 0
+    field_coverage_weight: 0.28
+    field_date_coverage_weight: 0.08
+    field_alpha_validation_weight: 0.01
+    field_user_validation_weight: 0.01
+    field_alpha_crowding_penalty_weight: 0.24
+    field_user_crowding_penalty_weight: 0.18
+    field_recency_weight: 0.04
+    field_theme_bonus_weight: 0.0
+    field_preferred_unexplored_bonus: 0.0
+    overtested_weak_fields:
+      - "unsystematic_risk_last_360_days"
+      - "unsystematic_risk_last_180_days"
+      - "unsystematic_risk_last_90_days"
+      - "systematic_risk_last_360_days"
+      - "systematic_risk_last_180_days"
+      - "systematic_risk_last_90_days"
+    preferred_field_order:
+      unsystematic_risk_last_30_days: 0
+      unsystematic_risk_last_60_days: 1
+      systematic_risk_last_30_days: 2
+      systematic_risk_last_60_days: 3

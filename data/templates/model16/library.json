@@ -36,130 +36,9 @@
       "dataset_tags": ["model16", "fundamental_scores"]
     },
     {
-      "name": "model16_rank_decay_120",
-      "expression": "rank(ts_decay_linear({field_preprocessed}, 120))",
-      "priority": 996,
-      "family": "decay",
-      "layer": "time_series",
-      "dataset_tags": ["model16", "fundamental_scores"]
-    },
-    {
-      "name": "model16_mean_reversion_zscore_120",
-      "expression": "rank(-1 * ts_zscore({field_preprocessed}, 120))",
-      "priority": 996,
-      "family": "mean_reversion",
-      "layer": "time_series",
-      "dataset_tags": ["model16", "derivative"]
-    },
-    {
-      "name": "model16_mean_reversion_ts_rank_120",
-      "expression": "rank(-1 * ts_rank({field_preprocessed}, 120))",
-      "priority": 995,
-      "family": "mean_reversion",
-      "layer": "time_series",
-      "dataset_tags": ["model16", "derivative"]
-    },
-    {
-      "name": "model16_mean_reversion_decay_120",
-      "expression": "rank(-1 * ts_decay_linear({field_preprocessed}, 120))",
-      "priority": 994,
-      "family": "mean_reversion",
-      "layer": "time_series",
-      "dataset_tags": ["model16", "derivative"]
-    },
-    {
-      "name": "model16_mean_reversion_ir_120",
-      "expression": "rank(-1 * ts_mean({field_preprocessed}, 120) / ts_std_dev({field_preprocessed}, 120))",
-      "priority": 993,
-      "family": "mean_reversion",
-      "layer": "time_series",
-      "dataset_tags": ["model16", "derivative"]
-    },
-    {
-      "name": "model16_mean_reversion_group_zscore_sector_120",
-      "expression": "group_rank(-1 * ts_zscore({field_preprocessed}, 120), sector)",
-      "priority": 992,
-      "family": "mean_reversion",
-      "layer": "group",
-      "dataset_tags": ["model16", "derivative"]
-    },
-    {
-      "name": "model16_rank_ir_120",
-      "expression": "rank(ts_mean({field_preprocessed}, 120) / ts_std_dev({field_preprocessed}, 120))",
-      "priority": 995,
-      "family": "information_ratio",
-      "layer": "time_series",
-      "dataset_tags": ["model16", "fundamental_scores"]
-    },
-    {
-      "name": "model16_bucket_cap_zscore_120",
-      "expression": "group_rank(ts_zscore({field_preprocessed}, 120), densify(bucket(rank(cap), range='0.1, 1, 0.1')))",
-      "priority": 994,
-      "family": "bucket_group_rank",
-      "layer": "group",
-      "dataset_tags": ["model16", "fundamental_scores"]
-    },
-    {
-      "name": "model16_bucket_liquidity_ts_rank_120",
-      "expression": "group_rank(ts_rank({field_preprocessed}, 120), densify(bucket(rank(close * volume), range='0.1, 1, 0.1')))",
-      "priority": 993,
-      "family": "bucket_group_rank",
-      "layer": "group",
-      "dataset_tags": ["model16", "fundamental_scores"]
-    },
-    {
-      "name": "model16_rank_ts_rank_60",
-      "expression": "rank(ts_rank({field_preprocessed}, 60))",
-      "priority": 992,
-      "family": "ts_rank",
-      "layer": "time_series",
-      "dataset_tags": ["model16", "fundamental_scores"]
-    },
-    {
-      "name": "model16_rank_decay_60",
-      "expression": "rank(ts_decay_linear({field_preprocessed}, 60))",
-      "priority": 991,
-      "family": "decay",
-      "layer": "time_series",
-      "dataset_tags": ["model16", "fundamental_scores"]
-    },
-    {
-
-      "name": "model16_ts_rank_504",
-      "expression": "rank(ts_rank({field_preprocessed}, 504))",
-      "priority": 988,
-      "family": "ts_rank",
-      "layer": "time_series",
-      "dataset_tags": ["model16", "fundamental_scores"]
-    },
-    {
-      "name": "model16_ts_zscore_504",
-      "expression": "rank(ts_zscore({field_preprocessed}, 504))",
-      "priority": 987,
-      "family": "zscore_time",
-      "layer": "time_series",
-      "dataset_tags": ["model16", "fundamental_scores"]
-    },
-    {
-      "name": "model16_ts_quantile_zscore_120",
-      "expression": "rank(ts_quantile(ts_zscore({field_preprocessed}, 120), 120))",
-      "priority": 986,
-      "family": "ts_quantile",
-      "layer": "time_series",
-      "dataset_tags": ["model16", "fundamental_scores"]
-    },
-    {
-      "name": "model16_normalize_zscore_120",
-      "expression": "rank(normalize(ts_zscore({field_preprocessed}, 120), useStd=true, limit=3.0))",
-      "priority": 985,
-      "family": "normalize",
-      "layer": "time_series",
-      "dataset_tags": ["model16", "fundamental_scores"]
-    },
-    {
       "name": "model16_ratio_cap_zscore_120",
       "expression": "rank(ts_zscore({field_preprocessed} / ts_backfill(cap, 120), 120))",
-      "priority": 984,
+      "priority": 996,
       "family": "ratio_cap",
       "layer": "composite",
       "dataset_tags": ["model16", "fundamental_scores"]
@@ -167,7 +46,7 @@
     {
       "name": "model16_bucket_cap_ratio_zscore_120",
       "expression": "group_rank(ts_zscore({field_preprocessed} / ts_backfill(cap, 120), 120), densify(bucket(rank(cap), range='0.1, 1, 0.1')))",
-      "priority": 983,
+      "priority": 995,
       "family": "bucket_ratio",
       "layer": "group",
       "dataset_tags": ["model16", "fundamental_scores"]
@@ -175,24 +54,16 @@
     {
       "name": "model16_groupfill_ts_rank_120",
       "expression": "rank(ts_rank({field_groupfill}, 120))",
+      "priority": 983,
+      "family": "groupfill",
+      "layer": "time_series",
+      "dataset_tags": ["model16", "fundamental_scores"]
+    },
+    {
+      "name": "model16_mean_spread_over_std_120_252",
+      "expression": "rank((ts_mean({field_preprocessed}, 120) - ts_mean({field_preprocessed}, 252)) / ts_std_dev({field_preprocessed}, 252))",
       "priority": 982,
-      "family": "groupfill",
-      "layer": "time_series",
-      "dataset_tags": ["model16", "fundamental_scores"]
-    },
-    {
-      "name": "model16_groupfill_ts_zscore_120",
-      "expression": "rank(ts_zscore({field_groupfill}, 120))",
-      "priority": 981,
-      "family": "groupfill",
-      "layer": "time_series",
-      "dataset_tags": ["model16", "fundamental_scores"]
-    },
-    {
-      "name": "model16_groupfill_decay_120",
-      "expression": "rank(ts_decay_linear({field_groupfill}, 120))",
-      "priority": 980,
-      "family": "groupfill",
+      "family": "mean_spread",
       "layer": "time_series",
       "dataset_tags": ["model16", "fundamental_scores"]
     }
