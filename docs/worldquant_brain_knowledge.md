@@ -238,3 +238,143 @@
 - 需 10,000 积分，通过提交满足阈值的 Alpha 获得
 - 经验法则：5~10 个 Alpha 在 5+ 不同日期提交（单日最多 2,000 积分）
 - 顾问可访问更多区域、数据字段、多模拟、SuperAlpha、Brain API
+
+---
+
+## 九、2026-07 官网补充学习笔记
+
+> 本节基于我通过本地 Chrome 会话直接阅读的 WorldQuant BRAIN 官方文档与支持中心页面补充整理。
+>
+> 主要页面：
+> - [Alpha Examples for Beginners](https://platform.worldquantbrain.com/learn/documentation/create-alphas/19-alpha-examples)
+> - [Simulate your first Alpha](https://platform.worldquantbrain.com/learn/documentation/create-alphas/running-your-first-alpha)
+> - [Click here for a list of terms and their definitions](https://support.worldquantbrain.com/hc/en-us/articles/4902349883927-Click-here-for-a-list-of-terms-and-their-definitions)
+> - [How to increase fitness of alphas](https://support.worldquantbrain.com/hc/en-us/articles/20251386376471-How-to-increase-fitness-of-alphas)
+> - [How to improve Sharpe?](https://support.worldquantbrain.com/hc/en-us/articles/20251383456663-How-to-improve-Sharpe)
+> - [How to improve returns?](https://support.worldquantbrain.com/hc/en-us/articles/20251364149655-How-to-improve-returns)
+> - [How to improve Turnover?](https://support.worldquantbrain.com/hc/en-us/articles/20251419309719-How-to-improve-Turnover)
+
+### 9.1 官方对 Alpha 学习路径的强调
+
+- 官方入门路径不是先“调参数”，而是先有一个可解释的假设，再把假设翻译成表达式。
+- `Alpha Examples for Beginners` 的结构基本固定为：`Hypothesis -> Implementation -> Hint to improve`。
+- 官方示例反复鼓励的改进方向不是暴力网格搜索，而是：
+  - 改成比率而不是直接比值
+  - 换更合理的观察窗口
+  - 尝试更合适的 neutralization
+  - 做更好的缺失值处理
+
+### 9.2 官方对“好 Alpha”的最低共识
+
+> 来源：`Simulate your first Alpha`
+
+- PnL 曲线应持续增长，不能只有高收益但伴随很大波动。
+- Turnover 要低，但不能低于 `1%`。
+- Drawdown 应低于 `10%`。
+- Delay 1 的 Sharpe 应高于 `1.25`；Delay 0 的 Sharpe 应高于 `2.0`。
+- 官方特别强调：即使年化收益高，如果 PnL 波动很大，Alpha 仍不算“足够好”。
+
+这点很重要，因为它解释了为什么很多看起来收益不错的表达式，最终仍会被平台标成 `Needs Improvement`。
+
+### 9.3 官方指标口径
+
+> 来源：术语表 + 支持文章
+
+- `Fitness = Sharpe * sqrt(abs(Returns) / Max(Turnover, 0.125))`
+- `Sharpe = IR * sqrt(252)`，其中 `IR = Avg(PnL) / Std_dev(PnL)`
+- `Returns = Annualized PnL / Half of Book Size`
+- `Turnover = Dollar trading volume / Booksize`
+- `Margin = PnL / Total dollars traded`
+- `Drawdown = 最大 PnL 峰谷回撤 / 半个 booksize`
+
+对实战最有用的结论：
+
+- 提高 Fitness 的三个杠杆只有三个：`提高 Sharpe`、`提高 Returns`、`降低 Turnover`。
+- 但由于公式里对 Turnover 有 `Max(Turnover, 0.125)` 下限，Turnover 低于 `12.5%` 后，再继续压低对 Fitness 的帮助会明显变弱。
+- 所以如果一个 Alpha 已经是低换手，再继续压 Turnover 往往不如直接提升 Sharpe 或 Returns。
+
+### 9.4 官方对 Sharpe / Returns / Turnover 的建议
+
+> 来源：`How to improve Sharpe?`、`How to improve returns?`、`How to improve Turnover?`
+
+#### Sharpe
+
+- 提高 Sharpe 的核心是两条：
+  - 提高收益
+  - 降低波动
+- 官方明确建议可通过 `neutralization settings` 和 `grouping operators` 来降低波动。
+- 官方也明确反对“为了提 Sharpe 而无意义微调参数”，要求表达式在数学和经济含义上都讲得通。
+
+#### Returns
+
+- 官方给的提高 Returns 方向包括：
+  - 提高 Turnover
+  - 使用更低的 Decay
+  - 使用更小、更流动的 universe
+  - 适度提高 Alpha 波动以换取更高收益
+  - 尝试 news / analyst 类数据集
+
+这说明：
+
+- `Returns` 和 `Turnover` 往往是正相关的。
+- 所以提高 Returns 很多时候会伤害 Fitness，需要结合公式一起判断，不能只盯收益。
+
+#### Turnover
+
+- 官方建议尽量把 Turnover 保持在 `40%` 以下，至少应低于 `70%`。
+- 官方列出的常见降 Turnover 方法：
+  - 使用 `Decay` 设置
+  - 使用 `rank()`
+  - 使用 `trade_when`
+  - 使用 `hump`
+  - 用更小的时间窗口
+  - 使用更新更频繁的数据类别
+
+这里有一个需要带着脑子读的地方：
+
+- 文中同时出现了“用 Decay 降 Turnover”和“用更低的 Decay 值”两种说法。
+- 结合平台通常行为，更可信的理解是：
+  - **更高的 decay 更容易压低 turnover**
+  - **更低的 decay 更容易提高 returns**
+
+所以实战里应把 `decay` 当成 `returns <-> turnover` 的平衡旋钮，而不是单向万能开关。
+
+### 9.5 官方对相关性与提交的说明
+
+> 来源：术语表 + `Simulate your first Alpha`
+
+- `Submit` 按钮会启动 OS 测试，而不是简单“存档”。
+- 提交前平台会先检查性能阈值与相关性阈值。
+- `SELF_CORRELATION`：
+  - 比较的是你当前 Alpha 与你自己已提交 Alpha 的最大 Pearson 相关性。
+  - 如果一组 Alpha 高度相关，通常只会让其中一个通过。
+- `PROD_CORRELATION`：
+  - 比较的是与全平台已提交 Alpha 的相关性。
+- 官方对 `Correlation` 的定位非常明确：它衡量的是 Alpha 的**独特性**，不是收益高低。
+
+这也解释了为什么“同一想法的小修小补”很容易卡在提交阶段，即使 IS 看起来不错。
+
+### 9.6 官方对仿真设置的直接启发
+
+> 来源：`Simulate your first Alpha` 与术语表
+
+- Neutralization 是官方最常提的稳健化手段之一。
+- Pasteurization = `On` 时，Universe 外的输入会被转成 NaN。
+- 平台用 Alpha 生成每天的股票权重向量，再根据 neutralization 设置决定是否对 `market / industry / subindustry / none` 做中性化。
+- Booksize 在平台中固定为 `$20 million`，因此很多收益率、回撤、margin 的定义都围绕这个常数展开。
+
+### 9.7 对后续学习最值得记住的几句话
+
+- 官方更重视“有逻辑的改进”，而不是“把参数从 20 调到 22”。
+- 先让 Alpha 过最小质量线，再追求更高收益；不要为了某个指标单独过拟合。
+- `neutralization`、`group operators`、`rank()`、`trade_when`、`decay` 是官方最常反复提到的实战杠杆。
+- 当 Fitness 不够时，永远先回到公式：到底是 `Sharpe` 不够、`Returns` 不够，还是 `Turnover` 太高。
+
+### 9.8 对本仓库使用者的直接映射
+
+把这些官网知识映射到本仓库，最实用的操作习惯是：
+
+- 先用模板生成“有解释的表达式”，不要一开始就做无约束广搜。
+- 在本地结果里先看 `Sharpe / Fitness / Turnover / Drawdown` 的组合，不要只看 `Returns`。
+- 当 `Fitness < 1` 时，优先按公式拆原因，而不是盲目新增更多模板。
+- 当 `SELF_CORRELATION` 或 `PROD_CORRELATION` 成为主失败原因时，应该换想法或换结构，而不是只调窗口。
