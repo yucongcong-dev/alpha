@@ -1,13 +1,13 @@
 """
 Alpha 测试系统命令行入口模块
 
-支持通过 `python3 -m alpha` 或安装后的 `alpha` 命令运行 Alpha 测试系统。
+支持通过 `python3.10 -m alpha` 或安装后的 `alpha` 命令运行 Alpha 测试系统。
 
 Usage:
-    python3 -m alpha [OPTIONS]
+    python3.10 -m alpha [OPTIONS]
 
 Example:
-    python3 -m alpha --dataset-id model51 --region USA --universe TOP3000
+    python3.10 -m alpha --dataset-id model51 --region USA --universe TOP3000
 """
 
 from __future__ import annotations

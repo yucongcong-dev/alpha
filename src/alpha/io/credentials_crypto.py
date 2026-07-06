@@ -27,7 +27,7 @@ def load_crypto_dependencies() -> tuple[Any, Any]:
         from cryptography.fernet import Fernet, InvalidToken
     except ModuleNotFoundError as exc:
         raise BrainAPIError(
-            "Missing dependency 'cryptography'. Install it first: python3 -m pip install cryptography"
+            "Missing dependency 'cryptography'. Install it first: python3.10 -m pip install cryptography"
         ) from exc
     return Fernet, InvalidToken
 

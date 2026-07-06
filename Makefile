@@ -1,6 +1,6 @@
 .PHONY: test help-check whitespace-check scan-secrets repo-boundary-check removed-compat-file-check compat-import-check arch-boundary-check todo-check ruff-check check clean-runtime
 
-PYTHON ?= python3
+PYTHON ?= python3.10
 PYTHONPATH ?= src
 SECRET_PATTERN := github_[p]at_[A-Za-z0-9_]+|WQB_[P]ASSWORD=|Authorization: [B]asic
 

@@ -20,12 +20,21 @@ WorldQuant BRAIN Alpha 自动生成与测试工具包。
     main.py         主入口函数
 
 使用方式：
-    python3 -m alpha --smoke-test
-    python3 -m alpha --dry-run-plan
-    python3 -m alpha --limit 50
+    python3.10 -m alpha --smoke-test
+    python3.10 -m alpha --dry-run-plan
+    python3.10 -m alpha --limit 50
 """
 
 from __future__ import annotations
+
+import sys
+
+if sys.version_info < (3, 10):
+    version = f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"
+    raise RuntimeError(
+        "alpha requires Python 3.10+ because the runtime models use dataclass(kw_only=True). "
+        f"Current interpreter: {version}. Please switch to python3.10 or newer."
+    )
 
 from .config import (
     ALPHAS_URL,

@@ -2,6 +2,13 @@
 
 通用的 WorldQuant Brain 数据集 Alpha 模拟/检查/提交运行器。
 
+## Python 版本
+
+- 最低要求：`Python 3.10`
+- 推荐：`Python 3.10+`
+- 项目根目录已补 `.python-version=3.10`，便于 `pyenv` / IDE 自动选中兼容解释器
+- 下文里的 `python3.10` 可以替换成任意 `3.10+` 解释器路径
+
 ## 项目结构
 
 ```
@@ -9,7 +16,7 @@ alpha/                     # 项目根目录
 ├── src/                   # 源码目录
 │   └── alpha/             # 主包
 │       ├── __init__.py    # 包入口（导出基础公共 API）
-│       ├── __main__.py    # python3 -m alpha / alpha 命令入口
+│       ├── __main__.py    # python3.10 -m alpha / alpha 命令入口
 │       ├── main.py        # 精简入口，调用 app 编排层
 │       │
 │       ├── app/           # 应用编排层：初始化、运行循环、收尾、clean
@@ -258,14 +265,14 @@ alpha/                     # 项目根目录
 
 ```bash
 # 开发模式安装（推荐）
-python3 -m pip install -e .
+python3.10 -m pip install -e .
 
 # 安装后可直接运行
 alpha --smoke-test
 
 # 或直接使用 PYTHONPATH 运行
 export PYTHONPATH=src
-python3 -m alpha --smoke-test
+python3.10 -m alpha --smoke-test
 ```
 
 ## 运行
@@ -277,7 +284,7 @@ Alpha 发现是一个**迭代优化**过程，建议按以下阶段执行：
 #### 阶段 1：环境验证（冒烟测试）
 
 ```bash
-python3 -m alpha --smoke-test
+python3.10 -m alpha --smoke-test
 ```
 
 验证：登录认证、API 连通性、模拟创建、401 重认证。
@@ -286,7 +293,7 @@ python3 -m alpha --smoke-test
 #### 阶段 2：广泛探索（发现候选字段）
 
 ```bash
-python3 -m alpha
+python3.10 -m alpha
 ```
 
 不传参时使用内置默认值（`--limit 200 --max-templates-per-field 6 --field-template-batch-size 2`）。
@@ -334,7 +341,7 @@ python3 -m alpha
 #### 阶段 3：聚焦深挖（针对高反馈字段）
 
 ```bash
-python3 -m alpha --top-fields-by-feedback 10 --max-templates-per-field 15
+python3.10 -m alpha --top-fields-by-feedback 10 --max-templates-per-field 15
 ```
 
 **目标**：对接近通过的候选进行精修，而不是继续做一轮广泛模板扩张。
@@ -380,7 +387,7 @@ python3 -m alpha --top-fields-by-feedback 10 --max-templates-per-field 15
 示例：
 
 ```bash
-python3 -m alpha --dataset-id model51 --dry-run-plan \
+python3.10 -m alpha --dataset-id model51 --dry-run-plan \
   --include-fields-file data/templates/model51/focused_fields.txt \
   --include-templates-file data/templates/model51/focused_templates.txt \
   --limit 4 --max-templates-per-field 4 --max-templates-per-family 1 \
@@ -390,7 +397,7 @@ python3 -m alpha --dataset-id model51 --dry-run-plan \
 ```
 
 ```bash
-python3 -m alpha --dataset-id model51 \
+python3.10 -m alpha --dataset-id model51 \
   --include-fields-file data/templates/model51/focused_fields.txt \
   --include-templates-file data/templates/model51/focused_templates.txt \
   --limit 4 --max-templates-per-field 4 --max-templates-per-family 1 \
@@ -403,7 +410,7 @@ python3 -m alpha --dataset-id model51 \
 #### 阶段 4：完整运行（可选）
 
 ```bash
-python3 -m alpha --full-run
+python3.10 -m alpha --full-run
 ```
 
 穷举所有字段和模板组合，适合：
@@ -426,7 +433,7 @@ python3 -m alpha --full-run
 当结果里出现较多 `pending_self_correlation` 时，推荐把复查与主探索拆开：
 
 ```bash
-python3 -m alpha --dataset-id model51 \
+python3.10 -m alpha --dataset-id model51 \
   --output results/model51/stage2_explore_clean.json \
   --feedback-output results/model51/stage2_explore_clean.json \
   --recheck-pending-self-correlation-only \
@@ -445,13 +452,13 @@ python3 -m alpha --dataset-id model51 \
 预览下一次运行而不创建模拟任务：
 
 ```bash
-python3 -m alpha --dry-run-plan
+python3.10 -m alpha --dry-run-plan
 ```
 
 首次生成或复用本地字段缓存：
 
 ```bash
-python3 -m alpha
+python3.10 -m alpha
 ```
 
 所有相对路径参数（如 `--output`、`--fields-cache-file`、`--include-fields-file`）都相对于当前命令执行目录解析。
@@ -466,19 +473,19 @@ python3 -m alpha
 清理本地运行产物（默认保留 `.credentials/`）：
 
 ```bash
-python3 -m alpha clean
+python3.10 -m alpha clean
 ```
 
 预览清理内容，不实际删除：
 
 ```bash
-python3 -m alpha clean --dry-run-clean
+python3.10 -m alpha clean --dry-run-clean
 ```
 
 如确实需要同时删除本地加密凭据：
 
 ```bash
-python3 -m alpha clean --include-credentials
+python3.10 -m alpha clean --include-credentials
 ```
 
 ### YAML 开关覆盖
@@ -486,8 +493,8 @@ python3 -m alpha clean --include-credentials
 YAML 中打开的布尔开关可以用 `--no-*` 在命令行临时关闭：
 
 ```bash
-python3 -m alpha --no-submit --no-auto-update-blacklist
-python3 -m alpha --no-smoke-test --no-full-run
+python3.10 -m alpha --no-submit --no-auto-update-blacklist
+python3.10 -m alpha --no-smoke-test --no-full-run
 ```
 
 ## 配置代码结构
@@ -542,7 +549,7 @@ YAML 分层优先级为：`config/settings.yaml` > `config/expression_policies.y
 运行单元测试：
 
 ```bash
-PYTHONPATH=src python3 -m pytest -q
+PYTHONPATH=src python3.10 -m pytest -q
 ```
 
 一键开发检查：
@@ -562,16 +569,16 @@ make scan-secrets
 如需运行 lint/format，请安装开发依赖：
 
 ```bash
-python3 -m pip install -e ".[dev]"
-python3 -m ruff check .
-python3 -m ruff format .
+python3.10 -m pip install -e ".[dev]"
+python3.10 -m ruff check .
+python3.10 -m ruff format .
 ```
 
 ## 打包发布
 
 ```bash
-python3 -m pip install build
-python3 -m build
+python3.10 -m pip install build
+python3.10 -m build
 ```
 
 生成的包在 `dist/` 目录下。
