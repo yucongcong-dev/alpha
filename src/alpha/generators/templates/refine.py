@@ -74,7 +74,8 @@ def build_refine_templates(
 ) -> list[TemplateCandidate]:
     """围绕近门槛候选构建 stage-3 精修模板。"""
     templates: list[TemplateCandidate] = []
-    seen: set[tuple[str, str]] = set()
+    seen_names: set[str] = set()
+    seen_expressions: set[str] = set()
 
     def add_candidate(
         name: str,
@@ -86,8 +87,7 @@ def build_refine_templates(
         layer: str = "",
         extra_metadata: dict[str, Any] | None = None,
     ) -> None:
-        key = (name, expression)
-        if key in seen:
+        if name in seen_names or expression in seen_expressions:
             return
         metadata = {
             **_candidate_metadata(
@@ -104,7 +104,8 @@ def build_refine_templates(
             policy=expression_policy,
         ):
             return
-        seen.add(key)
+        seen_names.add(name)
+        seen_expressions.add(expression)
         templates.append(
             _make_template_candidate(
                 name,

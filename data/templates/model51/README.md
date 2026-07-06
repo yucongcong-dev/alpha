@@ -76,44 +76,44 @@ Refine pack convention:
 Current local evidence behind this narrower focus:
 - Historical runs once showed `submittable=true` or near-pass behavior on the risk-field branch, but those signals are no longer sufficient by themselves after the self-correlation gate was tightened.
 - `beta_last_*_spy` and `correlation_last_*_spy` have been consistently weak in both broad and focused runs, so they are no longer part of the default refine whitelist.
+- The current `focused_fields.txt` / `focused_templates.txt` pair therefore keeps only the still-worth-probing `systematic/unsystematic risk` branch and drops the weaker `beta/correlation` spy branch from the next focused round.
 - `window_sweep_round11_selfcorr_recheck` revalidated the `unsystematic_risk_last_360_days` decay-window branch (`market/industry`, `56/63/70`) and all 6 candidates were excluded because `SELF_CORRELATION` stayed `PENDING`.
 - `group_branch_round12_recheck` then retried `unsystematic_risk_last_60/90/360_days` with non-decay group/bucket/time-series templates, and the first 9 tested candidates were again excluded for the same reason.
 - `systematic_branch_round13_recheck` repeated the same non-decay template families on `systematic_risk_last_30/60/90_days`, and all 9 tested candidates were likewise excluded because `SELF_CORRELATION` never reached a terminal state.
+- `focused_validation` then reran a much narrower `5 fields x 4 templates = 20` validation set under the current workflow and all candidates reached terminal results. That removed the earlier ambiguity: the current blocker is no longer `SELF_CORRELATION`, but ordinary quality gates led by `LOW_FITNESS`.
+- In that focused validation, `unsystematic_risk_last_60_days` became the only branch still close enough to justify more budget. The best three local candidates were `model51_ts_zscore_120` (`fitness=0.85`), `model51_bucket_cap_zscore_120` (`fitness=0.83`), and `model51_ts_rank_120` (`fitness=0.78`).
+- `systematic_risk_last_*` remained broadly weak across the same pack, so the next local refine round should drop it and spend the budget only on `unsystematic_risk_last_60_days`.
+- [refine/fields/unsystematic60_refine_round14_fields.txt](refine/fields/unsystematic60_refine_round14_fields.txt) and [refine/unsystematic60_refine_round14.json](refine/unsystematic60_refine_round14.json) capture that next-step local refine round. The pack keeps the three near-pass core templates and adds the `ratio_cap` / `bucket_ratio` / `60-day neighbor` variants that the prior focused validation did not really expand.
 
-Suggested diagnostic command:
+At this point the preferred next step is no longer a self-correlation diagnostic recheck. The tighter `focused_validation` run already showed that the most promising live branch can finish normally and is now primarily blocked by `LOW_FITNESS` / `LOW_SHARPE`, so the next budget should go to local refine rather than broader polling experiments.
+
+Suggested round14 refine command:
 ```bash
-python3 -m alpha --dataset-id model51 --dry-run-plan \
-  --include-fields-file data/templates/model51/refine/fields/systematic_branch_round13_fields.txt \
-  --include-templates-file data/templates/model51/refine/systematic_branch_round13_templates.txt \
-  --limit 1 --max-templates-per-field 1 --max-templates-per-family 1 \
-  --self-correlation-max-polls 36 --self-correlation-poll-seconds 10 \
-  --output results/model51/diagnostic_selfcorr_probe.json \
-  --feedback-output results/model51/diagnostic_selfcorr_probe.json \
+python3 -m alpha run \
+  --dataset-id model51 \
+  --include-fields-file data/templates/model51/refine/fields/unsystematic60_refine_round14_fields.txt \
+  --template-library-file data/templates/model51/refine/unsystematic60_refine_round14.json \
+  --limit 1 \
+  --max-templates-per-field 7 \
+  --max-templates-per-family 2 \
+  --max-concurrent-simulations 2 \
+  --max-concurrent-creates 1 \
+  --output results/model51/unsystematic60_refine_round14.json \
+  --feedback-output results/model51/focused_validation.json \
   --no-auto-update-blacklist
 ```
-
-Suggested post-run recheck command:
-```bash
-python3 -m alpha --dataset-id model51 \
-  --output results/model51/stage2_explore_clean.json \
-  --feedback-output results/model51/stage2_explore_clean.json \
-  --recheck-pending-self-correlation-only \
-  --no-auto-update-blacklist
-```
-
-Only run a full non-diagnostic `model51` exploration after a small probe like the command above proves that `SELF_CORRELATION` can actually resolve to a terminal state on the current branch, or after an explicit recheck pass converts a meaningful share of pending candidates into terminal outcomes.
 
 Current assessment:
-- `beta/correlation` families are still weak and do not become attractive just because the risk-field branches stalled.
-- The more important update is that the entire currently-tested risk-field family is now blocked by self-correlation resolution rather than by ordinary Sharpe/Fitness checks.
-- Until a later diagnostic run proves that `SELF_CORRELATION` eventually resolves to `PASS`, the historical `submittable=true` records on these branches should be treated as stale under the current workflow.
-- That makes `model51` a lower-priority exploration target than datasets that can actually complete the full `simulation -> checksubmit -> self-correlation -> submit` path cleanly.
+- `beta/correlation` families are still weak and do not become attractive just because the earlier risk-field branches stalled.
+- The highest-signal remaining branch is now clearly `unsystematic_risk_last_60_days`, and its current gap is quality uplift, not workflow completion.
+- Historical `submittable=true` records on neighboring risk branches should still be treated cautiously, but they are no longer the main driver of the next action.
+- That makes `model51` worth one more small local refine round, not another broad exploration sweep.
 - Operationally, this now means:
-  - keep the main exploration run short and non-blocking
-  - persist pending results
-  - recheck them in a separate pass instead of forcing `finalize` to wait on every branch
+  - keep the search local around the best unsystematic branch
+  - spend limited budget on structural neighbors rather than on wider field coverage
+  - only return to broader diagnostics if the round14 local refine fails cleanly
 
 ## Things To Revisit Later
-- Run a tiny diagnostic job with a much larger self-correlation poll budget only if we specifically want to learn whether these alphas eventually resolve to `PASS` or `FAIL`.
+- Run another self-correlation-focused diagnostic only if a future branch again stalls in `PENDING`; it is no longer the default next step for the current round14 path.
 - Add regime-aware variants only if later runs show that risk fields respond to separate high-vol / low-vol pathways.
 - Re-check whether one of the plain first-order rank/zscore templates can be demoted behind grouped bucket variants.

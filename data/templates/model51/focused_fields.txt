@@ -1,0 +1,5 @@
+systematic_risk_last_30_days
+systematic_risk_last_60_days
+systematic_risk_last_90_days
+unsystematic_risk_last_30_days
+unsystematic_risk_last_60_days

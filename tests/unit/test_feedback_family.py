@@ -276,3 +276,41 @@ def test_build_refine_templates_skips_recursive_refine_candidates() -> None:
     )
 
     assert templates == []
+
+
+def test_build_refine_templates_deduplicates_identical_expressions() -> None:
+    templates = build_refine_templates(
+        "cash_st",
+        [
+            NearPassCandidate(
+                field_id="cash_st",
+                field_name="cash_st",
+                template_name="model51_ts_zscore_120",
+                expression="rank(ts_zscore(ts_backfill(cash_st, 504), 120))",
+                template_family="zscore_time",
+                template_stage="first_order",
+                score=0.85,
+                failed_checks=[
+                    {"name": "LOW_FITNESS", "value": 0.85, "limit": 1.0},
+                ],
+            ),
+            NearPassCandidate(
+                field_id="cash_st",
+                field_name="cash_st",
+                template_name="duplicate_model51_ts_zscore_120",
+                expression="rank(ts_zscore(ts_backfill(cash_st, 504), 120))",
+                template_family="zscore_time",
+                template_stage="first_order",
+                score=0.84,
+                failed_checks=[
+                    {"name": "LOW_FITNESS", "value": 0.84, "limit": 1.0},
+                ],
+            ),
+        ],
+        expression_policy=get_dataset_expression_policy("fundamental6"),
+    )
+
+    exact_templates = [template for template in templates if template.expression == "rank(ts_zscore(ts_backfill(cash_st, 504), 120))"]
+
+    assert len(exact_templates) == 1
+    assert exact_templates[0].name == "refine_exact_1_model51_ts_zscore_120"
