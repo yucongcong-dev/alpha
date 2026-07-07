@@ -9,6 +9,7 @@
       "priority": 1000,
       "family": "zscore_decay",
       "layer": "time_series",
+      "field_tags": ["model16_dense_derivative"],
       "dataset_tags": ["model16", "fundamental_scores"]
     },
     {
@@ -17,6 +18,7 @@
       "priority": 999,
       "family": "ts_rank",
       "layer": "time_series",
+      "field_tags": ["model16_dense_derivative"],
       "dataset_tags": ["model16", "fundamental_scores"]
     },
     {
@@ -25,14 +27,16 @@
       "priority": 998,
       "family": "group_ts_rank",
       "layer": "group",
+      "field_tags": ["model16_dense_derivative"],
       "dataset_tags": ["model16", "fundamental_scores"]
     },
     {
       "name": "model16_group_zscore_sector_120",
-      "expression": "group_rank(ts_zscore({field_preprocessed}, 120), sector)",
+      "expression": "group_rank(ts_zscore({field_groupfill}, 120), sector)",
       "priority": 997,
       "family": "group_zscore",
       "layer": "group",
+      "field_tags": ["model16_sparse_fscore", "model16_sparse_bfl"],
       "dataset_tags": ["model16", "fundamental_scores"]
     },
     {
@@ -41,6 +45,7 @@
       "priority": 996,
       "family": "ratio_cap",
       "layer": "composite",
+      "field_tags": ["model16_dense_derivative"],
       "dataset_tags": ["model16", "fundamental_scores"]
     },
     {
@@ -49,6 +54,7 @@
       "priority": 995,
       "family": "bucket_ratio",
       "layer": "group",
+      "field_tags": ["model16_dense_derivative"],
       "dataset_tags": ["model16", "fundamental_scores"]
     },
     {
@@ -57,14 +63,16 @@
       "priority": 983,
       "family": "groupfill",
       "layer": "time_series",
+      "field_tags": ["model16_sparse_fscore", "model16_sparse_bfl"],
       "dataset_tags": ["model16", "fundamental_scores"]
     },
     {
       "name": "model16_mean_spread_over_std_120_252",
-      "expression": "rank((ts_mean({field_preprocessed}, 120) - ts_mean({field_preprocessed}, 252)) / ts_std_dev({field_preprocessed}, 252))",
+      "expression": "rank((ts_mean({field_groupfill}, 120) - ts_mean({field_groupfill}, 252)) / ts_std_dev({field_groupfill}, 252))",
       "priority": 982,
       "family": "mean_spread",
       "layer": "time_series",
+      "field_tags": ["model16_sparse_fscore", "model16_sparse_bfl"],
       "dataset_tags": ["model16", "fundamental_scores"]
     }
   ],

@@ -529,6 +529,8 @@ expression_policies:
     field_min_date_coverage: 0.0
     field_min_alpha_count: 0
     field_min_user_count: 0
+    field_max_alpha_count: 3000
+    field_max_user_count: 2000
     field_coverage_weight: 0.28
     field_date_coverage_weight: 0.08
     field_alpha_validation_weight: 0.01

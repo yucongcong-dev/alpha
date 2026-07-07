@@ -34,13 +34,6 @@
       "layer": "time_series"
     },
     {
-      "name": "ts_zscore_120",
-      "expression": "rank(ts_zscore({field}, 120))",
-      "priority": 956,
-      "family": "zscore_time",
-      "layer": "time_series"
-    },
-    {
       "name": "ts_zscore_252",
       "expression": "rank(ts_zscore({field}, 252))",
       "priority": 954,
@@ -60,14 +53,6 @@
       "priority": 946,
       "family": "decay_level",
       "layer": "time_series"
-    },
-    {
-
-      "name": "adv20_liquidity_rank_60",
-      "expression": "rank(ts_zscore({field}, 60) / rank(adv20))",
-      "priority": 924,
-      "family": "liquidity_adjusted",
-      "layer": "composite"
     }
   ],
   "VECTOR": [
