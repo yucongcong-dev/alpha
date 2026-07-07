@@ -277,7 +277,7 @@ def test_apply_run_paths_syncs_legacy_runtime_path_attrs(monkeypatch, tmp_path) 
             "--fields-cache-file",
             "cache/fields.json",
             "--template-library-file",
-            "data/templates/custom.json",
+            "templates/custom.json",
             "--creds-file",
             "~/.alpha/credentials.json",
             "--creds-key-file",

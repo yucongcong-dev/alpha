@@ -264,8 +264,6 @@ def test_auto_update_blacklist_appends_low_quality_template_once(tmp_path) -> No
 
 
 def test_auto_update_blacklist_is_visible_to_same_process(monkeypatch, tmp_path) -> None:
-    data_dir = tmp_path / "data"
-    data_dir.mkdir()
     monkeypatch.chdir(tmp_path)
     invalidate_blacklist_cache()
 
@@ -302,7 +300,7 @@ def test_auto_update_blacklist_is_visible_to_same_process(monkeypatch, tmp_path)
         ),
     ]
 
-    auto_update_blacklist(results, "custom_ds", data_dir=str(data_dir))
+    auto_update_blacklist(results, "custom_ds", data_dir=str(tmp_path))
 
     assert _is_blacklisted_template(
         "weak_template",
@@ -323,6 +321,7 @@ def test_scheduler_dump_results_shrinks_next_template_queue(monkeypatch, tmp_pat
     invalidate_blacklist_cache()
     invalidate_blacklist_path_cache()
     monkeypatch.setattr("alpha.io.common.DATA_DIR", data_dir)
+    monkeypatch.setattr("alpha.io.common.BLACKLISTS_DIR", tmp_path / "blacklists")
     monkeypatch.setattr(
         "alpha.core.executor.build_setting_variants",
         lambda *args, **kwargs: [{"neutralization": "SUBINDUSTRY", "truncation": 0.08}],
@@ -615,9 +614,7 @@ def test_fundamental6_template_library_removes_known_weak_short_window_templates
 
 
 def test_blacklist_prefers_name_and_stage_over_name_only(monkeypatch, tmp_path) -> None:
-    data_dir = tmp_path / "data"
-    data_dir.mkdir()
-    blacklist_file = data_dir / "blacklists" / "custom_ds" / "blacklist.json"
+    blacklist_file = tmp_path / "blacklists" / "custom_ds" / "blacklist.json"
     blacklist_file.parent.mkdir(parents=True)
     blacklist_file.write_text(
         json.dumps(
@@ -653,9 +650,7 @@ def test_blacklist_prefers_name_and_stage_over_name_only(monkeypatch, tmp_path) 
 
 
 def test_legacy_blacklist_name_only_only_applies_without_runtime_metadata(monkeypatch, tmp_path) -> None:
-    data_dir = tmp_path / "data"
-    data_dir.mkdir()
-    blacklist_file = data_dir / "blacklists" / "custom_ds" / "blacklist.json"
+    blacklist_file = tmp_path / "blacklists" / "custom_ds" / "blacklist.json"
     blacklist_file.parent.mkdir(parents=True)
     blacklist_file.write_text(
         json.dumps(
@@ -837,9 +832,7 @@ def test_event_field_uses_narrower_template_budget(monkeypatch) -> None:
 
 
 def test_blacklist_pattern_rules_support_exact_and_regex(monkeypatch, tmp_path) -> None:
-    data_dir = tmp_path / "data"
-    data_dir.mkdir()
-    blacklist_file = data_dir / "blacklists" / "custom_ds" / "blacklist.json"
+    blacklist_file = tmp_path / "blacklists" / "custom_ds" / "blacklist.json"
     blacklist_file.parent.mkdir(parents=True)
     blacklist_file.write_text(
         json.dumps(
