@@ -23,6 +23,10 @@ Local structural inference:
 Local run / policy evidence:
 - The curated library already outperformed legacy fallback shapes strongly enough that several older templates were moved out of the default library.
 - Current protected templates bias toward `126`-day structures and group-aware ranking.
+- Recent `stage2_lane_validation_round2` evidence showed the dense-derivative partner-ratio families were systematically weak:
+  - `high_conviction_ratio` and `group_ratio_zscore` were usually blocked by `LOW_SHARPE` and `LOW_FITNESS`
+  - `group_vol_scaled_delta` repeatedly failed with `CONCENTRATED_WEIGHT` and weak sub-universe behavior
+  - default broad search should therefore stop treating derivative pair-ratio branches as first-line candidates
 
 ## Current Template Direction
 Preprocessing:
@@ -38,6 +42,15 @@ Core default shapes:
 - market/sector group ranking
 - cap-ratio / bucket-cap-ratio representatives
 - one `mean_spread` branch plus one groupfill representative
+
+Dense derivative lane:
+- Prefer `cap-ratio` and `bucket-cap-ratio` as the default broad-search representatives.
+- Do not let derivative `pair ratio` families dominate broad search unless a later refine run produces clear near-pass evidence.
+
+Dynamic ratio policy:
+- `fscore_*` / `fscore_bfl_*` pair-ratio exploration stays available.
+- Dense derivative partner-ratio families are intentionally removed from the default broad-search policy.
+- `group_ratio_zscore_*` and `group_vol_scaled_delta` are no longer first-line `model16` defaults.
 
 Legacy handling:
 - Older weaker fallback templates live in `legacy.json`, not the main default library.

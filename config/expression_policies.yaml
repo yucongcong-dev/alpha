@@ -444,11 +444,6 @@ expression_policies:
       - ["fscore_bfl_surface", "fscore_surface"]
       - ["fscore_bfl_surface_accel", "fscore_surface_accel"]
       - ["fscore_bfl_total", "fscore_total"]
-      - ["multi_factor_acceleration_score_derivative", "multi_factor_static_score_derivative"]
-      - ["growth_potential_rank_derivative", "relative_valuation_rank_derivative"]
-      - ["analyst_revision_rank_derivative", "earnings_certainty_rank_derivative"]
-      - ["cashflow_efficiency_rank_derivative", "relative_valuation_rank_derivative"]
-      - ["composite_factor_score_derivative", "multi_factor_static_score_derivative"]
     ratio_partner_candidates:
       fscore_bfl_value: ["fscore_value", "fscore_bfl_total"]
       fscore_bfl_quality: ["fscore_quality", "fscore_bfl_total"]
@@ -466,14 +461,6 @@ expression_policies:
       fscore_surface: ["fscore_bfl_surface", "fscore_surface_accel"]
       fscore_surface_accel: ["fscore_bfl_surface_accel", "fscore_surface"]
       fscore_total: ["fscore_bfl_total", "fscore_quality"]
-      analyst_revision_rank_derivative: ["earnings_certainty_rank_derivative", "composite_factor_score_derivative"]
-      earnings_certainty_rank_derivative: ["analyst_revision_rank_derivative", "composite_factor_score_derivative"]
-      cashflow_efficiency_rank_derivative: ["relative_valuation_rank_derivative", "growth_potential_rank_derivative"]
-      relative_valuation_rank_derivative: ["growth_potential_rank_derivative", "cashflow_efficiency_rank_derivative"]
-      growth_potential_rank_derivative: ["relative_valuation_rank_derivative", "multi_factor_acceleration_score_derivative"]
-      multi_factor_acceleration_score_derivative: ["multi_factor_static_score_derivative", "growth_potential_rank_derivative"]
-      multi_factor_static_score_derivative: ["multi_factor_acceleration_score_derivative", "composite_factor_score_derivative"]
-      composite_factor_score_derivative: ["multi_factor_static_score_derivative", "analyst_revision_rank_derivative"]
     ratio_keywords:
       fscore_bfl_value: ["fscore_value", "fscore_total"]
       fscore_bfl_quality: ["fscore_quality", "fscore_total"]
@@ -483,14 +470,6 @@ expression_policies:
       fscore_bfl_surface: ["fscore_surface", "fscore_surface_accel"]
       fscore_bfl_surface_accel: ["fscore_surface", "fscore_total"]
       fscore_bfl_total: ["fscore_total", "fscore_quality", "fscore_value"]
-      analyst_revision_rank_derivative: ["earnings_certainty_rank_derivative", "revision", "certainty"]
-      earnings_certainty_rank_derivative: ["analyst_revision_rank_derivative", "revision", "certainty"]
-      cashflow_efficiency_rank_derivative: ["relative_valuation_rank_derivative", "growth_potential_rank_derivative", "valuation"]
-      relative_valuation_rank_derivative: ["growth_potential_rank_derivative", "cashflow_efficiency_rank_derivative", "growth"]
-      growth_potential_rank_derivative: ["relative_valuation_rank_derivative", "multi_factor_acceleration_score_derivative", "valuation"]
-      multi_factor_acceleration_score_derivative: ["multi_factor_static_score_derivative", "growth_potential_rank_derivative", "static"]
-      multi_factor_static_score_derivative: ["multi_factor_acceleration_score_derivative", "composite_factor_score_derivative", "acceleration"]
-      composite_factor_score_derivative: ["multi_factor_static_score_derivative", "analyst_revision_rank_derivative", "factor"]
     preferred_partner_score_bonuses:
       fscore_value: 80
       fscore_quality: 80
@@ -500,18 +479,11 @@ expression_policies:
       fscore_surface: 60
       fscore_surface_accel: 60
       fscore_total: 56
-      earnings_certainty_rank_derivative: 72
-      relative_valuation_rank_derivative: 68
-      multi_factor_static_score_derivative: 68
-      multi_factor_acceleration_score_derivative: 64
     ratio_delta_rank_windows:
       - [63, 188]
       - [126, 184]
-    ratio_delta_over_std_windows:
-      - [21, 63, 178]
-      - [63, 126, 174]
+    ratio_delta_over_std_windows: []
     ratio_diversified_template_specs:
-      - ["group_ratio_zscore_{ratio_label}", "group_rank(ts_zscore(ts_backfill({ratio_expr}, {backfill_window}), 63), subindustry)", 164]
       - ["ratio_mean_spread_over_std_{ratio_label}", "rank((ts_mean(ts_backfill({ratio_expr}, {backfill_window}), 63) - ts_mean(ts_backfill({ratio_expr}, {backfill_window}), {backfill_window})) / ts_std_dev(ts_backfill({ratio_expr}, {backfill_window}), 126))", 160]
       - ["ratio_zscore_spread_{ratio_label}", "rank(ts_zscore(ts_backfill({ratio_expr}, {backfill_window}), 63) - ts_zscore(ts_backfill({ratio_expr}, {backfill_window}), {backfill_window}))", 156]
     disabled_templates: []
@@ -521,6 +493,14 @@ expression_policies:
       - "model16_groupfill_ts_rank_120"
       - "model16_ratio_cap_zscore_120"
       - "model16_mean_spread_over_std_120_252"
+    concentrated_weak_families:
+      - "group_vol_scaled_delta"
+    low_sharpe_weak_ratio_families:
+      - "group_vol_scaled_delta"
+      - "group_ratio_level"
+    low_sharpe_weak_ratio_prefixes:
+      - "group_ratio_zscore_"
+    low_sharpe_ratio_fail_threshold: 2
     template_prefix_penalties:
       "delta_|group_delta_|rank_delta_|vol_scaled_delta_": "@heavy_penalty"
       "mean_reversion_|mean_diff_": "@mild_penalty"

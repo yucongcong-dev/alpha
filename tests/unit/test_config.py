@@ -196,8 +196,10 @@ def test_model16_policy_uses_long_backfill_with_winsorize() -> None:
         FieldTransformStage(kind="backfill", window=252, std=None),
         FieldTransformStage(kind="winsorize", window=0, std=4.0),
     )
-    assert "model16_bucket_cap_zscore_120" in policy.protected_templates
-    assert "model16_bucket_liquidity_ts_rank_120" in policy.protected_templates
+    assert "model16_bucket_cap_ratio_zscore_120" in policy.protected_templates
+    assert "model16_ratio_cap_zscore_120" in policy.protected_templates
+    assert ("analyst_revision_rank_derivative", "earnings_certainty_rank_derivative") not in policy.high_conviction_ratio_pairs
+    assert not policy.ratio_delta_over_std_windows
 
 
 def test_model51_policy_uses_risk_metric_winsorize_and_bucket_templates() -> None:
@@ -208,9 +210,9 @@ def test_model51_policy_uses_risk_metric_winsorize_and_bucket_templates() -> Non
         FieldTransformStage(kind="backfill", window=504, std=None),
         FieldTransformStage(kind="winsorize", window=0, std=4.0),
     )
-    assert "model51_bucket_cap_zscore_120" in policy.protected_templates
-    assert "model51_bucket_volatility_rank_120" in policy.protected_templates
-    assert "model51_group_zscore_market_120" in policy.protected_templates
+    assert "model51_bucket_cap_ratio_zscore_60" in policy.protected_templates
+    assert "model51_ratio_cap_zscore_60" in policy.protected_templates
+    assert "model51_group_zscore_subindustry_84" in policy.protected_templates
 
 
 def test_get_yaml_config_reloads_when_file_changes(tmp_path) -> None:
