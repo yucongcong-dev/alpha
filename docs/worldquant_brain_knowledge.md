@@ -378,3 +378,130 @@
 - 在本地结果里先看 `Sharpe / Fitness / Turnover / Drawdown` 的组合，不要只看 `Returns`。
 - 当 `Fitness < 1` 时，优先按公式拆原因，而不是盲目新增更多模板。
 - 当 `SELF_CORRELATION` 或 `PROD_CORRELATION` 成为主失败原因时，应该换想法或换结构，而不是只调窗口。
+
+### 9.9 官方术语表里最值得记住的定义
+
+> 来源：`Click here for a list of terms and their definitions`
+
+- `Alpha`：平台把 Alpha 明确定义为“预测未来价格变动的数学模型”，不是单个字段、也不是单个算子。
+- `Alpha list`：官方把它定位成“比较自己 Alpha 之间相关性和 PnL 曲线”的工具。这意味着它更像研究管理工具，而不是结果仓库。
+- `ATOM`：官方定义为“单数据集、放宽提交流程检查”的 Alpha 类型。它提醒我们：不同研究阶段的质量门槛可能不同，不能把所有结果都拿正式提交标准来一刀切。
+- `Booksize`：平台默认固定 `$20 million`，且模拟利润不会自动复投、亏损会被现金补齐。这解释了为什么平台里的 `Returns / Drawdown / Margin` 口径与很多自建回测框架不同。
+- `Capacity`：官方定义是“再多配一美元后，边际盈利能力降到目标线以下之前，Alpha 能承载的资金量”。这和高换手/集中权重问题是连着看的。
+- `Correlation`：术语表直接把它定义为衡量 Alpha “uniqueness”的指标。换句话说，相关性检查不是附属项，而是平台评估研究价值的核心维度之一。
+
+### 9.10 官方提交流程口径
+
+> 来源：`Simulate your first Alpha` + 支持中心文章
+
+平台语义上至少要分清三步：
+
+1. `Simulate`
+   只是对表达式做历史仿真，重点看 `Sharpe / Fitness / Turnover / Drawdown / Returns`。
+2. `Check submission / OS checks`
+   正式提交前会做性能阈值和相关性阈值检查，不是单纯看 IS 指标。
+3. `Submit`
+   不是“保存一下结果”，而是把 Alpha 送进正式提交路径。
+
+对本仓库最直接的启发：
+
+- 本地流程里应继续把“仿真通过”和“可提交”视为两个不同阶段。
+- 当结果长期卡在 `SELF_CORRELATION` / `PROD_CORRELATION` 时，应该在模板层做结构换代，而不是只在同族表达式上加密搜索。
+- 当结果长期卡在 `LOW_FITNESS` 时，优先按公式分解，不要把“继续多跑一些模板”当默认答案。
+
+### 9.11 这轮官网学习对当前仓库策略的直接影响
+
+结合当前官方资料，再回看本仓库的搜索逻辑，有几条经验值得固化：
+
+- 默认模板库应该尽量代表“不同假设”，而不是同一假设的很多近邻窗口。
+- `rank()`、`group operators`、`neutralization`、`trade_when`、`decay` 仍然是最该优先组织成模板家族的基础构件。
+- 当某个模板族已经在多个字段上稳定出现 `LOW_SHARPE + LOW_FITNESS`，应更积极降权或移出默认 broad-search 队列。
+- 对 `returns` 的追求不能脱离 `fitness` 公式，因为官方自己就明确承认：提高 returns 往往会带来更高 turnover 或更高波动。
+
+### 9.12 本次资料来源说明
+
+- 本次整理基于我通过本地 Chrome 会话访问的 WorldQuant BRAIN 官方站点与支持中心页面。
+- 平台文档页是前端渲染页面，支持中心页是可直接阅读的知识库页面；两者口径基本一致，但支持中心在“指标优化建议”和“术语定义”上更直接。
+- 文档更新时间以本次访问日 `2026-07-07` 为准；后续如果平台修改阈值、文案或支持文章，应重新复核本节内容。
+
+### 9.13 官方对“降低相关性”的建议比我之前总结得更具体
+
+> 来源：`How do you reduce correlation of a good Alpha?`
+
+官方给的方向，不是“把窗口从 20 改成 22”这种微调，而是明确鼓励做结构替换：
+
+- 换等价但不同的数据字段，例如把 `close` 的想法改写到 `open / high / low` 或同类替代字段上。
+- 换相近但不相同的算子，例如 `median` 替代 `mean`，`zscore` 替代 `rank` 等。
+- 换不同的 `grouping` 和 `neutralization` 方式。
+- 最后才是“think outside of the box”，也就是直接换研究假设。
+
+对当前仓库最重要的启发：
+
+- 降相关不应该主要靠同一模板族里的窗口微抖动。
+- 默认模板库应该优先扩充“结构替代路径”，例如 `rank -> zscore`、`mean -> median`、`raw -> grouped/neutralized`，而不是继续堆更多近邻参数。
+- 当 `SELF_CORRELATION / PROD_CORRELATION` 成为主失败原因时，应该优先触发“换字段、换算子、换中性化”的分支，而不是只提高搜索数量。
+
+### 9.14 官方对 PnL 平滑和 Margin 的建议
+
+> 来源：`How to smooth the PnL curve to minimize sudden fluctuations?`、`How to improve margins in simulation results?`
+
+官方把 PnL 突然跳变的常见原因拆得很实用：
+
+- 信号频繁在 `NaN` 和非 `NaN` 之间切换，这时可以考虑 `backfill`。
+- 信号值偶尔剧烈变化，这时可以考虑 `decay` 或做平均化处理。
+- 单只股票权重过高，个股跳变会直接把组合 PnL 拉出尖刺，这时可以通过更严格的 `truncation` 控制集中度，官方建议优先考虑小于 `0.1`。
+
+Margin 这块，官方口径更直接：
+
+- `Margin = PnL / Total dollars traded`
+- 提升 Margin 的本质仍然是两件事：提高收益，或者控制 turnover。
+
+这意味着：
+
+- PnL 平滑和 Weight/Turnover 控制是连在一起的，不是两个孤立优化目标。
+- 对本仓库而言，`decay`、`ts_backfill`、`trade_when`、`truncation` 应该被视为一组“稳健化开关”，而不是只拿来调某一个指标。
+
+### 9.15 官方对 Weight Coverage 的解释比“补 NaN”更完整
+
+> 来源：`Weight Coverage common issues and advice`
+
+这篇文章里最值得记住的不是某个具体算子，而是它对失败原因的分类：
+
+- Weight test 本质是在限制单只股票的资本集中度；BRAIN 的限制是单名股票不超过 `10%` book size。
+- 很多失败来自 `coverage` 太低，或者多空两边股票数严重失衡。
+- 官方明确给了几个处理方向：
+  - 用 `group_count(is_nan(a), market)` 之类方法先检测异常覆盖率下降。
+  - 对短期缺失尝试小窗口 `ts_backfill(a, 2)`。
+  - 对低频基本面数据可考虑更长窗口，例如 `ts_backfill(a, 60)`。
+  - 也可以用 `is_nan()`、`last_diff_value()`、`days_from_last_change()` 自己构造更细的补值逻辑。
+- 另一类失败并不是 coverage，而是数据分布有极端值、异常值，导致权重过于集中；这时官方建议优先考虑 `rank`、`group_rank`、`log`、`scale`、`zscore` 这类分布整形手段。
+
+官方也专门提醒了一点：
+
+- 不要滥用超长 backfill，因为它可能伤害表现。
+
+这对当前仓库的意义非常直接：
+
+- `coverage` 不能再只被当成“结果出来后再看一眼”的指标。
+- 模板生成阶段就应该更鼓励“先标准化、再建模”，尤其是原始值分布很散、极值很多的字段。
+- 针对低频字段，应该优先使用和字段更新频率一致的 backfill/平滑模板，而不是把所有字段都丢进同一套短窗模板里。
+
+### 9.16 官方对 Sub-universe Sharpe 报错的核心解释
+
+> 来源：`How do I resolve this error: "Sub-universe Sharpe NaN is not above cutoff..."?`
+
+这篇文章补足了一个之前文档里没有说透的点：
+
+- `Sub-universe test` 是提交前的鲁棒性测试，目的不是看你在目标 universe 上好不好，而是看它在“下一层更液态、更小的 universe”里是否仍有一定可用性。
+- 例如你在 `USA TOP3000` 提交，平台会额外看它在 `USA TOP1000` 上的表现。
+- 如果在更液态子宇宙里表现明显恶化，官方解释是：你的利润很可能主要来自非液态尾部股票，这通常不够稳健。
+
+官方给出的改进思路里，有两条特别值得纳入我们的方法论：
+
+- 避免直接使用会明显把权重推向大小盘某一侧的乘子，例如 `rank(-assets)`、`1-rank(cap)` 这类 size-related multiplier。
+- 可以把信号按“更液态 / 更不液态”两部分分别衰减，再合成结果，而不是对整条信号统一处理。
+
+这意味着本仓库后续在模板与评分上应更注意：
+
+- 对明显依赖 `cap`、`assets`、`volume*close` 这类流动性代理的表达式，应该更谨慎地进入默认 broad-search。
+- 当一个表达式在主宇宙结果尚可、但 sub-universe 经常失败时，优先怀疑“流动性偏置”或“尾部股票贡献过高”，而不是只怀疑 Sharpe 本身不够高。
