@@ -4,54 +4,18 @@
   "_dataset_id": "model16",
   "default": [
     {
-      "name": "model16_zscore_decay_120",
-      "expression": "ts_decay_linear(ts_zscore({field_preprocessed}, 120), 20)",
-      "priority": 1000,
-      "family": "zscore_decay",
-      "layer": "time_series",
-      "field_tags": ["model16_dense_derivative"],
-      "dataset_tags": ["model16", "fundamental_scores"]
-    },
-    {
-      "name": "model16_rank_ts_rank_120",
-      "expression": "rank(ts_rank({field_preprocessed}, 120))",
-      "priority": 999,
-      "family": "ts_rank",
-      "layer": "time_series",
-      "field_tags": ["model16_dense_derivative"],
-      "dataset_tags": ["model16", "fundamental_scores"]
-    },
-    {
-      "name": "model16_group_ts_rank_market_120",
-      "expression": "group_rank(ts_rank({field_preprocessed}, 120), market)",
-      "priority": 998,
-      "family": "group_ts_rank",
-      "layer": "group",
-      "field_tags": ["model16_dense_derivative"],
-      "dataset_tags": ["model16", "fundamental_scores"]
-    },
-    {
       "name": "model16_group_zscore_sector_120",
       "expression": "group_rank(ts_zscore({field_groupfill}, 120), sector)",
-      "priority": 997,
+      "priority": 1000,
       "family": "group_zscore",
       "layer": "group",
       "field_tags": ["model16_sparse_fscore", "model16_sparse_bfl"],
       "dataset_tags": ["model16", "fundamental_scores"]
     },
     {
-      "name": "model16_ratio_cap_zscore_120",
-      "expression": "rank(ts_zscore({field_preprocessed} / ts_backfill(cap, 120), 120))",
-      "priority": 996,
-      "family": "ratio_cap",
-      "layer": "composite",
-      "field_tags": ["model16_dense_derivative"],
-      "dataset_tags": ["model16", "fundamental_scores"]
-    },
-    {
       "name": "model16_bucket_cap_ratio_zscore_120",
       "expression": "group_rank(ts_zscore({field_preprocessed} / ts_backfill(cap, 120), 120), densify(bucket(rank(cap), range='0.1, 1, 0.1')))",
-      "priority": 995,
+      "priority": 999,
       "family": "bucket_ratio",
       "layer": "group",
       "field_tags": ["model16_dense_derivative"],
@@ -60,16 +24,25 @@
     {
       "name": "model16_groupfill_ts_rank_120",
       "expression": "rank(ts_rank({field_groupfill}, 120))",
-      "priority": 983,
+      "priority": 998,
       "family": "groupfill",
       "layer": "time_series",
       "field_tags": ["model16_sparse_fscore", "model16_sparse_bfl"],
       "dataset_tags": ["model16", "fundamental_scores"]
     },
     {
+      "name": "model16_ratio_cap_zscore_120",
+      "expression": "rank(ts_zscore({field_preprocessed} / ts_backfill(cap, 120), 120))",
+      "priority": 980,
+      "family": "ratio_cap",
+      "layer": "composite",
+      "field_tags": ["model16_dense_derivative"],
+      "dataset_tags": ["model16", "fundamental_scores"]
+    },
+    {
       "name": "model16_mean_spread_over_std_120_252",
       "expression": "rank((ts_mean({field_groupfill}, 120) - ts_mean({field_groupfill}, 252)) / ts_std_dev({field_groupfill}, 252))",
-      "priority": 982,
+      "priority": 970,
       "family": "mean_spread",
       "layer": "time_series",
       "field_tags": ["model16_sparse_fscore", "model16_sparse_bfl"],

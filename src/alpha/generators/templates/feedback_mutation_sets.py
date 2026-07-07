@@ -284,12 +284,12 @@ def build_group_quality_repair_mutations(
     field_name: str,
     backfill_window: int,
 ) -> list[TemplateCandidate]:
-    """Build group zscore mutations for sub-universe/concentration failures."""
+    """Build conservative group zscore mutations for sub-universe failures."""
     bw = backfill_window
     return [
         _make_template_candidate(
-            "iter_group_zscore_20",
-            f"group_rank(ts_zscore(ts_backfill({field_name}, {bw}), 20), subindustry)",
+            "iter_group_zscore_spread_5_20",
+            f"group_rank(ts_zscore(ts_backfill({field_name}, {bw}), 5) - ts_zscore(ts_backfill({field_name}, {bw}), 20), subindustry)",
             185,
             metadata=_candidate_metadata(
                 family="group_zscore",
@@ -297,15 +297,4 @@ def build_group_quality_repair_mutations(
                 stage=TEMPLATE_STAGE_GROUP_SECOND_ORDER,
             ),
         ),
-        _make_template_candidate(
-            "iter_group_zscore_spread_5_20",
-            f"group_rank(ts_zscore(ts_backfill({field_name}, {bw}), 5) - ts_zscore(ts_backfill({field_name}, {bw}), 20), subindustry)",
-            183,
-            metadata=_candidate_metadata(
-                family="group_zscore",
-                layer="group",
-                stage=TEMPLATE_STAGE_GROUP_SECOND_ORDER,
-            ),
-        ),
     ]
-

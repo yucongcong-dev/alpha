@@ -420,13 +420,10 @@ expression_policies:
           - "first_order"
     disabled_templates: []
     protected_templates:
-      - "model16_zscore_decay_120"
-      - "model16_rank_ts_rank_120"
-      - "model16_group_ts_rank_market_120"
       - "model16_group_zscore_sector_120"
-      - "model16_ratio_cap_zscore_120"
       - "model16_bucket_cap_ratio_zscore_120"
       - "model16_groupfill_ts_rank_120"
+      - "model16_ratio_cap_zscore_120"
       - "model16_mean_spread_over_std_120_252"
     template_prefix_penalties:
       "delta_|group_delta_|rank_delta_|vol_scaled_delta_": "@heavy_penalty"
