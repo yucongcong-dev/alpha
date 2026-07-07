@@ -28,6 +28,41 @@ logger = logging.getLogger(__name__)
 STATE_VERSION = 1
 
 
+def _serialize_pending_template_keys(
+    execution_state: ExecutionState,
+) -> list[dict[str, str]]:
+    """Serialize inflight template identities so resume can suppress duplicate scheduling."""
+    payload: list[dict[str, str]] = []
+    for meta in execution_state.pending_futures.values():
+        payload.append(
+            {
+                "field_id": str(getattr(meta, "field_id", "") or ""),
+                "template_name": str(getattr(meta, "template_name", "") or ""),
+                "expression": str(getattr(meta, "expression", "") or ""),
+                "settings_fingerprint": str(getattr(meta, "settings_fingerprint", "") or ""),
+            }
+        )
+    return payload
+
+
+def _restore_pending_template_keys(payload: object) -> set[tuple[str, str, str, str]]:
+    """Restore inflight template identities from persisted state."""
+    restored: set[tuple[str, str, str, str]] = set()
+    if not isinstance(payload, list):
+        return restored
+    for item in payload:
+        if not isinstance(item, dict):
+            continue
+        field_id = str(item.get("field_id", "") or "")
+        template_name = str(item.get("template_name", "") or "")
+        expression = str(item.get("expression", "") or "")
+        settings_fingerprint = str(item.get("settings_fingerprint", "") or "")
+        if not field_id or not template_name or not expression or not settings_fingerprint:
+            continue
+        restored.add((field_id, template_name, expression, settings_fingerprint))
+    return restored
+
+
 # ============================================================================
 # 状态保存
 # ============================================================================
@@ -71,6 +106,7 @@ def save_pipeline_state(
         "last_field_id": field_id,
         "field_queue_busy_counts": dict(execution_state.field_queue_busy_counts),
         "skipped_fields_due_to_queue": sorted(execution_state.skipped_fields_due_to_queue),
+        "pending_template_keys": _serialize_pending_template_keys(execution_state),
         "runtime_max_workers": runtime_state.runtime_max_workers,
         "remaining_cooldown_seconds": round(remaining_cooldown, 3),
         "template_stats": dict(execution_state.template_stats),
@@ -143,6 +179,10 @@ def load_pipeline_state(
     if isinstance(skipped, list):
         execution_state.skipped_fields_due_to_queue = set(skipped)
 
+    restored_pending_keys = _restore_pending_template_keys(payload.get("pending_template_keys"))
+    if restored_pending_keys:
+        execution_state.attempted_keys.update(restored_pending_keys)
+
     # 恢复模板统计
     template_stats = payload.get("template_stats", {})
     if isinstance(template_stats, dict):
@@ -163,11 +203,12 @@ def load_pipeline_state(
 
     logger.info(
         "[checkpoint] resumed from state_file=%s completed=%d "
-        "results=%d attempted=%d skipped_fields=%d cooldown=%.1fs",
+        "results=%d attempted=%d restored_pending=%d skipped_fields=%d cooldown=%.1fs",
         state_file,
         completed_index,
         payload.get("result_count", 0),
         payload.get("attempted_keys_count", 0),
+        len(restored_pending_keys),
         len(execution_state.skipped_fields_due_to_queue),
         remaining,
     )
@@ -215,6 +256,7 @@ def save_checkpoint(
             "field_id": str(meta.field_id),
             "template_name": str(meta.template_name),
             "expression": str(meta.expression),
+            "settings_fingerprint": str(meta.settings_fingerprint),
         }
         for meta in list(execution_state.pending_futures.values())[-CHECKPOINT_PENDING_FUTURES_LIMIT:]
     ]
@@ -228,6 +270,7 @@ def save_checkpoint(
         "attempted_keys_count": len(execution_state.attempted_keys),
         "pending_count": len(execution_state.pending_futures),
         "pending_summary": pending_summary,
+        "pending_template_keys": _serialize_pending_template_keys(execution_state),
         "field_queue_busy_counts": dict(execution_state.field_queue_busy_counts),
         "skipped_fields_due_to_queue": sorted(execution_state.skipped_fields_due_to_queue),
         "template_stats": dict(execution_state.template_stats),
