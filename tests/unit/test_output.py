@@ -378,7 +378,7 @@ def test_auto_update_blacklist_incremental_blacklists_only_changed_template(tmp_
     payload = json.loads((tmp_path / "blacklists" / "custom_ds" / "blacklist.json").read_text(encoding="utf-8"))
     assert added_after_first is False
     assert added_after_second is True
-    assert [entry["name"] for entry in payload["blacklisted_templates"]] == ["weak_template"]
+    assert [entry["name"] for entry in payload["learned_templates"]] == ["weak_template"]
 
 
 def test_resolve_cli_path_uses_cwd_for_relative_paths(monkeypatch, tmp_path) -> None:
@@ -401,7 +401,7 @@ def test_build_dataset_scoped_paths_includes_runtime_context_in_cache_path() -> 
     )
 
     template_path = Path(paths["template_library_file"])
-    assert template_path.parts[-4:] == ("data", "templates", "fundamental6", "library.json")
+    assert template_path.parts[-3:] == ("templates", "fundamental6", "library.json")
     cache_path = Path(paths["fields_cache_file"])
     assert cache_path.parent.parts[-4:] == ("cache", "fields", "fundamental6", "usa_top3000_equity_d1")
     assert cache_path.name == "fields.json"

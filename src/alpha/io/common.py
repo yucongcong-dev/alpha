@@ -24,6 +24,8 @@ PROJECT_ROOT = SCRIPT_DIR.parent.parent.parent
 CACHE_DIR = PROJECT_ROOT / "cache"
 RESULTS_DIR = PROJECT_ROOT / "results"
 DATA_DIR = PROJECT_ROOT / "data"
+TEMPLATES_DIR = PROJECT_ROOT / "templates"
+BLACKLISTS_DIR = PROJECT_ROOT / "blacklists"
 
 
 def atomic_write_json(path: str, payload: Any) -> None:
@@ -66,3 +68,37 @@ def resolve_runtime_data_dir(data_dir: str = "") -> Path:
     if cwd_data_dir.exists():
         return cwd_data_dir
     return DATA_DIR
+
+
+def resolve_templates_dir(templates_dir: str = "") -> Path:
+    """
+    解析模板库根目录。
+
+    优先级：
+    1. 显式传入的 templates_dir
+    2. 当前工作目录下存在的 templates/
+    3. 项目根目录下的 templates/
+    """
+    if templates_dir:
+        return Path(templates_dir)
+    cwd_templates_dir = Path.cwd() / "templates"
+    if cwd_templates_dir.exists():
+        return cwd_templates_dir
+    return TEMPLATES_DIR
+
+
+def resolve_blacklists_dir(blacklists_dir: str = "") -> Path:
+    """
+    解析黑名单根目录。
+
+    优先级：
+    1. 显式传入的 blacklists_dir
+    2. 当前工作目录下存在的 blacklists/
+    3. 项目根目录下的 blacklists/
+    """
+    if blacklists_dir:
+        return Path(blacklists_dir)
+    cwd_blacklists_dir = Path.cwd() / "blacklists"
+    if cwd_blacklists_dir.exists():
+        return cwd_blacklists_dir
+    return BLACKLISTS_DIR

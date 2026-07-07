@@ -12,12 +12,17 @@ import os
 import re
 from typing import Any
 
-from ..io.common import resolve_runtime_data_dir, sanitize_dataset_id_for_filename
+from ..io.common import (
+    resolve_blacklists_dir,
+    sanitize_dataset_id_for_filename,
+)
 from .types import (
     BlacklistCacheEntry,
     BlacklistMatcherEntry,
     BlacklistPatternRule,
     DefaultAvoidRulesCache,
+    LEARNED_BLACKLIST_KEY,
+    PATTERN_RULES_KEY,
 )
 
 _BLACKLIST_CACHE: dict[str, BlacklistCacheEntry] = {}
@@ -59,24 +64,22 @@ def load_default_avoid_rules() -> list[BlacklistPatternRule]:
 def _load_default_avoid_rules() -> list[BlacklistPatternRule]:
     """加载跨数据集默认规避规则 template_blacklist.json。"""
     global _DEFAULT_AVOID_RULES_CACHE
-    runtime_data_dir = resolve_runtime_data_dir()
-    candidates = [os.path.join(str(runtime_data_dir), "template_blacklist.json")]
-    for path in candidates:
-        if os.path.isfile(path):
-            signature = _file_signature(path)
-            if (
-                isinstance(_DEFAULT_AVOID_RULES_CACHE, dict)
-                and _DEFAULT_AVOID_RULES_CACHE.get("path") == path
-                and _DEFAULT_AVOID_RULES_CACHE.get("signature") == signature
-            ):
-                cached_rules = _DEFAULT_AVOID_RULES_CACHE.get("rules")
-                if isinstance(cached_rules, list):
-                    return cached_rules
-            try:
-                with open(path, encoding="utf-8") as fh:
-                    raw = json.load(fh)
-                if not isinstance(raw, dict):
-                    continue
+    blacklist_root = resolve_blacklists_dir()
+    path = os.path.join(str(blacklist_root), "template_blacklist.json")
+    if os.path.isfile(path):
+        signature = _file_signature(path)
+        if (
+            isinstance(_DEFAULT_AVOID_RULES_CACHE, dict)
+            and _DEFAULT_AVOID_RULES_CACHE.get("path") == path
+            and _DEFAULT_AVOID_RULES_CACHE.get("signature") == signature
+        ):
+            cached_rules = _DEFAULT_AVOID_RULES_CACHE.get("rules")
+            if isinstance(cached_rules, list):
+                return cached_rules
+        try:
+            with open(path, encoding="utf-8") as fh:
+                raw = json.load(fh)
+            if isinstance(raw, dict):
                 rules = raw.get("_default_auto_avoid_rules", [])
                 if not isinstance(rules, list):
                     rules = []
@@ -86,8 +89,8 @@ def _load_default_avoid_rules() -> list[BlacklistPatternRule]:
                     "rules": rules,
                 }
                 return rules
-            except (json.JSONDecodeError, OSError):
-                continue
+        except (json.JSONDecodeError, OSError):
+            pass
     _DEFAULT_AVOID_RULES_CACHE = {"path": None, "signature": None, "rules": []}
     return []
 
@@ -126,23 +129,13 @@ def _load_blacklist(dataset_id: str) -> None:
     entries: list[BlacklistMatcherEntry] = []
     dataset_signature: tuple[int, int] | None = None
 
-    runtime_data_dir = resolve_runtime_data_dir()
+    blacklist_root = resolve_blacklists_dir()
     dataset_key = sanitize_dataset_id_for_filename(dataset_id)
-    legacy_filename = f"template_blacklist_{dataset_id}.json"
-    candidates = list(
-        dict.fromkeys(
-            [
-                os.path.join(str(runtime_data_dir), "blacklists", dataset_key, "blacklist.json"),
-                os.path.join(str(runtime_data_dir), legacy_filename),
-            ]
-        )
-    )
-    blacklist_path = ""
-    for path in candidates:
-        if os.path.isfile(path):
-            blacklist_path = path
-            dataset_signature = _file_signature(path)
-            break
+    blacklist_path = os.path.join(str(blacklist_root), dataset_key, "blacklist.json")
+    if os.path.isfile(blacklist_path):
+        dataset_signature = _file_signature(blacklist_path)
+    else:
+        blacklist_path = ""
     default_rules = _load_default_avoid_rules()
     default_cache_signature = None
     if isinstance(_DEFAULT_AVOID_RULES_CACHE, dict):
@@ -160,7 +153,7 @@ def _load_blacklist(dataset_id: str) -> None:
             with open(blacklist_path, encoding="utf-8") as fh:
                 ds_raw = json.load(fh)
             if isinstance(ds_raw, dict):
-                for item in ds_raw.get("blacklisted_templates", []):
+                for item in ds_raw.get(LEARNED_BLACKLIST_KEY, []):
                     if isinstance(item, dict) and item.get("name"):
                         names.add(item["name"])
                         entries.append(
@@ -170,7 +163,7 @@ def _load_blacklist(dataset_id: str) -> None:
                                 "template_family": str(item.get("template_family", "")).strip().lower(),
                             }
                         )
-                for rule in ds_raw.get("auto_avoid_rules", []):
+                for rule in ds_raw.get(PATTERN_RULES_KEY, []):
                     if isinstance(rule, dict):
                         normalized_rule = _normalize_pattern_rule(rule)
                         if normalized_rule is not None:

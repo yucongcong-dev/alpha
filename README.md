@@ -168,13 +168,12 @@ alpha/                     # 项目根目录
 │   ├── quality_feedback.yaml # 质量阈值、反馈、统计、checkpoint 默认值
 │   ├── templates.yaml     # 模板优先级、ratio/partner 生成参数
 │   └── runtime.yaml       # 路径、状态字符串、哨兵值等运行约定
-├── data/                  # 模板库与黑名单
-│   ├── templates/
-│   │   ├── base/          # 基础共享模板库与说明
-│   │   ├── fundamental6/  # fundamental6 专属模板库与说明
-│   │   ├── model16/       # model16 专属模板库与说明
-│   │   └── model51/       # model51 专属模板库与说明
-│   └── blacklists/        # dataset 统一 blacklist（脚本自动追加，也可人工补充）
+├── templates/             # 模板库与 README
+│   ├── base/              # 基础共享模板库与说明
+│   ├── fundamental6/      # fundamental6 专属模板库与说明
+│   ├── model16/           # model16 专属模板库与说明
+│   └── model51/           # model51 专属模板库与说明
+├── blacklists/            # dataset 统一 blacklist（脚本自动追加，也可人工补充）
 └── .gitignore
 ```
 
@@ -183,9 +182,9 @@ alpha/                     # 项目根目录
 哪些文件进仓：
 
 - `config/*.yaml`：统一配置入口，按职责维护默认运行参数、数据集 profile、表达式策略、API、simulation、质量阈值、模板参数和运行约定。
-- `data/templates/base/` 与 `data/templates/<dataset_id>/`：基础模板、数据集专属模板、聚焦字段/模板白名单，以及经过验证值得复用的本地 refine 模板。
-- `data/templates/<dataset_id>/refine/fields/*.json`：少量、可复用、人工裁剪的字段 fixture；它们服务于稳定复现实验，不应再混入 `cache/`。
-- `data/blacklists/<dataset_id>/blacklist.json`：统一黑名单。脚本会自动追加，也允许人工维护；空黑名单也可以进仓，用于固定数据集目录边界。
+- `templates/base/` 与 `templates/<dataset_id>/`：基础模板、数据集专属模板、聚焦字段/模板白名单，以及经过验证值得复用的本地 refine 模板。
+- `templates/<dataset_id>/refine/fields/*.json`：少量、可复用、人工裁剪的字段 fixture；它们服务于稳定复现实验，不应再混入 `cache/`。
+- `blacklists/<dataset_id>/blacklist.json`：统一黑名单。脚本会自动追加，也允许人工维护；空黑名单也可以进仓，用于固定数据集目录边界。
 
 哪些文件不进仓：
 
@@ -195,7 +194,7 @@ alpha/                     # 项目根目录
 - `scratch/`：外部脚本、对照材料、手工实验草稿。
 - `.credentials/`：本地加密凭证和密钥。
 
-根目录只保留项目入口和说明文件。配置统一放 `config/`；临时文件不要放根目录。如果只是一次性实验，放 `tmp/`；如果已经验证值得长期复用，再整理命名后放入 `data/templates/<dataset_id>/`。
+根目录只保留项目入口和说明文件。配置统一放 `config/`；临时文件不要放根目录。如果只是一次性实验，放 `tmp/`；如果已经验证值得长期复用，再整理命名后放入 `templates/<dataset_id>/`。
 
 ## 结果目录约定
 
@@ -206,18 +205,18 @@ alpha/                     # 项目根目录
 - `results/<dataset_id>/compare/`：同一字段或同一家族的对照实验
 - `results/<dataset_id>/scratch/`：短期排障、filter probe、临时验证
 
-如果暂时没迁移旧文件，至少在新命名中保持阶段前缀一致；一旦某轮结果成为长期参考，再把对应模板/字段知识沉淀回 `data/templates/<dataset_id>/`，而不是继续让 `results/` 承担知识库角色。
+如果暂时没迁移旧文件，至少在新命名中保持阶段前缀一致；一旦某轮结果成为长期参考，再把对应模板/字段知识沉淀回 `templates/<dataset_id>/`，而不是继续让 `results/` 承担知识库角色。
 
 ## 模板目录
 
-当前模板目录统一放在 `data/templates/`：
+当前模板目录统一放在 `templates/`：
 
-- 基础共享模板库：`data/templates/base/library.json`
-- 基础模板说明：`data/templates/base/README.md`
-- 数据集专属模板库：`data/templates/<dataset_id>/library.json`
-- 数据集专属模板说明：`data/templates/<dataset_id>/README.md`
-- 数据集聚焦白名单：可选放在 `data/templates/<dataset_id>/*.txt`
-- 数据集 refine 模板库：可选放在 `data/templates/<dataset_id>/*refine*.json`
+- 基础共享模板库：`templates/base/library.json`
+- 基础模板说明：`templates/base/README.md`
+- 数据集专属模板库：`templates/<dataset_id>/library.json`
+- 数据集专属模板说明：`templates/<dataset_id>/README.md`
+- 数据集聚焦白名单：可选放在 `templates/<dataset_id>/*.txt`
+- 数据集 refine 模板库：可选放在 `templates/<dataset_id>/*refine*.json`
 
 其中 `base` 只负责提供共享 fallback 模板，真正的搜索方向应尽量在数据集专属目录里定制和收敛。
 
@@ -234,7 +233,7 @@ alpha/                     # 项目根目录
 
 ## 黑名单目录
 
-- 统一黑名单：`data/blacklists/<dataset_id>/blacklist.json`。
+- 统一黑名单：`blacklists/<dataset_id>/blacklist.json`。
 - 当运行结果持续不佳时，脚本会直接把低质量模板追加到该文件，下次运行自动跳过。
 - 你也可以手工编辑同一个文件，用于补充明确不想再跑的模板或表达式规则。
 
@@ -323,7 +322,7 @@ python3.10 -m alpha
 **表达式策略配置**：
 - 数据集级表达式搜索策略可在 `config/expression_policies.yaml` 或 `config/settings.yaml` 的 `expression_policies.<dataset_id>` 下覆盖
 - 适合放这里的参数包括：`partner_limit`、字段质量阈值、反馈阶段设置、少量运行期策略开关
-- 模板本身优先放在 `data/templates/base/` 或 `data/templates/<dataset_id>/` 下维护，而不是继续把模板内容塞回 Python 常量
+- 模板本身优先放在 `templates/base/` 或 `templates/<dataset_id>/` 下维护，而不是继续把模板内容塞回 Python 常量
 
 **输出**：`*_analysis.json` 中的关键字段：
 - `near_pass_summary`：接近通过的候选（按 score 排序）
@@ -383,15 +382,15 @@ python3.10 -m alpha --top-fields-by-feedback 10 --max-templates-per-field 15
 `model51`:
 - 当前更适合做“小字段集 + 小模板集”的聚焦 refine。
 - 项目内已提供可复用白名单：
-  - `data/templates/model51/focused_fields.txt`
-  - `data/templates/model51/focused_templates.txt`
+  - `templates/model51/focused_fields.txt`
+  - `templates/model51/focused_templates.txt`
 
 示例：
 
 ```bash
 python3.10 -m alpha --dataset-id model51 --dry-run-plan \
-  --include-fields-file data/templates/model51/focused_fields.txt \
-  --include-templates-file data/templates/model51/focused_templates.txt \
+  --include-fields-file templates/model51/focused_fields.txt \
+  --include-templates-file templates/model51/focused_templates.txt \
   --limit 4 --max-templates-per-field 4 --max-templates-per-family 1 \
   --output results/model51/focused_validation.json \
   --feedback-output results/model51/focused_validation.json \
@@ -400,8 +399,8 @@ python3.10 -m alpha --dataset-id model51 --dry-run-plan \
 
 ```bash
 python3.10 -m alpha --dataset-id model51 \
-  --include-fields-file data/templates/model51/focused_fields.txt \
-  --include-templates-file data/templates/model51/focused_templates.txt \
+  --include-fields-file templates/model51/focused_fields.txt \
+  --include-templates-file templates/model51/focused_templates.txt \
   --limit 4 --max-templates-per-field 4 --max-templates-per-family 1 \
   --max-concurrent-simulations 2 --max-concurrent-creates 1 \
   --output results/model51/focused_validation.json \
@@ -465,12 +464,12 @@ python3.10 -m alpha
 
 所有相对路径参数（如 `--output`、`--fields-cache-file`、`--include-fields-file`）都相对于当前命令执行目录解析。
 
-运行时 `data/` 目录也遵循类似优先级：
-- 显式传入的 `data_dir`
-- 当前命令执行目录下的 `data/`
-- 项目内置 `data/`
+运行时资源目录按类型分别解析：
+- 模板目录：显式传入的路径 > 当前命令目录下的 `templates/` > 项目内置 `templates/`
+- 黑名单目录：显式传入的路径 > 当前命令目录下的 `blacklists/` > 项目内置 `blacklists/`
+- 其余普通数据目录仍是：显式传入的 `data_dir` > 当前命令目录下的 `data/` > 项目内置 `data/`
 
-这意味着你可以在临时工作目录放一份独立的 `data/templates/` 或 `data/blacklists/`，而不用改动仓库内置数据。
+这意味着你可以在临时工作目录放一份独立的 `templates/` 或 `blacklists/`，而不用改动仓库内置数据。
 
 清理本地运行产物（默认保留 `.credentials/`）：
 
@@ -512,9 +511,9 @@ python3.10 -m alpha --no-smoke-test --no-full-run
 - `config/policy.py`：dataset expression policy 构建与反馈阶段解析
 - `config/profiles.py`：dataset profile fallback
 
-YAML 分层优先级为：`config/settings.yaml` > `config/expression_policies.yaml` > `config/dataset_profiles.yaml` > `config/runtime.yaml` / `config/templates.yaml` / `config/quality_feedback.yaml` / `config/simulation.yaml` / `config/api.yaml` > `config/constants_defaults.yaml`。其中 `config/settings.yaml` 面向日常运行调参，其他 `config/*.yaml` 面向按职责拆分的默认值，`data/templates/` 面向表达式模板，`data/blacklists/` 面向低质量模板过滤。
+YAML 分层优先级为：`config/settings.yaml` > `config/expression_policies.yaml` > `config/dataset_profiles.yaml` > `config/runtime.yaml` / `config/templates.yaml` / `config/quality_feedback.yaml` / `config/simulation.yaml` / `config/api.yaml` > `config/constants_defaults.yaml`。其中 `config/settings.yaml` 面向日常运行调参，其他 `config/*.yaml` 面向按职责拆分的默认值，`templates/` 面向表达式模板，`blacklists/` 面向低质量模板过滤。
 
-实际运行配置优先维护在 `config/*.yaml`、`data/templates/` 和 `data/blacklists/`，不要把数据集专属模板重新塞回 Python 常量。
+实际运行配置优先维护在 `config/*.yaml`、`templates/` 和 `blacklists/`，不要把数据集专属模板重新塞回 Python 常量。
 
 ## 结果解读
 

@@ -42,7 +42,7 @@ Core default shapes:
 Legacy handling:
 - Older weaker fallback templates live in `legacy.json`, not the main default library.
 - mean-reversion, `information_ratio`, normalize/quantile wrappers, and extra long-window neighbors are better treated as refine/experimental branches unless new evidence promotes them
-- The current recovery pack is `data/templates/model16/refine/broad_search_neighbors.json`.
+- The current recovery pack is `templates/model16/refine/broad_search_neighbors.json`.
 
 ## Things To Revisit Later
 - Add a small sector-relative spread family if later runs show enough differentiation between value/quality/growth-style fields.

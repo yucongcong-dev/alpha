@@ -11,8 +11,8 @@ import time
 from ..config.constants import DATE_FORMAT_ISO
 from ..io.common import (
     CACHE_DIR,
-    DATA_DIR,
     RESULTS_DIR,
+    TEMPLATES_DIR,
     sanitize_dataset_id_for_filename,
 )
 
@@ -68,7 +68,7 @@ def build_dataset_scoped_paths(
     )
     fields_cache_path = CACHE_DIR / "fields" / dataset_key / cache_scope_key / "fields.json"
     return {
-        "template_library_file": str(DATA_DIR / "templates" / dataset_key / "library.json"),
+        "template_library_file": str(TEMPLATES_DIR / dataset_key / "library.json"),
         "fields_cache_file": str(fields_cache_path),
         "output": str(RESULTS_DIR / dataset_key / "test_results.json"),
     }

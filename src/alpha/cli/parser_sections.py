@@ -215,7 +215,7 @@ def add_output_logging_arguments(parser: argparse.ArgumentParser) -> None:
         parser,
         "--auto-update-blacklist",
         dest="auto_update_blacklist",
-        help_enable="根据本次结果自动追加低质量模板到 data/blacklists/<dataset>/blacklist.json",
+        help_enable="根据本次结果自动追加低质量模板到 blacklists/<dataset>/blacklist.json",
         help_disable="不自动更新模板黑名单（覆盖 YAML runtime.auto_update_blacklist=true）",
     )
     parser.add_argument("--output", default="", help="结果 JSON 输出文件路径（留空则根据 dataset_id 自动生成）")

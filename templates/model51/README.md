@@ -68,8 +68,8 @@ Focused refine:
 Refine pack convention:
 - Keep `library.json` as the default narrow production library.
 - Keep targeted local sweeps under `refine/`.
-- Load refine packs explicitly with `--template-library-file data/templates/model51/refine/<file>.json`.
-- The current broadening pack is `data/templates/model51/refine/broad_search_neighbors.json`.
+- Load refine packs explicitly with `--template-library-file templates/model51/refine/<file>.json`.
+- The current broadening pack is `templates/model51/refine/broad_search_neighbors.json`.
 - If a focused experiment needs a stable hand-curated field cache, keep it under `refine/fields/` instead of `cache/`.
 - grouped `market` zscore families, extra decay-window families, and bucket-volatility variants belong here once they stop earning a place in the default queue
 
@@ -91,8 +91,8 @@ Suggested round14 refine command:
 ```bash
 python3 -m alpha run \
   --dataset-id model51 \
-  --include-fields-file data/templates/model51/refine/fields/unsystematic60_refine_round14_fields.txt \
-  --template-library-file data/templates/model51/refine/unsystematic60_refine_round14.json \
+  --include-fields-file templates/model51/refine/fields/unsystematic60_refine_round14_fields.txt \
+  --template-library-file templates/model51/refine/unsystematic60_refine_round14.json \
   --limit 1 \
   --max-templates-per-field 7 \
   --max-templates-per-family 2 \

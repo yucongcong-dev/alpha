@@ -14,6 +14,8 @@ CREDS_DIR = PROJECT_ROOT / ".credentials"
 CACHE_DIR = PROJECT_ROOT / "cache"
 RESULTS_DIR = PROJECT_ROOT / "results"
 DATA_DIR = PROJECT_ROOT / "data"
+TEMPLATES_DIR = PROJECT_ROOT / "templates"
+BLACKLISTS_DIR = PROJECT_ROOT / "blacklists"
 
 DEFAULT_CREDS_FILE = str(CREDS_DIR / "worldquant_brain_credentials.json")
 DEFAULT_CREDS_KEY_FILE = str(CREDS_DIR / "worldquant_brain_credentials.key")

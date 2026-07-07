@@ -48,7 +48,7 @@ The default library should now be read as the narrow production queue for broad 
 - treat vector/event-conditioned families as specialty lanes rather than generic broad-search seeds
 - keep cross-field ratio/pair exploration concentrated in the dedicated account/matrix lane instead of bloating scalar `default`
 - treat extra long-window neighbors, rawfill/longfill alternates, and legacy cross-sectional wrappers as refine candidates unless they prove repeatedly useful
-- the current recovery pack for these demoted defaults is `data/templates/fundamental6/refine/default_neighbors.json`
+- the current recovery pack for these demoted defaults is `templates/fundamental6/refine/default_neighbors.json`
 
 ## Things To Revisit Later
 - Continue shifting from single-field transforms toward field-relation templates.

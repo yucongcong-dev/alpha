@@ -13,7 +13,15 @@
 
 from __future__ import annotations
 
-from .common import CACHE_DIR, DATA_DIR, PROJECT_ROOT, RESULTS_DIR, SCRIPT_DIR
+from .common import (
+    BLACKLISTS_DIR,
+    CACHE_DIR,
+    DATA_DIR,
+    PROJECT_ROOT,
+    RESULTS_DIR,
+    SCRIPT_DIR,
+    TEMPLATES_DIR,
+)
 from .output_paths import (
     build_dataset_scoped_paths,
     build_output_sidecar_paths,
@@ -29,10 +37,12 @@ from .results_store import (
 
 __all__ = [
     "CACHE_DIR",
+    "BLACKLISTS_DIR",
     "DATA_DIR",
     "PROJECT_ROOT",
     "RESULTS_DIR",
     "SCRIPT_DIR",
+    "TEMPLATES_DIR",
     "build_dataset_scoped_paths",
     "build_output_sidecar_paths",
     "cleanup_legacy_sidecar_files",

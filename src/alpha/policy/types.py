@@ -11,6 +11,9 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any
 
+LEARNED_BLACKLIST_KEY = "learned_templates"
+PATTERN_RULES_KEY = "expression_rules"
+
 BlacklistPayload = dict[str, Any]
 """黑名单文件的完整 JSON payload。"""
 
@@ -57,7 +60,7 @@ BlacklistRuntimeStats = dict[str, BlacklistRuntimeSummary]
 
 @dataclass
 class BlacklistTemplateEntry:
-    """单条 blacklisted_templates 记录。"""
+    """单条 learned_templates 记录。"""
 
     name: str
     dataset_id: str

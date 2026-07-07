@@ -218,8 +218,8 @@ def test_ensure_template_blacklist_file_creates_empty_dataset_file(tmp_path) -> 
     payload = json.loads(blacklist_file.read_text(encoding="utf-8"))
     assert path == str(blacklist_file)
     assert payload["dataset_id"] == "custom_ds"
-    assert payload["blacklisted_templates"] == []
-    assert payload["auto_avoid_rules"] == []
+    assert payload["learned_templates"] == []
+    assert payload["expression_rules"] == []
 
 
 def test_auto_update_blacklist_appends_low_quality_template_once(tmp_path) -> None:
@@ -257,7 +257,7 @@ def test_auto_update_blacklist_appends_low_quality_template_once(tmp_path) -> No
     auto_update_blacklist(results, "custom_ds", data_dir=str(tmp_path))
 
     payload = json.loads((tmp_path / "blacklists" / "custom_ds" / "blacklist.json").read_text(encoding="utf-8"))
-    entries = payload["blacklisted_templates"]
+    entries = payload["learned_templates"]
     assert [entry["name"] for entry in entries] == ["weak_template"]
     assert entries[0]["template_family"] == "group_vol_scaled_delta"
     assert entries[0]["fields_tested"] == ["sales", "assets"]
@@ -472,7 +472,7 @@ def test_scheduler_dump_results_shrinks_next_template_queue(monkeypatch, tmp_pat
 
 def test_fundamental6_template_library_has_family_and_layer_metadata() -> None:
     """Common dataset template library entries should carry explicit family/layer metadata."""
-    template_file = Path(__file__).resolve().parents[2] / "data" / "templates" / "fundamental6" / "library.json"
+    template_file = Path(__file__).resolve().parents[2] / "templates" / "fundamental6" / "library.json"
     payload = json.loads(template_file.read_text(encoding="utf-8"))
 
     missing = []
@@ -572,7 +572,7 @@ def test_build_pending_templates_skips_inflight_duplicate(monkeypatch) -> None:
 
 
 def test_fundamental6_template_library_removes_known_weak_short_window_templates() -> None:
-    template_file = Path(__file__).resolve().parents[2] / "data" / "templates" / "fundamental6" / "library.json"
+    template_file = Path(__file__).resolve().parents[2] / "templates" / "fundamental6" / "library.json"
     payload = json.loads(template_file.read_text(encoding="utf-8"))
 
     names = {
@@ -623,14 +623,14 @@ def test_blacklist_prefers_name_and_stage_over_name_only(monkeypatch, tmp_path) 
         json.dumps(
             {
                 "dataset_id": "custom_ds",
-                "blacklisted_templates": [
+                "learned_templates": [
                     {
                         "name": "weak_template",
                         "template_stage": "group_second_order",
                         "template_family": "group_zscore",
                     }
                 ],
-                "auto_avoid_rules": [],
+                "expression_rules": [],
             }
         ),
         encoding="utf-8",
@@ -661,8 +661,8 @@ def test_legacy_blacklist_name_only_only_applies_without_runtime_metadata(monkey
         json.dumps(
             {
                 "dataset_id": "custom_ds",
-                "blacklisted_templates": [{"name": "legacy_template"}],
-                "auto_avoid_rules": [],
+                "learned_templates": [{"name": "legacy_template"}],
+                "expression_rules": [],
             }
         ),
         encoding="utf-8",
@@ -845,8 +845,8 @@ def test_blacklist_pattern_rules_support_exact_and_regex(monkeypatch, tmp_path) 
         json.dumps(
             {
                 "dataset_id": "custom_ds",
-                "blacklisted_templates": [],
-                "auto_avoid_rules": [
+                "learned_templates": [],
+                "expression_rules": [
                     {"type": "exact", "pattern": "rank(close)"},
                     {"type": "regex", "pattern": r"ts_delta\(.*?, 5\)"},
                 ],

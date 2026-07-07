@@ -1,0 +1,4 @@
+{
+  "_comment": "Optional cross-dataset default avoid rules. Keep empty unless a rule should apply to every dataset.",
+  "_default_auto_avoid_rules": []
+}

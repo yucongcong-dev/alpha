@@ -42,12 +42,18 @@ from ..models.runtime import (
     SimulationSettingsArgs,
 )
 from ..policy import ensure_template_blacklist_file
+from ..policy.blacklist_store import read_blacklist_payload, summarize_blacklist_payload
 from ..policy.expression import get_dataset_expression_policy
 from .bootstrap_cleanup import clean_runtime_artifacts as clean_runtime_artifacts
 from .bootstrap_fields import prepare_fields_for_execution
 from .bootstrap_state import build_execution_state
 
 logger = logging.getLogger(__name__)
+
+
+def _count_template_library_items(template_library: TemplateLibrary) -> int:
+    """Count concrete template entries across all field-type buckets."""
+    return sum(len(items) for items in template_library.values())
 
 
 @dataclass(frozen=True)
@@ -155,9 +161,24 @@ def prepare_bootstrap_resources(
     """Load template, feedback, and field resources needed to build the run context."""
     dataset_id = cast(str, args.dataset_id)
     template_library_file = ensure_dataset_template_library(paths.template_library_file, dataset_id)
-    ensure_template_blacklist_file(dataset_id)
+    blacklist_path = ensure_template_blacklist_file(dataset_id)
 
     template_library = load_template_library(template_library_file)
+    logger.info(
+        "[templates] dataset=%s library=%s entries=%d",
+        dataset_id,
+        template_library_file,
+        _count_template_library_items(cast(TemplateLibrary, template_library)),
+    )
+    blacklist_payload = read_blacklist_payload(dataset_id)
+    learned_count, rule_count = summarize_blacklist_payload(blacklist_payload)
+    logger.info(
+        "[blacklist] dataset=%s file=%s learned_templates=%d expression_rules=%d",
+        dataset_id,
+        blacklist_path,
+        learned_count,
+        rule_count,
+    )
     filters_dict = load_run_filters_extended(cast(RunPaths, run_paths))
     expression_policy = get_dataset_expression_policy(dataset_id)
     use_dataset_heuristics = expression_policy.use_curated_heuristics

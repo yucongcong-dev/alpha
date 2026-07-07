@@ -22,7 +22,12 @@ from .blacklist_store import (
     write_blacklist_payload,
 )
 from .expression import get_dataset_expression_policy
-from .types import BlacklistRuntimeStats, BlacklistRuntimeSummary, BlacklistTemplateEntry
+from .types import (
+    BlacklistRuntimeStats,
+    BlacklistRuntimeSummary,
+    BlacklistTemplateEntry,
+    LEARNED_BLACKLIST_KEY,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -178,13 +183,13 @@ def auto_update_blacklist(
     bl_data = read_blacklist_payload(dataset_id, data_dir=data_dir)
     existing_names = {
         item["name"]
-        for item in bl_data["blacklisted_templates"]
+        for item in bl_data[LEARNED_BLACKLIST_KEY]
         if isinstance(item, dict) and item.get("name")
     }
     added = 0
     for entry in new_entries:
         if entry.name not in existing_names:
-            bl_data["blacklisted_templates"].append(entry.to_dict())
+            bl_data[LEARNED_BLACKLIST_KEY].append(entry.to_dict())
             existing_names.add(entry.name)
             added += 1
     if added == 0:
@@ -197,7 +202,7 @@ def auto_update_blacklist(
         "[blacklist] auto-updated %s: added %d new entries (total=%d)",
         blacklist_path,
         added,
-        len(bl_data["blacklisted_templates"]),
+        len(bl_data[LEARNED_BLACKLIST_KEY]),
     )
 
 
@@ -235,13 +240,13 @@ def auto_update_blacklist_incremental(
     bl_data = read_blacklist_payload(dataset_id, data_dir=data_dir)
     existing_names = {
         item["name"]
-        for item in bl_data["blacklisted_templates"]
+        for item in bl_data[LEARNED_BLACKLIST_KEY]
         if isinstance(item, dict) and item.get("name")
     }
     if entry.name in existing_names:
         blacklisted_template_names.add(entry.name)
         return False
-    bl_data["blacklisted_templates"].append(entry.to_dict())
+    bl_data[LEARNED_BLACKLIST_KEY].append(entry.to_dict())
     bl_data["_updated"] = datetime.now().strftime(DATE_FORMAT_ISO_MINUTES)
     blacklist_path = write_blacklist_payload(dataset_id, bl_data, data_dir=data_dir)
     invalidate_blacklist_runtime_cache(dataset_id)
@@ -250,6 +255,6 @@ def auto_update_blacklist_incremental(
         "[blacklist] incrementally added %s to %s (total=%d)",
         entry.name,
         blacklist_path,
-        len(bl_data["blacklisted_templates"]),
+        len(bl_data[LEARNED_BLACKLIST_KEY]),
     )
     return True
