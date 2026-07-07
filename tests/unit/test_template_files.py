@@ -11,12 +11,12 @@ import pytest
 from alpha.core.executor import build_pending_templates_for_field, inflight_template_keys
 from alpha.core.scheduler import handle_completed_future
 from alpha.exceptions import BrainAPIError
-from alpha.generators.expression_builder import _is_blacklisted_template
+from alpha.generators.expression_builder import _is_blacklisted_template, build_expression_candidates
 from alpha.generators.payload import build_settings_fingerprint_from_payload
 from alpha.generators.templates import ensure_dataset_template_library, load_template_library
 from alpha.policy.blacklist_runtime import auto_update_blacklist
 from alpha.policy.blacklist_store import ensure_template_blacklist_file, invalidate_blacklist_path_cache
-from alpha.models.domain import FailedCheck, FieldTestResult, TemplateCandidate, TemplateLibraryItem
+from alpha.models.domain import FailedCheck, FieldTestResult, TemplateCandidate, TemplateField, TemplateLibraryItem
 from alpha.models.runtime import (
     ExecutionState,
     FutureCompletionContext,
@@ -71,6 +71,7 @@ def test_load_template_library_preserves_optional_metadata(tmp_path) -> None:
                         "layer": "ratio",
                         "stage": "first_order",
                         "requires_partner_field": False,
+                        "field_tags": ["dense_lane"],
                     }
                 ]
             }
@@ -85,6 +86,69 @@ def test_load_template_library_preserves_optional_metadata(tmp_path) -> None:
     assert item.metadata.get("layer") == "ratio"
     assert item.stage == "first_order"
     assert item.metadata.get("requires_partner_field") is False
+    assert item.metadata.get("field_tags") == ["dense_lane"]
+
+
+def test_build_expression_candidates_respects_template_field_tags(tmp_path) -> None:
+    template_file = tmp_path / "library.json"
+    template_file.write_text(
+        json.dumps(
+            {
+                "_dataset_id": "model16",
+                "default": [
+                    {
+                        "name": "dense_only",
+                        "expression": "rank(ts_rank({field_preprocessed}, 120))",
+                        "priority": 100,
+                        "field_tags": ["model16_dense_derivative"],
+                    },
+                    {
+                        "name": "sparse_only",
+                        "expression": "rank(ts_rank({field_groupfill}, 120))",
+                        "priority": 90,
+                        "field_tags": ["model16_sparse_fscore"],
+                    },
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    build_ctx = TemplateBuildContext(
+        options=TemplateBuildOptions(
+            region="USA",
+            universe="TOP3000",
+            instrument_type="EQUITY",
+            delay=1,
+            decay=4,
+            neutralization="SUBINDUSTRY",
+            truncation=0.08,
+            pasteurization="ON",
+            unit_handling="VERIFY",
+            nan_handling="OFF",
+            language="FASTEXPR",
+            dataset_id="model16",
+        ),
+        template_library=load_template_library(str(template_file)),
+    )
+    field = TemplateField.from_dict(
+        {
+            "id": "analyst_revision_rank_derivative",
+            "type": "MATRIX",
+            "runtime_field_tags": ["model16_dense_derivative", "high_coverage"],
+        }
+    )
+
+    candidates = build_expression_candidates(
+        field,
+        build_ctx,
+        max_templates_per_field=200,
+        max_templates_per_family=200,
+    )
+
+    names = [item.name for item in candidates]
+    assert "dense_only" in names
+    assert "sparse_only" not in names
 
 
 def test_load_template_library_infers_stage_from_layer(tmp_path) -> None:

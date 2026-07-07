@@ -40,6 +40,52 @@ def _safe_date_ordinal(value: Any) -> int:
         return 0
 
 
+def _is_explicitly_included(field_id: str, field_name: str, filters_dict: RunFilters) -> bool:
+    return bool(
+        filters_dict.include_fields
+        and (field_id in filters_dict.include_fields or field_name in filters_dict.include_fields)
+    )
+
+
+def _infer_runtime_field_tags(
+    field_name: str,
+    *,
+    dataset_id: str,
+    coverage: float,
+) -> tuple[str, ...]:
+    dataset_key = dataset_id.strip().lower()
+    tags: list[str] = []
+    if dataset_key == "model16":
+        if field_name.startswith("fscore_bfl_"):
+            tags.extend(["model16_sparse_bfl", "model16_sparse_score", "model16_fscore_family"])
+        elif field_name.startswith("fscore_"):
+            tags.extend(["model16_sparse_fscore", "model16_sparse_score", "model16_fscore_family"])
+        elif field_name.endswith("_derivative"):
+            tags.extend(["model16_dense_derivative", "model16_dense_score"])
+    if coverage >= 0.95:
+        tags.append("high_coverage")
+    elif coverage <= 0.50:
+        tags.append("sparse_coverage")
+    return tuple(tags)
+
+
+def _attach_runtime_metadata(
+    field: TemplateField,
+    *,
+    runtime_field_tags: tuple[str, ...],
+) -> TemplateField:
+    if not runtime_field_tags:
+        return field
+    metadata = dict(field.metadata)
+    metadata["runtime_field_tags"] = list(runtime_field_tags)
+    return TemplateField(
+        field_id=field.field_id,
+        field_name=field.field_name,
+        field_type=field.field_type,
+        metadata=metadata,
+    )
+
+
 def _normalize_range(values: list[float]) -> list[float]:
     if not values:
         return []
@@ -67,10 +113,13 @@ def prepare_fields_for_execution(
     low_date_coverage_count = 0
     low_alpha_count = 0
     low_user_count = 0
+    high_alpha_count = 0
+    high_user_count = 0
 
     for field in fields:
         field_id = str(first_non_empty(field.get("id"), SENTINEL_UNKNOWN))
         field_name = choose_field_name(field)
+        explicitly_included = _is_explicitly_included(field_id, field_name, filters_dict)
         is_event_field = is_event_field_name(field_name, expression_policy.event_field_prefixes)
         min_coverage = (
             expression_policy.event_field_min_coverage
@@ -114,7 +163,34 @@ def prepare_fields_for_execution(
         if _safe_int(field.get("userCount")) < min_user_count:
             low_user_count += 1
             continue
-        filtered_fields.append(field)
+        if (
+            not explicitly_included
+            and expression_policy.field_max_alpha_count > 0
+            and _safe_int(field.get("alphaCount")) > expression_policy.field_max_alpha_count
+        ):
+            high_alpha_count += 1
+            continue
+        if (
+            not explicitly_included
+            and expression_policy.field_max_user_count > 0
+            and _safe_int(field.get("userCount")) > expression_policy.field_max_user_count
+        ):
+            high_user_count += 1
+            continue
+        runtime_field_tags = _infer_runtime_field_tags(
+            field_name,
+            dataset_id=expression_policy.dataset_id,
+            coverage=_safe_float(field.get("coverage")),
+        )
+        if isinstance(field, TemplateField):
+            filtered_fields.append(
+                _attach_runtime_metadata(field, runtime_field_tags=runtime_field_tags)
+            )
+            continue
+        field_copy = dict(field)
+        if runtime_field_tags:
+            field_copy["runtime_field_tags"] = list(runtime_field_tags)
+        filtered_fields.append(field_copy)
 
     fields = filtered_fields
     if not fields:
@@ -127,6 +203,8 @@ def prepare_fields_for_execution(
             "low_date_coverage_count": low_date_coverage_count,
             "low_alpha_count": low_alpha_count,
             "low_user_count": low_user_count,
+            "high_alpha_count": high_alpha_count,
+            "high_user_count": high_user_count,
         }
 
     coverage_values = [_safe_float(field.get("coverage")) for field in fields]
@@ -235,4 +313,6 @@ def prepare_fields_for_execution(
         "low_date_coverage_count": low_date_coverage_count,
         "low_alpha_count": low_alpha_count,
         "low_user_count": low_user_count,
+        "high_alpha_count": high_alpha_count,
+        "high_user_count": high_user_count,
     }

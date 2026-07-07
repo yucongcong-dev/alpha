@@ -230,15 +230,19 @@ def _log_field_selection_stats(
         + field_stats["low_date_coverage_count"]
         + field_stats["low_alpha_count"]
         + field_stats["low_user_count"]
+        + field_stats.get("high_alpha_count", 0)
+        + field_stats.get("high_user_count", 0)
     )
     if metadata_filtered_count > 0:
         logger.info(
-            "[filter] 排序前因官网字段指标过滤 %d 个字段 (coverage=%d, dateCoverage=%d, alphaCount=%d, userCount=%d)",
+            "[filter] 排序前因官网字段指标过滤 %d 个字段 (coverage=%d, dateCoverage=%d, alphaCount=%d, userCount=%d, crowdedAlpha=%d, crowdedUser=%d)",
             metadata_filtered_count,
             field_stats["low_coverage_count"],
             field_stats["low_date_coverage_count"],
             field_stats["low_alpha_count"],
             field_stats["low_user_count"],
+            field_stats.get("high_alpha_count", 0),
+            field_stats.get("high_user_count", 0),
         )
     if not fields:
         logger.error("[error] 数据集 %s 在字段过滤后没有可运行字段", args.dataset_id)

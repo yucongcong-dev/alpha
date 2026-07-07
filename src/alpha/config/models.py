@@ -96,6 +96,8 @@ class DatasetExpressionPolicy:
     field_min_date_coverage: float = 0.0
     field_min_alpha_count: int = 0
     field_min_user_count: int = 0
+    field_max_alpha_count: int = 0
+    field_max_user_count: int = 0
     field_coverage_weight: float = 0.0
     field_date_coverage_weight: float = 0.0
     field_alpha_validation_weight: float = 0.0

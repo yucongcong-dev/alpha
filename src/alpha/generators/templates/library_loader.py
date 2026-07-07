@@ -17,6 +17,7 @@ _OPTIONAL_TEMPLATE_METADATA_KEYS = (
     "stage",
     "requires_partner_field",
     "field_kinds",
+    "field_tags",
     "dataset_tags",
 )
 

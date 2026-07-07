@@ -146,6 +146,83 @@ def test_prepare_fields_for_execution_applies_stricter_event_field_filters() -> 
     assert stats["low_coverage_count"] == 1
 
 
+def test_prepare_fields_for_execution_tags_model16_field_lanes() -> None:
+    fields = [
+        {
+            "id": "fscore_quality",
+            "coverage": 0.30,
+            "dateCoverage": 1.0,
+            "alphaCount": 100,
+            "userCount": 10,
+            "themes": [],
+            "dateCreated": "2022-05-01",
+            "type": "MATRIX",
+        },
+        {
+            "id": "analyst_revision_rank_derivative",
+            "coverage": 1.0,
+            "dateCoverage": 1.0,
+            "alphaCount": 100,
+            "userCount": 10,
+            "themes": [],
+            "dateCreated": "2022-05-01",
+            "type": "MATRIX",
+        },
+    ]
+    args = Namespace(limit=0, offset=0, top_fields_by_feedback=0)
+    filters = RunFilters()
+    historical_state = HistoricalRunState(field_feedback={})
+
+    selected, _ = prepare_fields_for_execution(
+        fields,
+        filters_dict=filters,
+        expression_policy=get_dataset_expression_policy("model16"),
+        historical_state=historical_state,
+        args=args,
+    )
+
+    tags_by_id = {row["id"]: tuple(row.get("runtime_field_tags", [])) for row in selected}
+    assert "model16_sparse_fscore" in tags_by_id["fscore_quality"]
+    assert "model16_dense_derivative" in tags_by_id["analyst_revision_rank_derivative"]
+
+
+def test_prepare_fields_for_execution_hard_filters_crowded_model51_fields() -> None:
+    fields = [
+        {
+            "id": "unsystematic_risk_last_360_days",
+            "coverage": 0.94,
+            "dateCoverage": 1.0,
+            "alphaCount": 14503,
+            "userCount": 4549,
+            "themes": [],
+            "dateCreated": "2022-05-01",
+        },
+        {
+            "id": "unsystematic_risk_last_60_days",
+            "coverage": 0.96,
+            "dateCoverage": 1.0,
+            "alphaCount": 2535,
+            "userCount": 1173,
+            "themes": [],
+            "dateCreated": "2022-05-01",
+        },
+    ]
+    args = Namespace(limit=0, offset=0, top_fields_by_feedback=0)
+    filters = RunFilters()
+    historical_state = HistoricalRunState(field_feedback={})
+
+    selected, stats = prepare_fields_for_execution(
+        fields,
+        filters_dict=filters,
+        expression_policy=get_dataset_expression_policy("model51"),
+        historical_state=historical_state,
+        args=args,
+    )
+
+    assert [row["id"] for row in selected] == ["unsystematic_risk_last_60_days"]
+    assert stats["high_alpha_count"] == 1
+
+
 def test_refresh_runtime_feedback_rebuilds_feedback_from_current_results() -> None:
     """Same-process results should be converted into fresh field/global feedback."""
     build_ctx = TemplateBuildContext(options=TemplateBuildOptions(**_DEFAULT_SIM_SETTINGS))

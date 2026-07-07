@@ -18,7 +18,7 @@ from typing import Any
 from ..config.getters import get_backfill_window
 from ..config.models import DatasetExpressionPolicy
 from ..generators.field_transforms import build_field_view
-from ..models.domain import TemplateCandidate, TemplateField, TemplateLibraryItem
+from ..models.domain import FieldView, TemplateCandidate, TemplateField, TemplateLibraryItem
 from ..models.runtime import TemplateBuildContext, TemplateFeedback
 from ..policy.expression import get_dataset_expression_policy, resolve_feedback_stage
 from ..policy.template_blacklist import load_default_avoid_rules
@@ -89,6 +89,23 @@ def _event_template_allowed(
         policy.event_allowed_template_prefixes
         and any(name.startswith(prefix) for prefix in policy.event_allowed_template_prefixes)
     )
+
+
+def _template_supports_field_tags(
+    candidate: TemplateCandidate,
+    field: FieldView,
+) -> bool:
+    raw_tags = candidate.metadata.get("field_tags")
+    if not raw_tags:
+        return True
+    if not isinstance(raw_tags, (list, tuple, set)):
+        return True
+    field_tags = field.metadata.get("runtime_field_tags") or ()
+    if not isinstance(field_tags, (list, tuple, set)):
+        return True
+    allowed_tags = {str(tag) for tag in raw_tags}
+    current_tags = {str(tag) for tag in field_tags}
+    return bool(allowed_tags & current_tags)
 
 
 
@@ -179,6 +196,7 @@ def build_expression_candidates(
 
     if is_event_field:
         templates = [item for item in templates if _event_template_allowed(item, policy)]
+    templates = [item for item in templates if _template_supports_field_tags(item, field_view)]
 
     templates = apply_similarity_penalty(templates, options.legacy_similarity_penalty)
     templates = apply_adaptive_priority(
