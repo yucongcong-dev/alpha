@@ -4,57 +4,57 @@
   "_dataset_id": "model51",
   "default": [
     {
-      "name": "model51_bucket_cap_zscore_120",
-      "expression": "group_rank(ts_zscore({field_preprocessed}, 120), densify(bucket(rank(cap), range='0.1, 1, 0.1')))",
-      "priority": 999,
-      "family": "bucket_group_rank",
+      "name": "model51_bucket_cap_ratio_zscore_60",
+      "expression": "group_rank(ts_zscore({field_preprocessed} / ts_backfill(cap, 120), 60), densify(bucket(rank(cap), range='0.1, 1, 0.1')))",
+      "priority": 1000,
+      "family": "bucket_ratio",
       "layer": "group",
       "stage": "group_second_order",
       "dataset_tags": ["model51", "risk_metrics"]
     },
     {
-      "name": "model51_ts_rank_120",
-      "expression": "rank(ts_rank({field_preprocessed}, 120))",
-      "priority": 1000,
-      "family": "ts_rank",
-      "layer": "time_series",
-      "stage": "first_order",
-      "dataset_tags": ["model51", "risk_metrics"]
-    },
-    {
-      "name": "model51_ts_zscore_120",
-      "expression": "rank(ts_zscore({field_preprocessed}, 120))",
-      "priority": 998,
-      "family": "zscore_time",
-      "layer": "time_series",
-      "stage": "first_order",
-      "dataset_tags": ["model51", "risk_metrics"]
-    },
-    {
-      "name": "model51_decay_120",
-      "expression": "rank(ts_decay_linear({field_preprocessed}, 120))",
-      "priority": 997,
-      "family": "decay",
-      "layer": "time_series",
-      "stage": "first_order",
-      "dataset_tags": ["model51", "risk_metrics"]
-    },
-    {
       "name": "model51_ratio_cap_zscore_60",
       "expression": "rank(ts_zscore({field_preprocessed} / ts_backfill(cap, 120), 60))",
-      "priority": 996,
+      "priority": 999,
       "family": "ratio_cap",
       "layer": "composite",
       "stage": "first_order",
       "dataset_tags": ["model51", "risk_metrics"]
     },
     {
-      "name": "model51_bucket_cap_ratio_zscore_60",
-      "expression": "group_rank(ts_zscore({field_preprocessed} / ts_backfill(cap, 120), 60), densify(bucket(rank(cap), range='0.1, 1, 0.1')))",
-      "priority": 995,
-      "family": "bucket_ratio",
+      "name": "model51_group_zscore_subindustry_84",
+      "expression": "group_rank(ts_zscore({field_preprocessed}, 84), subindustry)",
+      "priority": 998,
+      "family": "group_zscore",
       "layer": "group",
       "stage": "group_second_order",
+      "dataset_tags": ["model51", "risk_metrics"]
+    },
+    {
+      "name": "model51_group_delta_over_std_subindustry_42_126",
+      "expression": "group_rank(ts_delta({field_preprocessed}, 42) / ts_std_dev({field_preprocessed}, 126), subindustry)",
+      "priority": 997,
+      "family": "group_vol_scaled_delta",
+      "layer": "group",
+      "stage": "group_second_order",
+      "dataset_tags": ["model51", "risk_metrics"]
+    },
+    {
+      "name": "model51_rank_mean_reversion_63_252",
+      "expression": "rank(ts_mean({field_preprocessed}, 63) - ts_mean({field_preprocessed}, 252))",
+      "priority": 996,
+      "family": "mean_spread",
+      "layer": "time_series",
+      "stage": "first_order",
+      "dataset_tags": ["model51", "risk_metrics"]
+    },
+    {
+      "name": "model51_rank_ir_126",
+      "expression": "rank(ts_mean({field_preprocessed}, 126) / ts_std_dev({field_preprocessed}, 126))",
+      "priority": 995,
+      "family": "rank_spread",
+      "layer": "signal",
+      "stage": "first_order",
       "dataset_tags": ["model51", "risk_metrics"]
     }
   ],

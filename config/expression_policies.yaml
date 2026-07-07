@@ -555,13 +555,83 @@ expression_policies:
   # model51 — 16 日频系统性风险指标
   # --------------------------------------------------------------------------
   model51:
-    ratio_partner_candidates: {}
-    ratio_keywords: {}
-    ratio_delta_rank_windows: []
-    ratio_delta_over_std_windows: []
-    ratio_diversified_template_specs: []
-    preferred_partner_score_bonuses: {}
-    partner_limit: 0
+    use_curated_heuristics: true
+    ratio_partner_candidates:
+      beta_last_30_days_spy: ["correlation_last_30_days_spy", "systematic_risk_last_30_days"]
+      beta_last_60_days_spy: ["correlation_last_60_days_spy", "systematic_risk_last_60_days"]
+      beta_last_90_days_spy: ["correlation_last_90_days_spy", "systematic_risk_last_90_days"]
+      beta_last_360_days_spy: ["correlation_last_360_days_spy", "systematic_risk_last_360_days"]
+      correlation_last_30_days_spy: ["beta_last_30_days_spy", "unsystematic_risk_last_30_days"]
+      correlation_last_60_days_spy: ["beta_last_60_days_spy", "unsystematic_risk_last_60_days"]
+      correlation_last_90_days_spy: ["beta_last_90_days_spy", "unsystematic_risk_last_90_days"]
+      correlation_last_360_days_spy: ["beta_last_360_days_spy", "unsystematic_risk_last_360_days"]
+      systematic_risk_last_30_days: ["unsystematic_risk_last_30_days", "beta_last_30_days_spy"]
+      systematic_risk_last_60_days: ["unsystematic_risk_last_60_days", "beta_last_60_days_spy"]
+      systematic_risk_last_90_days: ["unsystematic_risk_last_90_days", "beta_last_90_days_spy"]
+      systematic_risk_last_360_days: ["unsystematic_risk_last_360_days", "beta_last_360_days_spy"]
+      unsystematic_risk_last_30_days: ["systematic_risk_last_30_days", "correlation_last_30_days_spy"]
+      unsystematic_risk_last_60_days: ["systematic_risk_last_60_days", "correlation_last_60_days_spy"]
+      unsystematic_risk_last_90_days: ["systematic_risk_last_90_days", "correlation_last_90_days_spy"]
+      unsystematic_risk_last_360_days: ["systematic_risk_last_360_days", "correlation_last_360_days_spy"]
+    ratio_keywords:
+      beta_last_30_days_spy: ["correlation_last_30_days_spy", "systematic_risk_last_30_days", "30"]
+      beta_last_60_days_spy: ["correlation_last_60_days_spy", "systematic_risk_last_60_days", "60"]
+      beta_last_90_days_spy: ["correlation_last_90_days_spy", "systematic_risk_last_90_days", "90"]
+      beta_last_360_days_spy: ["correlation_last_360_days_spy", "systematic_risk_last_360_days", "360"]
+      correlation_last_30_days_spy: ["beta_last_30_days_spy", "unsystematic_risk_last_30_days", "30"]
+      correlation_last_60_days_spy: ["beta_last_60_days_spy", "unsystematic_risk_last_60_days", "60"]
+      correlation_last_90_days_spy: ["beta_last_90_days_spy", "unsystematic_risk_last_90_days", "90"]
+      correlation_last_360_days_spy: ["beta_last_360_days_spy", "unsystematic_risk_last_360_days", "360"]
+      systematic_risk_last_30_days: ["unsystematic_risk_last_30_days", "beta_last_30_days_spy", "30"]
+      systematic_risk_last_60_days: ["unsystematic_risk_last_60_days", "beta_last_60_days_spy", "60"]
+      systematic_risk_last_90_days: ["unsystematic_risk_last_90_days", "beta_last_90_days_spy", "90"]
+      systematic_risk_last_360_days: ["unsystematic_risk_last_360_days", "beta_last_360_days_spy", "360"]
+      unsystematic_risk_last_30_days: ["systematic_risk_last_30_days", "correlation_last_30_days_spy", "30"]
+      unsystematic_risk_last_60_days: ["systematic_risk_last_60_days", "correlation_last_60_days_spy", "60"]
+      unsystematic_risk_last_90_days: ["systematic_risk_last_90_days", "correlation_last_90_days_spy", "90"]
+      unsystematic_risk_last_360_days: ["systematic_risk_last_360_days", "correlation_last_360_days_spy", "360"]
+    ratio_delta_rank_windows:
+      - [21, 188]
+      - [63, 182]
+    ratio_delta_over_std_windows:
+      - [5, 21, 182]
+      - [21, 63, 176]
+    ratio_diversified_template_specs:
+      - ["group_ratio_zscore_{ratio_label}", "group_rank(ts_zscore(ts_backfill({ratio_expr}, {backfill_window}), 42), subindustry)", 168]
+      - ["ratio_mean_spread_over_std_{ratio_label}", "rank((ts_mean(ts_backfill({ratio_expr}, {backfill_window}), 21) - ts_mean(ts_backfill({ratio_expr}, {backfill_window}), 126)) / ts_std_dev(ts_backfill({ratio_expr}, {backfill_window}), 63))", 162]
+      - ["ratio_zscore_spread_{ratio_label}", "rank(ts_zscore(ts_backfill({ratio_expr}, {backfill_window}), 21) - ts_zscore(ts_backfill({ratio_expr}, {backfill_window}), 126))", 158]
+    preferred_partner_score_bonuses:
+      correlation_last_30_days_spy: 80
+      correlation_last_60_days_spy: 76
+      correlation_last_90_days_spy: 72
+      correlation_last_360_days_spy: 68
+      systematic_risk_last_30_days: 80
+      systematic_risk_last_60_days: 76
+      systematic_risk_last_90_days: 72
+      systematic_risk_last_360_days: 68
+      unsystematic_risk_last_30_days: 78
+      unsystematic_risk_last_60_days: 74
+      unsystematic_risk_last_90_days: 70
+      unsystematic_risk_last_360_days: 66
+    partner_limit: 2
+    high_conviction_ratio_priority_boost: 860
+    high_conviction_ratio_pairs:
+      - ["beta_last_30_days_spy", "correlation_last_30_days_spy"]
+      - ["correlation_last_30_days_spy", "beta_last_30_days_spy"]
+      - ["beta_last_60_days_spy", "correlation_last_60_days_spy"]
+      - ["correlation_last_60_days_spy", "beta_last_60_days_spy"]
+      - ["beta_last_90_days_spy", "correlation_last_90_days_spy"]
+      - ["correlation_last_90_days_spy", "beta_last_90_days_spy"]
+      - ["beta_last_360_days_spy", "correlation_last_360_days_spy"]
+      - ["correlation_last_360_days_spy", "beta_last_360_days_spy"]
+      - ["systematic_risk_last_30_days", "unsystematic_risk_last_30_days"]
+      - ["unsystematic_risk_last_30_days", "systematic_risk_last_30_days"]
+      - ["systematic_risk_last_60_days", "unsystematic_risk_last_60_days"]
+      - ["unsystematic_risk_last_60_days", "systematic_risk_last_60_days"]
+      - ["systematic_risk_last_90_days", "unsystematic_risk_last_90_days"]
+      - ["unsystematic_risk_last_90_days", "systematic_risk_last_90_days"]
+      - ["systematic_risk_last_360_days", "unsystematic_risk_last_360_days"]
+      - ["unsystematic_risk_last_360_days", "systematic_risk_last_360_days"]
     default_field_transform:
       stages: []
       backfill_window: 0
@@ -573,6 +643,20 @@ expression_policies:
           std: 4
       backfill_window: 504
     vector_field_transform:
+      stages:
+        - kind: "backfill"
+          window: 504
+        - kind: "winsorize"
+          std: 4
+      backfill_window: 504
+    ratio_numerator_transform:
+      stages:
+        - kind: "backfill"
+          window: 504
+        - kind: "winsorize"
+          std: 4
+      backfill_window: 504
+    ratio_denominator_transform:
       stages:
         - kind: "backfill"
           window: 504
@@ -612,12 +696,10 @@ expression_policies:
       - "model51_zscore_decay_60"
       - "model51_zscore_decay_120"
     protected_templates:
-      - "model51_bucket_cap_zscore_120"
-      - "model51_ts_rank_120"
-      - "model51_ts_zscore_120"
-      - "model51_decay_120"
       - "model51_ratio_cap_zscore_60"
       - "model51_bucket_cap_ratio_zscore_60"
+      - "model51_group_zscore_subindustry_84"
+      - "model51_group_delta_over_std_subindustry_42_126"
     field_min_coverage: 0.05
     field_min_date_coverage: 0.0
     field_min_alpha_count: 0
