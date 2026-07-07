@@ -10,7 +10,9 @@ from ..analysis.result_identity import is_queue_timeout_result
 from ..config.constants import STATUS_ERROR
 from ..io.results_store import dump_results_incremental, initialize_results_journal
 from ..models.runtime import ExecutionState
-from ..policy import build_blacklist_runtime_stats, load_blacklisted_template_names
+from ..policy import build_blacklist_runtime_stats
+from ..policy.blacklist_context import set_active_blacklists_dir
+from ..policy.blacklist_store import load_blacklisted_template_keys
 
 
 def populate_execution_metrics(execution_state: ExecutionState) -> None:
@@ -34,8 +36,10 @@ def build_execution_state(
     settings_fingerprint: str,
     template_library_fingerprint: str,
     run_config: dict,
+    blacklists_dir: str = "",
 ) -> ExecutionState:
     """根据历史结果恢复 execution_state，并初始化 journal / sidecar 计数。"""
+    set_active_blacklists_dir(blacklists_dir)
     execution_state = ExecutionState(
         results=list(historical_state.existing_results),
         attempted_keys=set(historical_state.attempted_keys),
@@ -53,7 +57,7 @@ def build_execution_state(
         dict[str, dict[str, Any]],
         build_blacklist_runtime_stats(execution_state.results),
     )
-    execution_state.blacklisted_template_names = load_blacklisted_template_names(dataset_id)
+    execution_state.blacklisted_template_keys = load_blacklisted_template_keys(dataset_id)
     execution_state.persisted_result_count = dump_results_incremental(
         output_file,
         dataset_id,

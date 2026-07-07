@@ -138,7 +138,7 @@ class ExecutionState:
     - queue_timeout_count: Incremented for queue timeouts
     - persisted_result_count: Incremented after result persistence
     - blacklist_runtime_stats: Updated via build_blacklist_runtime_stats
-    - blacklisted_template_names: Updated when templates are blacklisted
+    - blacklisted_template_keys: Updated when templates are blacklisted
 
     Fields read by multiple threads:
     - results: Read for progress tracking and checkpointing
@@ -171,7 +171,7 @@ class ExecutionState:
     queue_timeout_count: int = 0
     persisted_result_count: int = 0
     blacklist_runtime_stats: BlacklistRuntimeStats = field(default_factory=dict)
-    blacklisted_template_names: set[str] = field(default_factory=set)
+    blacklisted_template_keys: set[tuple[str, str, str]] = field(default_factory=set)
     last_submission_at: float = 0.0
 
 

@@ -110,7 +110,7 @@ def apply_completed_result(
             )
         auto_update_blacklist_incremental_fn(
             execution_state.blacklist_runtime_stats,
-            execution_state.blacklisted_template_names,
+            execution_state.blacklisted_template_keys,
             result,
             result_write_options.dataset_id,
         )

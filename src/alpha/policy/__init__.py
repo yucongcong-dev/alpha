@@ -18,6 +18,7 @@ from .blacklist_runtime import (
 from .blacklist_store import (
     ensure_template_blacklist_file,
     invalidate_blacklist_path_cache,
+    load_blacklisted_template_keys,
     load_blacklisted_template_names,
 )
 from .expression import (
@@ -33,6 +34,7 @@ __all__ = [
     "build_blacklist_runtime_stats",
     "ensure_template_blacklist_file",
     "get_dataset_expression_policy",
+    "load_blacklisted_template_keys",
     "invalidate_blacklist_path_cache",
     "load_blacklisted_template_names",
     "resolve_feedback_stage",

@@ -240,9 +240,9 @@ def test_build_expression_candidates_adds_financial_ratio_templates() -> None:
 
 def test_load_default_avoid_rules_ignores_invalid_json_shape(monkeypatch, tmp_path) -> None:
     """A valid JSON file with the wrong top-level type should not crash rule loading."""
-    data_dir = tmp_path / "data"
-    data_dir.mkdir()
-    (data_dir / "template_blacklist.json").write_text(json.dumps([]), encoding="utf-8")
+    blacklists_dir = tmp_path / "blacklists"
+    blacklists_dir.mkdir()
+    (blacklists_dir / "template_blacklist.json").write_text(json.dumps([]), encoding="utf-8")
 
     monkeypatch.chdir(tmp_path)
     invalidate_default_avoid_rules_cache()
@@ -253,7 +253,7 @@ def test_load_default_avoid_rules_ignores_invalid_json_shape(monkeypatch, tmp_pa
 def test_build_expression_candidates_narrows_event_field_template_pool() -> None:
     policy = get_dataset_expression_policy("fundamental6")
     field = {"id": "fnd6_cptnewqeventv110_apq", "type": "VECTOR"}
-    template_file = Path(__file__).resolve().parents[2] / "data" / "templates" / "fundamental6" / "library.json"
+    template_file = Path(__file__).resolve().parents[2] / "templates" / "fundamental6" / "library.json"
     template_library = load_template_library(str(template_file))
 
     build_ctx = TemplateBuildContext(

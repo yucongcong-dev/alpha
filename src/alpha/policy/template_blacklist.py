@@ -8,18 +8,18 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
 import re
 from typing import Any
 
-from ..io.common import (
-    resolve_blacklists_dir,
-    sanitize_dataset_id_for_filename,
-)
+from ..io.common import sanitize_dataset_id_for_filename
+from .blacklist_context import clear_active_blacklists_dir, get_active_blacklists_dir
 from .types import (
     BlacklistCacheEntry,
     BlacklistMatcherEntry,
     BlacklistPatternRule,
+    DEFAULT_RULES_KEY,
     DefaultAvoidRulesCache,
     LEARNED_BLACKLIST_KEY,
     PATTERN_RULES_KEY,
@@ -29,6 +29,8 @@ _BLACKLIST_CACHE: dict[str, BlacklistCacheEntry] = {}
 """按 dataset_id 缓存的黑名单数据，带文件签名用于热更新检测。"""
 _DEFAULT_AVOID_RULES_CACHE: DefaultAvoidRulesCache | None = None
 """跨数据集默认规避规则缓存，带文件签名用于热更新检测。"""
+
+logger = logging.getLogger(__name__)
 
 
 def _file_signature(path: str | None) -> tuple[int, int] | None:
@@ -48,6 +50,7 @@ def invalidate_blacklist_cache(dataset_id: str = "") -> None:
         _BLACKLIST_CACHE.pop(dataset_id, None)
         return
     _BLACKLIST_CACHE.clear()
+    clear_active_blacklists_dir()
 
 
 def invalidate_default_avoid_rules_cache() -> None:
@@ -64,7 +67,7 @@ def load_default_avoid_rules() -> list[BlacklistPatternRule]:
 def _load_default_avoid_rules() -> list[BlacklistPatternRule]:
     """加载跨数据集默认规避规则 template_blacklist.json。"""
     global _DEFAULT_AVOID_RULES_CACHE
-    blacklist_root = resolve_blacklists_dir()
+    blacklist_root = get_active_blacklists_dir()
     path = os.path.join(str(blacklist_root), "template_blacklist.json")
     if os.path.isfile(path):
         signature = _file_signature(path)
@@ -80,7 +83,7 @@ def _load_default_avoid_rules() -> list[BlacklistPatternRule]:
             with open(path, encoding="utf-8") as fh:
                 raw = json.load(fh)
             if isinstance(raw, dict):
-                rules = raw.get("_default_auto_avoid_rules", [])
+                rules = raw.get(DEFAULT_RULES_KEY, raw.get("_default_auto_avoid_rules", []))
                 if not isinstance(rules, list):
                     rules = []
                 _DEFAULT_AVOID_RULES_CACHE = {
@@ -89,8 +92,9 @@ def _load_default_avoid_rules() -> list[BlacklistPatternRule]:
                     "rules": rules,
                 }
                 return rules
+            logger.warning("[blacklist] invalid default rule payload in %s; expected object", path)
         except (json.JSONDecodeError, OSError):
-            pass
+            logger.warning("[blacklist] failed to load default rules from %s; ignoring file", path)
     _DEFAULT_AVOID_RULES_CACHE = {"path": None, "signature": None, "rules": []}
     return []
 
@@ -129,7 +133,7 @@ def _load_blacklist(dataset_id: str) -> None:
     entries: list[BlacklistMatcherEntry] = []
     dataset_signature: tuple[int, int] | None = None
 
-    blacklist_root = resolve_blacklists_dir()
+    blacklist_root = get_active_blacklists_dir()
     dataset_key = sanitize_dataset_id_for_filename(dataset_id)
     blacklist_path = os.path.join(str(blacklist_root), dataset_key, "blacklist.json")
     if os.path.isfile(blacklist_path):
@@ -168,8 +172,10 @@ def _load_blacklist(dataset_id: str) -> None:
                         normalized_rule = _normalize_pattern_rule(rule)
                         if normalized_rule is not None:
                             pattern_rules.append(normalized_rule)
+            else:
+                logger.warning("[blacklist] invalid dataset blacklist payload in %s; expected object", blacklist_path)
         except (json.JSONDecodeError, OSError):
-            pass
+            logger.warning("[blacklist] failed to load dataset blacklist from %s; ignoring file", blacklist_path)
 
     for rule in default_rules:
         if isinstance(rule, dict):

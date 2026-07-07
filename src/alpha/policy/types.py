@@ -13,6 +13,22 @@ from typing import Any
 
 LEARNED_BLACKLIST_KEY = "learned_templates"
 PATTERN_RULES_KEY = "expression_rules"
+DEFAULT_RULES_KEY = "default_rules"
+
+BlacklistEntryKey = tuple[str, str, str]
+
+
+def build_blacklist_entry_key(
+    name: str,
+    template_stage: str = "",
+    template_family: str = "",
+) -> BlacklistEntryKey:
+    """Build the canonical identity key for a learned blacklist entry."""
+    return (
+        str(name).strip(),
+        str(template_stage).strip().lower(),
+        str(template_family).strip().lower(),
+    )
 
 BlacklistPayload = dict[str, Any]
 """黑名单文件的完整 JSON payload。"""

@@ -42,6 +42,7 @@ from ..models.runtime import (
     SimulationSettingsArgs,
 )
 from ..policy import ensure_template_blacklist_file
+from ..policy.blacklist_context import set_active_blacklists_dir
 from ..policy.blacklist_store import read_blacklist_payload, summarize_blacklist_payload
 from ..policy.expression import get_dataset_expression_policy
 from .bootstrap_cleanup import clean_runtime_artifacts as clean_runtime_artifacts
@@ -160,6 +161,7 @@ def prepare_bootstrap_resources(
 ) -> PreparedBootstrapResources | None:
     """Load template, feedback, and field resources needed to build the run context."""
     dataset_id = cast(str, args.dataset_id)
+    set_active_blacklists_dir()
     template_library_file = ensure_dataset_template_library(paths.template_library_file, dataset_id)
     blacklist_path = ensure_template_blacklist_file(dataset_id)
 
@@ -340,6 +342,7 @@ def initialize_run_context(
         settings_fingerprint=prepared.settings_fingerprint,
         template_library_fingerprint=prepared.template_library_fingerprint,
         run_config=prepared.run_config,
+        blacklists_dir="",
     )
 
     max_workers = max(1, cast(int, args.max_concurrent_simulations))

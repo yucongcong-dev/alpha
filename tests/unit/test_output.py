@@ -330,7 +330,7 @@ def test_ensure_analysis_synced_skips_invalid_main_summary_shape(tmp_path) -> No
 def test_auto_update_blacklist_incremental_blacklists_only_changed_template(tmp_path) -> None:
     """Incremental blacklist updates should blacklist qualifying templates without full rescans."""
     runtime_stats = blacklist_runtime.build_blacklist_runtime_stats([])
-    blacklisted_names = blacklist_store.load_blacklisted_template_names("custom_ds", data_dir=str(tmp_path))
+    blacklisted_keys = blacklist_store.load_blacklisted_template_keys("custom_ds", data_dir=str(tmp_path))
     first = FieldTestResult(
         field_id="f1",
         field_type="MATRIX",
@@ -362,14 +362,14 @@ def test_auto_update_blacklist_incremental_blacklists_only_changed_template(tmp_
 
     added_after_first = blacklist_runtime.auto_update_blacklist_incremental(
         runtime_stats,
-        blacklisted_names,
+        blacklisted_keys,
         first,
         "custom_ds",
         data_dir=str(tmp_path),
     )
     added_after_second = blacklist_runtime.auto_update_blacklist_incremental(
         runtime_stats,
-        blacklisted_names,
+        blacklisted_keys,
         second,
         "custom_ds",
         data_dir=str(tmp_path),

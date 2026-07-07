@@ -13,11 +13,17 @@ from typing import cast
 from ..config.constants import BLACKLIST_SCHEMA_VERSION, DATE_FORMAT_ISO
 from ..io.common import (
     atomic_write_json,
-    resolve_blacklists_dir,
     sanitize_dataset_id_for_filename,
 )
+from .blacklist_context import get_active_blacklists_dir, set_active_blacklists_dir
 from .template_blacklist import invalidate_blacklist_cache
-from .types import BlacklistPayload, LEARNED_BLACKLIST_KEY, PATTERN_RULES_KEY
+from .types import (
+    BlacklistEntryKey,
+    BlacklistPayload,
+    LEARNED_BLACKLIST_KEY,
+    PATTERN_RULES_KEY,
+    build_blacklist_entry_key,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -27,7 +33,7 @@ _BLACKLIST_PATH_CACHE: dict[str, str] = {}
 def _resolve_blacklist_root(data_dir: str = "") -> str:
     """Resolve the canonical blacklist root from an optional runtime root override."""
     if not data_dir:
-        return str(resolve_blacklists_dir())
+        return str(get_active_blacklists_dir())
     candidate = os.path.abspath(data_dir)
     if os.path.basename(candidate.rstrip(os.sep)) == "blacklists":
         return candidate
@@ -102,6 +108,8 @@ def normalize_blacklist_payload(
 
 
 def read_blacklist_payload(dataset_id: str, *, data_dir: str = "") -> BlacklistPayload:
+    if data_dir:
+        set_active_blacklists_dir(_resolve_blacklist_root(data_dir))
     blacklist_path = resolve_blacklist_path(dataset_id, data_dir=data_dir)
     try:
         if os.path.isfile(blacklist_path):
@@ -110,8 +118,12 @@ def read_blacklist_payload(dataset_id: str, *, data_dir: str = "") -> BlacklistP
         else:
             payload = build_default_blacklist(dataset_id)
     except (json.JSONDecodeError, OSError):
+        logger.warning("[blacklist] failed to read %s; using empty default payload", blacklist_path)
         payload = build_default_blacklist(dataset_id)
-    return normalize_blacklist_payload(payload, dataset_id)
+    normalized = normalize_blacklist_payload(payload, dataset_id)
+    if not isinstance(payload, dict):
+        logger.warning("[blacklist] invalid payload shape in %s; expected object", blacklist_path)
+    return normalized
 
 
 def write_blacklist_payload(
@@ -121,6 +133,7 @@ def write_blacklist_payload(
     data_dir: str = "",
 ) -> str:
     blacklist_path = resolve_blacklist_path(dataset_id, data_dir=data_dir)
+    set_active_blacklists_dir(os.path.dirname(os.path.dirname(blacklist_path)))
     atomic_write_json(blacklist_path, normalize_blacklist_payload(payload, dataset_id))
     return blacklist_path
 
@@ -142,6 +155,33 @@ def load_blacklisted_template_names(dataset_id: str, *, data_dir: str = "") -> s
     }
 
 
+def load_blacklisted_template_keys(
+    dataset_id: str,
+    *,
+    data_dir: str = "",
+) -> set[BlacklistEntryKey]:
+    """Load canonical learned blacklist entry identities."""
+    payload = read_blacklist_payload(dataset_id, data_dir=data_dir)
+    entries = payload.get(LEARNED_BLACKLIST_KEY, [])
+    if not isinstance(entries, list):
+        return set()
+    keys: set[BlacklistEntryKey] = set()
+    for item in entries:
+        if not isinstance(item, dict):
+            continue
+        name = str(item.get("name", "")).strip()
+        if not name:
+            continue
+        keys.add(
+            build_blacklist_entry_key(
+                name,
+                str(item.get("template_stage", "")).strip(),
+                str(item.get("template_family", "")).strip(),
+            )
+        )
+    return keys
+
+
 def summarize_blacklist_payload(payload: BlacklistPayload) -> tuple[int, int]:
     """Return learned-entry count and rule count for startup diagnostics."""
     learned = payload.get(LEARNED_BLACKLIST_KEY, [])
@@ -152,6 +192,8 @@ def summarize_blacklist_payload(payload: BlacklistPayload) -> tuple[int, int]:
 
 
 def ensure_template_blacklist_file(dataset_id: str, *, data_dir: str = "") -> str:
+    if data_dir:
+        set_active_blacklists_dir(_resolve_blacklist_root(data_dir))
     blacklist_path = resolve_blacklist_path(dataset_id, data_dir=data_dir)
     if os.path.isfile(blacklist_path):
         return blacklist_path

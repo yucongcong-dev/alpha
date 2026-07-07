@@ -23,13 +23,24 @@ from .blacklist_store import (
 )
 from .expression import get_dataset_expression_policy
 from .types import (
+    BlacklistEntryKey,
     BlacklistRuntimeStats,
     BlacklistRuntimeSummary,
     BlacklistTemplateEntry,
     LEARNED_BLACKLIST_KEY,
+    build_blacklist_entry_key,
 )
 
 logger = logging.getLogger(__name__)
+
+
+def _entry_key_from_payload(item: dict[str, object]) -> BlacklistEntryKey:
+    """Build a canonical identity key from a persisted blacklist entry."""
+    return build_blacklist_entry_key(
+        str(item.get("name", "")).strip(),
+        str(item.get("template_stage", "")).strip(),
+        str(item.get("template_family", "")).strip(),
+    )
 
 
 def _update_blacklist_runtime_stats_with_result(
@@ -181,16 +192,17 @@ def auto_update_blacklist(
         return
 
     bl_data = read_blacklist_payload(dataset_id, data_dir=data_dir)
-    existing_names = {
-        item["name"]
+    existing_keys = {
+        _entry_key_from_payload(item)
         for item in bl_data[LEARNED_BLACKLIST_KEY]
         if isinstance(item, dict) and item.get("name")
     }
     added = 0
     for entry in new_entries:
-        if entry.name not in existing_names:
+        entry_key = build_blacklist_entry_key(entry.name, entry.template_stage, entry.template_family)
+        if entry_key not in existing_keys:
             bl_data[LEARNED_BLACKLIST_KEY].append(entry.to_dict())
-            existing_names.add(entry.name)
+            existing_keys.add(entry_key)
             added += 1
     if added == 0:
         return
@@ -208,7 +220,7 @@ def auto_update_blacklist(
 
 def auto_update_blacklist_incremental(
     runtime_stats: BlacklistRuntimeStats,
-    blacklisted_template_names: set[str],
+    blacklisted_template_keys: set[BlacklistEntryKey],
     result: FieldTestResult,
     dataset_id: str,
     *,
@@ -226,7 +238,12 @@ def auto_update_blacklist_incremental(
     if summary is None:
         return False
     template_name = str(summary.template_name).strip()
-    if not template_name or template_name in blacklisted_template_names:
+    entry_key = build_blacklist_entry_key(
+        template_name,
+        str(summary.template_stage),
+        str(summary.template_family),
+    )
+    if not template_name or entry_key in blacklisted_template_keys:
         return False
     entry = _build_blacklist_entry_from_runtime_summary(
         summary,
@@ -238,19 +255,19 @@ def auto_update_blacklist_incremental(
     if entry is None:
         return False
     bl_data = read_blacklist_payload(dataset_id, data_dir=data_dir)
-    existing_names = {
-        item["name"]
+    existing_keys = {
+        _entry_key_from_payload(item)
         for item in bl_data[LEARNED_BLACKLIST_KEY]
         if isinstance(item, dict) and item.get("name")
     }
-    if entry.name in existing_names:
-        blacklisted_template_names.add(entry.name)
+    if entry_key in existing_keys:
+        blacklisted_template_keys.add(entry_key)
         return False
     bl_data[LEARNED_BLACKLIST_KEY].append(entry.to_dict())
     bl_data["_updated"] = datetime.now().strftime(DATE_FORMAT_ISO_MINUTES)
     blacklist_path = write_blacklist_payload(dataset_id, bl_data, data_dir=data_dir)
     invalidate_blacklist_runtime_cache(dataset_id)
-    blacklisted_template_names.add(entry.name)
+    blacklisted_template_keys.add(entry_key)
     logger.info(
         "[blacklist] incrementally added %s to %s (total=%d)",
         entry.name,
