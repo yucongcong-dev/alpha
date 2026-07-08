@@ -1,0 +1,85 @@
+{
+  "_comment": "model51 round16 refine pack — 切换到 systematic_risk_last_30_days，围绕 bucket_cap_ratio / ratio_cap 局部邻域继续压缩",
+  "_comment_placeholders": "{field}=字段名, {field_preprocessed}=winsorize(ts_backfill({field}, {backfill_window}), std=4), {backfill_window}=settings.yaml expression.backfill_window",
+  "_dataset_id": "model51",
+  "default": [
+    {
+      "name": "model51_bucket_cap_ratio_zscore_60",
+      "expression": "group_rank(ts_zscore({field_preprocessed} / ts_backfill(cap, 120), 60), densify(bucket(rank(cap), range='0.1, 1, 0.1')))",
+      "priority": 1010,
+      "family": "bucket_ratio",
+      "layer": "group",
+      "stage": "group_second_order",
+      "dataset_tags": ["model51", "risk_metrics", "round16_refine"],
+      "role": "refine_neighbor",
+      "activation_scope": "refine"
+    },
+    {
+      "name": "model51_ratio_cap_zscore_60",
+      "expression": "rank(ts_zscore({field_preprocessed} / ts_backfill(cap, 120), 60))",
+      "priority": 1008,
+      "family": "ratio_cap",
+      "layer": "composite",
+      "stage": "first_order",
+      "dataset_tags": ["model51", "risk_metrics", "round16_refine"],
+      "role": "refine_neighbor",
+      "activation_scope": "refine"
+    },
+    {
+      "name": "model51_bucket_cap_ratio_zscore_42",
+      "expression": "group_rank(ts_zscore({field_preprocessed} / ts_backfill(cap, 120), 42), densify(bucket(rank(cap), range='0.1, 1, 0.1')))",
+      "priority": 1006,
+      "family": "bucket_ratio",
+      "layer": "group",
+      "stage": "group_second_order",
+      "dataset_tags": ["model51", "risk_metrics", "round16_refine"],
+      "role": "refine_neighbor",
+      "activation_scope": "refine"
+    },
+    {
+      "name": "model51_bucket_cap_ratio_zscore_84",
+      "expression": "group_rank(ts_zscore({field_preprocessed} / ts_backfill(cap, 120), 84), densify(bucket(rank(cap), range='0.1, 1, 0.1')))",
+      "priority": 1005,
+      "family": "bucket_ratio",
+      "layer": "group",
+      "stage": "group_second_order",
+      "dataset_tags": ["model51", "risk_metrics", "round16_refine"],
+      "role": "refine_neighbor",
+      "activation_scope": "refine"
+    },
+    {
+      "name": "model51_ratio_cap_zscore_42",
+      "expression": "rank(ts_zscore({field_preprocessed} / ts_backfill(cap, 120), 42))",
+      "priority": 1003,
+      "family": "ratio_cap",
+      "layer": "composite",
+      "stage": "first_order",
+      "dataset_tags": ["model51", "risk_metrics", "round16_refine"],
+      "role": "refine_neighbor",
+      "activation_scope": "refine"
+    },
+    {
+      "name": "model51_ratio_cap_zscore_84",
+      "expression": "rank(ts_zscore({field_preprocessed} / ts_backfill(cap, 120), 84))",
+      "priority": 1002,
+      "family": "ratio_cap",
+      "layer": "composite",
+      "stage": "first_order",
+      "dataset_tags": ["model51", "risk_metrics", "round16_refine"],
+      "role": "refine_neighbor",
+      "activation_scope": "refine"
+    },
+    {
+      "name": "model51_decay_bucket_cap_ratio_zscore_60_4",
+      "expression": "ts_decay_linear(group_rank(ts_zscore({field_preprocessed} / ts_backfill(cap, 120), 60), densify(bucket(rank(cap), range='0.1, 1, 0.1'))), 4)",
+      "priority": 1000,
+      "family": "bucket_ratio_decay",
+      "layer": "group",
+      "stage": "group_second_order",
+      "dataset_tags": ["model51", "risk_metrics", "round16_refine"],
+      "role": "refine_neighbor",
+      "activation_scope": "refine"
+    }
+  ],
+  "VECTOR": []
+}

@@ -1,0 +1,85 @@
+{
+  "_comment": "model51 round15 refine pack — 围绕 unsystematic_risk_last_60_days 的最佳 near-pass 邻域，重点抬升 fitness 而非继续广撒网",
+  "_comment_placeholders": "{field}=字段名, {field_preprocessed}=winsorize(ts_backfill({field}, {backfill_window}), std=4), {backfill_window}=settings.yaml expression.backfill_window",
+  "_dataset_id": "model51",
+  "default": [
+    {
+      "name": "model51_decay_rank_ts_zscore_120_6",
+      "expression": "ts_decay_linear(rank(ts_zscore({field_preprocessed}, 120)), 6)",
+      "priority": 1010,
+      "family": "neutralize_decay",
+      "layer": "composite",
+      "stage": "first_order",
+      "dataset_tags": ["model51", "risk_metrics", "round15_refine"],
+      "role": "refine_neighbor",
+      "activation_scope": "refine"
+    },
+    {
+      "name": "model51_decay_rank_ts_zscore_120_4",
+      "expression": "ts_decay_linear(rank(ts_zscore({field_preprocessed}, 120)), 4)",
+      "priority": 1008,
+      "family": "neutralize_decay",
+      "layer": "composite",
+      "stage": "first_order",
+      "dataset_tags": ["model51", "risk_metrics", "round15_refine"],
+      "role": "refine_neighbor",
+      "activation_scope": "refine"
+    },
+    {
+      "name": "model51_decay_rank_ts_zscore_120_8",
+      "expression": "ts_decay_linear(rank(ts_zscore({field_preprocessed}, 120)), 8)",
+      "priority": 1007,
+      "family": "neutralize_decay",
+      "layer": "composite",
+      "stage": "first_order",
+      "dataset_tags": ["model51", "risk_metrics", "round15_refine"],
+      "role": "refine_neighbor",
+      "activation_scope": "refine"
+    },
+    {
+      "name": "model51_ts_zscore_120",
+      "expression": "rank(ts_zscore({field_preprocessed}, 120))",
+      "priority": 1004,
+      "family": "zscore_time",
+      "layer": "time_series",
+      "stage": "first_order",
+      "dataset_tags": ["model51", "risk_metrics", "round15_refine"],
+      "role": "refine_neighbor",
+      "activation_scope": "refine"
+    },
+    {
+      "name": "model51_ts_zscore_126",
+      "expression": "rank(ts_zscore({field_preprocessed}, 126))",
+      "priority": 1002,
+      "family": "zscore_time",
+      "layer": "time_series",
+      "stage": "first_order",
+      "dataset_tags": ["model51", "risk_metrics", "round15_refine"],
+      "role": "refine_neighbor",
+      "activation_scope": "refine"
+    },
+    {
+      "name": "model51_group_zscore_subindustry_120",
+      "expression": "group_rank(ts_zscore({field_preprocessed}, 120), subindustry)",
+      "priority": 1000,
+      "family": "group_zscore",
+      "layer": "group",
+      "stage": "group_second_order",
+      "dataset_tags": ["model51", "risk_metrics", "round15_refine"],
+      "role": "refine_neighbor",
+      "activation_scope": "refine"
+    },
+    {
+      "name": "model51_decay_group_zscore_subindustry_120_6",
+      "expression": "ts_decay_linear(group_rank(ts_zscore({field_preprocessed}, 120), subindustry), 6)",
+      "priority": 998,
+      "family": "group_zscore_decay",
+      "layer": "group",
+      "stage": "group_second_order",
+      "dataset_tags": ["model51", "risk_metrics", "round15_refine"],
+      "role": "refine_neighbor",
+      "activation_scope": "refine"
+    }
+  ],
+  "VECTOR": []
+}
