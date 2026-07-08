@@ -216,6 +216,7 @@ def print_dry_run_plan(
         template_library=template_library,
         template_registry=historical_state.template_registry,
         template_family_registry=historical_state.template_family_registry,
+        template_registry_overrides=historical_state.template_registry_overrides,
         field_feedback=historical_state.field_feedback,
         global_failed_check_counts=historical_state.global_failed_check_counts,
         include_templates=filters.include_templates,

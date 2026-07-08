@@ -835,6 +835,79 @@ def test_build_pending_templates_uses_persisted_registry_recommendation(monkeypa
     assert pending[0].template_role == "promoted_core"
 
 
+def test_build_pending_templates_respects_manual_registry_override(monkeypatch) -> None:
+    monkeypatch.setattr(
+        "alpha.core.executor.build_setting_variants",
+        lambda *args, **kwargs: [{"neutralization": "SUBINDUSTRY", "truncation": 0.08}],
+    )
+    monkeypatch.setattr(
+        "alpha.core.executor.build_expression_candidates",
+        lambda *args, **kwargs: [
+            TemplateCandidate(
+                "manual_override_template",
+                "rank(cash_st)",
+                1000,
+                {
+                    "family": "ts_rank",
+                    "stage": "first_order",
+                    "role": "default_seed",
+                    "activation_scope": "broad",
+                },
+            )
+        ],
+    )
+    args = Namespace(
+        dataset_id="fundamental6",
+        template_disable_after=0,
+        disable_legacy_after=0,
+        max_templates_per_field=6,
+        max_templates_per_family=3,
+        legacy_similarity_penalty=0,
+        region="USA",
+        universe="TOP3000",
+        instrument_type="EQUITY",
+        delay=1,
+        decay=4,
+        neutralization="SUBINDUSTRY",
+        truncation=0.08,
+        pasteurization="ON",
+        unit_handling="VERIFY",
+        nan_handling="OFF",
+        language="FASTEXPR",
+    )
+    build_ctx = TemplateBuildContext(
+        options=TemplateBuildOptions.from_args(args),
+        all_fields=[{"id": "cash_st", "type": "VECTOR", "name": "cash_st", "runtime_field_tags": ["high_coverage"]}],
+        template_library={},
+        template_registry_overrides={
+            "template_overrides": {
+                "manual_override_template": {
+                    "recommended_role": "diagnostic_probe",
+                    "recommended_scope": "diagnostic",
+                    "should_suppress": True,
+                    "reason": "manual_pause",
+                }
+            },
+            "family_overrides": {},
+            "field_cluster_overrides": {},
+        },
+        use_dataset_heuristics=False,
+        expression_policy=get_dataset_expression_policy("fundamental6"),
+    )
+
+    pending, disabled, total = build_pending_templates_for_field(
+        build_ctx,
+        {"id": "cash_st", "type": "VECTOR", "name": "cash_st", "runtime_field_tags": ["high_coverage"]},
+        template_stats={},
+        attempted_keys=set(),
+        prior_results=[],
+    )
+
+    assert total == 1
+    assert disabled == 0
+    assert pending == []
+
+
 def test_fundamental6_template_library_removes_known_weak_short_window_templates() -> None:
     template_file = Path(__file__).resolve().parents[2] / "templates" / "fundamental6" / "library.json"
     payload = json.loads(template_file.read_text(encoding="utf-8"))

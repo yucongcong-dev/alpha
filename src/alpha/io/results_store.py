@@ -86,6 +86,7 @@ def dump_results(
     sidecar_paths = build_output_sidecar_paths(path)
     from ..analysis.report_builder import build_analysis_payload, build_results_summary_payload
     from ..analysis.template_registry import compile_template_registry_summary
+    from ..analysis.template_registry import load_registry_overrides
     from ..analysis.template_stats import compile_template_stats
 
     summary, analysis_inputs = build_results_summary_payload(
@@ -101,6 +102,7 @@ def dump_results(
     atomic_write_json(path, summary)
     initialize_results_journal(path, results)
     atomic_write_json(sidecar_paths["template_registry"], template_registry_summary)
+    atomic_write_json(sidecar_paths["template_registry_overrides"], load_registry_overrides(path))
     if include_analysis:
         analysis = build_analysis_payload(results, summary, analysis_inputs)
         atomic_write_json(sidecar_paths["analysis"], analysis)
@@ -155,6 +157,10 @@ def dump_results_incremental(
     atomic_write_json(path, summary)
     if template_registry_summary is not None:
         atomic_write_json(sidecar_paths["template_registry"], template_registry_summary)
+    if not os.path.exists(sidecar_paths["template_registry_overrides"]):
+        from ..analysis.template_registry import load_registry_overrides
+
+        atomic_write_json(sidecar_paths["template_registry_overrides"], load_registry_overrides(path))
     cleanup_legacy_sidecar_files(path)
     logger.info(
         "[done] wrote incremental results to %s (tested=%d, submittable=%d, appended=%d)",

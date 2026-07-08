@@ -14,10 +14,12 @@ from ..analysis.feedback_history import (
     select_nearpass_candidates,
 )
 from ..analysis.template_registry import (
+    choose_field_cluster_settings_budget,
     choose_family_settings_budget,
     choose_registry_settings_budget,
     normalize_activation_scope,
     normalize_template_role,
+    resolve_registry_override,
     recommend_template_role_transition,
 )
 from ..analysis.template_stats import historical_template_priority_bonus
@@ -163,12 +165,21 @@ def build_pending_template_variants(
             expression,
             template_metadata,
         )
+        manual_override = resolve_registry_override(
+            build_ctx.template_registry_overrides,
+            template_name=template_name,
+            template_family=template_family,
+        )
         persisted_registry_entry = build_ctx.template_registry.get(template_name, {})
         template_role = normalize_template_role(
-            persisted_registry_entry.get("recommended_role") or template_metadata.get("role")
+            manual_override.get("recommended_role")
+            or persisted_registry_entry.get("recommended_role")
+            or template_metadata.get("role")
         )
         template_activation_scope = normalize_activation_scope(
-            persisted_registry_entry.get("recommended_scope") or template_metadata.get("activation_scope")
+            manual_override.get("recommended_scope")
+            or persisted_registry_entry.get("recommended_scope")
+            or template_metadata.get("activation_scope")
         )
         role_recommendation = recommend_template_role_transition(
             template_name,
@@ -177,6 +188,22 @@ def build_pending_template_variants(
             current_scope=template_activation_scope,
             feedback_stage=feedback_stage,
         )
+        if manual_override:
+            role_recommendation.update(
+                recommended_role=normalize_template_role(
+                    manual_override.get("recommended_role") or role_recommendation["recommended_role"]
+                ),
+                recommended_scope=normalize_activation_scope(
+                    manual_override.get("recommended_scope") or role_recommendation["recommended_scope"]
+                ),
+                priority_adjustment=int(
+                    manual_override.get("priority_adjustment", role_recommendation["priority_adjustment"]) or 0
+                ),
+                should_suppress=bool(
+                    manual_override.get("should_suppress", role_recommendation["should_suppress"])
+                ),
+                reason=str(manual_override.get("reason", role_recommendation["reason"]) or ""),
+            )
         if role_recommendation["should_suppress"]:
             continue
         recommended_role = normalize_template_role(role_recommendation["recommended_role"])
@@ -196,6 +223,12 @@ def build_pending_template_variants(
             effective_variant_budget,
             template_family,
             build_ctx.template_family_registry,
+            feedback_stage=feedback_stage,
+        )
+        effective_variant_budget = choose_field_cluster_settings_budget(
+            effective_variant_budget,
+            field.get("runtime_field_tags", []),
+            build_ctx.template_registry_overrides,
             feedback_stage=feedback_stage,
         )
         if effective_variant_budget <= 0:

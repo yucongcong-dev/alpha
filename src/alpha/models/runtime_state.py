@@ -70,6 +70,7 @@ class TemplateBuildContext:
     template_library: TemplateLibrary = field(default_factory=dict)
     template_registry: dict[str, dict[str, object]] = field(default_factory=dict)
     template_family_registry: dict[str, dict[str, object]] = field(default_factory=dict)
+    template_registry_overrides: dict[str, object] = field(default_factory=dict)
     field_feedback: FieldFeedbackMap = field(default_factory=dict)
     global_failed_check_counts: dict[str, int] = field(default_factory=dict)
     include_templates: set[str] = field(default_factory=set)
@@ -117,6 +118,7 @@ class HistoricalRunState:
     template_stats: TemplateStats = field(default_factory=dict)
     template_registry: dict[str, dict[str, object]] = field(default_factory=dict)
     template_family_registry: dict[str, dict[str, object]] = field(default_factory=dict)
+    template_registry_overrides: dict[str, object] = field(default_factory=dict)
     field_feedback: FieldFeedbackMap = field(default_factory=dict)
     global_failed_check_counts: dict[str, int] = field(default_factory=dict)
 

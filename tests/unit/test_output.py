@@ -74,6 +74,7 @@ def test_dump_results_can_skip_analysis_sidecar_for_intermediate_flushes(tmp_pat
     assert output_path.exists()
     assert not (tmp_path / "results_analysis.json").exists()
     assert (tmp_path / "results_template_registry.json").exists()
+    assert (tmp_path / "results_template_registry_overrides.json").exists()
 
 
 def test_initialize_results_journal_and_load_existing_results(tmp_path) -> None:

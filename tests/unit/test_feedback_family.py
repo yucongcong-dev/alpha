@@ -16,6 +16,7 @@ from alpha.analysis.feedback_history import (
 )
 from alpha.analysis.template_registry import choose_registry_settings_budget
 from alpha.analysis.template_registry import choose_family_settings_budget
+from alpha.analysis.template_registry import choose_field_cluster_settings_budget
 from alpha.analysis.results_loader import load_existing_results
 from alpha.generators.templates.refine import build_refine_templates
 from alpha.generators.variants import build_setting_variants
@@ -165,6 +166,25 @@ def test_family_settings_budget_respects_family_registry() -> None:
     )
 
 
+def test_field_cluster_settings_budget_respects_runtime_tags_and_overrides() -> None:
+    assert choose_field_cluster_settings_budget(1, ["high_coverage"], {}) == 2
+    assert (
+        choose_field_cluster_settings_budget(
+            2,
+            ["sparse_coverage"],
+            {
+                "field_cluster_overrides": {
+                    "sparse_coverage": {
+                        "recommended_scope": "diagnostic",
+                        "budget_adjustment": -1,
+                    }
+                }
+            },
+        )
+        == 0
+    )
+
+
 def test_build_historical_run_state_loads_persisted_template_registry(tmp_path) -> None:
     output_path = tmp_path / "results.json"
     output_path.write_text(
@@ -207,12 +227,28 @@ def test_build_historical_run_state_loads_persisted_template_registry(tmp_path) 
         ),
         encoding="utf-8",
     )
+    (tmp_path / "results_template_registry_overrides.json").write_text(
+        json.dumps(
+            {
+                "template_overrides": {
+                    "core_template": {
+                        "recommended_role": "promoted_core",
+                        "recommended_scope": "broad",
+                    }
+                },
+                "family_overrides": {},
+                "field_cluster_overrides": {},
+            }
+        ),
+        encoding="utf-8",
+    )
 
     state = build_historical_run_state(str(output_path), str(output_path))
 
     assert state.template_registry["core_template"]["recommended_role"] == "promoted_core"
     assert state.template_stats["core_template"]["registry_recommended_role"] == "promoted_core"
     assert state.template_family_registry["ts_rank"]["recommended_scope"] == "broad"
+    assert state.template_registry_overrides["template_overrides"]["core_template"]["recommended_role"] == "promoted_core"
 
 
 def test_resimulate_stage_blocks_iter_templates_outside_preferred_stages() -> None:
