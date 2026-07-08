@@ -13,6 +13,7 @@ from alpha.analysis.feedback_history import (
     choose_settings_variant_budget,
     select_nearpass_candidates,
 )
+from alpha.analysis.template_registry import choose_registry_settings_budget
 from alpha.analysis.results_loader import load_existing_results
 from alpha.generators.templates.refine import build_refine_templates
 from alpha.generators.variants import build_setting_variants
@@ -117,6 +118,30 @@ def test_choose_settings_variant_budget_uses_feedback_stage_policy() -> None:
 
     assert generate_budget == 1
     assert resimulate_budget == 3
+
+
+def test_registry_settings_budget_respects_recommended_scope() -> None:
+    assert (
+        choose_registry_settings_budget(
+            1,
+            {"recommended_scope": "broad", "recommended_role": "promoted_core"},
+        )
+        == 2
+    )
+    assert (
+        choose_registry_settings_budget(
+            3,
+            {"recommended_scope": "refine", "recommended_role": "refine_neighbor"},
+        )
+        == 1
+    )
+    assert (
+        choose_registry_settings_budget(
+            3,
+            {"recommended_scope": "diagnostic", "recommended_role": "diagnostic_probe"},
+        )
+        == 0
+    )
 
 
 def test_resimulate_stage_blocks_iter_templates_outside_preferred_stages() -> None:

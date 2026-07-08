@@ -84,6 +84,7 @@ def build_output_sidecar_paths(output_path: str) -> dict[str, str]:
     log_date = time.strftime(DATE_FORMAT_ISO)
     return {
         "analysis": str(base_dir / f"{base_name}_analysis.json"),
+        "template_registry": str(base_dir / f"{base_name}_template_registry.json"),
         "results_journal": str(base_dir / f"{base_name}_results.jsonl"),
         "run_log": str(base_dir / f"{base_name}_{log_date}.log"),
     }

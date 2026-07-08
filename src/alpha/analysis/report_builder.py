@@ -87,6 +87,7 @@ def build_results_summary_payload(
         "submitted": submitted_count,
         "errors": error_count,
         "queue_timeouts": queue_timeout_count,
+        "template_registry_embedded": False,
         "results_journal": results_journal_path,
         "results": results_dicts,
     }

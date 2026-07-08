@@ -73,6 +73,7 @@ def test_dump_results_can_skip_analysis_sidecar_for_intermediate_flushes(tmp_pat
 
     assert output_path.exists()
     assert not (tmp_path / "results_analysis.json").exists()
+    assert (tmp_path / "results_template_registry.json").exists()
 
 
 def test_initialize_results_journal_and_load_existing_results(tmp_path) -> None:
@@ -148,6 +149,8 @@ def test_dump_results_incremental_writes_lightweight_summary(tmp_path) -> None:
         field_type="MATRIX",
         field_name="field_2",
         template_name="tpl",
+        template_role="promoted_core",
+        template_activation_scope="broad",
         status="simulated",
         submittable=True,
         expression="rank(field_2)",
@@ -167,12 +170,21 @@ def test_dump_results_incremental_writes_lightweight_summary(tmp_path) -> None:
         settings_fingerprint="settings",
         template_library_fingerprint="templates",
         run_config={"mode": "incremental"},
+        template_registry_summary=[
+            {
+                "template_name": "tpl",
+                "recommended_role": "promoted_core",
+                "recommended_scope": "broad",
+            }
+        ],
     )
 
     payload = json.loads(output_path.read_text(encoding="utf-8"))
     assert persisted == 1
     assert payload["results_embedded"] is False
     assert "results" not in payload
+    registry = json.loads((tmp_path / "results_template_registry.json").read_text(encoding="utf-8"))
+    assert registry[0]["template_name"] == "tpl"
     assert load_existing_results(str(output_path))[0].field_id == "field_2"
 
 

@@ -45,6 +45,7 @@ def ensure_analysis_synced(
         return
 
     should_rebuild = not os.path.exists(sidecar_paths["analysis"])
+    should_rebuild = should_rebuild or not os.path.exists(sidecar_paths["template_registry"])
     if not should_rebuild:
         try:
             with open(sidecar_paths["analysis"], encoding="utf-8") as handle:

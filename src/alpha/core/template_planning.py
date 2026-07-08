@@ -14,6 +14,7 @@ from ..analysis.feedback_history import (
     select_nearpass_candidates,
 )
 from ..analysis.template_registry import (
+    choose_registry_settings_budget,
     normalize_activation_scope,
     normalize_template_role,
     recommend_template_role_transition,
@@ -174,12 +175,21 @@ def build_pending_template_variants(
         )
         if role_recommendation["should_suppress"]:
             continue
-        template_metadata["registry_recommended_role"] = role_recommendation["recommended_role"]
-        template_metadata["registry_recommended_scope"] = role_recommendation["recommended_scope"]
+        recommended_role = normalize_template_role(role_recommendation["recommended_role"])
+        recommended_scope = normalize_activation_scope(role_recommendation["recommended_scope"])
+        template_metadata["registry_recommended_role"] = recommended_role
+        template_metadata["registry_recommended_scope"] = recommended_scope
         template_metadata["registry_reason"] = role_recommendation["reason"]
         effective_priority = priority + historical_template_priority_bonus(
             template_name, template_stats
         ) + int(role_recommendation["priority_adjustment"])
+        effective_variant_budget = choose_registry_settings_budget(
+            max_setting_variants,
+            role_recommendation,
+            feedback_stage=feedback_stage,
+        )
+        if effective_variant_budget <= 0:
+            continue
         refine_candidate = None
         refine_failed_checks = template_metadata.get("refine_failed_checks")
         if isinstance(refine_failed_checks, list):
@@ -201,7 +211,7 @@ def build_pending_template_variants(
             expression,
             field_feedback=field_feedback,
             refine_candidate=refine_candidate,
-        )[:max_setting_variants]:
+        )[:effective_variant_budget]:
             variant_fingerprint = build_settings_fingerprint_fn(settings_variant)
             if (field_id, template_name, expression, variant_fingerprint) in all_reserved_keys:
                 continue
@@ -210,8 +220,8 @@ def build_pending_template_variants(
                     template_name=template_name,
                     template_family=template_family,
                     template_stage=template_stage,
-                    template_role=template_role,
-                    template_activation_scope=template_activation_scope,
+                    template_role=recommended_role,
+                    template_activation_scope=recommended_scope,
                     expression=expression,
                     priority=effective_priority,
                     settings_variant=settings_variant,

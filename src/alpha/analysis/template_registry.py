@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import Any
 
-from ..config.constants import FEEDBACK_STAGE_GENERATE
+from ..config.constants import FEEDBACK_STAGE_GENERATE, FEEDBACK_STAGE_RESIMULATE
 
 _DEFAULT_ROLE = "default_seed"
 _DEFAULT_SCOPE = "broad"
@@ -191,7 +191,35 @@ def compile_template_registry_summary(
     )
 
 
+def choose_registry_settings_budget(
+    base_budget: int,
+    recommendation: Mapping[str, Any],
+    *,
+    feedback_stage: str = FEEDBACK_STAGE_GENERATE,
+) -> int:
+    """Adjust settings-variant budget using registry recommendation."""
+    budget = max(1, int(base_budget or 1))
+    recommended_scope = normalize_activation_scope(recommendation.get("recommended_scope"))
+    recommended_role = normalize_template_role(recommendation.get("recommended_role"))
+    should_suppress = bool(recommendation.get("should_suppress", False))
+
+    if should_suppress and feedback_stage == FEEDBACK_STAGE_GENERATE:
+        return 0
+    if recommended_role == "promoted_core" or recommended_scope == "broad":
+        return budget + 1
+    if recommended_scope == "refine":
+        if feedback_stage == FEEDBACK_STAGE_RESIMULATE:
+            return budget + 1
+        return min(budget, 1)
+    if recommended_scope == "diagnostic":
+        if feedback_stage == FEEDBACK_STAGE_GENERATE:
+            return 0
+        return 1
+    return budget
+
+
 __all__ = [
+    "choose_registry_settings_budget",
     "compile_template_registry_summary",
     "normalize_activation_scope",
     "normalize_template_role",
