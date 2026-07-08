@@ -26,7 +26,9 @@ from .failed_checks import (
 )
 from .field_stats import compile_field_performance_summary
 
+from .template_registry import compile_template_registry_summary
 from .template_stats import compile_template_performance_summary
+from .template_stats import compile_template_stats
 
 
 def build_results_summary_payload(
@@ -103,6 +105,7 @@ def build_analysis_payload(
 ) -> AnalysisPayload:
     """基于完整结果和 summary 构建 analysis sidecar 内容。"""
     template_performance_summary = compile_template_performance_summary(results)
+    template_registry_summary = compile_template_registry_summary(compile_template_stats(results))
     field_performance_summary = compile_field_performance_summary(results)
     failed_check_leaderboard = compile_failed_check_leaderboard(results)
     near_pass_summary = compile_near_pass_summary(results)
@@ -127,5 +130,6 @@ def build_analysis_payload(
         "near_pass_summary": near_pass_summary,
         "optimization_hints": optimization_hints,
         "template_performance_summary": template_performance_summary,
+        "template_registry_summary": template_registry_summary,
         "field_performance_summary": field_performance_summary,
     }

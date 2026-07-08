@@ -7,6 +7,7 @@ from pathlib import Path
 
 from alpha.analysis.results_loader import load_existing_results
 from alpha.analysis.template_stats import compile_template_stats
+from alpha.analysis.template_registry import compile_template_registry_summary
 from alpha.analysis.analysis_sync import ensure_analysis_synced
 from alpha.io.output_paths import (
     build_dataset_scoped_paths,
@@ -106,6 +107,37 @@ def test_initialize_results_journal_and_load_existing_results(tmp_path) -> None:
 
     assert len(loaded) == 1
     assert loaded[0].field_id == "field_1"
+
+
+def test_load_existing_results_preserves_template_role_metadata(tmp_path) -> None:
+    output_path = tmp_path / "results.json"
+    results = [
+        FieldTestResult(
+            field_id="field_role",
+            field_type="MATRIX",
+            field_name="field_role",
+            template_name="tpl",
+            template_role="promoted_core",
+            template_activation_scope="broad",
+            status="simulated",
+            submittable=False,
+            expression="rank(field_role)",
+        )
+    ]
+
+    dump_results(
+        str(output_path),
+        "fundamental6",
+        results,
+        settings_fingerprint="settings",
+        template_library_fingerprint="templates",
+        include_analysis=False,
+    )
+
+    loaded = load_existing_results(str(output_path))
+
+    assert loaded[0].template_role == "promoted_core"
+    assert loaded[0].template_activation_scope == "broad"
 
 
 def test_dump_results_incremental_writes_lightweight_summary(tmp_path) -> None:
@@ -236,6 +268,38 @@ def test_compile_template_stats_includes_self_correlation_pending_results() -> N
     )
 
     assert stats["tpl"]["attempted"] == 1
+
+
+def test_compile_template_registry_summary_recommends_demotion_for_weak_templates() -> None:
+    stats = compile_template_stats(
+        [
+            FieldTestResult(
+                field_id=f"field_{idx}",
+                field_type="MATRIX",
+                field_name=f"field_{idx}",
+                template_name="weak_template",
+                template_family="mean_spread",
+                template_stage="first_order",
+                template_role="default_seed",
+                template_activation_scope="broad",
+                status="simulated",
+                submittable=False,
+                expression=f"rank(ts_mean(field_{idx}, 20))",
+                failed_checks=[
+                    FailedCheck(name="LOW_SHARPE", value=0.1),
+                    FailedCheck(name="LOW_FITNESS", value=0.2),
+                ],
+            )
+            for idx in range(6)
+        ]
+    )
+
+    summary = compile_template_registry_summary(stats)
+    row = next(item for item in summary if item["template_name"] == "weak_template")
+
+    assert row["recommended_scope"] == "diagnostic"
+    assert row["recommended_role"] == "diagnostic_probe"
+    assert row["should_suppress_in_generate"] is True
 
 
 def test_load_existing_results_falls_back_to_orphaned_journal_when_summary_missing(tmp_path) -> None:

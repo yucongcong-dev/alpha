@@ -39,6 +39,8 @@ class PendingFutureContext:
     template_name: str = ""
     template_family: str = ""
     template_stage: str = ""
+    template_role: str = ""
+    template_activation_scope: str = ""
     expression: str = ""
     settings_fingerprint: str = ""
 
@@ -50,6 +52,8 @@ class PendingTemplateEntry:
     template_name: str
     template_family: str
     template_stage: str
+    template_role: str
+    template_activation_scope: str
     expression: str
     priority: int
     settings_variant: SettingsVariant

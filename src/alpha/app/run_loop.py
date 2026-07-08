@@ -300,6 +300,8 @@ def submit_template_future(
     template_name: str,
     template_family: str,
     template_stage: str,
+    template_role: str,
+    template_activation_scope: str,
     expression: str,
     settings_variant: SettingsVariant,
     variant_fingerprint: str,
@@ -307,7 +309,13 @@ def submit_template_future(
     """Submit one simulation future and register its pending metadata."""
     field_with_template = dataclasses.replace(
         field,
-        metadata={**field.metadata, "template_family": template_family, "template_stage": template_stage},
+        metadata={
+            **field.metadata,
+            "template_family": template_family,
+            "template_stage": template_stage,
+            "template_role": template_role,
+            "template_activation_scope": template_activation_scope,
+        },
     )
     future = executor.submit(
         run_field_test_in_worker,
@@ -329,6 +337,8 @@ def submit_template_future(
         template_name=template_name,
         template_family=template_family,
         template_stage=template_stage,
+        template_role=template_role,
+        template_activation_scope=template_activation_scope,
         expression=expression,
         settings_fingerprint=variant_fingerprint,
     )
@@ -608,6 +618,8 @@ def _dispatch_templates_for_field(
             template_name=entry.template_name,
             template_family=entry.template_family,
             template_stage=entry.template_stage,
+            template_role=entry.template_role,
+            template_activation_scope=entry.template_activation_scope,
             expression=entry.expression,
             settings_variant=entry.settings_variant,
             variant_fingerprint=entry.variant_fingerprint,

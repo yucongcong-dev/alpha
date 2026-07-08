@@ -62,6 +62,8 @@ def _rows_to_results(rows: list[Any]) -> list[FieldTestResult]:
                     template_name=str(row.get(STAT_FIELD_TEMPLATE_NAME, "")),
                     template_family=str(row.get("template_family", "")),
                     template_stage=str(row.get("template_stage", "")),
+                    template_role=str(row.get("template_role", "")),
+                    template_activation_scope=str(row.get("template_activation_scope", "")),
                     simulation_id=row.get("simulation_id"),
                     alpha_id=row.get("alpha_id"),
                     status=str(row.get(API_KEY_STATUS, SENTINEL_UNKNOWN_STATUS)),

@@ -66,11 +66,28 @@ def update_template_stats_with_result(
             STAT_FIELD_LOW_FITNESS: 0,
             STAT_FIELD_CONCENTRATED_WEIGHT: 0,
             STAT_FIELD_LOW_SUB_UNIVERSE_SHARPE: 0,
+            "template_stage": "",
+            "template_role": "",
+            "template_activation_scope": "",
+            "role_counts": {},
+            "scope_counts": {},
         },
     )
 
     if result.template_family and "template_family" not in stat:
         stat["template_family"] = result.template_family
+    if result.template_stage:
+        stat["template_stage"] = result.template_stage
+    if result.template_role:
+        stat["template_role"] = result.template_role
+        role_counts = stat.setdefault("role_counts", {})
+        role_counts[result.template_role] = int(role_counts.get(result.template_role, 0)) + 1
+    if result.template_activation_scope:
+        stat["template_activation_scope"] = result.template_activation_scope
+        scope_counts = stat.setdefault("scope_counts", {})
+        scope_counts[result.template_activation_scope] = (
+            int(scope_counts.get(result.template_activation_scope, 0)) + 1
+        )
     if is_queue_timeout_result(result):
         stat[STAT_FIELD_QUEUE_TIMEOUTS] += 1
         return stats

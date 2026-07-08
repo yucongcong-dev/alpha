@@ -13,6 +13,11 @@ from ..analysis.feedback_history import (
     choose_settings_variant_budget,
     select_nearpass_candidates,
 )
+from ..analysis.template_registry import (
+    normalize_activation_scope,
+    normalize_template_role,
+    recommend_template_role_transition,
+)
 from ..analysis.template_stats import historical_template_priority_bonus
 from ..config.constants import (
     FEEDBACK_STAGE_RESIMULATE,
@@ -137,6 +142,10 @@ def build_pending_template_variants(
         field_feedback,
         expression_policy=build_ctx.expression_policy,
     )
+    feedback_stage = resolve_feedback_stage(
+        field_feedback,
+        (build_ctx.expression_policy or get_dataset_expression_policy(options.dataset_id)).feedback_loop_policy,
+    )
     for template in templates:
         template_name = template.name
         expression = template.expression
@@ -152,9 +161,25 @@ def build_pending_template_variants(
             expression,
             template_metadata,
         )
+        template_role = normalize_template_role(template_metadata.get("role"))
+        template_activation_scope = normalize_activation_scope(
+            template_metadata.get("activation_scope")
+        )
+        role_recommendation = recommend_template_role_transition(
+            template_name,
+            template_stats,
+            current_role=template_role,
+            current_scope=template_activation_scope,
+            feedback_stage=feedback_stage,
+        )
+        if role_recommendation["should_suppress"]:
+            continue
+        template_metadata["registry_recommended_role"] = role_recommendation["recommended_role"]
+        template_metadata["registry_recommended_scope"] = role_recommendation["recommended_scope"]
+        template_metadata["registry_reason"] = role_recommendation["reason"]
         effective_priority = priority + historical_template_priority_bonus(
             template_name, template_stats
-        )
+        ) + int(role_recommendation["priority_adjustment"])
         refine_candidate = None
         refine_failed_checks = template_metadata.get("refine_failed_checks")
         if isinstance(refine_failed_checks, list):
@@ -185,6 +210,8 @@ def build_pending_template_variants(
                     template_name=template_name,
                     template_family=template_family,
                     template_stage=template_stage,
+                    template_role=template_role,
+                    template_activation_scope=template_activation_scope,
                     expression=expression,
                     priority=effective_priority,
                     settings_variant=settings_variant,

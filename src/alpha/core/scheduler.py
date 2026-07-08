@@ -164,6 +164,8 @@ def handle_completed_future(
             template_name=template_name,
             template_family=_pending_meta_value(context, "template_family"),
             template_stage=_pending_meta_value(context, "template_stage"),
+            template_role=_pending_meta_value(context, "template_role"),
+            template_activation_scope=_pending_meta_value(context, "template_activation_scope"),
             simulation_id=None,
             alpha_id=None,
             expression=_pending_meta_value(context, "expression"),

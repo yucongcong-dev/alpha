@@ -194,6 +194,8 @@ class TestFieldTestResult:
             field_type="MATRIX",
             field_name="sales",
             template_name="ts_mean_20",
+            template_role="default_seed",
+            template_activation_scope="broad",
             expression="rank(ts_mean(sales, 20))",
             status="simulated",
             submittable=True,
@@ -201,6 +203,8 @@ class TestFieldTestResult:
         assert result.submittable
         assert result.status == "simulated"
         assert result.field_id == "sales"
+        assert result.to_dict()["template_role"] == "default_seed"
+        assert result.to_dict()["template_activation_scope"] == "broad"
 
     def test_failed_result_with_checks(self) -> None:
         result = FieldTestResult(

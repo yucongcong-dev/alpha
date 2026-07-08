@@ -221,6 +221,8 @@ class FieldTestResult:
     template_name: str
     template_family: str = ""
     template_stage: str = ""
+    template_role: str = ""
+    template_activation_scope: str = ""
     simulation_id: str | None = None
     alpha_id: str | None = None
     status: str = "unknown"
@@ -248,6 +250,8 @@ class FieldTestResult:
             "template_name": self.template_name,
             "template_family": self.template_family,
             "template_stage": self.template_stage,
+            "template_role": self.template_role,
+            "template_activation_scope": self.template_activation_scope,
             "simulation_id": self.simulation_id,
             "alpha_id": self.alpha_id,
             "status": self.status,
@@ -327,6 +331,8 @@ class FieldTestContext:
     expression: str
     template_family: str = ""
     template_stage: str = ""
+    template_role: str = ""
+    template_activation_scope: str = ""
     settings_fingerprint: str = ""
     template_library_fingerprint: str = ""
 
@@ -347,6 +353,8 @@ class FieldTestContext:
             template_name=self.template_name,
             template_family=self.template_family,
             template_stage=self.template_stage,
+            template_role=self.template_role,
+            template_activation_scope=self.template_activation_scope,
             simulation_id=simulation_id,
             alpha_id=alpha_id,
             status=status,
@@ -378,6 +386,8 @@ class FieldTestContext:
             template_name=self.template_name,
             template_family=self.template_family,
             template_stage=self.template_stage,
+            template_role=self.template_role,
+            template_activation_scope=self.template_activation_scope,
             simulation_id=simulation_id,
             alpha_id=alpha_id,
             status=status,

@@ -51,6 +51,12 @@ from .feedback_stats import (
 from .field_stats import compile_field_performance_summary, current_submittable_count, field_priority
 from .result_identity import attempted_template_keys, is_informative_result, result_identity
 from .results_loader import load_existing_results
+from .template_registry import (
+    compile_template_registry_summary,
+    normalize_activation_scope,
+    normalize_template_role,
+    recommend_template_role_transition,
+)
 from .template_stats import (
     compile_template_performance_summary,
     compile_template_stats,
@@ -68,6 +74,7 @@ __all__ = [
     "compile_near_pass_summary",
     "compile_optimization_hints",
     "compile_template_performance_summary",
+    "compile_template_registry_summary",
     "compile_template_stats",
     "current_submittable_count",
     "dominant_failed_check_names",
@@ -80,7 +87,10 @@ __all__ = [
     "is_legacy_family_disabled",
     "is_template_disabled",
     "load_existing_results",
+    "normalize_activation_scope",
+    "normalize_template_role",
     "merge_failed_check_counts",
+    "recommend_template_role_transition",
     "result_identity",
     "score_failed_checks",
     "select_nearpass_candidates",

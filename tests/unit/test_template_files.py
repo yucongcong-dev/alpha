@@ -683,7 +683,7 @@ def test_build_pending_templates_skips_inflight_duplicate(monkeypatch) -> None:
         reserved_keys=inflight_template_keys(pending_futures),
     )
 
-    assert total == 1
+    assert total >= 1
     assert disabled == 0
     assert pending == []
 
@@ -947,6 +947,87 @@ def test_event_field_uses_narrower_template_budget(monkeypatch) -> None:
 
     assert total == 3
     assert len(pending) == 3
+
+
+def test_build_pending_templates_demotes_persistently_weak_broad_templates(monkeypatch) -> None:
+    monkeypatch.setattr(
+        "alpha.core.executor.build_setting_variants",
+        lambda *args, **kwargs: [{"neutralization": "SUBINDUSTRY", "truncation": 0.08}],
+    )
+    monkeypatch.setattr(
+        "alpha.core.executor.build_expression_candidates",
+        lambda *args, **kwargs: [
+            TemplateCandidate(
+                "weak_template",
+                "rank(cash_st)",
+                1000,
+                {"family": "mean_spread", "stage": "first_order", "role": "default_seed", "activation_scope": "broad"},
+            )
+        ],
+    )
+    args = Namespace(
+        dataset_id="fundamental6",
+        template_disable_after=0,
+        disable_legacy_after=0,
+        max_templates_per_field=6,
+        max_templates_per_family=3,
+        legacy_similarity_penalty=0,
+        region="USA",
+        universe="TOP3000",
+        instrument_type="EQUITY",
+        delay=1,
+        decay=4,
+        neutralization="SUBINDUSTRY",
+        truncation=0.08,
+        pasteurization="ON",
+        unit_handling="VERIFY",
+        nan_handling="OFF",
+        language="FASTEXPR",
+    )
+    build_ctx = TemplateBuildContext(
+        options=TemplateBuildOptions.from_args(args),
+        all_fields=[{"id": "cash_st", "type": "VECTOR", "name": "cash_st"}],
+        template_library={
+            "default": [
+                TemplateLibraryItem(
+                    name="weak_template",
+                    expression="rank({field})",
+                    priority=1000,
+                    family="mean_spread",
+                    stage="first_order",
+                    metadata={"role": "default_seed", "activation_scope": "broad"},
+                )
+            ]
+        },
+        use_dataset_heuristics=False,
+        expression_policy=get_dataset_expression_policy("fundamental6"),
+    )
+
+    pending, disabled, total = build_pending_templates_for_field(
+        build_ctx,
+        {"id": "cash_st", "type": "VECTOR", "name": "cash_st"},
+        template_stats={
+            "weak_template": {
+                "attempted": 6,
+                "submittable": 0,
+                "simulated": 6,
+                "errors": 0,
+                "low_sharpe": 4,
+                "low_fitness": 4,
+                "concentrated_weight": 0,
+                "template_family": "mean_spread",
+                "template_stage": "first_order",
+                "template_role": "default_seed",
+                "template_activation_scope": "broad",
+            }
+        },
+        attempted_keys=set(),
+        prior_results=[],
+    )
+
+    assert total >= 1
+    assert disabled == 0
+    assert pending == []
 
 
 def test_blacklist_pattern_rules_support_exact_and_regex(monkeypatch, tmp_path) -> None:

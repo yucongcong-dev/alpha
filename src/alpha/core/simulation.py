@@ -77,6 +77,8 @@ def run_field_test(
         template_name=template_name,
         template_family=str(first_non_empty(field.get("template_family"), "")),
         template_stage=str(first_non_empty(field.get("template_stage"), "")),
+        template_role=str(first_non_empty(field.get("template_role"), "")),
+        template_activation_scope=str(first_non_empty(field.get("template_activation_scope"), "")),
         expression=expression,
         settings_fingerprint=settings_fingerprint,
         template_library_fingerprint=template_library_fingerprint,
