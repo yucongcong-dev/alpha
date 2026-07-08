@@ -10,10 +10,12 @@ from alpha.analysis.feedback_filters import (
     should_skip_field_template_family,
 )
 from alpha.analysis.feedback_history import (
+    build_historical_run_state,
     choose_settings_variant_budget,
     select_nearpass_candidates,
 )
 from alpha.analysis.template_registry import choose_registry_settings_budget
+from alpha.analysis.template_registry import choose_family_settings_budget
 from alpha.analysis.results_loader import load_existing_results
 from alpha.generators.templates.refine import build_refine_templates
 from alpha.generators.variants import build_setting_variants
@@ -142,6 +144,75 @@ def test_registry_settings_budget_respects_recommended_scope() -> None:
         )
         == 0
     )
+
+
+def test_family_settings_budget_respects_family_registry() -> None:
+    assert (
+        choose_family_settings_budget(
+            1,
+            "ts_rank",
+            {"ts_rank": {"recommended_scope": "broad", "budget_adjustment": 1}},
+        )
+        == 2
+    )
+    assert (
+        choose_family_settings_budget(
+            2,
+            "mean_spread",
+            {"mean_spread": {"recommended_scope": "diagnostic", "budget_adjustment": -1}},
+        )
+        == 0
+    )
+
+
+def test_build_historical_run_state_loads_persisted_template_registry(tmp_path) -> None:
+    output_path = tmp_path / "results.json"
+    output_path.write_text(
+        json.dumps(
+            {
+                "dataset_id": "fundamental6",
+                "results": [
+                    {
+                        "field_id": "cash_st",
+                        "field_type": "MATRIX",
+                        "field_name": "cash_st",
+                        "template_name": "core_template",
+                        "template_family": "ts_rank",
+                        "template_stage": "first_order",
+                        "status": "simulated",
+                        "submittable": True,
+                        "submitted": False,
+                        "message": "",
+                        "expression": "rank(ts_rank(cash_st, 60))",
+                        "settings_fingerprint": "settings",
+                        "template_library_fingerprint": "library",
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    (tmp_path / "results_template_registry.json").write_text(
+        json.dumps(
+            [
+                {
+                    "template_name": "core_template",
+                    "template_family": "ts_rank",
+                    "recommended_role": "promoted_core",
+                    "recommended_scope": "broad",
+                    "priority_adjustment": 120,
+                    "reason": "submittable_history",
+                }
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    state = build_historical_run_state(str(output_path), str(output_path))
+
+    assert state.template_registry["core_template"]["recommended_role"] == "promoted_core"
+    assert state.template_stats["core_template"]["registry_recommended_role"] == "promoted_core"
+    assert state.template_family_registry["ts_rank"]["recommended_scope"] == "broad"
 
 
 def test_resimulate_stage_blocks_iter_templates_outside_preferred_stages() -> None:

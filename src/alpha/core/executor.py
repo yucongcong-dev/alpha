@@ -214,6 +214,8 @@ def print_dry_run_plan(
         template_library_file=str(getattr(args, "template_library_file", "") or ""),
         all_fields=fields,
         template_library=template_library,
+        template_registry=historical_state.template_registry,
+        template_family_registry=historical_state.template_family_registry,
         field_feedback=historical_state.field_feedback,
         global_failed_check_counts=historical_state.global_failed_check_counts,
         include_templates=filters.include_templates,

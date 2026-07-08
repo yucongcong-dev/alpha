@@ -195,6 +195,8 @@ def create_template_build_context(
         template_library_file=str(getattr(args, "template_library_file", "") or ""),
         all_fields=fields,
         template_library=run_ctx.template_library,
+        template_registry=run_ctx.historical_state.template_registry,
+        template_family_registry=run_ctx.historical_state.template_family_registry,
         field_feedback=run_ctx.historical_state.field_feedback,
         global_failed_check_counts=run_ctx.historical_state.global_failed_check_counts,
         include_templates=run_ctx.filters.include_templates,

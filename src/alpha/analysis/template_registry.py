@@ -3,9 +3,12 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
+import json
+import os
 from typing import Any
 
 from ..config.constants import FEEDBACK_STAGE_GENERATE, FEEDBACK_STAGE_RESIMULATE
+from ..io.output_paths import build_output_sidecar_paths
 
 _DEFAULT_ROLE = "default_seed"
 _DEFAULT_SCOPE = "broad"
@@ -18,6 +21,8 @@ _DIAGNOSTIC_DEMOTION_PENALTY = -120
 _PROMOTE_MIN_SIMULATED = 3
 _DEMOTE_MIN_ATTEMPTED = 6
 _REFINE_MIN_ATTEMPTED = 4
+_FAMILY_STRONG_SUBMITTABLE_BONUS = 1
+_FAMILY_WEAK_MIN_ATTEMPTED = 8
 
 
 def normalize_template_role(role: object) -> str:
@@ -191,6 +196,121 @@ def compile_template_registry_summary(
     )
 
 
+def load_persisted_template_registry(output_path: str) -> list[dict[str, Any]]:
+    """Load persisted template-registry sidecar rows when available."""
+    if not output_path:
+        return []
+    registry_path = build_output_sidecar_paths(output_path)["template_registry"]
+    if not os.path.exists(registry_path):
+        return []
+    try:
+        with open(registry_path, encoding="utf-8") as handle:
+            payload = json.load(handle)
+    except Exception:
+        return []
+    if not isinstance(payload, list):
+        return []
+    return [item for item in payload if isinstance(item, dict)]
+
+
+def build_template_registry_index(
+    rows: list[dict[str, Any]],
+) -> dict[str, dict[str, Any]]:
+    """Build fast lookup index from persisted registry rows."""
+    indexed: dict[str, dict[str, Any]] = {}
+    for row in rows:
+        template_name = str(row.get("template_name", "") or "")
+        if not template_name:
+            continue
+        indexed[template_name] = dict(row)
+    return indexed
+
+
+def merge_registry_recommendations_into_template_stats(
+    template_stats: dict[str, dict[str, Any]],
+    registry_rows: list[dict[str, Any]],
+) -> dict[str, dict[str, Any]]:
+    """Merge persisted registry recommendations back into template stats."""
+    if not registry_rows:
+        return template_stats
+    merged = dict(template_stats)
+    for row in registry_rows:
+        template_name = str(row.get("template_name", "") or "")
+        if not template_name:
+            continue
+        stat = dict(merged.get(template_name, {}))
+        if "recommended_role" in row:
+            stat["registry_recommended_role"] = str(row.get("recommended_role", "") or "")
+        if "recommended_scope" in row:
+            stat["registry_recommended_scope"] = str(row.get("recommended_scope", "") or "")
+        if "priority_adjustment" in row:
+            stat["registry_priority_adjustment"] = int(row.get("priority_adjustment", 0) or 0)
+        if "reason" in row:
+            stat["registry_reason"] = str(row.get("reason", "") or "")
+        if "template_family" in row and row.get("template_family"):
+            stat["template_family"] = str(row.get("template_family", "") or "")
+        merged[template_name] = stat
+    return merged
+
+
+def compile_template_family_registry(
+    template_stats: Mapping[str, Mapping[str, Any]],
+) -> dict[str, dict[str, Any]]:
+    """Aggregate registry-like summary at template-family granularity."""
+    grouped: dict[str, dict[str, Any]] = {}
+    for stat in template_stats.values():
+        if not isinstance(stat, Mapping):
+            continue
+        family = str(stat.get("template_family", "") or "").strip().lower()
+        if not family:
+            continue
+        row = grouped.setdefault(
+            family,
+            {
+                "template_family": family,
+                "attempted": 0,
+                "simulated": 0,
+                "submittable": 0,
+                "errors": 0,
+                "low_sharpe": 0,
+                "low_fitness": 0,
+                "concentrated_weight": 0,
+            },
+        )
+        for key in (
+            "attempted",
+            "simulated",
+            "submittable",
+            "errors",
+            "low_sharpe",
+            "low_fitness",
+            "concentrated_weight",
+        ):
+            row[key] += int(stat.get(key, 0) or 0)
+    for family, row in grouped.items():
+        if row["submittable"] > 0:
+            row["recommended_scope"] = "broad"
+            row["budget_adjustment"] = _FAMILY_STRONG_SUBMITTABLE_BONUS
+            row["reason"] = "family_has_submittable_history"
+        elif (
+            row["attempted"] >= _FAMILY_WEAK_MIN_ATTEMPTED
+            and row["submittable"] == 0
+            and (
+                (row["low_sharpe"] >= 4 and row["low_fitness"] >= 4)
+                or row["concentrated_weight"] >= 3
+            )
+        ):
+            row["recommended_scope"] = "diagnostic"
+            row["budget_adjustment"] = -1
+            row["reason"] = "family_persistent_failure_pattern"
+        else:
+            row["recommended_scope"] = "refine" if row["simulated"] > 0 else "broad"
+            row["budget_adjustment"] = 0
+            row["reason"] = "family_neutral"
+        grouped[family] = row
+    return grouped
+
+
 def choose_registry_settings_budget(
     base_budget: int,
     recommendation: Mapping[str, Any],
@@ -218,9 +338,38 @@ def choose_registry_settings_budget(
     return budget
 
 
+def choose_family_settings_budget(
+    base_budget: int,
+    template_family: str,
+    family_registry: Mapping[str, Mapping[str, Any]],
+    *,
+    feedback_stage: str = FEEDBACK_STAGE_GENERATE,
+) -> int:
+    """Adjust settings budget using family-level historical strength."""
+    budget = max(0, int(base_budget or 0))
+    family_key = str(template_family or "").strip().lower()
+    if not family_key or family_key not in family_registry:
+        return budget
+    family_row = family_registry[family_key]
+    recommended_scope = normalize_activation_scope(family_row.get("recommended_scope"))
+    adjustment = int(family_row.get("budget_adjustment", 0) or 0)
+    if recommended_scope == "diagnostic" and feedback_stage == FEEDBACK_STAGE_GENERATE:
+        return 0
+    if recommended_scope == "broad":
+        return max(1, budget + max(0, adjustment))
+    if recommended_scope == "refine" and feedback_stage == FEEDBACK_STAGE_GENERATE:
+        return max(1, budget)
+    return max(1, budget + adjustment)
+
+
 __all__ = [
+    "build_template_registry_index",
+    "choose_family_settings_budget",
     "choose_registry_settings_budget",
+    "compile_template_family_registry",
     "compile_template_registry_summary",
+    "load_persisted_template_registry",
+    "merge_registry_recommendations_into_template_stats",
     "normalize_activation_scope",
     "normalize_template_role",
     "recommend_template_role_transition",

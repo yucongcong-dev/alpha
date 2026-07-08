@@ -14,6 +14,7 @@ from ..analysis.feedback_history import (
     select_nearpass_candidates,
 )
 from ..analysis.template_registry import (
+    choose_family_settings_budget,
     choose_registry_settings_budget,
     normalize_activation_scope,
     normalize_template_role,
@@ -162,9 +163,12 @@ def build_pending_template_variants(
             expression,
             template_metadata,
         )
-        template_role = normalize_template_role(template_metadata.get("role"))
+        persisted_registry_entry = build_ctx.template_registry.get(template_name, {})
+        template_role = normalize_template_role(
+            persisted_registry_entry.get("recommended_role") or template_metadata.get("role")
+        )
         template_activation_scope = normalize_activation_scope(
-            template_metadata.get("activation_scope")
+            persisted_registry_entry.get("recommended_scope") or template_metadata.get("activation_scope")
         )
         role_recommendation = recommend_template_role_transition(
             template_name,
@@ -186,6 +190,12 @@ def build_pending_template_variants(
         effective_variant_budget = choose_registry_settings_budget(
             max_setting_variants,
             role_recommendation,
+            feedback_stage=feedback_stage,
+        )
+        effective_variant_budget = choose_family_settings_budget(
+            effective_variant_budget,
+            template_family,
+            build_ctx.template_family_registry,
             feedback_stage=feedback_stage,
         )
         if effective_variant_budget <= 0:

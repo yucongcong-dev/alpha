@@ -27,6 +27,12 @@ from .feedback_stats import compile_field_feedback, compile_global_failed_check_
 from .field_stats import current_submittable_count
 from .result_identity import attempted_template_keys
 from .results_loader import load_existing_results
+from .template_registry import (
+    build_template_registry_index,
+    compile_template_family_registry,
+    load_persisted_template_registry,
+    merge_registry_recommendations_into_template_stats,
+)
 from .template_stats import compile_template_stats
 
 
@@ -35,6 +41,13 @@ def build_historical_run_state(output_path: str, feedback_output_path: str) -> H
     existing_results = load_existing_results(output_path)
     attempted_keys = attempted_template_keys(existing_results)
     template_stats = compile_template_stats(existing_results)
+    persisted_template_registry_rows = load_persisted_template_registry(output_path)
+    template_stats = merge_registry_recommendations_into_template_stats(
+        template_stats,
+        persisted_template_registry_rows,
+    )
+    template_registry = build_template_registry_index(persisted_template_registry_rows)
+    template_family_registry = compile_template_family_registry(template_stats)
     feedback_results = (
         existing_results
         if feedback_output_path == output_path
@@ -46,6 +59,8 @@ def build_historical_run_state(output_path: str, feedback_output_path: str) -> H
         existing_results=existing_results,
         attempted_keys=attempted_keys,
         template_stats=template_stats,
+        template_registry=template_registry,
+        template_family_registry=template_family_registry,
         field_feedback=field_feedback,
         global_failed_check_counts=global_failed_check_counts,
     )
