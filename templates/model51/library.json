@@ -22,8 +22,8 @@
       "dataset_tags": ["model51", "risk_metrics"]
     },
     {
-      "name": "model51_group_zscore_subindustry_84",
-      "expression": "group_rank(ts_zscore({field_preprocessed}, 84), subindustry)",
+      "name": "model51_group_zscore_subindustry_120",
+      "expression": "group_rank(ts_zscore({field_preprocessed}, 120), subindustry)",
       "priority": 998,
       "family": "group_zscore",
       "layer": "group",
@@ -31,29 +31,20 @@
       "dataset_tags": ["model51", "risk_metrics"]
     },
     {
-      "name": "model51_group_delta_over_std_subindustry_42_126",
-      "expression": "group_rank(ts_delta({field_preprocessed}, 42) / ts_std_dev({field_preprocessed}, 126), subindustry)",
+      "name": "model51_ts_zscore_120",
+      "expression": "rank(ts_zscore({field_preprocessed}, 120))",
       "priority": 997,
-      "family": "group_vol_scaled_delta",
-      "layer": "group",
-      "stage": "group_second_order",
-      "dataset_tags": ["model51", "risk_metrics"]
-    },
-    {
-      "name": "model51_rank_mean_reversion_63_252",
-      "expression": "rank(ts_mean({field_preprocessed}, 63) - ts_mean({field_preprocessed}, 252))",
-      "priority": 996,
-      "family": "mean_spread",
+      "family": "zscore_time",
       "layer": "time_series",
       "stage": "first_order",
       "dataset_tags": ["model51", "risk_metrics"]
     },
     {
-      "name": "model51_rank_ir_126",
-      "expression": "rank(ts_mean({field_preprocessed}, 126) / ts_std_dev({field_preprocessed}, 126))",
-      "priority": 995,
-      "family": "rank_spread",
-      "layer": "signal",
+      "name": "model51_rank_mean_reversion_60_252",
+      "expression": "rank(ts_mean({field_preprocessed}, 60) - ts_mean({field_preprocessed}, 252))",
+      "priority": 996,
+      "family": "mean_spread",
+      "layer": "time_series",
       "stage": "first_order",
       "dataset_tags": ["model51", "risk_metrics"]
     }

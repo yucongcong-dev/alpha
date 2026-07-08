@@ -37,9 +37,10 @@ Current default-library goal:
 - avoid filling the default queue with near-neighbor window variants around the same crowded risk branch
 
 Core default shapes:
-- first-order long-window `ts_rank / ts_zscore / decay`
-- one bucket-cap grouped template
-- one cap-ratio template plus one bucket-cap-ratio template that are less identical to the old risk-field branch
+- one first-order long-window `ts_zscore`
+- one grouped `subindustry` zscore
+- one cap-ratio template plus one bucket-cap-ratio template
+- one mean-reversion spread template to avoid over-concentrating the queue on pure zscore/risk transforms
 
 What was removed:
 - Default `stddev`-only templates were dropped from the curated main library because they were less targeted than the newer bucket/risk-aware shapes.
@@ -72,6 +73,12 @@ Refine pack convention:
 - The current broadening pack is `templates/model51/refine/broad_search_neighbors.json`.
 - If a focused experiment needs a stable hand-curated field cache, keep it under `refine/fields/` instead of `cache/`.
 - grouped `market` zscore families, extra decay-window families, and bucket-volatility variants belong here once they stop earning a place in the default queue
+- refine packs should now expand the new default spine first:
+  - `ts_zscore_120`
+  - `group_zscore_subindustry_120`
+  - `ratio_cap_zscore_60/120`
+  - `bucket_cap_ratio_zscore_60/120`
+  - `mean_reversion_60/120_252`
 
 Current local evidence behind this narrower focus:
 - Historical runs once showed `submittable=true` or near-pass behavior on the risk-field branch, but those signals are no longer sufficient by themselves after the self-correlation gate was tightened.

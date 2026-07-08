@@ -50,6 +50,14 @@ The default library should now be read as the narrow production queue for broad 
 - treat extra long-window neighbors, rawfill/longfill alternates, and legacy cross-sectional wrappers as refine candidates unless they prove repeatedly useful
 - the current recovery pack for these demoted defaults is `templates/fundamental6/refine/default_neighbors.json`
 
+Refine pack convention:
+- `default_neighbors.json` should now be read as an expansion ring around the new default spine rather than a dump of old scalar leftovers.
+- It should primarily broaden:
+  - slower or faster neighbors of the surviving slow-frequency templates
+  - longer-window `ratio_cap` / `bucket_ratio` variants
+  - grouped bucket variants around `cap` and liquidity
+  - the secondary event-self-change path that is too specific for broad-search default use
+
 ## Things To Revisit Later
 - Continue shifting from single-field transforms toward field-relation templates.
 - Reassess whether remaining generic `ts_rank/ts_zscore/stddev` defaults should be narrowed even further.

@@ -1,5 +1,5 @@
 {
-  "_comment": "fundamental6 refine pack — 从 default 降级的慢频近邻模板，适合二阶段定向加宽",
+  "_comment": "fundamental6 refine pack — 围绕新的默认主线做慢频邻域扩展与结构替代，适合二阶段定向加宽",
   "_comment_placeholders": "{field}=字段名, {field_preprocessed}=winsorize(ts_backfill({field}, {backfill_window}), std=4), {field_longfill}=winsorize(ts_backfill({field}, 252), std=3), {field_rawfill}=ts_backfill({field}, {backfill_window}), {backfill_window}=settings.yaml expression.backfill_window",
   "default": [
     {
@@ -10,95 +10,68 @@
       "layer": "composite"
     },
     {
-      "name": "ts_rank_60",
-      "expression": "rank(ts_rank({field}, 60))",
-      "priority": 970,
-      "family": "ts_rank",
-      "layer": "time_series"
-    },
-    {
-      "name": "ts_rank_504",
-      "expression": "rank(ts_rank({field}, 504))",
-      "priority": 964,
-      "family": "ts_rank",
-      "layer": "time_series"
-    },
-    {
-      "name": "ts_zscore_60",
-      "expression": "rank(ts_zscore({field}, 60))",
-      "priority": 957,
-      "family": "zscore_time",
-      "layer": "time_series"
-    },
-    {
       "name": "ts_zscore_126",
       "expression": "rank(ts_zscore({field}, 126))",
-      "priority": 955,
-      "family": "zscore_time",
-      "layer": "time_series"
-    },
-    {
-      "name": "ts_zscore_backfill",
-      "expression": "rank(ts_zscore(ts_backfill({field}, {backfill_window}), {backfill_window}))",
-      "priority": 953,
+      "priority": 966,
       "family": "zscore_time",
       "layer": "time_series"
     },
     {
       "name": "decay_20",
       "expression": "rank(ts_decay_linear(ts_backfill({field}, {backfill_window}), 20))",
-      "priority": 950,
+      "priority": 962,
       "family": "decay_level",
       "layer": "time_series"
     },
     {
       "name": "decay_252",
       "expression": "rank(ts_decay_linear(ts_backfill({field}, {backfill_window}), 252))",
-      "priority": 944,
+      "priority": 960,
       "family": "decay_level",
       "layer": "time_series"
     },
     {
-      "name": "stddev_60",
-      "expression": "rank(ts_std_dev({field}, 60))",
-      "priority": 933,
-      "family": "stddev",
-      "layer": "time_series"
+      "name": "ratio_cap_zscore_120",
+      "expression": "rank(ts_zscore({field_preprocessed} / ts_backfill(cap, {backfill_window}), 120))",
+      "priority": 958,
+      "family": "ratio_cap",
+      "layer": "account"
     },
     {
-      "name": "ir_60",
-      "expression": "rank(ts_mean({field}, 60) / ts_std_dev({field}, 60))",
-      "priority": 931,
-      "family": "mean_ratio",
-      "layer": "time_series"
+      "name": "bucket_cap_ratio_zscore_120",
+      "expression": "group_rank(ts_zscore({field_preprocessed} / ts_backfill(cap, {backfill_window}), 120), densify(bucket(rank(cap), range='0.1, 1, 0.1')))",
+      "priority": 956,
+      "family": "bucket_ratio",
+      "layer": "account"
     },
     {
-      "name": "stddev_252",
-      "expression": "rank(ts_std_dev({field}, 252))",
-      "priority": 929,
-      "family": "stddev",
-      "layer": "time_series"
+      "name": "bucket_cap_zscore_60",
+      "expression": "group_rank(ts_zscore({field_preprocessed}, 60), densify(bucket(rank(cap), range='0.1, 1, 0.1')))",
+      "priority": 954,
+      "family": "bucket_group_rank",
+      "layer": "account"
+    },
+    {
+      "name": "bucket_liquidity_ts_rank_60",
+      "expression": "group_rank(ts_rank({field_preprocessed}, 60), densify(bucket(rank(close * volume), range='0.1, 1, 0.1')))",
+      "priority": 952,
+      "family": "bucket_group_rank",
+      "layer": "account"
+    },
+    {
+      "name": "event_trade_when_field_change_rank_60",
+      "expression": "trade_when(ts_delta({field}) != 0, rank(ts_rank({field_preprocessed}, 60)), -1)",
+      "priority": 950,
+      "family": "event_trade_when",
+      "layer": "event",
+      "stage": "event_conditioned"
     },
     {
       "name": "days_from_change_decay_20",
       "expression": "rank(ts_decay_linear(days_from_last_change({field}), 20))",
-      "priority": 923,
+      "priority": 948,
       "family": "event_decay",
       "layer": "time_series"
-    },
-    {
-      "name": "zscore",
-      "expression": "rank(zscore({field}))",
-      "priority": 920,
-      "family": "legacy_level",
-      "layer": "cross_section"
-    },
-    {
-      "name": "scale",
-      "expression": "rank(scale({field}))",
-      "priority": 919,
-      "family": "legacy_level",
-      "layer": "cross_section"
     }
   ]
 }

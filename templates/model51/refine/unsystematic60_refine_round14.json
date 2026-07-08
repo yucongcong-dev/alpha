@@ -1,5 +1,5 @@
 {
-  "_comment": "model51 round14 refine pack — 仅围绕 unsystematic_risk_last_60_days，优先验证 near-pass 主支线与此前未充分展开的 ratio 分支",
+  "_comment": "model51 round14 refine pack — 围绕 unsystematic_risk_last_60_days 的新默认主线做小半径结构扩展",
   "_comment_placeholders": "{field}=字段名, {field_preprocessed}=winsorize(ts_backfill({field}, {backfill_window}), std=4), {backfill_window}=settings.yaml expression.backfill_window",
   "_dataset_id": "model51",
   "default": [
@@ -31,9 +31,18 @@
       "dataset_tags": ["model51", "risk_metrics", "round14_refine"]
     },
     {
+      "name": "model51_group_zscore_subindustry_120",
+      "expression": "group_rank(ts_zscore({field_preprocessed}, 120), subindustry)",
+      "priority": 997,
+      "family": "group_zscore",
+      "layer": "group",
+      "stage": "group_second_order",
+      "dataset_tags": ["model51", "risk_metrics", "round14_refine"]
+    },
+    {
       "name": "model51_ratio_cap_zscore_60",
       "expression": "rank(ts_zscore({field_preprocessed} / ts_backfill(cap, 120), 60))",
-      "priority": 997,
+      "priority": 996,
       "family": "ratio_cap",
       "layer": "composite",
       "stage": "first_order",
@@ -42,26 +51,26 @@
     {
       "name": "model51_bucket_cap_ratio_zscore_60",
       "expression": "group_rank(ts_zscore({field_preprocessed} / ts_backfill(cap, 120), 60), densify(bucket(rank(cap), range='0.1, 1, 0.1')))",
-      "priority": 996,
+      "priority": 995,
       "family": "bucket_ratio",
       "layer": "group",
       "stage": "group_second_order",
       "dataset_tags": ["model51", "risk_metrics", "round14_refine"]
     },
     {
-      "name": "model51_ts_zscore_60",
-      "expression": "rank(ts_zscore({field_preprocessed}, 60))",
-      "priority": 995,
-      "family": "zscore_time",
-      "layer": "time_series",
+      "name": "model51_ratio_cap_zscore_120",
+      "expression": "rank(ts_zscore({field_preprocessed} / ts_backfill(cap, 120), 120))",
+      "priority": 994,
+      "family": "ratio_cap",
+      "layer": "composite",
       "stage": "first_order",
       "dataset_tags": ["model51", "risk_metrics", "round14_refine"]
     },
     {
-      "name": "model51_ts_rank_60",
-      "expression": "rank(ts_rank({field_preprocessed}, 60))",
-      "priority": 994,
-      "family": "ts_rank",
+      "name": "model51_rank_mean_reversion_60_252",
+      "expression": "rank(ts_mean({field_preprocessed}, 60) - ts_mean({field_preprocessed}, 252))",
+      "priority": 993,
+      "family": "mean_spread",
       "layer": "time_series",
       "stage": "first_order",
       "dataset_tags": ["model51", "risk_metrics", "round14_refine"]

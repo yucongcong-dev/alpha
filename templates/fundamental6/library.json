@@ -3,7 +3,7 @@
   "_comment_placeholders": "{field}=字段名, {field_preprocessed}=winsorize(ts_backfill({field}, {backfill_window}), std=4), {field_longfill}=winsorize(ts_backfill({field}, 252), std=3), {field_rawfill}=ts_backfill({field}, {backfill_window}), {backfill_window}=settings.yaml expression.backfill_window",
   "default": [
     {
-      "_comment": "=== Tier 2: 三层嵌套 — 去模板内中性化, 依赖 settings neutralization ===",
+      "_comment": "=== 默认库：保留少量结构代表，而不是堆叠近邻窗口 ===",
       "name": "3layer_zscore_decay",
       "expression": "ts_decay_linear(ts_zscore(ts_backfill({field}, {backfill_window}), 60), 20)",
       "priority": 995,
@@ -11,83 +11,56 @@
       "layer": "composite"
     },
     {
-      "name": "3layer_rank_decay",
-      "expression": "ts_decay_linear(ts_rank(ts_backfill({field}, {backfill_window}), 60), 20)",
-      "priority": 994,
-      "family": "neutralize_decay",
-      "layer": "composite"
-    },
-    {
-
-      "_comment": "=== Tier 5: ts_rank — 默认库只保留中长窗代表模板 ===",
+      "_comment": "=== 慢频单字段代表 ===",
       "name": "ts_rank_120",
       "expression": "rank(ts_rank({field}, 120))",
-      "priority": 968,
-      "family": "ts_rank",
-      "layer": "time_series"
-    },
-    {
-      "name": "ts_rank_252",
-      "expression": "rank(ts_rank({field}, 252))",
-      "priority": 966,
+      "priority": 992,
       "family": "ts_rank",
       "layer": "time_series"
     },
     {
       "name": "ts_zscore_252",
       "expression": "rank(ts_zscore({field}, 252))",
-      "priority": 954,
+      "priority": 990,
       "family": "zscore_time",
-      "layer": "time_series"
-    },
-    {
-      "name": "decay_60",
-      "expression": "rank(ts_decay_linear(ts_backfill({field}, {backfill_window}), 60))",
-      "priority": 948,
-      "family": "decay_level",
       "layer": "time_series"
     },
     {
       "name": "decay_120",
       "expression": "rank(ts_decay_linear(ts_backfill({field}, {backfill_window}), 120))",
-      "priority": 946,
+      "priority": 988,
       "family": "decay_level",
       "layer": "time_series"
+    },
+    {
+      "_comment": "=== 关系型 / grouped 代表模板 ===",
+      "name": "ratio_cap_zscore_60",
+      "expression": "rank(ts_zscore({field_preprocessed} / ts_backfill(cap, {backfill_window}), 60))",
+      "priority": 986,
+      "family": "ratio_cap",
+      "layer": "account"
+    },
+    {
+      "name": "bucket_cap_ratio_zscore_60",
+      "expression": "group_rank(ts_zscore({field_preprocessed} / ts_backfill(cap, {backfill_window}), 60), densify(bucket(rank(cap), range='0.1, 1, 0.1')))",
+      "priority": 984,
+      "family": "bucket_ratio",
+      "layer": "account"
+    },
+    {
+      "name": "bucket_liquidity_ts_rank_120",
+      "expression": "group_rank(ts_rank({field_preprocessed}, 120), densify(bucket(rank(close * volume), range='0.1, 1, 0.1')))",
+      "priority": 982,
+      "family": "bucket_group_rank",
+      "layer": "account"
     }
   ],
   "VECTOR": [
     {
-      "_comment": "=== VECTOR: 事件字段自身变化触发 — 替代通用 volume/returns 条件 ===",
-      "name": "event_trade_when_field_change_rank_60",
-      "expression": "trade_when(ts_delta({field}) != 0, rank(ts_rank({field_preprocessed}, 60)), -1)",
-      "priority": 1008,
-      "family": "event_trade_when",
-      "layer": "event",
-      "stage": "event_conditioned",
-      "dataset_tags": ["event"]
-    },
-    {
+      "_comment": "=== VECTOR: 默认事件种子只保留字段自身变化路径 ===",
       "name": "event_trade_when_recent_change_zscore_60",
       "expression": "trade_when(days_from_last_change({field}) <= 5, rank(ts_zscore({field_preprocessed}, 60)), -1)",
-      "priority": 1006,
-      "family": "event_trade_when",
-      "layer": "event",
-      "stage": "event_conditioned",
-      "dataset_tags": ["event"]
-    },
-    {
-      "name": "event_trade_when_breakout_zscore_60",
-      "expression": "trade_when(ts_arg_max(close, 20) == 0, rank(ts_zscore({field_preprocessed}, 60)), -1)",
-      "priority": 1004,
-      "family": "event_trade_when",
-      "layer": "event",
-      "stage": "event_conditioned",
-      "dataset_tags": ["event"]
-    },
-    {
-      "name": "event_trade_when_high_return_decay_252",
-      "expression": "trade_when(ts_zscore(returns, 60) > 2, rank(ts_decay_linear({field_preprocessed}, 252)), -1)",
-      "priority": 1002,
+      "priority": 1008,
       "family": "event_trade_when",
       "layer": "event",
       "stage": "event_conditioned",

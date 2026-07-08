@@ -168,31 +168,16 @@ expression_policies:
       "mean_diff_|vec_avg_mean_diff_": "@small_penalty"
       "stddev_": "@small_penalty"
     matrix_delta_over_std_windows:
-      - [21, 63, 148]
       - [63, 126, 144]
-      - [63, 252, 146]
-      - [126, 252, 142]
-      - [252, 504, 140]
     matrix_diversified_template_specs:
-      - ["group_delta_over_std_industry_63_126", "group_rank(ts_delta(ts_backfill({field}, {backfill_window}), 63) / ts_std_dev(ts_backfill({field}, {backfill_window}), 126), industry)", 138]
       - ["group_short_long_mean_spread_subindustry_63_{backfill_window}", "group_rank(ts_mean(ts_backfill({field}, {backfill_window}), 63) - ts_mean(ts_backfill({field}, {backfill_window}), {backfill_window}), subindustry)", 164]
       - ["group_zscore_subindustry_63", "group_rank(ts_zscore(ts_backfill({field}, {backfill_window}), 63), subindustry)", 161]
-      - ["rank_mean_spread_over_std_63_{backfill_window}_126", "rank((ts_mean(ts_backfill({field}, {backfill_window}), 63) - ts_mean(ts_backfill({field}, {backfill_window}), {backfill_window})) / ts_std_dev(ts_backfill({field}, {backfill_window}), 126))", 158]
-      - ["rank_zscore_spread_63_{backfill_window}", "rank(ts_zscore(ts_backfill({field}, {backfill_window}), 63) - ts_zscore(ts_backfill({field}, {backfill_window}), {backfill_window}))", 154]
-      - ["group_rank_delta_of_rank_63", "group_rank(ts_delta(rank(ts_backfill({field}, {backfill_window})), 63), subindustry)", 150]
     ratio_delta_rank_windows:
       - [63, 186]
-      - [126, 180]
-      - [252, 172]
     ratio_delta_over_std_windows:
-      - [21, 63, 176]
       - [63, 126, 172]
-      - [63, 252, 174]
-      - [126, 252, 168]
     ratio_diversified_template_specs:
       - ["group_ratio_zscore_{ratio_label}", "group_rank(ts_zscore(ts_backfill({ratio_expr}, {backfill_window}), 63), subindustry)", 160]
-      - ["ratio_mean_spread_over_std_{ratio_label}", "rank((ts_mean(ts_backfill({ratio_expr}, {backfill_window}), 63) - ts_mean(ts_backfill({ratio_expr}, {backfill_window}), {backfill_window})) / ts_std_dev(ts_backfill({ratio_expr}, {backfill_window}), 126))", 156]
-      - ["ratio_zscore_spread_{ratio_label}", "rank(ts_zscore(ts_backfill({ratio_expr}, {backfill_window}), 63) - ts_zscore(ts_backfill({ratio_expr}, {backfill_window}), {backfill_window}))", 152]
     blacklisted_template_name_substrings:
       - "group_ratio_delta_rank"
     ratio_partner_candidates:
@@ -663,23 +648,18 @@ expression_policies:
           - "group_second_order"
           - "first_order"
     matrix_delta_over_std_windows:
-      - [5, 21, 148]
-      - [10, 42, 146]
-      - [21, 63, 144]
       - [42, 126, 140]
     matrix_diversified_template_specs:
-      - ["group_delta_over_std_subindustry_5_21", "group_rank(ts_delta({field_preprocessed}, 5) / ts_std_dev({field_preprocessed}, 21), subindustry)", 138]
-      - ["group_zscore_subindustry_42", "group_rank(ts_zscore({field_preprocessed}, 42), subindustry)", 161]
-      - ["rank_mean_reversion_21_126", "rank(ts_mean({field_preprocessed}, 21) - ts_mean({field_preprocessed}, 126))", 156]
-      - ["rank_ir_63", "rank(ts_mean({field_preprocessed}, 63) / ts_std_dev({field_preprocessed}, 63))", 152]
+      - ["group_zscore_subindustry_120", "group_rank(ts_zscore({field_preprocessed}, 120), subindustry)", 161]
+      - ["rank_mean_reversion_60_252", "rank(ts_mean({field_preprocessed}, 60) - ts_mean({field_preprocessed}, 252))", 156]
     disabled_templates:
       - "model51_zscore_decay_60"
       - "model51_zscore_decay_120"
     protected_templates:
       - "model51_ratio_cap_zscore_60"
       - "model51_bucket_cap_ratio_zscore_60"
-      - "model51_group_zscore_subindustry_84"
-      - "model51_group_delta_over_std_subindustry_42_126"
+      - "model51_group_zscore_subindustry_120"
+      - "model51_ts_zscore_120"
     field_min_coverage: 0.05
     field_min_date_coverage: 0.0
     field_min_alpha_count: 0
