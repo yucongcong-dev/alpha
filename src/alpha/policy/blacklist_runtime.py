@@ -33,6 +33,9 @@ from .types import (
 
 logger = logging.getLogger(__name__)
 
+_REGISTRY_SOFT_ROLES = {"promoted_core", "refine_neighbor"}
+_REGISTRY_SOFT_SCOPES = {"broad", "refine"}
+
 
 def _entry_key_from_payload(item: dict[str, object]) -> BlacklistEntryKey:
     """Build a canonical identity key from a persisted blacklist entry."""
@@ -57,8 +60,14 @@ def _update_blacklist_runtime_stats_with_result(
             field_type=result.field_type,
             template_family=result.template_family,
             template_stage=result.template_stage,
+            template_role=str(result.template_role or "").strip().lower(),
+            template_activation_scope=str(result.template_activation_scope or "").strip().lower(),
         )
     summary = stats[template_name]
+    if not summary.template_role and result.template_role:
+        summary.template_role = str(result.template_role).strip().lower()
+    if not summary.template_activation_scope and result.template_activation_scope:
+        summary.template_activation_scope = str(result.template_activation_scope).strip().lower()
     field_name = str(result.field_name or "")
     if field_name and field_name not in summary._field_names_seen:
         summary._field_names_seen.add(field_name)
@@ -109,9 +118,6 @@ def _build_blacklist_entry_from_runtime_summary(
     low_sharpe_count = summary.low_sharpe
     low_fitness_count = summary.low_fitness
     concentrated_count = summary.concentrated_weight
-    total_fails = low_sharpe_count + low_fitness_count
-    if total_fails < min_fail_checks:
-        return None
     sharpe_count = summary.sharpe_count
     fitness_count = summary.fitness_count
     avg_sharpe = (
@@ -124,6 +130,19 @@ def _build_blacklist_entry_from_runtime_summary(
         if fitness_count > 0
         else None
     )
+    hard_min_fields_tested = max(min_fields_tested + 1, 3)
+    hard_min_negative_signals = max(min_fail_checks * 2, 4)
+    total_negative_signals = low_sharpe_count + low_fitness_count + concentrated_count
+    has_repeated_quality_failures = (
+        low_sharpe_count >= min_fail_checks and low_fitness_count >= min_fail_checks
+    )
+    has_concentrated_failure_pattern = concentrated_count >= max(2, min_fail_checks)
+    if len(fields_tested) < hard_min_fields_tested:
+        return None
+    if total_negative_signals < hard_min_negative_signals:
+        return None
+    if not (has_repeated_quality_failures or has_concentrated_failure_pattern):
+        return None
     if (
         policy.blacklist_min_fields_for_nearpass > 0
         and len(fields_tested) < policy.blacklist_min_fields_for_nearpass
@@ -136,11 +155,22 @@ def _build_blacklist_entry_from_runtime_summary(
         )
     ):
         return None
+    if (
+        (summary.template_role in _REGISTRY_SOFT_ROLES or summary.template_activation_scope in _REGISTRY_SOFT_SCOPES)
+        and not has_concentrated_failure_pattern
+        and (
+            (avg_sharpe is None or avg_sharpe >= policy.blacklist_protected_min_avg_sharpe)
+            or (avg_fitness is None or avg_fitness >= policy.blacklist_protected_min_avg_fitness)
+        )
+    ):
+        return None
     reason_parts = [f"{len(fields_tested)}个字段测试均不通过"]
     if avg_sharpe is not None:
         reason_parts.append(f"平均 Sharpe {avg_sharpe:.3f}")
     if avg_fitness is not None:
         reason_parts.append(f"平均 Fitness {avg_fitness:.3f}")
+    if concentrated_count:
+        reason_parts.append(f"集中度失败 {concentrated_count} 次")
     from datetime import datetime
 
     entry = BlacklistTemplateEntry(

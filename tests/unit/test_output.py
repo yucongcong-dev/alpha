@@ -436,6 +436,20 @@ def test_auto_update_blacklist_incremental_blacklists_only_changed_template(tmp_
             FailedCheck(name="LOW_FITNESS", value=0.3),
         ],
     )
+    third = FieldTestResult(
+        field_id="f3",
+        field_type="MATRIX",
+        field_name="income",
+        template_name="weak_template",
+        template_family="group_vol_scaled_delta",
+        template_stage="group_second_order",
+        expression="rank(income)",
+        submittable=False,
+        failed_checks=[
+            FailedCheck(name="LOW_SHARPE", value=0.15),
+            FailedCheck(name="LOW_FITNESS", value=0.25),
+        ],
+    )
 
     added_after_first = blacklist_runtime.auto_update_blacklist_incremental(
         runtime_stats,
@@ -451,10 +465,18 @@ def test_auto_update_blacklist_incremental_blacklists_only_changed_template(tmp_
         "custom_ds",
         data_dir=str(tmp_path),
     )
+    added_after_third = blacklist_runtime.auto_update_blacklist_incremental(
+        runtime_stats,
+        blacklisted_keys,
+        third,
+        "custom_ds",
+        data_dir=str(tmp_path),
+    )
 
     payload = json.loads((tmp_path / "blacklists" / "custom_ds" / "blacklist.json").read_text(encoding="utf-8"))
     assert added_after_first is False
-    assert added_after_second is True
+    assert added_after_second is False
+    assert added_after_third is True
     assert [entry["name"] for entry in payload["learned_templates"]] == ["weak_template"]
 
 

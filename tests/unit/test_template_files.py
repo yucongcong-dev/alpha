@@ -369,6 +369,19 @@ def test_auto_update_blacklist_appends_low_quality_template_once(tmp_path) -> No
                 FailedCheck(name="LOW_FITNESS", value=0.3),
             ],
         ),
+        FieldTestResult(
+            field_id="income",
+            field_type="MATRIX",
+            field_name="income",
+            template_name="weak_template",
+            template_family="group_vol_scaled_delta",
+            expression="rank(income)",
+            submittable=False,
+            failed_checks=[
+                FailedCheck(name="LOW_SHARPE", value=0.15),
+                FailedCheck(name="LOW_FITNESS", value=0.25),
+            ],
+        ),
     ]
 
     auto_update_blacklist(results, "custom_ds", data_dir=str(tmp_path))
@@ -378,7 +391,7 @@ def test_auto_update_blacklist_appends_low_quality_template_once(tmp_path) -> No
     entries = payload["learned_templates"]
     assert [entry["name"] for entry in entries] == ["weak_template"]
     assert entries[0]["template_family"] == "group_vol_scaled_delta"
-    assert entries[0]["fields_tested"] == ["sales", "assets"]
+    assert entries[0]["fields_tested"] == ["sales", "assets", "income"]
 
 
 def test_auto_update_blacklist_is_visible_to_same_process(monkeypatch, tmp_path) -> None:
@@ -416,6 +429,20 @@ def test_auto_update_blacklist_is_visible_to_same_process(monkeypatch, tmp_path)
                 FailedCheck(name="LOW_FITNESS", value=0.3),
             ],
         ),
+        FieldTestResult(
+            field_id="income",
+            field_type="MATRIX",
+            field_name="income",
+            template_name="weak_template",
+            template_family="group_vol_scaled_delta",
+            template_stage="group_second_order",
+            expression="rank(income)",
+            submittable=False,
+            failed_checks=[
+                FailedCheck(name="LOW_SHARPE", value=0.15),
+                FailedCheck(name="LOW_FITNESS", value=0.25),
+            ],
+        ),
     ]
 
     auto_update_blacklist(results, "custom_ds", data_dir=str(tmp_path))
@@ -429,6 +456,34 @@ def test_auto_update_blacklist_is_visible_to_same_process(monkeypatch, tmp_path)
         },
         dataset_id="custom_ds",
     )
+
+
+def test_auto_update_blacklist_defers_promoted_templates_to_registry(tmp_path) -> None:
+    """Promoted/refine templates with weak but non-terminal failures should stay in registry flow."""
+    results = [
+        FieldTestResult(
+            field_id=f"field_{idx}",
+            field_type="MATRIX",
+            field_name=f"field_{idx}",
+            template_name="borderline_template",
+            template_family="mean_spread",
+            template_stage="first_order",
+            template_role="promoted_core",
+            template_activation_scope="broad",
+            expression=f"rank(field_{idx})",
+            submittable=False,
+            failed_checks=[
+                FailedCheck(name="LOW_SHARPE", value=0.05),
+                FailedCheck(name="LOW_FITNESS", value=0.08),
+            ],
+        )
+        for idx in range(3)
+    ]
+
+    auto_update_blacklist(results, "custom_ds", data_dir=str(tmp_path))
+
+    blacklist_file = tmp_path / "blacklists" / "custom_ds" / "blacklist.json"
+    assert not blacklist_file.exists()
 
 
 def test_scheduler_dump_results_shrinks_next_template_queue(monkeypatch, tmp_path) -> None:
@@ -522,7 +577,22 @@ def test_scheduler_dump_results_shrinks_next_template_queue(monkeypatch, tmp_pat
                 FailedCheck(name="LOW_SHARPE", value=0.1),
                 FailedCheck(name="LOW_FITNESS", value=0.2),
             ],
-        )
+        ),
+        FieldTestResult(
+            field_id="field_c",
+            field_type="MATRIX",
+            field_name="field_c",
+            template_name="weak_template",
+            template_family="legacy_level",
+            template_stage="first_order",
+            expression="rank(ts_backfill(field_c, 240))",
+            status="simulated",
+            submittable=False,
+            failed_checks=[
+                FailedCheck(name="LOW_SHARPE", value=0.12),
+                FailedCheck(name="LOW_FITNESS", value=0.22),
+            ],
+        ),
     ]
 
     class _DoneFuture:

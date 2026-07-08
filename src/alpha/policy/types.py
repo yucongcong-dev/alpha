@@ -54,6 +54,8 @@ class BlacklistRuntimeSummary:
     field_type: str = ""
     template_family: str = ""
     template_stage: str = ""
+    template_role: str = ""
+    template_activation_scope: str = ""
     fields_tested: list[str] = field(default_factory=list)
     _field_names_seen: set[str] = field(default_factory=set)
     submittable: int = 0
