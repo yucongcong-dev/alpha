@@ -8,7 +8,9 @@
       "expression": "ts_decay_linear(ts_zscore(ts_backfill({field}, {backfill_window}), 60), 20)",
       "priority": 995,
       "family": "neutralize_decay",
-      "layer": "composite"
+      "layer": "composite",
+      "role": "default_seed",
+      "activation_scope": "broad"
     },
     {
       "_comment": "=== 慢频单字段代表 ===",
@@ -16,21 +18,27 @@
       "expression": "rank(ts_rank({field}, 120))",
       "priority": 992,
       "family": "ts_rank",
-      "layer": "time_series"
+      "layer": "time_series",
+      "role": "default_seed",
+      "activation_scope": "broad"
     },
     {
       "name": "ts_zscore_252",
       "expression": "rank(ts_zscore({field}, 252))",
       "priority": 990,
       "family": "zscore_time",
-      "layer": "time_series"
+      "layer": "time_series",
+      "role": "default_seed",
+      "activation_scope": "broad"
     },
     {
       "name": "decay_120",
       "expression": "rank(ts_decay_linear(ts_backfill({field}, {backfill_window}), 120))",
       "priority": 988,
       "family": "decay_level",
-      "layer": "time_series"
+      "layer": "time_series",
+      "role": "default_seed",
+      "activation_scope": "broad"
     },
     {
       "_comment": "=== 关系型 / grouped 代表模板 ===",
@@ -38,21 +46,27 @@
       "expression": "rank(ts_zscore({field_preprocessed} / ts_backfill(cap, {backfill_window}), 60))",
       "priority": 986,
       "family": "ratio_cap",
-      "layer": "account"
+      "layer": "account",
+      "role": "default_seed",
+      "activation_scope": "broad"
     },
     {
       "name": "bucket_cap_ratio_zscore_60",
       "expression": "group_rank(ts_zscore({field_preprocessed} / ts_backfill(cap, {backfill_window}), 60), densify(bucket(rank(cap), range='0.1, 1, 0.1')))",
       "priority": 984,
       "family": "bucket_ratio",
-      "layer": "account"
+      "layer": "account",
+      "role": "default_seed",
+      "activation_scope": "broad"
     },
     {
       "name": "bucket_liquidity_ts_rank_120",
       "expression": "group_rank(ts_rank({field_preprocessed}, 120), densify(bucket(rank(close * volume), range='0.1, 1, 0.1')))",
       "priority": 982,
       "family": "bucket_group_rank",
-      "layer": "account"
+      "layer": "account",
+      "role": "default_seed",
+      "activation_scope": "broad"
     }
   ],
   "VECTOR": [
@@ -64,7 +78,9 @@
       "family": "event_trade_when",
       "layer": "event",
       "stage": "event_conditioned",
-      "dataset_tags": ["event"]
+      "dataset_tags": ["event"],
+      "role": "default_seed",
+      "activation_scope": "broad"
     },
     {
       "_comment": "=== VECTOR: vec_avg + vec_sum 双通道 ===",
@@ -72,35 +88,45 @@
       "expression": "rank(ts_rank({field_preprocessed}, 60))",
       "priority": 989,
       "family": "ts_rank",
-      "layer": "vector"
+      "layer": "vector",
+      "role": "default_seed",
+      "activation_scope": "broad"
     },
     {
       "name": "vec_sum_ts_rank_60",
       "expression": "rank(ts_rank(winsorize(ts_backfill(vec_sum({field}), {backfill_window}), std=4), 60))",
       "priority": 987,
       "family": "ts_rank",
-      "layer": "vector"
+      "layer": "vector",
+      "role": "default_seed",
+      "activation_scope": "broad"
     },
     {
       "name": "vec_avg_ts_zscore_60",
       "expression": "rank(ts_zscore({field_preprocessed}, 60))",
       "priority": 985,
       "family": "zscore_time",
-      "layer": "vector"
+      "layer": "vector",
+      "role": "default_seed",
+      "activation_scope": "broad"
     },
     {
       "name": "vec_sum_ts_zscore_60",
       "expression": "rank(ts_zscore(winsorize(ts_backfill(vec_sum({field}), {backfill_window}), std=4), 60))",
       "priority": 983,
       "family": "zscore_time",
-      "layer": "vector"
+      "layer": "vector",
+      "role": "default_seed",
+      "activation_scope": "broad"
     },
     {
       "name": "vec_avg_ts_rank_252",
       "expression": "rank(ts_rank({field_preprocessed}, 252))",
       "priority": 981,
       "family": "ts_rank",
-      "layer": "vector"
+      "layer": "vector",
+      "role": "default_seed",
+      "activation_scope": "broad"
     }
   ],
   "GROUP": [

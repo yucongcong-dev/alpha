@@ -10,7 +10,9 @@
       "family": "neutralize_decay",
       "layer": "composite",
       "stage": "group_second_order",
-      "dataset_tags": ["model51", "risk_metrics"]
+      "dataset_tags": ["model51", "risk_metrics"],
+      "role": "refine_neighbor",
+      "activation_scope": "refine"
     },
     {
       "name": "model51_group_zscore_market_120",
@@ -19,7 +21,9 @@
       "family": "group_zscore",
       "layer": "group",
       "stage": "group_second_order",
-      "dataset_tags": ["model51", "risk_metrics"]
+      "dataset_tags": ["model51", "risk_metrics"],
+      "role": "refine_neighbor",
+      "activation_scope": "refine"
     },
     {
       "name": "model51_group_zscore_subindustry_60",
@@ -28,7 +32,9 @@
       "family": "group_zscore",
       "layer": "group",
       "stage": "group_second_order",
-      "dataset_tags": ["model51", "risk_metrics"]
+      "dataset_tags": ["model51", "risk_metrics"],
+      "role": "refine_neighbor",
+      "activation_scope": "refine"
     },
     {
       "name": "model51_bucket_cap_zscore_120",
@@ -37,7 +43,9 @@
       "family": "bucket_group_rank",
       "layer": "group",
       "stage": "group_second_order",
-      "dataset_tags": ["model51", "risk_metrics"]
+      "dataset_tags": ["model51", "risk_metrics"],
+      "role": "refine_neighbor",
+      "activation_scope": "refine"
     },
     {
       "name": "model51_ts_zscore_252",
@@ -46,7 +54,9 @@
       "family": "zscore_time",
       "layer": "time_series",
       "stage": "first_order",
-      "dataset_tags": ["model51", "risk_metrics"]
+      "dataset_tags": ["model51", "risk_metrics"],
+      "role": "refine_neighbor",
+      "activation_scope": "refine"
     },
     {
       "name": "model51_decay_252",
@@ -55,7 +65,9 @@
       "family": "decay",
       "layer": "time_series",
       "stage": "first_order",
-      "dataset_tags": ["model51", "risk_metrics"]
+      "dataset_tags": ["model51", "risk_metrics"],
+      "role": "refine_neighbor",
+      "activation_scope": "refine"
     },
     {
       "name": "model51_ratio_cap_zscore_120",
@@ -64,7 +76,9 @@
       "family": "ratio_cap",
       "layer": "composite",
       "stage": "first_order",
-      "dataset_tags": ["model51", "risk_metrics"]
+      "dataset_tags": ["model51", "risk_metrics"],
+      "role": "refine_neighbor",
+      "activation_scope": "refine"
     },
     {
       "name": "model51_bucket_cap_ratio_zscore_120",
@@ -73,7 +87,9 @@
       "family": "bucket_ratio",
       "layer": "group",
       "stage": "group_second_order",
-      "dataset_tags": ["model51", "risk_metrics"]
+      "dataset_tags": ["model51", "risk_metrics"],
+      "role": "refine_neighbor",
+      "activation_scope": "refine"
     },
     {
       "name": "model51_rank_mean_reversion_120_252",
@@ -82,7 +98,9 @@
       "family": "mean_spread",
       "layer": "time_series",
       "stage": "first_order",
-      "dataset_tags": ["model51", "risk_metrics"]
+      "dataset_tags": ["model51", "risk_metrics"],
+      "role": "refine_neighbor",
+      "activation_scope": "refine"
     }
   ],
   "VECTOR": []

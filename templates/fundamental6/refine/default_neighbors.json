@@ -7,56 +7,72 @@
       "expression": "ts_decay_linear(ts_zscore(winsorize(ts_backfill({field}, 252), std=3), 60), 20)",
       "priority": 993,
       "family": "neutralize_decay",
-      "layer": "composite"
+      "layer": "composite",
+      "role": "refine_neighbor",
+      "activation_scope": "refine"
     },
     {
       "name": "ts_zscore_126",
       "expression": "rank(ts_zscore({field}, 126))",
       "priority": 966,
       "family": "zscore_time",
-      "layer": "time_series"
+      "layer": "time_series",
+      "role": "refine_neighbor",
+      "activation_scope": "refine"
     },
     {
       "name": "decay_20",
       "expression": "rank(ts_decay_linear(ts_backfill({field}, {backfill_window}), 20))",
       "priority": 962,
       "family": "decay_level",
-      "layer": "time_series"
+      "layer": "time_series",
+      "role": "refine_neighbor",
+      "activation_scope": "refine"
     },
     {
       "name": "decay_252",
       "expression": "rank(ts_decay_linear(ts_backfill({field}, {backfill_window}), 252))",
       "priority": 960,
       "family": "decay_level",
-      "layer": "time_series"
+      "layer": "time_series",
+      "role": "refine_neighbor",
+      "activation_scope": "refine"
     },
     {
       "name": "ratio_cap_zscore_120",
       "expression": "rank(ts_zscore({field_preprocessed} / ts_backfill(cap, {backfill_window}), 120))",
       "priority": 958,
       "family": "ratio_cap",
-      "layer": "account"
+      "layer": "account",
+      "role": "refine_neighbor",
+      "activation_scope": "refine"
     },
     {
       "name": "bucket_cap_ratio_zscore_120",
       "expression": "group_rank(ts_zscore({field_preprocessed} / ts_backfill(cap, {backfill_window}), 120), densify(bucket(rank(cap), range='0.1, 1, 0.1')))",
       "priority": 956,
       "family": "bucket_ratio",
-      "layer": "account"
+      "layer": "account",
+      "role": "refine_neighbor",
+      "activation_scope": "refine"
     },
     {
       "name": "bucket_cap_zscore_60",
       "expression": "group_rank(ts_zscore({field_preprocessed}, 60), densify(bucket(rank(cap), range='0.1, 1, 0.1')))",
       "priority": 954,
       "family": "bucket_group_rank",
-      "layer": "account"
+      "layer": "account",
+      "role": "refine_neighbor",
+      "activation_scope": "refine"
     },
     {
       "name": "bucket_liquidity_ts_rank_60",
       "expression": "group_rank(ts_rank({field_preprocessed}, 60), densify(bucket(rank(close * volume), range='0.1, 1, 0.1')))",
       "priority": 952,
       "family": "bucket_group_rank",
-      "layer": "account"
+      "layer": "account",
+      "role": "refine_neighbor",
+      "activation_scope": "refine"
     },
     {
       "name": "event_trade_when_field_change_rank_60",
@@ -65,13 +81,18 @@
       "family": "event_trade_when",
       "layer": "event",
       "stage": "event_conditioned"
+      ,
+      "role": "refine_neighbor",
+      "activation_scope": "refine"
     },
     {
       "name": "days_from_change_decay_20",
       "expression": "rank(ts_decay_linear(days_from_last_change({field}), 20))",
       "priority": 948,
       "family": "event_decay",
-      "layer": "time_series"
+      "layer": "time_series",
+      "role": "diagnostic_probe",
+      "activation_scope": "diagnostic"
     }
   ]
 }

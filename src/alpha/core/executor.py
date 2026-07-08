@@ -211,6 +211,7 @@ def print_dry_run_plan(
 
     build_ctx = TemplateBuildContext(
         options=options,
+        template_library_file=str(getattr(args, "template_library_file", "") or ""),
         all_fields=fields,
         template_library=template_library,
         field_feedback=historical_state.field_feedback,

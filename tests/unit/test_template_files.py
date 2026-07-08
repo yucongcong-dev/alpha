@@ -70,6 +70,8 @@ def test_load_template_library_preserves_optional_metadata(tmp_path) -> None:
                         "family": "custom_family",
                         "layer": "ratio",
                         "stage": "first_order",
+                        "role": "default_seed",
+                        "activation_scope": "refine",
                         "requires_partner_field": False,
                         "field_tags": ["dense_lane"],
                     }
@@ -85,6 +87,8 @@ def test_load_template_library_preserves_optional_metadata(tmp_path) -> None:
     assert item.family == "custom_family"
     assert item.metadata.get("layer") == "ratio"
     assert item.stage == "first_order"
+    assert item.metadata.get("role") == "default_seed"
+    assert item.metadata.get("activation_scope") == "refine"
     assert item.metadata.get("requires_partner_field") is False
     assert item.metadata.get("field_tags") == ["dense_lane"]
 
@@ -149,6 +153,120 @@ def test_build_expression_candidates_respects_template_field_tags(tmp_path) -> N
     names = [item.name for item in candidates]
     assert "dense_only" in names
     assert "sparse_only" not in names
+
+
+def test_build_expression_candidates_skip_refine_only_templates_in_default_library(tmp_path) -> None:
+    template_file = tmp_path / "library.json"
+    template_file.write_text(
+        json.dumps(
+            {
+                "default": [
+                    {
+                        "name": "broad_template",
+                        "expression": "rank({field})",
+                        "priority": 100,
+                        "activation_scope": "broad",
+                    },
+                    {
+                        "name": "refine_template",
+                        "expression": "ts_rank({field}, 20)",
+                        "priority": 90,
+                        "activation_scope": "refine",
+                    },
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    build_ctx = TemplateBuildContext(
+        options=TemplateBuildOptions(
+            region="USA",
+            universe="TOP3000",
+            instrument_type="EQUITY",
+            delay=1,
+            decay=4,
+            neutralization="SUBINDUSTRY",
+            truncation=0.08,
+            pasteurization="ON",
+            unit_handling="VERIFY",
+            nan_handling="OFF",
+            language="FASTEXPR",
+            dataset_id="fundamental6",
+        ),
+        template_library_file=str(template_file),
+        template_library=load_template_library(str(template_file)),
+    )
+    field = TemplateField.from_dict({"id": "cash_st", "type": "VECTOR"})
+
+    candidates = build_expression_candidates(
+        field,
+        build_ctx,
+        max_templates_per_field=20,
+        max_templates_per_family=20,
+    )
+
+    names = {item.name for item in candidates}
+    assert "broad_template" in names
+    assert "refine_template" not in names
+
+
+def test_build_expression_candidates_include_refine_only_templates_in_refine_library(tmp_path) -> None:
+    refine_dir = tmp_path / "templates" / "fundamental6" / "refine"
+    refine_dir.mkdir(parents=True)
+    template_file = refine_dir / "default_neighbors.json"
+    template_file.write_text(
+        json.dumps(
+            {
+                "default": [
+                    {
+                        "name": "broad_template",
+                        "expression": "rank({field})",
+                        "priority": 100,
+                        "activation_scope": "broad",
+                    },
+                    {
+                        "name": "refine_template",
+                        "expression": "ts_rank({field}, 20)",
+                        "priority": 90,
+                        "activation_scope": "refine",
+                    },
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    build_ctx = TemplateBuildContext(
+        options=TemplateBuildOptions(
+            region="USA",
+            universe="TOP3000",
+            instrument_type="EQUITY",
+            delay=1,
+            decay=4,
+            neutralization="SUBINDUSTRY",
+            truncation=0.08,
+            pasteurization="ON",
+            unit_handling="VERIFY",
+            nan_handling="OFF",
+            language="FASTEXPR",
+            dataset_id="fundamental6",
+        ),
+        template_library_file=str(template_file),
+        template_library=load_template_library(str(template_file)),
+    )
+    field = TemplateField.from_dict({"id": "cash_st", "type": "VECTOR"})
+
+    candidates = build_expression_candidates(
+        field,
+        build_ctx,
+        max_templates_per_field=20,
+        max_templates_per_family=20,
+    )
+
+    names = {item.name for item in candidates}
+    assert "broad_template" in names
+    assert "refine_template" in names
 
 
 def test_load_template_library_infers_stage_from_layer(tmp_path) -> None:

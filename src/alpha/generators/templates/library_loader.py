@@ -15,6 +15,8 @@ _OPTIONAL_TEMPLATE_METADATA_KEYS = (
     "family",
     "layer",
     "stage",
+    "role",
+    "activation_scope",
     "requires_partner_field",
     "field_kinds",
     "field_tags",

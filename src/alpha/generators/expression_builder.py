@@ -13,8 +13,10 @@ dataset policy, and feedback into ordered alpha expression candidates.
 from __future__ import annotations
 
 from collections.abc import Sequence
+from pathlib import Path
 from typing import Any
 
+from ..config.constants import FEEDBACK_STAGE_GENERATE, FEEDBACK_STAGE_RESIMULATE
 from ..config.getters import get_backfill_window
 from ..config.models import DatasetExpressionPolicy
 from ..generators.field_transforms import build_field_view
@@ -108,6 +110,41 @@ def _template_supports_field_tags(
     return bool(allowed_tags & current_tags)
 
 
+def _is_explicit_refine_library(template_library_file: str) -> bool:
+    """显式 refine 模板库使用 refine/ 子目录路径。"""
+    if not template_library_file:
+        return False
+    parts = {part.strip().lower() for part in Path(template_library_file).parts}
+    return "refine" in parts
+
+
+def _resolve_activation_scope(candidate: TemplateCandidate) -> str:
+    """模板激活范围，默认 broad。"""
+    raw_scope = str(candidate.metadata.get("activation_scope", "")).strip().lower()
+    if raw_scope in {"broad", "refine", "diagnostic"}:
+        return raw_scope
+    return "broad"
+
+
+def _template_scope_allowed(
+    candidate: TemplateCandidate,
+    *,
+    feedback_stage: str,
+    template_library_file: str,
+) -> bool:
+    """按模板激活范围和当前运行阶段决定是否放行模板。"""
+    activation_scope = _resolve_activation_scope(candidate)
+    if activation_scope == "broad":
+        return True
+
+    explicit_refine_library = _is_explicit_refine_library(template_library_file)
+    if activation_scope == "refine":
+        return explicit_refine_library or feedback_stage != FEEDBACK_STAGE_GENERATE
+    if activation_scope == "diagnostic":
+        return explicit_refine_library or feedback_stage == FEEDBACK_STAGE_RESIMULATE
+    return True
+
+
 
 def sort_templates_by_priority(
     templates: Sequence[TemplateCandidate | tuple[str, str, int]],
@@ -196,6 +233,15 @@ def build_expression_candidates(
 
     if is_event_field:
         templates = [item for item in templates if _event_template_allowed(item, policy)]
+    templates = [
+        item
+        for item in templates
+        if _template_scope_allowed(
+            item,
+            feedback_stage=feedback_stage,
+            template_library_file=build_ctx.template_library_file,
+        )
+    ]
     templates = [item for item in templates if _template_supports_field_tags(item, field_view)]
 
     templates = apply_similarity_penalty(templates, options.legacy_similarity_penalty)
