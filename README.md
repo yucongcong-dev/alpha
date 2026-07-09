@@ -4,6 +4,7 @@
 
 ## 学习入口
 
+- 文档首页索引：[docs/README.md](docs/README.md)
 - 学习地图总导航：[docs/worldquant_brain_knowledge.md](docs/worldquant_brain_knowledge.md)
 - 入门篇：[docs/01_beginner_guide.md](docs/01_beginner_guide.md)
 - 优化篇：[docs/02_optimization_guide.md](docs/02_optimization_guide.md)
@@ -14,6 +15,14 @@
   - [templates/model51/README.md](templates/model51/README.md)
   - [templates/model16/README.md](templates/model16/README.md)
   - [templates/fundamental6/README.md](templates/fundamental6/README.md)
+
+## 常用路径
+
+- 想按问题找文档：看 [docs/README.md](docs/README.md)
+- 想快速理解平台：看 [docs/01_beginner_guide.md](docs/01_beginner_guide.md)
+- 想解释失败项：看 [docs/02_optimization_guide.md](docs/02_optimization_guide.md)
+- 想查术语和状态：看 [docs/04_platform_terms_and_states.md](docs/04_platform_terms_and_states.md)
+- 想看仓库跑法：看 [docs/03_repo_practice_guide.md](docs/03_repo_practice_guide.md)
 
 ## Python 版本
 

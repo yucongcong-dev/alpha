@@ -5,6 +5,14 @@
 
 ---
 
+## 文档首页
+
+如果你想直接按“问题”或“角色”找文档，先看：
+
+- [README.md](README.md)
+
+---
+
 ## 推荐阅读顺序
 
 如果你是第一次系统学习 BRAIN，建议按下面顺序阅读：
@@ -19,6 +27,29 @@
    当你需要快速查术语、状态、评分、OS 页面字段含义时，直接查这篇。
 
 如果你已经在跑这个仓库，建议直接从第 2 篇开始，再补第 3 篇。
+
+---
+
+## 按场景阅读
+
+### 我想快速建立全局认识
+
+- [01_beginner_guide.md](01_beginner_guide.md)
+- [04_platform_terms_and_states.md](04_platform_terms_and_states.md)
+
+### 我正在解释某个失败项
+
+- [02_optimization_guide.md](02_optimization_guide.md)
+- [04_platform_terms_and_states.md](04_platform_terms_and_states.md)
+
+### 我准备真正开始跑仓库
+
+- [03_repo_practice_guide.md](03_repo_practice_guide.md)
+- `templates/<dataset_id>/README.md`
+
+### 我只是要查术语
+
+- [04_platform_terms_and_states.md](04_platform_terms_and_states.md)
 
 ---
 
