@@ -1,15 +1,7 @@
 # WorldQuant BRAIN 学习地图
 
-> 这份文件现在只负责做“总导航”。
-> 详细内容已拆成 `入门篇 / 优化篇 / 仓库实战篇`，避免所有知识继续堆在一个文档里。
-
----
-
-## 文档首页
-
-如果你想直接按“问题”或“角色”找文档，先看：
-
-- [README.md](README.md)
+> 这份文件现在只负责做“学习路径导航”。
+> 如果你想按问题或角色查文档，请直接看 [docs/README.md](README.md)。
 
 ---
 
@@ -30,26 +22,21 @@
 
 ---
 
-## 按场景阅读
+## 学习路径说明
 
-### 我想快速建立全局认识
+- `01_beginner_guide.md`
+  负责建立基础直觉：Alpha、设置、指标、基本算子。
+- `02_optimization_guide.md`
+  负责解释失败项、优化顺序和调参边界。
+- `03_repo_practice_guide.md`
+  负责把官网方法论映射到这个仓库的工作流。
+- `04_platform_terms_and_states.md`
+  负责查术语、状态、评分、OS 页面语义。
 
-- [01_beginner_guide.md](01_beginner_guide.md)
-- [04_platform_terms_and_states.md](04_platform_terms_and_states.md)
+这 4 篇里：
 
-### 我正在解释某个失败项
-
-- [02_optimization_guide.md](02_optimization_guide.md)
-- [04_platform_terms_and_states.md](04_platform_terms_and_states.md)
-
-### 我准备真正开始跑仓库
-
-- [03_repo_practice_guide.md](03_repo_practice_guide.md)
-- `templates/<dataset_id>/README.md`
-
-### 我只是要查术语
-
-- [04_platform_terms_and_states.md](04_platform_terms_and_states.md)
+- 前 3 篇更偏“学习和方法”
+- 第 4 篇更偏“查表和释义”
 
 ---
 
@@ -95,7 +82,7 @@
 
 ---
 
-## 和其他文档的关系
+## 和其他文档的边界
 
 - 工程结构与运行方式：看 [README.md](../README.md)
 - 数据集策略说明：
@@ -103,44 +90,14 @@
   - [templates/model16/README.md](../templates/model16/README.md)
   - [templates/fundamental6/README.md](../templates/fundamental6/README.md)
 
-这里的边界要尽量清晰：
-
 - `docs/` 负责通用学习路径
 - `README.md` 负责工程和使用说明
 - `templates/<dataset_id>/README.md` 负责数据集策略和本地经验
 
 ---
 
-## 官方资料入口
+## 维护原则
 
-这次整理时重点参考并核对过这些官方资料：
-
-- [What are the characteristics of a good Alpha?](https://api.worldquantbrain.com/faqs/characteristics-good-alphas)
-- [I have felt a lack of information on the fitness of an Alpha](https://api.worldquantbrain.com/faqs/fitness-alphas)
-- [Please explain Decay and Delay in detail](https://api.worldquantbrain.com/faqs/decay-delay)
-- [Is the delay days in trading days or calendar days?](https://api.worldquantbrain.com/faqs/delay-is-in-trading-days)
-- [Is there a scenario where delay-1 can be more useful than delay-0?](https://api.worldquantbrain.com/faqs/delay1-delay0-implication)
-- [Difference between delay and decay in terms of no of days?](https://api.worldquantbrain.com/faqs/delay-decay)
-- [What’s the difference between the three market neutralization methods?](https://api.worldquantbrain.com/faqs/difference-between-neutralization-groups)
-- [Will good Alpha be developed without neutralization?](https://api.worldquantbrain.com/faqs/alpha-with-no-neutralization)
-- [Does neutralization always reduce standard deviation of returns?](https://api.worldquantbrain.com/faqs/neutralization-reduces-standard-deviation-of-return)
-- [I have made some Alphas ... turnover tends to close to 90%](https://api.worldquantbrain.com/faqs/turnover-reduction-methods)
-- [If I change the value of decay from 1 to 5 ... over-fit?](https://api.worldquantbrain.com/faqs/decay_overfit)
-- [Can a user check correlation among his own Alphas?](https://api.worldquantbrain.com/faqs/self-correlation)
-- [How is correlation tested?](https://api.worldquantbrain.com/faqs/how-is-correlation-tested)
-- [First ... how to get the past values of some data?](https://api.worldquantbrain.com/faqs/debt-liabilities-past-value)
-- [FASTEXPR operators](https://api.worldquantbrain.com/operators?language=FASTEXPR)
-- [Running your first Alpha](https://platform.worldquantbrain.com/learn/documentation/create-alphas/running-your-first-alpha)
-- [19 Alpha Examples for Beginners](https://platform.worldquantbrain.com/learn/documentation/create-alphas/19-alpha-examples)
-
----
-
-## 当前建议
-
-后续维护时，尽量遵守这条规则：
-
-- 新增“学习路径”内容，放到这四篇主文档里
+- 新增“学习路径”内容，放到这 4 篇主文档里
 - 新增“数据集经验”内容，放到 `templates/<dataset_id>/README.md`
 - 新增“大量 FAQ 摘录”或“失败案例库”，单独再开专题文档
-
-这样文档体系才不会再次回到“信息很多，但阅读顺序混乱”的状态。
