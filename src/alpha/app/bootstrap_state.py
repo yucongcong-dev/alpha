@@ -9,7 +9,7 @@ from typing import Any, cast
 from ..analysis.result_identity import is_queue_timeout_result
 from ..config.constants import STATUS_ERROR
 from ..io.results_store import dump_results_incremental, initialize_results_journal
-from ..models.runtime import ExecutionState
+from ..runtime import ExecutionState
 from ..policy import build_blacklist_runtime_stats
 from ..policy.blacklist_context import set_active_blacklists_dir
 from ..policy.blacklist_store import load_blacklisted_template_keys

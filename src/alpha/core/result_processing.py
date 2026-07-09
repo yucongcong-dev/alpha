@@ -18,7 +18,7 @@ from ..analysis.template_registry import compile_template_registry_summary
 from ..analysis.template_stats import update_template_stats_with_result
 from ..config.constants import STATUS_ERROR
 from ..models.domain import FieldTestResult
-from ..models.runtime import ExecutionState, FutureCompletionContext
+from ..runtime import ExecutionState, FutureCompletionContext
 from ..policy import auto_update_blacklist_incremental, build_blacklist_runtime_stats
 
 logger = logging.getLogger(__name__)

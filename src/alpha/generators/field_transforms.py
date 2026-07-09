@@ -5,8 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from ..config.models import DatasetExpressionPolicy, FieldTransformSpec, FieldTransformStage
-from ..models.domain import FieldView
-from ..models.runtime import TemplateField
+from ..models.domain import FieldView, TemplateField
 from .fields import choose_field_name, choose_field_type
 
 

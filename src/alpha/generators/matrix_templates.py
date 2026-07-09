@@ -28,8 +28,7 @@ from ..config.constants import (
 )
 from ..config.getters import get_backfill_window
 from ..config.models import DatasetExpressionPolicy
-from ..models.domain import FieldView, TemplateCandidate
-from ..models.runtime import TemplateField
+from ..models.domain import FieldView, TemplateCandidate, TemplateField
 from .ratio_templates import extend_ratio_templates
 from .templates.candidates import (
     _candidate_metadata,

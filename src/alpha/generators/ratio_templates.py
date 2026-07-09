@@ -13,8 +13,7 @@ from ..config.constants import (
 from ..config.getters import get_backfill_window
 from ..config.models import DatasetExpressionPolicy
 from ..generators.field_transforms import build_field_view, build_ratio_expression
-from ..models.domain import FieldView, TemplateCandidate
-from ..models.runtime import TemplateField
+from ..models.domain import FieldView, TemplateCandidate, TemplateField
 from .fields import choose_field_name
 from .templates.candidates import (
     _candidate_metadata,

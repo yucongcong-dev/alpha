@@ -17,8 +17,9 @@ from ..config.constants import STATUS_ERROR
 from ..core import delete_pipeline_state
 from ..io.results_store import dump_results
 from ..models.io_types import RunPaths
-from ..models.runtime import InitializedRunContext, ResultWriteArgs
+from ..models.runtime import ResultWriteArgs
 from ..policy import auto_update_blacklist
+from ..runtime import InitializedRunContext
 
 
 logger = logging.getLogger(__name__)

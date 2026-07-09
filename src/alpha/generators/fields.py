@@ -24,7 +24,8 @@ from typing import Any, Protocol
 
 from ..config.constants import FIELDS_CACHE_TTL_HOURS, SENTINEL_UNKNOWN
 from ..io.common import atomic_write_json
-from ..models.runtime import FieldFetchOptions, TemplateField
+from ..models.domain import TemplateField
+from ..models.runtime import FieldFetchOptions
 
 logger = logging.getLogger(__name__)
 

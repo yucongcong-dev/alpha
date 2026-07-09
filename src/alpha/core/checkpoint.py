@@ -21,7 +21,7 @@ import time
 from typing import Any
 
 from ..config.constants import CHECKPOINT_PENDING_FUTURES_LIMIT, CHECKPOINT_RESUME_SAFETY_SECONDS
-from ..models.runtime import ExecutionState, RuntimeConcurrencyState
+from ..runtime import ExecutionState, RuntimeConcurrencyState
 
 logger = logging.getLogger(__name__)
 

@@ -1,15 +1,15 @@
-"""Compatibility re-export layer for runtime state models."""
+"""Runtime session contexts and mutable execution state."""
 
 from __future__ import annotations
 
-from ..runtime.contexts import (
+from .contexts import (
     FutureCompletionContext,
     HistoricalRunState,
     PendingFutureContext,
     PendingTemplateEntry,
     TemplateBuildContext,
 )
-from ..runtime.state import (
+from .state import (
     ExecutionState,
     InitializedRunContext,
     PendingFutureLike,
