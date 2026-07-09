@@ -8,6 +8,7 @@
 - 入门篇：[docs/01_beginner_guide.md](docs/01_beginner_guide.md)
 - 优化篇：[docs/02_optimization_guide.md](docs/02_optimization_guide.md)
 - 仓库实战篇：[docs/03_repo_practice_guide.md](docs/03_repo_practice_guide.md)
+- 术语与状态篇：[docs/04_platform_terms_and_states.md](docs/04_platform_terms_and_states.md)
 - 建议先读这几份主线文档，再回来看本 README 的工程结构和运行说明
 - 如果要深入某个数据集，再继续看：
   - [templates/model51/README.md](templates/model51/README.md)

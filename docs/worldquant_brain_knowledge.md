@@ -15,12 +15,14 @@
    再理解 `Sharpe / Fitness / Turnover / Correlation` 的诊断逻辑，以及常见失败项该怎么优化。
 3. [03_repo_practice_guide.md](03_repo_practice_guide.md)
    最后把官网知识映射回本仓库，形成稳定的研究和迭代习惯。
+4. [04_platform_terms_and_states.md](04_platform_terms_and_states.md)
+   当你需要快速查术语、状态、评分、OS 页面字段含义时，直接查这篇。
 
 如果你已经在跑这个仓库，建议直接从第 2 篇开始，再补第 3 篇。
 
 ---
 
-## 三份文档分别解决什么问题
+## 四份文档分别解决什么问题
 
 ### 入门篇
 
@@ -49,6 +51,16 @@
 - 什么情况下该 broad search，什么情况下该 local refine？
 - 什么是“结构替换优先”，什么是“近邻参数过密”？
 - 模板、结果、文档、数据集说明各自该承担什么角色？
+
+### 术语与状态篇
+
+回答这些问题：
+
+- `IS / OS / OSTEST-PENDING / OSTEST-DECM` 是什么意思？
+- 为什么 OS 页是 `N/A`？
+- `Meta Score` 在看什么？
+- `Universe / Weight / Booksize / NaN / Pasteurize` 怎么理解？
+- 页面上的很多词到底是在说什么？
 
 ---
 
@@ -96,7 +108,7 @@
 
 后续维护时，尽量遵守这条规则：
 
-- 新增“学习路径”内容，放到这三篇主文档里
+- 新增“学习路径”内容，放到这四篇主文档里
 - 新增“数据集经验”内容，放到 `templates/<dataset_id>/README.md`
 - 新增“大量 FAQ 摘录”或“失败案例库”，单独再开专题文档
 
