@@ -14,7 +14,7 @@ import getpass
 import json
 import logging
 import os
-from typing import Any, cast
+from typing import Any
 
 from ..exceptions import BrainAPIError
 from ..io.common import atomic_write_json
@@ -113,13 +113,13 @@ def load_credentials(args: CredentialsArgs) -> tuple[str | None, str | None]:
     creds_key_file = args.creds_key_file
 
     if email and password:
-        return cast(tuple[str | None, str | None], (email, password))
+        return email, password
     if not creds_file:
         raise BrainAPIError("Missing creds-file path.")
-    if not os.path.exists(cast(str, creds_file)):
-        return prompt_and_store_credentials(cast(str, creds_file), cast(str, creds_key_file))
+    if not os.path.exists(creds_file):
+        return prompt_and_store_credentials(creds_file, creds_key_file)
 
-    file_email, file_password = _load_credentials_from_file(cast(str, creds_file), cast(str, creds_key_file))
+    file_email, file_password = _load_credentials_from_file(creds_file, creds_key_file)
     if not (email or file_email) or not (password or file_password):
-        return prompt_and_store_credentials(cast(str, creds_file), cast(str, creds_key_file))
-    return cast(tuple[str | None, str | None], (email or file_email, password or file_password))
+        return prompt_and_store_credentials(creds_file, creds_key_file)
+    return email or file_email, password or file_password

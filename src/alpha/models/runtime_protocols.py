@@ -3,125 +3,125 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
-from typing import Any, Protocol, Union
+from typing import Protocol, Union
 
 from .domain import FieldFeedbackSummary, FieldTestResult, TemplateCandidate
 
 TemplateFeedback = FieldFeedbackSummary
 TemplateStats = dict[str, dict[str, int]]
-RunConfig = dict[str, Any]
-BlacklistRuntimeStats = dict[str, dict[str, Any]]
+RunConfig = dict[str, object]
+BlacklistRuntimeStats = dict[str, dict[str, object]]
 
 
 class ApiClientArgs(Protocol):
-    min_request_interval: object
-    rate_limit_max_retries: object
-    login_retries: object
+    min_request_interval: float
+    rate_limit_max_retries: int
+    login_retries: int
 
 
 class TemplateBuildArgs(Protocol):
-    dataset_id: object
-    max_templates_per_field: object
-    max_templates_per_family: object
-    legacy_similarity_penalty: object
-    template_disable_after: object
-    disable_legacy_after: object
-    region: object
-    universe: object
-    instrument_type: object
-    delay: object
-    decay: object
-    neutralization: object
-    truncation: object
-    pasteurization: object
-    unit_handling: object
-    nan_handling: object
-    language: object
-    start_date: object
-    end_date: object
+    dataset_id: str
+    max_templates_per_field: int
+    max_templates_per_family: int
+    legacy_similarity_penalty: int
+    template_disable_after: int
+    disable_legacy_after: int
+    region: str
+    universe: str
+    instrument_type: str
+    delay: int
+    decay: int
+    neutralization: str
+    truncation: float
+    pasteurization: str
+    unit_handling: str
+    nan_handling: str
+    language: str
+    start_date: str | None
+    end_date: str | None
 
 
 class ResultWriteArgs(Protocol):
-    dataset_id: object
-    output: object
-    auto_update_blacklist: object
+    dataset_id: str
+    output: str
+    auto_update_blacklist: bool
 
 
 class CleanRuntimeArgs(Protocol):
-    include_credentials: object
-    dry_run_clean: object
+    include_credentials: bool
+    dry_run_clean: bool
 
 
 class CredentialsArgs(Protocol):
-    email: object
-    password: object
-    creds_file: object
-    creds_key_file: object
+    email: str | None
+    password: str | None
+    creds_file: str
+    creds_key_file: str
 
 
 class FieldFetchArgs(Protocol):
-    dataset_id: object
-    page_size: object
-    region: object
-    universe: object
-    instrument_type: object
-    delay: object
+    dataset_id: str
+    page_size: int
+    region: str
+    universe: str
+    instrument_type: str
+    delay: int
 
 
 class FieldSelectionArgs(Protocol):
-    top_fields_by_feedback: object
-    offset: object
-    limit: object
+    top_fields_by_feedback: int
+    offset: int
+    limit: int
 
 
 class RunConfigArgs(Protocol):
-    dataset_id: object
-    region: object
-    universe: object
-    instrument_type: object
-    delay: object
-    decay: object
-    neutralization: object
-    truncation: object
-    nan_handling: object
-    limit: object
-    offset: object
-    page_size: object
-    sleep_between_fields: object
-    max_templates_per_field: object
-    max_templates_per_family: object
-    field_template_batch_size: object
-    legacy_similarity_penalty: object
-    disable_legacy_after: object
-    max_concurrent_simulations: object
-    max_concurrent_creates: object
-    simulation_create_retries: object
-    simulation_poll_retries: object
-    simulation_max_polls: object
-    simulation_max_wait_seconds: object
-    simulation_max_pending_cycles: object
-    simulation_max_queue_seconds: object
-    queue_busy_cooldown_seconds: object
-    field_queue_busy_skip_after: object
-    check_submit_retries: object
+    dataset_id: str
+    region: str
+    universe: str
+    instrument_type: str
+    delay: int
+    decay: int
+    neutralization: str
+    truncation: float
+    nan_handling: str
+    limit: int
+    offset: int
+    page_size: int
+    sleep_between_fields: float
+    max_templates_per_field: int
+    max_templates_per_family: int
+    field_template_batch_size: int
+    legacy_similarity_penalty: int
+    disable_legacy_after: int
+    max_concurrent_simulations: int
+    max_concurrent_creates: int
+    simulation_create_retries: int
+    simulation_poll_retries: int
+    simulation_max_polls: int
+    simulation_max_wait_seconds: float
+    simulation_max_pending_cycles: int
+    simulation_max_queue_seconds: float
+    queue_busy_cooldown_seconds: float
+    field_queue_busy_skip_after: int
+    check_submit_retries: int
 
-    rate_limit_max_retries: object
-    login_retries: object
-    min_request_interval: object
-    template_disable_after: object
-    top_fields_by_feedback: object
-    stop_after_submittable: object
+    rate_limit_max_retries: int
+    login_retries: int
+    min_request_interval: float
+    template_disable_after: int
+    top_fields_by_feedback: int
+    stop_after_submittable: bool
 
-    auto_update_blacklist: object
-    smoke_test: object
-    dry_run_plan: object
-    full_run: object
-    verbose: object
-    quiet: object
+    auto_update_blacklist: bool
+    smoke_test: bool
+    dry_run_plan: bool
+    full_run: bool
+    verbose: bool
+    quiet: bool
 
 
 class StopAfterSubmittableArgs(Protocol):
-    stop_after_submittable: object
+    stop_after_submittable: bool
 
 
 class BootstrapRuntimeArgs(
@@ -132,57 +132,57 @@ class BootstrapRuntimeArgs(
     RunConfigArgs,
     Protocol,
 ):
-    output: object
-    template_library_file: object
-    fields_cache_file: object
-    max_concurrent_simulations: object
-    max_concurrent_creates: object
+    output: str
+    template_library_file: str
+    fields_cache_file: str
+    max_concurrent_simulations: int
+    max_concurrent_creates: int
 
 
 class SimulationSettingsArgs(Protocol):
-    instrument_type: object
-    region: object
-    universe: object
-    delay: object
-    decay: object
-    neutralization: object
-    truncation: object
-    pasteurization: object
-    unit_handling: object
-    nan_handling: object
-    language: object
-    start_date: object
-    end_date: object
+    instrument_type: str
+    region: str
+    universe: str
+    delay: int
+    decay: int
+    neutralization: str
+    truncation: float
+    pasteurization: str
+    unit_handling: str
+    nan_handling: str
+    language: str
+    start_date: str | None
+    end_date: str | None
 
 
 class SimulationStageArgs(SimulationSettingsArgs, Protocol):
-    simulation_create_retries: object
-    simulation_poll_retries: object
-    simulation_max_polls: object
-    simulation_max_wait_seconds: object
-    simulation_max_pending_cycles: object
-    simulation_max_queue_seconds: object
-    check_submit_retries: object
+    simulation_create_retries: int
+    simulation_poll_retries: int
+    simulation_max_polls: int
+    simulation_max_wait_seconds: float
+    simulation_max_pending_cycles: int
+    simulation_max_queue_seconds: float
+    check_submit_retries: int
 
-    min_sharpe: object
-    min_fitness: object
-    min_turnover: object
-    max_turnover: object
-    max_weight: object
+    min_sharpe: float
+    min_fitness: float
+    min_turnover: float
+    max_turnover: float
+    max_weight: float
 
 
 class SchedulerRuntimeArgs(Protocol):
-    queue_busy_cooldown_seconds: object
-    field_queue_busy_skip_after: object
-    sleep_between_fields: object
-    dataset_id: object
-    output: object
-    auto_update_blacklist: object
+    queue_busy_cooldown_seconds: float
+    field_queue_busy_skip_after: int
+    sleep_between_fields: float
+    dataset_id: str
+    output: str
+    auto_update_blacklist: bool
 
 
 class RunLoopArgs(SimulationStageArgs, SchedulerRuntimeArgs, StopAfterSubmittableArgs, Protocol):
-    dry_run_plan: object
-    field_template_batch_size: object
+    dry_run_plan: bool
+    field_template_batch_size: int
 
 
 class ClientFactoryLike(Protocol):

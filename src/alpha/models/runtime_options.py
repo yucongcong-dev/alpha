@@ -23,9 +23,9 @@ class ApiClientOptions:
     @classmethod
     def from_args(cls, args: ApiClientArgs) -> ApiClientOptions:
         return cls(
-            min_request_interval=float(getattr(args, "min_request_interval", 0.0) or 0.0),
-            rate_limit_max_retries=int(getattr(args, "rate_limit_max_retries", 0) or 0),
-            login_retries=int(getattr(args, "login_retries", 0) or 0),
+            min_request_interval=float(args.min_request_interval or 0.0),
+            rate_limit_max_retries=int(args.rate_limit_max_retries or 0),
+            login_retries=int(args.login_retries or 0),
         )
 
 
@@ -68,11 +68,11 @@ class TemplateBuildOptions:
             nan_handling=args.nan_handling,
             language=args.language,
             dataset_id=args.dataset_id,
-            max_templates_per_field=int(getattr(args, "max_templates_per_field", 0) or 0),
-            max_templates_per_family=int(getattr(args, "max_templates_per_family", 0) or 0),
-            legacy_similarity_penalty=int(getattr(args, "legacy_similarity_penalty", 0) or 0),
-            template_disable_after=int(getattr(args, "template_disable_after", 0) or 0),
-            disable_legacy_after=int(getattr(args, "disable_legacy_after", 0) or 0),
+            max_templates_per_field=int(args.max_templates_per_field or 0),
+            max_templates_per_family=int(args.max_templates_per_family or 0),
+            legacy_similarity_penalty=int(args.legacy_similarity_penalty or 0),
+            template_disable_after=int(args.template_disable_after or 0),
+            disable_legacy_after=int(args.disable_legacy_after or 0),
             start_date=getattr(args, "start_date", None),
             end_date=getattr(args, "end_date", None),
         )
@@ -89,9 +89,9 @@ class ResultWriteOptions:
     @classmethod
     def from_args(cls, args: ResultWriteArgs) -> ResultWriteOptions:
         return cls(
-            dataset_id=str(getattr(args, "dataset_id", "") or ""),
-            output_path=str(getattr(args, "output", "") or ""),
-            auto_update_blacklist=bool(getattr(args, "auto_update_blacklist", False)),
+            dataset_id=str(args.dataset_id or ""),
+            output_path=str(args.output or ""),
+            auto_update_blacklist=bool(args.auto_update_blacklist),
         )
 
 
