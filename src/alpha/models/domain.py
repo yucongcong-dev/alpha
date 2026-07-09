@@ -8,7 +8,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, Sequence
 
 from ..config.constants import STATUS_ERROR
 
@@ -68,6 +68,13 @@ def coerce_failed_check(check: Any) -> FailedCheck:
 def serialize_failed_check(check: Any) -> dict[str, Any]:
     """把 failed check 归一化为可 JSON 序列化的字典。"""
     return coerce_failed_check(check).to_dict()
+
+
+def coerce_failed_checks(checks: Sequence[Any] | None) -> list[FailedCheck]:
+    """把 failed checks 序列归一化为 FailedCheck 列表。"""
+    if not checks:
+        return []
+    return [coerce_failed_check(check) for check in checks]
 
 
 ResultRow = dict[str, Any]
@@ -344,7 +351,7 @@ class FieldTestContext:
         simulation_id: str | None = None,
         alpha_id: str | None = None,
         status: str = STATUS_ERROR,
-        failed_checks: list[FailedCheck] | None = None,
+        failed_checks: Sequence[FailedCheck | dict[str, Any]] | None = None,
     ) -> FieldTestResult:
         return FieldTestResult(
             field_id=self.field_id,
@@ -365,7 +372,7 @@ class FieldTestContext:
             settings_fingerprint=self.settings_fingerprint,
             template_library_fingerprint=self.template_library_fingerprint,
             failed_stage=failed_stage,
-            failed_checks=failed_checks,
+            failed_checks=coerce_failed_checks(failed_checks),
         )
 
     def success(

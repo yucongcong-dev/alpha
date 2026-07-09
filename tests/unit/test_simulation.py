@@ -471,7 +471,7 @@ class TestBuildFailureResult:
             status="simulation_failed",
             failed_checks=checks,
         )
-        assert result.failed_checks == checks
+        assert result.failed_checks == [FailedCheck(name="LOW_SHARPE", value=0.8, limit=1.0)]
         assert result.simulation_id == "sim_1"
         assert result.alpha_id == "alpha_1"
         assert result.status == "simulation_failed"
@@ -575,7 +575,7 @@ class TestFieldTestContext:
             message="checks failed",
             failed_checks=checks,
         )
-        assert result.failed_checks == checks
+        assert result.failed_checks == [FailedCheck(name="LOW_SHARPE", value=0.5, limit=1.0)]
 
 
 def test_run_checksubmit_stage_with_self_correlation_pending(monkeypatch) -> None:

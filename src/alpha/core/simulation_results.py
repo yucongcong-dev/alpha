@@ -4,10 +4,10 @@ simulation 结果构建辅助模块。
 
 from __future__ import annotations
 
-from typing import Any, cast
+from typing import Any, Sequence
 
 from ..config.constants import STATUS_ERROR
-from ..models.domain import FailedCheck, FieldTestContext, FieldTestResult
+from ..models.domain import FailedCheck, FieldTestContext, FieldTestResult, coerce_failed_checks
 
 
 def build_failure_result(
@@ -28,7 +28,7 @@ def build_failure_result(
     template_role: str = "",
     template_activation_scope: str = "",
     status: str = STATUS_ERROR,
-    failed_checks: list[dict[str, Any]] | None = None,
+    failed_checks: Sequence[FailedCheck | dict[str, Any]] | None = None,
 ) -> FieldTestResult:
     return FieldTestResult(
         field_id=field_id,
@@ -49,7 +49,7 @@ def build_failure_result(
         settings_fingerprint=settings_fingerprint,
         template_library_fingerprint=template_library_fingerprint,
         failed_stage=failed_stage,
-        failed_checks=cast(list[FailedCheck], failed_checks),
+        failed_checks=coerce_failed_checks(failed_checks),
     )
 
 

@@ -212,7 +212,7 @@ def test_model51_policy_uses_risk_metric_winsorize_and_bucket_templates() -> Non
     )
     assert "model51_bucket_cap_ratio_zscore_60" in policy.protected_templates
     assert "model51_ratio_cap_zscore_60" in policy.protected_templates
-    assert "model51_group_zscore_subindustry_84" in policy.protected_templates
+    assert "model51_group_zscore_subindustry_120" in policy.protected_templates
 
 
 def test_get_yaml_config_reloads_when_file_changes(tmp_path) -> None:
