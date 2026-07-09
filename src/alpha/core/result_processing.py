@@ -14,7 +14,6 @@ from ..analysis.result_identity import (
     is_queue_timeout_result,
     result_identity,
 )
-from ..analysis.template_registry import compile_template_registry_summary
 from ..analysis.template_stats import update_template_stats_with_result
 from ..config.constants import STATUS_ERROR
 from ..models.domain import FieldTestResult
@@ -134,7 +133,7 @@ def apply_completed_result(
         settings_fingerprint=completion_ctx.settings_fingerprint,
         template_library_fingerprint=completion_ctx.template_library_fingerprint,
         run_config=completion_ctx.run_config,
-        template_registry_summary=compile_template_registry_summary(execution_state.template_stats),
+        template_stats=execution_state.template_stats,
     )
     congestion_detected, queue_busy_field_id = detect_result_congestion(result)
     if "CONCURRENT_SIMULATION_LIMIT_EXCEEDED" in result.message:

@@ -51,7 +51,7 @@ from .feedback_stats import (
 from .field_stats import compile_field_performance_summary, current_submittable_count, field_priority
 from .result_identity import attempted_template_keys, is_informative_result, result_identity
 from .results_loader import load_existing_results
-from .template_registry import (
+from .template_registry_rules import (
     compile_template_registry_summary,
     normalize_activation_scope,
     normalize_template_role,

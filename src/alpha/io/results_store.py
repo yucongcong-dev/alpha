@@ -84,9 +84,8 @@ def dump_results(
 ) -> None:
     """持久化完整运行结果，并按需同步分析边车文件。"""
     sidecar_paths = build_output_sidecar_paths(path)
+    from ..analysis.template_registry_sidecars import sync_template_registry_sidecars
     from ..analysis.report_builder import build_analysis_payload, build_results_summary_payload
-    from ..analysis.template_registry import compile_template_registry_summary
-    from ..analysis.template_registry import load_registry_overrides
     from ..analysis.template_stats import compile_template_stats
 
     summary, analysis_inputs = build_results_summary_payload(
@@ -98,11 +97,10 @@ def dump_results(
         results_journal_path=sidecar_paths["results_journal"],
     )
     summary["results_embedded"] = True
-    template_registry_summary = compile_template_registry_summary(compile_template_stats(results))
+    template_stats = compile_template_stats(results)
     atomic_write_json(path, summary)
     initialize_results_journal(path, results)
-    atomic_write_json(sidecar_paths["template_registry"], template_registry_summary)
-    atomic_write_json(sidecar_paths["template_registry_overrides"], load_registry_overrides(path))
+    sync_template_registry_sidecars(path, template_stats=template_stats)
     if include_analysis:
         analysis = build_analysis_payload(results, summary, analysis_inputs)
         atomic_write_json(sidecar_paths["analysis"], analysis)
@@ -135,9 +133,15 @@ def dump_results_incremental(
     template_library_fingerprint: str,
     run_config: dict[str, Any] | None = None,
     template_registry_summary: list[dict[str, Any]] | None = None,
+    template_stats: dict[str, dict[str, Any]] | None = None,
 ) -> int:
     """仅把新增结果追加到 journal，并写轻量 summary。"""
     sidecar_paths = build_output_sidecar_paths(path)
+    from ..analysis.template_registry_sidecars import (
+        ensure_template_registry_overrides_sidecar,
+        persist_template_registry_summary,
+    )
+
     if new_results:
         _append_results_journal(sidecar_paths["results_journal"], new_results)
     summary = {
@@ -155,12 +159,13 @@ def dump_results_incremental(
         "results_journal": sidecar_paths["results_journal"],
     }
     atomic_write_json(path, summary)
-    if template_registry_summary is not None:
-        atomic_write_json(sidecar_paths["template_registry"], template_registry_summary)
-    if not os.path.exists(sidecar_paths["template_registry_overrides"]):
-        from ..analysis.template_registry import load_registry_overrides
-
-        atomic_write_json(sidecar_paths["template_registry_overrides"], load_registry_overrides(path))
+    if template_registry_summary is not None or template_stats is not None:
+        persist_template_registry_summary(
+            path,
+            summary_rows=template_registry_summary,
+            template_stats=template_stats,
+        )
+    ensure_template_registry_overrides_sidecar(path)
     cleanup_legacy_sidecar_files(path)
     logger.info(
         "[done] wrote incremental results to %s (tested=%d, submittable=%d, appended=%d)",

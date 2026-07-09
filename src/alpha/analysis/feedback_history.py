@@ -28,12 +28,14 @@ from .feedback_stats import compile_field_feedback, compile_global_failed_check_
 from .field_stats import current_submittable_count
 from .result_identity import attempted_template_keys
 from .results_loader import load_existing_results
-from .template_registry import (
-    build_template_registry_index,
+from .template_registry_rules import (
     compile_template_family_registry,
+    merge_registry_recommendations_into_template_stats,
+)
+from .template_registry_store import (
+    build_template_registry_index,
     load_registry_overrides,
     load_persisted_template_registry,
-    merge_registry_recommendations_into_template_stats,
 )
 from .template_stats import compile_template_stats
 

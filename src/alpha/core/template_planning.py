@@ -13,15 +13,17 @@ from ..analysis.feedback_history import (
     choose_settings_variant_budget,
     select_nearpass_candidates,
 )
-from ..analysis.template_registry import (
+from ..analysis.template_registry_budget import (
     choose_field_cluster_settings_budget,
     choose_family_settings_budget,
     choose_registry_settings_budget,
+)
+from ..analysis.template_registry_rules import (
     normalize_activation_scope,
     normalize_template_role,
-    resolve_registry_override,
     recommend_template_role_transition,
 )
+from ..analysis.template_registry_store import resolve_registry_override
 from ..analysis.template_stats import historical_template_priority_bonus
 from ..config.constants import (
     FEEDBACK_STAGE_RESIMULATE,

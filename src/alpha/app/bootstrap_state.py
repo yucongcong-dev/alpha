@@ -72,5 +72,6 @@ def build_execution_state(
         settings_fingerprint=settings_fingerprint,
         template_library_fingerprint=template_library_fingerprint,
         run_config=run_config,
+        template_stats=execution_state.template_stats,
     )
     return execution_state
