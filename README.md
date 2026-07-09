@@ -4,14 +4,13 @@
 
 ## 学习入口
 
-- 文档总索引：先看 [docs/README.md](docs/README.md)
-- 学习路径导航：再看 [docs/worldquant_brain_knowledge.md](docs/worldquant_brain_knowledge.md)
+- 文档总入口：先看 [docs/README.md](docs/README.md)
 - 数据集策略说明：看 `templates/<dataset_id>/README.md`
 
 ## 常用路径
 
 - 想按问题找文档：看 [docs/README.md](docs/README.md)
-- 想按学习顺序看：看 [docs/worldquant_brain_knowledge.md](docs/worldquant_brain_knowledge.md)
+- 想按学习顺序看：看 [docs/README.md](docs/README.md)
 - 想看数据集策略：看 `templates/<dataset_id>/README.md`
 
 ## Python 版本

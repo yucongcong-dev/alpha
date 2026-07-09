@@ -1,19 +1,23 @@
 # Docs Index
 
-这份索引页只做一件事：帮你快速找到“现在该看哪篇文档”。
+这份索引页是 `docs/` 的唯一主入口：既负责学习顺序，也负责按问题快速定位文档。
 
----
+## 推荐阅读顺序
+
+第一次系统看这个仓库，建议按下面顺序读：
+
+1. [01_beginner_guide.md](01_beginner_guide.md)
+2. [02_optimization_guide.md](02_optimization_guide.md)
+3. [03_repo_practice_guide.md](03_repo_practice_guide.md)
+4. [04_platform_terms_and_states.md](04_platform_terms_and_states.md)
+
+如果你已经在跑实验，通常直接从第 2 篇开始更合适，再补第 3 篇。
 
 ## 快速入口
 
 ### 我是第一次接触这个仓库
 
-按这个顺序看：
-
-1. [worldquant_brain_knowledge.md](worldquant_brain_knowledge.md)
-2. [01_beginner_guide.md](01_beginner_guide.md)
-3. [02_optimization_guide.md](02_optimization_guide.md)
-4. [03_repo_practice_guide.md](03_repo_practice_guide.md)
+按“推荐阅读顺序”直接往下看。
 
 ### 我现在卡在某个结果，不知道怎么解释
 
@@ -34,11 +38,9 @@
 
 1. [03_repo_practice_guide.md](03_repo_practice_guide.md)
 2. 数据集说明：
-   - [../templates/model16/README.md](../templates/model16/README.md)
-   - [../templates/model51/README.md](../templates/model51/README.md)
-   - [../templates/fundamental6/README.md](../templates/fundamental6/README.md)
-
----
+- [../templates/model16/README.md](../templates/model16/README.md)
+- [../templates/model51/README.md](../templates/model51/README.md)
+- [../templates/fundamental6/README.md](../templates/fundamental6/README.md)
 
 ## 按问题找文档
 
@@ -54,14 +56,12 @@
 | 官网方法论怎么落到这个仓库？ | [03_repo_practice_guide.md](03_repo_practice_guide.md) |
 | 当前某个数据集该怎么跑？ | `templates/<dataset_id>/README.md` |
 
----
-
 ## 按角色找文档
 
 ### 新手
 
-- [worldquant_brain_knowledge.md](worldquant_brain_knowledge.md)
 - [01_beginner_guide.md](01_beginner_guide.md)
+- [02_optimization_guide.md](02_optimization_guide.md)
 
 ### 研究者
 
@@ -78,12 +78,10 @@
 - [../templates/model51/README.md](../templates/model51/README.md)
 - [../templates/fundamental6/README.md](../templates/fundamental6/README.md)
 
----
-
 ## 文档边界
 
 - `docs/`：通用学习路径、平台概念、查表文档
 - `README.md`：工程入口、运行方式、项目结构
 - `templates/<dataset_id>/README.md`：数据集策略与本地经验
 
-如果后面还要继续扩文档，优先先判断内容属于哪一层，再决定写到哪里。
+如果后面继续扩文档，优先先判断内容属于哪一层，再决定写到哪里。

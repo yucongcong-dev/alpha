@@ -180,7 +180,7 @@ Broad search 更适合：
 更建议保持这套边界：
 
 - 主学习路径：`docs/01~03`
-- 总导航：`docs/worldquant_brain_knowledge.md`
+- 总导航：`docs/README.md`
 - 工程入口：`README.md`
 - 数据集策略说明：`templates/<dataset_id>/README.md`
 
