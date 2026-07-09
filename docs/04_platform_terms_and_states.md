@@ -56,6 +56,27 @@
 
 所以不要把 OS 表现变化简单理解成“平台换了 neutralization”。
 
+### 2.4 `Test Period`
+
+官方 Learn 文档对 `Test Period` 的定义很明确：
+
+- 它是在 5 年 IS 内再切出一段 `Train/Test`
+- Train 更适合开发 Alpha
+- Test 更适合验证是否过拟合
+
+最容易记错的一点是：
+
+- `Test Period` 会影响统计和图表展示
+- 但 submission tests 仍然跑完整 5 年 IS
+
+所以它更像：
+
+- 一个研究验证工具
+
+而不是：
+
+- 一个改变平台正式提交口径的开关
+
 ---
 
 ## 3. 最常见状态词典
@@ -211,7 +232,17 @@
 
 ### 7.3 `Booksize`
 
-平台相关定义都围绕固定 `booksize` 展开。
+官方 Glossary 的口径更具体：
+
+- 平台使用固定 `booksize = $20 million`
+- 模拟利润不会做再投资
+- 模拟亏损会被现金注入补回
+
+所以平台上的很多结果都带着这层统一约束：
+
+- 资金底座固定
+- 收益不会因为“赚了钱再滚大本金”而膨胀
+- 亏损也不会因为“本金越亏越小”而自动收缩
 
 对实战最重要的意义是：
 
@@ -304,7 +335,55 @@
 
 ---
 
-## 10. PnL、Drawdown、平滑
+## 10. Coverage、Alpha list、Correlation 工具
+
+### 10.1 `Coverage`
+
+官方 Glossary 的定义是：
+
+- `Coverage` 指在当前 Universe 里
+- 某个 data field 有定义值的 instrument 占比
+
+这对研究的直接意义是：
+
+- coverage 低，不代表字段一定不能用
+- 但通常需要配合 `ts_backfill`、`kth_element`、`group_backfill` 之类方法处理缺失
+
+所以在本仓库里看到 `coverage / dateCoverage` 过滤时，可以把它理解成：
+
+- 先验质量信号
+- 不是绝对真理
+
+### 10.2 `Alpha list`
+
+官方 Glossary 里把 `Alpha list` 定义成：
+
+- 用来比较多条 Alpha
+- 以及查看它们彼此相关性的工具
+
+对本地工作流最有用的启发是：
+
+- 不要只盯单条 Alpha
+- 也要看一组 Alpha 是否只是高相关的小变体
+
+### 10.3 `Correlation`
+
+官方 Glossary 直接把 Correlation 解释成：
+
+- 衡量 Alpha 独特性的指标
+
+这和本地研究流程是直接对应的：
+
+- `SELF_CORRELATION` 更像“和自己池子太像”
+- `PROD_CORRELATION` 更像“和平台已有池子太像”
+
+所以相关性问题本质上不是“结果页面的小红字”，而是平台在判断：
+
+- 这条 Alpha 有没有增量价值
+
+---
+
+## 11. PnL、Drawdown、平滑
 
 ### 10.1 `PnL`
 
