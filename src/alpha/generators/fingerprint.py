@@ -7,9 +7,24 @@ import json
 from typing import Any
 
 from ..config.constants import STABLE_FINGERPRINT_HEX_LEN
+from ..models.domain import FieldTestResult, SettingsVariant, TemplateField, TemplateLibraryItem
+from ..models.domain_serializers import (
+    serialize_field_test_result,
+    serialize_settings_variant,
+    serialize_template_field,
+    serialize_template_library_item,
+)
 
 
 def _json_default(obj: Any) -> Any:
+    if isinstance(obj, FieldTestResult):
+        return serialize_field_test_result(obj)
+    if isinstance(obj, SettingsVariant):
+        return serialize_settings_variant(obj)
+    if isinstance(obj, TemplateField):
+        return serialize_template_field(obj)
+    if isinstance(obj, TemplateLibraryItem):
+        return serialize_template_library_item(obj)
     if hasattr(obj, "to_dict"):
         return obj.to_dict()
     if hasattr(obj, "__dataclass_fields__"):

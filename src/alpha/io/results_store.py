@@ -14,6 +14,7 @@ from typing import Any
 
 
 from ..models.domain import FieldTestResult
+from ..models.domain_serializers import serialize_field_test_result
 from .common import atomic_write_json
 from .output_paths import build_output_sidecar_paths, cleanup_legacy_sidecar_files
 
@@ -48,7 +49,7 @@ def initialize_results_journal(output_path: str, results: list[FieldTestResult])
     try:
         with os.fdopen(fd, "w", encoding="utf-8") as handle:
             for result in results:
-                handle.write(json.dumps(result.to_dict(), ensure_ascii=False))
+                handle.write(json.dumps(serialize_field_test_result(result), ensure_ascii=False))
                 handle.write("\n")
         os.replace(temp_path, journal_path)
     finally:
@@ -66,7 +67,7 @@ def _append_results_journal(journal_path: str, results: list[FieldTestResult]) -
     os.makedirs(directory, exist_ok=True)
     with open(journal_path, "a", encoding="utf-8") as handle:
         for result in results:
-            handle.write(json.dumps(result.to_dict(), ensure_ascii=False))
+            handle.write(json.dumps(serialize_field_test_result(result), ensure_ascii=False))
             handle.write("\n")
 
 

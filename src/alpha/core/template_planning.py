@@ -45,12 +45,12 @@ from ..generators.templates.priority import cap_templates_per_family
 from ..generators.templates.refine import build_refine_templates
 from ..generators.variants import build_setting_variants
 from ..models.domain import (
-    FailedCheck,
     FieldTestResult,
     NearPassCandidate,
     TemplateCandidate,
     TemplateField,
 )
+from ..models.domain_parsers import parse_failed_check
 from ..models.runtime_protocols import TemplateFeedback
 from ..runtime import PendingTemplateEntry, TemplateBuildContext
 from ..policy.expression import get_dataset_expression_policy, resolve_feedback_stage
@@ -247,9 +247,7 @@ def build_pending_template_variants(
                 template_family=template_family,
                 template_stage=template_stage,
                 score=float(template_metadata.get("refine_score", 0.0) or 0.0),
-                failed_checks=[
-                    FailedCheck.from_dict(check) for check in refine_failed_checks
-                ],
+                failed_checks=[parse_failed_check(check) for check in refine_failed_checks],
             )
         for settings_variant in build_setting_variants_fn(
             options,

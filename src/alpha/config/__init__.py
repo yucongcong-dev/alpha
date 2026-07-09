@@ -7,11 +7,11 @@ helpers. Internal modules should prefer importing focused submodules directly.
 
 from __future__ import annotations
 
-from importlib import import_module
 from typing import TYPE_CHECKING
 
 from .constants import __all__ as _CONSTANT_EXPORTS
 from .getters import __all__ as _GETTER_EXPORTS
+from .._facade import facade_dir, resolve_export
 
 if TYPE_CHECKING:
     from .constants import *
@@ -33,26 +33,6 @@ if TYPE_CHECKING:
         validate_yaml_config,
     )
 
-__all__ = [
-    *_CONSTANT_EXPORTS,
-    *_GETTER_EXPORTS,
-    "DatasetExpressionPolicy",
-    "FeedbackLoopPolicy",
-    "FeedbackPhasePolicy",
-    "FieldTransformSpec",
-    "FieldTransformStage",
-    "DATASET_PROFILES",
-    "DEFAULT_PROFILE",
-    "get_dataset_profile",
-    "clear_yaml_caches",
-    "get_yaml_config",
-    "load_yaml_config",
-    "validate_yaml_config",
-    "clear_runtime_config_cache",
-    "get_runtime_config",
-    "apply_yaml_global_defaults",
-]
-
 _EXPORT_MAP: dict[str, tuple[str, str]] = {
     **{name: (".constants", name) for name in _CONSTANT_EXPORTS},
     **{name: (".getters", name) for name in _GETTER_EXPORTS},
@@ -73,17 +53,18 @@ _EXPORT_MAP: dict[str, tuple[str, str]] = {
     "get_runtime_config": (".runtime_values", "get_runtime_config"),
 }
 
+__all__ = list(_EXPORT_MAP)
+
 
 def __getattr__(name: str) -> object:
-    try:
-        module_name, attr_name = _EXPORT_MAP[name]
-    except KeyError as exc:
-        raise AttributeError(f"module {__name__!r} has no attribute {name!r}") from exc
-    module = import_module(module_name, __package__)
-    value = getattr(module, attr_name)
-    globals()[name] = value
-    return value
+    return resolve_export(
+        name=name,
+        export_map=_EXPORT_MAP,
+        package=__package__,
+        namespace=__name__,
+        target_globals=globals(),
+    )
 
 
 def __dir__() -> list[str]:
-    return sorted(set(globals()) | set(__all__))
+    return facade_dir(globals(), _EXPORT_MAP)

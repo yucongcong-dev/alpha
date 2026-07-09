@@ -4,15 +4,15 @@ bootstrap 执行态与历史结果装配辅助模块。
 
 from __future__ import annotations
 
-from typing import Any, cast
-
 from ..analysis.result_identity import is_queue_timeout_result
 from ..config.constants import STATUS_ERROR
 from ..io.results_store import dump_results_incremental, initialize_results_journal
+from ..models.runtime_protocols import RunConfig
 from ..runtime import ExecutionState
 from ..policy import build_blacklist_runtime_stats
 from ..policy.blacklist_context import set_active_blacklists_dir
 from ..policy.blacklist_store import load_blacklisted_template_keys
+from ..runtime import HistoricalRunState
 
 
 def populate_execution_metrics(execution_state: ExecutionState) -> None:
@@ -32,10 +32,10 @@ def build_execution_state(
     *,
     dataset_id: str,
     output_file: str,
-    historical_state,
+    historical_state: HistoricalRunState,
     settings_fingerprint: str,
     template_library_fingerprint: str,
-    run_config: dict,
+    run_config: RunConfig,
     blacklists_dir: str = "",
 ) -> ExecutionState:
     """根据历史结果恢复 execution_state，并初始化 journal / sidecar 计数。"""
@@ -53,10 +53,7 @@ def build_execution_state(
         output_file,
         execution_state.results,
     )
-    execution_state.blacklist_runtime_stats = cast(
-        dict[str, dict[str, Any]],
-        build_blacklist_runtime_stats(execution_state.results),
-    )
+    execution_state.blacklist_runtime_stats = build_blacklist_runtime_stats(execution_state.results)
     execution_state.blacklisted_template_keys = load_blacklisted_template_keys(dataset_id)
     execution_state.persisted_result_count = dump_results_incremental(
         output_file,

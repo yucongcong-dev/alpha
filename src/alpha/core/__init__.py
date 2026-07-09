@@ -7,8 +7,9 @@ Internal modules should prefer importing concrete submodules directly.
 
 from __future__ import annotations
 
-from importlib import import_module
 from typing import TYPE_CHECKING
+
+from .._facade import ExportMap, facade_dir, resolve_export
 
 if TYPE_CHECKING:
     from .checkpoint import (
@@ -50,39 +51,7 @@ if TYPE_CHECKING:
         resolve_field_template_candidates,
     )
 
-__all__ = [
-    "apply_completed_result",
-    "apply_congestion_cooldown",
-    "build_failure_result",
-    "build_pending_template_variants",
-    "build_pending_templates_for_field",
-    "create_simulation_with_retry",
-    "delete_pipeline_state",
-    "detect_result_congestion",
-    "drain_completed_futures",
-    "extract_alpha_id",
-    "extract_checks",
-    "extract_failed_checks",
-    "handle_completed_future",
-    "inflight_template_keys",
-    "is_submittable_from_checks",
-    "load_pipeline_state",
-    "maybe_restore_runtime_concurrency",
-    "poll_simulation_with_retry",
-    "print_dry_run_plan",
-    "register_queue_busy_field",
-    "resolve_field_template_candidates",
-    "run_field_test",
-    "run_field_test_in_worker",
-    "save_checkpoint",
-    "save_pipeline_state",
-    "should_skip_expression_by_history",
-    "should_skip_field",
-    "summarize_failure",
-    "throttle_before_submission",
-]
-
-_EXPORT_MAP: dict[str, tuple[str, str]] = {
+_EXPORT_MAP: ExportMap = {
     "delete_pipeline_state": (".checkpoint", "delete_pipeline_state"),
     "load_pipeline_state": (".checkpoint", "load_pipeline_state"),
     "save_checkpoint": (".checkpoint", "save_checkpoint"),
@@ -114,17 +83,18 @@ _EXPORT_MAP: dict[str, tuple[str, str]] = {
     "resolve_field_template_candidates": (".template_planning", "resolve_field_template_candidates"),
 }
 
+__all__ = list(_EXPORT_MAP)
+
 
 def __getattr__(name: str) -> object:
-    try:
-        module_name, attr_name = _EXPORT_MAP[name]
-    except KeyError as exc:
-        raise AttributeError(f"module {__name__!r} has no attribute {name!r}") from exc
-    module = import_module(module_name, __package__)
-    value = getattr(module, attr_name)
-    globals()[name] = value
-    return value
+    return resolve_export(
+        name=name,
+        export_map=_EXPORT_MAP,
+        package=__package__ or "",
+        namespace=__name__,
+        target_globals=globals(),
+    )
 
 
 def __dir__() -> list[str]:
-    return sorted(set(globals()) | set(__all__))
+    return facade_dir(globals(), _EXPORT_MAP)

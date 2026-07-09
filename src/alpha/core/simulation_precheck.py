@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import cast
 
 from ..api.api_types import CheckResultDict, SimulationPayload
 from ..config.constants import (
@@ -45,12 +44,18 @@ class PrecheckConfig:
 
     @classmethod
     def from_args(cls, args: SimulationStageArgs) -> PrecheckConfig:
+        def _float_attr(name: str, default: float) -> float:
+            try:
+                return float(getattr(args, name, default))
+            except (TypeError, ValueError):
+                return default
+
         return cls(
-            min_sharpe=getattr(args, "min_sharpe", cls.min_sharpe),
-            min_fitness=getattr(args, "min_fitness", cls.min_fitness),
-            min_turnover=getattr(args, "min_turnover", cls.min_turnover),
-            max_turnover=getattr(args, "max_turnover", cls.max_turnover),
-            max_weight=getattr(args, "max_weight", cls.max_weight),
+            min_sharpe=_float_attr("min_sharpe", cls.min_sharpe),
+            min_fitness=_float_attr("min_fitness", cls.min_fitness),
+            min_turnover=_float_attr("min_turnover", cls.min_turnover),
+            max_turnover=_float_attr("max_turnover", cls.max_turnover),
+            max_weight=_float_attr("max_weight", cls.max_weight),
         )
 
 
@@ -76,19 +81,20 @@ def precheck_simulation_metrics(
     max_weight: float | None = None,
 ) -> tuple[bool, str, list[CheckResultDict]]:
     """Run local metric checks before calling check-submit."""
-    if any(value is None for value in (min_sharpe, min_fitness, min_turnover, max_turnover, max_weight)):
+    if any(
+        value is None for value in (min_sharpe, min_fitness, min_turnover, max_turnover, max_weight)
+    ):
         default_config = build_default_submit_precheck_config()
         min_sharpe = default_config.min_sharpe if min_sharpe is None else min_sharpe
         min_fitness = default_config.min_fitness if min_fitness is None else min_fitness
         min_turnover = default_config.min_turnover if min_turnover is None else min_turnover
         max_turnover = default_config.max_turnover if max_turnover is None else max_turnover
         max_weight = default_config.max_weight if max_weight is None else max_weight
-
-    min_sharpe = cast(float, min_sharpe)
-    min_fitness = cast(float, min_fitness)
-    min_turnover = cast(float, min_turnover)
-    max_turnover = cast(float, max_turnover)
-    max_weight = cast(float, max_weight)
+    assert min_sharpe is not None
+    assert min_fitness is not None
+    assert min_turnover is not None
+    assert max_turnover is not None
+    assert max_weight is not None
 
     is_section = simulation_result.get(_KEY_IS)
     if not isinstance(is_section, dict):
@@ -131,6 +137,6 @@ def precheck_simulation_metrics(
         return True, "", []
 
     reason_parts = [
-        f"{f['name'].lower()}: {cast(float, f['value']):.4f} vs limit {f['limit']}" for f in failures
+        f"{f['name'].lower()}: {float(f['value']):.4f} vs limit {f['limit']}" for f in failures
     ]
     return False, "; ".join(reason_parts), failures

@@ -16,7 +16,8 @@ from ...config.constants import (
 )
 from ...config.models import DatasetExpressionPolicy
 from ...config.runtime_values import get_runtime_config
-from ...models.domain import FieldFeedbackSummary, TemplateCandidate
+from ...models.domain import TemplateCandidate
+from ...models.domain_types import FieldFeedbackSummary
 from .feedback_best_expression import build_best_expression_mutations
 from .feedback_mutation_sets import (
     build_account_resimulation_mutations,

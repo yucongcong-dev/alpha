@@ -134,3 +134,103 @@ def test_initialize_run_context_prefers_run_paths_for_cache_and_credentials(monk
     assert captured["fields_cache_file"] == run_paths.fields_cache_file
     assert args.creds_file == "raw-creds.json"
     assert args.creds_key_file == "raw-creds.key"
+
+
+def test_initialize_run_context_builds_fallback_run_paths_when_missing(monkeypatch) -> None:
+    """Initialization should build a minimal RunPaths snapshot when no normalized paths are passed."""
+    args = _build_args()
+    args.output = "/tmp/raw-output.json"
+    args.template_library_file = "/tmp/raw-templates.json"
+    args.include_fields_file = "/tmp/include_fields.txt"
+    args.exclude_templates_file = "/tmp/exclude_templates.txt"
+    captured: dict[str, object] = {}
+
+    monkeypatch.setattr("alpha.app.bootstrap.setup_runtime_logging", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr(
+        "alpha.app.bootstrap.cleanup_legacy_sidecar_files", lambda *_args, **_kwargs: None
+    )
+    monkeypatch.setattr("alpha.app.bootstrap.ensure_analysis_synced", lambda *_args, **_kwargs: None)
+
+    def _capture_run_config(_args, run_paths):
+        captured["run_paths"] = run_paths
+        return {"paths": {"output": run_paths.output}}
+
+    monkeypatch.setattr("alpha.app.bootstrap.build_run_config_snapshot", _capture_run_config)
+    monkeypatch.setattr(
+        "alpha.app.bootstrap.ensure_dataset_template_library",
+        lambda template_library_file, _dataset_id: template_library_file,
+    )
+    monkeypatch.setattr(
+        "alpha.app.bootstrap.ensure_template_blacklist_file", lambda *_args, **_kwargs: None
+    )
+    monkeypatch.setattr(
+        "alpha.app.bootstrap.load_credentials",
+        lambda *_args, **_kwargs: ("user@example.com", "secret"),
+    )
+    monkeypatch.setattr(
+        "alpha.app.bootstrap.create_and_login_client",
+        lambda *_args, **_kwargs: ("bootstrap-client", "worker-factory"),
+    )
+    monkeypatch.setattr("alpha.app.bootstrap.load_template_library", lambda *_args, **_kwargs: {})
+
+    def _capture_filters(run_paths):
+        captured["filter_paths"] = run_paths
+        return RunFilters()
+
+    monkeypatch.setattr("alpha.app.bootstrap.load_run_filters_extended", _capture_filters)
+    monkeypatch.setattr(
+        "alpha.app.bootstrap.get_dataset_expression_policy",
+        lambda *_args, **_kwargs: type("Policy", (), {"use_curated_heuristics": False})(),
+    )
+    monkeypatch.setattr("alpha.app.bootstrap.stable_fingerprint", lambda *_args, **_kwargs: "tpl-fp")
+    monkeypatch.setattr(
+        "alpha.app.bootstrap.build_settings_fingerprint", lambda *_args, **_kwargs: "settings-fp"
+    )
+    monkeypatch.setattr(
+        "alpha.app.bootstrap.build_historical_run_state",
+        lambda *_args, **_kwargs: HistoricalRunState(),
+    )
+    monkeypatch.setattr("alpha.app.bootstrap.load_fields_cache", lambda *_args, **_kwargs: [])
+    monkeypatch.setattr(
+        "alpha.app.bootstrap.fetch_fields_with_cache",
+        lambda *_args, **_kwargs: [{"id": "field_1", "type": "MATRIX", "name": "field_1"}],
+    )
+    monkeypatch.setattr(
+        "alpha.app.bootstrap.prepare_fields_for_execution",
+        lambda fields, **_kwargs: (
+            fields,
+            {
+                "prefiltered_count": 0,
+                "low_coverage_count": 0,
+                "low_date_coverage_count": 0,
+                "low_alpha_count": 0,
+                "low_user_count": 0,
+                "cached_field_count": len(fields),
+                "filtered_field_count": len(fields),
+                "ranked_field_count": len(fields),
+            },
+        ),
+    )
+    monkeypatch.setattr(
+        "alpha.app.bootstrap.build_execution_state",
+        lambda **_kwargs: ExecutionState(
+            results=[],
+            attempted_keys=set(),
+            template_stats={},
+            pending_futures={},
+            field_queue_busy_counts={},
+            skipped_fields_due_to_queue=set(),
+        ),
+    )
+
+    run_ctx = initialize_run_context(args, None)
+
+    assert run_ctx is not None
+    run_config_paths = captured["run_paths"]
+    filter_paths = captured["filter_paths"]
+    assert isinstance(run_config_paths, RunPaths)
+    assert isinstance(filter_paths, RunPaths)
+    assert run_config_paths.output == args.output
+    assert run_config_paths.template_library_file == args.template_library_file
+    assert filter_paths.include_fields_file == args.include_fields_file
+    assert filter_paths.exclude_templates_file == args.exclude_templates_file

@@ -5,13 +5,12 @@ from __future__ import annotations
 from concurrent.futures import FIRST_COMPLETED, Future, ThreadPoolExecutor, wait
 import dataclasses
 import time
-from typing import TYPE_CHECKING, Any, cast
 
 from ..core.scheduler import drain_completed_futures
 from ..core.simulation import run_field_test_in_worker
-from ..models.domain import SettingsVariant, TemplateField
+from ..models.domain import FieldTestResult, SettingsVariant, TemplateField
 from ..models.runtime_options import ResultWriteOptions
-from ..models.runtime_protocols import SchedulerRuntimeArgs, SimulationStageArgs
+from ..models.runtime_protocols import ClientFactoryLike, SchedulerRuntimeArgs, SimulationStageArgs
 from ..runtime import (
     ExecutionState,
     InitializedRunContext,
@@ -19,9 +18,6 @@ from ..runtime import (
     RuntimeConcurrencyState,
 )
 from .run_loop_resume import save_terminal_pipeline_state
-
-if TYPE_CHECKING:
-    from ..api.client import WorkerClientFactory
 
 
 def drain_until_capacity(
@@ -36,12 +32,7 @@ def drain_until_capacity(
     """Drain completed futures until runtime concurrency has available capacity."""
     while len(executor_state.pending_futures) >= runtime_state.runtime_max_workers:
         done, _ = wait(
-            set(
-                cast(
-                    "dict[Future[Any], PendingFutureContext]",
-                    executor_state.pending_futures,
-                )
-            ),
+            set(executor_state.pending_futures),
             return_when=FIRST_COMPLETED,
         )
         drain_completed_futures(
@@ -91,7 +82,7 @@ def submit_template_future(
     )
     future = executor.submit(
         run_field_test_in_worker,
-        cast("WorkerClientFactory", run_ctx.client_factory),
+        run_ctx.client_factory,
         args,
         field_with_template,
         template_name,
@@ -102,7 +93,8 @@ def submit_template_future(
         run_ctx.create_semaphore,
     )
     execution_state.last_submission_at = time.monotonic()
-    execution_state.pending_futures[future] = PendingFutureContext(
+    typed_future: Future[FieldTestResult] = future
+    execution_state.pending_futures[typed_future] = PendingFutureContext(
         field_id=field_id,
         field_name=field_name,
         field_type=field_type,
@@ -130,12 +122,7 @@ def drain_remaining_futures(
     """Drain all remaining futures and persist terminal pipeline state when needed."""
     while execution_state.pending_futures:
         done, _ = wait(
-            set(
-                cast(
-                    "dict[Future[Any], PendingFutureContext]",
-                    execution_state.pending_futures,
-                )
-            ),
+            set(execution_state.pending_futures),
             return_when=FIRST_COMPLETED,
         )
         drain_completed_futures(

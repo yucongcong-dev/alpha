@@ -6,13 +6,14 @@ from __future__ import annotations
 
 from datetime import date
 from math import log1p
-from typing import Any, cast
+from typing import Any
 
 from ..analysis.field_stats import field_priority
 from ..config.constants import PREFERRED_FIELD_RANK_SENTINEL, SENTINEL_UNKNOWN, STATS_DEFAULT_SCORE
 from ..config.models import DatasetExpressionPolicy
 from ..generators.fields import choose_field_name
 from ..models.domain import TemplateField
+from ..models.runtime import FieldSelectionConfig
 from ..models.io_types import RunFilters
 from ..models.runtime_protocols import FieldSelectionArgs
 from ..runtime import HistoricalRunState
@@ -99,6 +100,9 @@ def _normalize_range(values: list[float]) -> list[float]:
     return [(value - low) / span for value in values]
 
 
+FieldSortKey = tuple[int, int, float, int, int, int, float, float, float, str]
+
+
 def prepare_fields_for_execution(
     fields: list[TemplateField],
     *,
@@ -108,6 +112,7 @@ def prepare_fields_for_execution(
     args: FieldSelectionArgs,
 ) -> tuple[list[TemplateField], dict[str, int]]:
     """对字段做过滤、排序并最终应用 offset/limit。"""
+    selection = FieldSelectionConfig.from_args(args)
     cached_field_count = len(fields)
     filtered_fields: list[TemplateField] = []
     prefiltered_count = 0
@@ -240,7 +245,7 @@ def prepare_fields_for_execution(
         )
         field_metadata_scores[field_id] = validation_score - crowding_penalty
 
-    def field_sort_key(item: TemplateField) -> tuple[Any, ...]:
+    def field_sort_key(item: TemplateField) -> FieldSortKey:
         field_id = str(first_non_empty(item.get("id"), SENTINEL_UNKNOWN))
         field_name = choose_field_name(item)
         feedback = historical_state.field_feedback.get(field_id)
@@ -285,10 +290,7 @@ def prepare_fields_for_execution(
         )
 
     fields.sort(key=field_sort_key)
-    top_fields_by_feedback = cast(int, args.top_fields_by_feedback)
-    offset = cast(int, args.offset)
-    limit = cast(int, args.limit)
-    if top_fields_by_feedback > 0:
+    if selection.top_fields_by_feedback > 0:
         focused_fields = [
             field
             for field in fields
@@ -298,13 +300,13 @@ def prepare_fields_for_execution(
             )
             > -999.0
         ]
-        fields = focused_fields[:top_fields_by_feedback]
+        fields = focused_fields[: selection.top_fields_by_feedback]
 
     ranked_field_count = len(fields)
-    if offset > 0:
-        fields = fields[offset:]
-    if limit > 0:
-        fields = fields[:limit]
+    if selection.offset > 0:
+        fields = fields[selection.offset :]
+    if selection.limit > 0:
+        fields = fields[: selection.limit]
 
     return fields, {
         "cached_field_count": cached_field_count,

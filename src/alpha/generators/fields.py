@@ -25,6 +25,8 @@ from typing import Any, Protocol
 from ..config.constants import FIELDS_CACHE_TTL_HOURS, SENTINEL_UNKNOWN
 from ..io.common import atomic_write_json
 from ..models.domain import TemplateField
+from ..models.domain_parsers import parse_template_field
+from ..models.domain_serializers import serialize_template_field
 from ..models.runtime_options import FieldFetchOptions
 
 logger = logging.getLogger(__name__)
@@ -180,7 +182,7 @@ def save_fields_cache(
             },
             "cached_at": time.time(),
             "count": len(fields),
-            "fields": [f.to_dict() if hasattr(f, "to_dict") else f for f in fields],
+            "fields": [serialize_template_field(f) for f in fields],
         },
     )
 
@@ -222,7 +224,7 @@ def fetch_fields_with_cache(
         使用重试机制处理临时 API 不稳定性。
     """
     if cached_fields:
-        fields = [TemplateField.from_dict(f) if isinstance(f, dict) else f for f in cached_fields]
+        fields = [parse_template_field(f) if isinstance(f, dict) else f for f in cached_fields]
         logger.info("[cache] 从 %s 加载 %d 个字段", os.path.basename(fields_cache_file), len(fields))
         return fields
 
@@ -240,7 +242,7 @@ def fetch_fields_with_cache(
         instrument_type=options.instrument_type,
         delay=options.delay,
     )
-    fields = [TemplateField.from_dict(f) if isinstance(f, dict) else f for f in fetched_fields]
+    fields = [parse_template_field(f) if isinstance(f, dict) else f for f in fetched_fields]
     save_fields_cache(
         fields_cache_file,
         dataset_id=options.dataset_id,

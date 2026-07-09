@@ -7,27 +7,42 @@ until a specific symbol is requested.
 
 from __future__ import annotations
 
-from importlib import import_module
 from typing import TYPE_CHECKING
+
+from .._facade import ExportMap, facade_dir, resolve_export
 
 if TYPE_CHECKING:
     from ..config.models import DatasetExpressionPolicy
     from .domain import (
-        AnalysisInputs,
-        AnalysisPayload,
         FailedCheck,
-        FieldFeedbackMap,
-        FieldFeedbackSummary,
         FieldTestContext,
         FieldTestResult,
         FieldView,
         NearPassCandidate,
-        ResultRow,
         SettingsVariant,
-        SummaryPayload,
         TemplateCandidate,
         TemplateField,
         TemplateLibrary,
+    )
+    from .domain_parsers import (
+        parse_failed_check,
+        parse_settings_variant,
+        parse_template_field,
+        parse_template_library_item,
+    )
+    from .domain_serializers import serialize_field_test_result
+    from .domain_serializers import (
+        serialize_settings_variant,
+        serialize_template_field,
+        serialize_template_library_item,
+    )
+    from .domain_types import (
+        AnalysisInputs,
+        AnalysisPayload,
+        FieldFeedbackMap,
+        FieldFeedbackSummary,
+        ResultRow,
+        SummaryPayload,
         TemplateMetadata,
     )
     from .io_types import RunFilters, RunPaths
@@ -64,77 +79,32 @@ if TYPE_CHECKING:
         TemplateSequence,
     )
 
-__all__ = [
-    "AnalysisInputs",
-    "AnalysisPayload",
-    "ApiClientArgs",
-    "ApiClientOptions",
-    "BootstrapRuntimeArgs",
-    "CleanRuntimeArgs",
-    "ClientFactoryLike",
-    "CredentialsArgs",
-    "DatasetExpressionPolicy",
-    "ExecutionState",
-    "FailedCheck",
-    "FieldFeedbackMap",
-    "FieldFeedbackSummary",
-    "FieldFetchOptions",
-    "FieldSelectionArgs",
-    "FieldTestContext",
-    "FieldTestResult",
-    "FieldView",
-    "FutureCompletionContext",
-    "HistoricalRunState",
-    "InitializedRunContext",
-    "NearPassCandidate",
-    "PendingFutureContext",
-    "PendingFutureLike",
-    "ResultRow",
-    "ResultWriteArgs",
-    "ResultWriteOptions",
-    "RunConfigArgs",
-    "RunFilters",
-    "RunLoopArgs",
-    "RunPaths",
-    "RuntimeConcurrencyState",
-    "SchedulerRuntimeArgs",
-    "SemaphoreLike",
-    "SettingsVariant",
-    "SimulationSettingsArgs",
-    "SimulationStageArgs",
-    "StopAfterSubmittableArgs",
-    "SummaryPayload",
-    "TemplateBuildArgs",
-    "TemplateBuildContext",
-    "TemplateBuildOptions",
-    "TemplateCandidate",
-    "TemplateFeedback",
-    "TemplateField",
-    "TemplateLibrary",
-    "TemplateMetadata",
-    "TemplateSequence",
-    "is_informative_result",
-    "is_queue_timeout_result",
-]
-
-_EXPORT_MAP: dict[str, tuple[str, str]] = {
+_EXPORT_MAP: ExportMap = {
     "DatasetExpressionPolicy": ("..config.models", "DatasetExpressionPolicy"),
-    "AnalysisInputs": (".domain", "AnalysisInputs"),
-    "AnalysisPayload": (".domain", "AnalysisPayload"),
+    "AnalysisInputs": (".domain_types", "AnalysisInputs"),
+    "AnalysisPayload": (".domain_types", "AnalysisPayload"),
     "FailedCheck": (".domain", "FailedCheck"),
-    "FieldFeedbackMap": (".domain", "FieldFeedbackMap"),
-    "FieldFeedbackSummary": (".domain", "FieldFeedbackSummary"),
+    "FieldFeedbackMap": (".domain_types", "FieldFeedbackMap"),
+    "FieldFeedbackSummary": (".domain_types", "FieldFeedbackSummary"),
     "FieldTestContext": (".domain", "FieldTestContext"),
     "FieldTestResult": (".domain", "FieldTestResult"),
     "FieldView": (".domain", "FieldView"),
     "NearPassCandidate": (".domain", "NearPassCandidate"),
-    "ResultRow": (".domain", "ResultRow"),
+    "parse_failed_check": (".domain_parsers", "parse_failed_check"),
+    "parse_settings_variant": (".domain_parsers", "parse_settings_variant"),
+    "parse_template_field": (".domain_parsers", "parse_template_field"),
+    "parse_template_library_item": (".domain_parsers", "parse_template_library_item"),
+    "serialize_field_test_result": (".domain_serializers", "serialize_field_test_result"),
+    "serialize_settings_variant": (".domain_serializers", "serialize_settings_variant"),
+    "serialize_template_field": (".domain_serializers", "serialize_template_field"),
+    "serialize_template_library_item": (".domain_serializers", "serialize_template_library_item"),
+    "ResultRow": (".domain_types", "ResultRow"),
     "SettingsVariant": (".domain", "SettingsVariant"),
-    "SummaryPayload": (".domain", "SummaryPayload"),
+    "SummaryPayload": (".domain_types", "SummaryPayload"),
     "TemplateCandidate": (".domain", "TemplateCandidate"),
     "TemplateField": (".domain", "TemplateField"),
     "TemplateLibrary": (".domain", "TemplateLibrary"),
-    "TemplateMetadata": (".domain", "TemplateMetadata"),
+    "TemplateMetadata": (".domain_types", "TemplateMetadata"),
     "RunFilters": (".io_types", "RunFilters"),
     "RunPaths": (".io_types", "RunPaths"),
     "is_informative_result": (".result_predicates", "is_informative_result"),
@@ -170,17 +140,18 @@ _EXPORT_MAP: dict[str, tuple[str, str]] = {
     "TemplateSequence": (".runtime", "TemplateSequence"),
 }
 
+__all__ = list(_EXPORT_MAP)
+
 
 def __getattr__(name: str) -> object:
-    try:
-        module_name, attr_name = _EXPORT_MAP[name]
-    except KeyError as exc:
-        raise AttributeError(f"module {__name__!r} has no attribute {name!r}") from exc
-    module = import_module(module_name, __package__)
-    value = getattr(module, attr_name)
-    globals()[name] = value
-    return value
+    return resolve_export(
+        name=name,
+        export_map=_EXPORT_MAP,
+        package=__package__ or "",
+        namespace=__name__,
+        target_globals=globals(),
+    )
 
 
 def __dir__() -> list[str]:
-    return sorted(set(globals()) | set(__all__))
+    return facade_dir(globals(), _EXPORT_MAP)

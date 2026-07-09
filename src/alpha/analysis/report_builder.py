@@ -18,6 +18,7 @@ from ..models.domain import (
     SummaryPayload,
     serialize_failed_check,
 )
+from ..models.domain_serializers import serialize_field_test_result
 from ..models.result_predicates import is_queue_timeout_result
 from .failed_checks import (
     compile_failed_check_leaderboard,
@@ -52,7 +53,7 @@ def build_results_summary_payload(
     queue_timeout_count = 0
 
     for result in results:
-        item = result.to_dict()
+        item = serialize_field_test_result(result)
         results_dicts.append(item)
         field_ids.add(result.field_id)
 

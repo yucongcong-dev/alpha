@@ -34,7 +34,7 @@ from ..config.models import (
     FieldTransformStage,
 )
 from ..config.policy_overrides import apply_yaml_expression_policy_overrides
-from ..models.domain import FieldFeedbackSummary
+from ..models.domain_types import FieldFeedbackSummary
 
 
 def _default_transform_specs() -> tuple[

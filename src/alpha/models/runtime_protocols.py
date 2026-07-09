@@ -5,7 +5,8 @@ from __future__ import annotations
 from collections.abc import Sequence
 from typing import Protocol, Union
 
-from .domain import FieldFeedbackSummary, FieldTestResult, TemplateCandidate
+from .domain import FieldTestResult, TemplateCandidate
+from .domain_types import FieldFeedbackSummary
 
 TemplateFeedback = FieldFeedbackSummary
 TemplateStats = dict[str, dict[str, int]]
@@ -186,7 +187,7 @@ class RunLoopArgs(SimulationStageArgs, SchedulerRuntimeArgs, StopAfterSubmittabl
 
 
 class ClientFactoryLike(Protocol):
-    def create_client(self) -> object: ...
+    def get_client(self) -> object: ...
 
 
 class SemaphoreLike(Protocol):
@@ -195,6 +196,5 @@ class SemaphoreLike(Protocol):
     def release(self) -> None: ...
 
 
-PendingFutureLike = Union[dict[str, object], object]
 TemplateSequence = Sequence[TemplateCandidate]
 HistoricalResults = list[FieldTestResult]

@@ -18,7 +18,7 @@ from ..models.domain import (
     SettingsVariant,
 )
 from ..models.domain import TemplateField
-from ..models.runtime_protocols import SemaphoreLike, SimulationStageArgs
+from ..models.runtime_protocols import ClientFactoryLike, SemaphoreLike, SimulationStageArgs
 from ..utils.helpers import first_non_empty
 from .simulation_parsing import (
     extract_alpha_id,
@@ -145,7 +145,7 @@ def run_field_test(
 
 
 def run_field_test_in_worker(
-    client_factory: WorkerClientFactory,
+    client_factory: ClientFactoryLike,
     args: SimulationStageArgs,
     field: TemplateField,
     template_name: str,

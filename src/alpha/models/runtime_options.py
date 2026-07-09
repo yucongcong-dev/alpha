@@ -91,7 +91,7 @@ class ResultWriteOptions:
         return cls(
             dataset_id=str(args.dataset_id or ""),
             output_path=str(args.output or ""),
-            auto_update_blacklist=bool(args.auto_update_blacklist),
+            auto_update_blacklist=bool(getattr(args, "auto_update_blacklist", False)),
         )
 
 

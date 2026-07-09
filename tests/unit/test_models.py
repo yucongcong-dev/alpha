@@ -8,6 +8,7 @@ import time
 import pytest
 
 from alpha.models.domain import FieldTestContext, FieldTestResult
+from alpha.models.domain_serializers import serialize_field_test_result
 from alpha.models.io_types import RunFilters
 from alpha.models.runtime import ExecutionState, HistoricalRunState, RuntimeConcurrencyState
 from alpha.models.runtime_options import (
@@ -203,8 +204,8 @@ class TestFieldTestResult:
         assert result.submittable
         assert result.status == "simulated"
         assert result.field_id == "sales"
-        assert result.to_dict()["template_role"] == "default_seed"
-        assert result.to_dict()["template_activation_scope"] == "broad"
+        assert serialize_field_test_result(result)["template_role"] == "default_seed"
+        assert serialize_field_test_result(result)["template_activation_scope"] == "broad"
 
     def test_failed_result_with_checks(self) -> None:
         result = FieldTestResult(

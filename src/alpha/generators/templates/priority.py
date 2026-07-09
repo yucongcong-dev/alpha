@@ -51,7 +51,8 @@ from ...config import (
     SIMILARITY_PENALTY_OFFSET_LEGACY_RATIO,
     STATS_DEFAULT_SCORE,
 )
-from ...models.domain import FieldFeedbackSummary, TemplateCandidate
+from ...models.domain import TemplateCandidate
+from ...models.domain_types import FieldFeedbackSummary
 from .candidates import _coerce_template_candidate, _make_template_candidate
 from .classification import classify_expression_family
 from .metadata import TemplateMetadataMap

@@ -7,12 +7,12 @@ from dataclasses import dataclass, field
 
 from ..config.models import DatasetExpressionPolicy
 from ..models.domain import (
-    FieldFeedbackMap,
     FieldTestResult,
     SettingsVariant,
     TemplateField,
     TemplateLibrary,
 )
+from ..models.domain_types import FieldFeedbackMap
 from ..models.runtime_options import ResultWriteOptions, TemplateBuildOptions
 from ..models.runtime_protocols import RunConfig, TemplateStats
 

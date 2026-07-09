@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from ..config.models import DatasetExpressionPolicy
 from ..models.domain import TemplateField, TemplateLibrary
 from ..models.io_types import RunFilters
+from ..models.runtime_protocols import RunConfig
 from ..runtime import HistoricalRunState
 
 
@@ -14,10 +15,10 @@ from ..runtime import HistoricalRunState
 class ResolvedCredentials:
     """凭证加载所需的最小只读输入。"""
 
-    email: object
-    password: object
-    creds_file: object
-    creds_key_file: object
+    email: str | None
+    password: str | None
+    creds_file: str
+    creds_key_file: str
 
 
 @dataclass(frozen=True)
@@ -45,4 +46,4 @@ class PreparedBootstrapResources:
     settings_fingerprint: str
     historical_state: HistoricalRunState
     fields: list[TemplateField]
-    run_config: dict[str, object]
+    run_config: RunConfig

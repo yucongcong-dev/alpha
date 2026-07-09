@@ -6,7 +6,7 @@ from __future__ import annotations
 
 import logging
 import re
-from typing import Any, cast
+from typing import Any
 
 from ..api.api_types import SimulationPayload
 from ..api.client import BrainClient, retry_operation
@@ -27,6 +27,8 @@ from ..models.domain import (
     FieldTestResult,
     SettingsVariant,
 )
+from ..models.domain_parsers import parse_failed_check
+from ..models.runtime import SimulationStageConfig
 from ..models.runtime_protocols import SemaphoreLike, SimulationStageArgs
 from ..utils.helpers import first_non_empty
 from .simulation_parsing import (
@@ -43,6 +45,13 @@ from .simulation_results import handle_stage_error
 logger = logging.getLogger(__name__)
 
 _SIM_ID_REGEX: re.Pattern[str] = re.compile(r"/simulations/([^/]+)", re.IGNORECASE)
+
+
+def _int_arg(args: object, name: str, default: int = 0) -> int:
+    try:
+        return int(getattr(args, name, default) or default)
+    except (TypeError, ValueError):
+        return default
 
 
 
@@ -101,9 +110,7 @@ def checksubmit_with_retry(
         retry_wait_seconds=SIMULATION_RETRY_WAIT,
     )
     checks = extract_checks(alpha_detail)
-    submittable = is_submittable_from_checks(
-        [FailedCheck.from_dict(cast(dict[str, Any], c)) for c in checks]
-    )
+    submittable = is_submittable_from_checks([parse_failed_check(c) for c in checks if isinstance(c, dict)])
     failed_checks = extract_failed_checks(alpha_detail)
     message = (
         "checks unavailable"
@@ -130,9 +137,10 @@ def run_simulation_create_stage(
     create_semaphore: SemaphoreLike | None = None,
 ) -> FieldTestResult | tuple[str, str]:
     try:
+        config = SimulationStageConfig.from_args(args)
         payload = build_simulation_payload(args, ctx.expression)
         if simulation_settings is not None:
-            payload["settings"] = cast(dict[str, Any], simulation_settings)
+            payload["settings"] = simulation_settings.to_dict()
         if create_semaphore is not None:
             logger.info(
                 "[simulation] waiting for create slot field=%s template=%s",
@@ -141,11 +149,10 @@ def run_simulation_create_stage(
             )
             _ = create_semaphore.acquire()
         try:
-            create_retries: int = cast(int, args.simulation_create_retries)
             simulation_location, simulation_id = create_simulation_with_retry(
                 client,
                 payload,
-                create_retries,
+                config.simulation_create_retries,
             )
         finally:
             if create_semaphore is not None:
@@ -164,14 +171,15 @@ def run_simulation_poll_stage(
     simulation_id: str,
 ) -> FieldTestResult | tuple[str, SimulationPayload]:
     try:
+        config = SimulationStageConfig.from_args(args)
         simulation_result = poll_simulation_with_retry(
             client,
             simulation_location,
-            cast(int, args.simulation_poll_retries),
-            max_polls=cast(int, args.simulation_max_polls),
-            max_wait_seconds=cast(float, args.simulation_max_wait_seconds),
-            max_pending_cycles=cast(int, args.simulation_max_pending_cycles),
-            max_queue_seconds=cast(float, args.simulation_max_queue_seconds),
+            config.simulation_poll_retries,
+            max_polls=config.simulation_max_polls,
+            max_wait_seconds=float(config.simulation_max_wait_seconds),
+            max_pending_cycles=config.simulation_max_pending_cycles,
+            max_queue_seconds=float(config.simulation_max_queue_seconds),
         )
         progress = first_non_empty(
             simulation_result.get(API_KEY_PROGRESS),
@@ -212,14 +220,14 @@ def run_checksubmit_stage(
     simulation_result: SimulationPayload | None = None,
 ) -> FieldTestResult | tuple[bool | None, str, list[FailedCheck]]:
     if simulation_result:
-        config = PrecheckConfig.from_args(args)
+        precheck_config = PrecheckConfig.from_args(args)
         passed, reason, precheck_failed_checks = precheck_simulation_metrics(
             simulation_result,
-            min_sharpe=config.min_sharpe,
-            min_fitness=config.min_fitness,
-            min_turnover=config.min_turnover,
-            max_turnover=config.max_turnover,
-            max_weight=config.max_weight,
+            min_sharpe=precheck_config.min_sharpe,
+            min_fitness=precheck_config.min_fitness,
+            min_turnover=precheck_config.min_turnover,
+            max_turnover=precheck_config.max_turnover,
+            max_weight=precheck_config.max_weight,
         )
         if not passed:
             logger.info(
@@ -228,14 +236,13 @@ def run_checksubmit_stage(
                 simulation_id,
                 reason,
             )
-            return False, f"precheck_failed: {reason}", cast(list[FailedCheck], precheck_failed_checks)
+            return False, f"precheck_failed: {reason}", [parse_failed_check(check) for check in precheck_failed_checks]
 
     try:
         return checksubmit_with_retry(
             client,
             alpha_id,
-            cast(int, args.check_submit_retries),
-
+            _int_arg(args, "check_submit_retries"),
         )
     except Exception as exc:
         return handle_stage_error(

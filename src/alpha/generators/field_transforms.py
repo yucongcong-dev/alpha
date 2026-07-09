@@ -6,6 +6,7 @@ from typing import Any
 
 from ..config.models import DatasetExpressionPolicy, FieldTransformSpec, FieldTransformStage
 from ..models.domain import FieldView, TemplateField
+from ..models.domain_parsers import parse_template_field
 from .fields import choose_field_name, choose_field_type
 
 
@@ -44,7 +45,7 @@ def build_field_view(
 ) -> FieldView:
     """为字段构建统一视图。"""
     if isinstance(field, dict):
-        field = TemplateField.from_dict(field)
+        field = parse_template_field(field)
     field_name = choose_field_name(field)
     field_type = choose_field_type(field)
 

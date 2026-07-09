@@ -15,10 +15,10 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
+from concurrent.futures import Future
 from dataclasses import dataclass
 import logging
 import time
-from typing import Any, cast
 
 from ..analysis.result_identity import (
     is_informative_result,
@@ -27,20 +27,18 @@ from ..analysis.result_identity import (
 )
 from ..analysis.template_stats import update_template_stats_with_result
 from ..api.timing import wait_seconds
+from ..models.domain import FieldTestResult
 from ..models.runtime_options import ResultWriteOptions
-from ..models.runtime_protocols import SchedulerRuntimeArgs
-from ..runtime import ExecutionState, FutureCompletionContext, RuntimeConcurrencyState
+from ..models.runtime_protocols import RunConfig, SchedulerRuntimeArgs
+from ..runtime import ExecutionState, FutureCompletionContext, PendingFutureContext, RuntimeConcurrencyState
 from .result_processing import apply_completed_result
-from .simulation import build_failure_result
+from .scheduler_completion import (
+    apply_drain_feedback,
+    build_completion_context,
+    resolve_completed_future_result,
+)
 
 logger = logging.getLogger(__name__)
-
-
-def _pending_meta_value(context: Any, key: str) -> str:
-    """兼容读取旧 dict 形式和新 dataclass 形式的 pending future 元数据。"""
-    if isinstance(context, dict):
-        return str(context.get(key, ""))
-    return str(getattr(context, key, ""))
 
 
 @dataclass
@@ -75,7 +73,7 @@ def maybe_restore_runtime_concurrency(state: RuntimeConcurrencyState) -> None:
 def apply_congestion_cooldown(args: SchedulerRuntimeArgs, state: RuntimeConcurrencyState) -> None:
     """检测到拥塞后，临时切换到单 worker 运行模式。"""
     state.runtime_max_workers = 1
-    state.cooldown_until = time.monotonic() + max(cast(float, args.queue_busy_cooldown_seconds), 0.0)
+    state.cooldown_until = time.monotonic() + max(args.queue_busy_cooldown_seconds, 0.0)
     logger.info(
         "[cooldown] detected queue congestion, runtime concurrency -> 1 for %.0fs",
         args.queue_busy_cooldown_seconds,
@@ -89,10 +87,10 @@ def register_queue_busy_field(
     skipped_fields_due_to_queue: set[str],
 ) -> None:
     """记录重复的排队拥塞字段，并在达到阈值后跳过该字段。"""
-    if not field_id or cast(int, args.field_queue_busy_skip_after) <= 0:
+    if not field_id or args.field_queue_busy_skip_after <= 0:
         return
     field_queue_busy_counts[field_id] = field_queue_busy_counts.get(field_id, 0) + 1
-    if field_queue_busy_counts[field_id] >= cast(int, args.field_queue_busy_skip_after):
+    if field_queue_busy_counts[field_id] >= args.field_queue_busy_skip_after:
         skipped_fields_due_to_queue.add(field_id)
         logger.info(
             "[skip] field=%s hit queue-busy limit %d/%d",
@@ -104,12 +102,12 @@ def register_queue_busy_field(
 
 def throttle_before_submission(args: SchedulerRuntimeArgs, execution_state: ExecutionState) -> None:
     """在提交新任务前控制节奏，避免阻塞已完成任务处理。"""
-    if cast(float, args.sleep_between_fields) <= 0:
+    if args.sleep_between_fields <= 0:
         return
     if execution_state.last_submission_at <= 0:
         return
     elapsed = time.monotonic() - execution_state.last_submission_at
-    remaining = cast(float, args.sleep_between_fields) - elapsed
+    remaining = args.sleep_between_fields - elapsed
     if remaining > 0:
         wait_seconds(remaining, "before next template submission")
 
@@ -120,7 +118,7 @@ def throttle_before_submission(args: SchedulerRuntimeArgs, execution_state: Exec
 
 
 def handle_completed_future(
-    future,
+    future: Future[FieldTestResult],
     *,
     completion_ctx: FutureCompletionContext,
     execution_state: ExecutionState,
@@ -147,29 +145,11 @@ def handle_completed_future(
         - 检测拥塞信号并返回给调用方
     """
     context = execution_state.pending_futures.pop(future)
-    field_id = _pending_meta_value(context, "field_id")
-    template_name = _pending_meta_value(context, "template_name")
-
-    try:
-        result = future.result()
-    except Exception as exc:
-        result = build_failure_result(
-            field_id=field_id,
-            field_type=_pending_meta_value(context, "field_type"),
-            field_name=_pending_meta_value(context, "field_name"),
-            template_name=template_name,
-            template_family=_pending_meta_value(context, "template_family"),
-            template_stage=_pending_meta_value(context, "template_stage"),
-            template_role=_pending_meta_value(context, "template_role"),
-            template_activation_scope=_pending_meta_value(context, "template_activation_scope"),
-            simulation_id=None,
-            alpha_id=None,
-            expression=_pending_meta_value(context, "expression"),
-            settings_fingerprint=_pending_meta_value(context, "settings_fingerprint"),
-            template_library_fingerprint=completion_ctx.template_library_fingerprint,
-            failed_stage="worker",
-            message=str(exc),
-        )
+    result = resolve_completed_future_result(
+        future,
+        context=context,
+        template_library_fingerprint=completion_ctx.template_library_fingerprint,
+    )
 
     return apply_completed_result(
         result,
@@ -189,13 +169,13 @@ def handle_completed_future(
 
 def drain_completed_futures(
     *,
-    completed_futures: Sequence[Any],
+    completed_futures: Sequence[Future[FieldTestResult]],
     execution_state: ExecutionState,
     args: SchedulerRuntimeArgs,
     result_write_options: ResultWriteOptions | None = None,
     settings_fingerprint: str,
     template_library_fingerprint: str,
-    run_config: dict[str, Any] | None,
+    run_config: RunConfig | None,
     runtime_state: RuntimeConcurrencyState,
 ) -> dict[str, dict[str, int]]:
     """
@@ -220,8 +200,9 @@ def drain_completed_futures(
         - 检测拥塞并应用冷却
         - 注册队列拥塞字段
     """
-    completion_ctx = FutureCompletionContext(
-        result_write_options=result_write_options or ResultWriteOptions.from_args(args),
+    completion_ctx = build_completion_context(
+        args=args,
+        result_write_options=result_write_options,
         settings_fingerprint=settings_fingerprint,
         template_library_fingerprint=template_library_fingerprint,
         run_config=run_config,
@@ -234,12 +215,13 @@ def drain_completed_futures(
                 execution_state=execution_state,
             )
         )
-        register_queue_busy_field(
-            queue_busy_field_id,
-            args,
-            execution_state.field_queue_busy_counts,
-            execution_state.skipped_fields_due_to_queue,
+        apply_drain_feedback(
+            args=args,
+            execution_state=execution_state,
+            runtime_state=runtime_state,
+            congestion_detected=congestion_detected,
+            queue_busy_field_id=queue_busy_field_id,
+            register_queue_busy_field_fn=register_queue_busy_field,
+            apply_congestion_cooldown_fn=apply_congestion_cooldown,
         )
-        if congestion_detected:
-            apply_congestion_cooldown(args, runtime_state)
     return execution_state.template_stats

@@ -27,9 +27,10 @@ WorldQuant BRAIN Alpha 自动生成与测试工具包。
 
 from __future__ import annotations
 
-from importlib import import_module
 import sys
 from typing import TYPE_CHECKING
+
+from ._facade import facade_dir, resolve_export
 
 if sys.version_info < (3, 10):
     version = f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"
@@ -81,46 +82,6 @@ if TYPE_CHECKING:
 __version__ = "1.0.0"
 __author__ = "Alpha Generator Team"
 
-__all__ = [
-    "ALPHAS_URL",
-    "API_BASE",
-    "AUTH_URL",
-    "DATA_FIELDS_URL",
-    "DEFAULT_DATASET_ID",
-    "DEFAULT_HEADERS",
-    "SIMULATIONS_URL",
-    "SIM_ACCEPT_HEADER",
-    "VERSION_HEADER",
-    "BrainAPIError",
-    "BrainQueueBusyError",
-    "BrainRateLimitError",
-    "DatasetExpressionPolicy",
-    "ErrorCategory",
-    "ErrorContext",
-    "ErrorHandler",
-    "ErrorRecord",
-    "ErrorSeverity",
-    "ExecutionState",
-    "FieldTestResult",
-    "FieldView",
-    "HistoricalRunState",
-    "RunFilters",
-    "RunPaths",
-    "RuntimeConcurrencyState",
-    "SettingsVariant",
-    "TemplateLibrary",
-    "__author__",
-    "__version__",
-    "choose_field_name",
-    "choose_field_type",
-    "error_handler",
-    "first_non_empty",
-    "get_error_handler",
-    "handle_global_error",
-    "retry_on_error",
-    "set_error_handler",
-]
-
 _EXPORT_MAP: dict[str, tuple[str, str]] = {
     "ALPHAS_URL": (".config", "ALPHAS_URL"),
     "API_BASE": (".config", "API_BASE"),
@@ -159,17 +120,18 @@ _EXPORT_MAP: dict[str, tuple[str, str]] = {
     "first_non_empty": (".utils", "first_non_empty"),
 }
 
+__all__ = [*_EXPORT_MAP, "__author__", "__version__"]
+
 
 def __getattr__(name: str) -> object:
-    try:
-        module_name, attr_name = _EXPORT_MAP[name]
-    except KeyError as exc:
-        raise AttributeError(f"module {__name__!r} has no attribute {name!r}") from exc
-    module = import_module(module_name, __package__)
-    value = getattr(module, attr_name)
-    globals()[name] = value
-    return value
+    return resolve_export(
+        name=name,
+        export_map=_EXPORT_MAP,
+        package=__package__,
+        namespace=__name__,
+        target_globals=globals(),
+    )
 
 
 def __dir__() -> list[str]:
-    return sorted(set(globals()) | set(__all__))
+    return facade_dir(globals(), _EXPORT_MAP)

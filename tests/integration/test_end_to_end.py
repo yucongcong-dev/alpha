@@ -22,6 +22,10 @@ from alpha.models.domain import (
     FieldTestResult,
     TemplateLibraryItem,
 )
+from alpha.models.domain_serializers import (
+    serialize_field_test_result,
+    serialize_template_library_item,
+)
 from alpha.models.runtime import (
     ExecutionState,
     PendingFutureContext,
@@ -49,7 +53,7 @@ class TestDataClassSerialization:
             failed_checks=[failed_check],
         )
 
-        result_dict = result.to_dict()
+        result_dict = serialize_field_test_result(result)
         assert result_dict["field_id"] == "sales"
         assert result_dict["field_type"] == "MATRIX"
         assert result_dict["submittable"] is True
@@ -108,14 +112,7 @@ class TestDataClassSerialization:
         assert item.family == "mean"
         assert item.stage == "refine"
 
-        item_dict = {
-            "name": item.name,
-            "expression": item.expression,
-            "priority": item.priority,
-            "family": item.family,
-            "stage": item.stage,
-            "metadata": item.metadata,
-        }
+        item_dict = serialize_template_library_item(item)
 
         json_str = json.dumps(item_dict)
         loaded = json.loads(json_str)

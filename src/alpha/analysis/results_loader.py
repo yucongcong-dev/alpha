@@ -21,7 +21,8 @@ from ..config.constants import (
     STAT_FIELD_SUBMITTED,
     STAT_FIELD_TEMPLATE_NAME,
 )
-from ..models.domain import FailedCheck, FieldTestResult, ResultRow
+from ..models.domain import FieldTestResult, ResultRow
+from ..models.domain_parsers import parse_failed_check
 
 logger = logging.getLogger(__name__)
 
@@ -75,9 +76,7 @@ def _rows_to_results(rows: list[Any]) -> list[FieldTestResult]:
                     template_library_fingerprint=str(row.get("template_library_fingerprint", "")),
                     failed_stage=row.get("failed_stage"),
                     failed_checks=[
-                        FailedCheck.from_dict(check)
-                        for check in row.get("failed_checks", [])
-                        if isinstance(check, dict)
+                        parse_failed_check(check) for check in row.get("failed_checks", []) if isinstance(check, dict)
                     ]
                     if isinstance(row.get("failed_checks"), list)
                     else None,

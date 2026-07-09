@@ -7,8 +7,9 @@ loading concrete definitions lazily.
 
 from __future__ import annotations
 
-from importlib import import_module
 from typing import TYPE_CHECKING
+
+from .._facade import ExportMap, facade_dir, resolve_export
 
 if TYPE_CHECKING:
     from .domain import TemplateField
@@ -67,57 +68,7 @@ if TYPE_CHECKING:
         TemplateBuildContext,
     )
 
-__all__ = [
-    "ApiClientArgs",
-    "ApiClientConfig",
-    "ApiClientOptions",
-    "BlacklistRuntimeStats",
-    "BootstrapConfig",
-    "BootstrapRuntimeArgs",
-    "CleanConfig",
-    "CleanRuntimeArgs",
-    "ClientFactoryLike",
-    "CredentialsArgs",
-    "CredentialsConfig",
-    "ExecutionState",
-    "FieldFetchArgs",
-    "FieldFetchConfig",
-    "FieldFetchOptions",
-    "FieldSelectionArgs",
-    "FieldSelectionConfig",
-    "FutureCompletionContext",
-    "HistoricalRunState",
-    "InitializedRunContext",
-    "PendingFutureContext",
-    "PendingFutureLike",
-    "PendingTemplateEntry",
-    "ResultWriteArgs",
-    "ResultWriteConfig",
-    "ResultWriteOptions",
-    "RunConfig",
-    "RunConfigArgs",
-    "RunLoopArgs",
-    "RunLoopConfig",
-    "RuntimeConcurrencyState",
-    "SchedulerConfig",
-    "SchedulerRuntimeArgs",
-    "SemaphoreLike",
-    "SimulationSettingsArgs",
-    "SimulationSettingsConfig",
-    "SimulationStageArgs",
-    "SimulationStageConfig",
-    "StopAfterSubmittableArgs",
-    "TemplateBuildArgs",
-    "TemplateBuildConfig",
-    "TemplateBuildContext",
-    "TemplateBuildOptions",
-    "TemplateFeedback",
-    "TemplateField",
-    "TemplateSequence",
-    "TemplateStats",
-]
-
-_EXPORT_MAP: dict[str, tuple[str, str]] = {
+_EXPORT_MAP: ExportMap = {
     "TemplateField": (".domain", "TemplateField"),
     "ApiClientConfig": (".runtime_config", "ApiClientConfig"),
     "BootstrapConfig": (".runtime_config", "BootstrapConfig"),
@@ -167,17 +118,18 @@ _EXPORT_MAP: dict[str, tuple[str, str]] = {
     "TemplateBuildContext": (".runtime_state", "TemplateBuildContext"),
 }
 
+__all__ = list(_EXPORT_MAP)
+
 
 def __getattr__(name: str) -> object:
-    try:
-        module_name, attr_name = _EXPORT_MAP[name]
-    except KeyError as exc:
-        raise AttributeError(f"module {__name__!r} has no attribute {name!r}") from exc
-    module = import_module(module_name, __package__)
-    value = getattr(module, attr_name)
-    globals()[name] = value
-    return value
+    return resolve_export(
+        name=name,
+        export_map=_EXPORT_MAP,
+        package=__package__ or "",
+        namespace=__name__,
+        target_globals=globals(),
+    )
 
 
 def __dir__() -> list[str]:
-    return sorted(set(globals()) | set(__all__))
+    return facade_dir(globals(), _EXPORT_MAP)

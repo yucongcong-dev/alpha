@@ -19,7 +19,8 @@ from ..config.constants import (
     NEARPASS_PENALTY_LOW_TURNOVER,
 )
 from ..config.models import DatasetExpressionPolicy
-from ..models.domain import FailedCheck, FieldFeedbackSummary, FieldTestResult, NearPassCandidate
+from ..models.domain import FailedCheck, FieldTestResult, NearPassCandidate
+from ..models.domain_types import FieldFeedbackSummary
 from ..models.runtime_protocols import StopAfterSubmittableArgs
 from ..policy.expression import get_dataset_expression_policy, resolve_feedback_stage
 from ..runtime import HistoricalRunState

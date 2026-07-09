@@ -28,7 +28,7 @@ from ..generators.templates.priority import (
     dominant_failed_check_names,
 )
 from ..generators.templates.variation_common import is_blacklisted_template as _is_blacklisted_template
-from ..models.domain import FieldFeedbackSummary
+from ..models.domain_types import FieldFeedbackSummary
 from ..policy.expression import get_dataset_expression_policy, resolve_feedback_stage
 
 

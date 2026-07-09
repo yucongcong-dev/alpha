@@ -12,7 +12,6 @@ from __future__ import annotations
 
 import logging
 import threading
-from typing import cast
 
 from ..analysis.feedback_history import build_historical_run_state
 from ..api.client import BrainClient, WorkerClientFactory, login_with_retry
@@ -28,13 +27,7 @@ from ..io.credentials import load_credentials
 from ..io.output_paths import cleanup_legacy_sidecar_files
 from ..models.domain import TemplateField, TemplateLibrary
 from ..models.io_types import RunFilters, RunPaths
-from ..models.runtime_protocols import (
-    ApiClientArgs,
-    BootstrapRuntimeArgs,
-    ClientFactoryLike,
-    CredentialsArgs,
-    SimulationSettingsArgs,
-)
+from ..models.runtime_protocols import ApiClientArgs, BootstrapRuntimeArgs, ClientFactoryLike, RunConfig
 from ..policy import ensure_template_blacklist_file
 from ..policy.blacklist_context import set_active_blacklists_dir
 from ..policy.blacklist_store import read_blacklist_payload, summarize_blacklist_payload
@@ -55,10 +48,54 @@ from .bootstrap_types import BootstrapPaths, PreparedBootstrapResources
 logger = logging.getLogger(__name__)
 
 
+# ============================================================================
+# bootstrap_steps facade wiring
+# ============================================================================
+
+
+def _runtime_output_dependencies() -> dict[str, object]:
+    """Return concrete dependencies for runtime output preparation."""
+    return {
+        "setup_runtime_logging_fn": setup_runtime_logging,
+        "cleanup_legacy_sidecar_files_fn": cleanup_legacy_sidecar_files,
+        "ensure_analysis_synced_fn": ensure_analysis_synced,
+        "build_run_config_snapshot_fn": build_run_config_snapshot,
+    }
+
+
+def _resource_loading_dependencies() -> dict[str, object]:
+    """Return concrete dependencies for bootstrap resource loading."""
+    return {
+        "set_active_blacklists_dir_fn": set_active_blacklists_dir,
+        "ensure_dataset_template_library_fn": ensure_dataset_template_library,
+        "ensure_template_blacklist_file_fn": ensure_template_blacklist_file,
+        "load_template_library_fn": load_template_library,
+        "read_blacklist_payload_fn": read_blacklist_payload,
+        "summarize_blacklist_payload_fn": summarize_blacklist_payload,
+        "load_run_filters_extended_fn": load_run_filters_extended,
+        "get_dataset_expression_policy_fn": get_dataset_expression_policy,
+        "stable_fingerprint_fn": stable_fingerprint,
+        "build_settings_fingerprint_fn": build_settings_fingerprint,
+        "build_historical_run_state_fn": build_historical_run_state,
+        "load_fields_cache_fn": load_fields_cache,
+        "fetch_fields_with_cache_fn": fetch_fields_with_cache,
+        "prepare_fields_for_execution_fn": prepare_fields_for_execution,
+    }
+
+
+def _client_login_dependencies() -> dict[str, object]:
+    """Return concrete dependencies for bootstrap client creation and login."""
+    return {
+        "get_runtime_config_fn": get_runtime_config,
+        "login_with_retry_fn": login_with_retry,
+    }
+
+
 def resolve_bootstrap_paths(
     args: BootstrapRuntimeArgs,
     run_paths: RunPaths | None,
 ) -> BootstrapPaths:
+    """Facade export for bootstrap path normalization."""
     return _resolve_bootstrap_paths(args, run_paths)
 
 
@@ -66,27 +103,17 @@ def prepare_runtime_outputs(
     args: BootstrapRuntimeArgs,
     run_paths: RunPaths | None,
     paths: BootstrapPaths,
-) -> dict[str, object]:
-    return _prepare_runtime_outputs(
-        args,
-        run_paths,
-        paths,
-        setup_runtime_logging_fn=setup_runtime_logging,
-        cleanup_legacy_sidecar_files_fn=cleanup_legacy_sidecar_files,
-        ensure_analysis_synced_fn=ensure_analysis_synced,
-        build_run_config_snapshot_fn=build_run_config_snapshot,
-    )
+) -> RunConfig:
+    """Facade export for runtime output preparation with app-level wiring."""
+    return _prepare_runtime_outputs(args, run_paths, paths, **_runtime_output_dependencies())
 
 
 def resolve_credentials(
     args: BootstrapRuntimeArgs,
     paths: BootstrapPaths,
 ) -> tuple[str, str]:
-    return _resolve_credentials(
-        args,
-        paths,
-        load_credentials_fn=load_credentials,
-    )
+    """Facade export for credential resolution with app-level wiring."""
+    return _resolve_credentials(args, paths, load_credentials_fn=load_credentials)
 
 
 def prepare_bootstrap_resources(
@@ -94,44 +121,67 @@ def prepare_bootstrap_resources(
     paths: BootstrapPaths,
     bootstrap_client: BrainClient,
     *,
-    run_config: dict[str, object],
+    run_config: RunConfig,
     run_paths: RunPaths | None,
 ) -> PreparedBootstrapResources | None:
+    """Facade export for bootstrap resource loading with app-level wiring."""
     return _prepare_bootstrap_resources(
         args,
         paths,
         bootstrap_client,
         run_config=run_config,
         run_paths=run_paths,
-        set_active_blacklists_dir_fn=set_active_blacklists_dir,
-        ensure_dataset_template_library_fn=ensure_dataset_template_library,
-        ensure_template_blacklist_file_fn=ensure_template_blacklist_file,
-        load_template_library_fn=load_template_library,
-        read_blacklist_payload_fn=read_blacklist_payload,
-        summarize_blacklist_payload_fn=summarize_blacklist_payload,
-        load_run_filters_extended_fn=load_run_filters_extended,
-        get_dataset_expression_policy_fn=get_dataset_expression_policy,
-        stable_fingerprint_fn=stable_fingerprint,
-        build_settings_fingerprint_fn=build_settings_fingerprint,
-        build_historical_run_state_fn=build_historical_run_state,
-        load_fields_cache_fn=load_fields_cache,
-        fetch_fields_with_cache_fn=fetch_fields_with_cache,
-        prepare_fields_for_execution_fn=prepare_fields_for_execution,
+        **_resource_loading_dependencies(),
     )
 
 
 def create_and_login_client(
     email: str, password: str, args: ApiClientArgs
 ) -> tuple[BrainClient, WorkerClientFactory]:
-    return cast(
-        tuple[BrainClient, WorkerClientFactory],
-        _create_and_login_client(
-            email,
-            password,
-            args,
-            get_runtime_config_fn=get_runtime_config,
-            login_with_retry_fn=login_with_retry,
-        ),
+    """Facade export for bootstrap client creation with app-level wiring."""
+    return _create_and_login_client(email, password, args, **_client_login_dependencies())
+
+
+def build_runtime_concurrency(
+    args: BootstrapRuntimeArgs,
+) -> tuple[RuntimeConcurrencyState, threading.Semaphore]:
+    """Build runtime concurrency state and create semaphore from bootstrap args."""
+    max_workers = max(1, int(getattr(args, "max_concurrent_simulations", 0) or 0))
+    runtime_state = RuntimeConcurrencyState(
+        max_workers=max_workers,
+        runtime_max_workers=max_workers,
+    )
+    max_create_workers = max(1, int(getattr(args, "max_concurrent_creates", 0) or 0))
+    create_semaphore = threading.Semaphore(max_create_workers)
+    logger.info("[config] max_concurrent_simulations=%d", max_workers)
+    logger.info("[config] max_concurrent_creates=%d", max_create_workers)
+    logger.info("[config] simulation_max_pending_cycles=%d", args.simulation_max_pending_cycles)
+    return runtime_state, create_semaphore
+
+
+def assemble_initialized_run_context(
+    *,
+    client_factory: ClientFactoryLike,
+    prepared: PreparedBootstrapResources,
+    execution_state,
+    runtime_state: RuntimeConcurrencyState,
+    create_semaphore: threading.Semaphore,
+) -> InitializedRunContext:
+    """Assemble the final initialized run context from prepared bootstrap parts."""
+    return InitializedRunContext(
+        client_factory=client_factory,
+        template_library=prepared.template_library,
+        filters=prepared.filters,
+        expression_policy=prepared.expression_policy,
+        use_dataset_heuristics=prepared.use_dataset_heuristics,
+        template_library_fingerprint=prepared.template_library_fingerprint,
+        settings_fingerprint=prepared.settings_fingerprint,
+        historical_state=prepared.historical_state,
+        fields=prepared.fields,
+        execution_state=execution_state,
+        runtime_state=runtime_state,
+        create_semaphore=create_semaphore,
+        run_config=prepared.run_config,
     )
 
 
@@ -159,7 +209,7 @@ def initialize_run_context(
         return None
 
     execution_state = build_execution_state(
-        dataset_id=cast(str, args.dataset_id),
+        dataset_id=str(args.dataset_id),
         output_file=paths.output_file,
         historical_state=prepared.historical_state,
         settings_fingerprint=prepared.settings_fingerprint,
@@ -168,30 +218,11 @@ def initialize_run_context(
         blacklists_dir="",
     )
 
-    max_workers = max(1, cast(int, args.max_concurrent_simulations))
-    runtime_state = RuntimeConcurrencyState(
-        max_workers=max_workers,
-        runtime_max_workers=max_workers,
-    )
-    max_create_workers = max(1, cast(int, args.max_concurrent_creates))
-    create_semaphore = threading.Semaphore(max_create_workers)
-
-    logger.info("[config] max_concurrent_simulations=%d", max_workers)
-    logger.info("[config] max_concurrent_creates=%d", max_create_workers)
-    logger.info("[config] simulation_max_pending_cycles=%d", args.simulation_max_pending_cycles)
-
-    return InitializedRunContext(
-        client_factory=cast(ClientFactoryLike, client_factory),
-        template_library=prepared.template_library,
-        filters=prepared.filters,
-        expression_policy=prepared.expression_policy,
-        use_dataset_heuristics=prepared.use_dataset_heuristics,
-        template_library_fingerprint=prepared.template_library_fingerprint,
-        settings_fingerprint=prepared.settings_fingerprint,
-        historical_state=prepared.historical_state,
-        fields=prepared.fields,
+    runtime_state, create_semaphore = build_runtime_concurrency(args)
+    return assemble_initialized_run_context(
+        client_factory=client_factory,
+        prepared=prepared,
         execution_state=execution_state,
         runtime_state=runtime_state,
         create_semaphore=create_semaphore,
-        run_config=prepared.run_config,
     )

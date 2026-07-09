@@ -22,23 +22,44 @@ Alpha 生成器包
 
 from __future__ import annotations
 
-from .expression_builder import build_expression_candidates, limit_templates, sort_templates_by_priority
-from .fields import choose_field_name, choose_field_type
-from .fingerprint import stable_fingerprint
-from .payload import build_settings_fingerprint, build_simulation_payload
-from .templates import ensure_dataset_template_library, load_template_library
-from .variants import build_setting_variants
+from typing import TYPE_CHECKING
 
-__all__ = [
-    "build_expression_candidates",
-    "build_setting_variants",
-    "build_settings_fingerprint",
-    "build_simulation_payload",
-    "choose_field_name",
-    "choose_field_type",
-    "ensure_dataset_template_library",
-    "limit_templates",
-    "load_template_library",
-    "sort_templates_by_priority",
-    "stable_fingerprint",
-]
+from .._facade import ExportMap, facade_dir, resolve_export
+
+if TYPE_CHECKING:
+    from .expression_builder import build_expression_candidates, limit_templates, sort_templates_by_priority
+    from .fields import choose_field_name, choose_field_type
+    from .fingerprint import stable_fingerprint
+    from .payload import build_settings_fingerprint, build_simulation_payload
+    from .templates import ensure_dataset_template_library, load_template_library
+    from .variants import build_setting_variants
+
+_EXPORT_MAP: ExportMap = {
+    "build_expression_candidates": (".expression_builder", "build_expression_candidates"),
+    "limit_templates": (".expression_builder", "limit_templates"),
+    "sort_templates_by_priority": (".expression_builder", "sort_templates_by_priority"),
+    "choose_field_name": (".fields", "choose_field_name"),
+    "choose_field_type": (".fields", "choose_field_type"),
+    "stable_fingerprint": (".fingerprint", "stable_fingerprint"),
+    "build_settings_fingerprint": (".payload", "build_settings_fingerprint"),
+    "build_simulation_payload": (".payload", "build_simulation_payload"),
+    "ensure_dataset_template_library": (".templates", "ensure_dataset_template_library"),
+    "load_template_library": (".templates", "load_template_library"),
+    "build_setting_variants": (".variants", "build_setting_variants"),
+}
+
+__all__ = list(_EXPORT_MAP)
+
+
+def __getattr__(name: str) -> object:
+    return resolve_export(
+        name=name,
+        export_map=_EXPORT_MAP,
+        package=__package__ or "",
+        namespace=__name__,
+        target_globals=globals(),
+    )
+
+
+def __dir__() -> list[str]:
+    return facade_dir(globals(), _EXPORT_MAP)

@@ -2,21 +2,20 @@
 
 from __future__ import annotations
 
+from concurrent.futures import Future
 from dataclasses import dataclass, field
 import time
-from typing import Union
 
 from ..config.models import DatasetExpressionPolicy
 from ..models.domain import FieldTestResult, TemplateField, TemplateLibrary
 from ..models.io_types import RunFilters
 from ..models.runtime_protocols import (
-    BlacklistRuntimeStats,
     ClientFactoryLike,
-    PendingFutureLike as PendingFuturePayload,
     RunConfig,
     SemaphoreLike,
     TemplateStats,
 )
+from ..policy.types import BlacklistRuntimeStats
 from .contexts import HistoricalRunState, PendingFutureContext
 
 
@@ -46,7 +45,7 @@ class ExecutionState:
     results: list[FieldTestResult]
     attempted_keys: set[tuple[str, str, str, str]]
     template_stats: TemplateStats
-    pending_futures: dict[object, PendingFutureContext]
+    pending_futures: dict[Future[FieldTestResult], PendingFutureContext]
     field_queue_busy_counts: dict[str, int]
     skipped_fields_due_to_queue: set[str]
     unique_field_ids: set[str] = field(default_factory=set)
@@ -78,5 +77,4 @@ class InitializedRunContext:
     create_semaphore: SemaphoreLike
     run_config: RunConfig
 
-
-PendingFutureLike = Union[PendingFutureContext, PendingFuturePayload]
+PendingFutureLike = PendingFutureContext
