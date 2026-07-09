@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any, cast
+from typing import Any
 
 from ..config.constants import (
     GROUP_NAME_SUBINDUSTRY,
@@ -37,13 +37,13 @@ def build_setting_variants(
     """
     _ = template_name, field_feedback
     base_settings = build_simulation_payload(args, expression)["settings"]
-    variants: list[SettingsVariant] = [cast(SettingsVariant, dict(base_settings))]
+    variants: list[SettingsVariant] = [SettingsVariant.from_dict(dict(base_settings))]
     lower_expr = expression.lower()
 
     def add_variant(**updates: Any) -> None:
         candidate = dict(base_settings)
         candidate.update(updates)
-        casted = cast(SettingsVariant, candidate)
+        casted = SettingsVariant.from_dict(candidate)
         if casted not in variants:
             variants.append(casted)
 

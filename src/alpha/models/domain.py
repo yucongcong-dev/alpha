@@ -107,6 +107,10 @@ class SettingsVariant:
     start_date: str | None = None
     end_date: str | None = None
 
+    def get(self, key: str, default: Any = None) -> Any:
+        """兼容旧的 dict 风格读取。"""
+        return getattr(self, key, default)
+
     def to_dict(self) -> dict[str, Any]:
         """兼容入口：序列化为设置变体字典。"""
         return serialize_settings_variant(self)

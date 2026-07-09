@@ -351,6 +351,7 @@ def test_build_setting_variants_expands_candidate_centric_refine_settings() -> N
         ),
     )
 
+    assert all(isinstance(variant, type(variants[0])) for variant in variants)
     assert any(variant.get("truncation") == 0.05 for variant in variants)
     assert any(variant.get("neutralization") == "INDUSTRY" for variant in variants)
     assert any(variant.get("neutralization") == "MARKET" for variant in variants)
