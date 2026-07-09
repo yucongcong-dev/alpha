@@ -14,7 +14,7 @@ from typing import TYPE_CHECKING, cast
 
 from ..analysis.field_stats import current_submittable_count
 from ..config.constants import STATUS_ERROR
-from ..core import delete_pipeline_state
+from ..core.checkpoint import delete_pipeline_state
 from ..io.results_store import dump_results
 from ..models.io_types import RunPaths
 from ..models.runtime import ResultWriteArgs

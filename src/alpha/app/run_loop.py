@@ -6,9 +6,7 @@ from concurrent.futures import ThreadPoolExecutor
 import logging
 from typing import cast
 
-from ..core import (
-    print_dry_run_plan,
-)
+from ..core.executor import print_dry_run_plan
 from ..models.domain import TemplateField
 from ..models.io_types import RunPaths
 from ..models.runtime import (

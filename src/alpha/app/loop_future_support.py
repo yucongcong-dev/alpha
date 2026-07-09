@@ -7,10 +7,8 @@ import dataclasses
 import time
 from typing import TYPE_CHECKING, Any, cast
 
-from ..core import (
-    drain_completed_futures,
-    run_field_test_in_worker,
-)
+from ..core.scheduler import drain_completed_futures
+from ..core.simulation import run_field_test_in_worker
 from ..models.domain import SettingsVariant, TemplateField
 from ..models.runtime import (
     ResultWriteOptions,
