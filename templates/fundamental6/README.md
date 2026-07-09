@@ -67,6 +67,24 @@ Refine pack convention:
 - Do not mix event/vector-specific families back into generic scalar broad-search pools.
 - Do not reintroduce template-level `group_neutralize` on top of settings-level `neutralization=SUBINDUSTRY`.
 
+## What Works Better On fundamental6
+
+- Slow-frequency single-field stabilizers such as `ts_rank_120`, `ts_zscore_252`, and composite `zscore + decay` spines.
+- Heavy preprocessing before ranking, especially `ts_backfill` plus `winsorize`.
+- Relation-based templates such as `ratio_cap`, `ratio_assets`, `bucket_ratio`, and other cross-field comparisons.
+- Bucketed grouped structures with `densify(...)`, especially around `cap` and liquidity segmentation.
+- Event/self-change triggers for VECTOR-style fields, where the trigger comes from the field itself rather than generic market activity.
+- Narrow broad-search defaults followed by refine packs, instead of pushing many near-duplicate templates into the first round.
+
+## What Usually Works Poorly On fundamental6
+
+- Short-window families such as `5/20` rank, zscore, or decay variants on slow-updating fundamental fields.
+- Large batches of single-field micro-variants that differ only by nearby windows.
+- Mixing scalar, vector, and event-conditioned structures into one generic broad-search pool.
+- Double-neutralization: template-level `group_neutralize` plus settings-level `neutralization=SUBINDUSTRY`.
+- Using broad search to keep scaling quantity after the main failure mode is already known.
+- Treating `vec_avg` / `vec_sum` alternates and longer-window neighbors as first-round defaults instead of second-round refine branches.
+
 ## Recommended Workflow
 
 Broad exploration:
@@ -77,6 +95,31 @@ Broad exploration:
 Focused refine:
 - Use refine packs as expansion rings around the slow-frequency default spine.
 - Expand ratio/bucket/event-self-change neighbors only after the main scalar spine is validated.
+
+## First-Round Research Flow
+
+1. Start from the narrowed `default` spine, not from the refine pack.
+2. Run only a small broad-search batch to answer three questions:
+   - do we get any `near_pass`
+   - is `self-correlation` still dominating
+   - which field families are repeatedly near threshold
+3. Prioritize reading results around the known promising families:
+   - `cash_st`
+   - `debt`
+   - `debt_lt`
+   - `cogs`
+   - `cashflow_op`
+   - related ratio fields
+4. If results show repeated near-threshold behavior, switch to `refine/default_neighbors.json` instead of widening `default`.
+5. If results are still dominated by homogeneous failure, add more field-relation structure rather than more scalar neighbors.
+6. Only after the main scalar spine is understood, open specialty lanes:
+   - vector/event-conditioned branch
+   - grouped bucket branch
+   - longer-window relation neighbors
+
+Practical goal of round 1:
+- identify whether the narrowed broad spine produces differentiated failures or only repeats the old self-correlation pattern
+- identify 1 to 3 field families worth a dedicated refine round
 
 ## Open Questions
 - Continue shifting from single-field transforms toward field-relation templates.
