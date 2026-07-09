@@ -10,13 +10,14 @@
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING
 
 from ..analysis.field_stats import current_submittable_count
 from ..config.constants import STATUS_ERROR
 from ..core.checkpoint import delete_pipeline_state
 from ..io.results_store import dump_results
 from ..models.io_types import RunPaths
+from ..models.runtime_options import ResultWriteOptions
 from ..models.runtime_protocols import ResultWriteArgs
 from ..policy import auto_update_blacklist
 from ..runtime import InitializedRunContext
@@ -40,7 +41,8 @@ def finalize_run(
 ) -> None:
     """写出最终结果并清理运行中间状态。"""
     execution_state = run_ctx.execution_state
-    output_path = cast("str", _run_path_value(run_paths, "output") or args.output)
+    write_options = ResultWriteOptions.from_args(args)
+    output_path = _run_path_value(run_paths, "output") or write_options.output_path
     state_file = _run_path_value(run_paths, "state_file")
     logger.info(
         "[done] 测试完成：tested=%d submittable=%d errors=%d",
@@ -50,12 +52,12 @@ def finalize_run(
     )
     dump_results(
         output_path,
-        cast("str", args.dataset_id),
+        write_options.dataset_id,
         execution_state.results,
         settings_fingerprint=run_ctx.settings_fingerprint,
         template_library_fingerprint=run_ctx.template_library_fingerprint,
         run_config=run_ctx.run_config,
-        auto_update_template_blacklist=getattr(args, "auto_update_blacklist", False),
+        auto_update_template_blacklist=write_options.auto_update_blacklist,
         auto_update_blacklist_fn=auto_update_blacklist,
     )
     delete_pipeline_state(state_file)

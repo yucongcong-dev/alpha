@@ -3,12 +3,13 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from threading import Semaphore
 
 from ..config.models import DatasetExpressionPolicy
 from ..models.domain import TemplateField, TemplateLibrary
 from ..models.io_types import RunFilters
 from ..models.runtime_protocols import RunConfig
-from ..runtime import HistoricalRunState
+from ..runtime import HistoricalRunState, RuntimeConcurrencyState
 
 
 @dataclass(frozen=True)
@@ -47,3 +48,11 @@ class PreparedBootstrapResources:
     historical_state: HistoricalRunState
     fields: list[TemplateField]
     run_config: RunConfig
+
+
+@dataclass(frozen=True)
+class RuntimeConcurrencyResources:
+    """初始化阶段产出的并发调度资源。"""
+
+    runtime_state: RuntimeConcurrencyState
+    create_semaphore: Semaphore

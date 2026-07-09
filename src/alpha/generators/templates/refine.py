@@ -9,7 +9,6 @@ from __future__ import annotations
 
 from collections.abc import Callable, Sequence
 import re
-from typing import Any
 
 from ...config import (
     GROUP_NAME_INDUSTRY,
@@ -26,6 +25,7 @@ from ...config import (
     DatasetExpressionPolicy,
 )
 from ...models.domain import NearPassCandidate, TemplateCandidate
+from ...models.domain_types import TemplateMetadata
 from .candidates import _candidate_metadata, _make_template_candidate
 from .variation_common import is_blacklisted_template as _is_blacklisted_template
 
@@ -85,7 +85,7 @@ def build_refine_templates(
         family: str = "",
         stage: str = "",
         layer: str = "",
-        extra_metadata: dict[str, Any] | None = None,
+        extra_metadata: TemplateMetadata | None = None,
     ) -> None:
         if name in seen_names or expression in seen_expressions:
             return

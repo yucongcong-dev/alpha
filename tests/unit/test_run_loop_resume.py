@@ -122,7 +122,14 @@ def test_drain_remaining_futures_persists_total_field_count() -> None:
 def test_run_field_test_loop_persists_progress_for_skipped_fields(tmp_path) -> None:
     fields = [{"id": "f1", "type": "MATRIX", "name": "f1"}, {"id": "f2", "type": "MATRIX", "name": "f2"}]
     run_ctx = _build_run_ctx(fields)
-    args = argparse.Namespace(dry_run_plan=False, field_template_batch_size=0, stop_after_submittable=0)
+    args = argparse.Namespace(
+        dry_run_plan=False,
+        field_template_batch_size=0,
+        stop_after_submittable=0,
+        dataset_id="fundamental6",
+        output=str(tmp_path / "results.json"),
+        auto_update_blacklist=False,
+    )
 
     with (
         patch("alpha.app.run_loop.restore_fields_from_state", return_value=(fields, 0)),

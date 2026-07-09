@@ -9,7 +9,7 @@ runtime summary 结构，避免在多个 policy 模块里重复书写
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, Protocol
 
 LEARNED_BLACKLIST_KEY = "learned_templates"
 PATTERN_RULES_KEY = "expression_rules"
@@ -44,6 +44,14 @@ BlacklistCacheEntry = dict[str, Any]
 
 DefaultAvoidRulesCache = dict[str, Any]
 """跨数据集默认规避规则缓存项。"""
+
+
+class BlacklistRuntimePolicy(Protocol):
+    """黑名单判断所需的最小运行时策略视图。"""
+
+    dataset_id: str
+    protected_templates: set[str]
+    blacklisted_template_name_substrings: tuple[str, ...]
 
 
 @dataclass

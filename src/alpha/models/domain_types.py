@@ -7,6 +7,7 @@ helps the core domain objects focus on dataclasses and behavior.
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from typing import Any
 
 FieldFeedbackSummary = dict[str, Any]
@@ -15,8 +16,8 @@ FieldFeedbackSummary = dict[str, Any]
 ResultRow = dict[str, Any]
 """结果落盘 / 分析阶段使用的通用行对象。"""
 
-TemplateMetadata = dict[str, Any]
-"""模板候选或字段视图附带的元数据。"""
+TemplateMetadata = Mapping[str, object]
+"""模板候选或字段视图附带的只读元数据视图。"""
 
 FieldFeedbackMap = dict[str, FieldFeedbackSummary]
 """按字段 ID 聚合的反馈画像映射。"""

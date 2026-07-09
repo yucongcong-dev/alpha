@@ -27,7 +27,13 @@ from ..io.credentials import load_credentials
 from ..io.output_paths import cleanup_legacy_sidecar_files
 from ..models.domain import TemplateField, TemplateLibrary
 from ..models.io_types import RunFilters, RunPaths
-from ..models.runtime_protocols import ApiClientArgs, BootstrapRuntimeArgs, ClientFactoryLike, RunConfig
+from ..models.runtime_protocols import (
+    ApiClientArgs,
+    BootstrapRuntimeArgs,
+    ClientFactoryLike,
+    RunConfig,
+    RuntimeConcurrencyArgs,
+)
 from ..policy import ensure_template_blacklist_file
 from ..policy.blacklist_context import set_active_blacklists_dir
 from ..policy.blacklist_store import read_blacklist_payload, summarize_blacklist_payload
@@ -43,7 +49,7 @@ from .bootstrap_steps import (
     resolve_bootstrap_paths as _resolve_bootstrap_paths,
     resolve_credentials as _resolve_credentials,
 )
-from .bootstrap_types import BootstrapPaths, PreparedBootstrapResources
+from .bootstrap_types import BootstrapPaths, PreparedBootstrapResources, RuntimeConcurrencyResources
 
 logger = logging.getLogger(__name__)
 
@@ -143,20 +149,23 @@ def create_and_login_client(
 
 
 def build_runtime_concurrency(
-    args: BootstrapRuntimeArgs,
-) -> tuple[RuntimeConcurrencyState, threading.Semaphore]:
-    """Build runtime concurrency state and create semaphore from bootstrap args."""
-    max_workers = max(1, int(getattr(args, "max_concurrent_simulations", 0) or 0))
+    args: RuntimeConcurrencyArgs,
+) -> RuntimeConcurrencyResources:
+    """Build runtime concurrency state and semaphore from narrow concurrency args."""
+    max_workers = max(1, int(args.max_concurrent_simulations or 0))
     runtime_state = RuntimeConcurrencyState(
         max_workers=max_workers,
         runtime_max_workers=max_workers,
     )
-    max_create_workers = max(1, int(getattr(args, "max_concurrent_creates", 0) or 0))
+    max_create_workers = max(1, int(args.max_concurrent_creates or 0))
     create_semaphore = threading.Semaphore(max_create_workers)
     logger.info("[config] max_concurrent_simulations=%d", max_workers)
     logger.info("[config] max_concurrent_creates=%d", max_create_workers)
     logger.info("[config] simulation_max_pending_cycles=%d", args.simulation_max_pending_cycles)
-    return runtime_state, create_semaphore
+    return RuntimeConcurrencyResources(
+        runtime_state=runtime_state,
+        create_semaphore=create_semaphore,
+    )
 
 
 def assemble_initialized_run_context(
@@ -218,11 +227,11 @@ def initialize_run_context(
         blacklists_dir="",
     )
 
-    runtime_state, create_semaphore = build_runtime_concurrency(args)
+    concurrency = build_runtime_concurrency(args)
     return assemble_initialized_run_context(
         client_factory=client_factory,
         prepared=prepared,
         execution_state=execution_state,
-        runtime_state=runtime_state,
-        create_semaphore=create_semaphore,
+        runtime_state=concurrency.runtime_state,
+        create_semaphore=concurrency.create_semaphore,
     )

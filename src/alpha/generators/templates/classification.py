@@ -7,20 +7,19 @@
 
 from __future__ import annotations
 
-from typing import Any
-
 from ...config import (
     TEMPLATE_STAGE_EVENT_CONDITIONED,
     TEMPLATE_STAGE_FIRST_ORDER,
     TEMPLATE_STAGE_GROUP_SECOND_ORDER,
     UNKNOWN_FAMILY,
 )
+from ...models.domain_types import TemplateMetadata
 
 
 def classify_expression_family(
     template_name: str,
     expression: str,
-    metadata: dict[str, Any] | None = None,
+    metadata: TemplateMetadata | None = None,
 ) -> str:
     """
     将表达式归类到粗粒度家族，用于剪枝与排序。
@@ -86,7 +85,7 @@ def classify_expression_family(
 def classify_template_stage(
     template_name: str,
     expression: str,
-    metadata: dict[str, Any] | None = None,
+    metadata: TemplateMetadata | None = None,
 ) -> str:
     """
     将模板归类到 first_order / group_second_order / event_conditioned 三层。
@@ -131,7 +130,7 @@ def classify_template_stage(
 def is_legacy_family(
     template_name: str,
     expression: str,
-    metadata: dict[str, Any] | None = None,
+    metadata: TemplateMetadata | None = None,
 ) -> bool:
     """
     判断模板是否属于历史上较易过度使用的 legacy 家族。

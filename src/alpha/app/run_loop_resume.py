@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Any
+from collections.abc import Callable
 
 from ..config.constants import SENTINEL_UNKNOWN
 from ..core.checkpoint import load_pipeline_state, save_checkpoint, save_pipeline_state
@@ -12,6 +12,8 @@ from ..runtime import ExecutionState, RuntimeConcurrencyState
 from ..utils.helpers import first_non_empty
 
 logger = logging.getLogger(__name__)
+
+ResumeIndexClamp = Callable[[int, int], int]
 
 
 def build_field_resume_positions(fields: list[TemplateField]) -> dict[str, int]:
@@ -42,7 +44,7 @@ def restore_fields_from_state(
     state_file: str,
     runtime_state: RuntimeConcurrencyState,
     execution_state: ExecutionState,
-    clamp_resume_index_fn,
+    clamp_resume_index_fn: ResumeIndexClamp,
 ) -> tuple[list[TemplateField], int]:
     """Restore field start position from pipeline state and rotate field order accordingly."""
     resumed_index = 0
@@ -134,6 +136,3 @@ def save_terminal_pipeline_state(
         runtime_state=runtime_state,
         field_id=last_field_id,
     )
-
-
-ResumeIndexClamp = Any

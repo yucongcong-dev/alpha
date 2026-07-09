@@ -15,6 +15,7 @@ from ...config import (
     TEMPLATE_STAGE_GROUP_SECOND_ORDER,
 )
 from ...models.domain import TemplateCandidate
+from ...models.domain_types import TemplateMetadata
 from .classification import classify_expression_family, classify_template_stage
 from .metadata import TemplateMetadataMap, _template_key
 
@@ -28,9 +29,9 @@ def _candidate_metadata(
     layer: str = "",
     stage: str = "",
     requires_partner_field: bool | None = None,
-) -> dict[str, Any]:
+) -> dict[str, object]:
     """构造候选模板的运行时元数据。"""
-    metadata: dict[str, Any] = {}
+    metadata: dict[str, object] = {}
     if family:
         metadata["family"] = family
     if layer:
@@ -45,8 +46,8 @@ def _candidate_metadata(
 def _enrich_candidate_metadata(
     name: str,
     expression: str,
-    metadata: dict[str, Any] | None = None,
-) -> dict[str, Any]:
+    metadata: TemplateMetadata | None = None,
+) -> dict[str, object]:
     """补齐 family/stage/layer 等运行时元数据。"""
     enriched = dict(metadata or {})
     if not enriched.get("family"):
@@ -69,7 +70,7 @@ def _make_template_candidate(
     expression: str,
     priority: int,
     *,
-    metadata: dict[str, Any] | None = None,
+    metadata: TemplateMetadata | None = None,
 ) -> TemplateCandidate:
     """创建统一模板候选对象。"""
     return TemplateCandidate(
@@ -96,7 +97,7 @@ def _coerce_template_candidate(
 def _render_template_specs(
     specs: Sequence[TemplateSpec],
     *,
-    metadata: dict[str, Any] | None = None,
+    metadata: TemplateMetadata | None = None,
     **placeholders: Any,
 ) -> list[TemplateCandidate]:
     """将配置中的模板规格渲染为结构化模板候选。"""

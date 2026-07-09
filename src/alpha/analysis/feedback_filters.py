@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from typing import Any
-
 from ..config.constants import (
     CHECK_CONCENTRATED_WEIGHT,
     CHECK_HIGH_TURNOVER,
@@ -28,7 +26,7 @@ from ..generators.templates.priority import (
     dominant_failed_check_names,
 )
 from ..generators.templates.variation_common import is_blacklisted_template as _is_blacklisted_template
-from ..models.domain_types import FieldFeedbackSummary
+from ..models.domain_types import FieldFeedbackSummary, TemplateMetadata
 from ..policy.expression import get_dataset_expression_policy, resolve_feedback_stage
 
 
@@ -65,7 +63,7 @@ def is_legacy_family_disabled(
     template_stats: dict[str, dict[str, int]],
     disable_after: int,
     *,
-    template_metadata: dict[str, Any] | None = None,
+    template_metadata: TemplateMetadata | None = None,
 ) -> bool:
     """当整个 legacy 家族消耗过多预算却没有收益时进行禁用。"""
     if disable_after <= 0 or not is_legacy_family(template_name, expression, template_metadata):
@@ -73,7 +71,7 @@ def is_legacy_family_disabled(
     attempted = 0
     submittable = 0
     for prior_template_name, stat in template_stats.items():
-        prior_metadata: dict[str, Any] = {}
+        prior_metadata: dict[str, object] = {}
         family = stat.get("template_family")
         if family:
             prior_metadata = {"family": family}
@@ -98,7 +96,7 @@ def should_keep_template_for_feedback(
     *,
     dataset_id: str = "",
     expression_policy: DatasetExpressionPolicy | None = None,
-    template_metadata: dict[str, Any] | None = None,
+    template_metadata: TemplateMetadata | None = None,
 ) -> bool:
     """在字段反馈足够后剪掉低信号、低价值的模板。"""
     if not field_feedback:
@@ -196,7 +194,7 @@ def should_skip_field_template_family(
     use_dataset_heuristics: bool | None = None,
     dataset_id: str = "",
     expression_policy: DatasetExpressionPolicy | None = None,
-    template_metadata: dict[str, Any] | None = None,
+    template_metadata: TemplateMetadata | None = None,
 ) -> bool:
     """对已经证明偏弱的字段-模板家族组合做先验剪枝。"""
     policy = expression_policy or get_dataset_expression_policy(

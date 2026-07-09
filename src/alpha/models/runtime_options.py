@@ -91,7 +91,7 @@ class ResultWriteOptions:
         return cls(
             dataset_id=str(args.dataset_id or ""),
             output_path=str(args.output or ""),
-            auto_update_blacklist=bool(getattr(args, "auto_update_blacklist", False)),
+            auto_update_blacklist=bool(args.auto_update_blacklist),
         )
 
 
@@ -114,5 +114,5 @@ class FieldFetchOptions:
             instrument_type=args.instrument_type,
             delay=args.delay,
             dataset_id=args.dataset_id,
-            page_size=int(getattr(args, "page_size", 0) or 0),
+            page_size=int(args.page_size or 0),
         )

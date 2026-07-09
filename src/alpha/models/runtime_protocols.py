@@ -40,6 +40,7 @@ class TemplateBuildArgs(Protocol):
     language: str
     start_date: str | None
     end_date: str | None
+    template_library_file: str
 
 
 class ResultWriteArgs(Protocol):
@@ -138,6 +139,12 @@ class BootstrapRuntimeArgs(
     fields_cache_file: str
     max_concurrent_simulations: int
     max_concurrent_creates: int
+    email: str | None
+    password: str | None
+    include_fields_file: str
+    exclude_fields_file: str
+    include_templates_file: str
+    exclude_templates_file: str
 
 
 class SimulationSettingsArgs(Protocol):
@@ -181,7 +188,19 @@ class SchedulerRuntimeArgs(Protocol):
     auto_update_blacklist: bool
 
 
-class RunLoopArgs(SimulationStageArgs, SchedulerRuntimeArgs, StopAfterSubmittableArgs, Protocol):
+class RuntimeConcurrencyArgs(Protocol):
+    max_concurrent_simulations: int
+    max_concurrent_creates: int
+    simulation_max_pending_cycles: int
+
+
+class RunLoopArgs(
+    TemplateBuildArgs,
+    SimulationStageArgs,
+    SchedulerRuntimeArgs,
+    StopAfterSubmittableArgs,
+    Protocol,
+):
     dry_run_plan: bool
     field_template_batch_size: int
 

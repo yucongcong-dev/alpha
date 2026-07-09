@@ -11,8 +11,9 @@ from typing import Any
 
 from ...config.runtime_values import get_runtime_config
 from ...models.domain import FieldView, TemplateLibrary, TemplateLibraryItem
+from ...models.domain_types import TemplateMetadata
 
-TemplateMetadataMap = dict[tuple[str, str], dict[str, Any]]
+TemplateMetadataMap = dict[tuple[str, str], TemplateMetadata]
 """表达式构建阶段使用的模板元数据映射。key=(template_name, expression)。"""
 
 
@@ -21,7 +22,7 @@ def _template_key(template_name: str, expression: str) -> tuple[str, str]:
     return (template_name, expression)
 
 
-def _runtime_template_metadata(item: TemplateLibraryItem) -> dict[str, Any]:
+def _runtime_template_metadata(item: TemplateLibraryItem) -> dict[str, object]:
     """提取运行时需要的模板元数据。"""
     metadata = dict(item.metadata)
     if item.family:
@@ -87,6 +88,6 @@ def get_template_metadata(
     template_name: str,
     expression: str,
     metadata_by_key: TemplateMetadataMap | None = None,
-) -> dict[str, Any]:
+) -> TemplateMetadata:
     """查找模板元数据。"""
     return (metadata_by_key or {}).get(_template_key(template_name, expression), {})

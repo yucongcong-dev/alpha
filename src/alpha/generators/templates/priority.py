@@ -52,7 +52,7 @@ from ...config import (
     STATS_DEFAULT_SCORE,
 )
 from ...models.domain import TemplateCandidate
-from ...models.domain_types import FieldFeedbackSummary
+from ...models.domain_types import FieldFeedbackSummary, TemplateMetadata
 from .candidates import _coerce_template_candidate, _make_template_candidate
 from .classification import classify_expression_family
 from .metadata import TemplateMetadataMap
@@ -216,7 +216,7 @@ def adaptive_template_priority_adjustment(
     *,
     field_feedback: FieldFeedbackSummary | None,
     global_failed_check_counts: dict[str, int],
-    metadata: dict[str, Any] | None = None,
+    metadata: TemplateMetadata | None = None,
 ) -> int:
     """
     根据字段与全局失败分布动态调整模板优先级。

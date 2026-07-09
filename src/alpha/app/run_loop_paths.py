@@ -41,7 +41,7 @@ def create_template_build_context(
     """Construct the template build context and seed its feedback cache count."""
     template_build_ctx = TemplateBuildContext(
         options=TemplateBuildOptions.from_args(args),
-        template_library_file=str(getattr(args, "template_library_file", "") or ""),
+        template_library_file=str(args.template_library_file or ""),
         all_fields=fields,
         template_library=run_ctx.template_library,
         template_registry=run_ctx.historical_state.template_registry,

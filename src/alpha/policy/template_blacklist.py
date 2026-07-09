@@ -11,7 +11,6 @@ import json
 import logging
 import os
 import re
-from typing import Any
 
 from .blacklist_context import clear_active_blacklists_dir, get_active_blacklists_dir
 from .blacklist_store import (
@@ -19,10 +18,12 @@ from .blacklist_store import (
     read_blacklist_payload,
     resolve_blacklist_path,
 )
+from ..models.domain_types import TemplateMetadata
 from .types import (
     BlacklistCacheEntry,
     BlacklistMatcherEntry,
     BlacklistPatternRule,
+    BlacklistRuntimePolicy,
     DEFAULT_RULES_KEY,
     DefaultAvoidRulesCache,
     LEARNED_BLACKLIST_KEY,
@@ -197,9 +198,9 @@ def runtime_blacklist_match_reason(
     template_name: str,
     expression: str = "",
     *,
-    template_metadata: dict[str, Any] | None = None,
+    template_metadata: TemplateMetadata | None = None,
     dataset_id: str = "",
-    policy: Any | None = None,
+    policy: BlacklistRuntimePolicy | None = None,
     current_family: str = "",
     current_stage: str = "",
 ) -> str | None:
@@ -225,9 +226,9 @@ def is_blacklisted_template(
     template_name: str,
     expression: str = "",
     *,
-    template_metadata: dict[str, Any] | None = None,
+    template_metadata: TemplateMetadata | None = None,
     dataset_id: str = "",
-    policy: Any | None = None,
+    policy: BlacklistRuntimePolicy | None = None,
     current_family: str = "",
     current_stage: str = "",
 ) -> bool:

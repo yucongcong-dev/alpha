@@ -70,10 +70,10 @@ def build_effective_run_paths(
         feedback_output=paths.feedback_output,
         creds_file=paths.creds_file,
         creds_key_file=paths.creds_key_file,
-        include_fields_file=str(getattr(args, "include_fields_file", "") or ""),
-        exclude_fields_file=str(getattr(args, "exclude_fields_file", "") or ""),
-        include_templates_file=str(getattr(args, "include_templates_file", "") or ""),
-        exclude_templates_file=str(getattr(args, "exclude_templates_file", "") or ""),
+        include_fields_file=str(args.include_fields_file or ""),
+        exclude_fields_file=str(args.exclude_fields_file or ""),
+        include_templates_file=str(args.include_templates_file or ""),
+        exclude_templates_file=str(args.exclude_templates_file or ""),
     )
 
 
@@ -106,8 +106,8 @@ def resolve_credentials(
 ) -> tuple[str, str]:
     """Resolve credentials without mutating the runtime args object."""
     credentials_args = ResolvedCredentials(
-        email=getattr(args, "email", None),
-        password=getattr(args, "password", None),
+        email=args.email,
+        password=args.password,
         creds_file=paths.creds_file,
         creds_key_file=paths.creds_key_file,
     )

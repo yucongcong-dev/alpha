@@ -6,7 +6,7 @@ from __future__ import annotations
 
 import json
 import re
-from typing import Any, cast
+from typing import Any
 
 from ..api.api_types import ApiPayload, CheckResultDict
 from ..config.constants import (
@@ -39,6 +39,26 @@ _TYPE_ALPHA: str = "ALPHA"
 _RESULT_PENDING: str = "PENDING"
 
 
+def _as_api_payload(value: object) -> ApiPayload | None:
+    if isinstance(value, dict):
+        return value
+    return None
+
+
+def _coerce_check_result(check: CheckResultDict) -> str | None:
+    result = check.get(_KEY_RESULT)
+    if isinstance(result, str) and result:
+        return result
+    return None
+
+
+def _coerce_check_value(check: CheckResultDict) -> float | None:
+    value = check.get(_KEY_VALUE)
+    if isinstance(value, (int, float)) and not isinstance(value, bool):
+        return float(value)
+    return None
+
+
 def extract_alpha_id(payload: ApiPayload) -> str | None:
     candidates = [
         payload.get(_KEY_ALPHA),
@@ -48,8 +68,8 @@ def extract_alpha_id(payload: ApiPayload) -> str | None:
     for candidate in candidates:
         if isinstance(candidate, str) and candidate:
             return candidate
-        if isinstance(candidate, dict):
-            cd = cast(ApiPayload, candidate)
+        cd = _as_api_payload(candidate)
+        if cd is not None:
             candidate_id = first_non_empty(cd.get(_KEY_ID), cd.get(_KEY_ALPHA))
             if isinstance(candidate_id, str) and candidate_id:
                 return candidate_id
@@ -57,10 +77,8 @@ def extract_alpha_id(payload: ApiPayload) -> str | None:
     children = payload.get(_KEY_CHILDREN)
     if isinstance(children, list):
         for child in children:
-            if isinstance(child, dict):
-                alpha_id = extract_alpha_id(cast(ApiPayload, child))
-            else:
-                alpha_id = None
+            child_payload = _as_api_payload(child)
+            alpha_id = extract_alpha_id(child_payload) if child_payload is not None else None
             if alpha_id:
                 return alpha_id
 
@@ -74,8 +92,8 @@ def extract_alpha_id(payload: ApiPayload) -> str | None:
 
 def extract_checks(alpha_payload: ApiPayload) -> list[CheckResultDict]:
     is_section = alpha_payload.get(_KEY_IS)
-    if isinstance(is_section, dict):
-        section = cast(ApiPayload, is_section)
+    section = _as_api_payload(is_section)
+    if section is not None:
         section_checks = section.get(_KEY_CHECKS)
         if isinstance(section_checks, list):
             return section_checks
@@ -93,8 +111,8 @@ def extract_failed_checks(alpha_payload: ApiPayload) -> list[FailedCheck]:
         failed_checks.append(
             FailedCheck(
                 name=str(check.get(_KEY_NAME, "")),
-                result=cast(str | None, check.get(_KEY_RESULT)),
-                value=cast(float | None, check.get(_KEY_VALUE)),
+                result=_coerce_check_result(check),
+                value=_coerce_check_value(check),
                 limit=first_non_empty(check.get(_KEY_LIMIT), check.get(_KEY_THRESHOLD)),
             )
         )
@@ -109,8 +127,8 @@ def extract_pending_checks(alpha_payload: ApiPayload) -> list[FailedCheck]:
         pending_checks.append(
             FailedCheck(
                 name=str(check.get(_KEY_NAME, "")),
-                result=cast(str | None, check.get(_KEY_RESULT)),
-                value=cast(float | None, check.get(_KEY_VALUE)),
+                result=_coerce_check_result(check),
+                value=_coerce_check_value(check),
                 limit=first_non_empty(check.get(_KEY_LIMIT), check.get(_KEY_THRESHOLD)),
             )
         )

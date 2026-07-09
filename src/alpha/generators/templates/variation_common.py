@@ -2,9 +2,8 @@
 
 from __future__ import annotations
 
-from typing import Any
-
 from ...config import DatasetExpressionPolicy
+from ...models.domain_types import TemplateMetadata
 from ...policy.template_blacklist import is_blacklisted_template as _policy_is_blacklisted_template
 from .classification import classify_expression_family, classify_template_stage
 
@@ -13,7 +12,7 @@ def is_blacklisted_template(
     template_name: str,
     expression: str = "",
     *,
-    template_metadata: dict[str, Any] | None = None,
+    template_metadata: TemplateMetadata | None = None,
     dataset_id: str = "",
     policy: DatasetExpressionPolicy | None = None,
 ) -> bool:
