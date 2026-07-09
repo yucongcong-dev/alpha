@@ -27,7 +27,8 @@ from ..analysis.result_identity import (
 )
 from ..analysis.template_stats import update_template_stats_with_result
 from ..api.timing import wait_seconds
-from ..models.runtime import ResultWriteOptions, SchedulerRuntimeArgs
+from ..models.runtime_options import ResultWriteOptions
+from ..models.runtime_protocols import SchedulerRuntimeArgs
 from ..runtime import ExecutionState, FutureCompletionContext, RuntimeConcurrencyState
 from .result_processing import apply_completed_result
 from .simulation import build_failure_result

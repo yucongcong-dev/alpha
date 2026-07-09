@@ -17,7 +17,7 @@ from ..config.constants import (
     TRUNCATION_WEB_DEFAULT,
 )
 from ..models.domain import NearPassCandidate, SettingsVariant
-from ..models.runtime import SimulationSettingsArgs
+from ..models.runtime_protocols import SimulationSettingsArgs
 from .payload import build_simulation_payload
 
 

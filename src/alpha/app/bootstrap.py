@@ -29,13 +29,12 @@ from ..io.credentials import load_credentials
 from ..io.output_paths import cleanup_legacy_sidecar_files
 from ..models.domain import TemplateField, TemplateLibrary
 from ..models.io_types import RunFilters, RunPaths
-from ..models.runtime import (
+from ..models.runtime_options import ApiClientOptions, FieldFetchOptions
+from ..models.runtime_protocols import (
     ApiClientArgs,
-    ApiClientOptions,
     BootstrapRuntimeArgs,
     ClientFactoryLike,
     CredentialsArgs,
-    FieldFetchOptions,
     SimulationSettingsArgs,
 )
 from ..policy import ensure_template_blacklist_file

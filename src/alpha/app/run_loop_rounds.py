@@ -16,7 +16,8 @@ from ..core.executor import (
 from ..core.scheduler import maybe_restore_runtime_concurrency, throttle_before_submission
 from ..generators.fields import choose_field_name, choose_field_type
 from ..models.domain import TemplateField
-from ..models.runtime import ResultWriteOptions, RunLoopArgs
+from ..models.runtime_options import ResultWriteOptions
+from ..models.runtime_protocols import RunLoopArgs
 from ..runtime import (
     ExecutionState,
     InitializedRunContext,

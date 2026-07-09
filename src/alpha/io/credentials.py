@@ -18,7 +18,7 @@ from typing import Any, cast
 
 from ..exceptions import BrainAPIError
 from ..io.common import atomic_write_json
-from ..models.runtime import CredentialsArgs
+from ..models.runtime_protocols import CredentialsArgs
 from .credentials_crypto import (
     CREDENTIALS_STORAGE_VERSION,
     decrypt_credentials_payload,

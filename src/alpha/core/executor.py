@@ -27,10 +27,8 @@ from ..generators.templates.refine import build_refine_templates
 from ..generators.variants import build_setting_variants
 from ..models.domain import FieldTestResult, TemplateCandidate, TemplateField, TemplateLibrary
 from ..models.io_types import RunFilters
-from ..models.runtime import (
-    TemplateBuildArgs,
-    TemplateBuildOptions,
-)
+from ..models.runtime_options import TemplateBuildOptions
+from ..models.runtime_protocols import TemplateBuildArgs
 from ..runtime import (
     ExecutionState,
     HistoricalRunState,

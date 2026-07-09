@@ -49,7 +49,7 @@ from ..models.domain import (
     TemplateCandidate,
     TemplateField,
 )
-from ..models.runtime import TemplateFeedback
+from ..models.runtime_protocols import TemplateFeedback
 from ..runtime import PendingTemplateEntry, TemplateBuildContext
 from ..policy.expression import get_dataset_expression_policy, resolve_feedback_stage
 from ..utils.helpers import first_non_empty, is_event_field_name

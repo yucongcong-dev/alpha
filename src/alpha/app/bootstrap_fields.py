@@ -14,7 +14,7 @@ from ..config.models import DatasetExpressionPolicy
 from ..generators.fields import choose_field_name
 from ..models.domain import TemplateField
 from ..models.io_types import RunFilters
-from ..models.runtime import FieldSelectionArgs
+from ..models.runtime_protocols import FieldSelectionArgs
 from ..runtime import HistoricalRunState
 from ..utils.helpers import first_non_empty, is_event_field_name
 

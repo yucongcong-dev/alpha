@@ -17,11 +17,8 @@ from ..models.domain import (
     FieldTestResult,
     SettingsVariant,
 )
-from ..models.runtime import (
-    SemaphoreLike,
-    SimulationStageArgs,
-    TemplateField,
-)
+from ..models.domain import TemplateField
+from ..models.runtime_protocols import SemaphoreLike, SimulationStageArgs
 from ..utils.helpers import first_non_empty
 from .simulation_parsing import (
     extract_alpha_id,

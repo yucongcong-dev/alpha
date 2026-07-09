@@ -21,7 +21,7 @@ from ..config.getters import get_backfill_window
 from ..config.models import DatasetExpressionPolicy
 from ..generators.field_transforms import build_field_view
 from ..models.domain import FieldView, TemplateCandidate, TemplateField, TemplateLibraryItem
-from ..models.runtime import TemplateFeedback
+from ..models.runtime_protocols import TemplateFeedback
 from ..runtime import TemplateBuildContext
 from ..policy.expression import get_dataset_expression_policy, resolve_feedback_stage
 from ..policy.template_blacklist import load_default_avoid_rules

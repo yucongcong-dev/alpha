@@ -3,13 +3,9 @@
 from __future__ import annotations
 
 from ..models.io_types import RunPaths
-from ..models.runtime import (
-    ResultWriteArgs,
-    ResultWriteOptions,
-    TemplateBuildArgs,
-    TemplateBuildOptions,
-)
 from ..models.domain import TemplateField
+from ..models.runtime_options import ResultWriteOptions, TemplateBuildOptions
+from ..models.runtime_protocols import ResultWriteArgs, TemplateBuildArgs
 from ..runtime import InitializedRunContext, TemplateBuildContext
 
 

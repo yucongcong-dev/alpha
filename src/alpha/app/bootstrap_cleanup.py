@@ -6,7 +6,7 @@ from pathlib import Path
 import shutil
 
 from ..cli.constants import PROJECT_ROOT
-from ..models.runtime import CleanRuntimeArgs
+from ..models.runtime_protocols import CleanRuntimeArgs
 
 
 def clean_runtime_artifacts(

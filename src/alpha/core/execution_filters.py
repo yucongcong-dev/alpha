@@ -25,9 +25,7 @@ from ..config.constants import (
 from ..config.models import DatasetExpressionPolicy
 from ..models.domain import FieldTestResult, TemplateCandidate
 from ..models.io_types import RunFilters
-from ..models.runtime import (
-    TemplateFeedback,
-)
+from ..models.runtime_protocols import TemplateFeedback
 from ..runtime import TemplateBuildContext
 
 logger = logging.getLogger(__name__)

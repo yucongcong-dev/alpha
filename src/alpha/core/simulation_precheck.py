@@ -25,7 +25,7 @@ from ..config.getters import (
     get_submit_min_sharpe,
     get_submit_min_turnover,
 )
-from ..models.runtime import SimulationStageArgs
+from ..models.runtime_protocols import SimulationStageArgs
 
 _RESULT_FAIL: str = "FAIL"
 _KEY_CONCENTRATED_WEIGHT: str = "concentratedWeight"

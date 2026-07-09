@@ -14,7 +14,7 @@ import threading
 
 from ..config.constants import DEFAULT_RATE_LIMIT_MAX_RETRIES
 from ..exceptions import BrainAPIError
-from ..models.runtime import ApiClientOptions
+from ..models.runtime_options import ApiClientOptions
 from .alphas import BrainAlphasMixin
 from .fields import BrainFieldsMixin
 from .http_backend import create_http_backend

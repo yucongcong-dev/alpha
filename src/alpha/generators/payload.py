@@ -15,7 +15,7 @@ from ..config.getters import (
     get_simulation_default_start_date,
 )
 from ..config.yaml import get_yaml_config
-from ..models.runtime import SimulationSettingsArgs
+from ..models.runtime_protocols import SimulationSettingsArgs
 from .fingerprint import stable_fingerprint
 
 WEBSITE_DEFAULTS: dict[str, Any] = {

@@ -9,10 +9,7 @@ from typing import cast
 from ..core.executor import print_dry_run_plan
 from ..models.domain import TemplateField
 from ..models.io_types import RunPaths
-from ..models.runtime import (
-    RunLoopArgs,
-    TemplateBuildArgs,
-)
+from ..models.runtime_protocols import RunLoopArgs, TemplateBuildArgs
 from ..runtime import ExecutionState, InitializedRunContext, RuntimeConcurrencyState
 from .loop_future_support import drain_remaining_futures as drain_remaining_futures
 from .run_loop_feedback import refresh_runtime_feedback as refresh_runtime_feedback
