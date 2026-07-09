@@ -106,6 +106,7 @@ class SettingsVariant:
     delay: int | None = None
     start_date: str | None = None
     end_date: str | None = None
+    visualization: bool | None = None
 
     def get(self, key: str, default: Any = None) -> Any:
         """兼容旧的 dict 风格读取。"""

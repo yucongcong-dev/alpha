@@ -40,15 +40,16 @@ def parse_settings_variant(data: dict[str, Any]) -> "SettingsVariant":
         neutralization=data.get("neutralization"),
         truncation=data.get("truncation"),
         pasteurization=data.get("pasteurization"),
-        unit_handling=data.get("unit_handling"),
-        nan_handling=data.get("nan_handling"),
+        unit_handling=data.get("unit_handling", data.get("unitHandling")),
+        nan_handling=data.get("nan_handling", data.get("nanHandling")),
         language=data.get("language"),
-        instrument_type=data.get("instrument_type"),
+        instrument_type=data.get("instrument_type", data.get("instrumentType")),
         region=data.get("region"),
         universe=data.get("universe"),
         delay=data.get("delay"),
-        start_date=data.get("start_date"),
-        end_date=data.get("end_date"),
+        start_date=data.get("start_date", data.get("startDate")),
+        end_date=data.get("end_date", data.get("endDate")),
+        visualization=data.get("visualization"),
     )
 
 

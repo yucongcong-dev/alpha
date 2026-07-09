@@ -24,7 +24,19 @@ def serialize_template_library_item(item: "TemplateLibraryItem") -> dict[str, ob
 
 def serialize_settings_variant(settings: "SettingsVariant") -> dict[str, object]:
     """Serialize a settings variant, omitting unset values."""
-    return {key: value for key, value in settings.__dict__.items() if value is not None}
+    serialized: dict[str, object] = {}
+    key_map = {
+        "instrument_type": "instrumentType",
+        "unit_handling": "unitHandling",
+        "nan_handling": "nanHandling",
+        "start_date": "startDate",
+        "end_date": "endDate",
+    }
+    for key, value in settings.__dict__.items():
+        if value is None:
+            continue
+        serialized[key_map.get(key, key)] = value
+    return serialized
 
 
 def serialize_template_field(field: "TemplateField") -> dict[str, object]:

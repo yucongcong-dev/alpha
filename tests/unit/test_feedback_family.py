@@ -355,6 +355,9 @@ def test_build_setting_variants_expands_candidate_centric_refine_settings() -> N
     assert any(variant.get("truncation") == 0.05 for variant in variants)
     assert any(variant.get("neutralization") == "INDUSTRY" for variant in variants)
     assert any(variant.get("neutralization") == "MARKET" for variant in variants)
+    assert all("instrumentType" in variant.to_dict() for variant in variants)
+    assert all("unitHandling" in variant.to_dict() for variant in variants)
+    assert all("nanHandling" in variant.to_dict() for variant in variants)
 
 
 def test_build_refine_templates_generates_localized_mutations_from_nearpass_candidate() -> None:
