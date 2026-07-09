@@ -49,12 +49,15 @@
 | Alpha 是什么？ | [01_beginner_guide.md](01_beginner_guide.md) |
 | Delay / Decay / Neutralization 是什么？ | [01_beginner_guide.md](01_beginner_guide.md) |
 | 为什么不能只看 Returns？ | [01_beginner_guide.md](01_beginner_guide.md) |
+| `Simulate / Check submission / Submit / Semi-OS / OS` 这条链路怎么理解？ | [01_beginner_guide.md](01_beginner_guide.md) |
 | `LOW_SHARPE` / `LOW_FITNESS` 怎么拆？ | [02_optimization_guide.md](02_optimization_guide.md) |
 | 什么时候该调参数，什么时候该换结构？ | [02_optimization_guide.md](02_optimization_guide.md) |
 | `Test Period` 到底在做什么？ | [04_platform_terms_and_states.md](04_platform_terms_and_states.md) |
 | `IS / OS / OSTEST-PENDING / N/A` 是什么意思？ | [04_platform_terms_and_states.md](04_platform_terms_and_states.md) |
+| `Semi-OS` 是什么？ | [04_platform_terms_and_states.md](04_platform_terms_and_states.md) |
 | `Meta Score / Universe / Weight / Booksize / NaN / Pasteurize` 是什么？ | [04_platform_terms_and_states.md](04_platform_terms_and_states.md) |
 | `Coverage / Alpha list / Correlation` 工具怎么看？ | [04_platform_terms_and_states.md](04_platform_terms_and_states.md) |
+| `LOW_SUB_UNIVERSE_SHARPE` / `SELF_CORRELATION` / `PROD_CORRELATION` 怎么理解？ | [04_platform_terms_and_states.md](04_platform_terms_and_states.md) |
 | 官网方法论怎么落到这个仓库？ | [03_repo_practice_guide.md](03_repo_practice_guide.md) |
 | 当前某个数据集该怎么跑？ | `templates/<dataset_id>/README.md` |
 
