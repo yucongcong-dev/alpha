@@ -1,9 +1,9 @@
 {
-  "_comment": "fundamental6 独立模板库 — 时序窗口使用官方推荐值(5/20/60/120/252)、去模板内中性化(依赖settings)、删hump/无效算子、增预处理变体、增ratio/pair、bucket加densify、事件字段自身变化触发、增vec_sum",
+  "_comment": "fundamental6 独立模板库 — 默认 broad 主干已收窄为少量慢频代表；时序窗口使用官方推荐值(5/20/60/120/252)、去模板内中性化(依赖settings)、删hump/无效算子、增预处理变体、增ratio/pair、bucket加densify、事件字段自身变化触发、增vec_sum",
   "_comment_placeholders": "{field}=字段名, {field_preprocessed}=winsorize(ts_backfill({field}, {backfill_window}), std=4), {field_longfill}=winsorize(ts_backfill({field}, 252), std=3), {field_rawfill}=ts_backfill({field}, {backfill_window}), {backfill_window}=settings.yaml expression.backfill_window",
   "default": [
     {
-      "_comment": "=== 默认库：保留少量结构代表，而不是堆叠近邻窗口 ===",
+      "_comment": "=== 默认库：保留 5 个 broad 种子，只覆盖最核心的慢频结构代表 ===",
       "name": "3layer_zscore_decay",
       "expression": "ts_decay_linear(ts_zscore(ts_backfill({field}, {backfill_window}), 60), 20)",
       "priority": 995,
@@ -32,15 +32,6 @@
       "activation_scope": "broad"
     },
     {
-      "name": "decay_120",
-      "expression": "rank(ts_decay_linear(ts_backfill({field}, {backfill_window}), 120))",
-      "priority": 988,
-      "family": "decay_level",
-      "layer": "time_series",
-      "role": "default_seed",
-      "activation_scope": "broad"
-    },
-    {
       "_comment": "=== 关系型 / grouped 代表模板 ===",
       "name": "ratio_cap_zscore_60",
       "expression": "rank(ts_zscore({field_preprocessed} / ts_backfill(cap, {backfill_window}), 60))",
@@ -55,15 +46,6 @@
       "expression": "group_rank(ts_zscore({field_preprocessed} / ts_backfill(cap, {backfill_window}), 60), densify(bucket(rank(cap), range='0.1, 1, 0.1')))",
       "priority": 984,
       "family": "bucket_ratio",
-      "layer": "account",
-      "role": "default_seed",
-      "activation_scope": "broad"
-    },
-    {
-      "name": "bucket_liquidity_ts_rank_120",
-      "expression": "group_rank(ts_rank({field_preprocessed}, 120), densify(bucket(rank(close * volume), range='0.1, 1, 0.1')))",
-      "priority": 982,
-      "family": "bucket_group_rank",
       "layer": "account",
       "role": "default_seed",
       "activation_scope": "broad"
@@ -83,7 +65,7 @@
       "activation_scope": "broad"
     },
     {
-      "_comment": "=== VECTOR: vec_avg + vec_sum 双通道 ===",
+      "_comment": "=== VECTOR: broad 只保留双通道 rank 主干，zscore 与更长窗口下沉到 refine ===",
       "name": "vec_avg_ts_rank_60",
       "expression": "rank(ts_rank({field_preprocessed}, 60))",
       "priority": 989,
@@ -100,38 +82,11 @@
       "layer": "vector",
       "role": "default_seed",
       "activation_scope": "broad"
-    },
-    {
-      "name": "vec_avg_ts_zscore_60",
-      "expression": "rank(ts_zscore({field_preprocessed}, 60))",
-      "priority": 985,
-      "family": "zscore_time",
-      "layer": "vector",
-      "role": "default_seed",
-      "activation_scope": "broad"
-    },
-    {
-      "name": "vec_sum_ts_zscore_60",
-      "expression": "rank(ts_zscore(winsorize(ts_backfill(vec_sum({field}), {backfill_window}), std=4), 60))",
-      "priority": 983,
-      "family": "zscore_time",
-      "layer": "vector",
-      "role": "default_seed",
-      "activation_scope": "broad"
-    },
-    {
-      "name": "vec_avg_ts_rank_252",
-      "expression": "rank(ts_rank({field_preprocessed}, 252))",
-      "priority": 981,
-      "family": "ts_rank",
-      "layer": "vector",
-      "role": "default_seed",
-      "activation_scope": "broad"
     }
   ],
   "GROUP": [
     {
-      "_comment": "=== GROUP: 去模板内中性化, 增 vec_sum ===",
+      "_comment": "=== GROUP: broad 只保留 composite + 双通道 rank 主干 ===",
       "name": "vec_avg_3layer_zscore_decay",
       "expression": "ts_decay_linear(ts_zscore(vec_avg({field}), 60), 20)",
       "priority": 1000,
@@ -157,26 +112,12 @@
       "expression": "rank(ts_rank(vec_sum({field}), 60))",
       "priority": 996,
       "family": "ts_rank",
-      "layer": "group"
-    },
-    {
-      "name": "vec_avg_ts_rank_252",
-      "expression": "rank(ts_rank(vec_avg({field}), 252))",
-      "priority": 994,
-      "family": "ts_rank",
-      "layer": "group"
-    },
-    {
-      "name": "vec_avg_ts_zscore_60",
-      "expression": "rank(ts_zscore(vec_avg({field}), 60))",
-      "priority": 991,
-      "family": "zscore_time",
       "layer": "group"
     }
   ],
   "SET": [
     {
-      "_comment": "=== SET: 同 GROUP, 稍低优先级 ===",
+      "_comment": "=== SET: broad 只保留 composite + 双通道 rank 主干 ===",
       "name": "vec_avg_3layer_zscore_decay",
       "expression": "ts_decay_linear(ts_zscore(vec_avg({field}), 60), 20)",
       "priority": 1000,
@@ -202,20 +143,6 @@
       "expression": "rank(ts_rank(vec_sum({field}), 60))",
       "priority": 996,
       "family": "ts_rank",
-      "layer": "set"
-    },
-    {
-      "name": "vec_avg_ts_rank_252",
-      "expression": "rank(ts_rank(vec_avg({field}), 252))",
-      "priority": 994,
-      "family": "ts_rank",
-      "layer": "set"
-    },
-    {
-      "name": "vec_avg_ts_zscore_60",
-      "expression": "rank(ts_zscore(vec_avg({field}), 60))",
-      "priority": 991,
-      "family": "zscore_time",
       "layer": "set"
     }
   ],

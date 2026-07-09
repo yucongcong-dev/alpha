@@ -30,6 +30,15 @@
       "activation_scope": "refine"
     },
     {
+      "name": "decay_120",
+      "expression": "rank(ts_decay_linear(ts_backfill({field}, {backfill_window}), 120))",
+      "priority": 961,
+      "family": "decay_level",
+      "layer": "time_series",
+      "role": "refine_neighbor",
+      "activation_scope": "refine"
+    },
+    {
       "name": "decay_252",
       "expression": "rank(ts_decay_linear(ts_backfill({field}, {backfill_window}), 252))",
       "priority": 960,
@@ -66,6 +75,15 @@
       "activation_scope": "refine"
     },
     {
+      "name": "bucket_liquidity_ts_rank_120",
+      "expression": "group_rank(ts_rank({field_preprocessed}, 120), densify(bucket(rank(close * volume), range='0.1, 1, 0.1')))",
+      "priority": 953,
+      "family": "bucket_group_rank",
+      "layer": "account",
+      "role": "refine_neighbor",
+      "activation_scope": "refine"
+    },
+    {
       "name": "bucket_liquidity_ts_rank_60",
       "expression": "group_rank(ts_rank({field_preprocessed}, 60), densify(bucket(rank(close * volume), range='0.1, 1, 0.1')))",
       "priority": 952,
@@ -93,6 +111,75 @@
       "layer": "time_series",
       "role": "diagnostic_probe",
       "activation_scope": "diagnostic"
+    }
+  ],
+  "VECTOR": [
+    {
+      "name": "vec_avg_ts_zscore_60",
+      "expression": "rank(ts_zscore({field_preprocessed}, 60))",
+      "priority": 985,
+      "family": "zscore_time",
+      "layer": "vector",
+      "role": "refine_neighbor",
+      "activation_scope": "refine"
+    },
+    {
+      "name": "vec_sum_ts_zscore_60",
+      "expression": "rank(ts_zscore(winsorize(ts_backfill(vec_sum({field}), {backfill_window}), std=4), 60))",
+      "priority": 983,
+      "family": "zscore_time",
+      "layer": "vector",
+      "role": "refine_neighbor",
+      "activation_scope": "refine"
+    },
+    {
+      "name": "vec_avg_ts_rank_252",
+      "expression": "rank(ts_rank({field_preprocessed}, 252))",
+      "priority": 981,
+      "family": "ts_rank",
+      "layer": "vector",
+      "role": "refine_neighbor",
+      "activation_scope": "refine"
+    }
+  ],
+  "GROUP": [
+    {
+      "name": "vec_avg_ts_rank_252",
+      "expression": "rank(ts_rank(vec_avg({field}), 252))",
+      "priority": 994,
+      "family": "ts_rank",
+      "layer": "group",
+      "role": "refine_neighbor",
+      "activation_scope": "refine"
+    },
+    {
+      "name": "vec_avg_ts_zscore_60",
+      "expression": "rank(ts_zscore(vec_avg({field}), 60))",
+      "priority": 991,
+      "family": "zscore_time",
+      "layer": "group",
+      "role": "refine_neighbor",
+      "activation_scope": "refine"
+    }
+  ],
+  "SET": [
+    {
+      "name": "vec_avg_ts_rank_252",
+      "expression": "rank(ts_rank(vec_avg({field}), 252))",
+      "priority": 994,
+      "family": "ts_rank",
+      "layer": "set",
+      "role": "refine_neighbor",
+      "activation_scope": "refine"
+    },
+    {
+      "name": "vec_avg_ts_zscore_60",
+      "expression": "rank(ts_zscore(vec_avg({field}), 60))",
+      "priority": 991,
+      "family": "zscore_time",
+      "layer": "set",
+      "role": "refine_neighbor",
+      "activation_scope": "refine"
     }
   ]
 }

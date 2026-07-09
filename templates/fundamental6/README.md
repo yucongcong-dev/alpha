@@ -45,10 +45,12 @@ Local run evidence:
 ## Default Library Boundary
 
 The default library should now be read as the narrow production queue for broad exploration:
-- keep only a handful of core slow-frequency templates in `default`
+- keep only 5 core slow-frequency seeds in `default`
 - treat vector/event-conditioned families as specialty lanes rather than generic broad-search seeds
+- for `VECTOR / GROUP / SET`, keep only the smallest representative spine in broad; move `zscore` alternates and `252` neighbors to refine
 - keep cross-field ratio/pair exploration concentrated in the dedicated account/matrix lane instead of bloating scalar `default`
 - treat extra long-window neighbors, rawfill/longfill alternates, and legacy cross-sectional wrappers as refine candidates unless they prove repeatedly useful
+- treat standalone decay neighbors and liquidity-bucket variants as refine candidates instead of broad-search defaults
 - the current recovery pack for these demoted defaults is `templates/fundamental6/refine/default_neighbors.json`
 
 Refine pack convention:
