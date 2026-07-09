@@ -2,6 +2,18 @@
 
 通用的 WorldQuant Brain 数据集 Alpha 模拟/检查/提交运行器。
 
+## 学习入口
+
+- 学习地图总导航：[docs/worldquant_brain_knowledge.md](docs/worldquant_brain_knowledge.md)
+- 入门篇：[docs/01_beginner_guide.md](docs/01_beginner_guide.md)
+- 优化篇：[docs/02_optimization_guide.md](docs/02_optimization_guide.md)
+- 仓库实战篇：[docs/03_repo_practice_guide.md](docs/03_repo_practice_guide.md)
+- 建议先读这几份主线文档，再回来看本 README 的工程结构和运行说明
+- 如果要深入某个数据集，再继续看：
+  - [templates/model51/README.md](templates/model51/README.md)
+  - [templates/model16/README.md](templates/model16/README.md)
+  - [templates/fundamental6/README.md](templates/fundamental6/README.md)
+
 ## Python 版本
 
 - 最低要求：`Python 3.10`
