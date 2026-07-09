@@ -17,8 +17,8 @@ from pathlib import Path
 from typing import Any
 
 from ..config.constants import FEEDBACK_STAGE_GENERATE, FEEDBACK_STAGE_RESIMULATE
-from ..config.getters import get_backfill_window
 from ..config.models import DatasetExpressionPolicy
+from ..config.runtime_values import get_runtime_config
 from ..generators.field_transforms import build_field_view
 from ..models.domain import FieldView, TemplateCandidate, TemplateField, TemplateLibraryItem
 from ..models.runtime_protocols import TemplateFeedback
@@ -188,6 +188,7 @@ def build_expression_candidates(
     feedback_stage = resolve_feedback_stage(field_feedback, policy.feedback_loop_policy)
     field_view = build_field_view(field, policy)
     is_event_field = _is_event_field(field_name, policy)
+    backfill_window = get_runtime_config().expression.backfill_window
 
     raw_templates = _select_template_items(build_ctx.template_library, field_type, policy.dataset_id)
     templates = [
@@ -199,7 +200,7 @@ def build_expression_candidates(
                 field_groupfill=field_view.groupfill_expression,
                 ratio_numerator=field_view.ratio_numerator_expression,
                 ratio_denominator=field_view.ratio_denominator_expression,
-                backfill_window=get_backfill_window(),
+                backfill_window=backfill_window,
             ),
             item.priority + _policy_template_priority_adjustment(item.name, policy),
             metadata=_runtime_template_metadata(item),

@@ -13,12 +13,7 @@ from ..config.constants import (
     AUTH_URL,
     DEFAULT_HEADERS,
 )
-from ..config.getters import (
-    get_http_request_timeout,
-    get_rate_limit_default_wait,
-    get_server_error_backoff_max,
-    get_server_error_backoff_step,
-)
+from ..config.runtime_values import get_runtime_config
 from ..exceptions import BrainAPIError, BrainRateLimitError
 from .api_types import ApiParams
 from .http_backend import HttpBackend
@@ -66,6 +61,7 @@ class BrainSessionMixin:
     ) -> tuple[int, dict[str, str], bytes]:
         """发送带共享头、退避与重试策略的 HTTP 请求。"""
         merged_headers = dict(DEFAULT_HEADERS)
+        http_config = get_runtime_config().http
         if headers:
             merged_headers.update(headers)
         retries = self.rate_limit_max_retries if retries is None else max(retries, 1)
@@ -86,7 +82,7 @@ class BrainSessionMixin:
                     response_headers.get("Retry-After"),
                 )
                 wait_seconds(
-                    doubled_retry_after(response_headers, default=get_rate_limit_default_wait()),
+                    doubled_retry_after(response_headers, default=http_config.rate_limit_default_wait),
                     "rate limit",
                 )
                 continue
@@ -96,7 +92,7 @@ class BrainSessionMixin:
                 continue
             if status in (500, 502, 503, 504):
                 wait_seconds(
-                    min(get_server_error_backoff_max(), attempt * get_server_error_backoff_step()),
+                    min(http_config.server_error_backoff_max, attempt * http_config.server_error_backoff_step),
                     f"server error {status}",
                 )
                 continue
@@ -108,7 +104,7 @@ class BrainSessionMixin:
             raise BrainAPIError(f"No response from {method} {url}")
         status, response_headers, content = last_response
         if status == 429:
-            retry_after = doubled_retry_after(response_headers, default=get_rate_limit_default_wait())
+            retry_after = doubled_retry_after(response_headers, default=http_config.rate_limit_default_wait)
             detail = safe_json_bytes(content)
             raise BrainRateLimitError(
                 f"{method} {url} rate limited after {retries} attempts, "
@@ -157,5 +153,5 @@ class BrainSessionMixin:
             url=url,
             headers=headers,
             data=request_data,
-            timeout=get_http_request_timeout(),
+            timeout=get_runtime_config().http.request_timeout,
         )

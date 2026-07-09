@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 import os
 
-from ...config import get_backfill_window
+from ...config.runtime_values import get_runtime_config
 from ...exceptions import BrainAPIError
 from ...models.domain import TemplateLibrary, TemplateLibraryItem
 from ...policy.expression import get_dataset_expression_policy
@@ -51,7 +51,7 @@ def resolve_placeholders(expression: str, backfill_window: int) -> str:
 def resolve_template_backfill_window(payload: dict[str, object], field_type: str) -> int:
     """Resolve backfill_window for a template group using dataset policy when present."""
     dataset_id = str(payload.get("_dataset_id", "")).strip()
-    fallback = get_backfill_window()
+    fallback = get_runtime_config().expression.backfill_window
     if not dataset_id:
         return fallback
 

@@ -6,7 +6,7 @@ from collections.abc import Callable
 import logging
 from typing import TYPE_CHECKING, TypeVar
 
-from ..config.getters import get_login_retry_wait, get_retry_operation_default_wait
+from ..config.runtime_values import get_runtime_config
 from ..exceptions import BrainAPIError, BrainQueueBusyError, BrainRateLimitError
 from .timing import wait_seconds
 
@@ -27,7 +27,7 @@ def retry_operation(
 ) -> _T:
     """以有限重试执行单个阶段，并特殊处理限流与排队拥塞。"""
     if retry_wait_seconds is None:
-        retry_wait_seconds = get_retry_operation_default_wait()
+        retry_wait_seconds = get_runtime_config().http.retry_operation_default_wait
     last_error: Exception | None = None
 
     for attempt in range(1, retries + 1):
@@ -86,8 +86,9 @@ def is_invalid_credentials_error(error: Exception) -> bool:
 def login_with_retry(client: BrainClient, retries: int) -> None:
     """通过统一的重试封装完成客户端登录。"""
     attempts = max(retries, 1)
+    login_retry_wait = get_runtime_config().http.login_retry_wait
     try:
-        retry_operation("login", attempts, client.login, retry_wait_seconds=get_login_retry_wait())
+        retry_operation("login", attempts, client.login, retry_wait_seconds=login_retry_wait)
     except BrainAPIError as exc:
         if is_invalid_credentials_error(exc):
             raise BrainAPIError(

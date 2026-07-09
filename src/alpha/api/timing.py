@@ -7,7 +7,7 @@ from __future__ import annotations
 import logging
 import time
 
-from ..config.getters import get_polling_retry_buffer
+from ..config.runtime_values import get_runtime_config
 
 logger = logging.getLogger(__name__)
 
@@ -45,5 +45,5 @@ def polling_retry_after(
 ) -> float:
     """按服务端 Retry-After 轮询异步任务，并添加小缓冲时间。"""
     if buffer_seconds is None:
-        buffer_seconds = get_polling_retry_buffer()
+        buffer_seconds = get_runtime_config().http.polling_retry_buffer
     return extract_retry_after(headers, default=default) + max(buffer_seconds, 0.0)

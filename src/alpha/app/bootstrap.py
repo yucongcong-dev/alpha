@@ -20,6 +20,7 @@ from ..api.client import BrainClient, WorkerClientFactory, login_with_retry
 from ..cli.filters import load_run_filters_extended, setup_runtime_logging
 from ..cli.run_config import build_run_config_snapshot
 from ..config.models import DatasetExpressionPolicy
+from ..config.runtime_values import get_runtime_config
 from ..generators.fields import DatasetFieldClient, fetch_fields_with_cache, load_fields_cache
 from ..generators.fingerprint import stable_fingerprint
 from ..generators.payload import build_settings_fingerprint
@@ -293,10 +294,8 @@ def create_and_login_client(
     email: str, password: str, args: ApiClientArgs
 ) -> tuple[BrainClient, WorkerClientFactory]:
     """创建 Brain API 客户端并完成登录，同时创建工作线程客户端工厂。"""
-    from ..config.getters import get_http_backend
-
     client_options = ApiClientOptions.from_args(args)
-    http_backend = get_http_backend()
+    http_backend = get_runtime_config().http.backend
     bootstrap_client = BrainClient(
         email,
         password,

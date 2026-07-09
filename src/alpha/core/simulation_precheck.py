@@ -18,13 +18,7 @@ from ..config.constants import (
     PRECHECK_FALLBACK_MIN_SHARPE,
     PRECHECK_FALLBACK_MIN_TURNOVER,
 )
-from ..config.getters import (
-    get_submit_max_turnover,
-    get_submit_max_weight,
-    get_submit_min_fitness,
-    get_submit_min_sharpe,
-    get_submit_min_turnover,
-)
+from ..config.runtime_values import get_runtime_config
 from ..models.runtime_protocols import SimulationStageArgs
 
 _RESULT_FAIL: str = "FAIL"
@@ -62,12 +56,13 @@ class PrecheckConfig:
 
 def build_default_submit_precheck_config() -> PrecheckConfig:
     """Load submit-grade precheck defaults from the current runtime config."""
+    quality = get_runtime_config().submit_quality
     return PrecheckConfig(
-        min_sharpe=get_submit_min_sharpe(),
-        min_fitness=get_submit_min_fitness(),
-        min_turnover=get_submit_min_turnover(),
-        max_turnover=get_submit_max_turnover(),
-        max_weight=get_submit_max_weight(),
+        min_sharpe=quality.min_sharpe,
+        min_fitness=quality.min_fitness,
+        min_turnover=quality.min_turnover,
+        max_turnover=quality.max_turnover,
+        max_weight=quality.max_weight,
     )
 
 

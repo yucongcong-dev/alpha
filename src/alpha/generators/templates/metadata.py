@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from ...config import get_backfill_window
+from ...config.runtime_values import get_runtime_config
 from ...models.domain import FieldView, TemplateLibrary, TemplateLibraryItem
 
 TemplateMetadataMap = dict[tuple[str, str], dict[str, Any]]
@@ -67,6 +67,7 @@ def build_template_metadata_index(
     """为当前字段构建已渲染模板的元数据索引。"""
     metadata_by_key: TemplateMetadataMap = {}
     raw_templates = _select_template_items(template_library, field_type, dataset_id)
+    backfill_window = get_runtime_config().expression.backfill_window
     for item in raw_templates:
         rendered_expression = item.expression.format(
             field=field_view.raw_expression,
@@ -74,7 +75,7 @@ def build_template_metadata_index(
             field_groupfill=field_view.groupfill_expression,
             ratio_numerator=field_view.ratio_numerator_expression,
             ratio_denominator=field_view.ratio_denominator_expression,
-            backfill_window=get_backfill_window(),
+            backfill_window=backfill_window,
         )
         metadata = _runtime_template_metadata(item)
         if metadata:

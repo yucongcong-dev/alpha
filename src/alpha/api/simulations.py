@@ -13,10 +13,7 @@ from ..config.constants import (
     SIM_TERMINAL_STATES,
     SIMULATIONS_URL,
 )
-from ..config.getters import (
-    get_polling_default_wait,
-    get_polling_no_retry_after_wait,
-)
+from ..config.runtime_values import get_runtime_config
 from ..error_handling import ErrorCategory, ErrorSeverity, error_handler
 from ..exceptions import BrainAPIError, BrainQueueBusyError
 from ..utils.helpers import first_non_empty
@@ -90,6 +87,7 @@ class BrainSimulationsMixin:
     ) -> SimulationPayload:
         """轮询单个模拟任务，直到完成或超出排队/等待预算。"""
         url = location if location.startswith("http") else f"{API_BASE}{location}"
+        http_config = get_runtime_config().http
         poll_count = 0
         pending_cycles = 0
         started_at = time.monotonic()
@@ -134,13 +132,13 @@ class BrainSimulationsMixin:
                 )
                 if response_headers.get("Retry-After"):
                     wait_seconds(
-                        polling_retry_after(response_headers, default=get_polling_default_wait()),
+                        polling_retry_after(response_headers, default=http_config.polling_default_wait),
                         "simulation pending",
                         verbose=False,
                     )
                 else:
                     wait_seconds(
-                        get_polling_no_retry_after_wait(),
+                        http_config.polling_no_retry_after_wait,
                         f"simulation {status.lower()}",
                         verbose=False,
                     )
@@ -179,7 +177,7 @@ class BrainSimulationsMixin:
                     response_headers.get("Retry-After"),
                 )
                 wait_seconds(
-                    polling_retry_after(response_headers, default=get_polling_default_wait()),
+                    polling_retry_after(response_headers, default=http_config.polling_default_wait),
                     "simulation pending",
                     verbose=False,
                 )

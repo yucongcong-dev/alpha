@@ -10,10 +10,7 @@ from ..config.constants import (
     MONTHS_PER_YEAR,
     NEUTRALIZATION_SUBINDUSTRY,
 )
-from ..config.getters import (
-    get_simulation_default_end_date,
-    get_simulation_default_start_date,
-)
+from ..config.runtime_values import get_runtime_config
 from ..config.yaml import get_yaml_config
 from ..models.runtime_protocols import SimulationSettingsArgs
 from .fingerprint import stable_fingerprint
@@ -127,9 +124,10 @@ def resolve_test_period_dates(
         if end_date is None:
             end_date = yaml_sim.get("endDate")
 
+    defaults = get_runtime_config().simulation
     return (
-        start_date or get_simulation_default_start_date(),
-        end_date or get_simulation_default_end_date(),
+        start_date or defaults.start_date,
+        end_date or defaults.end_date,
     )
 
 

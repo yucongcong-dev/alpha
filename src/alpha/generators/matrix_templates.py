@@ -26,8 +26,8 @@ from ..config.constants import (
     TEMPLATE_STAGE_FIRST_ORDER,
     TEMPLATE_STAGE_GROUP_SECOND_ORDER,
 )
-from ..config.getters import get_backfill_window
 from ..config.models import DatasetExpressionPolicy
+from ..config.runtime_values import get_runtime_config
 from ..models.domain import FieldView, TemplateCandidate, TemplateField
 from .ratio_templates import extend_ratio_templates
 from .templates.candidates import (
@@ -46,7 +46,8 @@ def build_matrix_templates(
     """为 MATRIX 类型字段构建多样化和 legacy 模板候选。"""
     field_name = field_view.field_name
     preprocessed_expression = field_view.preprocessed_expression
-    backfill_window = expression_policy.matrix_field_transform.backfill_window or get_backfill_window()
+    default_backfill_window = get_runtime_config().expression.backfill_window
+    backfill_window = expression_policy.matrix_field_transform.backfill_window or default_backfill_window
 
     diversified: list[TemplateCandidate] = []
     for delta, std, pri in expression_policy.matrix_delta_over_std_windows:

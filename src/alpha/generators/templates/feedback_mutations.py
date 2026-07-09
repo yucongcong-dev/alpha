@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from ...config import (
+from ...config.constants import (
     CHECK_CONCENTRATED_WEIGHT,
     CHECK_LOW_SUB_UNIVERSE_SHARPE,
     CHECK_LOW_TURNOVER,
@@ -13,9 +13,9 @@ from ...config import (
     MUTATION_ACCOUNT_EXTEND_THRESHOLD,
     MUTATION_DOMINANT_CHECK_LIMIT,
     STATS_DEFAULT_SCORE,
-    DatasetExpressionPolicy,
-    get_backfill_window,
 )
+from ...config.models import DatasetExpressionPolicy
+from ...config.runtime_values import get_runtime_config
 from ...models.domain import FieldFeedbackSummary, TemplateCandidate
 from .feedback_best_expression import build_best_expression_mutations
 from .feedback_mutation_sets import (
@@ -38,7 +38,7 @@ def build_feedback_mutations(
     feedback_stage: str = FEEDBACK_STAGE_GENERATE,
 ) -> list[TemplateCandidate]:
     """Build mutations from field feedback and best-known expressions."""
-    bw = get_backfill_window()
+    bw = get_runtime_config().expression.backfill_window
     base_mutations = build_base_feedback_mutations(
         field_name,
         bw,
