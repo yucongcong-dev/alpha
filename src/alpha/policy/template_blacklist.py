@@ -13,8 +13,12 @@ import os
 import re
 from typing import Any
 
-from ..io.common import sanitize_dataset_id_for_filename
 from .blacklist_context import clear_active_blacklists_dir, get_active_blacklists_dir
+from .blacklist_store import (
+    invalidate_blacklist_path_cache,
+    read_blacklist_payload,
+    resolve_blacklist_path,
+)
 from .types import (
     BlacklistCacheEntry,
     BlacklistMatcherEntry,
@@ -48,8 +52,10 @@ def invalidate_blacklist_cache(dataset_id: str = "") -> None:
     """使黑名单缓存失效，便于同进程内感知文件更新。"""
     if dataset_id:
         _BLACKLIST_CACHE.pop(dataset_id, None)
+        invalidate_blacklist_path_cache(dataset_id)
         return
     _BLACKLIST_CACHE.clear()
+    invalidate_blacklist_path_cache()
     clear_active_blacklists_dir()
 
 
@@ -133,9 +139,7 @@ def _load_blacklist(dataset_id: str) -> None:
     entries: list[BlacklistMatcherEntry] = []
     dataset_signature: tuple[int, int] | None = None
 
-    blacklist_root = get_active_blacklists_dir()
-    dataset_key = sanitize_dataset_id_for_filename(dataset_id)
-    blacklist_path = os.path.join(str(blacklist_root), dataset_key, "blacklist.json")
+    blacklist_path = resolve_blacklist_path(dataset_id)
     if os.path.isfile(blacklist_path):
         dataset_signature = _file_signature(blacklist_path)
     else:
@@ -154,27 +158,23 @@ def _load_blacklist(dataset_id: str) -> None:
         return
     if blacklist_path:
         try:
-            with open(blacklist_path, encoding="utf-8") as fh:
-                ds_raw = json.load(fh)
-            if isinstance(ds_raw, dict):
-                for item in ds_raw.get(LEARNED_BLACKLIST_KEY, []):
-                    if isinstance(item, dict) and item.get("name"):
-                        names.add(item["name"])
-                        entries.append(
-                            {
-                                "name": str(item.get("name", "")).strip(),
-                                "template_stage": str(item.get("template_stage", "")).strip().lower(),
-                                "template_family": str(item.get("template_family", "")).strip().lower(),
-                            }
-                        )
-                for rule in ds_raw.get(PATTERN_RULES_KEY, []):
-                    if isinstance(rule, dict):
-                        normalized_rule = _normalize_pattern_rule(rule)
-                        if normalized_rule is not None:
-                            pattern_rules.append(normalized_rule)
-            else:
-                logger.warning("[blacklist] invalid dataset blacklist payload in %s; expected object", blacklist_path)
-        except (json.JSONDecodeError, OSError):
+            ds_raw = read_blacklist_payload(dataset_id)
+            for item in ds_raw.get(LEARNED_BLACKLIST_KEY, []):
+                if isinstance(item, dict) and item.get("name"):
+                    names.add(item["name"])
+                    entries.append(
+                        {
+                            "name": str(item.get("name", "")).strip(),
+                            "template_stage": str(item.get("template_stage", "")).strip().lower(),
+                            "template_family": str(item.get("template_family", "")).strip().lower(),
+                        }
+                    )
+            for rule in ds_raw.get(PATTERN_RULES_KEY, []):
+                if isinstance(rule, dict):
+                    normalized_rule = _normalize_pattern_rule(rule)
+                    if normalized_rule is not None:
+                        pattern_rules.append(normalized_rule)
+        except OSError:
             logger.warning("[blacklist] failed to load dataset blacklist from %s; ignoring file", blacklist_path)
 
     for rule in default_rules:

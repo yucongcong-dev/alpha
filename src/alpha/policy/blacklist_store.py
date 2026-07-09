@@ -16,7 +16,6 @@ from ..io.common import (
     sanitize_dataset_id_for_filename,
 )
 from .blacklist_context import get_active_blacklists_dir, set_active_blacklists_dir
-from .template_blacklist import invalidate_blacklist_cache
 from .types import (
     BlacklistEntryKey,
     BlacklistPayload,
@@ -38,6 +37,11 @@ def _resolve_blacklist_root(data_dir: str = "") -> str:
     if os.path.basename(candidate.rstrip(os.sep)) == "blacklists":
         return candidate
     return os.path.join(candidate, "blacklists")
+
+
+def activate_blacklist_root(data_dir: str = "") -> str:
+    """Explicitly bind the process-local blacklist root for subsequent matching."""
+    return set_active_blacklists_dir(_resolve_blacklist_root(data_dir))
 
 
 def resolve_blacklist_path(dataset_id: str, *, data_dir: str = "") -> str:
@@ -108,8 +112,6 @@ def normalize_blacklist_payload(
 
 
 def read_blacklist_payload(dataset_id: str, *, data_dir: str = "") -> BlacklistPayload:
-    if data_dir:
-        set_active_blacklists_dir(_resolve_blacklist_root(data_dir))
     blacklist_path = resolve_blacklist_path(dataset_id, data_dir=data_dir)
     try:
         if os.path.isfile(blacklist_path):
@@ -133,12 +135,12 @@ def write_blacklist_payload(
     data_dir: str = "",
 ) -> str:
     blacklist_path = resolve_blacklist_path(dataset_id, data_dir=data_dir)
-    set_active_blacklists_dir(os.path.dirname(os.path.dirname(blacklist_path)))
     atomic_write_json(blacklist_path, normalize_blacklist_payload(payload, dataset_id))
     return blacklist_path
 
 
 def invalidate_blacklist_runtime_cache(dataset_id: str) -> None:
+    from .template_blacklist import invalidate_blacklist_cache
 
     invalidate_blacklist_cache(dataset_id)
 
@@ -192,8 +194,6 @@ def summarize_blacklist_payload(payload: BlacklistPayload) -> tuple[int, int]:
 
 
 def ensure_template_blacklist_file(dataset_id: str, *, data_dir: str = "") -> str:
-    if data_dir:
-        set_active_blacklists_dir(_resolve_blacklist_root(data_dir))
     blacklist_path = resolve_blacklist_path(dataset_id, data_dir=data_dir)
     if os.path.isfile(blacklist_path):
         return blacklist_path

@@ -17,6 +17,7 @@ from ..config.models import DatasetExpressionPolicy
 from ..models.domain import FieldTestResult
 from ..models.result_predicates import is_informative_result
 from .blacklist_store import (
+    activate_blacklist_root,
     invalidate_blacklist_runtime_cache,
     read_blacklist_payload,
     write_blacklist_payload,
@@ -205,6 +206,8 @@ def auto_update_blacklist(
         return
     from datetime import datetime
 
+    if data_dir:
+        activate_blacklist_root(data_dir)
     policy = expression_policy or get_dataset_expression_policy(dataset_id)
     runtime_stats = build_blacklist_runtime_stats(results)
     new_entries: list[BlacklistTemplateEntry] = []
@@ -263,6 +266,8 @@ def auto_update_blacklist_incremental(
         return False
     from datetime import datetime
 
+    if data_dir:
+        activate_blacklist_root(data_dir)
     policy = expression_policy or get_dataset_expression_policy(dataset_id)
     summary = _update_blacklist_runtime_stats_with_result(runtime_stats, result)
     if summary is None:
