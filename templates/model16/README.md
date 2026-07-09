@@ -8,10 +8,11 @@ The template library therefore favors:
 - market/sector-aware grouped ranking
 - limited bucket-group templates
 
-## Evidence Layers
-Official:
+## Official Guidance
 - No dataset-specific official template manual was available in local context.
 - The usable official guidance is general expression style from BRAIN alpha examples.
+
+## Local Evidence
 
 Public-script inspiration:
 - The shared public script reinforced the value of preprocessed long-window inputs and controlled bucket grouping.
@@ -52,11 +53,28 @@ Dynamic ratio policy:
 - Dense derivative partner-ratio families are intentionally removed from the default broad-search policy.
 - `group_ratio_zscore_*` and `group_vol_scaled_delta` are no longer first-line `model16` defaults.
 
+## What Not To Do
+
+- Do not treat short `delta` and aggressive mean-reversion families as first-line defaults for this dataset.
+- Do not let dense derivative pair-ratio branches crowd broad search unless later refine evidence clearly improves.
+- Do not promote legacy fallback wrappers back into the main library just because they add quantity.
+
+## Recommended Workflow
+
+Broad exploration:
+- Keep broad search compact and hypothesis-driven.
+- Prefer the curated dataset library over broad fallback expansion.
+- Let structural diversity beat near-neighbor window density.
+
+Focused refine:
+- Use refine packs to reopen demoted lanes only after clear near-pass evidence.
+- Prefer cap-ratio / bucket-cap-ratio expansions before reviving weak derivative pair-ratio families.
+
 Legacy handling:
 - Older weaker fallback templates live in `legacy.json`, not the main default library.
 - mean-reversion, `information_ratio`, normalize/quantile wrappers, and extra long-window neighbors are better treated as refine/experimental branches unless new evidence promotes them
 - The current recovery pack is `templates/model16/refine/broad_search_neighbors.json`.
 
-## Things To Revisit Later
+## Open Questions
 - Add a small sector-relative spread family if later runs show enough differentiation between value/quality/growth-style fields.
 - Verify whether `information_ratio` should remain in the core default set or be demoted behind grouped bucket variants.

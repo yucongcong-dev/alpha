@@ -9,10 +9,11 @@ The library is intentionally built around:
 - volatility/cap bucket grouping
 - avoidance of short-window directional operators
 
-## Evidence Layers
-Official:
+## Official Guidance
 - As with `model16`, no dataset-specific official template guide was available locally.
 - General BRAIN documentation still supports grouped, neutralized, structured expressions.
+
+## Local Evidence
 
 Local structural inference:
 - Field naming and behavior suggested risk or systematic descriptors rather than classic reactive alpha inputs.
@@ -49,6 +50,12 @@ What was removed:
 
 Field ordering:
 - crowded risk fields now rely on explicit `alphaCount/userCount` crowding penalties in policy instead of floating to the front just because they are historically common
+
+## What Not To Do
+
+- Do not keep spending broad-search budget on the currently weak risk-field families just because they are historically familiar.
+- Do not let extra grouped/decay/window neighbors re-enter the default queue as fake diversity.
+- Do not treat past `submittable=true` records on neighboring branches as enough evidence by themselves after the self-correlation gate tightened.
 
 ## Recommended Workflow
 Broad exploration:
@@ -117,10 +124,10 @@ Current assessment:
 - That makes `model51` worth one more small local refine round, not another broad exploration sweep.
 - Operationally, this now means:
   - keep the search local around the best unsystematic branch
-  - spend limited budget on structural neighbors rather than on wider field coverage
-  - only return to broader diagnostics if the round14 local refine fails cleanly
+- spend limited budget on structural neighbors rather than on wider field coverage
+- only return to broader diagnostics if the round14 local refine fails cleanly
 
-## Things To Revisit Later
+## Open Questions
 - Run another self-correlation-focused diagnostic only if a future branch again stalls in `PENDING`; it is no longer the default next step for the current round14 path.
 - Add regime-aware variants only if later runs show that risk fields respond to separate high-vol / low-vol pathways.
 - Re-check whether one of the plain first-order rank/zscore templates can be demoted behind grouped bucket variants.

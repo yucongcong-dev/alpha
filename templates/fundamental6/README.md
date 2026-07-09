@@ -9,13 +9,14 @@ The current library is intentionally biased toward:
 - bucket grouping with densify
 - event-self-change triggers for vector fields
 
-## Evidence Layers
-Official:
+## Official Guidance
 - WorldQuant BRAIN alpha examples support neutralization, grouped ranking, and structured expressions as first-class building blocks.
 
 Official field metadata:
 - Field filtering and ranking use `coverage`, `dateCoverage`, `alphaCount`, and `userCount`.
 - Event-prefixed fields use stricter thresholds than ordinary fundamental fields.
+
+## Local Evidence
 
 Public-script inspiration:
 - The local public script emphasized `winsorize(ts_backfill(...), std=4)`.
@@ -58,7 +59,24 @@ Refine pack convention:
   - grouped bucket variants around `cap` and liquidity
   - the secondary event-self-change path that is too specific for broad-search default use
 
-## Things To Revisit Later
+## What Not To Do
+
+- Do not use short-window templates as first-line defaults on quarterly-updated fields.
+- Do not mix event/vector-specific families back into generic scalar broad-search pools.
+- Do not reintroduce template-level `group_neutralize` on top of settings-level `neutralization=SUBINDUSTRY`.
+
+## Recommended Workflow
+
+Broad exploration:
+- Keep the default library narrow and slow-frequency aware.
+- Treat vector/event-conditioned lanes as specialty branches rather than generic broad-search seeds.
+- Let field-relation templates gradually replace single-field transform sprawl.
+
+Focused refine:
+- Use refine packs as expansion rings around the slow-frequency default spine.
+- Expand ratio/bucket/event-self-change neighbors only after the main scalar spine is validated.
+
+## Open Questions
 - Continue shifting from single-field transforms toward field-relation templates.
 - Reassess whether remaining generic `ts_rank/ts_zscore/stddev` defaults should be narrowed even further.
 - Keep separating conclusions that are directly supported by official docs from conclusions that come from local runs.
