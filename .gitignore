@@ -36,3 +36,7 @@ worldquant_brain_credentials.key
 
 # Analysis artifacts
 _analysis.json
+
+# Local test run artifacts at repo root
+/test_output*.json
+/test_output*.jsonl

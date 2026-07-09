@@ -2,21 +2,31 @@
 
 from __future__ import annotations
 
-from . import library_loader as _library_loader
-from . import library_store as _library_store
+from typing import TYPE_CHECKING
+
+from ..._facade import ExportMap, facade_dir, resolve_export
+
+if TYPE_CHECKING:
+    from .library_loader import load_template_library
+    from .library_store import ensure_dataset_template_library
+
+_EXPORT_MAP: ExportMap = {
+    "ensure_dataset_template_library": (".library_store", "ensure_dataset_template_library"),
+    "load_template_library": (".library_loader", "load_template_library"),
+}
+
+__all__ = list(_EXPORT_MAP)
 
 
-def ensure_dataset_template_library(path: str, dataset_id: str) -> str:
-    """Compatibility wrapper around the split template-library store."""
-    return _library_store.ensure_dataset_template_library(path, dataset_id)
+def __getattr__(name: str) -> object:
+    return resolve_export(
+        name=name,
+        export_map=_EXPORT_MAP,
+        package=__package__ or "",
+        namespace=__name__,
+        target_globals=globals(),
+    )
 
 
-def load_template_library(path: str):
-    """Compatibility wrapper around the split template-library loader."""
-    return _library_loader.load_template_library(path)
-
-
-__all__ = [
-    "ensure_dataset_template_library",
-    "load_template_library",
-]
+def __dir__() -> list[str]:
+    return facade_dir(globals(), _EXPORT_MAP)
