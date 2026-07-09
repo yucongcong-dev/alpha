@@ -78,7 +78,7 @@ def test_restore_fields_from_state_returns_empty_when_all_fields_completed(tmp_p
 
 
 def test_persist_field_progress_keeps_terminal_index() -> None:
-    with patch("alpha.app.run_loop.save_pipeline_state") as mock_save:
+    with patch("alpha.app.run_loop_resume.save_pipeline_state") as mock_save:
         persist_field_progress(
             state_file="/tmp/state.json",
             field_id="f3",
@@ -101,9 +101,9 @@ def test_drain_remaining_futures_persists_total_field_count() -> None:
         execution_state.pending_futures.clear()
 
     with (
-        patch("alpha.app.run_loop.wait", return_value=({future}, set())),
-        patch("alpha.app.run_loop.drain_completed_futures", side_effect=_drain),
-        patch("alpha.app.run_loop.save_pipeline_state") as mock_save,
+        patch("alpha.app.loop_future_support.wait", return_value=({future}, set())),
+        patch("alpha.app.loop_future_support.drain_completed_futures", side_effect=_drain),
+        patch("alpha.app.run_loop_resume.save_pipeline_state") as mock_save,
     ):
         drain_remaining_futures(
             state_file="/tmp/state.json",

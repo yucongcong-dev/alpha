@@ -26,7 +26,6 @@ alpha/                     # 项目根目录
 │       │   ├── bootstrap_state.py
 │       │   ├── finalize.py
 │       │   ├── loop_future_support.py
-│       │   ├── loop_persistence.py
 │       │   ├── run_loop.py
 │       │   ├── run_loop_feedback.py
 │       │   ├── run_loop_paths.py
@@ -122,8 +121,13 @@ alpha/                     # 项目根目录
 │       │   ├── runtime.py
 │       │   ├── runtime_options.py
 │       │   ├── runtime_protocols.py
-│       │   ├── runtime_state.py
+│       │   ├── runtime_state.py # 兼容导出层
 │       │   └── base.py    # 兼容导出层
+│       │
+│       ├── runtime/       # 运行期上下文与可变执行状态
+│       │   ├── __init__.py
+│       │   ├── contexts.py
+│       │   └── state.py
 │       │
 │       ├── policy/        # 运行期策略层
 │       │   ├── blacklist.py
@@ -241,7 +245,7 @@ alpha/                     # 项目根目录
 
 - `main.py` 现在只保留精简入口，具体应用编排已经拆到 `app/bootstrap.py`、`app/run_loop.py`、`app/finalize.py`
 - 根目录的 `bootstrap.py`、`run_loop.py`、`finalize.py`、`loop_*` 和 `run_loop_*` 兼容壳已经移除；代码应直接依赖 `alpha.app.*`
-- `models/domain.py` 只放领域对象；`models/io_types.py` 放路径/过滤边界对象；`models/runtime_options.py`、`models/runtime_protocols.py`、`models/runtime_state.py` 分别放运行配置、协议和运行态上下文；`models/runtime.py` / `models/base.py` 仅保留兼容导出
+- `models/domain.py` 只放领域对象；`models/io_types.py` 放路径/过滤边界对象；`models/runtime_options.py`、`models/runtime_protocols.py` 放运行配置与协议；运行期上下文和可变执行状态已经下沉到 `runtime/contexts.py`、`runtime/state.py`；`models/runtime_state.py`、`models/runtime.py` / `models/base.py` 仅保留兼容导出
 - `analysis/stats.py` 是兼容导出层；结果加载、失败检查评分、模板/字段统计、反馈画像已经分别拆到 `results_loader.py`、`failed_checks.py`、`template_stats.py`、`field_stats.py`、`feedback_stats.py`
 - `analysis/feedback.py` 是兼容导出层；历史状态/near-pass 选择放在 `feedback_history.py`，模板禁用/保留/跳过策略放在 `feedback_filters.py`
 - `analysis/report_builder.py` 负责从结果构建 summary/analysis payload
