@@ -54,6 +54,17 @@ def _int_arg(args: object, name: str, default: int = 0) -> int:
         return default
 
 
+def _serialize_settings_overrides(
+    simulation_settings: SettingsVariant | dict[str, Any] | None,
+) -> dict[str, Any]:
+    """Normalize settings overrides while preserving compatibility with old dict callers."""
+    if simulation_settings is None:
+        return {}
+    if isinstance(simulation_settings, dict):
+        return SettingsVariant.from_dict(simulation_settings).to_dict()
+    return simulation_settings.to_dict()
+
+
 
 def create_simulation_with_retry(
     client: BrainClient, payload: SimulationPayload, retries: int
@@ -140,7 +151,9 @@ def run_simulation_create_stage(
         config = SimulationStageConfig.from_args(args)
         payload = build_simulation_payload(args, ctx.expression)
         if simulation_settings is not None:
-            payload["settings"] = simulation_settings.to_dict()
+            # Merge partial variant overrides into the baseline website/default payload
+            # instead of replacing it outright, so required API fields remain intact.
+            payload["settings"].update(_serialize_settings_overrides(simulation_settings))
         if create_semaphore is not None:
             logger.info(
                 "[simulation] waiting for create slot field=%s template=%s",

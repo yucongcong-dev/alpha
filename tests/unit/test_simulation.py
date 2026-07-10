@@ -18,9 +18,10 @@ from alpha.core.simulation import (
     is_submittable_from_checks,
     precheck_simulation_metrics,
     run_checksubmit_stage,
+    run_simulation_create_stage,
     summarize_failure,
 )
-from alpha.models.domain import FailedCheck, FieldTestContext, FieldTestResult
+from alpha.models.domain import FailedCheck, FieldTestContext, FieldTestResult, SettingsVariant
 from tests.conftest import MockArgs
 
 # ============================================================================
@@ -640,3 +641,134 @@ def test_run_checksubmit_stage_with_self_correlation_pending(monkeypatch) -> Non
         assert r2.field_id == "b"
         assert r1.field_type == "MATRIX"
         assert r2.field_type == "VECTOR"
+
+
+def test_run_simulation_create_stage_merges_dict_settings_with_baseline(monkeypatch) -> None:
+    ctx = FieldTestContext(
+        field_id="cash_st",
+        field_type="MATRIX",
+        field_name="cash_st",
+        template_name="account_ts_rank_60",
+        expression="rank(ts_rank(cash_st, 60))",
+        settings_fingerprint="fp1",
+        template_library_fingerprint="lib1",
+    )
+    args = MockArgs(
+        instrument_type=None,
+        region=None,
+        universe=None,
+        delay=None,
+        decay=None,
+        neutralization=None,
+        truncation=None,
+        pasteurization=None,
+        unit_handling=None,
+        nan_handling=None,
+        language=None,
+        start_date=None,
+        end_date=None,
+        simulation_create_retries=3,
+        simulation_poll_retries=3,
+        simulation_max_polls=10,
+        simulation_max_wait_seconds=60,
+        simulation_max_pending_cycles=10,
+        simulation_max_queue_seconds=30,
+        check_submit_retries=3,
+        min_sharpe=1.25,
+        min_fitness=1.0,
+        min_turnover=0.01,
+        max_turnover=0.7,
+        max_weight=0.1,
+    )
+    captured: dict[str, object] = {}
+
+    class DummyClient:
+        def create_simulation(self, payload: dict[str, object]) -> str:
+            captured["payload"] = payload
+            return "/simulations/sim_123"
+
+    monkeypatch.setattr("alpha.core.simulation_stages.retry_operation", lambda *a, **k: a[2]())
+
+    result = run_simulation_create_stage(
+        ctx,
+        DummyClient(),
+        args,
+        simulation_settings={"decay": 2, "neutralization": "MARKET"},
+    )
+
+    assert result == ("/simulations/sim_123", "sim_123")
+    payload = captured["payload"]
+    assert isinstance(payload, dict)
+    settings = payload["settings"]
+    assert isinstance(settings, dict)
+    assert settings["instrumentType"] == "EQUITY"
+    assert settings["region"] == "USA"
+    assert settings["unitHandling"] == "VERIFY"
+    assert settings["nanHandling"] == "OFF"
+    assert settings["visualization"] is False
+    assert settings["decay"] == 2
+    assert settings["neutralization"] == "MARKET"
+
+
+def test_run_simulation_create_stage_merges_settings_variant_with_baseline(monkeypatch) -> None:
+    ctx = FieldTestContext(
+        field_id="cash_st",
+        field_type="MATRIX",
+        field_name="cash_st",
+        template_name="account_ts_rank_252",
+        expression="rank(ts_rank(cash_st, 252))",
+        settings_fingerprint="fp2",
+        template_library_fingerprint="lib2",
+    )
+    args = MockArgs(
+        instrument_type=None,
+        region=None,
+        universe=None,
+        delay=None,
+        decay=None,
+        neutralization=None,
+        truncation=None,
+        pasteurization=None,
+        unit_handling=None,
+        nan_handling=None,
+        language=None,
+        start_date=None,
+        end_date=None,
+        simulation_create_retries=3,
+        simulation_poll_retries=3,
+        simulation_max_polls=10,
+        simulation_max_wait_seconds=60,
+        simulation_max_pending_cycles=10,
+        simulation_max_queue_seconds=30,
+        check_submit_retries=3,
+        min_sharpe=1.25,
+        min_fitness=1.0,
+        min_turnover=0.01,
+        max_turnover=0.7,
+        max_weight=0.1,
+    )
+    captured: dict[str, object] = {}
+
+    class DummyClient:
+        def create_simulation(self, payload: dict[str, object]) -> str:
+            captured["payload"] = payload
+            return "/simulations/sim_456"
+
+    monkeypatch.setattr("alpha.core.simulation_stages.retry_operation", lambda *a, **k: a[2]())
+
+    result = run_simulation_create_stage(
+        ctx,
+        DummyClient(),
+        args,
+        simulation_settings=SettingsVariant(decay=6, truncation=0.05),
+    )
+
+    assert result == ("/simulations/sim_456", "sim_456")
+    payload = captured["payload"]
+    assert isinstance(payload, dict)
+    settings = payload["settings"]
+    assert isinstance(settings, dict)
+    assert settings["instrumentType"] == "EQUITY"
+    assert settings["visualization"] is False
+    assert settings["decay"] == 6
+    assert settings["truncation"] == 0.05

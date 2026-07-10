@@ -41,9 +41,27 @@
     {
       "name": "decay_120",
       "expression": "rank(ts_decay_linear(ts_backfill({field}, {backfill_window}), 120))",
-      "priority": 961,
+      "priority": 978,
       "family": "decay_level",
       "layer": "time_series",
+      "role": "refine_neighbor",
+      "activation_scope": "refine"
+    },
+    {
+      "name": "hc_ratio_group_level_field_over_cap",
+      "expression": "group_rank({field_preprocessed} / cap, subindustry)",
+      "priority": 975,
+      "family": "high_conviction_ratio",
+      "layer": "account",
+      "role": "refine_neighbor",
+      "activation_scope": "refine"
+    },
+    {
+      "name": "hc_ratio_group_level_field_over_cap_industry",
+      "expression": "group_rank({field_preprocessed} / cap, industry)",
+      "priority": 974,
+      "family": "high_conviction_ratio",
+      "layer": "account",
       "role": "refine_neighbor",
       "activation_scope": "refine"
     },
@@ -133,19 +151,10 @@
       "activation_scope": "refine"
     },
     {
-      "name": "vec_sum_ts_rank_60",
-      "expression": "rank(ts_rank(winsorize(ts_backfill(vec_sum({field}), {backfill_window}), std=4), 60))",
+      "name": "vec_avg_decay_120",
+      "expression": "rank(ts_decay_linear(ts_backfill(vec_avg({field}), {backfill_window}), 120))",
       "priority": 984,
-      "family": "ts_rank",
-      "layer": "vector",
-      "role": "refine_neighbor",
-      "activation_scope": "refine"
-    },
-    {
-      "name": "vec_sum_ts_zscore_60",
-      "expression": "rank(ts_zscore(winsorize(ts_backfill(vec_sum({field}), {backfill_window}), std=4), 60))",
-      "priority": 983,
-      "family": "zscore_time",
+      "family": "decay_level",
       "layer": "vector",
       "role": "refine_neighbor",
       "activation_scope": "refine"
@@ -171,19 +180,10 @@
       "activation_scope": "refine"
     },
     {
-      "name": "vec_sum_3layer_zscore_decay",
-      "expression": "ts_decay_linear(ts_zscore(vec_sum({field}), 60), 20)",
+      "name": "vec_avg_decay_120",
+      "expression": "rank(ts_decay_linear(ts_backfill(vec_avg({field}), {backfill_window}), 120))",
       "priority": 993,
-      "family": "neutralize_decay",
-      "layer": "group",
-      "role": "refine_neighbor",
-      "activation_scope": "refine"
-    },
-    {
-      "name": "vec_sum_ts_rank_60",
-      "expression": "rank(ts_rank(vec_sum({field}), 60))",
-      "priority": 992,
-      "family": "ts_rank",
+      "family": "decay_level",
       "layer": "group",
       "role": "refine_neighbor",
       "activation_scope": "refine"
@@ -209,19 +209,10 @@
       "activation_scope": "refine"
     },
     {
-      "name": "vec_sum_3layer_zscore_decay",
-      "expression": "ts_decay_linear(ts_zscore(vec_sum({field}), 60), 20)",
+      "name": "vec_avg_decay_120",
+      "expression": "rank(ts_decay_linear(ts_backfill(vec_avg({field}), {backfill_window}), 120))",
       "priority": 993,
-      "family": "neutralize_decay",
-      "layer": "set",
-      "role": "refine_neighbor",
-      "activation_scope": "refine"
-    },
-    {
-      "name": "vec_sum_ts_rank_60",
-      "expression": "rank(ts_rank(vec_sum({field}), 60))",
-      "priority": 992,
-      "family": "ts_rank",
+      "family": "decay_level",
       "layer": "set",
       "role": "refine_neighbor",
       "activation_scope": "refine"
