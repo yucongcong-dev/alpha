@@ -382,9 +382,138 @@
 
 ---
 
-## 10. Coverage、Alpha list、Correlation 工具
+## 10. 字段类型词典
 
-### 10.1 `Coverage`
+这一节主要解释字段右侧常见的 `type`，尤其是：
+
+- `MATRIX`
+- `VECTOR`
+- `GROUP`
+- `SET`
+
+它们不是“质量评级”，而是字段的数据形态。
+
+### 10.1 `MATRIX`
+
+可以把 `MATRIX` 理解成：
+
+- 普通单值型字段
+- 对每个股票、每个日期，通常对应一个数
+
+典型例子：
+
+- `assets`
+- `cash_st`
+- `debt`
+- `cashflow_op`
+
+这类字段通常最适合直接进入普通标量模板，例如：
+
+- `rank(...)`
+- `ts_rank(...)`
+- `ts_zscore(...)`
+- `ts_decay_linear(...)`
+
+对研究流程的直接意义是：
+
+- 如果你看到字段类型是 `MATRIX`，默认先按“普通基本面/标量字段”处理
+- 它通常适合做慢频稳定化、cross-field ratio、group relative 结构
+
+### 10.2 `VECTOR`
+
+可以把 `VECTOR` 理解成：
+
+- 向量型字段
+- 对每个股票、每个日期，不一定是一个单独的数，更像一组值、事件集合，或需要先聚合的内容
+
+在表达式里，这类字段通常不适合直接像标量一样硬套普通模板，而更常见的第一步是：
+
+- `vec_avg(...)`
+- `vec_sum(...)`
+
+比如本仓库在 `fundamental6` 里保留过这类结构：
+
+- `rank(ts_rank(vec_avg({field}), 60))`
+- `rank(ts_rank(vec_sum({field}), 60))`
+
+对研究流程的直接意义是：
+
+- `VECTOR` 更适合单独作为 event/vector 专项分支
+- 不建议和普通 `MATRIX` 字段放进同一个 broad-search 池里无差别扫
+- 它往往更依赖：
+  - 先聚合
+  - 再平滑
+  - 再决定是否需要事件触发
+
+### 10.3 `GROUP`
+
+可以把 `GROUP` 理解成：
+
+- 组结构字段
+- 它更像“某个对象属于哪个组”或“某种分组语义”
+
+这类字段常见的用途不是直接拿去做普通时间序列变换，而是参与：
+
+- `group_rank`
+- `group_neutralize`
+- `group_backfill`
+- bucket/group 相关结构
+
+在本仓库的模板语境里，`GROUP` 分支经常意味着：
+
+- 先把字段转成适合组内比较的结构
+- 再做 rank / zscore / decay
+
+更实用的记法是：
+
+- `MATRIX` 更像“数值本身”
+- `GROUP` 更像“分组语义”
+
+### 10.4 `SET`
+
+可以把 `SET` 理解成：
+
+- 集合型字段
+- 它和 `VECTOR` 一样，都不是最朴素的单值标量
+
+在实战里，`SET` 和 `VECTOR` 往往都不适合直接按普通标量字段粗暴处理，通常更适合：
+
+- 单独分支
+- 保留更窄的默认模板主干
+- 先做聚合或结构转换，再进入时序/截面模板
+
+如果当前没有平台级更细的字段释义，研究时可以先把它当作：
+
+- “需要额外结构处理的非标量字段”
+
+而不是：
+
+- “直接可和 `assets`、`debt` 一样处理的字段”
+
+### 10.5 一个够用的实战记忆法
+
+如果只想快速判断研究路线，可以先这样记：
+
+- `MATRIX`：普通单值字段
+  - 默认走标量主干模板
+- `VECTOR`：向量/事件型字段
+  - 默认先 `vec_avg / vec_sum`
+- `GROUP`：分组语义字段
+  - 默认考虑 group 相关结构
+- `SET`：集合型字段
+  - 默认单独处理，不和普通标量字段混扫
+
+对 `fundamental6` 这种数据集，这个区分尤其重要：
+
+- `MATRIX` 适合作为基本面主干
+- `VECTOR` 更适合作为事件/向量专项支路
+- `GROUP / SET` 不该简单混回普通标量模板池
+
+---
+
+## 11. Coverage、Alpha list、Correlation 工具
+
+### 11.1 `Coverage`
 
 官方 Glossary 的定义是：
 
@@ -401,7 +530,7 @@
 - 先验质量信号
 - 不是绝对真理
 
-### 10.2 `Alpha list`
+### 11.2 `Alpha list`
 
 官方 Glossary 里把 `Alpha list` 定义成：
 
@@ -413,7 +542,7 @@
 - 不要只盯单条 Alpha
 - 也要看一组 Alpha 是否只是高相关的小变体
 
-### 10.3 `Correlation`
+### 11.3 `Correlation`
 
 官方 Glossary 直接把 Correlation 解释成：
 
@@ -430,11 +559,11 @@
 
 ---
 
-## 11. 提交检查词典
+## 12. 提交检查词典
 
 这一节不追求覆盖平台所有检查，而是优先解释本仓库最常遇到的几类。
 
-### 11.1 `LOW_SHARPE`
+### 12.1 `LOW_SHARPE`
 
 - 风险调整后的收益不够稳定
 - 更像“信号质量不够硬”，而不只是收益不够高
@@ -445,7 +574,7 @@
 - 是否缺少 group-relative 结构
 - 是否没有做足够平滑
 
-### 11.2 `LOW_FITNESS`
+### 12.2 `LOW_FITNESS`
 
 官方公式是：
 
@@ -457,7 +586,7 @@
 - `Returns` 不够
 - `Turnover` 太高
 
-### 11.3 `HIGH_TURNOVER`
+### 12.3 `HIGH_TURNOVER`
 
 - 代表信号变化太快
 - 真实交易成本压力通常也会更高
@@ -468,7 +597,7 @@
 - 用 `trade_when`
 - 用更稳定的截面整形和 backfill
 
-### 11.4 `CONCENTRATED_WEIGHT`
+### 12.4 `CONCENTRATED_WEIGHT`
 
 - 代表少数股票权重过大
 - 更接近“组合结构问题”，不只是表达式长得难看
@@ -479,7 +608,7 @@
 - `truncation` 太松
 - 没有做 rank / group 处理
 
-### 11.5 `LOW_SUB_UNIVERSE_SHARPE`
+### 12.5 `LOW_SUB_UNIVERSE_SHARPE`
 
 Glossary 把 robust performance 明确当成平台关心的方向。
 
@@ -488,7 +617,7 @@ Glossary 把 robust performance 明确当成平台关心的方向。
 - 你的 Alpha 在更小、更液态的子宇宙里不够稳
 - 它提示的往往不是“再调一个窗口”，而是结构泛化能力不够
 
-### 11.6 `SELF_CORRELATION`
+### 12.6 `SELF_CORRELATION`
 
 - 和你自己已有 Alpha 太像
 - 平台通常不会鼓励你反复提交同一个想法的近邻分支
@@ -504,14 +633,14 @@ Glossary 把 robust performance 明确当成平台关心的方向。
 - `20 -> 22`
 - `60 -> 63`
 
-### 11.7 `PROD_CORRELATION`
+### 12.7 `PROD_CORRELATION`
 
 - 和平台已有已提交 Alpha 太像
 - 说明它缺少足够的独特性
 
 这类问题通常也更适合做结构替换，而不是参数微调。
 
-### 11.8 `WEIGHT_COVERAGE`
+### 12.8 `WEIGHT_COVERAGE`
 
 虽然它在不同页面或 FAQ 里展示口径可能略有不同，但核心都指向：
 
@@ -525,17 +654,17 @@ Glossary 把 robust performance 明确当成平台关心的方向。
 
 ---
 
-## 12. PnL、Drawdown、平滑
+## 13. PnL、Drawdown、平滑
 
-### 12.1 `PnL`
+### 13.1 `PnL`
 
 你看到的 PnL 是组合层面的表现，不是单只股票单独收益图。
 
-### 12.2 `Drawdown`
+### 13.2 `Drawdown`
 
 就是组合从峰值往下回撤的幅度。
 
-### 12.3 PnL 为什么会突然跳
+### 13.3 PnL 为什么会突然跳
 
 官方给出的常见原因主要有：
 
@@ -551,7 +680,7 @@ Glossary 把 robust performance 明确当成平台关心的方向。
 
 ---
 
-## 13. `Neutralization` 的页面语义
+## 14. `Neutralization` 的页面语义
 
 平台语义里：
 
@@ -563,36 +692,36 @@ Glossary 把 robust performance 明确当成平台关心的方向。
 
 ---
 
-## 14. 最常见的误读速查
+## 15. 最常见的误读速查
 
-### 14.1 `N/A = 异常`
+### 15.1 `N/A = 异常`
 
 不一定。  
 很多时候只是 OS 样本还没积累够。
 
-### 14.2 `0 = 不持仓`
+### 15.2 `0 = 不持仓`
 
 不对。  
 `NaN` 才更接近“不持仓”。
 
-### 14.3 `模拟结果已经扣了真实交易成本`
+### 15.3 `模拟结果已经扣了真实交易成本`
 
 不对。  
 官方说模拟结果不直接包含交易成本，Turnover 只是 proxy。
 
-### 14.4 `提交更多同类 Alpha 一定更好`
+### 15.4 `提交更多同类 Alpha 一定更好`
 
 不对。  
 官方 `Meta Score` 明确看组合相关性与池子质量。
 
-### 14.5 `OS 只是 IS 的重复显示`
+### 15.5 `OS 只是 IS 的重复显示`
 
 不对。  
 OS 是提交之后逐步积累出来的样本外表现。
 
 ---
 
-## 15. 建议怎样配合其他文档使用
+## 16. 建议怎样配合其他文档使用
 
 - 想理解平台在做什么：
   看 [01_beginner_guide.md](01_beginner_guide.md)
@@ -605,7 +734,7 @@ OS 是提交之后逐步积累出来的样本外表现。
 
 ---
 
-## 16. 官方来源
+## 17. 官方来源
 
 本篇主要整理自这些官方 FAQ：
 
