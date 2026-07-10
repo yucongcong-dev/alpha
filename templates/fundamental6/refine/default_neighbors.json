@@ -12,6 +12,15 @@
       "activation_scope": "refine"
     },
     {
+      "name": "ts_zscore_252",
+      "expression": "rank(ts_zscore({field}, 252))",
+      "priority": 967,
+      "family": "zscore_time",
+      "layer": "time_series",
+      "role": "refine_neighbor",
+      "activation_scope": "refine"
+    },
+    {
       "name": "ts_zscore_126",
       "expression": "rank(ts_zscore({field}, 126))",
       "priority": 966,
@@ -124,6 +133,15 @@
       "activation_scope": "refine"
     },
     {
+      "name": "vec_sum_ts_rank_60",
+      "expression": "rank(ts_rank(winsorize(ts_backfill(vec_sum({field}), {backfill_window}), std=4), 60))",
+      "priority": 984,
+      "family": "ts_rank",
+      "layer": "vector",
+      "role": "refine_neighbor",
+      "activation_scope": "refine"
+    },
+    {
       "name": "vec_sum_ts_zscore_60",
       "expression": "rank(ts_zscore(winsorize(ts_backfill(vec_sum({field}), {backfill_window}), std=4), 60))",
       "priority": 983,
@@ -153,6 +171,24 @@
       "activation_scope": "refine"
     },
     {
+      "name": "vec_sum_3layer_zscore_decay",
+      "expression": "ts_decay_linear(ts_zscore(vec_sum({field}), 60), 20)",
+      "priority": 993,
+      "family": "neutralize_decay",
+      "layer": "group",
+      "role": "refine_neighbor",
+      "activation_scope": "refine"
+    },
+    {
+      "name": "vec_sum_ts_rank_60",
+      "expression": "rank(ts_rank(vec_sum({field}), 60))",
+      "priority": 992,
+      "family": "ts_rank",
+      "layer": "group",
+      "role": "refine_neighbor",
+      "activation_scope": "refine"
+    },
+    {
       "name": "vec_avg_ts_zscore_60",
       "expression": "rank(ts_zscore(vec_avg({field}), 60))",
       "priority": 991,
@@ -167,6 +203,24 @@
       "name": "vec_avg_ts_rank_252",
       "expression": "rank(ts_rank(vec_avg({field}), 252))",
       "priority": 994,
+      "family": "ts_rank",
+      "layer": "set",
+      "role": "refine_neighbor",
+      "activation_scope": "refine"
+    },
+    {
+      "name": "vec_sum_3layer_zscore_decay",
+      "expression": "ts_decay_linear(ts_zscore(vec_sum({field}), 60), 20)",
+      "priority": 993,
+      "family": "neutralize_decay",
+      "layer": "set",
+      "role": "refine_neighbor",
+      "activation_scope": "refine"
+    },
+    {
+      "name": "vec_sum_ts_rank_60",
+      "expression": "rank(ts_rank(vec_sum({field}), 60))",
+      "priority": 992,
       "family": "ts_rank",
       "layer": "set",
       "role": "refine_neighbor",

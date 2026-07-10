@@ -102,12 +102,12 @@
 
 ## 默认模板库边界
 
-当前默认库应理解为：给 broad exploration 用的、窄化后的生产主队列。
+当前默认库应理解为：给 broad exploration 用的、进一步窄化后的生产主队列。
 
 核心原则：
-- `default` 里只保留 5 个慢频核心种子
+- `default` 里只保留 4 个慢频核心种子
 - vector / event-conditioned 家族是专项分支，不是通用 broad-search 默认种子
-- 对 `VECTOR / GROUP / SET`，broad 中只保留最小代表主干；把 `zscore` 邻居和 `252` 天邻居下沉到 refine
+- 对 `VECTOR / GROUP / SET`，broad 中只保留单通道最小代表主干；把 `vec_sum` 近邻、`zscore` 近邻和 `252` 天邻居下沉到 refine
 - cross-field ratio/pair 探索集中在 account/matrix 专用支路，不要把 scalar `default` 撑得过宽
 - 额外长窗口邻居、`rawfill/longfill` 近邻、旧式横截面包装器，如果没有反复证明有效，就都作为 refine 候选
 - 单独的 decay 邻居、liquidity-bucket 变体，也都更适合作为 refine 候选，而不是 broad-search 默认
@@ -120,6 +120,7 @@ Refine pack 约定：
   - 更长窗口的 `ratio_cap` / `bucket_ratio` 变体
   - 围绕 `cap` 和流动性分层的 grouped bucket 变体
   - 过于具体、不适合放进 broad 默认队列的次级 event-self-change 路径
+  - 从 broad 下沉下来的 `ts_zscore_252`、`vec_sum` 双通道分支
 
 ## 不建议做的事
 
@@ -129,12 +130,13 @@ Refine pack 约定：
 
 ## 哪些方向更适合 fundamental6
 
-- 慢频单字段稳定器，例如 `ts_rank_120`、`ts_zscore_252`、以及 `zscore + decay` 复合主干
+- 慢频单字段稳定器，例如 `ts_rank_120`，以及 `zscore + decay` 复合主干
 - 排序前做较重的预处理，尤其是 `ts_backfill + winsorize`
 - relation-based 模板，例如 `ratio_cap`、`ratio_assets`、`bucket_ratio` 等跨字段比较
 - 带 `densify(...)` 的 bucket/group 结构，尤其是围绕 `cap` 和流动性分层
 - 用字段自身变化触发的 VECTOR/event 模板，而不是泛化市场活跃度触发
 - 默认 broad-search 先窄，再接 refine pack，而不是第一轮就压入大量近似模板
+- 对高拥挤经典字段，先用 relation/grouped 主干，再把额外单字段邻居留到 refine
 
 ## 哪些方向通常表现较差
 
@@ -143,7 +145,7 @@ Refine pack 约定：
 - 把 scalar、vector、event-conditioned 结构混进同一个通用 broad-search 池
 - 双重中性化：模板内 `group_neutralize` + settings 层 `neutralization=SUBINDUSTRY`
 - 在主要失败模式已经明确后，仍然用 broad search 单纯放大数量
-- 把 `vec_avg / vec_sum` 邻居和更长窗口邻居，当作第一轮默认模板，而不是第二轮 refine 分支
+- 把 `vec_sum` 双通道邻居和更长窗口邻居，当作第一轮默认模板，而不是第二轮 refine 分支
 
 ## 推荐流程
 

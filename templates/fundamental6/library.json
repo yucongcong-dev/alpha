@@ -3,7 +3,7 @@
   "_comment_placeholders": "{field}=字段名, {field_preprocessed}=winsorize(ts_backfill({field}, {backfill_window}), std=4), {field_longfill}=winsorize(ts_backfill({field}, 252), std=3), {field_rawfill}=ts_backfill({field}, {backfill_window}), {backfill_window}=settings.yaml expression.backfill_window",
   "default": [
     {
-      "_comment": "=== 默认库：保留 5 个 broad 种子，只覆盖最核心的慢频结构代表 ===",
+      "_comment": "=== 默认库：保留 4 个 broad 种子，只覆盖最核心的慢频结构代表 ===",
       "name": "3layer_zscore_decay",
       "expression": "ts_decay_linear(ts_zscore(ts_backfill({field}, {backfill_window}), 60), 20)",
       "priority": 995,
@@ -23,19 +23,10 @@
       "activation_scope": "broad"
     },
     {
-      "name": "ts_zscore_252",
-      "expression": "rank(ts_zscore({field}, 252))",
-      "priority": 990,
-      "family": "zscore_time",
-      "layer": "time_series",
-      "role": "default_seed",
-      "activation_scope": "broad"
-    },
-    {
       "_comment": "=== 关系型 / grouped 代表模板 ===",
       "name": "ratio_cap_zscore_60",
       "expression": "rank(ts_zscore({field_preprocessed} / ts_backfill(cap, {backfill_window}), 60))",
-      "priority": 986,
+      "priority": 990,
       "family": "ratio_cap",
       "layer": "account",
       "role": "default_seed",
@@ -44,7 +35,7 @@
     {
       "name": "bucket_cap_ratio_zscore_60",
       "expression": "group_rank(ts_zscore({field_preprocessed} / ts_backfill(cap, {backfill_window}), 60), densify(bucket(rank(cap), range='0.1, 1, 0.1')))",
-      "priority": 984,
+      "priority": 988,
       "family": "bucket_ratio",
       "layer": "account",
       "role": "default_seed",
@@ -65,19 +56,10 @@
       "activation_scope": "broad"
     },
     {
-      "_comment": "=== VECTOR: broad 只保留双通道 rank 主干，zscore 与更长窗口下沉到 refine ===",
+      "_comment": "=== VECTOR: broad 只保留单通道 rank 主干，vec_sum 与更长窗口下沉到 refine ===",
       "name": "vec_avg_ts_rank_60",
       "expression": "rank(ts_rank({field_preprocessed}, 60))",
       "priority": 989,
-      "family": "ts_rank",
-      "layer": "vector",
-      "role": "default_seed",
-      "activation_scope": "broad"
-    },
-    {
-      "name": "vec_sum_ts_rank_60",
-      "expression": "rank(ts_rank(winsorize(ts_backfill(vec_sum({field}), {backfill_window}), std=4), 60))",
-      "priority": 987,
       "family": "ts_rank",
       "layer": "vector",
       "role": "default_seed",
@@ -86,7 +68,7 @@
   ],
   "GROUP": [
     {
-      "_comment": "=== GROUP: broad 只保留 composite + 双通道 rank 主干 ===",
+      "_comment": "=== GROUP: broad 只保留 composite + 单通道 rank 主干 ===",
       "name": "vec_avg_3layer_zscore_decay",
       "expression": "ts_decay_linear(ts_zscore(vec_avg({field}), 60), 20)",
       "priority": 1000,
@@ -94,30 +76,16 @@
       "layer": "group"
     },
     {
-      "name": "vec_sum_3layer_zscore_decay",
-      "expression": "ts_decay_linear(ts_zscore(vec_sum({field}), 60), 20)",
-      "priority": 999,
-      "family": "neutralize_decay",
-      "layer": "group"
-    },
-    {
       "name": "vec_avg_ts_rank_60",
       "expression": "rank(ts_rank(vec_avg({field}), 60))",
       "priority": 997,
-      "family": "ts_rank",
-      "layer": "group"
-    },
-    {
-      "name": "vec_sum_ts_rank_60",
-      "expression": "rank(ts_rank(vec_sum({field}), 60))",
-      "priority": 996,
       "family": "ts_rank",
       "layer": "group"
     }
   ],
   "SET": [
     {
-      "_comment": "=== SET: broad 只保留 composite + 双通道 rank 主干 ===",
+      "_comment": "=== SET: broad 只保留 composite + 单通道 rank 主干 ===",
       "name": "vec_avg_3layer_zscore_decay",
       "expression": "ts_decay_linear(ts_zscore(vec_avg({field}), 60), 20)",
       "priority": 1000,
@@ -125,23 +93,9 @@
       "layer": "set"
     },
     {
-      "name": "vec_sum_3layer_zscore_decay",
-      "expression": "ts_decay_linear(ts_zscore(vec_sum({field}), 60), 20)",
-      "priority": 999,
-      "family": "neutralize_decay",
-      "layer": "set"
-    },
-    {
       "name": "vec_avg_ts_rank_60",
       "expression": "rank(ts_rank(vec_avg({field}), 60))",
       "priority": 997,
-      "family": "ts_rank",
-      "layer": "set"
-    },
-    {
-      "name": "vec_sum_ts_rank_60",
-      "expression": "rank(ts_rank(vec_sum({field}), 60))",
-      "priority": 996,
       "family": "ts_rank",
       "layer": "set"
     }
