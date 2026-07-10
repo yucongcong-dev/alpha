@@ -1,80 +1,83 @@
-# model16 Notes
+# model16 说明
 
-## Positioning
-`model16` is currently treated as a slow-moving score/composite dataset rather than a raw high-frequency signal source.
-The template library therefore favors:
-- long-window rank/zscore smoothing
-- mild decay
-- market/sector-aware grouped ranking
-- limited bucket-group templates
+## 定位
+`model16` 当前更适合被视为一个慢频的评分/复合指标数据集，而不是原始高频信号源。
 
-## Official Guidance
-- No dataset-specific official template manual was available in local context.
-- The usable official guidance is general expression style from BRAIN alpha examples.
+因此模板库的主方向是：
+- 长窗口 `rank/zscore` 平滑
+- 轻度 `decay`
+- 带市场/行业语义的分组排序
+- 少量、受控的 bucket 分组模板
 
-## Local Evidence
+## 官方口径
+- 当前本地上下文里没有找到 `model16` 的官方专属模板手册。
+- 能直接复用的官方信息，主要还是 BRAIN 通用的 alpha examples 表达式风格。
 
-Public-script inspiration:
-- The shared public script reinforced the value of preprocessed long-window inputs and controlled bucket grouping.
+## 本地证据
 
-Local structural inference:
-- Field naming and observed behavior were more consistent with composite score fields than with daily reactive signals.
-- That makes short `delta`, aggressive mean-reversion, and brute-force operator sweeps poor default choices.
+公开脚本启发：
+- 公共脚本再次说明，长窗口预处理输入和克制的 bucket 分组值得保留。
 
-Local run / policy evidence:
-- The curated library already outperformed legacy fallback shapes strongly enough that several older templates were moved out of the default library.
-- Current protected templates bias toward `126`-day structures and group-aware ranking.
-- Recent `stage2_lane_validation_round2` evidence showed the dense-derivative partner-ratio families were systematically weak:
-  - `high_conviction_ratio` and `group_ratio_zscore` were usually blocked by `LOW_SHARPE` and `LOW_FITNESS`
-  - `group_vol_scaled_delta` repeatedly failed with `CONCENTRATED_WEIGHT` and weak sub-universe behavior
-  - default broad search should therefore stop treating derivative pair-ratio branches as first-line candidates
+结构性判断：
+- 从字段命名和实际表现看，它更像复合分数类字段，而不是日频强反应型信号。
+- 因此，短窗 `delta`、激进均值回归、暴力算子扫库，都不适合作为默认主力。
 
-## Current Template Direction
-Preprocessing:
-- `252`-day backfill plus `winsorize(std=4)`.
+运行与策略证据：
+- 当前整理后的模板库，已经明显优于过去的 fallback 形态，因此一批旧模板已移出默认库。
+- 当前受保护的核心模板，明显偏向 `126` 天结构和带分组语义的排序。
+- 最近 `stage2_lane_validation_round2` 的结果表明，密集导数类 partner-ratio 分支系统性偏弱：
+  - `high_conviction_ratio`、`group_ratio_zscore` 经常被 `LOW_SHARPE` 和 `LOW_FITNESS` 卡住
+  - `group_vol_scaled_delta` 多次因 `CONCENTRATED_WEIGHT` 和较弱的子域表现失败
+  - 因此，默认 broad search 不该再把这些导数 pair-ratio 分支当作第一候选
 
-Current default-library goal:
-- keep a compact production candidate pool centered on the strongest slow-score hypotheses
-- avoid letting many close cousins of the same `120/126`-day idea crowd out true idea diversity
+## 当前模板方向
 
-Core default shapes:
+预处理：
+- 使用 `252` 天 backfill，并叠加 `winsorize(std=4)`。
+
+当前默认库目标：
+- 维持一个紧凑、可生产的候选池，围绕最强的慢频分数假设展开
+- 避免大量围绕同一个 `120/126` 天主意的近邻变体，挤占真正的思路多样性
+
+默认主干形态：
 - `zscore_decay_120`
 - `rank_ts_rank_120`
-- market/sector group ranking
-- cap-ratio / bucket-cap-ratio representatives
-- one `mean_spread` branch plus one groupfill representative
+- 市场/行业分组排序
+- `cap-ratio` / `bucket-cap-ratio` 代表模板
+- 一条 `mean_spread` 分支，加一条 `groupfill` 代表
 
-Dense derivative lane:
-- Prefer `cap-ratio` and `bucket-cap-ratio` as the default broad-search representatives.
-- Do not let derivative `pair ratio` families dominate broad search unless a later refine run produces clear near-pass evidence.
+密集导数分支：
+- broad search 默认优先保留 `cap-ratio` 和 `bucket-cap-ratio`
+- 除非后续 refine 明确出现 near-pass 证据，否则不要让导数 `pair ratio` 家族重新主导 broad search
 
-Dynamic ratio policy:
-- `fscore_*` / `fscore_bfl_*` pair-ratio exploration stays available.
-- Dense derivative partner-ratio families are intentionally removed from the default broad-search policy.
-- `group_ratio_zscore_*` and `group_vol_scaled_delta` are no longer first-line `model16` defaults.
+动态 ratio 策略：
+- `fscore_*` / `fscore_bfl_*` 的 pair-ratio 探索仍然保留
+- 密集导数类 partner-ratio 家族，已经明确移出默认 broad-search 策略
+- `group_ratio_zscore_*` 和 `group_vol_scaled_delta` 不再是一线默认模板
 
-## What Not To Do
+## 不建议做的事
 
-- Do not treat short `delta` and aggressive mean-reversion families as first-line defaults for this dataset.
-- Do not let dense derivative pair-ratio branches crowd broad search unless later refine evidence clearly improves.
-- Do not promote legacy fallback wrappers back into the main library just because they add quantity.
+- 不要把短窗 `delta` 和激进均值回归当作该数据集的一线默认模板。
+- 不要让密集导数 pair-ratio 分支重新挤占 broad search，除非后续 refine 证据明显改善。
+- 不要仅仅因为“增加了数量”，就把旧的 fallback 包装器重新塞回主模板库。
 
-## Recommended Workflow
+## 推荐流程
 
-Broad exploration:
-- Keep broad search compact and hypothesis-driven.
-- Prefer the curated dataset library over broad fallback expansion.
-- Let structural diversity beat near-neighbor window density.
+Broad exploration：
+- broad search 保持紧凑、假设驱动。
+- 优先使用当前整理后的数据集专属模板库，而不是继续扩 shared fallback。
+- 让“结构差异”胜过“近邻窗口堆叠”。
 
-Focused refine:
-- Use refine packs to reopen demoted lanes only after clear near-pass evidence.
-- Prefer cap-ratio / bucket-cap-ratio expansions before reviving weak derivative pair-ratio families.
+Focused refine：
+- 只有在明确出现 near-pass 证据后，再用 refine pack 重新打开已下沉分支。
+- 相比恢复弱势导数 pair-ratio，更优先扩 `cap-ratio` / `bucket-cap-ratio`
 
-Legacy handling:
-- Older weaker fallback templates live in `legacy.json`, not the main default library.
-- mean-reversion, `information_ratio`, normalize/quantile wrappers, and extra long-window neighbors are better treated as refine/experimental branches unless new evidence promotes them
-- The current recovery pack is `templates/model16/refine/broad_search_neighbors.json`.
+旧模板处理：
+- 过去较弱的 fallback 模板保留在 `legacy.json`，不再放在默认主库。
+- `mean-reversion`、`information_ratio`、`normalize/quantile` 包装器，以及额外的长窗口近邻，更适合作为 refine/实验分支，而不是默认 broad-search 主力。
+- 当前恢复包位于 `templates/model16/refine/broad_search_neighbors.json`
 
-## Open Questions
-- Add a small sector-relative spread family if later runs show enough differentiation between value/quality/growth-style fields.
-- Verify whether `information_ratio` should remain in the core default set or be demoted behind grouped bucket variants.
+## 待确认问题
+
+- 如果后续运行显示 value/quality/growth 风格字段之间差异足够明显，可以补一个小型 sector-relative spread 家族。
+- 继续验证 `information_ratio` 是否还应留在核心默认集，还是进一步下沉到 grouped bucket 变体之后。
