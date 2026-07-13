@@ -130,12 +130,62 @@
 - 不做 neutralization：更容易带上市场/行业方向暴露
 - 做 neutralization：更像是在同类股票里做强弱比较
 
+这里最容易混淆的一点是：
+
+- `neutralization` 设置
+- `group_neutralize(...)` 算子
+
+它们不是一回事。
+
+可以先这样记：
+
+- `group_neutralize(...)`
+  - 是表达式内部自己显式做组内相对化
+- `neutralization` 设置
+  - 是平台在组合层面对整条 Alpha 再做一层中性化
+
+所以很多时候：
+
+- 先用 `group_neutralize(...)` 决定信号结构
+- 再由 `neutralization` 设置决定最终组合暴露
+
 ### 5.4 Truncation
 
 它的本质不是格式设置，而是组合风险控制。
 
 - 更严格：更分散，更稳
 - 更宽松：更容易放大信号，也更容易集中
+
+这里也要分清两个东西：
+
+- `truncate(...)` 算子
+- `truncation` 设置
+
+更实用的理解是：
+
+- `truncate(...)`
+  - 更像表达式内部主动裁极值
+- `truncation` 设置
+  - 更像平台在最终组合权重层做上限控制
+
+所以如果你的问题是：
+
+- 原始信号本身极端值太尖
+
+更该先想：
+
+- `rank`
+- `zscore`
+- `scale`
+- `truncate(...)`
+
+如果你的问题是：
+
+- 最终组合权重太集中
+
+更该先想：
+
+- 更严格的 `truncation`
 
 ### 5.5 Universe
 
@@ -261,6 +311,18 @@
 
 - 当你的表达式可能出现极端值或非法值时，`pasteurize` 是安全阀
 - 当你在用 group operators 时，它也能帮助避免 Universe 外股票混进计算
+
+再补一个很实用的直觉：
+
+- `pasteurize` 不只是清洗脏值
+- 它也会改变“哪些股票还能继续参与后续运算”
+
+所以当你发现：
+
+- 开启 `pasteurize` 后
+- coverage、group 输入集合、甚至最终权重结构都有变化
+
+这不是异常，而是它的正常语义。
 
 ---
 

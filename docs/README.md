@@ -59,6 +59,7 @@
 | `Coverage / Alpha list / Correlation` 工具怎么看？ | [04_platform_terms_and_states.md](04_platform_terms_and_states.md) |
 | `LOW_SUB_UNIVERSE_SHARPE` / `SELF_CORRELATION` / `PROD_CORRELATION` 怎么理解？ | [04_platform_terms_and_states.md](04_platform_terms_and_states.md) |
 | 官网方法论怎么落到这个仓库？ | [03_repo_practice_guide.md](03_repo_practice_guide.md) |
+| 官网 Support / Community 的量化建议，怎么映射到本仓库？ | [02_optimization_guide.md](02_optimization_guide.md) / [03_repo_practice_guide.md](03_repo_practice_guide.md) |
 | 当前某个数据集该怎么跑？ | `templates/<dataset_id>/README.md` |
 
 ## 按角色找文档

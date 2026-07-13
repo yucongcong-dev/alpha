@@ -342,6 +342,40 @@
 - Universe 边界控制
 - group operator 输入集合控制
 
+这也是为什么它经常和下面这些东西一起被讨论：
+
+- cross operations
+- group operators
+- coverage 变化
+
+因为它不只是“把坏值洗掉”，还会改变后续有哪些 instrument 继续参与计算。
+
+---
+
+## 8.5 `truncate(...)`、`truncation`、`group_neutralize(...)`、`neutralization`
+
+这几组词在平台里非常容易混。
+
+先记最重要的边界：
+
+- `truncate(...)`
+  - 表达式算子
+  - 更像信号内部裁极值
+- `truncation`
+  - 平台设置
+  - 更像最终组合权重上限
+- `group_neutralize(...)`
+  - 表达式算子
+  - 更像组内相对化
+- `neutralization`
+  - 平台设置
+  - 更像组合层中性化
+
+这层边界很重要，因为它决定了：
+
+- 你是在改“信号长什么样”
+- 还是在改“平台怎样把信号变成最终组合”
+
 ---
 
 ## 9. 交易成本、Turnover、Margin
@@ -713,6 +747,18 @@ Glossary 把 robust performance 明确当成平台关心的方向。
 
 - 你的 Alpha 在更小、更液态的子宇宙里不够稳
 - 它提示的往往不是“再调一个窗口”，而是结构泛化能力不够
+
+它经常和社区里讨论的：
+
+- `robust universe sharpe`
+- `robust universe returns`
+
+属于同一类稳健性话题。
+
+更实用的理解是：
+
+- 平台不只想知道“你在大 Universe 里能不能跑起来”
+- 还想知道“收缩到更核心子集后，它是否仍然站得住”
 
 ### 12.6 `SELF_CORRELATION`
 
