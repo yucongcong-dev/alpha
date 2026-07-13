@@ -48,6 +48,33 @@
       "activation_scope": "refine"
     },
     {
+      "name": "hc_ratio_group_zscore_252_over_cap",
+      "expression": "group_rank(ts_zscore({field_preprocessed} / cap, 252), subindustry)",
+      "priority": 981,
+      "family": "high_conviction_ratio",
+      "layer": "account",
+      "role": "refine_neighbor",
+      "activation_scope": "refine"
+    },
+    {
+      "name": "hc_ratio_group_zscore_252_over_cap_industry",
+      "expression": "group_rank(ts_zscore({field_preprocessed} / cap, 252), industry)",
+      "priority": 980,
+      "family": "high_conviction_ratio",
+      "layer": "account",
+      "role": "refine_neighbor",
+      "activation_scope": "refine"
+    },
+    {
+      "name": "hc_ratio_decay_zscore_252_over_cap",
+      "expression": "ts_decay_linear(group_rank(ts_zscore({field_preprocessed} / cap, 252), subindustry), 20)",
+      "priority": 979,
+      "family": "high_conviction_ratio",
+      "layer": "account",
+      "role": "refine_neighbor",
+      "activation_scope": "refine"
+    },
+    {
       "name": "hc_ratio_group_level_field_over_cap",
       "expression": "group_rank({field_preprocessed} / cap, subindustry)",
       "priority": 975,
@@ -152,7 +179,7 @@
     },
     {
       "name": "vec_avg_decay_120",
-      "expression": "rank(ts_decay_linear(ts_backfill(vec_avg({field}), {backfill_window}), 120))",
+      "expression": "rank(ts_decay_linear(ts_backfill({field}, {backfill_window}), 120))",
       "priority": 984,
       "family": "decay_level",
       "layer": "vector",

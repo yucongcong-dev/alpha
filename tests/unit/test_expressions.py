@@ -277,3 +277,37 @@ def test_build_expression_candidates_narrows_event_field_template_pool() -> None
     assert "vec_avg_zscore" not in names
     assert families <= {"ts_rank", "zscore_time", "decay_level", "event_trade_when"}
     assert all("vec_avg(vec_avg(" not in item.expression for item in candidates)
+
+
+def test_fundamental6_refine_vector_templates_do_not_double_wrap_vec_avg() -> None:
+    policy = get_dataset_expression_policy("fundamental6")
+    field = {"id": "fnd6_cptnewqeventv110_apq", "type": "VECTOR"}
+    template_file = (
+        Path(__file__).resolve().parents[2]
+        / "templates"
+        / "fundamental6"
+        / "refine"
+        / "default_neighbors.json"
+    )
+    template_library = load_template_library(str(template_file))
+
+    build_ctx = TemplateBuildContext(
+        options=TemplateBuildOptions(**_DEFAULT_SIM_SETTINGS, dataset_id="fundamental6", legacy_similarity_penalty=0),
+        all_fields=[field],
+        template_library_file=str(template_file),
+        template_library=template_library,
+    )
+    candidates = build_expression_candidates(
+        field,
+        build_ctx,
+        max_templates_per_field=0,
+        max_templates_per_family=0,
+        expression_policy=policy,
+    )
+
+    by_name = {item.name: item.expression for item in candidates}
+    assert "vec_avg_decay_120" in by_name
+    assert by_name["vec_avg_decay_120"] == (
+        "rank(ts_decay_linear(ts_backfill(vec_avg(fnd6_cptnewqeventv110_apq), 504), 120))"
+    )
+    assert all("vec_avg(vec_avg(" not in item.expression for item in candidates)
