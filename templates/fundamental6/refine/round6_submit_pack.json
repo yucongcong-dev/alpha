@@ -1,0 +1,54 @@
+{
+  "_comment": "fundamental6 round6 submit pack — 仅围绕 cashflow_op 的已通过/近通过主线做重复验证与窄邻域微调",
+  "_comment_placeholders": "{field}=字段名, {field_preprocessed}=winsorize(ts_backfill({field}, {backfill_window}), std=4), {backfill_window}=settings.yaml expression.backfill_window",
+  "default": [
+    {
+      "name": "hc_ratio_group_zscore_252_over_cap",
+      "expression": "group_rank(ts_zscore({field_preprocessed} / cap, 252), subindustry)",
+      "priority": 1000,
+      "family": "high_conviction_ratio",
+      "layer": "account",
+      "role": "refine_neighbor",
+      "activation_scope": "refine"
+    },
+    {
+      "name": "hc_ratio_decay_zscore_252_over_cap",
+      "expression": "ts_decay_linear(group_rank(ts_zscore({field_preprocessed} / cap, 252), subindustry), 20)",
+      "priority": 999,
+      "family": "high_conviction_ratio",
+      "layer": "account",
+      "role": "refine_neighbor",
+      "activation_scope": "refine"
+    },
+    {
+      "name": "hc_ratio_group_level_field_over_cap",
+      "expression": "group_rank({field_preprocessed} / cap, subindustry)",
+      "priority": 998,
+      "family": "high_conviction_ratio",
+      "layer": "account",
+      "role": "refine_neighbor",
+      "activation_scope": "refine"
+    },
+    {
+      "name": "hc_ratio_group_zscore_252_over_cap_industry",
+      "expression": "group_rank(ts_zscore({field_preprocessed} / cap, 252), industry)",
+      "priority": 997,
+      "family": "high_conviction_ratio",
+      "layer": "account",
+      "role": "refine_neighbor",
+      "activation_scope": "refine"
+    },
+    {
+      "name": "hc_ratio_group_level_field_over_cap_industry",
+      "expression": "group_rank({field_preprocessed} / cap, industry)",
+      "priority": 996,
+      "family": "high_conviction_ratio",
+      "layer": "account",
+      "role": "refine_neighbor",
+      "activation_scope": "refine"
+    }
+  ],
+  "VECTOR": [],
+  "GROUP": [],
+  "SET": []
+}
