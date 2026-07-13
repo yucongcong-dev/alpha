@@ -83,6 +83,97 @@
 - 短窗模板（`20/5`）在季度更新字段上几乎没有有效信号
 - v3 模板的 53 条结果全部 `submittable=0`，主因是 self-correlation
 
+## 当前阶段结论
+
+基于 `2026-07-10` 到 `2026-07-13` 的 `round3 -> round6` 本地运行结果，`fundamental6` 当前已经不再处于“找方向”阶段，而是进入“围绕已验证主线做 submit-oriented 深挖”阶段。
+
+阶段性结论：
+- 当前最强、最稳定的主线是：
+  - `cashflow_op`
+  - `field / cap`
+  - `ts_zscore(..., 252)`
+  - `group_rank(..., subindustry/industry)`
+- 已经稳定打出 `submittable` 的表达式包括：
+  - `group_rank(ts_zscore(winsorize(ts_backfill(cashflow_op, 120), std=4)/cap, 252), subindustry)`
+  - `group_rank(ts_zscore(winsorize(ts_backfill(cashflow_op, 120), std=4)/cap, 252), industry)`
+- 最接近门槛、但还未正式过线的 near-pass 主线是：
+  - `ts_decay_linear(group_rank(ts_zscore(winsorize(ts_backfill(cashflow_op, 120), std=4)/cap, 252), subindustry), 20)`
+  - 它通常卡在：
+    - `LOW_SHARPE ~= 1.20~1.21`
+    - `LOW_FITNESS ~= 0.78~0.79`
+
+这说明：
+- `cashflow_op + cap + grouped zscore_252` 不是偶然结果，而是当前数据集里已经被重复验证的 submit 主干
+- `subindustry` 与 `industry` 两个 grouped 版本都值得保留
+- 相比之下，普通单字段 `decay/zscore` 模板大多只是“能跑”，不是“能交”
+
+## 已验证的分层判断
+
+主战场：
+- `cashflow_op` 是当前最值得继续投入算力的字段
+- 应优先使用 relation/grouped 结构，而不是继续堆普通时间窗邻居
+
+次优观察线：
+- `cogs + decay_120`
+  - 强度不算差，但反复卡在 `LOW_TURNOVER`
+- `VECTOR decay_120`
+  - `fnd6_cptnewqeventv110_lctq`
+  - `fnd6_cptnewqeventv110_dpq`
+  - 这两条在修复双重 `vec_avg` 后已稳定可跑，但当前还不如 `cashflow_op` 主线接近提交
+
+弱线 / 暂停线：
+- `cash_st`
+- `cashflow`
+- 普通 `ts_zscore_126/252`
+- 普通 `decay_120/252`
+- 慢频字段上的短窗或轻微窗口微调
+
+这些方向当前更容易出现的问题是：
+- `LOW_SHARPE`
+- `LOW_FITNESS`
+- `LOW_TURNOVER`
+- 或者只是和已知强表达式高度相似，但没有新增价值
+
+## 相关性风险判断
+
+围绕 `cashflow_op` 继续探索，短期内是合理的，但长期只盯一个字段会有明显风险：
+- 容易和自己已有表达式发生高 `self-correlation`
+- 容易把很多算力花在“同一条信号的小改版”上
+- 组合层面的新增价值会越来越低
+
+因此当前建议是：
+- 短期：
+  - 继续允许围绕 `cashflow_op` 做 1 到 2 轮 submit-oriented 微调
+- 中期：
+  - 尽快从“单字段 submit”转向“同结构异字段簇扩张”
+- 长期：
+  - 用字段簇轮换，替代字段单点深挖
+
+更稳的扩张单位应是“字段簇”，而不是单字段：
+- 经营现金流簇
+- 成本/支出簇
+- 事件型 VECTOR 簇
+
+## 当前建议执行顺序
+
+1. 先把 `cashflow_op` 已通过主线视为正式主干。
+2. 只对 `cashflow_op` 的 grouped zscore_252 近邻做小范围提交导向微调。
+3. 将 `cogs decay_120` 和 `VECTOR decay_120` 保留为备选观察线，而不是主战场。
+4. 暂停大范围字段扩搜和 broad-search 回滚。
+5. 下一阶段从“单字段 submit”过渡到“同结构多字段簇扩张”。
+
+## 模板包阶段角色
+
+到当前阶段，几个本地模板包的职责已经比较明确：
+- `templates/fundamental6/library.json`
+  - 用于第一阶段 broad 主干探索
+- `templates/fundamental6/refine/default_neighbors.json`
+  - 用于第二阶段 refine 扩展和结构替代
+- `templates/fundamental6/refine/round5_high_conviction.json`
+  - 用于高信念收窄验证，回收 `cashflow_op` 主线并保留稳定的 VECTOR 次优支路
+- `templates/fundamental6/refine/round6_submit_pack.json`
+  - 用于 submit-oriented 重复验证，只围绕 `cashflow_op` 的已通过与 near-pass 主线
+
 ## v4 模板调整
 
 1. 去掉模板内中性化：所有模板移除 `group_neutralize`，只依赖 settings 里的 `neutralization=SUBINDUSTRY`
