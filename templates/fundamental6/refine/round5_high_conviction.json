@@ -1,0 +1,129 @@
+{
+  "_comment": "fundamental6 round5 高信念 refine 包 — 回收 round3 接近门槛的 cashflow_op 主线，并保留 round4 已验证稳定的 VECTOR decay_120",
+  "_comment_placeholders": "{field}=字段名, {field_preprocessed}=winsorize(ts_backfill({field}, {backfill_window}), std=4), {field_longfill}=winsorize(ts_backfill({field}, 252), std=3), {field_rawfill}=ts_backfill({field}, {backfill_window}), {backfill_window}=settings.yaml expression.backfill_window",
+  "default": [
+    {
+      "name": "hc_ratio_decay_zscore_252_over_cap",
+      "expression": "ts_decay_linear(group_rank(ts_zscore({field_preprocessed} / cap, 252), subindustry), 20)",
+      "priority": 1000,
+      "family": "high_conviction_ratio",
+      "layer": "account",
+      "role": "refine_neighbor",
+      "activation_scope": "refine"
+    },
+    {
+      "name": "hc_ratio_group_zscore_252_over_cap",
+      "expression": "group_rank(ts_zscore({field_preprocessed} / cap, 252), subindustry)",
+      "priority": 998,
+      "family": "high_conviction_ratio",
+      "layer": "account",
+      "role": "refine_neighbor",
+      "activation_scope": "refine"
+    },
+    {
+      "name": "hc_ratio_group_level_field_over_cap",
+      "expression": "group_rank({field_preprocessed} / cap, subindustry)",
+      "priority": 996,
+      "family": "high_conviction_ratio",
+      "layer": "account",
+      "role": "refine_neighbor",
+      "activation_scope": "refine"
+    },
+    {
+      "name": "decay_120",
+      "expression": "rank(ts_decay_linear(ts_backfill({field}, {backfill_window}), 120))",
+      "priority": 994,
+      "family": "decay_level",
+      "layer": "time_series",
+      "role": "refine_neighbor",
+      "activation_scope": "refine"
+    },
+    {
+      "name": "3layer_zscore_longfill_decay",
+      "expression": "ts_decay_linear(ts_zscore(winsorize(ts_backfill({field}, 252), std=3), 60), 20)",
+      "priority": 992,
+      "family": "neutralize_decay",
+      "layer": "composite",
+      "role": "refine_neighbor",
+      "activation_scope": "refine"
+    },
+    {
+      "name": "hc_ratio_group_zscore_252_over_cap_industry",
+      "expression": "group_rank(ts_zscore({field_preprocessed} / cap, 252), industry)",
+      "priority": 990,
+      "family": "high_conviction_ratio",
+      "layer": "account",
+      "role": "refine_neighbor",
+      "activation_scope": "refine"
+    }
+  ],
+  "VECTOR": [
+    {
+      "name": "vec_avg_decay_120",
+      "expression": "rank(ts_decay_linear(ts_backfill({field}, {backfill_window}), 120))",
+      "priority": 1000,
+      "family": "decay_level",
+      "layer": "vector",
+      "role": "refine_neighbor",
+      "activation_scope": "refine"
+    },
+    {
+      "name": "vec_avg_ts_rank_252",
+      "expression": "rank(ts_rank({field_preprocessed}, 252))",
+      "priority": 998,
+      "family": "ts_rank",
+      "layer": "vector",
+      "role": "refine_neighbor",
+      "activation_scope": "refine"
+    },
+    {
+      "name": "vec_avg_ts_zscore_60",
+      "expression": "rank(ts_zscore({field_preprocessed}, 60))",
+      "priority": 996,
+      "family": "zscore_time",
+      "layer": "vector",
+      "role": "refine_neighbor",
+      "activation_scope": "refine"
+    }
+  ],
+  "GROUP": [
+    {
+      "name": "vec_avg_decay_120",
+      "expression": "rank(ts_decay_linear(ts_backfill(vec_avg({field}), {backfill_window}), 120))",
+      "priority": 1000,
+      "family": "decay_level",
+      "layer": "group",
+      "role": "refine_neighbor",
+      "activation_scope": "refine"
+    },
+    {
+      "name": "vec_avg_ts_rank_252",
+      "expression": "rank(ts_rank(vec_avg({field}), 252))",
+      "priority": 998,
+      "family": "ts_rank",
+      "layer": "group",
+      "role": "refine_neighbor",
+      "activation_scope": "refine"
+    }
+  ],
+  "SET": [
+    {
+      "name": "vec_avg_decay_120",
+      "expression": "rank(ts_decay_linear(ts_backfill(vec_avg({field}), {backfill_window}), 120))",
+      "priority": 1000,
+      "family": "decay_level",
+      "layer": "set",
+      "role": "refine_neighbor",
+      "activation_scope": "refine"
+    },
+    {
+      "name": "vec_avg_ts_rank_252",
+      "expression": "rank(ts_rank(vec_avg({field}), 252))",
+      "priority": 998,
+      "family": "ts_rank",
+      "layer": "set",
+      "role": "refine_neighbor",
+      "activation_scope": "refine"
+    }
+  ]
+}
