@@ -12,10 +12,26 @@
 
 ## 官方口径
 - WorldQuant BRAIN 的 alpha examples 明确支持 neutralization、grouped ranking、以及结构化表达式。
+- 官网按数据类别给出的通用建议是：Fundamental Dataset 优先以 `Industry` Neutralization
+  作为基线，因为同一基本面指标对不同行业的含义通常不同。
 
 官方字段元信息层面：
 - 字段筛选和排序会使用 `coverage`、`dateCoverage`、`alphaCount`、`userCount`
 - 事件前缀字段通常需要更严格的阈值处理
+
+## Neutralization 建议
+
+官方类别级建议和本地运行证据需要同时保留：
+
+- 官方基线：`Industry`
+- 本地已验证挑战版本：`Subindustry`
+- `cashflow_op / cap` 这类 grouped relation，应同时保留 Industry 和 Subindustry 对照
+- 模板内使用 `group_rank / group_zscore` 不等于已经中性化；仍需明确 settings 层策略
+- 模板内使用 `group_neutralize` 时，settings 层设为 `None`，避免双重中性化
+- 市值或流动性 bucket 统一先经过 `densify()`，并控制 bucket 数量，避免小组样本过少
+
+选择最终 Neutralization 时，不只比较最高 Sharpe，还要同时看 Sub-Universe、
+权重集中度和相邻设置的稳定性。
 
 ## 官方数据画像
 

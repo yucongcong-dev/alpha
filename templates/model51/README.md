@@ -14,6 +14,19 @@
 - 和 `model16` 一样，当前本地没有拿到 `model51` 的专属官方模板手册。
 - 可直接依赖的官方信息，仍然是 BRAIN 通用文档里对 grouped、neutralized、structured expressions 的支持。
 
+## Neutralization 与流动性建议
+
+`model51` 属于 Model Dataset，官网建议根据子类别比较多种 Neutralization。结合其风险字段语义：
+
+- `Market` 用来先移除全市场共同风险
+- `Industry / Subindustry` 用来判断风险描述子是否只是行业结构
+- `bucket(rank(cap), ...)` 可以构造 size 分层，bucket 使用前应 `densify()`
+- 若最不流动 50% after-cost Sharpe 较弱，可按 `cap` 或平均成交量划分流动性组，并给低流动性组更长 Decay
+- 有明确 size / liquidity 风险向量时，可在专项 refine 中尝试 `vector_neut()`
+
+模板内中性化和 settings 层中性化不能无意识叠加。默认库应让每个候选明确属于
+“表达式中性化”或“设置中性化”中的一种。
+
 ## 本地证据
 
 结构性判断：

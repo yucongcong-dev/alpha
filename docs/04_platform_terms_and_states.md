@@ -543,6 +543,32 @@
 - `VECTOR` 更适合作为事件/向量专项支路
 - `GROUP / SET` 不该简单混回普通标量模板池
 
+### 10.6 `GROUP` 字段、`bucket()` 和 `densify()`
+
+官网对 Group Data Field 的定位是：它描述股票属于哪个组，主要作为 group operator
+的第二个输入。除了 `sector / industry / subindustry / exchange`，还可以用普通数值字段
+动态创建分组：
+
+```text
+asset_group = bucket(rank(assets), range="0.1, 1, 0.1");
+group_zscore(alpha, densify(asset_group))
+```
+
+这里：
+
+- `bucket()` 根据数值区间生成自定义组
+- `densify()` 去掉空组并重新压紧组编号
+- `group_rank / group_zscore / group_neutralize` 只在组内比较股票
+
+所以 `bucket()` 不是普通的数值离散化装饰。它改变了 Alpha 的比较范围，适合用于：
+
+- 市值分层
+- 流动性分层
+- 波动率分层
+- 基本面规模分层
+
+自定义组过细会导致每组股票太少。Universe 越小，越要控制 bucket 数量。
+
 ---
 
 ## 11. Coverage、Alpha list、Correlation 工具
@@ -673,6 +699,19 @@
 - `VECTOR/event` 开支路
 - 拥挤字段不是不能用，而是不能普通地用
 
+### 11.2.3 `Dataset Value Score`
+
+官网把 Dataset Value Score 定义为数据集“未被充分使用”的程度，该指标目前主要
+面向 Consultant。它不是传统意义上的 Value Factor，也不等于数据质量分数。
+
+更合适的理解是：
+
+- 分数较高：平台更鼓励探索，通常代表相对没被充分利用
+- 分数较低：不代表数据差，但可能已经更拥挤
+
+因此筛选数据集时应把它和 `coverage / alphaCount / userCount` 一起看，不能只按
+Value Score 排序就直接投入大量仿真预算。
+
 ### 11.3 `Correlation`
 
 官方 Glossary 直接把 Correlation 解释成：
@@ -795,6 +834,39 @@ Glossary 把 robust performance 明确当成平台关心的方向。
 - 是否 coverage 很低却没做 backfill
 - 是否某些极端值把权重挤到少数股票上
 
+### 12.9 最不流动 50% 的 after-cost Sharpe 检查
+
+平台会检查原 Universe 中最不流动的 50% 股票在计入交易成本后的 Sharpe。
+官网示例要求该部分达到原 Universe after-cost Sharpe 的约 `52.5%`。
+
+这项检查回答的是：
+
+- Alpha 是否只在最液态股票上有效
+- 扩展到较不流动部分后，交易成本是否吃掉了信号
+- 是否存在明显的 size / liquidity 风险暴露
+
+常见处理方向：
+
+- 按流动性分组设置不同 Decay
+- 用 `cap` 或平均成交量构造 bucket
+- 用 `group_neutralize()` 处理 size / liquidity 分层
+- 有合适风险向量时使用 `vector_neut()`
+
+### 12.10 `Alpha better suited for Delay 1`
+
+该提示出现在 D0 Alpha 上，含义是：
+
+- 同一 Alpha 在 D1 的 Sharpe 高于 D0
+- 平台认为它更适合 Delay 1
+
+这种情况下通常应优先提交 D1，因为 D1 往往同时具有：
+
+- 更高表现
+- 更低换手
+- 更低交易成本压力
+
+它不是要求继续优化 D0，而是在提醒研究假设和 Delay 不匹配。
+
 ---
 
 ## 13. PnL、Drawdown、平滑
@@ -895,3 +967,8 @@ OS 是提交之后逐步积累出来的样本外表现。
 - [What is ISladder test and how is it constructed?](https://api.worldquantbrain.com/faqs/isladder-test)
 - [What is the IQC scoring metrics?](https://api.worldquantbrain.com/faqs/iqc-scoring-metrics)
 - [After I submit an alpha, how much time does it take for it to be reflected as the score on leaderboard?](https://api.worldquantbrain.com/faqs/score-update-frequency)
+- [Understanding Data in BRAIN: Key Concepts and Tips](https://platform.worldquantbrain.com/learn/documentation/understanding-data/data)
+- [Group Data Fields](https://platform.worldquantbrain.com/learn/documentation/understanding-data/group-data-fields)
+- [D0](https://platform.worldquantbrain.com/learn/documentation/advanced-topics/getting-started-d0)
+- [Most illiquid 50% instruments after-cost test](https://support.worldquantbrain.com/hc/en-us/articles/19083525654551-Error-message-Most-illiquid-50-instruments-after-cost-Sharpe-is-above-cutoff-of-original-universe)
+- [Alpha better suited for Delay 1](https://support.worldquantbrain.com/hc/en-us/articles/19083452017559-Error-Message-Alpha-better-suited-for-Delay-1)

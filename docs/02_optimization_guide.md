@@ -96,7 +96,7 @@
 因为：
 
 - `Sharpe` 太差时，`Returns` 再高也很难稳
-- `Turnover` 太高时，`Fitness` 很容易被真实交易成本压力拖垮
+- `Turnover` 太高时，`Fitness` 会受到公式分母惩罚，实际交易成本压力也更大
 
 ---
 
@@ -140,6 +140,37 @@
 3. 配合 `hump` 或其他阈值逻辑，直接把换手控制写进结构
 
 这比把它理解成“简单降换手开关”更接近官方社区里的用法。
+
+还可以继续区分几种工具的职责：
+
+- `hump / hump_decay`：过滤幅度很小的日常抖动
+- `ts_decay_linear / ts_decay_exp_window`：平滑持续变化的信号
+- `days_from_last_change`：识别快速衰减或长时间未更新的字段
+- `trade_when` 的退出条件：在止损、事件结束或信号失效时主动退出，而不是无限延持
+
+如果高换手主要来自低流动性股票，不要只给全 Universe 增加同一个 Decay。
+更合理的是用 `cap` 或平均成交量划分流动性层，并给低流动性组更长的持有周期。
+
+---
+
+## 5.5 D0 Alpha 应该单独研究
+
+`Delay=0` 不是简单把 D1 Alpha 的设置改成 0。官网对 D0 的定位是：
+
+- 使用当日最新可用信息
+- 更快响应业绩、并购、回购、产品发布和宏观新闻等事件
+- 通常比 D1 有更高 Turnover 和交易成本压力
+
+D0 研究建议按下面的顺序进行：
+
+1. 先确认字段真的支持 D0，并检查适用 Region
+2. 优先使用事件逻辑和 `trade_when`
+3. 使用流动性更好的 Universe；USA 通常从 `TOP1000` 或更核心 Universe 起步
+4. 同一个想法同时跑 D0 和 D1，保留 D1 作为对照
+5. 检查 Sub-Universe、Robust Universe 和 after-cost 表现
+
+如果同一表达式在 D1 的 Sharpe 高于 D0，官网建议直接考虑提交 D1，因为它通常
+同时具有更高表现和更低交易成本，而不是为了 D0 标签继续强行优化。
 
 ---
 
@@ -249,8 +280,9 @@
 
 官方这里给了两个非常容易被忽略的点：
 
-- 模拟结果本身 **不直接包含** 交易成本
+- 普通模拟结果展示的 Returns **不直接扣除** 真实交易成本
 - `Turnover` 是判断交易成本压力的一个好 proxy
+- 部分提交检查会另外计算 `after-cost Sharpe`
 
 所以优化时不要误以为：
 
@@ -343,6 +375,40 @@
 - 它对边缘样本依赖太强
 - 或结构稳健性还不够
 
+## 11.6 最不流动 50% 的 after-cost 检查
+
+官网说明里还有一项容易遗漏的提交检查：
+
+- 平台会看原 Universe 中最不流动的 50% 股票
+- 计算该部分的 after-cost Sharpe
+- 其表现需要达到原 Universe after-cost Sharpe 的一定比例；官方示例约为 `52.5%`
+
+失败时不应该简单删除低流动性股票。优先考虑：
+
+- 按流动性设置不同的 Decay
+- 使用 `cap`、平均成交量等构造流动性分组
+- 用 `group_neutralize()` 降低 size / liquidity 风险暴露
+- 在有明确风险向量时使用 `vector_neut()`
+
+## 11.7 一套可执行的抗过拟合测试
+
+官方社区明确建议把 disciplined research 放在“找到最高 IS 数字”之前。
+进入最终候选池前至少做：
+
+1. Rank test：把最终 Alpha 转成 rank，检查相对排序是否仍有效
+2. Binary test：只保留 `-1/+1` 方向，检查是否过度依赖精确幅度
+3. Sub/Super Universe test：检查不同股票池下是否仍成立
+4. Train/Test：研发阶段不查看 Test 结果，最后一次性验证
+5. 参数稳定性：自然窗口附近不应只剩一个孤立最优点
+6. 因子暴露检查：避免表现主要来自波动率、规模或常见风格因子
+
+几个很实用的官方社区经验：
+
+- 不要总选数字最高的参数，稳定的次优点通常更可信
+- `4` 天和 `6` 天都可用时，可以选 `5`，或简单平均两个版本
+- 不要为了通过某项测试反向拟合该测试
+- 不要陷入“IS 表现越优秀越好”的陷阱，重点是表现能否保持
+
 ---
 
 ## 12. PnL 曲线突然跳变时先查什么
@@ -369,11 +435,14 @@
 
 - `Decay`
 - `trade_when`
+- `hump / hump_decay`
+- `ts_decay_linear / ts_decay_exp_window`
 - `rank()`
 - `ts_backfill`
-- `Truncation`
 
 把它们放在一起理解，比孤立看任何一个都更有效。
+
+`Truncation` 主要控制单股权重和集中度，不应被当作首要降换手工具。
 
 ---
 
@@ -411,3 +480,16 @@
 - 相关性优先靠结构替换解决
 - Fitness 先回公式，不要当黑盒
 - 模板数量不是研究质量
+
+---
+
+## 17. 官方来源
+
+- [Understanding Data in BRAIN: Key Concepts and Tips](https://platform.worldquantbrain.com/learn/documentation/understanding-data/data)
+- [How to use the Data Explorer](https://platform.worldquantbrain.com/learn/documentation/understanding-data/how-use-data-explorer)
+- [Must-read posts: How to improve your Alphas](https://platform.worldquantbrain.com/learn/documentation/advanced-topics/list-must-read-posts-how-improve-your-alphas-are-submitted)
+- [Neutralization](https://platform.worldquantbrain.com/learn/documentation/advanced-topics/neut-cons)
+- [D0](https://platform.worldquantbrain.com/learn/documentation/advanced-topics/getting-started-d0)
+- [How can you avoid overfitting?](https://support.worldquantbrain.com/hc/en-us/community/posts/8209806533015-How-can-you-avoid-overfitting-)
+- [Most illiquid 50% instruments after-cost test](https://support.worldquantbrain.com/hc/en-us/articles/19083525654551-Error-message-Most-illiquid-50-instruments-after-cost-Sharpe-is-above-cutoff-of-original-universe)
+- [Alpha better suited for Delay 1](https://support.worldquantbrain.com/hc/en-us/articles/19083452017559-Error-Message-Alpha-better-suited-for-Delay-1)

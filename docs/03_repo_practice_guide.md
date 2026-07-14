@@ -47,6 +47,43 @@ Broad search 更适合：
 
 但一旦已经知道某些结构长期弱，继续做大范围广搜往往价值不高。
 
+### Broad search 前先做字段体检
+
+官网对新字段给了一套很实用的诊断方法。不要只看 Data Explorer
+里的元信息就直接生成模板，先在 `Neutralization=None`、`Decay=0`
+下用小批量模拟回答下面的问题：
+
+| 诊断表达式 | 主要回答什么 |
+|---|---|
+| `{field}` | 用 Long Count + Short Count 粗估实际覆盖率 |
+| `{field} != 0 ? 1 : 0` | 每天有多少非零有效值 |
+| `ts_std_dev({field}, N) != 0 ? 1 : 0` | 字段按日、周、月还是季度更新 |
+| `abs({field}) > X` | 取值边界和异常大值 |
+| `ts_median({field}, 1000) > X` | 长期中位数和中心位置 |
+| `X < scale_down({field}) && scale_down({field}) < Y` | 原始分布是否集中、偏斜或离散 |
+
+这里最重要的不是把六条表达式加入默认模板库，而是用它们决定：
+
+- 应该用什么窗口
+- 是否真的需要 backfill
+- 是否需要 winsorize / rank
+- 字段更适合连续信号还是事件触发
+- 它是否值得进入 broad search
+
+### Data Explorer 的筛选顺序
+
+官网建议先固定 `Region / Delay / Universe`，再搜索字段，因为同一字段不一定
+在所有区域和 Delay 下可用。随后综合看：
+
+- `coverage`
+- 字段类型
+- Dataset Value Score
+- `alphaCount / userCount`
+- 数据集和字段的拥挤度
+
+搜索词遵循 3S：short、simple、straightforward。对于常见概念，同时搜索全称
+和缩写，例如 `earnings per share / EPS`、`implied volatility / IV`。
+
 ---
 
 ## 4. Local refine 什么时候更合适
@@ -124,6 +161,18 @@ Broad search 更适合：
 5. 做定向 refine
 6. 如果主失败项长期不变，再考虑换字段或换假设
 
+在进入 submit-oriented refine 前，再加一道稳健性门：
+
+- Rank test：把最终信号改成截面 rank，观察逻辑是否仍成立
+- Binary test：用 `sign` 或条件表达式只保留方向，检查是否过度依赖精确幅度
+- Sub/Super Universe：检查结果是否只依赖某一段股票池
+- Train/Test：只用 Train 研发，用 Test 做最终验证
+- 参数扰动：优先使用 `5/20/60/120/252` 等自然窗口，避免挑中孤立最优点
+- 设置扰动：轻微改变 Decay、Neutralization 或 Truncation 后不应立即崩溃
+
+如果只有一个精确参数组合表现突出，不应直接把它当作最佳候选。官网社区更推荐
+选择稳定的次优点，或把相邻参数做简单融合，而不是继续追逐尖锐峰值。
+
 而不是：
 
 1. 先生成大量邻近模板
@@ -174,6 +223,19 @@ Broad search 更适合：
 - 本地研究如果只会不断复制同一想法的小变体
 - 就算偶尔单条回测不错，整池价值也未必高
 
+本地候选池至少应该按下面几个维度观察覆盖情况：
+
+- Region
+- Universe
+- Delay
+- Dataset category
+- 字段族和研究假设
+- 模板族和 Neutralization
+
+这不是要求每个组合都跑一遍，而是避免所有预算长期集中在同一个
+`Region × Delay × Dataset × idea family` 上。官网的 Dataset Usage Management
+同样在鼓励研究者离开过度使用的数据类别，主动增加研究多样性。
+
 ---
 
 ## 10. 对模板库的更健康要求
@@ -216,7 +278,7 @@ Broad search 更适合：
 
 更建议保持这套边界：
 
-- 主学习路径：`docs/01~03`
+- 主学习路径：`docs/01~04`
 - 总导航：`docs/README.md`
 - 工程入口：`README.md`
 - 数据集策略说明：`templates/<dataset_id>/README.md`
@@ -240,8 +302,18 @@ Broad search 更适合：
 
 如果继续往下整理，我更建议按这个顺序做：
 
-1. 对齐 `README.md` 和三篇主文档的链接
-2. 给 `templates/model16/README.md`、`templates/model51/README.md`、`templates/fundamental6/README.md` 各补一个统一结构
-3. 后续再单独做“FAQ 摘录篇”或“失败案例篇”
+1. 对齐 `README.md` 和四篇主文档的链接
+2. 给 `templates/model16/README.md`、`templates/model51/README.md`、`templates/fundamental6/README.md` 保持统一结构
+3. 新的官方知识继续合并进现有四篇主文档，不再单独增加 FAQ 摘录篇
 
 这样整套知识体系会比现在更稳。
+
+---
+
+## 14. 官方来源
+
+- [Understanding Data in BRAIN: Key Concepts and Tips](https://platform.worldquantbrain.com/learn/documentation/understanding-data/data)
+- [How to use the Data Explorer](https://platform.worldquantbrain.com/learn/documentation/understanding-data/how-use-data-explorer)
+- [Group Data Fields](https://platform.worldquantbrain.com/learn/documentation/understanding-data/group-data-fields)
+- [How can you avoid overfitting?](https://support.worldquantbrain.com/hc/en-us/community/posts/8209806533015-How-can-you-avoid-overfitting-)
+- [Dataset Usage Management](https://support.worldquantbrain.com/hc/en-us/sections/22696480006423-Dataset-Usage-Management)

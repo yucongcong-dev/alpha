@@ -13,6 +13,20 @@
 - 当前本地上下文里没有找到 `model16` 的官方专属模板手册。
 - 能直接复用的官方信息，主要还是 BRAIN 通用的 alpha examples 表达式风格。
 
+## Neutralization 建议
+
+官网对 Model Dataset 的建议不是固定使用某一级中性化，而是根据模型子类别在
+`Market / Sector / Industry / Subindustry` 之间做对照实验。
+
+对 `model16` 当前这种慢频评分/复合指标，更适合：
+
+- 以 `Industry` 作为第一基线，检查是否只是行业风格分数
+- 用 `Sector` 和 `Subindustry` 各保留一个挑战版本
+- 对规模效应明显的字段，使用 `bucket(rank(cap), ...)` 创建市值组，并先 `densify()`
+- 模板内已经使用 `group_neutralize` 时，把 settings 层 Neutralization 设为 `None`，避免双重中性化
+
+Neutralization 的选择应看一组稳定结果，而不是只挑 Sharpe 最高的单点。
+
 ## 本地证据
 
 公开脚本启发：
