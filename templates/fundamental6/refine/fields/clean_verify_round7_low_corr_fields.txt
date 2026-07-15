@@ -1,0 +1,4 @@
+cashflow_op
+cogs
+fnd6_cptnewqeventv110_lctq
+fnd6_cptnewqeventv110_dpq

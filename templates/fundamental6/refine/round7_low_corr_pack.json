@@ -1,0 +1,73 @@
+{
+  "_comment": "fundamental6 round7 low-corr pack — 保持已验证的 grouped relation 主结构，同时从 cashflow_op 扩到低相关字段簇",
+  "_comment_placeholders": "{field}=字段名, {field_preprocessed}=winsorize(ts_backfill({field}, {backfill_window}), std=4), {backfill_window}=settings.yaml expression.backfill_window",
+  "default": [
+    {
+      "name": "hc_ratio_group_zscore_252_over_cap",
+      "expression": "group_rank(ts_zscore({field_preprocessed} / cap, 252), subindustry)",
+      "priority": 1000,
+      "family": "high_conviction_ratio",
+      "layer": "account",
+      "role": "refine_neighbor",
+      "activation_scope": "refine"
+    },
+    {
+      "name": "hc_ratio_group_zscore_252_over_cap_industry",
+      "expression": "group_rank(ts_zscore({field_preprocessed} / cap, 252), industry)",
+      "priority": 999,
+      "family": "high_conviction_ratio",
+      "layer": "account",
+      "role": "refine_neighbor",
+      "activation_scope": "refine"
+    },
+    {
+      "name": "hc_ratio_decay_zscore_252_over_cap",
+      "expression": "ts_decay_linear(group_rank(ts_zscore({field_preprocessed} / cap, 252), subindustry), 20)",
+      "priority": 998,
+      "family": "high_conviction_ratio",
+      "layer": "account",
+      "role": "refine_neighbor",
+      "activation_scope": "refine"
+    },
+    {
+      "name": "hc_ratio_group_level_field_over_cap",
+      "expression": "group_rank({field_preprocessed} / cap, subindustry)",
+      "priority": 997,
+      "family": "high_conviction_ratio",
+      "layer": "account",
+      "role": "refine_neighbor",
+      "activation_scope": "refine"
+    },
+    {
+      "name": "decay_120",
+      "expression": "rank(ts_decay_linear(ts_backfill({field}, {backfill_window}), 120))",
+      "priority": 995,
+      "family": "decay_level",
+      "layer": "time_series",
+      "role": "refine_neighbor",
+      "activation_scope": "refine"
+    }
+  ],
+  "VECTOR": [
+    {
+      "name": "vec_avg_decay_120",
+      "expression": "rank(ts_decay_linear(ts_backfill({field}, {backfill_window}), 120))",
+      "priority": 1000,
+      "family": "decay_level",
+      "layer": "vector",
+      "role": "refine_neighbor",
+      "activation_scope": "refine"
+    },
+    {
+      "name": "vec_avg_ts_rank_252",
+      "expression": "rank(ts_rank({field_preprocessed}, 252))",
+      "priority": 998,
+      "family": "ts_rank",
+      "layer": "vector",
+      "role": "refine_neighbor",
+      "activation_scope": "refine"
+    }
+  ],
+  "GROUP": [],
+  "SET": []
+}
