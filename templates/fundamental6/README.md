@@ -18,6 +18,22 @@
 官方字段元信息层面：
 - 字段筛选和排序会使用 `coverage`、`dateCoverage`、`alphaCount`、`userCount`
 - 事件前缀字段通常需要更严格的阈值处理
+- 当目标 Region 的 Fundamental 使用占比过高时，平台可能暂时禁用相关字段的模拟和提交；需要在 [Alpha distribution](https://platform.worldquantbrain.com/alphas/distribution) 降到 `15%` 以下后恢复访问
+
+## 基本面假设地图
+
+默认模板不应只按字段名扫库，而应先归入可解释的财务假设：
+
+- 盈利能力：利润、毛利、经营利润相对资产、收入或资本的效率
+- 流动性：现金、短期资产和短期负债之间的偿付能力
+- 偿债能力：债务、利息负担与资产或现金流之间的关系
+- 现金流质量：经营现金流相对利润、资产、收入或市值的质量
+- 成长：收入、利润、资产和现金流的中长期变化
+- 估值：企业价值或市值相对利润、现金流、资产的定价
+
+优先构造有财务恒等式或关系约束支撑的表达式，例如资产与负债/权益、收入与费用、现金流利润与应计利润的差异。现金流显著强于会计利润时可能代表更高盈利质量；利润增长但经营现金流没有同步时，应警惕应计项驱动。
+
+行业口径不一致时，可以围绕资产规模、流动性或自定义财务分类构造 `bucket + densify` 分组，但要控制组数并验证每组样本量。
 
 ## Neutralization 建议
 
@@ -177,6 +193,96 @@
 3. 将 `cogs decay_120` 和 `VECTOR decay_120` 保留为备选观察线，而不是主战场。
 4. 暂停大范围字段扩搜和 broad-search 回滚。
 5. 下一阶段从“单字段 submit”过渡到“同结构多字段簇扩张”。
+
+## 2026-07-16 阶段切换
+
+基于 `round8 -> round11` 的连续验证，当前执行策略需要明确切换：
+
+- `cogs` 线到此为止只保留研究结论，不再继续消耗主预算
+- 原因不是流程没修好，而是它在去重修复后仍稳定卡在：
+  - `LOW_SHARPE ~= 0.88 ~ 0.89`
+  - `LOW_FITNESS ~= 0.77 ~ 0.79`
+- 因此 `cogs` 当前应被视为“已验证但不过线”的事件型备选线
+
+下一阶段应改成“第二主线候选字段簇”探索，而不是继续压同一条 `cogs` 表达式。
+
+推荐的 round12 候选字段簇：
+
+- `fnd6_cptnewqeventv110_lctq`
+- `fnd6_cptnewqeventv110_dpq`
+
+这两个字段的共同特点是：
+
+- 属于低拥挤的 `VECTOR / event-like` 支路
+- 在 `round7` 中都比大多数普通弱线更接近阈值
+- 当前还明显弱于 `cashflow_op` 主干，但比继续打 `cogs` 更值得拿预算验证
+
+对应字段文件：
+
+- `templates/fundamental6/refine/fields/clean_verify_round12_second_line_fields.txt`
+
+推荐执行包：
+
+- `templates/fundamental6/refine/round7_low_corr_pack.json`
+
+推荐用途：
+
+- 不是为了立刻 submit
+- 而是为了回答“`cashflow_op` 之外，哪个字段簇最像第二主线”
+
+如果 round12 之后这两个字段仍明显低于：
+
+- `Sharpe < 0.9`
+- `Fitness < 0.75`
+
+那就说明当前 `fundamental6` 阶段应暂时接受“单主线 + 多备选线”的现实，不要再强行追求第二主线。
+
+## 2026-07-16 round12 后续结论
+
+`round12` 已经把第二主线候选字段簇试了一轮，结果可以进一步收口：
+
+- `lctq` 明显强于 `dpq`
+- 但两者都没有达到第二主线门槛
+- 当前更合理的做法不是继续并行扩字段，而是把 `lctq` 单独保留为最小观察线
+
+当前对这两条字段的判断：
+
+- `lctq`
+  - 最强表达式仍是 `vec_avg_decay_120`
+  - 大约停留在 `Sharpe ~= 0.79`、`Fitness ~= 0.67`
+  - 可以保留为 `VECTOR` 观察线
+- `dpq`
+  - 最强表达式仍是 `vec_avg_decay_120`
+  - 大约停留在 `Sharpe ~= 0.71`、`Fitness ~= 0.57`
+  - 可继续降级，不再作为优先候选
+
+因此从 `2026-07-16 round12` 之后，推荐结构变成：
+
+- 正式主干：`cashflow_op`
+- 事件型备选：`cogs`
+- 向量观察线：`lctq`
+- 暂停线：`dpq`
+
+为避免 `VECTOR` 观察线再次扩散成大包，新增一个最小观察包：
+
+- `templates/fundamental6/refine/lctq_watch_pack.json`
+
+对应字段文件：
+
+- `templates/fundamental6/refine/fields/clean_verify_round13_lctq_watch_field.txt`
+
+这个包的设计原则是：
+
+- 只保留 `lctq` 当前最有信息量的 1 条主干
+- 不再保留 `decay_252`，因为它没有形成额外增量证据
+- 不再保留 `volume` 触发邻居，因为 `round13` 已证实它略弱于主干
+- 不再保留明显偏弱的 `ts_rank_252`
+- 不再继续把 `lctq` 当“第二主线候选簇”扩张，而是把它当“长期观察哨兵”
+
+`round13` 之后，`lctq_watch_pack.json` 应理解为：
+
+- 只剩一条主表达式：`vec_avg_decay_120`
+- 作用不是为了 submit，而是为了长期监控 `VECTOR` 支路是否有自然改善
 
 ## 模板包阶段角色
 

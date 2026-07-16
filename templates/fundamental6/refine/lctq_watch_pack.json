@@ -1,0 +1,18 @@
+{
+  "_comment": "fundamental6 lctq watch pack — 仅保留 lctq 当前最有信息量的最小观察主干，避免继续扩散成大包",
+  "_comment_placeholders": "{field}=字段名, {field_preprocessed}=winsorize(ts_backfill({field}, {backfill_window}), std=4), {backfill_window}=settings.yaml expression.backfill_window",
+  "default": [],
+  "VECTOR": [
+    {
+      "name": "vec_avg_decay_120",
+      "expression": "rank(ts_decay_linear(ts_backfill({field}, {backfill_window}), 120))",
+      "priority": 1000,
+      "family": "decay_level",
+      "layer": "vector",
+      "role": "refine_neighbor",
+      "activation_scope": "refine"
+    }
+  ],
+  "GROUP": [],
+  "SET": []
+}
