@@ -363,6 +363,30 @@
 - 只剩一条主表达式：`vec_avg_decay_120`
 - 作用不是为了 submit，而是为了长期监控 `VECTOR` 支路是否有自然改善
 
+## 2026-07-16 round14 后的最小提交资产
+
+为了避免后续每次都从大 refine 包里挑主线，当前 `cashflow_op` 已经单独收成一个最小提交包：
+
+- `templates/fundamental6/refine/cashflow_submit_core_pack.json`
+
+这个包只保留两条已验证可提交主线：
+
+- `grouped zscore over cap`
+- `group delta-over-std 63/126 over cap`
+
+对应用途：
+
+- 最小复跑
+- 主干稳定性验证
+- 提交前快速健康检查
+
+它不再包含：
+
+- `decay` near-pass 邻居
+- `industry` 弱版本
+- `backfill 504` 弱 refine
+- `trade_when(volume)` 弱包装
+
 ## 模板包阶段角色
 
 到当前阶段，几个本地模板包的职责已经比较明确：

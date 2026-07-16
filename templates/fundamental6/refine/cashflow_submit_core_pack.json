@@ -1,0 +1,27 @@
+{
+  "_comment": "fundamental6 cashflow submit core pack — 仅保留 cashflow_op 当前两条已验证可提交主线，用于最小复跑与稳定性验证",
+  "_comment_placeholders": "{field}=字段名, {field_preprocessed}=winsorize(ts_backfill({field}, {backfill_window}), std=4), {backfill_window}=settings.yaml expression.backfill_window",
+  "default": [
+    {
+      "name": "hc_ratio_group_zscore_252_over_cap",
+      "expression": "group_rank(ts_zscore({field_preprocessed} / cap, 252), subindustry)",
+      "priority": 1000,
+      "family": "high_conviction_ratio",
+      "layer": "account",
+      "role": "refine_neighbor",
+      "activation_scope": "refine"
+    },
+    {
+      "name": "group_ratio_delta_over_std_63_126_over_cap",
+      "expression": "group_rank(ts_delta({field_preprocessed} / cap, 63) / ts_std_dev({field_preprocessed} / cap, 126), subindustry)",
+      "priority": 999,
+      "family": "group_ratio_delta_over_std",
+      "layer": "account",
+      "role": "refine_neighbor",
+      "activation_scope": "refine"
+    }
+  ],
+  "VECTOR": [],
+  "GROUP": [],
+  "SET": []
+}
