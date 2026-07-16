@@ -6,9 +6,12 @@
 
 - 正式主干：
   - `cashflow_op`
-  - 主表达式是 `group_rank(ts_zscore(winsorize(ts_backfill(cashflow_op, 120), std=4)/cap, 252), subindustry/industry)`
+  - 主表达式分成两条已验证主线：
+    - `group_rank(ts_zscore(winsorize(ts_backfill(cashflow_op, 120), std=4)/cap, 252), subindustry/industry)`
+    - `group_rank(ts_delta(winsorize(ts_backfill(cashflow_op, 120), std=4)/cap, 63) / ts_std_dev(winsorize(ts_backfill(cashflow_op, 120), std=4)/cap, 126), subindustry)`
 - 已验证通过：
   - `cashflow_op / cap / grouped zscore_252`
+  - `cashflow_op / cap / group delta-over-std 63/126`
 - 近通过但未过线：
   - `ts_decay_linear(group_rank(ts_zscore(winsorize(ts_backfill(cashflow_op, 120), std=4)/cap, 252), subindustry), 20)`
   - 常见卡点：`LOW_SHARPE ~= 1.20~1.21`、`LOW_FITNESS ~= 0.78~0.79`
@@ -34,6 +37,14 @@
 2. 把 `cogs` 作为已验证但不过线的事件备选保留。
 3. 把 `lctq` 作为长期观察哨兵，仅保留最小观察包。
 4. 暂停继续追“第二主线”，除非后续平台或字段状态发生明显变化。
+
+补充：
+
+- 截至 `2026-07-16 round14`，`cashflow_op` 已经不再只是“一条 grouped zscore 主干”
+- 它已经确认长出了第二条可提交分支：`group delta-over-std 63/126 over cap`
+- 因此当前最稳的理解应是：
+  - 数据集层面仍然是“单字段主干”
+  - 但字段层面已经是“单字段双结构主线”
 
 ## 定位
 `fundamental6` 当前应被视为一个慢频基本面数据集。
@@ -163,6 +174,7 @@
 - 已经稳定打出 `submittable` 的表达式包括：
   - `group_rank(ts_zscore(winsorize(ts_backfill(cashflow_op, 120), std=4)/cap, 252), subindustry)`
   - `group_rank(ts_zscore(winsorize(ts_backfill(cashflow_op, 120), std=4)/cap, 252), industry)`
+  - `group_rank(ts_delta(winsorize(ts_backfill(cashflow_op, 120), std=4)/cap, 63) / ts_std_dev(winsorize(ts_backfill(cashflow_op, 120), std=4)/cap, 126), subindustry)`
 - 最接近门槛、但还未正式过线的 near-pass 主线是：
   - `ts_decay_linear(group_rank(ts_zscore(winsorize(ts_backfill(cashflow_op, 120), std=4)/cap, 252), subindustry), 20)`
   - 它通常卡在：
@@ -171,8 +183,40 @@
 
 这说明：
 - `cashflow_op + cap + grouped zscore_252` 不是偶然结果，而是当前数据集里已经被重复验证的 submit 主干
+- `cashflow_op + cap + grouped delta-over-std 63/126` 也已经被验证成第二条可提交结构
 - `subindustry` 与 `industry` 两个 grouped 版本都值得保留
 - 相比之下，普通单字段 `decay/zscore` 模板大多只是“能跑”，不是“能交”
+
+## 2026-07-16 round14 新增结论
+
+`round14` 的价值很高，因为它把 `cashflow_op` 主线从“单结构成功”推进到了“同字段双结构成功”。
+
+新增确认的可提交分支：
+
+- `group_rank(ts_delta(winsorize(ts_backfill(cashflow_op, 120), std=4)/cap, 63) / ts_std_dev(winsorize(ts_backfill(cashflow_op, 120), std=4)/cap, 126), subindustry)`
+
+对应判断：
+
+- `cashflow_op` 当前应理解为两条正式主线并存：
+  - `grouped zscore over cap`
+  - `group delta-over-std over cap`
+- 之前那条 `ts_decay_linear(..., 20)` 近通过分支依然没过线
+- 但它仍保持在：
+  - `LOW_SHARPE ~= 1.20 ~ 1.21`
+  - `LOW_FITNESS ~= 0.78 ~ 0.79`
+
+这轮同时也明确淘汰了一批 refine 方向：
+
+- `industry decay` 明显弱于 `subindustry decay`
+- `backfill 504` 方向变差
+- `trade_when(volume)` 包装会削弱原有 near-pass 主干
+
+因此从 `2026-07-16 round14` 之后，`cashflow_op` 的推荐优先级应调整为：
+
+1. `grouped zscore over cap`
+2. `group delta-over-std over cap`
+3. `subindustry decay near-pass`
+4. 停止继续投入 `industry decay` / `backfill 504` / `trade_when(volume)` 这些弱 refine
 
 ## 已验证的分层判断
 
