@@ -113,6 +113,7 @@ class TemplateBuildConfig:
     unit_handling: str
     nan_handling: str
     language: str
+    max_trade: str = "OFF"
     dataset_id: str = ""
     max_templates_per_field: int = 0
     max_templates_per_family: int = 0
@@ -137,6 +138,7 @@ class TemplateBuildConfig:
             unit_handling=options.unit_handling,
             nan_handling=options.nan_handling,
             language=options.language,
+            max_trade=options.max_trade,
             dataset_id=options.dataset_id,
             max_templates_per_field=options.max_templates_per_field,
             max_templates_per_family=options.max_templates_per_family,
@@ -190,6 +192,7 @@ class SimulationSettingsConfig:
     unit_handling: str
     nan_handling: str
     language: str
+    max_trade: str = "OFF"
     start_date: str | None = None
     end_date: str | None = None
 
@@ -207,6 +210,7 @@ class SimulationSettingsConfig:
             unit_handling=args.unit_handling,
             nan_handling=args.nan_handling,
             language=args.language,
+            max_trade=str(getattr(args, "max_trade", "OFF") or "OFF"),
             start_date=args.start_date,
             end_date=args.end_date,
         )
@@ -244,6 +248,7 @@ class SimulationStageConfig(SimulationSettingsConfig):
             unit_handling=settings.unit_handling,
             nan_handling=settings.nan_handling,
             language=settings.language,
+            max_trade=settings.max_trade,
             start_date=settings.start_date,
             end_date=settings.end_date,
             simulation_create_retries=int(args.simulation_create_retries or 0),
@@ -304,6 +309,7 @@ class RunLoopConfig(SimulationStageConfig, SchedulerConfig):
             unit_handling=simulation.unit_handling,
             nan_handling=simulation.nan_handling,
             language=simulation.language,
+            max_trade=simulation.max_trade,
             start_date=simulation.start_date,
             end_date=simulation.end_date,
             simulation_create_retries=simulation.simulation_create_retries,

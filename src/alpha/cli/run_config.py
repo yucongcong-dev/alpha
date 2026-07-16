@@ -25,6 +25,7 @@ def build_run_config_snapshot(args: RunConfigArgs, run_paths: RunPaths) -> dict[
             "neutralization": args.neutralization,
             "truncation": args.truncation,
             "nan_handling": args.nan_handling,
+            "max_trade": getattr(args, "max_trade", "OFF"),
         },
         "limits": {
             "limit": args.limit,

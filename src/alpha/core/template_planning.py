@@ -145,6 +145,12 @@ def build_pending_template_variants(
     field_name = choose_field_name(field)
     pending_templates: list[PendingTemplateEntry] = []
     all_reserved_keys = attempted_keys | reserved_keys
+    reserved_expression_variant_keys = {
+        (reserved_field_id, reserved_expression, reserved_variant_fingerprint)
+        for reserved_field_id, _reserved_template_name, reserved_expression, reserved_variant_fingerprint in all_reserved_keys
+    }
+    seen_expression_variant_keys: set[tuple[str, str, str]] = set()
+    seen_resimulate_expressions: set[tuple[str, str]] = set()
     max_setting_variants = choose_settings_variant_budget(
         field_feedback,
         expression_policy=build_ctx.expression_policy,
@@ -158,6 +164,9 @@ def build_pending_template_variants(
         expression = template.expression
         priority = template.priority
         template_metadata = template.metadata
+        expression_key = (field_id, expression)
+        if feedback_stage == FEEDBACK_STAGE_RESIMULATE and expression_key in seen_resimulate_expressions:
+            continue
         template_family = classify_expression_family(
             template_name,
             expression,
@@ -257,8 +266,14 @@ def build_pending_template_variants(
             refine_candidate=refine_candidate,
         )[:effective_variant_budget]:
             variant_fingerprint = build_settings_fingerprint_fn(settings_variant)
+            expression_variant_key = (field_id, expression, variant_fingerprint)
+            if expression_variant_key in reserved_expression_variant_keys:
+                continue
+            if expression_variant_key in seen_expression_variant_keys:
+                continue
             if (field_id, template_name, expression, variant_fingerprint) in all_reserved_keys:
                 continue
+            seen_expression_variant_keys.add(expression_variant_key)
             pending_templates.append(
                 PendingTemplateEntry(
                     template_name=template_name,
@@ -272,5 +287,8 @@ def build_pending_template_variants(
                     variant_fingerprint=variant_fingerprint,
                 )
             )
+            if feedback_stage == FEEDBACK_STAGE_RESIMULATE:
+                seen_resimulate_expressions.add(expression_key)
+                break
     pending_templates.sort(key=lambda item: (-item.priority, item.template_name, item.expression, item.variant_fingerprint))
     return pending_templates

@@ -37,6 +37,7 @@ class TemplateBuildArgs(Protocol):
     pasteurization: str
     unit_handling: str
     nan_handling: str
+    max_trade: str
     language: str
     start_date: str | None
     end_date: str | None
@@ -86,6 +87,7 @@ class RunConfigArgs(Protocol):
     neutralization: str
     truncation: float
     nan_handling: str
+    max_trade: str
     limit: int
     offset: int
     page_size: int
@@ -158,6 +160,7 @@ class SimulationSettingsArgs(Protocol):
     pasteurization: str
     unit_handling: str
     nan_handling: str
+    max_trade: str
     language: str
     start_date: str | None
     end_date: str | None

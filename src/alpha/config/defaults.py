@@ -47,6 +47,7 @@ def apply_yaml_global_defaults(
         "instrumentType": "instrument_type",
         "unitHandling": "unit_handling",
         "nanHandling": "nan_handling",
+        "maxTrade": "max_trade",
         "startDate": "start_date",
         "endDate": "end_date",
     }

@@ -1,5 +1,40 @@
 # fundamental6 说明
 
+## 执行摘要
+
+如果只看一页，当前 `fundamental6` 可以直接理解成下面这张状态卡：
+
+- 正式主干：
+  - `cashflow_op`
+  - 主表达式是 `group_rank(ts_zscore(winsorize(ts_backfill(cashflow_op, 120), std=4)/cap, 252), subindustry/industry)`
+- 已验证通过：
+  - `cashflow_op / cap / grouped zscore_252`
+- 近通过但未过线：
+  - `ts_decay_linear(group_rank(ts_zscore(winsorize(ts_backfill(cashflow_op, 120), std=4)/cap, 252), subindustry), 20)`
+  - 常见卡点：`LOW_SHARPE ~= 1.20~1.21`、`LOW_FITNESS ~= 0.78~0.79`
+- 事件型备选：
+  - `cogs`
+  - 最强也只到大约 `Sharpe ~= 0.89`、`Fitness ~= 0.79`
+- 向量观察线：
+  - `fnd6_cptnewqeventv110_lctq`
+  - 当前只保留 `vec_avg_decay_120`
+- 已降级字段：
+  - `fnd6_cptnewqeventv110_dpq`
+
+当前阶段结论：
+
+- `fundamental6` 已经不是“继续找方向”的阶段，而是“接受单主线现实，并控制备选线预算”的阶段
+- 最值得投入的仍然是 `cashflow_op` submit-oriented 微调
+- `cogs` 和 `lctq` 都保留研究价值，但都不应继续拿主预算大规模扩张
+- `dpq` 当前可以视为低优先级暂停线
+
+当前推荐动作：
+
+1. 把 `cashflow_op` 视为唯一正式主干。
+2. 把 `cogs` 作为已验证但不过线的事件备选保留。
+3. 把 `lctq` 作为长期观察哨兵，仅保留最小观察包。
+4. 暂停继续追“第二主线”，除非后续平台或字段状态发生明显变化。
+
 ## 定位
 `fundamental6` 当前应被视为一个慢频基本面数据集。
 

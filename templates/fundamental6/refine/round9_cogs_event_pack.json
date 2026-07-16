@@ -1,0 +1,69 @@
+{
+  "_comment": "fundamental6 round9 cogs event pack — 只保留 cogs 中已证明相对有效的 trade_when + slow core 方向，停止无效的 delta 提换手",
+  "_comment_placeholders": "{field}=字段名, {field_preprocessed}=winsorize(ts_backfill({field}, {backfill_window}), std=4), {backfill_window}=settings.yaml expression.backfill_window",
+  "default": [
+    {
+      "name": "trade_when_volume_decay_120",
+      "expression": "trade_when(ts_mean(volume, 10) > ts_mean(volume, 60), rank(ts_decay_linear(ts_backfill({field}, 504), 120)), -1)",
+      "priority": 1000,
+      "family": "event_trade_when",
+      "layer": "event",
+      "stage": "event_conditioned",
+      "role": "refine_neighbor",
+      "activation_scope": "refine"
+    },
+    {
+      "name": "trade_when_breakout_decay_120",
+      "expression": "trade_when(ts_arg_max(close, 20) == 0, rank(ts_decay_linear(ts_backfill({field}, 504), 120)), -1)",
+      "priority": 999,
+      "family": "event_trade_when",
+      "layer": "event",
+      "stage": "event_conditioned",
+      "role": "refine_neighbor",
+      "activation_scope": "refine"
+    },
+    {
+      "name": "trade_when_return_zscore_decay_120",
+      "expression": "trade_when(ts_zscore(returns, 60) > 2, rank(ts_decay_linear(ts_backfill({field}, 504), 120)), -1)",
+      "priority": 998,
+      "family": "event_trade_when",
+      "layer": "event",
+      "stage": "event_conditioned",
+      "role": "refine_neighbor",
+      "activation_scope": "refine"
+    },
+    {
+      "name": "trade_when_volume_decay_60",
+      "expression": "trade_when(ts_mean(volume, 10) > ts_mean(volume, 60), rank(ts_decay_linear(ts_backfill({field}, 504), 60)), -1)",
+      "priority": 997,
+      "family": "event_trade_when",
+      "layer": "event",
+      "stage": "event_conditioned",
+      "role": "refine_neighbor",
+      "activation_scope": "refine"
+    },
+    {
+      "name": "trade_when_volume_group_zscore_252_over_cap",
+      "expression": "trade_when(ts_mean(volume, 10) > ts_mean(volume, 60), group_rank(ts_zscore({field_preprocessed} / cap, 252), subindustry), -1)",
+      "priority": 996,
+      "family": "event_trade_when",
+      "layer": "event",
+      "stage": "event_conditioned",
+      "role": "refine_neighbor",
+      "activation_scope": "refine"
+    },
+    {
+      "name": "trade_when_breakout_group_zscore_252_over_cap",
+      "expression": "trade_when(ts_arg_max(close, 20) == 0, group_rank(ts_zscore({field_preprocessed} / cap, 252), subindustry), -1)",
+      "priority": 995,
+      "family": "event_trade_when",
+      "layer": "event",
+      "stage": "event_conditioned",
+      "role": "refine_neighbor",
+      "activation_scope": "refine"
+    }
+  ],
+  "VECTOR": [],
+  "GROUP": [],
+  "SET": []
+}

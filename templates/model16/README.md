@@ -13,6 +13,10 @@
 - 当前本地上下文里没有找到 `model16` 的官方专属模板手册。
 - 能直接复用的官方信息，主要还是 BRAIN 通用的 alpha examples 表达式风格。
 
+模型字段中的 `score / rate / rank` 不应默认视为同一种数值：`score` 往往保留模型幅度，`rank` 更强调相对顺序，`rate` 需要结合字段描述确认是变化率、评级还是概率。首次使用前应分别检查分布、覆盖、更新频率和方向，避免对已经排名过的字段重复做无意义的重排序。
+
+`STATISTICAL` 或 Consultant 专属的 Slow/Fast Factor neutralization 只适合作为显式实验设置。未确认当前账号和 Region 支持前，不进入默认模板与批量配置。
+
 ## Neutralization 建议
 
 官网对 Model Dataset 的建议不是固定使用某一级中性化，而是根据模型子类别在

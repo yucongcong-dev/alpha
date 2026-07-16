@@ -180,6 +180,14 @@ D0 研究建议按下面的顺序进行：
 
 说明你现在这条 Alpha 和你自己已有 Alpha 太像。
 
+官网 FAQ 给出的典型提交语义是：
+
+- Self-Correlation cutoff 为 `0.7`
+- 当相关性高于 cutoff，且新 Alpha 的表现没有提高至少 `10%` 时，检查失败
+
+因此超过 `0.7` 不等于只靠抬高一点 Sharpe 就一定能解决。平台仍然更鼓励换数据集、
+换算子集合和换研究想法，而不是围绕旧 Alpha 做参数化复制。
+
 ### 6.2 `PROD_CORRELATION`
 
 说明它和平台已有 Alpha 太像。
@@ -273,6 +281,23 @@ D0 研究建议按下面的顺序进行：
 - `CONCENTRATED_WEIGHT`
 
 那往往说明这条 Alpha 结构本身就不够稳。
+
+官方给出的门槛公式是：
+
+```text
+subuniverse_sharpe
+>= 0.75 * sqrt(subuniverse_size / alpha_universe_size) * alpha_sharpe
+```
+
+这个测试不是简单把原表达式改成较小 Universe 重跑。平台会：
+
+1. Pasteurize 到目标 Sub-Universe
+2. 对剩余股票执行 Market Neutralization
+3. 将 Alpha 重新缩放到原始规模
+4. 用得到的 PnL 计算 Sub-Universe Sharpe
+
+例如 USA `TOP3000` 通常会检查更液态的 `TOP1000`。如果结果主要来自 TOP1000
+以外的低流动性股票，Sub-Universe 表现会明显下降。
 
 ---
 
@@ -401,6 +426,7 @@ D0 研究建议按下面的顺序进行：
 4. Train/Test：研发阶段不查看 Test 结果，最后一次性验证
 5. 参数稳定性：自然窗口附近不应只剩一个孤立最优点
 6. 因子暴露检查：避免表现主要来自波动率、规模或常见风格因子
+7. Max Trade test：在 `Max Trade=ON` 下做可交易性压力测试，观察表现是否断崖下降
 
 几个很实用的官方社区经验：
 
@@ -408,6 +434,34 @@ D0 研究建议按下面的顺序进行：
 - `4` 天和 `6` 天都可用时，可以选 `5`，或简单平均两个版本
 - 不要为了通过某项测试反向拟合该测试
 - 不要陷入“IS 表现越优秀越好”的陷阱，重点是表现能否保持
+
+Test Period 可以更具体地按下面方式使用：
+
+- 五年 IS 先用约 `80/20` 划分，常见做法是隐藏最后一年
+- 只用前四年研发，满意后再显示 Test Period
+- Test Sharpe / Fitness 等下降超过约 `50%`，通常是明显的过拟合警报
+- 进一步用 `20% / 30% / 40%` 的不同 Test Period 做时间稳定性检查
+
+`Max Trade` 是社区常用稳健性压力测试，不是这里描述的固定提交门槛。它更适合在
+最终候选阶段使用，而不是默认开启后替代普通 broad search。
+
+## 11.8 算子顺序和线性组合
+
+算子顺序会改变比较对象和最终权重。例如：
+
+- `rank(ts_rank(field, 60))`：先看每只股票自身历史位置，再做当日截面排序
+- `ts_rank(rank(field), 60)`：先做每日截面排序，再看该截面名次的历史位置
+
+官网社区更建议保持外层算子简单，让原始研究假设仍然可辨认。不要通过不断套
+`rank / quantile / zscore` 来追逐单次 IS 提升。
+
+把多个弱表达式直接线性相加也存在三个风险：
+
+- 两个子表达式尺度不同，较小者几乎不起作用
+- 无法单独观察子表达式之间的相关性
+- 为系数和组合方式调参，很容易形成 IS 过拟合
+
+如果确实需要组合，先分别标准化和验证每个子表达式；不要用组合掩盖单个假设本身偏弱。
 
 ---
 
@@ -493,3 +547,8 @@ D0 研究建议按下面的顺序进行：
 - [How can you avoid overfitting?](https://support.worldquantbrain.com/hc/en-us/community/posts/8209806533015-How-can-you-avoid-overfitting-)
 - [Most illiquid 50% instruments after-cost test](https://support.worldquantbrain.com/hc/en-us/articles/19083525654551-Error-message-Most-illiquid-50-instruments-after-cost-Sharpe-is-above-cutoff-of-original-universe)
 - [Alpha better suited for Delay 1](https://support.worldquantbrain.com/hc/en-us/articles/19083452017559-Error-Message-Alpha-better-suited-for-Delay-1)
+- [Sub-universe Sharpe cutoff and calculation](https://support.worldquantbrain.com/hc/en-us/articles/6568644868375-How-do-I-resolve-this-error-Sub-universe-Sharpe-NaN-is-not-above-cutoff)
+- [Self-correlation cutoff and performance exception](https://support.worldquantbrain.com/hc/en-us/articles/6726867827991-Ideas-to-clear-the-submission-test-Self-correlation-0-9588-is-above-cutoff-of-0-7-and-performance-not-better-by-10-0-or-more)
+- [Using Test Period to improve OS robustness](https://support.worldquantbrain.com/hc/en-us/community/posts/22205077935895--BRAIN-TIPS-How-can-I-use-the-test-period-to-improve-the-OS-performance-of-my-Alpha)
+- [Sequencing Multiple Operators](https://support.worldquantbrain.com/hc/en-us/community/posts/19344464221335--BRAIN-TIPS-Sequencing-Multiple-Operators-in-an-Expression)
+- [Why linear combinations are discouraged](https://support.worldquantbrain.com/hc/en-us/community/posts/15238236356375--BRAIN-TIPS-Why-is-linear-combination-of-expressions-in-one-alpha-not-recommended-)

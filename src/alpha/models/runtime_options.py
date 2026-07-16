@@ -44,6 +44,7 @@ class TemplateBuildOptions:
     unit_handling: str
     nan_handling: str
     language: str
+    max_trade: str = "OFF"
     dataset_id: str = ""
     max_templates_per_field: int = 0
     max_templates_per_family: int = 0
@@ -67,6 +68,7 @@ class TemplateBuildOptions:
             unit_handling=args.unit_handling,
             nan_handling=args.nan_handling,
             language=args.language,
+            max_trade=str(getattr(args, "max_trade", "OFF") or "OFF"),
             dataset_id=args.dataset_id,
             max_templates_per_field=int(args.max_templates_per_field or 0),
             max_templates_per_family=int(args.max_templates_per_family or 0),

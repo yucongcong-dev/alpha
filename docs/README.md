@@ -48,6 +48,7 @@
 |---|---|
 | Alpha 是什么？ | [01_beginner_guide.md](01_beginner_guide.md) |
 | Delay / Decay / Neutralization 是什么？ | [01_beginner_guide.md](01_beginner_guide.md) |
+| `NaNHandling / Unit Handling` 怎样影响表达式？ | [01_beginner_guide.md](01_beginner_guide.md) / [04_platform_terms_and_states.md](04_platform_terms_and_states.md) |
 | 为什么不能只看 Returns？ | [01_beginner_guide.md](01_beginner_guide.md) |
 | `Simulate / Check submission / Submit / Semi-OS / OS` 这条链路怎么理解？ | [01_beginner_guide.md](01_beginner_guide.md) |
 | `LOW_SHARPE` / `LOW_FITNESS` 怎么拆？ | [02_optimization_guide.md](02_optimization_guide.md) |
@@ -58,6 +59,9 @@
 | `Meta Score / Universe / Weight / Booksize / NaN / Pasteurize` 是什么？ | [04_platform_terms_and_states.md](04_platform_terms_and_states.md) |
 | `Coverage / Alpha list / Correlation` 工具怎么看？ | [04_platform_terms_and_states.md](04_platform_terms_and_states.md) |
 | `LOW_SUB_UNIVERSE_SHARPE` / `SELF_CORRELATION` / `PROD_CORRELATION` 怎么理解？ | [04_platform_terms_and_states.md](04_platform_terms_and_states.md) |
+| Sub-Universe、自相关的精确检查语义是什么？ | [02_optimization_guide.md](02_optimization_guide.md) / [04_platform_terms_and_states.md](04_platform_terms_and_states.md) |
+| `Max Trade` 是提交门槛还是稳健性测试？ | [02_optimization_guide.md](02_optimization_guide.md) / [04_platform_terms_and_states.md](04_platform_terms_and_states.md) |
+| `UNSUBMITTED / ACTIVE / DECOMMISSIONED` 是什么？ | [04_platform_terms_and_states.md](04_platform_terms_and_states.md) |
 | 新字段进入模板库前应该怎么体检？ | [03_repo_practice_guide.md](03_repo_practice_guide.md) |
 | 怎样做 Rank/Binary/Train-Test 等抗过拟合检查？ | [02_optimization_guide.md](02_optimization_guide.md) / [03_repo_practice_guide.md](03_repo_practice_guide.md) |
 | D0 Alpha 和 D1 Alpha 应该怎样比较？ | [02_optimization_guide.md](02_optimization_guide.md) |

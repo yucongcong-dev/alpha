@@ -42,6 +42,7 @@ def parse_settings_variant(data: dict[str, Any]) -> "SettingsVariant":
         pasteurization=data.get("pasteurization"),
         unit_handling=data.get("unit_handling", data.get("unitHandling")),
         nan_handling=data.get("nan_handling", data.get("nanHandling")),
+        max_trade=data.get("max_trade", data.get("maxTrade")),
         language=data.get("language"),
         instrument_type=data.get("instrument_type", data.get("instrumentType")),
         region=data.get("region"),

@@ -72,6 +72,7 @@ def add_dataset_arguments(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--nan-handling", default=None, help="NaN 处理方式 (NaN Handling)")
     parser.add_argument("--pasteurization", default=None, help="Pasteurization 开关 (ON/OFF)")
     parser.add_argument("--unit-handling", default=None, help="单位验证 (Unit Handling)")
+    parser.add_argument("--max-trade", default=None, help="可交易性约束 (Max Trade, ON/OFF)")
     parser.add_argument("--language", default=None, help="表达式语言 (Language)")
     parser.add_argument(
         "--start-date",

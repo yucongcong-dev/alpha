@@ -14,6 +14,22 @@
 - 和 `model16` 一样，当前本地没有拿到 `model51` 的专属官方模板手册。
 - 可直接依赖的官方信息，仍然是 BRAIN 通用文档里对 grouped、neutralized、structured expressions 的支持。
 
+## 风险因子假设地图
+
+这类字段更适合按风险来源组织，而不是按窗口组织：
+
+- 市场：整体 beta 与共同市场波动
+- 规模：大盘/小盘暴露
+- 价值：估值差异
+- 盈利与投资：公司质量、资本扩张和资产增长
+- 动量：趋势与反转暴露
+- 应计：会计利润与现金利润差异
+- 流动性：成交能力和交易成本暴露
+
+风险因子之间并不独立，一个字段可能同时携带 size、industry 或 liquidity 暴露；因子有效性也可能随市场 regime 改变。研究目标应是识别并隔离增量暴露，而不是把“风险描述子长期稳定”误当作“Alpha 永久稳定”。
+
+存在明确的第二风险向量时，可在专项 refine 中用 `vector_neut(alpha, risk_vector)` 检查正交后的增量信号。`STATISTICAL` 以及 Consultant 账号可能出现的 Slow/Fast Factor neutralization 只作为账号能力确认后的实验设置，不进入默认库，也不自动写入通用运行配置。
+
 ## Neutralization 与流动性建议
 
 `model51` 属于 Model Dataset，官网建议根据子类别比较多种 Neutralization。结合其风险字段语义：

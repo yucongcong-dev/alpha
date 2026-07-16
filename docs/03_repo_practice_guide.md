@@ -236,6 +236,8 @@ Broad search 更适合：
 `Region × Delay × Dataset × idea family` 上。官网的 Dataset Usage Management
 同样在鼓励研究者离开过度使用的数据类别，主动增加研究多样性。
 
+这里还有一个实际的平台约束：当某个 Region 的 Fundamental 使用占比过高时，相关字段可能暂时不能继续模拟或提交；占比降到 `15%` 以下后才恢复访问。应通过平台的 [Alpha distribution](https://platform.worldquantbrain.com/alphas/distribution) 页面观察分布，而不是等接口报错后才被动换数据集。
+
 ---
 
 ## 10. 对模板库的更健康要求
@@ -272,6 +274,21 @@ Broad search 更适合：
 - 哪些结构只该在 refine 阶段出现
 - 哪些问题更适合交给设置层，而不是表达式层
 
+### 算子顺序必须表达研究语义
+
+同一组算子换顺序后通常已经是不同假设。例如：
+
+- `rank(ts_delta(x, 20))`：先观察每只股票自身的变化，再做当日截面比较
+- `ts_delta(rank(x), 20)`：观察股票截面排名在 20 天内怎样变化
+- `group_rank(ts_zscore(x, 252), industry)`：先衡量自身历史异常，再做行业内比较
+- `ts_zscore(group_rank(x, industry), 252)`：衡量行业内排名自身的历史异常
+
+模板库应显式命名这些语义差异，不能把算子排列当作无方向的排列组合。
+
+### 不要用线性组合掩盖弱假设
+
+直接写 `a * alpha1 + b * alpha2` 可能抬高某次回测，也可能只是让强分支掩盖弱分支，并引入难以解释的相关暴露。组合前应分别验证每个分支，并检查组合是否真的改善稳健性、相关性或覆盖，而不只是改善单次 Sharpe。
+
 ---
 
 ## 11. 对文档体系的更健康要求
@@ -295,6 +312,9 @@ Broad search 更适合：
 - 结构升级优先于参数微调
 - 官方知识更适合并回主线文档，不要不断平行加专题页
 - 文档边界清晰，比一次性写很多更重要
+- 官方提交规则与社区压力测试必须分开记录；后者用于提高置信度，不能冒充平台硬门槛
+
+最终候选除平台 `check submission` 外，建议再做一组社区压力测试：Rank/Binary、Train/Test、参数和设置扰动、Sub/Super Universe，以及显式开启 `Max Trade` 的集中度挑战。`Max Trade` 默认仍保持 `OFF`，只对少量候选使用，避免把实验开关误扩散到所有 broad search。
 
 ---
 

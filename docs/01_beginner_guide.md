@@ -246,6 +246,24 @@
 - 分组比较
 - 交易频率控制
 
+### 6.1 Fast Expression 的最小语法
+
+Fast Expression 支持用变量拆分复杂表达式，每条中间语句以分号结束，最后一条
+表达式作为最终 Alpha 输出：
+
+```text
+raw = ts_backfill(cashflow_op, 120);
+stable = winsorize(raw, std=4);
+group_rank(ts_zscore(stable / cap, 252), industry)
+```
+
+还可以用 `/* ... */` 写块注释。需要注意：
+
+- 最后一条语句不需要分号
+- 中间变量只是提高可读性，不是新的数据字段
+- Fast Expression 没有类、对象、指针或自定义函数
+- 多行写法不会自动改善 Alpha，仍要保证每个算子都有明确作用
+
 ---
 
 ## 7. Alpha 值怎样变成最终持仓
@@ -296,6 +314,28 @@
 
 这是很多新手第一次设计表达式时最容易忽略的底层语义。
 
+### 8.1 `NaNHandling` 和手动缺失值处理
+
+平台设置中的 `NaNHandling` 与表达式里的 `ts_backfill / is_nan` 不是一回事：
+
+- `OFF`：保留 NaN，由表达式显式处理；这是平台默认值
+- `ON`：平台按算子类型自动处理部分 NaN
+
+开启后可能出现：
+
+- 时间序列窗口全部是 NaN 时返回 `0`
+- 某些 Group 算子在单只股票输入为 NaN 时返回组统计值
+
+这样可以增加 Coverage，但会把“没有数据”和“真实值为 0”混在一起。因此本仓库
+默认使用 `OFF`，需要补值时优先写出明确的业务逻辑：
+
+```text
+is_nan(primary_signal) ? fallback_signal : primary_signal
+```
+
+Arithmetic 算子的 `filter=true` 又是第三种行为：它只在该次加减乘运算中把 NaN
+当作 `0`，不会改变全局 `NaNHandling`。
+
 ---
 
 ## 9. Pasteurize 到底在做什么
@@ -323,6 +363,23 @@
 - coverage、group 输入集合、甚至最终权重结构都有变化
 
 这不是异常，而是它的正常语义。
+
+### 9.1 `Unit Handling`
+
+`Unit Handling=VERIFY` 会在不兼容量纲参与算术运算时给出警告，例如：
+
+```text
+close + adv20
+```
+
+这里一个是价格，一个是成交股数。该警告本身不会阻止提交，但通常说明表达式
+缺少经济解释。如果确实只想组合相对位置，可以先分别标准化：
+
+```text
+rank(close) + rank(adv20)
+```
+
+不要为了消除警告机械地加 `rank()`；先确认两个量纲为什么应该被组合。
 
 ---
 

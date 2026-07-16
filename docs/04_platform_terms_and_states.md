@@ -160,6 +160,14 @@
 - 本地 `submittable=true` 只是“有资格继续”
 - 它不等于“这条 Alpha 已经长期成立”
 
+### 3.7 `UNSUBMITTED`、`ACTIVE`、`DECOMMISSIONED`
+
+- `UNSUBMITTED`：仍在研究区，尚未正式提交；模拟通过也仍属于这一状态
+- `ACTIVE`：已提交并处于有效生命周期内；对 Consultant 而言，ACTIVE Alpha 才可能继续累积权重
+- `DECOMMISSIONED`：已退出有效生产生命周期，常见原因包括数据集不再可用、长期 OS 表现不佳，或平台基于整体管理做出的调整
+
+因此不要把“曾经提交成功”理解成永久有效。提交后的 OS 稳定性、数据可用性和池子价值仍会影响 Alpha 的后续状态。
+
 ---
 
 ## 4. 为什么 OS 页面会出现 `N/A`
@@ -247,6 +255,19 @@
 - 阶段结束后会继续结合 OS 结果
 
 如果你的本地文档未来继续服务竞赛使用，这一块值得单独维护，但和普通 Alpha 研究文档要保持边界。
+
+### 6.4 D1 / D0 Fitness 评级
+
+官网给出的显示档位并不相同：
+
+| 评级 | D1 Fitness | D0 Fitness |
+|---|---:|---:|
+| Average | `> 1.0` | `> 1.3` |
+| Good | `> 1.5` | `> 1.95` |
+| Excellent | `> 2.0` | `> 2.6` |
+| Spectacular | `> 2.5` | `> 3.25` |
+
+D0 的门槛更高，因此不能只看绝对 Fitness 数字就断言 D0 优于 D1；还要结合 Delay 匹配、换手和交易成本压力判断。
 
 ---
 
@@ -375,6 +396,19 @@
 
 - 你是在改“信号长什么样”
 - 还是在改“平台怎样把信号变成最终组合”
+
+### 8.6 `NaNHandling`
+
+- `OFF`：保留算子自然产生的缺失语义
+- `ON`：平台会对部分缺失情形做自动处理；例如全为 NaN 的时间序列窗口可能得到 `0`，部分 group operator 也可能返回组内值
+
+它可能提高覆盖率，但也可能把“真实零值”和“缺失后补出的零值”混在一起。它不是手写 `is_nan(...)` 的替代品，也不同于某些算子的 `filter=true` 参数。
+
+### 8.7 `Unit Handling`
+
+平台会检查表达式里的单位是否合理，例如“金额 + 比率”可能产生单位警告。单位警告用于帮助发现表达式语义错误，但官方说明它本身不会阻止提交。
+
+研究时仍应优先修正不合理单位，因为“能提交”不等于“经济含义成立”。
 
 ---
 
@@ -799,6 +833,15 @@ Glossary 把 robust performance 明确当成平台关心的方向。
 - 平台不只想知道“你在大 Universe 里能不能跑起来”
 - 还想知道“收缩到更核心子集后，它是否仍然站得住”
 
+官网给出的检查线可以写成：
+
+```text
+subuniverse_sharpe
+>= 0.75 * sqrt(subuniverse_size / alpha_universe_size) * alpha_sharpe
+```
+
+这说明阈值会随子宇宙相对大小缩放，不是所有 Universe 都使用同一个固定 Sharpe 数字。
+
 ### 12.6 `SELF_CORRELATION`
 
 - 和你自己已有 Alpha 太像
@@ -814,6 +857,8 @@ Glossary 把 robust performance 明确当成平台关心的方向。
 
 - `20 -> 22`
 - `60 -> 63`
+
+常见检查语义是：最大自相关高于 `0.7` 时，如果新 Alpha 的表现没有比相关 Alpha 至少改善约 `10%`，就可能失败。因此 `0.7` 不是脱离表现比较的孤立硬线；本地仍应把高相关候选优先视为低增量分支。
 
 ### 12.7 `PROD_CORRELATION`
 
@@ -866,6 +911,12 @@ Glossary 把 robust performance 明确当成平台关心的方向。
 - 更低交易成本压力
 
 它不是要求继续优化 D0，而是在提醒研究假设和 Delay 不匹配。
+
+### 12.11 `Max Trade`
+
+`Max Trade` 是模拟设置中的单票交易约束开关，可用于观察 Alpha 是否依赖少数股票上的大额交易。社区常把它作为稳健性压力测试：开启后若表现立即崩溃，应检查权重集中、极端值和流动性依赖。
+
+它不是文档已确认的固定 submission threshold。本仓库默认保持 `OFF`，只在最终候选验证或明确的流动性诊断中显式开启。
 
 ---
 
@@ -970,5 +1021,8 @@ OS 是提交之后逐步积累出来的样本外表现。
 - [Understanding Data in BRAIN: Key Concepts and Tips](https://platform.worldquantbrain.com/learn/documentation/understanding-data/data)
 - [Group Data Fields](https://platform.worldquantbrain.com/learn/documentation/understanding-data/group-data-fields)
 - [D0](https://platform.worldquantbrain.com/learn/documentation/advanced-topics/getting-started-d0)
+- [Simulation Settings](https://platform.worldquantbrain.com/learn/documentation/create-alphas/simulation-settings)
+- [Self-Correlation](https://support.worldquantbrain.com/hc/en-us/articles/19083458643863-Error-Message-Alpha-is-too-correlated-with-your-other-Alphas)
+- [Sub-Universe Sharpe](https://support.worldquantbrain.com/hc/en-us/articles/19083526884759-Error-Message-Sub-universe-Sharpe-is-below-cutoff)
 - [Most illiquid 50% instruments after-cost test](https://support.worldquantbrain.com/hc/en-us/articles/19083525654551-Error-message-Most-illiquid-50-instruments-after-cost-Sharpe-is-above-cutoff-of-original-universe)
 - [Alpha better suited for Delay 1](https://support.worldquantbrain.com/hc/en-us/articles/19083452017559-Error-Message-Alpha-better-suited-for-Delay-1)

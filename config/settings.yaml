@@ -48,12 +48,12 @@ global:
     delay: 1
 
     # 6. NEUTRALIZATION — 官网: Neutralization
-    #    选项: SUBINDUSTRY, MARKET, SECTOR, NONE
-    #    官网显示: Subindustry | Market | Sector | None
+    #    通用选项: SUBINDUSTRY, INDUSTRY, SECTOR, MARKET, NONE
+    #    Consultant 账号可能显示额外风险中性化选项，不建议在未验证账号权限前设为默认。
     neutralization: "SUBINDUSTRY"
 
     # 7. DECAY — 官网: Decay
-    #    指数加权衰减天数, 0=无衰减, 官网默认=4
+    #    线性衰减天数, 0=无衰减, 官网默认=4
     #    设为 4 可降低 Turnover，提升 Fitness 通过率；
     #    模板库中含 ts_decay_linear 的模板会形成双重衰减（信号级+组合级），
     #    但实测对 Fitness 提升利大于弊。若需精细控制，可设为 0 并确保
@@ -78,7 +78,11 @@ global:
     #    官网默认=OFF
     nanHandling: "OFF"
 
-    # 12. TEST PERIOD — 官网: Test Period → Years / Months
+    # 12. MAX TRADE — 官网: Max Trade
+    #    选项: ON | OFF。默认关闭；开启后可作为可交易性/稳健性压力测试。
+    maxTrade: "OFF"
+
+    # 13. TEST PERIOD — 官网: Test Period → Years / Months
     #    官网默认: 1 Year, 0 Months (当前日期往前推1年)
     #    代码会自动换算为 startDate / endDate 发给 API
     #    如需固定历史区间，可改用 startDate + endDate 覆盖（见注释）

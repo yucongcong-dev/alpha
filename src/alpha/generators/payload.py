@@ -27,6 +27,7 @@ WEBSITE_DEFAULTS: dict[str, Any] = {
     "pasteurization": "ON",
     "unitHandling": "VERIFY",
     "nanHandling": "OFF",
+    "maxTrade": "OFF",
     "visualization": False,
 }
 """Brain website defaults used when YAML config is unavailable."""
@@ -35,6 +36,7 @@ API_TO_ARGS: dict[str, str] = {
     "instrumentType": "instrument_type",
     "unitHandling": "unit_handling",
     "nanHandling": "nan_handling",
+    "maxTrade": "max_trade",
     "startDate": "start_date",
     "endDate": "end_date",
 }
@@ -51,6 +53,7 @@ CLI_DEFAULTS: dict[str, Any] = {
     "pasteurization": "ON",
     "unit_handling": "VERIFY",
     "nan_handling": "OFF",
+    "max_trade": "OFF",
     "language": "FASTEXPR",
 }
 """argparse defaults used to distinguish explicit CLI overrides from defaults."""

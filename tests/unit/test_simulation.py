@@ -705,6 +705,7 @@ def test_run_simulation_create_stage_merges_dict_settings_with_baseline(monkeypa
     assert settings["region"] == "USA"
     assert settings["unitHandling"] == "VERIFY"
     assert settings["nanHandling"] == "OFF"
+    assert settings["maxTrade"] == "OFF"
     assert settings["visualization"] is False
     assert settings["decay"] == 2
     assert settings["neutralization"] == "MARKET"

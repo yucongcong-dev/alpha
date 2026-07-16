@@ -29,6 +29,7 @@ def serialize_settings_variant(settings: "SettingsVariant") -> dict[str, object]
         "instrument_type": "instrumentType",
         "unit_handling": "unitHandling",
         "nan_handling": "nanHandling",
+        "max_trade": "maxTrade",
         "start_date": "startDate",
         "end_date": "endDate",
     }

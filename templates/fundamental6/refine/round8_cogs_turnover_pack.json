@@ -1,0 +1,83 @@
+{
+  "_comment": "fundamental6 round8 cogs turnover pack — 围绕 cogs 的低换手问题做针对性修复，保留最强 decay 主体并加入提换手近邻",
+  "_comment_placeholders": "{field}=字段名, {field_preprocessed}=winsorize(ts_backfill({field}, {backfill_window}), std=4), {backfill_window}=settings.yaml expression.backfill_window",
+  "default": [
+    {
+      "name": "decay_120",
+      "expression": "rank(ts_decay_linear(ts_backfill({field}, 504), 120))",
+      "priority": 1000,
+      "family": "decay_level",
+      "layer": "time_series",
+      "role": "refine_neighbor",
+      "activation_scope": "refine"
+    },
+    {
+      "name": "trade_when_volume_decay_120",
+      "expression": "trade_when(ts_mean(volume, 10) > ts_mean(volume, 60), rank(ts_decay_linear(ts_backfill({field}, 504), 120)), -1)",
+      "priority": 999,
+      "family": "event_trade_when",
+      "layer": "event",
+      "stage": "event_conditioned",
+      "role": "refine_neighbor",
+      "activation_scope": "refine"
+    },
+    {
+      "name": "decay_60",
+      "expression": "rank(ts_decay_linear(ts_backfill({field}, 504), 60))",
+      "priority": 998,
+      "family": "decay_level",
+      "layer": "time_series",
+      "role": "refine_neighbor",
+      "activation_scope": "refine"
+    },
+    {
+      "name": "iter_rank_delta_3",
+      "expression": "rank(ts_delta(ts_backfill({field}, 120), 3))",
+      "priority": 997,
+      "family": "rank_delta",
+      "layer": "signal",
+      "role": "refine_neighbor",
+      "activation_scope": "refine"
+    },
+    {
+      "name": "iter_rank_delta_5",
+      "expression": "rank(ts_delta(ts_backfill({field}, 120), 5))",
+      "priority": 996,
+      "family": "rank_delta",
+      "layer": "signal",
+      "role": "refine_neighbor",
+      "activation_scope": "refine"
+    },
+    {
+      "name": "iter_rank_then_delta_3",
+      "expression": "rank(ts_delta(rank(ts_backfill({field}, 120)), 3))",
+      "priority": 995,
+      "family": "rank_delta",
+      "layer": "signal",
+      "role": "refine_neighbor",
+      "activation_scope": "refine"
+    },
+    {
+      "name": "hc_ratio_group_zscore_252_over_cap",
+      "expression": "group_rank(ts_zscore({field_preprocessed} / cap, 252), subindustry)",
+      "priority": 994,
+      "family": "high_conviction_ratio",
+      "layer": "account",
+      "role": "refine_neighbor",
+      "activation_scope": "refine"
+    },
+    {
+      "name": "refine_trade_when_volume_hc_ratio_group_zscore_252_over_cap",
+      "expression": "trade_when(ts_mean(volume, 10) > ts_mean(volume, 60), group_rank(ts_zscore({field_preprocessed} / cap, 252), subindustry), -1)",
+      "priority": 993,
+      "family": "event_trade_when",
+      "layer": "event",
+      "stage": "event_conditioned",
+      "role": "refine_neighbor",
+      "activation_scope": "refine"
+    }
+  ],
+  "VECTOR": [],
+  "GROUP": [],
+  "SET": []
+}

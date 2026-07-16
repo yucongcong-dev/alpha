@@ -63,6 +63,31 @@ def test_cli_limit_overrides_yaml(monkeypatch, tmp_path) -> None:
     assert args.max_concurrent_simulations == 1
 
 
+def test_max_trade_respects_cli_over_yaml_precedence(monkeypatch, tmp_path) -> None:
+    """Max Trade should follow the same CLI > YAML precedence as other settings."""
+    clear_yaml_cache()
+    config_path = tmp_path / "settings.yaml"
+    config_path.write_text(
+        """
+global:
+  simulation:
+    maxTrade: "ON"
+""".strip(),
+        encoding="utf-8",
+    )
+
+    monkeypatch.setattr(sys, "argv", ["alpha", "--config", str(config_path)])
+    assert parse_args().max_trade == "ON"
+
+    clear_yaml_cache()
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        ["alpha", "--config", str(config_path), "--max-trade", "OFF"],
+    )
+    assert parse_args().max_trade == "OFF"
+
+
 def test_cli_smoke_test_overrides_yaml_false(monkeypatch, tmp_path) -> None:
     """--smoke-test must not be reset by runtime.smoke_test=false in YAML."""
     clear_yaml_cache()

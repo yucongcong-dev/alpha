@@ -99,6 +99,7 @@ class SettingsVariant:
     pasteurization: bool | None = None
     unit_handling: str | None = None
     nan_handling: str | None = None
+    max_trade: str | None = None
     language: str | None = None
     instrument_type: str | None = None
     region: str | None = None
