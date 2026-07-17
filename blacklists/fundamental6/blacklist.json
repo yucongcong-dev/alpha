@@ -1,0 +1,9 @@
+{
+  "_version": "v2",
+  "_comment": "Template blacklist for fundamental6. learned_templates stores dataset-specific learned exclusions; expression_rules stores explicit expression pattern blocks.",
+  "_created": "2026-07-13",
+  "_updated": "2026-07-13",
+  "dataset_id": "fundamental6",
+  "learned_templates": [],
+  "expression_rules": []
+}
