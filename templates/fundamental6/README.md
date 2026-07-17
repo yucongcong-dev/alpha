@@ -421,6 +421,41 @@
 - 当前阶段不应再对这些弱 refine 抱有“再跑一次也许会变强”的预期
 - `fundamental6` 的重点已经从“继续扩模板”转成“围绕双主线做低频复核和提交运营”
 
+## 2026-07-17 round16 低频复跑确认
+
+`round16` 的意义，是在新一天重新跑一次同一个最小提交包，确认主干没有漂移。
+
+对应结果文件：
+
+- `results/fundamental6/clean_verify_round16_cashflow_core_analysis.json`
+- `results/fundamental6/clean_verify_round16_cashflow_core_results.jsonl`
+
+核心结果：
+
+- `tested = 15`
+- `submittable = 3`
+- `error_count = 0`
+- 其中仍有 1 条是同一表达式的重复命名记录
+- 所以按唯一表达式看，结论仍然是 2 条稳定可提交主线
+
+再次复现的两条正式主线：
+
+- `group_rank(ts_zscore(winsorize(ts_backfill(cashflow_op, 120), std=4)/cap, 252), subindustry)`
+- `group_rank(ts_delta(winsorize(ts_backfill(cashflow_op, 120), std=4)/cap, 63) / ts_std_dev(winsorize(ts_backfill(cashflow_op, 120), std=4)/cap, 126), subindustry)`
+
+同时也再次确认弱 refine 仍然没有恢复：
+
+- `group level over cap` 仍大约只有 `Sharpe ~= 0.80`、`Fitness ~= 0.61`
+- `industry` 版本仍大约只有 `Sharpe ~= 0.76 ~ 0.78`、`Fitness ~= 0.61 ~ 0.62`
+- `trade_when(volume)` 仍大约只有 `Sharpe ~= 0.78 ~ 0.80`、`Fitness ~= 0.58 ~ 0.60`
+- `decay(6)` 仍大约只有 `Sharpe ~= 0.78`、`Fitness ~= 0.58`
+
+这说明：
+
+- `round16` 不是发现了新主线，而是再次确认旧结论稳定
+- `cashflow_submit_core_pack.json` 已经具备“跨天低频复跑”的最小运营价值
+- 当前 `fundamental6` 不应再继续扩这些已验证偏弱的 refine 邻居
+
 ## 模板包阶段角色
 
 到当前阶段，几个本地模板包的职责已经比较明确：
