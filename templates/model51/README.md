@@ -128,42 +128,41 @@ Refine pack 约定：
 - `group_branch_round12_recheck` 随后在 `unsystematic_risk_last_60/90/360_days` 上使用非 decay 的 group/bucket/time-series 模板重试，前 9 条候选仍然因为同样原因被排除。
 - `systematic_branch_round13_recheck` 又在 `systematic_risk_last_30/60/90_days` 上重复这些非 decay 模板家族，全部 9 条候选同样因为 `SELF_CORRELATION` 未终态而被排除。
 - `focused_validation` 则重新以更窄的 `5 fields x 4 templates = 20` 验证集运行，所有候选都拿到了终态结果。这样之前的模糊点被去掉了：当前主阻塞已经不再是 `SELF_CORRELATION`，而是普通质量门槛，尤其是 `LOW_FITNESS`。
-- 在该 focused validation 中，`unsystematic_risk_last_60_days` 成为唯一还足够接近、值得继续投入预算的分支。当前本地前三条最好结果分别是：
+- 在更早一轮 focused validation 中，`unsystematic_risk_last_60_days` 一度是最接近的 near-pass 分支，本地前三条最好结果分别是：
   - `model51_ts_zscore_120`：`fitness=0.85`
   - `model51_bucket_cap_zscore_120`：`fitness=0.83`
   - `model51_ts_rank_120`：`fitness=0.78`
-- 相比之下，`systematic_risk_last_*` 在同一模板包下整体偏弱，因此下一轮本地 refine 应直接放弃它，把预算只投给 `unsystematic_risk_last_60_days`
-- [refine/fields/unsystematic60_refine_round14_fields.txt](/Users/boyaa/Downloads/alpha/templates/model51/refine/fields/unsystematic60_refine_round14_fields.txt) 和 [refine/unsystematic60_refine_round14.json](/Users/boyaa/Downloads/alpha/templates/model51/refine/unsystematic60_refine_round14.json) 记录了这一步本地 refine。该模板包保留了三条 near-pass 核心模板，并补上 `ratio_cap` / `bucket_ratio` / `60-day neighbor` 这些上轮 focused validation 没有真正展开的结构邻居。
+- 但后续 `2026-07-08 round15` 已经证明，这条 `unsystematic60` 分支没有继续抬升：
+  - `tested=16`
+  - `submittable=0`
+  - 没有突破 `round14` 的 near-pass 天花板
+- 因此它已从 active refine branch 降级为 archived near-pass branch。对应结论见 [branch_review_2026-07-08.md](/Users/boyaa/Downloads/alpha/results/model51/branch_review_2026-07-08.md)。
 
-到当前阶段，优先动作已经不再是 self-correlation 诊断性重查。更紧的 `focused_validation` 已经证明，最有希望的 live 分支可以正常走完流程，现在主要卡在 `LOW_FITNESS / LOW_SHARPE`，因此下一笔预算更适合继续本地 refine，而不是继续做更广的轮询实验。
+随后仓库把 active branch 切到了 `systematic_risk_last_30_days`，并准备了：
 
-建议的 round14 refine 命令：
+- [refine/fields/systematic30_refine_round16_fields.txt](/Users/boyaa/Downloads/alpha/templates/model51/refine/fields/systematic30_refine_round16_fields.txt)
+- [refine/systematic30_refine_round16.json](/Users/boyaa/Downloads/alpha/templates/model51/refine/systematic30_refine_round16.json)
 
-```bash
-python3 -m alpha run \
-  --dataset-id model51 \
-  --include-fields-file templates/model51/refine/fields/unsystematic60_refine_round14_fields.txt \
-  --template-library-file templates/model51/refine/unsystematic60_refine_round14.json \
-  --limit 1 \
-  --max-templates-per-field 7 \
-  --max-templates-per-family 2 \
-  --max-concurrent-simulations 2 \
-  --max-concurrent-creates 1 \
-  --output results/model51/unsystematic60_refine_round14.json \
-  --feedback-output results/model51/focused_validation.json \
-  --no-auto-update-blacklist
-```
+但 `2026-07-17 round16` 的最新结果同样没有形成新增价值：
 
-当前判断：
-- `beta/correlation` 家族依旧偏弱，不会因为之前风险分支卡住过就自动变得更有吸引力。
-- 现在信号最强、最值得继续试的分支，已经比较清楚地收敛到 `unsystematic_risk_last_60_days`。
-- 它当前的差距主要在质量抬升，而不是流程闭环。
-- 历史上相邻风险分支曾出现过 `submittable=true`，仍要谨慎看待，但它们已不是当前行动的核心依据。
-- 因此，`model51` 还值得做一轮小型本地 refine，而不是再做一次 broad exploration sweep。
-- 操作上意味着：
-  - 继续把搜索收缩在最优 unsystematic 分支附近
-  - 有限预算优先给结构邻居，而不是更宽的字段覆盖
-  - 只有当 round14 本地 refine 明确失败后，再回头做更广的诊断
+- `tested=24`
+- `submittable=0`
+- `error_count=1`
+- `queue_timeout_count=1`
+
+本轮最核心的几个模板结果：
+
+- `bucket_cap_ratio_zscore_60` 大多停在 `Sharpe ~= 0.79`、`Fitness ~= 0.37`
+- `ratio_cap_zscore_60` 大多停在 `Sharpe ~= 0.60 ~ 0.72`、`Fitness ~= 0.35 ~ 0.37`
+- `bucket_cap_ratio_zscore_42` 也只有大约 `Sharpe ~= 0.84`、`Fitness ~= 0.37`
+- `zscore_126` 邻居更差，还出现了 `LOW_SUB_UNIVERSE_SHARPE`
+
+到当前阶段，`model51` 的判断应更新为：
+
+- `beta/correlation` 家族依旧偏弱，不需要回头恢复
+- `unsystematic_risk_last_60_days` 保留为已知 near-pass 参考，但不再继续加预算
+- `systematic_risk_last_30_days` 这轮也没能证明自己值得继续 refine
+- 因此 `model51` 当前更适合整体暂停新增本地 refine 预算，而不是继续 broad sweep 或局部微调
 
 ## 待确认问题
 
