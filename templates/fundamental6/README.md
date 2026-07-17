@@ -387,6 +387,40 @@
 - `backfill 504` 弱 refine
 - `trade_when(volume)` 弱包装
 
+## 2026-07-16 round15 最小提交包复核
+
+`round15` 的意义，不是继续找新结构，而是验证上面这个最小提交包能不能稳定复跑。
+
+对应结果文件：
+
+- `results/fundamental6/clean_verify_round15_cashflow_core_analysis.json`
+- `results/fundamental6/clean_verify_round15_cashflow_core_results.jsonl`
+
+核心结果：
+
+- `tested = 15`
+- `submittable = 3`
+- 但其中有 1 条是同一表达式的重复命名记录
+- 因此按唯一表达式看，当前仍然只有 2 条稳定可提交主线
+
+这两条稳定主线分别是：
+
+- `group_rank(ts_zscore(winsorize(ts_backfill(cashflow_op, 120), std=4)/cap, 252), subindustry)`
+- `group_rank(ts_delta(winsorize(ts_backfill(cashflow_op, 120), std=4)/cap, 63) / ts_std_dev(winsorize(ts_backfill(cashflow_op, 120), std=4)/cap, 126), subindustry)`
+
+同时也再次确认一批弱 refine 没有恢复：
+
+- `group level over cap` 仍只有大约 `Sharpe ~= 0.8`、`Fitness ~= 0.61`
+- `industry` 版本仍弱于 `subindustry`
+- `trade_when(volume)` 包装仍会削弱主干
+- 小 `decay` 邻居没有形成新增提交价值
+
+所以 `round15` 的真正结论是：
+
+- `cashflow_submit_core_pack.json` 已经可以视为后续 `fundamental6` 的最小复跑资产
+- 当前阶段不应再对这些弱 refine 抱有“再跑一次也许会变强”的预期
+- `fundamental6` 的重点已经从“继续扩模板”转成“围绕双主线做低频复核和提交运营”
+
 ## 模板包阶段角色
 
 到当前阶段，几个本地模板包的职责已经比较明确：
@@ -398,6 +432,8 @@
   - 用于高信念收窄验证，回收 `cashflow_op` 主线并保留稳定的 VECTOR 次优支路
 - `templates/fundamental6/refine/round6_submit_pack.json`
   - 用于 submit-oriented 重复验证，只围绕 `cashflow_op` 的已通过与 near-pass 主线
+- `templates/fundamental6/refine/cashflow_submit_core_pack.json`
+  - 用于最小复跑、主干健康检查，以及后续提交前的低成本稳定性确认
 
 ## v4 模板调整
 
