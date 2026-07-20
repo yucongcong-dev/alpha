@@ -47,6 +47,18 @@ Neutralization 的选择应看一组稳定结果，而不是只挑 Sharpe 最高
   - `high_conviction_ratio`、`group_ratio_zscore` 经常被 `LOW_SHARPE` 和 `LOW_FITNESS` 卡住
   - `group_vol_scaled_delta` 多次因 `CONCENTRATED_WEIGHT` 和较弱的子域表现失败
   - 因此，默认 broad search 不该再把这些导数 pair-ratio 分支当作第一候选
+- `2026-07-20 round3_dense_derivative_focus` 又做了一轮更窄的定向验证：
+  - 只保留 6 个 dense derivative 字段
+  - 只围绕 `bucket_cap_ratio_zscore_120` 和 `ratio_cap_zscore_120` 这两条旧主干复核
+  - 最终 `tested=34`、`submittable=0`
+  - 没有产生任何新增可提交结果
+- 这轮里最稳定的重复形态非常一致：
+  - `bucket_cap_ratio_zscore_120` 大多停在 `Sharpe ~= 0.77 ~ 0.82`、`Fitness ~= 0.63 ~ 0.64`
+  - `ratio_cap_zscore_120` 大多停在 `Sharpe ~= 0.66 ~ 0.67`、`Fitness ~= 0.50 ~ 0.51`
+  - 个别 refine 邻居把 `Sharpe` 抬到约 `0.94`，但 `Fitness` 仍停在 `0.63`
+- 因此当前更准确的判断是：
+  - `model16` 不是没有稳定结构，而是稳定结构已经反复复现，却始终过不了质量门槛
+  - 当前主问题不是“还没找到方向”，而是“已知方向没有继续抬升”
 
 ## 当前模板方向
 
@@ -89,6 +101,7 @@ Broad exploration：
 Focused refine：
 - 只有在明确出现 near-pass 证据后，再用 refine pack 重新打开已下沉分支。
 - 相比恢复弱势导数 pair-ratio，更优先扩 `cap-ratio` / `bucket-cap-ratio`
+- 但在 `2026-07-20 round3_dense_derivative_focus` 之后，`cap-ratio` / `bucket-cap-ratio` 这条支路也应暂时停止继续加预算，除非平台状态或字段集合发生明显变化。
 
 旧模板处理：
 - 过去较弱的 fallback 模板保留在 `legacy.json`，不再放在默认主库。
@@ -99,3 +112,7 @@ Focused refine：
 
 - 如果后续运行显示 value/quality/growth 风格字段之间差异足够明显，可以补一个小型 sector-relative spread 家族。
 - 继续验证 `information_ratio` 是否还应留在核心默认集，还是进一步下沉到 grouped bucket 变体之后。
+- 如果未来还要重启 `model16`，优先前提不该是“再试更多近邻”，而应该是：
+  - 字段池出现新成员
+  - 平台阈值或市场环境明显变化
+  - 或者有新的结构假设，不再只是重复 `120` 天的 `ratio_cap / bucket_ratio`

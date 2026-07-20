@@ -1,0 +1,6 @@
+analyst_revision_rank_derivative
+cashflow_efficiency_rank_derivative
+composite_factor_score_derivative
+earnings_certainty_rank_derivative
+multi_factor_static_score_derivative
+relative_valuation_rank_derivative
