@@ -545,6 +545,19 @@ YAML 分层优先级为：`config/settings.yaml` > `config/expression_policies.y
 
 ## 结果解读
 
+当前仓库的默认运行语义是：
+
+- 只做 `simulation + check-submit`
+- 产出 `submittable / submitted` 状态字段
+- 不会自动向平台执行正式 `submit`
+
+也就是说，当前看到的：
+
+- `submittable=true` = 这条 Alpha 通过了本轮检查，具备后续人工提交价值
+- `submitted=false` = 仍然没有被本地 runner 自动正式提交
+
+如果后续要做正式提交，仍然需要人工干预，而不是依赖默认 CLI 运行流程。
+
 每次运行会生成两个文件：
 
 | 文件 | 用途 |
@@ -556,7 +569,7 @@ YAML 分层优先级为：`config/settings.yaml` > `config/expression_policies.y
 
 | 字段 | 含义 | 如何使用 |
 |------|------|----------|
-| `submittable_count` | 可提交数量 | =0 时继续优化 |
+| `submittable_count` | 通过本轮 check-submit 的数量 | =0 时继续优化；>0 也不代表已自动提交 |
 | `near_pass_summary` | 接近通过的候选 | score > 0.5 的优先深挖 |
 | `failed_check_leaderboard` | 失败原因分布 | 看主要卡点是 LOW_SHARPE 还是 LOW_FITNESS |
 | `optimization_hints` | 自动生成的建议 | 直接参考执行 |

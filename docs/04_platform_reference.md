@@ -158,7 +158,9 @@
 这也是为什么：
 
 - 本地 `submittable=true` 只是“有资格继续”
+- 本地 runner 当前默认不会自动执行正式 `submit`
 - 它不等于“这条 Alpha 已经长期成立”
+- 它也不等于“这条 Alpha 已经进入平台 `ACTIVE` 生命周期”
 
 ### 3.7 `UNSUBMITTED`、`ACTIVE`、`DECOMMISSIONED`
 
