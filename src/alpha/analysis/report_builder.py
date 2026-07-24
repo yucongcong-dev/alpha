@@ -27,7 +27,7 @@ from .failed_checks import (
 )
 from .field_stats import compile_field_performance_summary
 
-from .template_registry import compile_template_registry_summary
+from .template_registry_rules import compile_template_registry_summary
 from .template_stats import compile_template_performance_summary
 from .template_stats import compile_template_stats
 
