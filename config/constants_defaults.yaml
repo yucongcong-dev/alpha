@@ -474,6 +474,7 @@ strings:
 
     simulated: "simulated"
     error: "error"
+    skipped: "skipped"
   stat_fields:
     attempted: "attempted"
     submittable: "submittable"

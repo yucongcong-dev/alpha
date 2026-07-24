@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from concurrent.futures import Future
 from dataclasses import dataclass, field
+from threading import Event
 import time
 
 from ..config.models import DatasetExpressionPolicy
@@ -57,6 +58,7 @@ class ExecutionState:
     blacklist_runtime_stats: BlacklistRuntimeStats = field(default_factory=dict)
     blacklisted_template_keys: set[tuple[str, str, str]] = field(default_factory=set)
     last_submission_at: float = 0.0
+    stop_signal: Event = field(default_factory=Event)
 
 
 @dataclass(frozen=True)

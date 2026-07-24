@@ -7,7 +7,7 @@ import logging
 from typing import TYPE_CHECKING, TypeVar
 
 from ..config.runtime_values import get_runtime_config
-from ..exceptions import BrainAPIError, BrainQueueBusyError, BrainRateLimitError
+from ..exceptions import BrainAPIError, BrainQueueBusyError, BrainRateLimitError, BrainStopRequested
 from .timing import wait_seconds
 
 if TYPE_CHECKING:
@@ -24,6 +24,7 @@ def retry_operation(
     func: Callable[[], _T],
     *,
     retry_wait_seconds: float | None = None,
+    should_abort: Callable[[], bool] | None = None,
 ) -> _T:
     """以有限重试执行单个阶段，并特殊处理限流与排队拥塞。"""
     if retry_wait_seconds is None:
@@ -31,6 +32,8 @@ def retry_operation(
     last_error: Exception | None = None
 
     for attempt in range(1, retries + 1):
+        if should_abort is not None and should_abort():
+            raise BrainStopRequested(f"{name} aborted after stop-after-submittable triggered")
         try:
             return func()
         except BrainRateLimitError as exc:
@@ -73,6 +76,8 @@ def retry_operation(
                 exc,
             )
             if attempt < retries:
+                if should_abort is not None and should_abort():
+                    raise BrainStopRequested(f"{name} aborted after stop-after-submittable triggered")
                 wait_seconds(retry_wait_seconds, f"retry {name}")
 
     raise BrainAPIError(f"{name} failed after {retries} attempts: {last_error}")

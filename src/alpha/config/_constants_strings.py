@@ -30,6 +30,7 @@ API_KEY_STATE: str = _yaml_str("strings", "api_keys", "state", default="state")
 
 STATUS_SIMULATED: str = _yaml_str("strings", "status", "simulated", default="simulated")
 STATUS_ERROR: str = _yaml_str("strings", "status", "error", default="error")
+STATUS_SKIPPED: str = _yaml_str("strings", "status", "skipped", default="skipped")
 
 # ---- 字段统计键名 ----
 STAT_FIELD_ATTEMPTED: str = _yaml_str("strings", "stat_fields", "attempted", default="attempted")

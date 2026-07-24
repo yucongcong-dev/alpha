@@ -24,6 +24,7 @@ from ..config.constants import (
     STATS_DEFAULT_SCORE,
     STATS_PERFORMANCE_TOP_N,
     STATUS_ERROR,
+    STATUS_SKIPPED,
 )
 from ..models.domain import FieldFeedbackMap, FieldTestResult
 from .result_identity import is_queue_timeout_result
@@ -49,6 +50,8 @@ def compile_field_performance_summary(results: Sequence[FieldTestResult]) -> lis
         )
         if is_queue_timeout_result(result):
             summary[STAT_FIELD_QUEUE_TIMEOUTS] += 1
+            continue
+        if result.status == STATUS_SKIPPED:
             continue
 
         summary[STAT_FIELD_ATTEMPTED_TEMPLATES] += 1

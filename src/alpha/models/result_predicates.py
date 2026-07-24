@@ -6,6 +6,7 @@
 
 from __future__ import annotations
 
+from ..config.constants import STATUS_SKIPPED
 from .domain import FieldTestResult
 
 
@@ -21,4 +22,4 @@ def is_queue_timeout_result(result: FieldTestResult) -> bool:
 
 def is_informative_result(result: FieldTestResult) -> bool:
     """判断结果是否应参与模板/字段质量学习。"""
-    return not is_queue_timeout_result(result)
+    return not is_queue_timeout_result(result) and result.status != STATUS_SKIPPED

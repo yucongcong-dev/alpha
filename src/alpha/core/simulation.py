@@ -7,6 +7,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 import logging
 
 from ..api.client import BrainClient, WorkerClientFactory
@@ -54,6 +55,7 @@ def run_field_test(
     template_library_fingerprint: str,
     simulation_settings: SettingsVariant | None = None,
     create_semaphore: SemaphoreLike | None = None,
+    should_abort: Callable[[], bool] | None = None,
 ) -> FieldTestResult:
     """执行单个候选表达式的 simulation / checksubmit 两阶段流程。"""
     if not expression or not expression.strip():
@@ -95,6 +97,7 @@ def run_field_test(
         args,
         simulation_settings=simulation_settings,
         create_semaphore=create_semaphore,
+        should_abort=should_abort,
     )
     if isinstance(create_result, FieldTestResult):
         return create_result
@@ -154,6 +157,7 @@ def run_field_test_in_worker(
     template_library_fingerprint: str,
     simulation_settings: SettingsVariant | None = None,
     create_semaphore: SemaphoreLike | None = None,
+    should_abort: Callable[[], bool] | None = None,
 ) -> FieldTestResult:
     """工作线程入口，先解析线程本地客户端再执行测试。"""
     client = client_factory.get_client()
@@ -167,6 +171,7 @@ def run_field_test_in_worker(
         template_library_fingerprint,
         simulation_settings,
         create_semaphore,
+        should_abort,
     )
 
 

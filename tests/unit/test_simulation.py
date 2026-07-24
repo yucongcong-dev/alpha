@@ -7,6 +7,9 @@
 
 from __future__ import annotations
 
+from threading import Event
+
+from alpha.config.constants import STATUS_SKIPPED
 from alpha.core.simulation import (
     PrecheckConfig,
     build_failure_result,
@@ -773,3 +776,28 @@ def test_run_simulation_create_stage_merges_settings_variant_with_baseline(monke
     assert settings["visualization"] is False
     assert settings["decay"] == 6
     assert settings["truncation"] == 0.05
+
+
+def test_run_simulation_create_stage_skips_when_stop_signal_is_set() -> None:
+    ctx = FieldTestContext(
+        field_id="cashflow_op",
+        field_type="MATRIX",
+        field_name="cashflow_op",
+        template_name="group_ratio",
+        expression="rank(cashflow_op)",
+        settings_fingerprint="fp-stop",
+        template_library_fingerprint="lib-stop",
+    )
+    stop_signal = Event()
+    stop_signal.set()
+
+    result = run_simulation_create_stage(
+        ctx,
+        client=object(),  # type: ignore[arg-type]
+        args=MockArgs(),
+        should_abort=stop_signal.is_set,
+    )
+
+    assert isinstance(result, FieldTestResult)
+    assert result.status == STATUS_SKIPPED
+    assert result.failed_stage == "stopped"

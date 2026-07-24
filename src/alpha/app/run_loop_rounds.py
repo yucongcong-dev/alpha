@@ -71,6 +71,7 @@ def execute_schedule_round(
 
     for field_index, field in enumerate(fields, start=1):
         if should_stop_after_submittable(args, execution_state.results):
+            execution_state.stop_signal.set()
             logger.info("[stop] 达到 stop-after-submittable=%d", args.stop_after_submittable)
             return ScheduleRoundResult(
                 progressed=progressed_this_round,
@@ -232,12 +233,15 @@ def _dispatch_templates_for_field(
     """Dispatch scheduled templates for a single field; return whether a stop was requested."""
     for template_index, entry in enumerate(scheduled_templates, start=1):
         if should_stop_after_submittable(args, execution_state.results):
+            execution_state.stop_signal.set()
             logger.info("[stop] 达到 stop-after-submittable=%d", args.stop_after_submittable)
             return True
 
         if field_id in execution_state.skipped_fields_due_to_queue:
             logger.warning("[skip] field=%s 队列拥塞后停止剩余模板", field_id)
             return False
+        if execution_state.stop_signal.is_set():
+            return True
 
         maybe_restore_runtime_concurrency(runtime_state)
         if not drain_until_capacity(
@@ -249,6 +253,8 @@ def _dispatch_templates_for_field(
             result_write_options=result_write_options,
         ):
             return False
+        if execution_state.stop_signal.is_set():
+            return True
 
         logger.debug(
             "[progress] field=%s template %d/%d name=%s priority=%d queued=%d/%d settings=%s",

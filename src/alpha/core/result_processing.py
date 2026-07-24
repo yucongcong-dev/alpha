@@ -15,7 +15,7 @@ from ..analysis.result_identity import (
     result_identity,
 )
 from ..analysis.template_stats import update_template_stats_with_result
-from ..config.constants import STATUS_ERROR
+from ..config.constants import STATUS_ERROR, STATUS_SKIPPED
 from ..models.domain import FieldTestResult
 from ..runtime import ExecutionState, FutureCompletionContext
 from ..policy import auto_update_blacklist_incremental, build_blacklist_runtime_stats
@@ -78,6 +78,13 @@ def log_completed_result(result: FieldTestResult) -> None:
     if result.status == STATUS_ERROR:
         logger.error(
             "[result] field=%s template=%s status=ERROR message=%s",
+            result.field_id,
+            result.template_name,
+            result.message,
+        )
+    elif result.status == STATUS_SKIPPED:
+        logger.info(
+            "[result] field=%s template=%s status=SKIPPED message=%s",
             result.field_id,
             result.template_name,
             result.message,

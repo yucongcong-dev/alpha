@@ -41,6 +41,33 @@ from .scheduler_completion import (
 logger = logging.getLogger(__name__)
 
 
+def _stop_after_submittable_threshold(args: SchedulerRuntimeArgs) -> int:
+    try:
+        return int(getattr(args, "stop_after_submittable", 0) or 0)
+    except (TypeError, ValueError):
+        return 0
+
+
+def _activate_stop_signal_if_ready(
+    args: SchedulerRuntimeArgs,
+    execution_state: ExecutionState,
+) -> None:
+    stop_threshold = _stop_after_submittable_threshold(args)
+    if stop_threshold > 0 and execution_state.submittable_count >= stop_threshold:
+        execution_state.stop_signal.set()
+
+
+def _cancel_unstarted_pending_futures(execution_state: ExecutionState) -> None:
+    for future, context in list(execution_state.pending_futures.items()):
+        if future.cancel():
+            execution_state.pending_futures.pop(future, None)
+            logger.info(
+                "[stop] cancelled queued future field=%s template=%s after stop-after-submittable",
+                context.field_id,
+                context.template_name,
+            )
+
+
 @dataclass
 class DrainResult:
     """批量结果消费的结果对象（不可变）"""
@@ -215,6 +242,8 @@ def drain_completed_futures(
                 execution_state=execution_state,
             )
         )
+        _activate_stop_signal_if_ready(args, execution_state)
+        _cancel_unstarted_pending_futures(execution_state)
         apply_drain_feedback(
             args=args,
             execution_state=execution_state,

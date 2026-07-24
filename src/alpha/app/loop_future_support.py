@@ -91,6 +91,7 @@ def submit_template_future(
         run_ctx.template_library_fingerprint,
         settings_variant,
         run_ctx.create_semaphore,
+        execution_state.stop_signal.is_set,
     )
     execution_state.last_submission_at = time.monotonic()
     typed_future: Future[FieldTestResult] = future

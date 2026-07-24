@@ -26,6 +26,7 @@ from ..config.constants import (
     STAT_FIELD_TOP_FAILED_CHECKS,
     STATS_PERFORMANCE_TOP_N,
     STATUS_ERROR,
+    STATUS_SKIPPED,
     STATUS_SIMULATED,
 
     TEMPLATE_HISTORY_CONCENTRATED_PENALTY,
@@ -90,6 +91,8 @@ def update_template_stats_with_result(
         )
     if is_queue_timeout_result(result):
         stat[STAT_FIELD_QUEUE_TIMEOUTS] += 1
+        return stats
+    if result.status == STATUS_SKIPPED:
         return stats
     stat[STAT_FIELD_ATTEMPTED] += 1
     if result.submittable:
@@ -156,6 +159,8 @@ def compile_template_performance_summary(
         )
         if is_queue_timeout_result(result):
             summary[STAT_FIELD_QUEUE_TIMEOUTS] += 1
+            continue
+        if result.status == STATUS_SKIPPED:
             continue
 
         summary[STAT_FIELD_ATTEMPTED] += 1
