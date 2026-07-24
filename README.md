@@ -52,7 +52,7 @@ alpha/
 哪些文件进仓：
 
 - `config/*.yaml`：统一配置入口，按职责维护默认运行参数、数据集 profile、表达式策略、质量阈值和模板参数。
-- `templates/base/` 与 `templates/<dataset_id>/`：基础模板、数据集专属模板、聚焦字段/模板白名单，以及经过验证值得复用的本地 refine 模板。
+- `templates/<dataset_id>/`：数据集专属模板、聚焦字段/模板白名单，以及经过验证值得复用的本地 refine 模板。
 - `templates/<dataset_id>/refine/fields/*.json`：少量、可复用、人工裁剪的字段 fixture；它们服务于稳定复现实验，不应再混入 `cache/`。
 - `blacklists/<dataset_id>/blacklist.json`：统一黑名单。脚本会自动追加，也允许人工维护；空黑名单也可以进仓，用于固定数据集目录边界。
 
@@ -81,14 +81,16 @@ alpha/
 
 当前模板目录统一放在 `templates/`：
 
-- 基础共享模板库：`templates/base/library.json`
-- 基础模板说明：`templates/base/README.md`
 - 数据集专属模板库：`templates/<dataset_id>/library.json`
 - 数据集专属模板说明：`templates/<dataset_id>/README.md`
 - 数据集聚焦白名单：可选放在 `templates/<dataset_id>/*.txt`
-- 数据集 refine 模板库：可选放在 `templates/<dataset_id>/*refine*.json`
+- 数据集 refine 模板库：可选放在 `templates/<dataset_id>/refine/*.json`
 
-其中 `base` 只负责提供共享 fallback 模板，真正的搜索方向应尽量在数据集专属目录里定制和收敛。
+当前实现没有 `templates/base/` 这一层，也没有基础模板继承。
+
+- 每个数据集都必须显式维护自己的 `library.json`
+- 运行时不会从基础模板库自动 fallback 或自动生成
+- 真正的搜索方向应直接在数据集专属目录里定制和收敛
 
 代码中的模板相关逻辑统一放在 `src/alpha/generators/templates/`：
 
@@ -191,7 +193,7 @@ python3.10 -m alpha
 **表达式策略配置**：
 - 数据集级表达式搜索策略可在 `config/expression_policies.yaml` 或 `config/settings.yaml` 的 `expression_policies.<dataset_id>` 下覆盖
 - 适合放这里的参数包括：`partner_limit`、字段质量阈值、反馈阶段设置、少量运行期策略开关
-- 模板本身优先放在 `templates/base/` 或 `templates/<dataset_id>/` 下维护，而不是继续把模板内容塞回 Python 常量
+- 模板本身优先放在 `templates/<dataset_id>/` 下维护，而不是继续把模板内容塞回 Python 常量
 
 **输出**：`*_analysis.json` 中的关键字段：
 - `near_pass_summary`：接近通过的候选（按 score 排序）

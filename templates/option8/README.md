@@ -57,24 +57,84 @@
 
 这套默认库不是最终答案，而是第一轮“研究入口”。
 
+结合 `2026-07-24` 的第一轮真实运行，当前默认入口又收窄了一次：
+
+- 默认首发模板先不再把 `group/sector zscore` 当主入口
+- 首轮字段白名单先聚焦 `mean_skew / mean`
+- `historical / parkinson` 暂时降级到第二轮验证
+
 ## 第一轮优先字段
 
 当前最建议先从以下家族开小样本，而不是全库混扫：
 
 - `implied_volatility_mean_skew_*`
 - `implied_volatility_mean_*`
-- `historical_volatility_*`
-- `parkinson_volatility_*`
 
 当前不建议第一轮就把预算主力放到：
 
 - `implied_volatility_call_*`
 - `implied_volatility_put_*`
+- `historical_volatility_*`
+- `parkinson_volatility_*`
 
 原因：
 
 - call/put level 本身更拥挤
-- 先用 `mean` / `mean_skew` / realized-vol 家族，更容易看出结构差异
+- `historical / parkinson` 首轮实盘验证里先暴露出弱信号和拥堵问题
+- 先用 `mean` / `mean_skew` 家族，更容易看出结构差异
+
+## 2026-07-24 首轮真实验证
+
+首次真实运行命令：
+
+```bash
+cd /Users/boyaa/Downloads/alpha
+PYTHONPATH=src python3.10 -m alpha \
+  --dataset-id option8 \
+  --neutralization MARKET \
+  --limit 8 \
+  --max-templates-per-field 3 \
+  --max-templates-per-family 1 \
+  --include-fields-file templates/option8/refine/fields/phase1_core_fields.txt \
+  --output results/option8/phase1_entry_validation.json \
+  --feedback-output results/option8/phase1_entry_validation.json \
+  --no-auto-update-blacklist
+```
+
+当前已落地结果摘要：
+
+- 结果文件：`results/option8/phase1entryvalidation_results.jsonl`
+- 已落地总数：`3`
+- `submittable = 0`
+- 当前通过率：`0%`
+- `simulated but failed checks = 2 / 3 = 66.7%`
+- `runtime error = 1 / 3 = 33.3%`
+
+当前暴露出的失败模式非常集中：
+
+- 质量失败：
+  - `LOW_SHARPE = 2`
+  - `LOW_FITNESS = 2`
+- 流程失败：
+  - `CONCURRENT_SIMULATION_LIMIT_EXCEEDED = 1`
+
+已确认的弱组合：
+
+- `parkinson_volatility_30 + option8_sector_zscore_20`
+  - 两次都失败
+  - `Sharpe = 0.22`
+  - `Fitness = 0.05`
+
+这说明首轮主要不是“差一点点”，而是：
+
+- `parkinson_* + sector_zscore` 这条默认入口明显偏弱
+- 平台并发配额对 `option8` 首发也比较敏感
+
+所以当前动作已经同步收口为：
+
+- 从默认模板库移除 `option8_sector_zscore_20`
+- 第一轮白名单字段回收到 `mean_skew / mean`
+- 后续若继续跑真实验证，优先先看 `mean_skew_*` 是否能出现 near-pass
 
 ## 推荐命令
 
@@ -91,7 +151,7 @@ PYTHONPATH=src python3.10 -m alpha \
   --no-auto-update-blacklist
 ```
 
-再做第一轮真实小验证：
+再做收窄后的真实小验证：
 
 ```bash
 cd /Users/boyaa/Downloads/alpha
@@ -115,10 +175,17 @@ PYTHONPATH=src python3.10 -m alpha \
 - 新模板入口
 - 新文档/流程验证对象
 
-而不是立刻大规模 full-run。
+但它当前还没有完成“主线晋级”。
+
+截至 `2026-07-24`，它更准确的状态是：
+
+- 值得继续探索
+- 但必须在更窄字段、更窄模板下继续
+- 不适合立刻做大规模 full-run
 
 正确顺序应该是：
 
-1. 先用核心字段白名单跑小样本
-2. 看 `mean_skew / mean / realized vol` 哪一支先出 near-pass
-3. 再决定是否扩到 call/put level 或更长 tenor
+1. 先用 `mean_skew / mean` 白名单继续跑小样本
+2. 看哪一支先出 near-pass
+3. 再决定是否把 `historical / parkinson` 放回第二轮
+4. 最后再考虑是否扩到 call/put level 或更长 tenor

@@ -4,5 +4,3 @@ implied_volatility_mean_skew_60
 implied_volatility_mean_skew_90
 implied_volatility_mean_20
 implied_volatility_mean_60
-historical_volatility_20
-parkinson_volatility_20
