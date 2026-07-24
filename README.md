@@ -44,7 +44,6 @@ alpha/
 ├── templates/             # 数据集模板库与说明
 ├── blacklists/            # 数据集 blacklist
 ├── docs/                  # 四篇主文档 + 索引
-├── scripts/               # 少量可复用辅助脚本
 └── tests/                 # unit / integration
 ```
 

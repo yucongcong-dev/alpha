@@ -380,11 +380,38 @@
 - 主干稳定性验证
 - 提交前快速健康检查
 
-推荐直接使用闭环验证脚本：
+推荐直接使用下面这组等价命令：
 
 ```bash
-./scripts/run_fundamental6_cashflow_core_verify.sh --dry-run-plan
-./scripts/run_fundamental6_cashflow_core_verify.sh
+cd /Users/boyaa/Downloads/alpha
+
+PYTHONPATH=src python3.10 -m alpha --dry-run-plan \
+  --dataset-id fundamental6 \
+  --template-library-file templates/fundamental6/refine/cashflow_submit_core_pack.json \
+  --include-fields-file templates/fundamental6/refine/fields/cashflow_submit_core_field.txt \
+  --include-templates-file templates/fundamental6/refine/templates/cashflow_submit_core_templates.txt \
+  --limit 1 \
+  --max-templates-per-field 5 \
+  --max-templates-per-family 2 \
+  --field-template-batch-size 1 \
+  --stop-after-submittable 1 \
+  --no-auto-update-blacklist \
+  --output results/fundamental6/verify_cashflow_core_$(date +%F).json \
+  --feedback-output results/fundamental6/verify_cashflow_core_$(date +%F).json
+
+PYTHONPATH=src python3.10 -m alpha \
+  --dataset-id fundamental6 \
+  --template-library-file templates/fundamental6/refine/cashflow_submit_core_pack.json \
+  --include-fields-file templates/fundamental6/refine/fields/cashflow_submit_core_field.txt \
+  --include-templates-file templates/fundamental6/refine/templates/cashflow_submit_core_templates.txt \
+  --limit 1 \
+  --max-templates-per-field 5 \
+  --max-templates-per-family 2 \
+  --field-template-batch-size 1 \
+  --stop-after-submittable 1 \
+  --no-auto-update-blacklist \
+  --output results/fundamental6/verify_cashflow_core_$(date +%F).json \
+  --feedback-output results/fundamental6/verify_cashflow_core_$(date +%F).json
 ```
 
 这个脚本默认会带上：
@@ -407,7 +434,7 @@
 - 模板包：`templates/fundamental6/refine/cashflow_submit_core_pack.json`
 - 字段白名单：`templates/fundamental6/refine/fields/cashflow_submit_core_field.txt`
 - 模板白名单：`templates/fundamental6/refine/templates/cashflow_submit_core_templates.txt`
-- 执行脚本：`scripts/run_fundamental6_cashflow_core_verify.sh`
+- 执行方式：直接运行上面的固定命令
 
 如果省略 `--stop-after-submittable`，当前流程会继续：
 
@@ -518,7 +545,7 @@
 
 在把现役字段白名单和模板白名单收正之后，同一天又做了一次真实验证：
 
-- 执行脚本：`scripts/run_fundamental6_cashflow_core_verify.sh`
+- 执行方式：直接运行最小健康检查命令
 - 结果文件：`results/fundamental6/verify_cashflow_core_2026-07-24.json`
 - 本轮实际是“单枪健康检查”，不是“双模板全量展开”
 
