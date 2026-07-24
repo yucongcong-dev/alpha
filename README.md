@@ -233,7 +233,7 @@ python3.10 -m alpha --top-fields-by-feedback 10 --max-templates-per-field 15
   - 对换手问题尝试更快或更慢的 `decay`
 
 **反馈循环**：
-- 默认读取同一输出文件（`results/model51/test_results.json`）
+- 默认读取当前 `--output / --feedback-output` 指向的同一结果文件；若未显式指定，则使用本次运行的默认结果路径
 - 阶段 2 的结果会自动用于字段优先级排序和 near-pass 候选筛选
 - 可多次运行，每次自动续跑（不重复已完成的组合）
 - 如果阶段 2 产生了较多 `pending_self_correlation` 结果，建议先单独复查，再决定是否继续 refine，而不是直接把这些 pending 结果当作普通 near-pass 历史

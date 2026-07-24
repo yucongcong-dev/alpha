@@ -46,6 +46,45 @@
   - 数据集层面仍然是“单字段主干”
   - 但字段层面已经是“单字段双结构主线”
 
+## 今日执行摘要
+
+如果今天只想按当前仓库现役方案执行，直接按下面理解：
+
+- 数据集定位：
+  - `fundamental6` 现在是“维护池 / 低频复跑池”
+  - 不是当前主探索入口
+- 今日唯一正式主干：
+  - `cashflow_op`
+- 今日现役资产：
+  - 模板包：[cashflow_submit_core_pack.json](/Users/boyaa/Downloads/alpha/templates/fundamental6/refine/cashflow_submit_core_pack.json)
+  - 字段白名单：[cashflow_submit_core_field.txt](/Users/boyaa/Downloads/alpha/templates/fundamental6/refine/fields/cashflow_submit_core_field.txt)
+  - 模板白名单：[cashflow_submit_core_templates.txt](/Users/boyaa/Downloads/alpha/templates/fundamental6/refine/templates/cashflow_submit_core_templates.txt)
+- 今日次主线验证资产：
+  - 模板包：[cashflow_submit_zscore_core_pack.json](/Users/boyaa/Downloads/alpha/templates/fundamental6/refine/cashflow_submit_zscore_core_pack.json)
+- 今日观察线：
+  - [lctq_watch_pack.json](/Users/boyaa/Downloads/alpha/templates/fundamental6/refine/lctq_watch_pack.json)
+- 今日不建议做的事：
+  - 不恢复 broad-search
+  - 不继续扩 `cogs`
+  - 不把 `lctq` 重新扩成第二主线
+  - 不再围绕 `dpq` 单独加预算
+
+今天最推荐的命令是：
+
+```bash
+cd /Users/boyaa/Downloads/alpha
+PYTHONPATH=src python3.10 -m alpha \
+  --dataset-id fundamental6 \
+  --template-library-file templates/fundamental6/refine/cashflow_submit_core_pack.json \
+  --include-fields-file templates/fundamental6/refine/fields/cashflow_submit_core_field.txt \
+  --include-templates-file templates/fundamental6/refine/templates/cashflow_submit_core_templates.txt \
+  --no-auto-update-blacklist \
+  --output results/fundamental6/verify_cashflow_core_$(date +%F).json \
+  --feedback-output results/fundamental6/verify_cashflow_core_$(date +%F).json
+```
+
+如果只是想快速判断“这条线还活不活着”，优先跑上面这条，不要先去翻历史归档包。
+
 ## 定位
 `fundamental6` 当前应被视为一个慢频基本面数据集。
 
