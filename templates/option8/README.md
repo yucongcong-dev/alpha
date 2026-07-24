@@ -96,8 +96,8 @@ PYTHONPATH=src python3.10 -m alpha \
   --max-templates-per-field 3 \
   --max-templates-per-family 1 \
   --include-fields-file templates/option8/refine/fields/phase1_core_fields.txt \
-  --output results/option8/phase1_entry_validation.json \
-  --feedback-output results/option8/phase1_entry_validation.json \
+  --output results/option8/phase1entryvalidation.json \
+  --feedback-output results/option8/phase1entryvalidation.json \
   --no-auto-update-blacklist
 ```
 
@@ -162,8 +162,8 @@ PYTHONPATH=src python3.10 -m alpha \
   --max-templates-per-field 3 \
   --max-templates-per-family 1 \
   --include-fields-file templates/option8/refine/fields/phase1_core_fields.txt \
-  --output results/option8/phase1_entry_validation.json \
-  --feedback-output results/option8/phase1_entry_validation.json \
+  --output results/option8/phase1entryvalidation.json \
+  --feedback-output results/option8/phase1entryvalidation.json \
   --no-auto-update-blacklist
 ```
 

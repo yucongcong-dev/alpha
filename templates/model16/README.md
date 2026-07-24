@@ -114,7 +114,7 @@ Focused refine：
 - `2026-07-24` 的闭合默认库实跑没有改变这个结论，因此当前不建议把 `model16` 提升为新的主预算数据集。
 
 旧模板处理：
-- 过去较弱的 fallback 模板保留在 `legacy.json`，不再放在默认主库。
+- 过去较弱的 fallback 模板已经从默认主库下沉，不再作为 broad-search 默认入口。
 - `mean-reversion`、`information_ratio`、`normalize/quantile` 包装器，以及额外的长窗口近邻，更适合作为 refine/实验分支，而不是默认 broad-search 主力。
 - 当前恢复包位于 `templates/model16/refine/broad_search_neighbors.json`
 

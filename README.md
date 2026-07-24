@@ -53,7 +53,7 @@ alpha/
 
 - `config/*.yaml`：统一配置入口，按职责维护默认运行参数、数据集 profile、表达式策略、质量阈值和模板参数。
 - `templates/<dataset_id>/`：数据集专属模板、聚焦字段/模板白名单，以及经过验证值得复用的本地 refine 模板。
-- `templates/<dataset_id>/refine/fields/*.json`：少量、可复用、人工裁剪的字段 fixture；它们服务于稳定复现实验，不应再混入 `cache/`。
+- `templates/<dataset_id>/refine/fields/*.txt`：少量、可复用、人工裁剪的字段白名单；它们服务于稳定复现实验，不应再混入 `cache/`。
 - `blacklists/<dataset_id>/blacklist.json`：统一黑名单。脚本会自动追加，也允许人工维护；空黑名单也可以进仓，用于固定数据集目录边界。
 
 哪些文件不进仓：
@@ -86,10 +86,10 @@ alpha/
 - 数据集聚焦白名单：可选放在 `templates/<dataset_id>/*.txt`
 - 数据集 refine 模板库：可选放在 `templates/<dataset_id>/refine/*.json`
 
-当前实现没有 `templates/base/` 这一层，也没有基础模板继承。
+当前实现采用“数据集专属模板库”模式：
 
-- 每个数据集都必须显式维护自己的 `library.json`
-- 运行时不会从基础模板库自动 fallback 或自动生成
+- 每个数据集都显式维护自己的 `library.json`
+- 运行时直接读取该数据集模板库，不做额外模板继承
 - 真正的搜索方向应直接在数据集专属目录里定制和收敛
 
 代码中的模板相关逻辑统一放在 `src/alpha/generators/templates/`：
@@ -375,7 +375,7 @@ YAML 分层优先级为：`config/settings.yaml` > `config/expression_policies.y
 
 如果后续要做正式提交，仍然需要人工干预，而不是依赖默认 CLI 运行流程。
 
-每次运行会生成两个文件：
+每次运行至少会生成一组结果文件；若未显式指定 `--output`，常见默认命名如下：
 
 | 文件 | 用途 |
 |------|------|
