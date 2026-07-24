@@ -519,10 +519,10 @@ python3.10 -m alpha clean --include-credentials
 
 ### YAML 开关覆盖
 
-YAML 中打开的布尔开关可以用 `--no-*` 在命令行临时关闭：
+YAML 中打开的布尔开关可以用对应的 `--no-*` 在命令行临时关闭：
 
 ```bash
-python3.10 -m alpha --no-submit --no-auto-update-blacklist
+python3.10 -m alpha --no-auto-update-blacklist
 python3.10 -m alpha --no-smoke-test --no-full-run
 ```
 

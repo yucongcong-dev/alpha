@@ -380,6 +380,33 @@
 - 主干稳定性验证
 - 提交前快速健康检查
 
+推荐直接使用闭环验证脚本：
+
+```bash
+./scripts/run_fundamental6_cashflow_core_verify.sh --dry-run-plan
+./scripts/run_fundamental6_cashflow_core_verify.sh
+```
+
+这个脚本默认会带上：
+
+- `--stop-after-submittable 1`
+- `--no-auto-update-blacklist`
+- `cashflow_submit_core_pack.json`
+- `clean_verify_round6_submit_field.txt`
+
+这样它的目标很明确：
+
+- 只验证当前最小主干是否还能稳定产出
+- 一旦拿到 1 条可提交结果就收口
+- 不让最小验证包自动扩散成 refine 长链
+- 它是“软收口”: 已经发出去的 pending 任务会继续收尾，但不会再继续进入 refine 放大
+
+如果省略 `--stop-after-submittable`，当前流程会继续：
+
+- 扩到同字段更多 settings / 邻居模板
+- 在出现 near-pass 或已通过结果后继续进入 refine 派生
+- 导致“小包验证”变成“放大式精修”
+
 它不再包含：
 
 - `decay` near-pass 邻居
@@ -455,6 +482,28 @@
 - `round16` 不是发现了新主线，而是再次确认旧结论稳定
 - `cashflow_submit_core_pack.json` 已经具备“跨天低频复跑”的最小运营价值
 - 当前 `fundamental6` 不应再继续扩这些已验证偏弱的 refine 邻居
+
+## 2026-07-24 闭环验证流程修正
+
+`2026-07-24` 的一次真实小批次运行，把一个容易被忽略的问题跑实了：
+
+- `cashflow_submit_core_pack.json` 文件里虽然只有 2 条主模板
+- 但如果只是直接运行，而不设置 `--stop-after-submittable`
+- 当前调度会继续扩到更多 settings 组合、邻居模板，甚至自动进入 refine 链
+
+这意味着：
+
+- “最小提交包”本身没问题
+- 真正缺的不是模板，而是验证流程的停止边界
+
+因此从这一天开始，`fundamental6` 的最小复跑应该固定理解为：
+
+- 用 `cashflow_submit_core_pack.json`
+- 用单字段白名单 `clean_verify_round6_submit_field.txt`
+- 显式设置 `--stop-after-submittable 1`
+- 默认关闭 blacklist 自动更新
+
+如果目标不是健康检查，而是继续放大可提交结果，那才应该故意去掉这个停止条件。
 
 ## 模板包阶段角色
 
