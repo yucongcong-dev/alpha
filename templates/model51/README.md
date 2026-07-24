@@ -96,18 +96,19 @@
 
 Broad exploration：
 - `model51` 已经展示出足够的结构性，因此大范围模板扫库应继续保持窄而精。
-- 优先使用数据集专属模板库，而不是共享 base library。
+- 优先使用数据集专属模板库，而不是继续扩默认主库之外的历史旁支。
 - 在 self-correlation 行为没有理解清楚前，不要继续把 broad-search 预算浪费在当前风险字段家族上。
 - 如果还需要做 broad sweep，也应该把它视为生成 `pending_self_correlation` backlog 的诊断动作，而不是主要的 alpha 挖掘动作。
 
 Focused refine：
-- 历史上的 focused fixtures 仍然保留在仓库中，方便审计，但目前更适合被视为诊断输入，而不是优先生产 refine 默认。
-- [refine/local_refine_round7.json](/Users/boyaa/Downloads/alpha/templates/model51/refine/local_refine_round7.json) 保留了一小组围绕同一风险分支的已验证本地 refine 变体。
-- [refine/local_refine_industry_decay_triplet_round9.json](/Users/boyaa/Downloads/alpha/templates/model51/refine/local_refine_industry_decay_triplet_round9.json) 和 [refine/local_refine_market_decay_triplet_round9.json](/Users/boyaa/Downloads/alpha/templates/model51/refine/local_refine_market_decay_triplet_round9.json) 保留了围绕 `ts_zscore(..., 63)` 分支的更紧凑 `10/15/20` decay 扫描。
-- [refine/local_refine_decay_density_round10.json](/Users/boyaa/Downloads/alpha/templates/model51/refine/local_refine_decay_density_round10.json) 保留了同一分支上更密的 `8/12/18/24` decay 扫描。
-- [refine/local_refine_window_sweep_round11.json](/Users/boyaa/Downloads/alpha/templates/model51/refine/local_refine_window_sweep_round11.json) 比较了同一 decay 分支上的邻近 `ts_zscore` 窗口 `56/63/70`。
-- [refine/fields/unsystematic_group_branch_round12_fields.txt](/Users/boyaa/Downloads/alpha/templates/model51/refine/fields/unsystematic_group_branch_round12_fields.txt) 和 [refine/group_branch_round12_templates.txt](/Users/boyaa/Downloads/alpha/templates/model51/refine/group_branch_round12_templates.txt) 记录了 unsystematic 分支上的非 decay 重查。
-- [refine/fields/systematic_branch_round13_fields.txt](/Users/boyaa/Downloads/alpha/templates/model51/refine/fields/systematic_branch_round13_fields.txt) 和 [refine/systematic_branch_round13_templates.txt](/Users/boyaa/Downloads/alpha/templates/model51/refine/systematic_branch_round13_templates.txt) 记录了对应的 systematic 分支重查。
+- 历史上的 focused fixtures 并没有完整保留为现役文件集合；当前更适合作为“历史轮次说明”，而不是可直接点击复用的本地入口。
+- 当前仓库里仍然存在、可直接复用的 refine 资产主要是：
+  - [refine/broad_search_neighbors.json](/Users/boyaa/Downloads/alpha/templates/model51/refine/broad_search_neighbors.json)
+  - [refine/unsystematic60_refine_round14.json](/Users/boyaa/Downloads/alpha/templates/model51/refine/unsystematic60_refine_round14.json)
+  - [refine/unsystematic60_refine_round15.json](/Users/boyaa/Downloads/alpha/templates/model51/refine/unsystematic60_refine_round15.json)
+  - [refine/systematic30_refine_round16.json](/Users/boyaa/Downloads/alpha/templates/model51/refine/systematic30_refine_round16.json)
+  - [refine/fields/unsystematic60_refine_round14_fields.txt](/Users/boyaa/Downloads/alpha/templates/model51/refine/fields/unsystematic60_refine_round14_fields.txt)
+  - [refine/fields/systematic30_refine_round16_fields.txt](/Users/boyaa/Downloads/alpha/templates/model51/refine/fields/systematic30_refine_round16_fields.txt)
 
 Refine pack 约定：
 - `library.json` 保持为默认、窄化后的生产模板库。
@@ -139,7 +140,7 @@ Refine pack 约定：
   - `tested=16`
   - `submittable=0`
   - 没有突破 `round14` 的 near-pass 天花板
-- 因此它已从 active refine branch 降级为 archived near-pass branch。对应结论见 [branch_review_2026-07-08.md](/Users/boyaa/Downloads/alpha/results/model51/branch_review_2026-07-08.md)。
+- 因此它已从 active refine branch 降级为 archived near-pass branch；当前文档直接保留这个结论，不再引用未进仓的结果复盘文件。
 
 随后仓库把 active branch 切到了 `systematic_risk_last_30_days`，并准备了：
 

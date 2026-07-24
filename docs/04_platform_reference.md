@@ -958,7 +958,7 @@ subuniverse_sharpe
 
 继续看：
 
-- [02_optimization_and_submission.md](02_optimization_and_submission.md)
+- [03_optimization_and_submission.md](03_optimization_and_submission.md)
 
 平台语义里：
 
@@ -1004,11 +1004,11 @@ OS 是提交之后逐步积累出来的样本外表现。
 - 想理解平台在做什么：
   看 [01_beginner_guide.md](01_beginner_guide.md)
 - 想理解失败项和优化动作：
-  看 [02_optimization_and_submission.md](02_optimization_and_submission.md)
+  看 [03_optimization_and_submission.md](03_optimization_and_submission.md)
 - 想理解这些术语在页面和状态里是什么意思：
   看这篇
 - 想把平台逻辑落到本仓库：
-  看 [03_research_and_data_guide.md](03_research_and_data_guide.md)
+  看 [02_research_and_data_guide.md](02_research_and_data_guide.md)
 
 ---
 

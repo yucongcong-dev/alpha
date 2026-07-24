@@ -157,7 +157,7 @@
 
 优先继续看：
 
-- [02_optimization_and_submission.md](02_optimization_and_submission.md)
+- [03_optimization_and_submission.md](03_optimization_and_submission.md)
 
 ### 5.4 Truncation
 
@@ -222,7 +222,7 @@
 
 优先继续看：
 
-- [02_optimization_and_submission.md](02_optimization_and_submission.md)
+- [03_optimization_and_submission.md](03_optimization_and_submission.md)
 
 ### 5.6 Test Period
 
