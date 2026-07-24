@@ -63,12 +63,17 @@ def main() -> int:
     return 0
 
 
-if __name__ == "__main__":
+def run_cli_entry() -> int:
+    """Run the main entrypoint with top-level CLI error handling."""
     try:
-        raise SystemExit(main())
+        return main()
     except KeyboardInterrupt:
         logger.warning("[abort] 用户中断")
-        raise SystemExit(130) from None
+        return 130
     except Exception as exc:
         logger.error("[error] %s", exc)
-        raise SystemExit(1) from None
+        return 1
+
+
+if __name__ == "__main__":
+    raise SystemExit(run_cli_entry())
