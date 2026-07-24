@@ -16,38 +16,13 @@ from __future__ import annotations
 
 import logging
 
-from .app.bootstrap import (
-    clean_runtime_artifacts,
-    initialize_run_context,
-)
-from .app.bootstrap import (
-    create_and_login_client as create_and_login_client,
-)
-from .app.bootstrap import (
-    prepare_fields_for_execution as prepare_fields_for_execution,
-)
+from .app.bootstrap import clean_runtime_artifacts, initialize_run_context
 from .app.finalize import finalize_run
-
-from .app.run_loop import (
-    build_field_resume_positions as build_field_resume_positions,
-)
-from .app.run_loop import (
-    normalize_resume_index as normalize_resume_index,
-)
-from .app.run_loop import (
-    refresh_runtime_feedback as refresh_runtime_feedback,
-)
-from .app.run_loop import (
-    run_field_test_loop,
-)
+from .app.run_loop import run_field_test_loop
 from .cli.parser import parse_args
 from .cli.path_resolution import apply_run_paths, normalize_args_paths
 
 logger = logging.getLogger(__name__)
-
-# 保留历史函数名，避免测试与外部导入立即失效。
-_initialize = initialize_run_context
-_run_field_test_loop = run_field_test_loop
 
 
 def main() -> int:

@@ -54,98 +54,17 @@ from .bootstrap_types import BootstrapPaths, PreparedBootstrapResources, Runtime
 logger = logging.getLogger(__name__)
 
 
-# ============================================================================
-# bootstrap_steps facade wiring
-# ============================================================================
-
-
-def _runtime_output_dependencies() -> dict[str, object]:
-    """Return concrete dependencies for runtime output preparation."""
-    return {
-        "setup_runtime_logging_fn": setup_runtime_logging,
-        "cleanup_legacy_sidecar_files_fn": cleanup_legacy_sidecar_files,
-        "ensure_analysis_synced_fn": ensure_analysis_synced,
-        "build_run_config_snapshot_fn": build_run_config_snapshot,
-    }
-
-
-def _resource_loading_dependencies() -> dict[str, object]:
-    """Return concrete dependencies for bootstrap resource loading."""
-    return {
-        "set_active_blacklists_dir_fn": set_active_blacklists_dir,
-        "ensure_dataset_template_library_fn": ensure_dataset_template_library,
-        "ensure_template_blacklist_file_fn": ensure_template_blacklist_file,
-        "load_template_library_fn": load_template_library,
-        "read_blacklist_payload_fn": read_blacklist_payload,
-        "summarize_blacklist_payload_fn": summarize_blacklist_payload,
-        "load_run_filters_extended_fn": load_run_filters_extended,
-        "get_dataset_expression_policy_fn": get_dataset_expression_policy,
-        "stable_fingerprint_fn": stable_fingerprint,
-        "build_settings_fingerprint_fn": build_settings_fingerprint,
-        "build_historical_run_state_fn": build_historical_run_state,
-        "load_fields_cache_fn": load_fields_cache,
-        "fetch_fields_with_cache_fn": fetch_fields_with_cache,
-        "prepare_fields_for_execution_fn": prepare_fields_for_execution,
-    }
-
-
-def _client_login_dependencies() -> dict[str, object]:
-    """Return concrete dependencies for bootstrap client creation and login."""
-    return {
-        "get_runtime_config_fn": get_runtime_config,
-        "login_with_retry_fn": login_with_retry,
-    }
-
-
-def resolve_bootstrap_paths(
-    args: BootstrapRuntimeArgs,
-    run_paths: RunPaths | None,
-) -> BootstrapPaths:
-    """Facade export for bootstrap path normalization."""
-    return _resolve_bootstrap_paths(args, run_paths)
-
-
-def prepare_runtime_outputs(
-    args: BootstrapRuntimeArgs,
-    run_paths: RunPaths | None,
-    paths: BootstrapPaths,
-) -> RunConfig:
-    """Facade export for runtime output preparation with app-level wiring."""
-    return _prepare_runtime_outputs(args, run_paths, paths, **_runtime_output_dependencies())
-
-
-def resolve_credentials(
-    args: BootstrapRuntimeArgs,
-    paths: BootstrapPaths,
-) -> tuple[str, str]:
-    """Facade export for credential resolution with app-level wiring."""
-    return _resolve_credentials(args, paths, load_credentials_fn=load_credentials)
-
-
-def prepare_bootstrap_resources(
-    args: BootstrapRuntimeArgs,
-    paths: BootstrapPaths,
-    bootstrap_client: BrainClient,
-    *,
-    run_config: RunConfig,
-    run_paths: RunPaths | None,
-) -> PreparedBootstrapResources | None:
-    """Facade export for bootstrap resource loading with app-level wiring."""
-    return _prepare_bootstrap_resources(
-        args,
-        paths,
-        bootstrap_client,
-        run_config=run_config,
-        run_paths=run_paths,
-        **_resource_loading_dependencies(),
-    )
-
-
 def create_and_login_client(
     email: str, password: str, args: ApiClientArgs
 ) -> tuple[BrainClient, WorkerClientFactory]:
-    """Facade export for bootstrap client creation with app-level wiring."""
-    return _create_and_login_client(email, password, args, **_client_login_dependencies())
+    """兼容导出：创建 Brain API 客户端并完成登录。"""
+    return _create_and_login_client(
+        email,
+        password,
+        args,
+        get_runtime_config_fn=get_runtime_config,
+        login_with_retry_fn=login_with_retry,
+    )
 
 
 def build_runtime_concurrency(
@@ -201,20 +120,46 @@ def initialize_run_context(
     run_paths: RunPaths | None,
 ) -> InitializedRunContext | None:
     """执行主流程的初始化阶段，返回结构化运行上下文。"""
-    paths = resolve_bootstrap_paths(args, run_paths)
-    run_config = prepare_runtime_outputs(args, run_paths, paths)
-    email, password = resolve_credentials(args, paths)
+    paths = _resolve_bootstrap_paths(args, run_paths)
+    run_config = _prepare_runtime_outputs(
+        args,
+        run_paths,
+        paths,
+        setup_runtime_logging_fn=setup_runtime_logging,
+        cleanup_legacy_sidecar_files_fn=cleanup_legacy_sidecar_files,
+        ensure_analysis_synced_fn=ensure_analysis_synced,
+        build_run_config_snapshot_fn=build_run_config_snapshot,
+    )
+    email, password = _resolve_credentials(
+        args,
+        paths,
+        load_credentials_fn=load_credentials,
+    )
     if not email or not password:
         logger.error("[error] 缺少凭证，无法继续")
         return None
 
     bootstrap_client, client_factory = create_and_login_client(email, password, args)
-    prepared = prepare_bootstrap_resources(
+    prepared = _prepare_bootstrap_resources(
         args,
         paths,
         bootstrap_client,
         run_config=run_config,
         run_paths=run_paths,
+        set_active_blacklists_dir_fn=set_active_blacklists_dir,
+        ensure_dataset_template_library_fn=ensure_dataset_template_library,
+        ensure_template_blacklist_file_fn=ensure_template_blacklist_file,
+        load_template_library_fn=load_template_library,
+        read_blacklist_payload_fn=read_blacklist_payload,
+        summarize_blacklist_payload_fn=summarize_blacklist_payload,
+        load_run_filters_extended_fn=load_run_filters_extended,
+        get_dataset_expression_policy_fn=get_dataset_expression_policy,
+        stable_fingerprint_fn=stable_fingerprint,
+        build_settings_fingerprint_fn=build_settings_fingerprint,
+        build_historical_run_state_fn=build_historical_run_state,
+        load_fields_cache_fn=load_fields_cache,
+        fetch_fields_with_cache_fn=fetch_fields_with_cache,
+        prepare_fields_for_execution_fn=prepare_fields_for_execution,
     )
     if prepared is None:
         return None

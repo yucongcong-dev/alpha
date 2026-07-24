@@ -4,12 +4,9 @@ from __future__ import annotations
 
 from argparse import Namespace
 
-from alpha.main import (
-    build_field_resume_positions,
-    normalize_resume_index,
-    prepare_fields_for_execution,
-    refresh_runtime_feedback,
-)
+from alpha.app.bootstrap_fields import prepare_fields_for_execution
+from alpha.app.run_loop_feedback import refresh_runtime_feedback
+from alpha.app.run_loop_resume import build_field_resume_positions, normalize_resume_index
 from alpha.models.domain import FieldTestResult
 from alpha.models.io_types import RunFilters
 from alpha.models.runtime import HistoricalRunState, TemplateBuildContext, TemplateBuildOptions
