@@ -28,6 +28,7 @@ class BootstrapPaths:
 
     output_file: str
     log_file: str
+    blacklists_dir: str
     template_library_file: str
     fields_cache_file: str
     feedback_output: str

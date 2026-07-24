@@ -93,6 +93,11 @@ alpha/                     # 项目根目录
 │       │   ├── report_builder.py
 │       │   ├── result_identity.py
 │       │   ├── results_loader.py
+│       │   ├── template_registry.py
+│       │   ├── template_registry_budget.py
+│       │   ├── template_registry_rules.py
+│       │   ├── template_registry_sidecars.py
+│       │   ├── template_registry_store.py
 │       │   ├── stats.py       # 兼容导出层
 │       │   └── template_stats.py
 │       │
@@ -141,9 +146,13 @@ alpha/                     # 项目根目录
 │       │   └── state.py
 │       │
 │       ├── policy/        # 运行期策略层
-│       │   ├── blacklist.py
+│       │   ├── __init__.py     # facade 导出入口
+│       │   ├── blacklist_context.py
 │       │   ├── blacklist_runtime.py
+│       │   ├── blacklist_runtime_stats.py
+│       │   ├── blacklist_runtime_updates.py
 │       │   ├── blacklist_store.py
+│       │   ├── expression.py
 │       │   ├── template_blacklist.py
 │       │   └── types.py
 │       │
@@ -259,11 +268,13 @@ alpha/                     # 项目根目录
 - `models/domain.py` 只放领域对象；`models/io_types.py` 放路径/过滤边界对象；`models/runtime_options.py`、`models/runtime_protocols.py` 放运行配置与协议；运行期上下文和可变执行状态已经下沉到 `runtime/contexts.py`、`runtime/state.py`；`models/runtime_state.py`、`models/runtime.py` / `models/base.py` 仅保留兼容导出
 - `analysis/stats.py` 是兼容导出层；结果加载、失败检查评分、模板/字段统计、反馈画像已经分别拆到 `results_loader.py`、`failed_checks.py`、`template_stats.py`、`field_stats.py`、`feedback_stats.py`
 - `analysis/feedback.py` 是兼容导出层；历史状态/near-pass 选择放在 `feedback_history.py`，模板禁用/保留/跳过策略放在 `feedback_filters.py`
+- `analysis/template_registry.py` 及其配套的 `template_registry_budget.py`、`template_registry_rules.py`、`template_registry_store.py`、`template_registry_sidecars.py` 负责模板角色、scope、预算和 sidecar 汇总这组“模板治理”逻辑
 - `analysis/report_builder.py` 负责从结果构建 summary/analysis payload
 - `core/execution_filters.py` 负责执行期字段/模板跳过判断；`core/template_planning.py` 负责把模板候选展开为执行队列。旧的 `core/template_filters.py` / `core/template_queue.py` 仅保留兼容导出。
-- `policy/blacklist.py` 负责黑名单策略、聚合与增量更新
+- `policy/__init__.py` 是策略 facade；`blacklist_runtime.py` 负责运行态黑名单聚合与自动更新，`blacklist_store.py` 负责黑名单文件存取，`template_blacklist.py` 负责模板名/表达式规则匹配，`expression.py` 负责数据集表达式策略和反馈阶段判断
 - `io/output.py` 负责结果持久化与分析边车编排，不再承载黑名单策略实现
 - `io/common.py` 放更底层的 JSON 原子写入、路径常量、dataset 文件名安全化与运行时 `data/` 目录解析
+- `cli/path_resolution.py` 负责把模板库、字段缓存、结果 sidecar、blacklist 根目录等运行路径显式归一化为 `RunPaths`
 - `config/` 是配置子包：`__init__.py` 保留旧的 `alpha.config` 入口，`models.py` 放配置 dataclass，`yaml.py` 只保留线程安全缓存和公共 API，`yaml_sources.py` 放 YAML 查找/加载/合并/签名，`yaml_validator.py` 放 schema 和交叉一致性校验，`defaults.py` 放 YAML global 到 CLI 参数的合并，`policy.py` 放策略构建和反馈阶段判断，`policy_coercers.py` 放 YAML 类型转换，`policy_overrides.py` 放 expression policy 覆盖解析，`profiles.py` 放 dataset profile fallback。
 - `generators/templates/` 是模板子包：`__init__.py` 管理 JSON 模板库，`candidates.py` 构造 `TemplateCandidate`，`classification.py` 做模板 family/stage 分类，`metadata.py` 建模板元数据索引，`partner_fields.py` 发现 ratio 配对字段，`priority.py` 做自适应优先级和 family 裁剪，`refine.py` 生成 near-pass 精修模板，`feedback_mutations.py` 编排反馈 mutation，`feedback_mutation_sets.py` 放具体 mutation 集合，`feedback_best_expression.py` 放历史最佳表达式变异，`historical_reuse.py`、`wrappers.py` 和 `variation_common.py` 拆分模板变体策略，`variations.py` 保留组合入口。
 - `generators/expression_builder.py` 是表达式候选编排层，负责把字段、模板库、策略和反馈组合成候选表达式。

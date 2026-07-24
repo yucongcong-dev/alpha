@@ -175,6 +175,7 @@ def assemble_initialized_run_context(
     execution_state,
     runtime_state: RuntimeConcurrencyState,
     create_semaphore: threading.Semaphore,
+    blacklists_dir: str,
 ) -> InitializedRunContext:
     """Assemble the final initialized run context from prepared bootstrap parts."""
     return InitializedRunContext(
@@ -185,6 +186,7 @@ def assemble_initialized_run_context(
         use_dataset_heuristics=prepared.use_dataset_heuristics,
         template_library_fingerprint=prepared.template_library_fingerprint,
         settings_fingerprint=prepared.settings_fingerprint,
+        blacklists_dir=blacklists_dir,
         historical_state=prepared.historical_state,
         fields=prepared.fields,
         execution_state=execution_state,
@@ -224,7 +226,7 @@ def initialize_run_context(
         settings_fingerprint=prepared.settings_fingerprint,
         template_library_fingerprint=prepared.template_library_fingerprint,
         run_config=prepared.run_config,
-        blacklists_dir="",
+        blacklists_dir=paths.blacklists_dir,
     )
 
     concurrency = build_runtime_concurrency(args)
@@ -234,4 +236,5 @@ def initialize_run_context(
         execution_state=execution_state,
         runtime_state=concurrency.runtime_state,
         create_semaphore=concurrency.create_semaphore,
+        blacklists_dir=paths.blacklists_dir,
     )

@@ -70,6 +70,7 @@ class InitializedRunContext:
     use_dataset_heuristics: bool
     template_library_fingerprint: str
     settings_fingerprint: str
+    blacklists_dir: str
     historical_state: HistoricalRunState
     fields: list[TemplateField]
     execution_state: ExecutionState

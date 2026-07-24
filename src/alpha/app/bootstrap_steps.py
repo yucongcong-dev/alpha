@@ -41,6 +41,7 @@ def resolve_bootstrap_paths(
     return BootstrapPaths(
         output_file=output_file,
         log_file=run_path_value(run_paths, "log_file"),
+        blacklists_dir=run_path_value(run_paths, "blacklists_dir"),
         template_library_file=(
             run_path_value(run_paths, "template_library_file") or str(args.template_library_file)
         ),
@@ -64,6 +65,7 @@ def build_effective_run_paths(
         log_file=paths.log_file,
         state_file="",
         checkpoint_file="",
+        blacklists_dir=paths.blacklists_dir,
         fields_cache_file=paths.fields_cache_file,
         template_library_file=paths.template_library_file,
         output=paths.output_file,

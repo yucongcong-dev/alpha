@@ -17,6 +17,7 @@ class RunPaths:
     log_file: str
     state_file: str
     checkpoint_file: str
+    blacklists_dir: str = ""
     fields_cache_file: str = ""
     template_library_file: str = ""
     output: str = ""

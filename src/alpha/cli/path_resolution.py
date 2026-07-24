@@ -8,6 +8,7 @@ import argparse
 import os
 from pathlib import Path
 
+from ..io.common import resolve_blacklists_dir
 from ..io.output_paths import (
     build_dataset_scoped_paths,
     build_output_sidecar_paths,
@@ -41,6 +42,7 @@ def normalize_args_paths(args: argparse.Namespace) -> RunPaths:
     creds_key_file = (
         resolve_cli_path(args.creds_key_file, base_dir=os.getcwd()) or DEFAULT_CREDS_KEY_FILE
     )
+    blacklists_dir = str(resolve_blacklists_dir())
     include_fields_file = resolve_cli_path(args.include_fields_file, base_dir=os.getcwd())
     exclude_fields_file = resolve_cli_path(args.exclude_fields_file, base_dir=os.getcwd())
     include_templates_file = resolve_cli_path(args.include_templates_file, base_dir=os.getcwd())
@@ -59,6 +61,7 @@ def normalize_args_paths(args: argparse.Namespace) -> RunPaths:
         log_file=log_file,
         state_file=state_file,
         checkpoint_file=checkpoint_file,
+        blacklists_dir=blacklists_dir,
         fields_cache_file=fields_cache_file,
         template_library_file=template_library_file,
         output=output_file,
@@ -78,6 +81,7 @@ def apply_run_paths(args: argparse.Namespace, run_paths: RunPaths) -> None:
     args.log_file = run_paths.log_file
     args.state_file = run_paths.state_file
     args.checkpoint_file = run_paths.checkpoint_file
+    args.blacklists_dir = run_paths.blacklists_dir
     args.fields_cache_file = run_paths.fields_cache_file
     args.template_library_file = run_paths.template_library_file
     args.feedback_output = run_paths.feedback_output
