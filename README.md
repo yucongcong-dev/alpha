@@ -93,6 +93,7 @@ alpha/                     # 项目根目录
 │       │   ├── report_builder.py
 │       │   ├── result_identity.py
 │       │   ├── results_loader.py
+│       │   ├── template_execution_policy.py
 │       │   ├── template_registry.py
 │       │   ├── template_registry_budget.py
 │       │   ├── template_registry_rules.py
@@ -268,9 +269,10 @@ alpha/                     # 项目根目录
 - `models/domain.py` 只放领域对象；`models/io_types.py` 放路径/过滤边界对象；`models/runtime_options.py`、`models/runtime_protocols.py` 放运行配置与协议；运行期上下文和可变执行状态已经下沉到 `runtime/contexts.py`、`runtime/state.py`；`models/runtime_state.py`、`models/runtime.py` / `models/base.py` 仅保留兼容导出
 - `analysis/stats.py` 是兼容导出层；结果加载、失败检查评分、模板/字段统计、反馈画像已经分别拆到 `results_loader.py`、`failed_checks.py`、`template_stats.py`、`field_stats.py`、`feedback_stats.py`
 - `analysis/feedback.py` 是兼容导出层；历史状态/near-pass 选择放在 `feedback_history.py`，模板禁用/保留/跳过策略放在 `feedback_filters.py`
+- `analysis/template_execution_policy.py` 负责把模板 registry 的角色、scope、预算和 refine candidate 这些“模板治理判定”整理成执行前决策
 - `analysis/template_registry.py` 及其配套的 `template_registry_budget.py`、`template_registry_rules.py`、`template_registry_store.py`、`template_registry_sidecars.py` 负责模板角色、scope、预算和 sidecar 汇总这组“模板治理”逻辑
 - `analysis/report_builder.py` 负责从结果构建 summary/analysis payload
-- `core/execution_filters.py` 负责执行期字段/模板跳过判断；`core/template_planning.py` 负责把模板候选展开为执行队列。旧的 `core/template_filters.py` / `core/template_queue.py` 仅保留兼容导出。
+- `core/execution_filters.py` 负责执行期字段/模板跳过判断；`core/template_planning.py` 负责把模板候选展开为执行队列，本身尽量不再承载 template registry 的细粒度策略判定。旧的 `core/template_filters.py` / `core/template_queue.py` 仅保留兼容导出。
 - `policy/__init__.py` 是策略 facade；`blacklist_runtime.py` 负责运行态黑名单聚合与自动更新，`blacklist_store.py` 负责黑名单文件存取，`template_blacklist.py` 负责模板名/表达式规则匹配，`expression.py` 负责数据集表达式策略和反馈阶段判断
 - `io/output.py` 负责结果持久化与分析边车编排，不再承载黑名单策略实现
 - `io/common.py` 放更底层的 JSON 原子写入、路径常量、dataset 文件名安全化与运行时 `data/` 目录解析
