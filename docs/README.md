@@ -1,102 +1,93 @@
 # Docs Index
 
-这份索引页是 `docs/` 的唯一主入口：既负责学习顺序，也负责按问题快速定位文档。
+`docs/` 现在收敛为四篇主文档。每个主题只保留一个主要解释位置，其他文档只做简短引用。
 
 ## 推荐阅读顺序
 
-第一次系统看这个仓库，建议按下面顺序读：
-
 1. [01_beginner_guide.md](01_beginner_guide.md)
-2. [02_optimization_guide.md](02_optimization_guide.md)
-3. [03_repo_practice_guide.md](03_repo_practice_guide.md)
-4. [04_platform_terms_and_states.md](04_platform_terms_and_states.md)
+2. [03_research_and_data_guide.md](03_research_and_data_guide.md)
+3. [02_optimization_and_submission.md](02_optimization_and_submission.md)
 
-如果你已经在跑实验，通常直接从第 2 篇开始更合适，再补第 3 篇。
+阅读过程中遇到平台术语、页面字段或状态时，随时查：
 
-## 快速入口
+- [04_platform_reference.md](04_platform_reference.md)
 
-### 我是第一次接触这个仓库
+## 四篇文档的边界
 
-按“推荐阅读顺序”直接往下看。
+### 01 入门
 
-### 我现在卡在某个结果，不知道怎么解释
+[01_beginner_guide.md](01_beginner_guide.md) 负责建立基础直觉：
 
-优先看：
+- Alpha、Simulate、Check submission、Submit
+- Sharpe、Fitness、Turnover、Drawdown
+- Delay、Decay、Neutralization、Truncation、Universe
+- Fast Expression 基础语法
+- NaN、Pasteurize、Unit Handling
 
-1. [02_optimization_guide.md](02_optimization_guide.md)
-2. [04_platform_terms_and_states.md](04_platform_terms_and_states.md)
+这里只讲第一次学习所需的最小知识；平台状态的完整定义放在 Reference。
 
-### 我想知道平台页面上的术语和状态是什么意思
+### 02 优化与提交
 
-直接看：
+[02_optimization_and_submission.md](02_optimization_and_submission.md) 负责研究后半程：
 
-- [04_platform_terms_and_states.md](04_platform_terms_and_states.md)
+- `LOW_SHARPE / LOW_FITNESS / HIGH_TURNOVER`
+- 权重、Sub-Universe、相关性和成本问题
+- 抗过拟合与稳定性验证
+- Neutralization 和 D0 的最终决策
+- 提交前统一检查顺序
 
-### 我想知道这个仓库现在建议怎么跑
+### 03 数据研究与仓库实践
 
-优先看：
+[03_research_and_data_guide.md](03_research_and_data_guide.md) 负责从想法到实验：
 
-1. [03_repo_practice_guide.md](03_repo_practice_guide.md)
-2. 数据集说明：
-   - [../templates/model16/README.md](../templates/model16/README.md)
-   - [../templates/model51/README.md](../templates/model51/README.md)
-   - [../templates/fundamental6/README.md](../templates/fundamental6/README.md)
+- Beginners / Bronze / Silver 示例
+- MATRIX、VECTOR、GROUP
+- Data Explorer 和字段体检
+- 专题数据集研究方法
+- Broad search、Local refine、模板库设计
+- 仓库知识边界和候选池视角
 
-## 按问题找文档
+### 04 平台 Reference
 
-| 你的问题 | 最该看 |
+[04_platform_reference.md](04_platform_reference.md) 是查表文档：
+
+- IS、Semi-OS、OS 与状态生命周期
+- 页面字段、评分、Universe、Weight、Booksize
+- NaN、Pasteurize、Coverage、Correlation
+- submission check 名称和页面语义
+
+Reference 主要回答“这个词是什么意思”；具体怎么优化，回到 02。
+
+## 按问题快速定位
+
+| 问题 | 文档 |
 |---|---|
-| Alpha 是什么？ | [01_beginner_guide.md](01_beginner_guide.md) |
-| Delay / Decay / Neutralization 是什么？ | [01_beginner_guide.md](01_beginner_guide.md) |
-| `NaNHandling / Unit Handling` 怎样影响表达式？ | [01_beginner_guide.md](01_beginner_guide.md) / [04_platform_terms_and_states.md](04_platform_terms_and_states.md) |
-| 为什么不能只看 Returns？ | [01_beginner_guide.md](01_beginner_guide.md) |
-| `Simulate / Check submission / Submit / Semi-OS / OS` 这条链路怎么理解？ | [01_beginner_guide.md](01_beginner_guide.md) |
-| `LOW_SHARPE` / `LOW_FITNESS` 怎么拆？ | [02_optimization_guide.md](02_optimization_guide.md) |
-| 什么时候该调参数，什么时候该换结构？ | [02_optimization_guide.md](02_optimization_guide.md) |
-| `Test Period` 到底在做什么？ | [04_platform_terms_and_states.md](04_platform_terms_and_states.md) |
-| `IS / OS / OSTEST-PENDING / N/A` 是什么意思？ | [04_platform_terms_and_states.md](04_platform_terms_and_states.md) |
-| `Semi-OS` 是什么？ | [04_platform_terms_and_states.md](04_platform_terms_and_states.md) |
-| `Meta Score / Universe / Weight / Booksize / NaN / Pasteurize` 是什么？ | [04_platform_terms_and_states.md](04_platform_terms_and_states.md) |
-| `Coverage / Alpha list / Correlation` 工具怎么看？ | [04_platform_terms_and_states.md](04_platform_terms_and_states.md) |
-| `LOW_SUB_UNIVERSE_SHARPE` / `SELF_CORRELATION` / `PROD_CORRELATION` 怎么理解？ | [04_platform_terms_and_states.md](04_platform_terms_and_states.md) |
-| Sub-Universe、自相关的精确检查语义是什么？ | [02_optimization_guide.md](02_optimization_guide.md) / [04_platform_terms_and_states.md](04_platform_terms_and_states.md) |
-| `Max Trade` 是提交门槛还是稳健性测试？ | [02_optimization_guide.md](02_optimization_guide.md) / [04_platform_terms_and_states.md](04_platform_terms_and_states.md) |
-| `UNSUBMITTED / ACTIVE / DECOMMISSIONED` 是什么？ | [04_platform_terms_and_states.md](04_platform_terms_and_states.md) |
-| 新字段进入模板库前应该怎么体检？ | [03_repo_practice_guide.md](03_repo_practice_guide.md) |
-| 怎样做 Rank/Binary/Train-Test 等抗过拟合检查？ | [02_optimization_guide.md](02_optimization_guide.md) / [03_repo_practice_guide.md](03_repo_practice_guide.md) |
-| D0 Alpha 和 D1 Alpha 应该怎样比较？ | [02_optimization_guide.md](02_optimization_guide.md) |
-| 最不流动 50% after-cost 检查怎么理解？ | [04_platform_terms_and_states.md](04_platform_terms_and_states.md) |
-| `GROUP` 字段、`bucket()`、`densify()` 怎么用？ | [04_platform_terms_and_states.md](04_platform_terms_and_states.md) |
-| 官网方法论怎么落到这个仓库？ | [03_repo_practice_guide.md](03_repo_practice_guide.md) |
-| 官网 Support / Community 的量化建议，怎么映射到本仓库？ | [02_optimization_guide.md](02_optimization_guide.md) / [03_repo_practice_guide.md](03_repo_practice_guide.md) |
-| 当前某个数据集该怎么跑？ | `templates/<dataset_id>/README.md` |
+| Alpha、基础指标和设置是什么？ | [01](01_beginner_guide.md) |
+| 如何理解 Fast Expression 和基本算子？ | [01](01_beginner_guide.md) |
+| 官网 Alpha examples 应该怎么学？ | [03](03_research_and_data_guide.md) |
+| MATRIX、VECTOR、GROUP 如何分流？ | [03](03_research_and_data_guide.md) |
+| Data Explorer 怎么搜，字段怎么体检？ | [03](03_research_and_data_guide.md) |
+| 仓库里 Broad search 和 Local refine 怎么安排？ | [03](03_research_and_data_guide.md) |
+| LOW_SHARPE、LOW_FITNESS 怎么处理？ | [02](02_optimization_and_submission.md) |
+| Turnover、Sub-Universe、相关性怎么优化？ | [02](02_optimization_and_submission.md) |
+| D0、Neutralization、提交前检查怎么串起来？ | [02](02_optimization_and_submission.md) |
+| IS、Semi-OS、OS、OSTEST 状态是什么意思？ | [04](04_platform_reference.md) |
+| 页面上的 N/A、Booksize、Coverage 是什么？ | [04](04_platform_reference.md) |
+| 某个 submission check 名称是什么意思？ | [04](04_platform_reference.md) |
 
-## 按角色找文档
+## 仓库文档分层
 
-### 新手
+- `docs/`：通用学习路径、研究方法、优化流程和平台查表
+- 根 [README.md](../README.md)：安装、项目结构和运行方式
+- `templates/<dataset_id>/README.md`：具体数据集策略与本地经验
+- `results/`：运行产物，不作为长期知识库
 
-- [01_beginner_guide.md](01_beginner_guide.md)
-- [02_optimization_guide.md](02_optimization_guide.md)
+新增知识前先判断归属：
 
-### 研究者
+- 基础概念放 01
+- 诊断、稳健性和提交方法放 02
+- 数据、示例和仓库研究方法放 03
+- 纯定义、状态和错误码放 04
+- 数据集专属经验放对应模板目录
 
-- [02_optimization_guide.md](02_optimization_guide.md)
-- [03_repo_practice_guide.md](03_repo_practice_guide.md)
-
-### 排障 / 查表
-
-- [04_platform_terms_and_states.md](04_platform_terms_and_states.md)
-
-### 数据集维护者
-
-- [../templates/model16/README.md](../templates/model16/README.md)
-- [../templates/model51/README.md](../templates/model51/README.md)
-- [../templates/fundamental6/README.md](../templates/fundamental6/README.md)
-
-## 文档边界
-
-- `docs/`：通用学习路径、平台概念、查表文档
-- `README.md`：工程入口、运行方式、项目结构
-- `templates/<dataset_id>/README.md`：数据集策略与本地经验
-
-如果后面继续扩文档，优先先判断内容属于哪一层，再决定写到哪里。
+原则上不再新增与四篇主线平行的 FAQ 或专题摘录页。

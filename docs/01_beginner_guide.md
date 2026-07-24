@@ -149,6 +149,16 @@
 - 先用 `group_neutralize(...)` 决定信号结构
 - 再由 `neutralization` 设置决定最终组合暴露
 
+如果你已经想进一步搞清楚：
+
+- 回测设置里的 `Neutralization`
+- 表达式里的 `group_neutralize(...)`
+- 不同数据类别更适合哪种中性化
+
+优先继续看：
+
+- [02_optimization_and_submission.md](02_optimization_and_submission.md)
+
 ### 5.4 Truncation
 
 它的本质不是格式设置，而是组合风险控制。
@@ -204,6 +214,15 @@
 - `TOP1000` 是 `TOP2000` 的子集
 
 这意味着 Universe 不只是“股票数量设置”，它本身也在改变策略面对的流动性环境。
+
+如果你后面开始研究：
+
+- `D0` 和 `D1` 的差异
+- 为什么更高流动性的 Universe 对 D0 更重要
+
+优先继续看：
+
+- [02_optimization_and_submission.md](02_optimization_and_submission.md)
 
 ### 5.6 Test Period
 

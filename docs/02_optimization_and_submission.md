@@ -1,6 +1,6 @@
-# WorldQuant BRAIN 优化篇
+# WorldQuant BRAIN 优化与提交篇
 
-> 目标：把 `Sharpe / Fitness / Turnover / Correlation` 的问题拆开看，而不是遇到失败项就盲跑更多模板。
+> 目标：把 `Sharpe / Fitness / Turnover / Correlation` 的问题拆开，并把研究、稳健性验证和最终提交串成一条流程。
 
 ---
 
@@ -171,6 +171,17 @@ D0 研究建议按下面的顺序进行：
 
 如果同一表达式在 D1 的 Sharpe 高于 D0，官网建议直接考虑提交 D1，因为它通常
 同时具有更高表现和更低交易成本，而不是为了 D0 标签继续强行优化。
+
+如果你想系统看官网对：
+
+- `Simulation Results`
+- `Alpha Submission`
+- `Neutralization`
+- `D0`
+
+这些高级主题的原始口径和统一收口，优先继续看：
+
+- 本文后半部分的提交前检查与高级设置章节
 
 ---
 
@@ -537,7 +548,53 @@ Test Period 可以更具体地按下面方式使用：
 
 ---
 
-## 17. 官方来源
+## 17. 提交前统一收口
+
+优化结束不等于可以提交。最终候选应按固定顺序复查：
+
+1. `Sharpe` 是否达到基础质量要求
+2. `Fitness` 的问题来自收益、稳定性还是换手
+3. `Turnover` 与 `Margin` 是否匹配
+4. `PnL / Drawdown` 是否依赖少数日期或股票
+5. Neutralization 是否与数据类别、表达式结构匹配
+6. Sub/Super Universe、Train/Test 和参数扰动是否稳定
+7. `SELF_CORRELATION / PROD_CORRELATION` 是否可接受
+8. 权重覆盖和集中度是否健康
+
+提交判断可以压成两层：
+
+- 第一层检查收益质量、成本和可实现性
+- 第二层检查独特性、稳健性和是否值得加入现有 Alpha 池
+
+### 17.1 Neutralization 的最终决策
+
+表达式里的 `group_neutralize(x, group)` 与回测设置的 Neutralization 属于同类处理。
+如果表达式最后已经显式完成组内中性化，通常先用 `Neutralization=None` 做对照，
+避免重复处理。是否保留双层中性化，应由对照实验决定，而不是默认叠加。
+
+常见起点：
+
+- Fundamental / Analysts / Earnings：`Industry`
+- News / Social / Sentiment：`Subindustry`
+- Option：`Market` 或 `Sector`
+- Price Volume / Macro：`Market`、`Sector`，必要时再试 `Industry`
+
+### 17.2 D0 的提交判断
+
+D0 应当作为独立研究分支。除更高换手和成本压力外，还要验证同一逻辑在 D1 上
+是否保留合理表现。如果 D1 明显更强，不应为了 D0 标签继续强行调参。
+
+### 17.3 社区压力测试与平台硬门槛要分开
+
+Rank/Binary、Train/Test、参数扰动、Sub/Super Universe 和 Max Trade 挑战用于提高
+研究置信度；它们不应被描述成平台统一硬门槛。文档和结果记录中应明确区分：
+
+- 平台 submission check
+- 本仓库主动增加的稳健性检查
+
+---
+
+## 18. 官方来源
 
 - [Understanding Data in BRAIN: Key Concepts and Tips](https://platform.worldquantbrain.com/learn/documentation/understanding-data/data)
 - [How to use the Data Explorer](https://platform.worldquantbrain.com/learn/documentation/understanding-data/how-use-data-explorer)

@@ -1,4 +1,4 @@
-# WorldQuant BRAIN 术语、状态与页面语义
+# WorldQuant BRAIN 平台术语与状态 Reference
 
 > 目标：把平台里最容易混淆的术语、状态、评分、OS 页面字段收口成一篇可快速查阅的文档。
 
@@ -948,6 +948,16 @@ subuniverse_sharpe
 
 ## 14. `Neutralization` 的页面语义
 
+如果你不只是想查页面语义，而是想进一步理解：
+
+- 为什么不同数据类别会偏向不同 neutralization
+- 什么时候该放在 settings，什么时候该写进表达式
+- `D0` 和提交门槛为什么要一起看
+
+继续看：
+
+- [02_optimization_and_submission.md](02_optimization_and_submission.md)
+
 平台语义里：
 
 - 先有表达式原始值
@@ -992,11 +1002,11 @@ OS 是提交之后逐步积累出来的样本外表现。
 - 想理解平台在做什么：
   看 [01_beginner_guide.md](01_beginner_guide.md)
 - 想理解失败项和优化动作：
-  看 [02_optimization_guide.md](02_optimization_guide.md)
+  看 [02_optimization_and_submission.md](02_optimization_and_submission.md)
 - 想理解这些术语在页面和状态里是什么意思：
   看这篇
 - 想把平台逻辑落到本仓库：
-  看 [03_repo_practice_guide.md](03_repo_practice_guide.md)
+  看 [03_research_and_data_guide.md](03_research_and_data_guide.md)
 
 ---
 
