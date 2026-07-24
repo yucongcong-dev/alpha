@@ -46,6 +46,7 @@ def test_initialize_run_context_prefers_run_paths_for_cache_and_credentials(monk
         log_file="/tmp/run.log",
         state_file="/tmp/state.json",
         checkpoint_file="/tmp/checkpoint.json",
+        blacklists_dir="/tmp/blacklists",
         fields_cache_file="/tmp/normalized-fields.json",
         template_library_file="/tmp/templates.json",
         output="/tmp/output.json",
@@ -139,6 +140,7 @@ def test_initialize_run_context_prefers_run_paths_for_cache_and_credentials(monk
     assert captured["creds_file"] == run_paths.creds_file
     assert captured["creds_key_file"] == run_paths.creds_key_file
     assert captured["fields_cache_file"] == run_paths.fields_cache_file
+    assert run_ctx.blacklists_dir == run_paths.blacklists_dir
     assert args.creds_file == "raw-creds.json"
     assert args.creds_key_file == "raw-creds.key"
 
@@ -239,5 +241,7 @@ def test_initialize_run_context_builds_fallback_run_paths_when_missing(monkeypat
     assert isinstance(filter_paths, RunPaths)
     assert run_config_paths.output == args.output
     assert run_config_paths.template_library_file == args.template_library_file
+    assert isinstance(run_config_paths.blacklists_dir, str)
+    assert run_config_paths.blacklists_dir
     assert filter_paths.include_fields_file == args.include_fields_file
     assert filter_paths.exclude_templates_file == args.exclude_templates_file

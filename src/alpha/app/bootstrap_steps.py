@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 
 from ..api.client import BrainClient, WorkerClientFactory
+from ..io.common import resolve_blacklists_dir
 from ..models.domain import TemplateField
 from ..models.io_types import RunPaths
 from ..models.runtime import FieldSelectionConfig
@@ -41,7 +42,7 @@ def resolve_bootstrap_paths(
     return BootstrapPaths(
         output_file=output_file,
         log_file=run_path_value(run_paths, "log_file"),
-        blacklists_dir=run_path_value(run_paths, "blacklists_dir"),
+        blacklists_dir=run_path_value(run_paths, "blacklists_dir") or str(resolve_blacklists_dir()),
         template_library_file=(
             run_path_value(run_paths, "template_library_file") or str(args.template_library_file)
         ),

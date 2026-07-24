@@ -25,6 +25,7 @@ def _build_run_ctx() -> InitializedRunContext:
         use_dataset_heuristics=False,
         template_library_fingerprint="tpl-fp",
         settings_fingerprint="settings-fp",
+        blacklists_dir="/tmp/blacklists",
         historical_state=HistoricalRunState(),
         fields=[],
         execution_state=ExecutionState(
@@ -53,6 +54,7 @@ def test_finalize_run_prefers_run_paths_output(monkeypatch) -> None:
         log_file="/tmp/run.log",
         state_file="/tmp/state.json",
         checkpoint_file="/tmp/checkpoint.json",
+        blacklists_dir="/tmp/blacklists",
         output="/tmp/normalized-results.json",
     )
     run_ctx = _build_run_ctx()
