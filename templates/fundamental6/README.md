@@ -514,6 +514,37 @@
 
 如果目标不是健康检查，而是继续放大可提交结果，那才应该故意去掉这个停止条件。
 
+## 2026-07-24 真实健康检查结果
+
+在把现役字段白名单和模板白名单收正之后，同一天又做了一次真实验证：
+
+- 执行脚本：`scripts/run_fundamental6_cashflow_core_verify.sh`
+- 结果文件：`results/fundamental6/verify_cashflow_core_2026-07-24.json`
+- 本轮实际是“单枪健康检查”，不是“双模板全量展开”
+
+本轮落地结果：
+
+- `tested = 1`
+- `submittable = 1`
+- `errors = 0`
+- `submitted = false`
+
+命中的主线是：
+
+- `group_rank(ts_delta(winsorize(ts_backfill(cashflow_op, 120), std=4) / cap, 63) / ts_std_dev(winsorize(ts_backfill(cashflow_op, 120), std=4) / cap, 126), subindustry)`
+
+对应平台结果：
+
+- `alpha_id = A17weAVw`
+- `template = group_ratio_delta_over_std_63_126_over_cap`
+- `checks passed`
+
+这轮结果把当前闭环又确认了一次：
+
+- 现役脚本已经不再从 `archive/` 漏回旧入口
+- 最小复跑已经从“可能悄悄扩包”收成“命中即停”的健康检查
+- `fundamental6` 当前最合理的节奏，仍然是低频复跑与提交运营，而不是恢复大范围扩模板
+
 ## 模板包阶段角色
 
 到当前阶段，`fundamental6` 的本地资产应按“现役 / 观察 / 归档”理解：
