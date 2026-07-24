@@ -1,0 +1,1 @@
+hc_ratio_group_zscore_252_over_cap

@@ -190,6 +190,7 @@ def build_expression_candidates(
     is_event_field = _is_event_field(field_name, policy)
     backfill_window = get_runtime_config().expression.backfill_window
 
+    explicit_refine_library = _is_explicit_refine_library(build_ctx.template_library_file)
     raw_templates = _select_template_items(build_ctx.template_library, field_type, policy.dataset_id)
     templates = [
         _make_template_candidate(
@@ -215,16 +216,19 @@ def build_expression_candidates(
             policy=policy,
         )
     ]
-    templates.extend(
-        build_feedback_mutations(
-            field_name,
-            field_feedback,
-            expression_policy=policy,
-            feedback_stage=feedback_stage,
+    if not explicit_refine_library:
+        templates.extend(
+            build_feedback_mutations(
+                field_name,
+                field_feedback,
+                expression_policy=policy,
+                feedback_stage=feedback_stage,
+            )
         )
-    )
 
-    if field_type == "MATRIX":
+    # An explicit refine library is expected to be a closed candidate set.
+    # Do not silently re-expand it with auto-generated MATRIX neighbors.
+    if field_type == "MATRIX" and not explicit_refine_library:
         diversified, legacy = build_matrix_templates(
             field_view,
             all_fields,
