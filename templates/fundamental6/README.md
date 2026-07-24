@@ -572,6 +572,56 @@ PYTHONPATH=src python3.10 -m alpha \
 - 最小复跑已经从“可能悄悄扩包”收成“命中即停”的健康检查
 - `fundamental6` 当前最合理的节奏，仍然是低频复跑与提交运营，而不是恢复大范围扩模板
 
+## 2026-07-24 rerun 双主线复现
+
+在当天后续又做了一轮 `core pack` 真实复跑：
+
+- 结果文件：`results/fundamental6/verify_cashflow_core_2026-07-24_rerun.json`
+- 本轮目标：不是继续找新模板，而是确认现役双主线能否在同一天再次一起复现
+
+核心结果：
+
+- `tested = 2`
+- `submittable = 2`
+- `errors = 0`
+
+两条正式主线都拿到了 `submittable=true`：
+
+- `group_ratio_delta_over_std_63_126_over_cap`
+  - `alpha_id = A17weAVw`
+- `hc_ratio_group_zscore_252_over_cap`
+  - `alpha_id = 3qe7krMQ`
+
+这轮的重要意义是：
+
+- `fundamental6` 当前两条正式主线，不只是历史上分别通过过
+- 而是在 `2026-07-24` 同一天的现役 `core pack` 复跑里再次同时复现
+- 因此当前完全可以把 `cashflow_submit_core_pack.json` 视为稳定的双主线运营入口
+
+## 2026-07-24 zscore-only pack 独立验证
+
+除了双主线 `core pack` 复跑之外，当天还单独把 `grouped zscore over cap` 这条主线拆成一模板 pack 做了独立验证：
+
+- 模板包：`templates/fundamental6/refine/cashflow_submit_zscore_core_pack.json`
+- 结果文件：`results/fundamental6/verify_cashflow_zscore_pack_2026-07-24_fixed.json`
+
+核心结果：
+
+- `tested = 1`
+- `submittable = 1`
+- `errors = 0`
+
+对应结果：
+
+- `template = hc_ratio_group_zscore_252_over_cap`
+- `alpha_id = 3qe7krMQ`
+
+这轮的额外价值不只是再次通过，而是顺手验证了一个流程修复：
+
+- 当显式指定 `refine/` 下的模板库时，执行器现在不会再偷偷混入自动生成的 `MATRIX` 模板
+- 也不会再混入 `iter_*` 反馈变异模板
+- 这意味着 `fundamental6` 的最小 `refine pack` 终于真正具备“闭集执行”语义
+
 ## 模板包阶段角色
 
 到当前阶段，`fundamental6` 的本地资产应按“现役 / 观察 / 归档”理解：
