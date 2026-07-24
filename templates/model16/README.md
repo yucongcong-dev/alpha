@@ -42,6 +42,10 @@ Neutralization 的选择应看一组稳定结果，而不是只挑 Sharpe 最高
 
 运行与策略证据：
 - 当前整理后的模板库，已经明显优于过去的 fallback 形态，因此一批旧模板已移出默认库。
+- 从 `2026-07-24` 起，默认 `library.json` 已被收成真正的闭合候选集：
+  - 默认 broad run 不再偷偷混入自动生成的 MATRIX 邻居
+  - 也不再把 feedback mutation 静默扩回默认计划
+  - 因此现在看到的默认 dry-run / 实跑结果，才真正对应这份 README 里描述的窄模板库
 - 当前受保护的核心模板，明显偏向 `126` 天结构和带分组语义的排序。
 - 最近 `stage2_lane_validation_round2` 的结果表明，密集导数类 partner-ratio 分支系统性偏弱：
   - `high_conviction_ratio`、`group_ratio_zscore` 经常被 `LOW_SHARPE` 和 `LOW_FITNESS` 卡住
@@ -59,6 +63,11 @@ Neutralization 的选择应看一组稳定结果，而不是只挑 Sharpe 最高
 - 因此当前更准确的判断是：
   - `model16` 不是没有稳定结构，而是稳定结构已经反复复现，却始终过不了质量门槛
   - 当前主问题不是“还没找到方向”，而是“已知方向没有继续抬升”
+- `2026-07-24 entry_validation` 的第一条真实新结果再次确认了这个结论：
+  - 字段：`analyst_revision_rank_derivative`
+  - 模板：`model16_bucket_cap_ratio_zscore_120`
+  - 结果：`LOW_SHARPE = 0.82`、`LOW_FITNESS = 0.64`
+  - 这说明即便在“默认库已闭合、无杂模板污染”的前提下，当前主干还是停留在同一质量天花板附近
 
 ## 当前模板方向
 
@@ -102,6 +111,7 @@ Focused refine：
 - 只有在明确出现 near-pass 证据后，再用 refine pack 重新打开已下沉分支。
 - 相比恢复弱势导数 pair-ratio，更优先扩 `cap-ratio` / `bucket-cap-ratio`
 - 但在 `2026-07-20 round3_dense_derivative_focus` 之后，`cap-ratio` / `bucket-cap-ratio` 这条支路也应暂时停止继续加预算，除非平台状态或字段集合发生明显变化。
+- `2026-07-24` 的闭合默认库实跑没有改变这个结论，因此当前不建议把 `model16` 提升为新的主预算数据集。
 
 旧模板处理：
 - 过去较弱的 fallback 模板保留在 `legacy.json`，不再放在默认主库。

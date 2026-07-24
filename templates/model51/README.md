@@ -52,6 +52,9 @@
 运行证据：
 - 短窗和泛化 `delta` 家族已经弱到在策略中被显式禁用。
 - 整理后的长窗口、带 market/industry neutralization 的模板，更符合这类数据的预期用法。
+- 从 `2026-07-24` 起，默认 `library.json` 也已经被收成真正的闭合候选集：
+  - 默认 broad run 不再自动混入 `hc_ratio_*`、`group_ratio_delta_over_std_*` 等额外外扩模板
+  - 因此当前默认计划看到的，就是仓库明确保留的 5 条主模板，而不是“文档很窄、运行时又变宽”
 - 在 `checksubmit` 流程改成等待 `SELF_CORRELATION` 终态之后，当前风险字段分支已不再像可直接生产的候选：
   - 近期对 `unsystematic_risk_last_*` 和 `systematic_risk_last_*` 的重查里，self-correlation 都没能在轮询预算内进入终态
 - 当前工作流会把这些结果保留为 `pending_self_correlation`，而不是伪装成普通 simulated failure，方便后续单独重查

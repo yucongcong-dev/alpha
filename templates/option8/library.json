@@ -1,0 +1,58 @@
+{
+  "_comment": "option8 独立模板库 — 对齐官方 IV/volatility 教程，优先短 backfill、少平滑、sector/group 结构，不在默认库里自动外扩。",
+  "_comment_placeholders": "{field}=字段名, {field_preprocessed}=winsorize(ts_backfill({field}, {backfill_window}), std=4), {backfill_window}=settings.yaml expression.backfill_window",
+  "_dataset_id": "option8",
+  "default": [
+    {
+      "name": "option8_sector_zscore_20",
+      "expression": "group_rank(ts_zscore({field_preprocessed}, 20), sector)",
+      "priority": 1000,
+      "family": "group_zscore",
+      "layer": "group",
+      "dataset_tags": ["option8", "implied_volatility"],
+      "role": "default_seed",
+      "activation_scope": "broad"
+    },
+    {
+      "name": "option8_ts_zscore_20",
+      "expression": "rank(ts_zscore({field_preprocessed}, 20))",
+      "priority": 995,
+      "family": "zscore_time",
+      "layer": "time_series",
+      "dataset_tags": ["option8", "implied_volatility"],
+      "role": "default_seed",
+      "activation_scope": "broad"
+    },
+    {
+      "name": "option8_decay_zscore_20_5",
+      "expression": "rank(ts_decay_linear(ts_zscore({field_preprocessed}, 20), 5))",
+      "priority": 990,
+      "family": "decay_level",
+      "layer": "time_series",
+      "dataset_tags": ["option8", "implied_volatility"],
+      "role": "default_seed",
+      "activation_scope": "broad"
+    },
+    {
+      "name": "option8_zscore_spread_20_120",
+      "expression": "rank(ts_zscore({field_preprocessed}, 20) - ts_zscore({field_preprocessed}, 120))",
+      "priority": 985,
+      "family": "zscore_spread",
+      "layer": "time_series",
+      "dataset_tags": ["option8", "implied_volatility"],
+      "role": "default_seed",
+      "activation_scope": "broad"
+    },
+    {
+      "name": "option8_delta_over_std_5_20",
+      "expression": "rank(ts_delta({field_preprocessed}, 5) / ts_std_dev({field_preprocessed}, 20))",
+      "priority": 975,
+      "family": "delta_over_std",
+      "layer": "time_series",
+      "dataset_tags": ["option8", "implied_volatility"],
+      "role": "default_seed",
+      "activation_scope": "broad"
+    }
+  ],
+  "VECTOR": []
+}

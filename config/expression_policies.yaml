@@ -689,3 +689,73 @@ expression_policies:
       unsystematic_risk_last_60_days: 1
       systematic_risk_last_30_days: 2
       systematic_risk_last_60_days: 3
+
+  # --------------------------------------------------------------------------
+  # option8 — volatility / implied volatility
+  # --------------------------------------------------------------------------
+  option8:
+    use_curated_heuristics: false
+    closed_default_template_library: true
+    default_field_transform:
+      stages: []
+      backfill_window: 0
+    matrix_field_transform:
+      stages:
+        - kind: "backfill"
+          window: 5
+        - kind: "winsorize"
+          std: 4
+      backfill_window: 5
+    vector_field_transform:
+      stages:
+        - kind: "backfill"
+          window: 5
+        - kind: "winsorize"
+          std: 4
+      backfill_window: 5
+    ratio_numerator_transform:
+      stages:
+        - kind: "backfill"
+          window: 5
+        - kind: "winsorize"
+          std: 4
+      backfill_window: 5
+    ratio_denominator_transform:
+      stages:
+        - kind: "backfill"
+          window: 5
+        - kind: "winsorize"
+          std: 4
+      backfill_window: 5
+    feedback_loop_policy:
+      generate:
+        min_attempted_templates: 0
+        min_best_score: -999.0
+        settings_variant_budget: 1
+      prune:
+        min_attempted_templates: 2
+        min_best_score: -999.0
+        settings_variant_budget: 2
+        enable_template_pruning: true
+      resimulate:
+        min_attempted_templates: 3
+        min_best_score: 0.50
+        settings_variant_budget: 3
+        enable_template_pruning: true
+        enable_resimulation_mutations: true
+        preferred_template_stages:
+          - "group_second_order"
+          - "first_order"
+    field_min_coverage: 0.95
+    field_min_date_coverage: 0.99
+    field_min_alpha_count: 50
+    field_min_user_count: 20
+    field_coverage_weight: 0.35
+    field_date_coverage_weight: 0.25
+    field_alpha_validation_weight: 0.08
+    field_user_validation_weight: 0.08
+    field_alpha_crowding_penalty_weight: 0.14
+    field_user_crowding_penalty_weight: 0.10
+    field_recency_weight: 0.0
+    field_theme_bonus_weight: 0.0
+    field_preferred_unexplored_bonus: 0.05
