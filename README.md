@@ -23,190 +23,41 @@
 ## 项目结构
 
 ```
-alpha/                     # 项目根目录
-├── src/                   # 源码目录
-│   └── alpha/             # 主包
-│       ├── __init__.py    # 包入口（导出基础公共 API）
-│       ├── __main__.py    # python3.10 -m alpha / alpha 命令入口
-│       ├── main.py        # 精简入口，调用 app 编排层
-│       │
-│       ├── app/           # 应用编排层：初始化、运行循环、收尾、clean
-│       │   ├── bootstrap.py
-│       │   ├── bootstrap_cleanup.py
-│       │   ├── bootstrap_fields.py
-│       │   ├── bootstrap_state.py
-│       │   ├── finalize.py
-│       │   ├── loop_future_support.py
-│       │   ├── run_loop.py
-│       │   ├── run_loop_feedback.py
-│       │   ├── run_loop_paths.py
-│       │   ├── run_loop_resume.py
-│       │   └── run_loop_rounds.py
-│       │
-│       ├── core/          # 核心业务层
-│       │   ├── checkpoint.py
-│       │   ├── execution_filters.py
-│       │   ├── executor.py
-│       │   ├── scheduler.py
-│       │   ├── result_processing.py
-│       │   ├── simulation_parsing.py
-│       │   ├── simulation_precheck.py
-│       │   ├── simulation_results.py
-│       │   ├── simulation_stages.py
-│       │   ├── template_planning.py
-│       │   └── simulation.py   # 兼容导出层
-│       │
-│       ├── generators/    # Alpha 生成层
-│       │   ├── expressions.py
-│       │   ├── expression_builder.py
-│       │   ├── field_transforms.py
-│       │   ├── fields.py
-│       │   ├── fingerprint.py
-│       │   ├── matrix_templates.py
-│       │   ├── payload.py
-│       │   ├── ratio_templates.py
-│       │   ├── settings.py # 兼容导出层
-│       │   ├── variants.py
-│       │   └── templates/ # 模板库、候选构造、分类、优先级、refine 变体
-│       │       ├── __init__.py
-│       │       ├── candidates.py
-│       │       ├── classification.py
-│       │       ├── feedback_best_expression.py
-│       │       ├── feedback_mutations.py
-│       │       ├── feedback_mutation_sets.py
-│       │       ├── historical_reuse.py
-│       │       ├── metadata.py
-│       │       ├── partner_fields.py
-│       │       ├── priority.py
-│       │       ├── refine.py
-│       │       ├── variation_common.py
-│       │       ├── wrappers.py
-│       │       └── variations.py
-│       │
-│       ├── analysis/      # 分析优化层
-│       │   ├── feedback.py
-│       │   ├── feedback_filters.py
-│       │   ├── feedback_history.py
-│       │   ├── failed_checks.py
-│       │   ├── feedback_stats.py
-│       │   ├── field_stats.py
-│       │   ├── report_builder.py
-│       │   ├── result_identity.py
-│       │   ├── results_loader.py
-│       │   ├── template_execution_policy.py
-│       │   ├── template_registry.py
-│       │   ├── template_registry_budget.py
-│       │   ├── template_registry_rules.py
-│       │   ├── template_registry_sidecars.py
-│       │   ├── template_registry_store.py
-│       │   ├── stats.py       # 兼容导出层
-│       │   └── template_stats.py
-│       │
-│       ├── api/           # API 客户端层
-│       │   ├── alphas.py
-│       │   ├── api_types.py
-│       │   ├── client.py      # BrainClient / WorkerClientFactory 组合入口
-│       │   ├── fields.py
-│       │   ├── payloads.py
-│       │   ├── retry.py
-│       │   ├── session.py
-│       │   ├── simulations.py
-│       │   └── timing.py
-│       │
-│       ├── io/            # 输入输出层
-│       │   ├── analysis_sync.py
-│       │   ├── common.py
-│       │   ├── credentials.py
-│       │   ├── credentials_crypto.py
-│       │   ├── output_paths.py
-│       │   ├── results_store.py
-│       │   └── output.py      # 兼容导出层
-│       │
-│       ├── cli/           # 命令行接口层
-│       │   ├── arg_resolution.py
-│       │   ├── constants.py
-│       │   ├── filters.py
-│       │   ├── parser_sections.py
-│       │   ├── parser_schema.py
-│       │   ├── path_resolution.py
-│       │   ├── run_config.py
-│       │   └── parser.py
-│       │
-│       ├── models/        # 数据模型层
-│       │   ├── domain.py
-│       │   ├── io_types.py
-│       │   ├── runtime.py
-│       │   ├── runtime_options.py
-│       │   ├── runtime_protocols.py
-│       │   ├── runtime_state.py # 兼容导出层
-│       │   └── base.py    # 兼容导出层
-│       │
-│       ├── runtime/       # 运行期上下文与可变执行状态
-│       │   ├── __init__.py
-│       │   ├── contexts.py
-│       │   └── state.py
-│       │
-│       ├── policy/        # 运行期策略层
-│       │   ├── __init__.py     # facade 导出入口
-│       │   ├── blacklist_context.py
-│       │   ├── blacklist_runtime.py
-│       │   ├── blacklist_runtime_stats.py
-│       │   ├── blacklist_runtime_updates.py
-│       │   ├── blacklist_store.py
-│       │   ├── expression.py
-│       │   ├── template_blacklist.py
-│       │   └── types.py
-│       │
-│       ├── utils/         # 工具函数层
-│       │   └── helpers.py
-│       │
-│       ├── config/        # 配置入口、YAML、模型、profiles、CLI defaults
-│       │   ├── __init__.py
-│       │   ├── constants.py
-│       │   ├── defaults.py
-│       │   ├── getters.py
-│       │   ├── models.py
-│       │   ├── policy.py
-│       │   ├── policy_coercers.py
-│       │   ├── policy_overrides.py
-│       │   ├── profiles.py
-│       │   ├── types.py
-│       │   ├── yaml.py
-│       │   ├── yaml_sources.py
-│       │   └── yaml_validator.py
-│       └── exceptions.py  # 自定义异常
-│
-├── tests/                 # 测试目录
-│   ├── unit/              # 单元测试
-│   └── integration/       # 集成测试
-│
-├── README.md              # 项目说明
-├── requirements.txt       # 依赖
-├── pyproject.toml         # 项目配置
-├── config/                # 按职责拆分的 YAML 配置
-│   ├── settings.yaml      # 默认运行配置
-│   ├── dataset_profiles.yaml # 数据集运行 profile
-│   ├── expression_policies.yaml # 数据集表达式策略
-│   ├── constants_defaults.yaml # 代码级常量默认值
-│   ├── api.yaml           # API endpoint、headers、HTTP 超时与退避
-│   ├── simulation.yaml    # simulation 状态、默认日期、表达式窗口
-│   ├── quality_feedback.yaml # 质量阈值、反馈、统计、checkpoint 默认值
-│   ├── templates.yaml     # 模板优先级、ratio/partner 生成参数
-│   └── runtime.yaml       # 路径、状态字符串、哨兵值等运行约定
-├── templates/             # 模板库与 README
-│   ├── base/              # 基础共享模板库与说明
-│   ├── fundamental6/      # fundamental6 专属模板库与说明
-│   ├── model16/           # model16 专属模板库与说明
-│   └── model51/           # model51 专属模板库与说明
-├── blacklists/            # dataset 统一 blacklist（脚本自动追加，也可人工补充）
-└── .gitignore
+alpha/
+├── src/alpha/             # 主包
+│   ├── __main__.py        # `python3.10 -m alpha` 入口
+│   ├── main.py            # 精简 CLI 主入口
+│   ├── app/               # 应用编排：bootstrap / run_loop / finalize / clean
+│   ├── core/              # 调度、simulation、checkpoint、template planning
+│   ├── generators/        # 字段变换、表达式候选、模板变体、payload
+│   ├── analysis/          # 反馈、统计、report、template-registry sidecars
+│   ├── api/               # Brain API 客户端、session、retry、fields、alphas
+│   ├── io/                # 凭证、输出路径、results journal、原子写入
+│   ├── cli/               # 参数解析、路径归一化、run config、filters
+│   ├── models/            # 领域模型、io types、runtime options/protocols
+│   ├── runtime/           # 运行期上下文与可变状态
+│   ├── policy/            # expression policy、blacklist runtime/store
+│   ├── config/            # 配置常量、YAML、profiles、policy overrides
+│   └── utils/             # 通用 helpers
+├── config/                # YAML 配置
+│   ├── settings.yaml
+│   ├── dataset_profiles.yaml
+│   ├── expression_policies.yaml
+│   ├── quality_feedback.yaml
+│   ├── templates.yaml
+│   └── constants_defaults.yaml
+├── templates/             # 数据集模板库与说明
+├── blacklists/            # 数据集 blacklist
+├── docs/                  # 四篇主文档 + 索引
+├── scripts/               # 少量可复用辅助脚本
+└── tests/                 # unit / integration
 ```
 
 ## 仓库边界
 
 哪些文件进仓：
 
-- `config/*.yaml`：统一配置入口，按职责维护默认运行参数、数据集 profile、表达式策略、API、simulation、质量阈值、模板参数和运行约定。
+- `config/*.yaml`：统一配置入口，按职责维护默认运行参数、数据集 profile、表达式策略、质量阈值和模板参数。
 - `templates/base/` 与 `templates/<dataset_id>/`：基础模板、数据集专属模板、聚焦字段/模板白名单，以及经过验证值得复用的本地 refine 模板。
 - `templates/<dataset_id>/refine/fields/*.json`：少量、可复用、人工裁剪的字段 fixture；它们服务于稳定复现实验，不应再混入 `cache/`。
 - `blacklists/<dataset_id>/blacklist.json`：统一黑名单。脚本会自动追加，也允许人工维护；空黑名单也可以进仓，用于固定数据集目录边界。
@@ -264,27 +115,23 @@ alpha/                     # 项目根目录
 
 ## 当前代码分层
 
-- `main.py` 现在只保留精简入口，具体应用编排已经拆到 `app/bootstrap.py`、`app/run_loop.py`、`app/finalize.py`
-- 根目录的 `bootstrap.py`、`run_loop.py`、`finalize.py`、`loop_*` 和 `run_loop_*` 兼容壳已经移除；代码应直接依赖 `alpha.app.*`
-- `models/domain.py` 只放领域对象；`models/io_types.py` 放路径/过滤边界对象；`models/runtime_options.py`、`models/runtime_protocols.py` 放运行配置与协议；运行期上下文和可变执行状态已经下沉到 `runtime/contexts.py`、`runtime/state.py`；`models/runtime_state.py`、`models/runtime.py` / `models/base.py` 仅保留兼容导出
-- `analysis/stats.py` 是兼容导出层；结果加载、失败检查评分、模板/字段统计、反馈画像已经分别拆到 `results_loader.py`、`failed_checks.py`、`template_stats.py`、`field_stats.py`、`feedback_stats.py`
-- `analysis/feedback.py` 是兼容导出层；历史状态/near-pass 选择放在 `feedback_history.py`，模板禁用/保留/跳过策略放在 `feedback_filters.py`
-- `analysis/template_execution_policy.py` 负责把模板 registry 的角色、scope、预算和 refine candidate 这些“模板治理判定”整理成执行前决策
-- `analysis/template_registry.py` 及其配套的 `template_registry_budget.py`、`template_registry_rules.py`、`template_registry_store.py`、`template_registry_sidecars.py` 负责模板角色、scope、预算和 sidecar 汇总这组“模板治理”逻辑
-- `analysis/report_builder.py` 负责从结果构建 summary/analysis payload
-- `core/execution_filters.py` 负责执行期字段/模板跳过判断；`core/template_planning.py` 负责把模板候选展开为执行队列，本身尽量不再承载 template registry 的细粒度策略判定。旧的 `core/template_filters.py` / `core/template_queue.py` 仅保留兼容导出。
-- `policy/__init__.py` 是策略 facade；`blacklist_runtime.py` 负责运行态黑名单聚合与自动更新，`blacklist_store.py` 负责黑名单文件存取，`template_blacklist.py` 负责模板名/表达式规则匹配，`expression.py` 负责数据集表达式策略和反馈阶段判断
-- `io/output.py` 负责结果持久化与分析边车编排，不再承载黑名单策略实现
-- `io/common.py` 放更底层的 JSON 原子写入、路径常量、dataset 文件名安全化与运行时 `data/` 目录解析
-- `cli/path_resolution.py` 负责把模板库、字段缓存、结果 sidecar、blacklist 根目录等运行路径显式归一化为 `RunPaths`
-- `config/` 是配置子包：`__init__.py` 保留旧的 `alpha.config` 入口，`models.py` 放配置 dataclass，`yaml.py` 只保留线程安全缓存和公共 API，`yaml_sources.py` 放 YAML 查找/加载/合并/签名，`yaml_validator.py` 放 schema 和交叉一致性校验，`defaults.py` 放 YAML global 到 CLI 参数的合并，`policy.py` 放策略构建和反馈阶段判断，`policy_coercers.py` 放 YAML 类型转换，`policy_overrides.py` 放 expression policy 覆盖解析，`profiles.py` 放 dataset profile fallback。
-- `generators/templates/` 是模板子包：`__init__.py` 管理 JSON 模板库，`candidates.py` 构造 `TemplateCandidate`，`classification.py` 做模板 family/stage 分类，`metadata.py` 建模板元数据索引，`partner_fields.py` 发现 ratio 配对字段，`priority.py` 做自适应优先级和 family 裁剪，`refine.py` 生成 near-pass 精修模板，`feedback_mutations.py` 编排反馈 mutation，`feedback_mutation_sets.py` 放具体 mutation 集合，`feedback_best_expression.py` 放历史最佳表达式变异，`historical_reuse.py`、`wrappers.py` 和 `variation_common.py` 拆分模板变体策略，`variations.py` 保留组合入口。
-- `generators/expression_builder.py` 是表达式候选编排层，负责把字段、模板库、策略和反馈组合成候选表达式。
-- `generators/matrix_templates.py` 负责 MATRIX 字段的多样化、ratio、bucket、trade_when 和 legacy 模板构造。
-- `generators/ratio_templates.py` 负责高信心 ratio、字段配对 ratio、delta-rank 和 delta/std ratio 模板构造。
-- `generators/expressions.py` 现在是兼容导出层，不再承载模板分类、元数据、优先级、refine、feedback mutation 或候选构建的具体实现。
-- `api/client.py` 保留 `BrainClient` / `WorkerClientFactory` 组合入口；`api/retry.py` 放阶段重试和登录重试；`api/session.py` 放登录、底层 request 和全局节流；`api/fields.py` 放 dataset 字段分页；`api/simulations.py` 放 simulation create/poll；`api/alphas.py` 放 alpha detail/submit；`api/payloads.py` 放响应 payload 解析，`api/timing.py` 放等待和 `Retry-After` 解析。
-- 内部源码已改为直接依赖具体模块（如 `models/domain.py`、`models/runtime.py`、`models/io_types.py`、`config/constants.py`、`config/getters.py`、`config/policy.py`），`models/base.py` 和 `config/__init__.py` 主要服务外部旧导入兼容。
+- `main.py` / `__main__.py`：CLI 入口与顶层异常处理
+- `app/`：应用编排层，负责初始化、执行主循环、最终收尾和 `clean`
+- `core/`：核心执行层，负责 scheduler、simulation、checkpoint、template planning
+- `generators/`：字段预处理、表达式候选构造、settings 变体、模板细分策略
+- `analysis/`：反馈画像、失败检查、字段/模板统计、report 和 template-registry sidecars
+- `api/`：Brain API 会话、重试、fields、simulations、alphas
+- `io/`：凭证、results journal、输出 sidecar、原子写入
+- `cli/`：参数解析、路径归一化、run config、filters
+- `models/` + `runtime/`：领域模型、运行配置对象、运行期上下文和可变状态
+- `policy/`：expression policy 与 blacklist 相关运行策略
+- `config/`：代码侧配置入口；根 `config/*.yaml` 提供可调默认值
+
+补充说明：
+
+- 内部代码现在优先直接依赖具体模块，不再鼓励继续增加新的“兼容壳”。
+- 包级 facade 仍然保留在 `alpha.models`、`alpha.core`、`alpha.config` 等入口，用来维持已有导入路径稳定。
+- 如果 README 的结构说明再次过期，应优先更新这里的高层分层说明，而不是回到逐文件枚举。
 
 这次重构的目标是把原先集中在少数大文件里的职责拆开，让入口、运行态、分析构建、配置、模板生成、策略和 IO 边界更清晰。旧入口仍保持兼容，例如 `from alpha.config import get_yaml_config`、`from alpha.generators.templates import load_template_library` 仍然可用。
 
