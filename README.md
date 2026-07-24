@@ -2,16 +2,11 @@
 
 通用的 WorldQuant Brain 数据集 Alpha 模拟/检查/提交运行器。
 
-## 学习入口
+## 文档导航
 
-- 文档总入口：先看 [docs/README.md](docs/README.md)
-- 数据集策略说明：看 `templates/<dataset_id>/README.md`
-
-## 常用路径
-
-- 想按问题找文档：看 [docs/README.md](docs/README.md)
-- 想按学习顺序看：看 [docs/README.md](docs/README.md)
-- 想看数据集策略：看 `templates/<dataset_id>/README.md`
+- 通用学习与问题索引：先看 [docs/README.md](docs/README.md)
+- 数据集专属策略：看 `templates/<dataset_id>/README.md`
+- 想快速上手仓库：继续看本文档的“安装 / 运行 / 结果解读”
 
 ## Python 版本
 
@@ -251,37 +246,11 @@ python3.10 -m alpha --top-fields-by-feedback 10 --max-templates-per-field 15
 
 #### 数据集 Playbooks
 
-`fundamental6`:
-- 当前更适合做止损式小验证，而不是继续大范围单字段深挖。
+根 `README` 只保留通用运行方法，不长期维护具体数据集的作战细节。
 
-`model51`:
-- 当前更适合做“小字段集 + 小模板集”的聚焦 refine。
-- 项目内已提供可复用白名单：
-  - `templates/model51/focused_fields.txt`
-  - `templates/model51/focused_templates.txt`
-
-示例：
-
-```bash
-python3.10 -m alpha --dataset-id model51 --dry-run-plan \
-  --include-fields-file templates/model51/focused_fields.txt \
-  --include-templates-file templates/model51/focused_templates.txt \
-  --limit 4 --max-templates-per-field 4 --max-templates-per-family 1 \
-  --output results/model51/focused_validation.json \
-  --feedback-output results/model51/focused_validation.json \
-  --no-auto-update-blacklist
-```
-
-```bash
-python3.10 -m alpha --dataset-id model51 \
-  --include-fields-file templates/model51/focused_fields.txt \
-  --include-templates-file templates/model51/focused_templates.txt \
-  --limit 4 --max-templates-per-field 4 --max-templates-per-family 1 \
-  --max-concurrent-simulations 2 --max-concurrent-creates 1 \
-  --output results/model51/focused_validation.json \
-  --feedback-output results/model51/focused_validation.json \
-  --no-auto-update-blacklist
-```
+- `fundamental6`、`model51`、`model16` 的当前策略，统一下沉到对应的 `templates/<dataset_id>/README.md`
+- 如果某个数据集有聚焦字段白名单、模板白名单、refine 包，也应优先放在对应模板目录说明里维护
+- 根文档只回答“怎么运行这个仓库”，数据集文档再回答“这个数据集现在该怎么跑”
 
 #### 阶段 4：完整运行（可选）
 
@@ -386,7 +355,7 @@ python3.10 -m alpha --no-smoke-test --no-full-run
 - `config/policy.py`：dataset expression policy 构建与反馈阶段解析
 - `config/profiles.py`：dataset profile fallback
 
-YAML 分层优先级为：`config/settings.yaml` > `config/expression_policies.yaml` > `config/dataset_profiles.yaml` > `config/runtime.yaml` / `config/templates.yaml` / `config/quality_feedback.yaml` / `config/simulation.yaml` / `config/api.yaml` > `config/constants_defaults.yaml`。其中 `config/settings.yaml` 面向日常运行调参，其他 `config/*.yaml` 面向按职责拆分的默认值，`templates/` 面向表达式模板，`blacklists/` 面向低质量模板过滤。
+YAML 分层优先级为：`config/settings.yaml` > `config/expression_policies.yaml` > `config/dataset_profiles.yaml` > `config/templates.yaml` / `config/quality_feedback.yaml` > `config/constants_defaults.yaml`。其中 `config/settings.yaml` 面向日常运行调参，其余 `config/*.yaml` 面向按职责拆分的默认值；`templates/` 面向表达式模板，`blacklists/` 面向低质量模板过滤。
 
 实际运行配置优先维护在 `config/*.yaml`、`templates/` 和 `blacklists/`，不要把数据集专属模板重新塞回 Python 常量。
 
