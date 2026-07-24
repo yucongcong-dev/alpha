@@ -44,20 +44,42 @@ from ..policy.expression import get_dataset_expression_policy, resolve_feedback_
 from ..utils.helpers import first_non_empty, is_event_field_name
 
 
-def resolve_field_template_candidates(
+def _limit_template_candidates(
+    templates: Sequence[TemplateCandidate],
+    *,
+    max_templates_per_family: int,
+    max_templates_per_field: int,
+) -> list[TemplateCandidate]:
+    """Apply the shared family/field caps after sorting by priority."""
+    return limit_templates(
+        cap_templates_per_family(
+            sort_templates_by_priority(list(templates)),
+            max_templates_per_family,
+        ),
+        max_templates_per_field,
+    )
+
+
+def _resolve_field_planning_policy(
     build_ctx: TemplateBuildContext,
     field: TemplateField,
-    *,
-    prior_results: Sequence[FieldTestResult],
-    build_refine_templates_fn=build_refine_templates,
-    build_expression_candidates_fn=build_expression_candidates,
-) -> tuple[list[TemplateCandidate], TemplateFeedback, DatasetExpressionPolicy]:
-    """为单个字段解析模板候选、字段反馈和表达式策略。"""
+) -> tuple[str, str, TemplateFeedback | None, DatasetExpressionPolicy]:
+    """Resolve the stable policy inputs shared by candidate and variant planning."""
     options = build_ctx.options
     field_id = str(first_non_empty(field.get("id"), SENTINEL_UNKNOWN))
     field_name = choose_field_name(field)
     field_feedback = build_ctx.field_feedback.get(field_id)
     expression_policy = build_ctx.expression_policy or get_dataset_expression_policy(options.dataset_id)
+    return field_id, field_name, field_feedback, expression_policy
+
+
+def _resolve_template_limits(
+    *,
+    field_name: str,
+    options,
+    expression_policy: DatasetExpressionPolicy,
+) -> tuple[int, int]:
+    """Resolve the effective field/family template caps for one field."""
     is_event_field = is_event_field_name(field_name, expression_policy.event_field_prefixes)
     max_templates_per_field = (
         expression_policy.event_max_templates_per_field
@@ -69,10 +91,40 @@ def resolve_field_template_candidates(
         if is_event_field and expression_policy.event_max_templates_per_family > 0
         else options.max_templates_per_family
     )
-    feedback_stage = resolve_feedback_stage(
+    return max_templates_per_field, max_templates_per_family
+
+
+def _resolve_feedback_stage(
+    field_feedback: TemplateFeedback | None,
+    expression_policy: DatasetExpressionPolicy,
+) -> str:
+    """Resolve the feedback stage using the active dataset expression policy."""
+    return resolve_feedback_stage(
         field_feedback,
         expression_policy.feedback_loop_policy,
     )
+
+
+def resolve_field_template_candidates(
+    build_ctx: TemplateBuildContext,
+    field: TemplateField,
+    *,
+    prior_results: Sequence[FieldTestResult],
+    build_refine_templates_fn=build_refine_templates,
+    build_expression_candidates_fn=build_expression_candidates,
+) -> tuple[list[TemplateCandidate], TemplateFeedback, DatasetExpressionPolicy]:
+    """为单个字段解析模板候选、字段反馈和表达式策略。"""
+    options = build_ctx.options
+    field_id, field_name, field_feedback, expression_policy = _resolve_field_planning_policy(
+        build_ctx,
+        field,
+    )
+    max_templates_per_field, max_templates_per_family = _resolve_template_limits(
+        field_name=field_name,
+        options=options,
+        expression_policy=expression_policy,
+    )
+    feedback_stage = _resolve_feedback_stage(field_feedback, expression_policy)
     nearpass_candidates = (
         select_nearpass_candidates(
             field_id,
@@ -88,12 +140,10 @@ def resolve_field_template_candidates(
             nearpass_candidates,
             expression_policy=expression_policy,
         )
-        templates = limit_templates(
-            cap_templates_per_family(
-                sort_templates_by_priority(templates),
-                max_templates_per_family,
-            ),
-            max_templates_per_field,
+        templates = _limit_template_candidates(
+            templates,
+            max_templates_per_family=max_templates_per_family,
+            max_templates_per_field=max_templates_per_field,
         )
     else:
         templates = build_expression_candidates_fn(
@@ -104,12 +154,10 @@ def resolve_field_template_candidates(
             field_feedback=field_feedback,
             expression_policy=expression_policy,
         )
-    templates = limit_templates(
-        cap_templates_per_family(
-            sort_templates_by_priority(templates),
-            max_templates_per_family,
-        ),
-        max_templates_per_field,
+    templates = _limit_template_candidates(
+        templates,
+        max_templates_per_family=max_templates_per_family,
+        max_templates_per_field=max_templates_per_field,
     )
     return templates, field_feedback or {}, expression_policy
 
@@ -128,8 +176,10 @@ def build_pending_template_variants(
 ) -> list[PendingTemplateEntry]:
     """把模板候选展开为真正待执行的 settings 变体队列。"""
     options = build_ctx.options
-    field_id = str(first_non_empty(field.get("id"), SENTINEL_UNKNOWN))
-    field_name = choose_field_name(field)
+    field_id, field_name, _policy_feedback, expression_policy = _resolve_field_planning_policy(
+        build_ctx,
+        field,
+    )
     pending_templates: list[PendingTemplateEntry] = []
     all_reserved_keys = attempted_keys | reserved_keys
     reserved_expression_variant_keys = {
@@ -140,12 +190,9 @@ def build_pending_template_variants(
     seen_resimulate_expressions: set[tuple[str, str]] = set()
     max_setting_variants = choose_settings_variant_budget(
         field_feedback,
-        expression_policy=build_ctx.expression_policy,
+        expression_policy=expression_policy,
     )
-    feedback_stage = resolve_feedback_stage(
-        field_feedback,
-        (build_ctx.expression_policy or get_dataset_expression_policy(options.dataset_id)).feedback_loop_policy,
-    )
+    feedback_stage = _resolve_feedback_stage(field_feedback, expression_policy)
     for template in templates:
         template_name = template.name
         expression = template.expression
