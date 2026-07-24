@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
-from typing import cast
 
 from ..config.constants import (
     CHECK_CONCENTRATED_WEIGHT,
@@ -21,7 +20,6 @@ from ..config.constants import (
 from ..config.models import DatasetExpressionPolicy
 from ..models.domain import FailedCheck, FieldTestResult, NearPassCandidate
 from ..models.domain_types import FieldFeedbackSummary
-from ..models.runtime_protocols import StopAfterSubmittableArgs
 from ..policy.expression import get_dataset_expression_policy, resolve_feedback_stage
 from ..runtime import HistoricalRunState
 from .failed_checks import failed_check_gap, score_failed_checks
@@ -154,11 +152,10 @@ def select_nearpass_candidates(
 
 
 def should_stop_after_submittable(
-    args: StopAfterSubmittableArgs,
+    stop_threshold: int,
     results: Sequence[FieldTestResult],
 ) -> bool:
     """判断当前运行是否已达到要求的可提交数量上限。"""
-    stop_threshold = cast(int, args.stop_after_submittable)
     if stop_threshold <= 0:
         return False
     current_count = current_submittable_count(results)

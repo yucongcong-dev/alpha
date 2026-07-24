@@ -71,12 +71,6 @@ class FieldFetchArgs(Protocol):
     delay: int
 
 
-class FieldSelectionArgs(Protocol):
-    top_fields_by_feedback: int
-    offset: int
-    limit: int
-
-
 class RunConfigArgs(Protocol):
     dataset_id: str
     region: str
@@ -124,15 +118,10 @@ class RunConfigArgs(Protocol):
     quiet: bool
 
 
-class StopAfterSubmittableArgs(Protocol):
-    stop_after_submittable: int
-
-
 class BootstrapRuntimeArgs(
     ApiClientArgs,
     CredentialsArgs,
     FieldFetchArgs,
-    FieldSelectionArgs,
     RunConfigArgs,
     Protocol,
 ):
@@ -201,11 +190,11 @@ class RunLoopArgs(
     TemplateBuildArgs,
     SimulationStageArgs,
     SchedulerRuntimeArgs,
-    StopAfterSubmittableArgs,
     Protocol,
 ):
     dry_run_plan: bool
     field_template_batch_size: int
+    stop_after_submittable: int
 
 
 class ClientFactoryLike(Protocol):

@@ -16,7 +16,7 @@ from ..core.executor import (
 from ..core.scheduler import maybe_restore_runtime_concurrency, throttle_before_submission
 from ..generators.fields import choose_field_name, choose_field_type
 from ..models.domain import TemplateField
-from ..models.runtime_options import ResultWriteOptions
+from ..runtime import FutureCompletionContext
 from ..models.runtime_protocols import RunLoopArgs
 from ..runtime import (
     ExecutionState,
@@ -53,7 +53,7 @@ def execute_schedule_round(
     field_resume_positions: dict[str, int],
     execution_state: ExecutionState,
     runtime_state: RuntimeConcurrencyState,
-    result_write_options: ResultWriteOptions,
+    completion_ctx: FutureCompletionContext,
     state_file: str,
     round_index: int,
     field_template_batch_size: int,
@@ -70,7 +70,7 @@ def execute_schedule_round(
         )
 
     for field_index, field in enumerate(fields, start=1):
-        if should_stop_after_submittable(args, execution_state.results):
+        if should_stop_after_submittable(args.stop_after_submittable, execution_state.results):
             execution_state.stop_signal.set()
             logger.info("[stop] 达到 stop-after-submittable=%d", args.stop_after_submittable)
             return ScheduleRoundResult(
@@ -91,7 +91,7 @@ def execute_schedule_round(
             field_resume_positions=field_resume_positions,
             execution_state=execution_state,
             runtime_state=runtime_state,
-            result_write_options=result_write_options,
+            completion_ctx=completion_ctx,
             state_file=state_file,
             round_index=round_index,
             field_template_batch_size=field_template_batch_size,
@@ -125,7 +125,7 @@ def schedule_field_round(
     field_resume_positions: dict[str, int],
     execution_state: ExecutionState,
     runtime_state: RuntimeConcurrencyState,
-    result_write_options: ResultWriteOptions,
+    completion_ctx: FutureCompletionContext,
     state_file: str,
     round_index: int,
     field_template_batch_size: int,
@@ -193,7 +193,7 @@ def schedule_field_round(
         executor=executor,
         execution_state=execution_state,
         runtime_state=runtime_state,
-        result_write_options=result_write_options,
+        completion_ctx=completion_ctx,
         field=field,
         field_id=field_id,
         field_name=field_name,
@@ -223,7 +223,7 @@ def _dispatch_templates_for_field(
     executor: ThreadPoolExecutor,
     execution_state: ExecutionState,
     runtime_state: RuntimeConcurrencyState,
-    result_write_options: ResultWriteOptions,
+    completion_ctx: FutureCompletionContext,
     field: TemplateField,
     field_id: str,
     field_name: str,
@@ -232,7 +232,7 @@ def _dispatch_templates_for_field(
 ) -> bool:
     """Dispatch scheduled templates for a single field; return whether a stop was requested."""
     for template_index, entry in enumerate(scheduled_templates, start=1):
-        if should_stop_after_submittable(args, execution_state.results):
+        if should_stop_after_submittable(args.stop_after_submittable, execution_state.results):
             execution_state.stop_signal.set()
             logger.info("[stop] 达到 stop-after-submittable=%d", args.stop_after_submittable)
             return True
@@ -248,9 +248,8 @@ def _dispatch_templates_for_field(
             executor_state=execution_state,
             runtime_state=runtime_state,
             args=args,
-            run_ctx=run_ctx,
+            completion_ctx=completion_ctx,
             field_id=field_id,
-            result_write_options=result_write_options,
         ):
             return False
         if execution_state.stop_signal.is_set():

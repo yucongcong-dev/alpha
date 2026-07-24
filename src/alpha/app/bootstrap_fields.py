@@ -13,9 +13,7 @@ from ..config.constants import PREFERRED_FIELD_RANK_SENTINEL, SENTINEL_UNKNOWN, 
 from ..config.models import DatasetExpressionPolicy
 from ..generators.fields import choose_field_name
 from ..models.domain import TemplateField
-from ..models.runtime import FieldSelectionConfig
 from ..models.io_types import RunFilters
-from ..models.runtime_protocols import FieldSelectionArgs
 from ..runtime import HistoricalRunState
 from ..utils.helpers import first_non_empty, is_event_field_name
 
@@ -103,16 +101,25 @@ def _normalize_range(values: list[float]) -> list[float]:
 FieldSortKey = tuple[int, int, float, int, int, int, float, float, float, str]
 
 
+def resolve_field_selection(args: object) -> tuple[int, int, int]:
+    """Extract top-N/offset/limit knobs from an args-like object."""
+    return (
+        _safe_int(getattr(args, "top_fields_by_feedback", 0)),
+        _safe_int(getattr(args, "offset", 0)),
+        _safe_int(getattr(args, "limit", 0)),
+    )
+
+
 def prepare_fields_for_execution(
     fields: list[TemplateField],
     *,
     filters_dict: RunFilters,
     expression_policy: DatasetExpressionPolicy,
     historical_state: HistoricalRunState,
-    args: FieldSelectionArgs,
+    args: object,
 ) -> tuple[list[TemplateField], dict[str, int]]:
     """对字段做过滤、排序并最终应用 offset/limit。"""
-    selection = FieldSelectionConfig.from_args(args)
+    top_fields_by_feedback, offset, limit = resolve_field_selection(args)
     cached_field_count = len(fields)
     filtered_fields: list[TemplateField] = []
     prefiltered_count = 0
@@ -290,7 +297,7 @@ def prepare_fields_for_execution(
         )
 
     fields.sort(key=field_sort_key)
-    if selection.top_fields_by_feedback > 0:
+    if top_fields_by_feedback > 0:
         focused_fields = [
             field
             for field in fields
@@ -300,13 +307,13 @@ def prepare_fields_for_execution(
             )
             > -999.0
         ]
-        fields = focused_fields[: selection.top_fields_by_feedback]
+        fields = focused_fields[:top_fields_by_feedback]
 
     ranked_field_count = len(fields)
-    if selection.offset > 0:
-        fields = fields[selection.offset :]
-    if selection.limit > 0:
-        fields = fields[: selection.limit]
+    if offset > 0:
+        fields = fields[offset:]
+    if limit > 0:
+        fields = fields[:limit]
 
     return fields, {
         "cached_field_count": cached_field_count,

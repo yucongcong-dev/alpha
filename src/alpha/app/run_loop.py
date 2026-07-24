@@ -16,6 +16,9 @@ from .run_loop_paths import (
     create_template_build_context as create_template_build_context,
 )
 from .run_loop_paths import (
+    resolve_future_completion_context as resolve_future_completion_context,
+)
+from .run_loop_paths import (
     resolve_result_write_options as resolve_result_write_options,
 )
 from .run_loop_paths import run_path_value as run_path_value
@@ -49,6 +52,7 @@ def run_field_test_loop(
     field_template_batch_size = max(0, int(getattr(args, "field_template_batch_size", 0) or 0))
     field_resume_positions = build_field_resume_positions(original_fields)
     result_write_options = resolve_result_write_options(args, run_paths)
+    completion_ctx = resolve_future_completion_context(args, run_ctx, result_write_options)
 
     fields, _resumed_index = restore_fields_from_state(
         fields=fields,
@@ -93,7 +97,7 @@ def run_field_test_loop(
                     field_resume_positions=field_resume_positions,
                     execution_state=execution_state,
                     runtime_state=runtime_state,
-                    result_write_options=result_write_options,
+                    completion_ctx=completion_ctx,
                     state_file=state_file,
                     round_index=round_index,
                     field_template_batch_size=field_template_batch_size,
@@ -112,8 +116,7 @@ def run_field_test_loop(
                 execution_state=execution_state,
                 runtime_state=runtime_state,
                 args=args,
-                run_ctx=run_ctx,
-                result_write_options=result_write_options,
+                completion_ctx=completion_ctx,
             )
         except KeyboardInterrupt:
             save_runtime_checkpoint(

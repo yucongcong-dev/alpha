@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
+from ..core.scheduler_completion import build_completion_context
 from ..models.io_types import RunPaths
 from ..models.domain import TemplateField
 from ..models.runtime_options import ResultWriteOptions, TemplateBuildOptions
-from ..models.runtime_protocols import ResultWriteArgs, TemplateBuildArgs
-from ..runtime import InitializedRunContext, TemplateBuildContext
+from ..models.runtime_protocols import ResultWriteArgs, SchedulerRuntimeArgs, TemplateBuildArgs
+from ..runtime import FutureCompletionContext, InitializedRunContext, TemplateBuildContext
 
 
 def run_path_value(run_paths: RunPaths | None, attr: str) -> str:
@@ -28,6 +29,21 @@ def resolve_result_write_options(
         dataset_id=options.dataset_id,
         output_path=output_path,
         auto_update_blacklist=options.auto_update_blacklist,
+    )
+
+
+def resolve_future_completion_context(
+    args: SchedulerRuntimeArgs,
+    run_ctx: InitializedRunContext,
+    result_write_options: ResultWriteOptions,
+) -> FutureCompletionContext:
+    """Build the shared completion context once for the whole run loop."""
+    return build_completion_context(
+        args=args,
+        result_write_options=result_write_options,
+        settings_fingerprint=run_ctx.settings_fingerprint,
+        template_library_fingerprint=run_ctx.template_library_fingerprint,
+        run_config=run_ctx.run_config,
     )
 
 

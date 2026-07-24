@@ -14,7 +14,6 @@ from .._facade import ExportMap, facade_dir, resolve_export
 if TYPE_CHECKING:
     from .domain import TemplateField
     from .runtime_config import (
-        FieldSelectionConfig,
         SimulationSettingsConfig,
         SimulationStageConfig,
     )
@@ -32,7 +31,6 @@ if TYPE_CHECKING:
         ClientFactoryLike,
         CredentialsArgs,
         FieldFetchArgs,
-        FieldSelectionArgs,
         ResultWriteArgs,
         RuntimeConcurrencyArgs,
         RunConfig,
@@ -42,7 +40,6 @@ if TYPE_CHECKING:
         SemaphoreLike,
         SimulationSettingsArgs,
         SimulationStageArgs,
-        StopAfterSubmittableArgs,
         TemplateBuildArgs,
         TemplateFeedback,
         TemplateSequence,
@@ -62,7 +59,6 @@ if TYPE_CHECKING:
 
 _EXPORT_MAP: ExportMap = {
     "TemplateField": (".domain", "TemplateField"),
-    "FieldSelectionConfig": (".runtime_config", "FieldSelectionConfig"),
     "SimulationSettingsConfig": (".runtime_config", "SimulationSettingsConfig"),
     "SimulationStageConfig": (".runtime_config", "SimulationStageConfig"),
     "ApiClientOptions": (".runtime_options", "ApiClientOptions"),
@@ -76,7 +72,6 @@ _EXPORT_MAP: ExportMap = {
     "ClientFactoryLike": (".runtime_protocols", "ClientFactoryLike"),
     "CredentialsArgs": (".runtime_protocols", "CredentialsArgs"),
     "FieldFetchArgs": (".runtime_protocols", "FieldFetchArgs"),
-    "FieldSelectionArgs": (".runtime_protocols", "FieldSelectionArgs"),
     "ResultWriteArgs": (".runtime_protocols", "ResultWriteArgs"),
     "RuntimeConcurrencyArgs": (".runtime_protocols", "RuntimeConcurrencyArgs"),
     "RunConfig": (".runtime_protocols", "RunConfig"),
@@ -86,7 +81,6 @@ _EXPORT_MAP: ExportMap = {
     "SemaphoreLike": (".runtime_protocols", "SemaphoreLike"),
     "SimulationSettingsArgs": (".runtime_protocols", "SimulationSettingsArgs"),
     "SimulationStageArgs": (".runtime_protocols", "SimulationStageArgs"),
-    "StopAfterSubmittableArgs": (".runtime_protocols", "StopAfterSubmittableArgs"),
     "TemplateBuildArgs": (".runtime_protocols", "TemplateBuildArgs"),
     "TemplateFeedback": (".runtime_protocols", "TemplateFeedback"),
     "TemplateSequence": (".runtime_protocols", "TemplateSequence"),

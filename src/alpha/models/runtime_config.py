@@ -4,26 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from .runtime_protocols import (
-    FieldSelectionArgs,
-    SimulationSettingsArgs,
-    SimulationStageArgs,
-)
-
-
-@dataclass(frozen=True)
-class FieldSelectionConfig:
-    top_fields_by_feedback: int = 0
-    offset: int = 0
-    limit: int = 0
-
-    @classmethod
-    def from_args(cls, args: FieldSelectionArgs) -> FieldSelectionConfig:
-        return cls(
-            top_fields_by_feedback=int(args.top_fields_by_feedback or 0),
-            offset=int(args.offset or 0),
-            limit=int(args.limit or 0),
-        )
+from .runtime_protocols import SimulationSettingsArgs, SimulationStageArgs
 
 
 @dataclass(frozen=True, kw_only=True)

@@ -6,13 +6,13 @@ from concurrent.futures import FIRST_COMPLETED, Future, ThreadPoolExecutor, wait
 import dataclasses
 import time
 
-from ..core.scheduler import drain_completed_futures
+from ..core.scheduler import drain_completed_futures_with_context
 from ..core.simulation import run_field_test_in_worker
 from ..models.domain import FieldTestResult, SettingsVariant, TemplateField
-from ..models.runtime_options import ResultWriteOptions
 from ..models.runtime_protocols import ClientFactoryLike, SchedulerRuntimeArgs, SimulationStageArgs
 from ..runtime import (
     ExecutionState,
+    FutureCompletionContext,
     InitializedRunContext,
     PendingFutureContext,
     RuntimeConcurrencyState,
@@ -20,29 +20,43 @@ from ..runtime import (
 from .run_loop_resume import save_terminal_pipeline_state
 
 
+def _drain_completed_cycle(
+    *,
+    pending_futures: dict[Future[FieldTestResult], PendingFutureContext],
+    execution_state: ExecutionState,
+    args: SchedulerRuntimeArgs,
+    completion_ctx: FutureCompletionContext,
+    runtime_state: RuntimeConcurrencyState,
+) -> None:
+    """Wait for one completion cycle and drain all finished futures."""
+    done, _ = wait(
+        set(pending_futures),
+        return_when=FIRST_COMPLETED,
+    )
+    drain_completed_futures_with_context(
+        completed_futures=list(done),
+        execution_state=execution_state,
+        args=args,
+        completion_ctx=completion_ctx,
+        runtime_state=runtime_state,
+    )
+
+
 def drain_until_capacity(
     *,
     executor_state: ExecutionState,
     runtime_state: RuntimeConcurrencyState,
     args: SchedulerRuntimeArgs,
-    run_ctx: InitializedRunContext,
+    completion_ctx: FutureCompletionContext,
     field_id: str,
-    result_write_options: ResultWriteOptions,
 ) -> bool:
     """Drain completed futures until runtime concurrency has available capacity."""
     while len(executor_state.pending_futures) >= runtime_state.runtime_max_workers:
-        done, _ = wait(
-            set(executor_state.pending_futures),
-            return_when=FIRST_COMPLETED,
-        )
-        drain_completed_futures(
-            completed_futures=list(done),
+        _drain_completed_cycle(
+            pending_futures=executor_state.pending_futures,
             execution_state=executor_state,
             args=args,
-            result_write_options=result_write_options,
-            settings_fingerprint=run_ctx.settings_fingerprint,
-            template_library_fingerprint=run_ctx.template_library_fingerprint,
-            run_config=run_ctx.run_config,
+            completion_ctx=completion_ctx,
             runtime_state=runtime_state,
         )
         if field_id in executor_state.skipped_fields_due_to_queue:
@@ -117,23 +131,15 @@ def drain_remaining_futures(
     execution_state: ExecutionState,
     runtime_state: RuntimeConcurrencyState,
     args: SchedulerRuntimeArgs,
-    run_ctx: InitializedRunContext,
-    result_write_options: ResultWriteOptions,
+    completion_ctx: FutureCompletionContext,
 ) -> None:
     """Drain all remaining futures and persist terminal pipeline state when needed."""
     while execution_state.pending_futures:
-        done, _ = wait(
-            set(execution_state.pending_futures),
-            return_when=FIRST_COMPLETED,
-        )
-        drain_completed_futures(
-            completed_futures=list(done),
+        _drain_completed_cycle(
+            pending_futures=execution_state.pending_futures,
             execution_state=execution_state,
             args=args,
-            result_write_options=result_write_options,
-            settings_fingerprint=run_ctx.settings_fingerprint,
-            template_library_fingerprint=run_ctx.template_library_fingerprint,
-            run_config=run_ctx.run_config,
+            completion_ctx=completion_ctx,
             runtime_state=runtime_state,
         )
         save_terminal_pipeline_state(

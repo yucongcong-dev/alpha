@@ -234,6 +234,24 @@ def drain_completed_futures(
         template_library_fingerprint=template_library_fingerprint,
         run_config=run_config,
     )
+    return drain_completed_futures_with_context(
+        completed_futures=completed_futures,
+        execution_state=execution_state,
+        args=args,
+        completion_ctx=completion_ctx,
+        runtime_state=runtime_state,
+    )
+
+
+def drain_completed_futures_with_context(
+    *,
+    completed_futures: Sequence[Future[FieldTestResult]],
+    execution_state: ExecutionState,
+    args: SchedulerRuntimeArgs,
+    completion_ctx: FutureCompletionContext,
+    runtime_state: RuntimeConcurrencyState,
+) -> dict[str, dict[str, int]]:
+    """Consume completed futures using a prebuilt immutable completion context."""
     for done_future in completed_futures:
         execution_state.template_stats, congestion_detected, queue_busy_field_id = (
             handle_completed_future(

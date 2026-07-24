@@ -8,7 +8,6 @@ from ..api.client import BrainClient, WorkerClientFactory
 from ..io.common import resolve_blacklists_dir
 from ..models.domain import TemplateField
 from ..models.io_types import RunPaths
-from ..models.runtime import FieldSelectionConfig
 from ..models.runtime_options import ApiClientOptions, FieldFetchOptions
 from ..models.runtime_protocols import (
     ApiClientArgs,
@@ -16,6 +15,7 @@ from ..models.runtime_protocols import (
     ClientFactoryLike,
     RunConfig,
 )
+from .bootstrap_fields import resolve_field_selection
 from .bootstrap_resource_loading import (
     load_bootstrap_fields,
     load_bootstrap_supporting_resources,
@@ -124,7 +124,7 @@ def log_field_selection_stats(
     fields: list[TemplateField],
 ) -> None:
     """Emit field-filtering and ranking diagnostics."""
-    selection = FieldSelectionConfig.from_args(args)
+    top_fields_by_feedback, offset, limit = resolve_field_selection(args)
     if field_stats["prefiltered_count"] > 0:
         logger.info(
             "[filter] 排序前因 include/exclude 规则过滤 %d 个字段",
@@ -152,15 +152,15 @@ def log_field_selection_stats(
     if not fields:
         logger.error("[error] 数据集 %s 在字段过滤后没有可运行字段", args.dataset_id)
         return
-    if selection.top_fields_by_feedback > 0:
+    if top_fields_by_feedback > 0:
         logger.info("[focus] 限制运行到按反馈排序的前 %d 个字段", len(fields))
     logger.info(
         "[data] 当前上下文缓存共 %d 个字段，过滤后共 %d 个字段，优先级排序后共 %d 个字段，本次按 offset=%d limit=%d 取 %d 个字段",
         field_stats["cached_field_count"],
         field_stats["filtered_field_count"],
         field_stats["ranked_field_count"],
-        selection.offset,
-        selection.limit,
+        offset,
+        limit,
         len(fields),
     )
     logger.info("[data] 从数据集 %s 获取 %d 个字段", args.dataset_id, len(fields))

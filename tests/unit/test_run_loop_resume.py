@@ -20,6 +20,7 @@ from alpha.app.run_loop import (
 from alpha.models.io_types import RunFilters, RunPaths
 from alpha.models.runtime import (
     ExecutionState,
+    FutureCompletionContext,
     HistoricalRunState,
     InitializedRunContext,
     ResultWriteOptions,
@@ -103,7 +104,7 @@ def test_drain_remaining_futures_persists_total_field_count() -> None:
 
     with (
         patch("alpha.app.loop_future_support.wait", return_value=({future}, set())),
-        patch("alpha.app.loop_future_support.drain_completed_futures", side_effect=_drain),
+        patch("alpha.app.loop_future_support.drain_completed_futures_with_context", side_effect=_drain),
         patch("alpha.app.run_loop_resume.save_pipeline_state") as mock_save,
     ):
         drain_remaining_futures(
@@ -113,8 +114,9 @@ def test_drain_remaining_futures_persists_total_field_count() -> None:
             execution_state=execution_state,
             runtime_state=RuntimeConcurrencyState(max_workers=2, runtime_max_workers=2),
             args=argparse.Namespace(),
-            run_ctx=_build_run_ctx([]),
-            result_write_options=ResultWriteOptions(),
+            completion_ctx=FutureCompletionContext(
+                result_write_options=ResultWriteOptions(),
+            ),
         )
 
     assert mock_save.call_args.kwargs["completed_field_index"] == 5
