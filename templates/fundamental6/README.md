@@ -298,11 +298,11 @@
 
 对应字段文件：
 
-- `templates/fundamental6/refine/fields/clean_verify_round12_second_line_fields.txt`
+- `templates/fundamental6/refine/archive/fields/clean_verify_round12_second_line_fields.txt`
 
 推荐执行包：
 
-- `templates/fundamental6/refine/round7_low_corr_pack.json`
+- `templates/fundamental6/refine/archive/round7_low_corr_pack.json`
 
 推荐用途：
 
@@ -458,17 +458,29 @@
 
 ## 模板包阶段角色
 
-到当前阶段，几个本地模板包的职责已经比较明确：
+到当前阶段，`fundamental6` 的本地资产应按“现役 / 观察 / 归档”理解：
+
+现役：
 - `templates/fundamental6/library.json`
-  - 用于第一阶段 broad 主干探索
+  - 第一阶段 broad 主干探索
 - `templates/fundamental6/refine/default_neighbors.json`
-  - 用于第二阶段 refine 扩展和结构替代
-- `templates/fundamental6/refine/round5_high_conviction.json`
-  - 用于高信念收窄验证，回收 `cashflow_op` 主线并保留稳定的 VECTOR 次优支路
-- `templates/fundamental6/refine/round6_submit_pack.json`
-  - 用于 submit-oriented 重复验证，只围绕 `cashflow_op` 的已通过与 near-pass 主线
+  - 第二阶段现役 refine 扩展带
+  - 只保留仍有增量价值的 `cashflow_op` 主线近邻，以及最小 `VECTOR` 哨兵
 - `templates/fundamental6/refine/cashflow_submit_core_pack.json`
-  - 用于最小复跑、主干健康检查，以及后续提交前的低成本稳定性确认
+  - 最小复跑、主干健康检查、提交前低成本稳定性确认
+
+观察：
+- `templates/fundamental6/refine/lctq_watch_pack.json`
+  - 长期观察 `VECTOR` 支路是否自然改善
+  - 不是 submit 主包
+
+归档：
+- `templates/fundamental6/refine/archive/*.json`
+  - 保存 round5~round9 这类历史轮次包
+  - 用途是回看结论，不再作为现役执行入口
+- `templates/fundamental6/refine/archive/fields/*.txt`
+  - 保存历史字段白名单 fixture
+  - 当前只保留观察线所需的最小字段文件在现役目录
 
 ## v4 模板调整
 
@@ -494,20 +506,19 @@
 核心原则：
 - `default` 里只保留 4 个慢频核心种子
 - vector / event-conditioned 家族是专项分支，不是通用 broad-search 默认种子
-- 对 `VECTOR / GROUP / SET`，broad 中只保留单通道最小代表主干；把 `vec_sum` 近邻、`zscore` 近邻和 `252` 天邻居下沉到 refine
+- 对 `VECTOR`，broad 中只保留单通道最小代表主干；`GROUP / SET` 在 `fundamental6` 当前不作为现役分支维护
 - cross-field ratio/pair 探索集中在 account/matrix 专用支路，不要把 scalar `default` 撑得过宽
 - 额外长窗口邻居、`rawfill/longfill` 近邻、旧式横截面包装器，如果没有反复证明有效，就都作为 refine 候选
 - 单独的 decay 邻居、liquidity-bucket 变体，也都更适合作为 refine 候选，而不是 broad-search 默认
-- 当前这些被下沉分支的恢复包在 `templates/fundamental6/refine/default_neighbors.json`
+- 当前这些仍值得保留的恢复分支，收敛在 `templates/fundamental6/refine/default_neighbors.json`
 
 Refine pack 约定：
-- `default_neighbors.json` 现在应被理解为新默认主干外侧的一圈扩展带，而不是旧 scalar 剩余物的堆放地
+- `default_neighbors.json` 现在应被理解为新默认主干外侧的一圈“现役扩展带”，而不是旧 scalar 剩余物的堆放地
 - 它主要负责扩以下内容：
-  - 保留下来的慢频模板的更快/更慢邻居
-  - 更长窗口的 `ratio_cap` / `bucket_ratio` 变体
-  - 围绕 `cap` 和流动性分层的 grouped bucket 变体
-  - 过于具体、不适合放进 broad 默认队列的次级 event-self-change 路径
-  - 从 broad 下沉下来的 `ts_zscore_252`、`vec_sum` 双通道分支
+  - `cashflow_op` 当前两条正式主线附近的低预算验证邻居
+  - 仍接近门槛的 `subindustry decay near-pass`
+  - 一个最小 `VECTOR` 观察哨兵
+- 已被证伪或只剩历史价值的 `industry` 弱版本、`backfill 504`、`trade_when(volume)`、大批普通时间窗邻居，都下沉到 `archive/`
 
 ## 不建议做的事
 
@@ -542,8 +553,18 @@ Broad exploration：
 - 让 field-relation 模板逐步替代单字段变换的堆叠
 
 Focused refine：
-- refine pack 作为慢频默认主干外围的扩展带使用
-- 只有在主 scalar 主干被验证后，再扩 ratio/bucket/event-self-change 邻居
+- 现役 `refine/default_neighbors.json` 只负责主线近邻与最小观察哨兵
+- 只有在主 scalar 主干被验证后，再扩少量 submit-oriented 邻居
+- 如果只是回看历史结论，去 `refine/archive/`，不要直接把历史包当现役入口
+
+## blacklist 的当前作用
+
+- `blacklists/fundamental6/blacklist.json` 仍然有保留必要
+- 原因不是它现在内容丰富，而是运行时策略仍会读写这个文件；它是统一 blacklist 机制的一部分，不是纯文档摆设
+- 当前它为空，意味着：
+  - 现阶段 `fundamental6` 的主问题已经主要通过模板收窄和流程收口解决
+  - 还没有新的稳定弱模板需要沉淀成 dataset 级 blacklist 规则
+- 因此现在更合理的做法是“保留空文件作为运行时边界”，而不是删除整个目录
 
 ## 第一轮研究流程
 
