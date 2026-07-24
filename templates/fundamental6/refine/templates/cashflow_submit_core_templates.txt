@@ -1,0 +1,2 @@
+hc_ratio_group_zscore_252_over_cap
+group_ratio_delta_over_std_63_126_over_cap

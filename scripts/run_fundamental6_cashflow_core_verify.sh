@@ -19,7 +19,8 @@ cd "${ROOT_DIR}"
 exec "${PYTHON_BIN}" -m alpha \
   --dataset-id fundamental6 \
   --template-library-file templates/fundamental6/refine/cashflow_submit_core_pack.json \
-  --include-fields-file templates/fundamental6/refine/archive/fields/clean_verify_round6_submit_field.txt \
+  --include-fields-file templates/fundamental6/refine/fields/cashflow_submit_core_field.txt \
+  --include-templates-file templates/fundamental6/refine/templates/cashflow_submit_core_templates.txt \
   --limit "${LIMIT}" \
   --max-templates-per-field "${MAX_TEMPLATES_PER_FIELD}" \
   --max-templates-per-family "${MAX_TEMPLATES_PER_FAMILY}" \

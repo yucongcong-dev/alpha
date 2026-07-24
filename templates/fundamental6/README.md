@@ -402,6 +402,13 @@
 - 它是“软收口”: 已经发出去的 pending 任务会继续收尾，但不会再继续进入 refine 放大
 - 它验证的是“可提交资格”，不是自动正式提交
 
+当前现役闭环入口应理解为：
+
+- 模板包：`templates/fundamental6/refine/cashflow_submit_core_pack.json`
+- 字段白名单：`templates/fundamental6/refine/fields/cashflow_submit_core_field.txt`
+- 模板白名单：`templates/fundamental6/refine/templates/cashflow_submit_core_templates.txt`
+- 执行脚本：`scripts/run_fundamental6_cashflow_core_verify.sh`
+
 如果省略 `--stop-after-submittable`，当前流程会继续：
 
 - 扩到同字段更多 settings / 邻居模板
@@ -500,7 +507,8 @@
 因此从这一天开始，`fundamental6` 的最小复跑应该固定理解为：
 
 - 用 `cashflow_submit_core_pack.json`
-- 用单字段白名单 `clean_verify_round6_submit_field.txt`
+- 用单字段白名单 `cashflow_submit_core_field.txt`
+- 用双模板白名单 `cashflow_submit_core_templates.txt`
 - 显式设置 `--stop-after-submittable 1`
 - 默认关闭 blacklist 自动更新
 
