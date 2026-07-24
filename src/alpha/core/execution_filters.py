@@ -31,6 +31,18 @@ from ..runtime import TemplateBuildContext
 logger = logging.getLogger(__name__)
 
 
+def is_template_selected_by_filters(
+    build_ctx: TemplateBuildContext,
+    template_name: str,
+) -> bool:
+    """Return whether a template survives explicit include/exclude name filters."""
+    if build_ctx.include_templates and template_name not in build_ctx.include_templates:
+        return False
+    if template_name in build_ctx.exclude_templates:
+        return False
+    return True
+
+
 def should_skip_expression_by_history(
     field_id: str,
     template_name: str,
@@ -105,9 +117,7 @@ def is_template_actionable(
     expression = template.expression
     priority = template.priority
     template_metadata = template.metadata
-    if build_ctx.include_templates and template_name not in build_ctx.include_templates:
-        return False
-    if template_name in build_ctx.exclude_templates:
+    if not is_template_selected_by_filters(build_ctx, template_name):
         return False
     if not should_keep_template_for_feedback(
         template_name,

@@ -39,6 +39,7 @@ from ..runtime import (
 from ..policy.expression import get_dataset_expression_policy
 from ..utils.helpers import first_non_empty
 from .execution_filters import (
+    is_template_selected_by_filters,
     is_template_actionable,
     should_skip_field,
 )
@@ -55,6 +56,40 @@ logger = logging.getLogger(__name__)
 # ============================================================================
 # 模板队列构建函数
 # ============================================================================
+
+
+def build_template_build_context(
+    *,
+    args: TemplateBuildArgs,
+    fields: Sequence[TemplateField],
+    template_library: TemplateLibrary,
+    historical_state: HistoricalRunState,
+    filters: RunFilters,
+    use_dataset_heuristics: bool,
+    existing_results_count: int,
+) -> TemplateBuildContext:
+    """Construct the shared template build context for dry-run and live execution."""
+    options = TemplateBuildOptions.from_args(args)
+    template_build_ctx = TemplateBuildContext(
+        options=options,
+        template_library_file=str(args.template_library_file or ""),
+        all_fields=fields,
+        template_library=template_library,
+        template_registry=historical_state.template_registry,
+        template_family_registry=historical_state.template_family_registry,
+        template_registry_overrides=historical_state.template_registry_overrides,
+        field_feedback=historical_state.field_feedback,
+        global_failed_check_counts=historical_state.global_failed_check_counts,
+        include_templates=filters.include_templates,
+        exclude_templates=filters.exclude_templates,
+        use_dataset_heuristics=use_dataset_heuristics,
+        expression_policy=get_dataset_expression_policy(
+            options.dataset_id,
+            use_curated_heuristics=use_dataset_heuristics,
+        ),
+    )
+    template_build_ctx.feedback_result_count = existing_results_count
+    return template_build_ctx
 
 
 def inflight_template_keys(
@@ -123,9 +158,7 @@ def build_pending_templates_for_field(
     enabled_templates: list[TemplateCandidate] = []
     disabled_templates = 0
     for template in templates:
-        if build_ctx.include_templates and template.name not in build_ctx.include_templates:
-            continue
-        if template.name in build_ctx.exclude_templates:
+        if not is_template_selected_by_filters(build_ctx, template.name):
             continue
         if is_template_actionable(
             template=template,
@@ -206,25 +239,14 @@ def print_dry_run_plan(
     planned_templates = 0
     disabled_templates = 0
     samples: list[dict[str, object]] = []
-    options = TemplateBuildOptions.from_args(args)
-
-    build_ctx = TemplateBuildContext(
-        options=options,
-        template_library_file=str(args.template_library_file or ""),
-        all_fields=fields,
+    build_ctx = build_template_build_context(
+        args=args,
+        fields=fields,
         template_library=template_library,
-        template_registry=historical_state.template_registry,
-        template_family_registry=historical_state.template_family_registry,
-        template_registry_overrides=historical_state.template_registry_overrides,
-        field_feedback=historical_state.field_feedback,
-        global_failed_check_counts=historical_state.global_failed_check_counts,
-        include_templates=filters.include_templates,
-        exclude_templates=filters.exclude_templates,
+        historical_state=historical_state,
+        filters=filters,
         use_dataset_heuristics=use_dataset_heuristics,
-        expression_policy=get_dataset_expression_policy(
-            options.dataset_id,
-            use_curated_heuristics=use_dataset_heuristics,
-        ),
+        existing_results_count=len(execution_state.results),
     )
 
     for field in fields:

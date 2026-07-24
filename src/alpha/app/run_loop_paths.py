@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
+from ..core.executor import build_template_build_context
 from ..core.scheduler_completion import build_completion_context
 from ..models.io_types import RunPaths
 from ..models.domain import TemplateField
-from ..models.runtime_options import ResultWriteOptions, TemplateBuildOptions
+from ..models.runtime_options import ResultWriteOptions
 from ..models.runtime_protocols import ResultWriteArgs, SchedulerRuntimeArgs, TemplateBuildArgs
 from ..runtime import FutureCompletionContext, InitializedRunContext, TemplateBuildContext
 
@@ -55,20 +56,15 @@ def create_template_build_context(
     existing_results_count: int,
 ) -> TemplateBuildContext:
     """Construct the template build context and seed its feedback cache count."""
-    template_build_ctx = TemplateBuildContext(
-        options=TemplateBuildOptions.from_args(args),
-        template_library_file=str(args.template_library_file or ""),
-        all_fields=fields,
+    template_build_ctx = build_template_build_context(
+        args=args,
+        fields=fields,
         template_library=run_ctx.template_library,
-        template_registry=run_ctx.historical_state.template_registry,
-        template_family_registry=run_ctx.historical_state.template_family_registry,
-        template_registry_overrides=run_ctx.historical_state.template_registry_overrides,
-        field_feedback=run_ctx.historical_state.field_feedback,
-        global_failed_check_counts=run_ctx.historical_state.global_failed_check_counts,
-        include_templates=run_ctx.filters.include_templates,
-        exclude_templates=run_ctx.filters.exclude_templates,
+        historical_state=run_ctx.historical_state,
+        filters=run_ctx.filters,
         use_dataset_heuristics=run_ctx.use_dataset_heuristics,
-        expression_policy=run_ctx.expression_policy,
+        existing_results_count=existing_results_count,
     )
-    template_build_ctx.feedback_result_count = existing_results_count
+    if run_ctx.expression_policy is not None:
+        template_build_ctx.expression_policy = run_ctx.expression_policy
     return template_build_ctx
