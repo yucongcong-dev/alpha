@@ -114,7 +114,7 @@ class RunConfigArgs(Protocol):
     min_request_interval: float
     template_disable_after: int
     top_fields_by_feedback: int
-    stop_after_submittable: bool
+    stop_after_submittable: int
 
     auto_update_blacklist: bool
     smoke_test: bool
@@ -125,7 +125,7 @@ class RunConfigArgs(Protocol):
 
 
 class StopAfterSubmittableArgs(Protocol):
-    stop_after_submittable: bool
+    stop_after_submittable: int
 
 
 class BootstrapRuntimeArgs(

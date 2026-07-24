@@ -291,7 +291,7 @@ class SchedulerConfig:
 class RunLoopConfig(SimulationStageConfig, SchedulerConfig):
     dry_run_plan: bool = False
     field_template_batch_size: int = 0
-    stop_after_submittable: bool = False
+    stop_after_submittable: int = 0
 
     @classmethod
     def from_args(cls, args: RunLoopArgs) -> RunLoopConfig:
@@ -332,7 +332,7 @@ class RunLoopConfig(SimulationStageConfig, SchedulerConfig):
             auto_update_blacklist=scheduler.auto_update_blacklist,
             dry_run_plan=bool(args.dry_run_plan),
             field_template_batch_size=int(args.field_template_batch_size or 0),
-            stop_after_submittable=bool(args.stop_after_submittable),
+            stop_after_submittable=int(args.stop_after_submittable or 0),
         )
 
 
