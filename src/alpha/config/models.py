@@ -54,6 +54,7 @@ class DatasetExpressionPolicy:
 
     dataset_id: str = ""
     use_curated_heuristics: bool = False
+    closed_default_template_library: bool = False
     partner_limit: int = 4
     account_template_boost: int = 0
     high_conviction_ratio_priority_boost: int = 0

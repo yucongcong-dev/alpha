@@ -119,6 +119,19 @@ def _is_explicit_refine_library(template_library_file: str) -> bool:
     return "refine" in parts
 
 
+def _is_dataset_default_library(template_library_file: str, dataset_id: str) -> bool:
+    """判断是否正在使用 templates/<dataset>/library.json 这类默认主模板库。"""
+    if not template_library_file or not dataset_id:
+        return False
+    path = Path(template_library_file)
+    if path.name.lower() != "library.json":
+        return False
+    parts = [part.strip().lower() for part in path.parts]
+    if len(parts) < 2:
+        return False
+    return parts[-2] == dataset_id.strip().lower()
+
+
 def _resolve_activation_scope(candidate: TemplateCandidate) -> str:
     """模板激活范围，默认 broad。"""
     raw_scope = str(candidate.metadata.get("activation_scope", "")).strip().lower()
@@ -144,6 +157,21 @@ def _template_scope_allowed(
     if activation_scope == "diagnostic":
         return explicit_refine_library or feedback_stage == FEEDBACK_STAGE_RESIMULATE
     return True
+
+
+def _is_closed_candidate_library(
+    template_library_file: str,
+    *,
+    dataset_id: str,
+    policy: DatasetExpressionPolicy,
+) -> bool:
+    """判断当前模板库是否应被视为闭合集，不再自动外扩默认候选。"""
+    if _is_explicit_refine_library(template_library_file):
+        return True
+    return bool(
+        policy.closed_default_template_library
+        and _is_dataset_default_library(template_library_file, dataset_id)
+    )
 
 
 
@@ -190,7 +218,11 @@ def build_expression_candidates(
     is_event_field = _is_event_field(field_name, policy)
     backfill_window = get_runtime_config().expression.backfill_window
 
-    explicit_refine_library = _is_explicit_refine_library(build_ctx.template_library_file)
+    closed_candidate_library = _is_closed_candidate_library(
+        build_ctx.template_library_file,
+        dataset_id=policy.dataset_id,
+        policy=policy,
+    )
     raw_templates = _select_template_items(build_ctx.template_library, field_type, policy.dataset_id)
     templates = [
         _make_template_candidate(
@@ -216,7 +248,7 @@ def build_expression_candidates(
             policy=policy,
         )
     ]
-    if not explicit_refine_library:
+    if not closed_candidate_library:
         templates.extend(
             build_feedback_mutations(
                 field_name,
@@ -226,9 +258,9 @@ def build_expression_candidates(
             )
         )
 
-    # An explicit refine library is expected to be a closed candidate set.
-    # Do not silently re-expand it with auto-generated MATRIX neighbors.
-    if field_type == "MATRIX" and not explicit_refine_library:
+    # Closed candidate libraries are expected to remain compact and explicit.
+    # Do not silently re-expand them with auto-generated MATRIX neighbors.
+    if field_type == "MATRIX" and not closed_candidate_library:
         diversified, legacy = build_matrix_templates(
             field_view,
             all_fields,

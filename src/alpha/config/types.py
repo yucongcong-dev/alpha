@@ -88,6 +88,7 @@ class DatasetProfile(TypedDict, total=False):
 class ExpressionPolicyOverrides(TypedDict, total=False):
     """expression_policies 段中单个数据集的覆盖配置。"""
     use_curated_heuristics: bool
+    closed_default_template_library: bool
     partner_limit: int
     positive_raw_fields: list[str]
     negative_raw_fields: list[str]

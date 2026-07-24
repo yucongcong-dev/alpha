@@ -364,6 +364,7 @@ expression_policies:
   # --------------------------------------------------------------------------
   model16:
     use_curated_heuristics: true
+    closed_default_template_library: true
     default_field_transform:
       stages:
         - kind: "backfill"
@@ -521,6 +522,7 @@ expression_policies:
   # --------------------------------------------------------------------------
   model51:
     use_curated_heuristics: true
+    closed_default_template_library: true
     ratio_partner_candidates:
       beta_last_30_days_spy: ["correlation_last_30_days_spy", "systematic_risk_last_30_days"]
       beta_last_60_days_spy: ["correlation_last_60_days_spy", "systematic_risk_last_60_days"]
