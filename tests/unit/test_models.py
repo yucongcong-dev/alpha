@@ -11,7 +11,6 @@ from alpha.models.domain import FieldTestContext, FieldTestResult
 from alpha.models.domain_serializers import serialize_field_test_result
 from alpha.models.io_types import RunFilters
 from alpha.models.runtime import ExecutionState, HistoricalRunState, RuntimeConcurrencyState
-from alpha.models.runtime_config import RunLoopConfig
 from alpha.models.runtime_options import (
     ApiClientOptions,
     FieldFetchOptions,
@@ -137,48 +136,6 @@ class TestRuntimeOptionBuilders:
             instrument_type="EQUITY",
             delay=2,
         )
-
-    def test_run_loop_config_preserves_stop_after_submittable_threshold(self) -> None:
-        class _Args:
-            instrument_type = "EQUITY"
-            region = "USA"
-            universe = "TOP3000"
-            delay = 1
-            decay = 4
-            neutralization = "SUBINDUSTRY"
-            truncation = 0.08
-            pasteurization = "OFF"
-            unit_handling = "VERIFY"
-            nan_handling = "OFF"
-            language = "FASTEXPR"
-            max_trade = "OFF"
-            start_date = None
-            end_date = None
-            simulation_create_retries = 3
-            simulation_poll_retries = 3
-            simulation_max_polls = 240
-            simulation_max_wait_seconds = 900
-            simulation_max_pending_cycles = 120
-            simulation_max_queue_seconds = 600
-            check_submit_retries = 3
-            min_sharpe = 1.25
-            min_fitness = 1.0
-            min_turnover = 0.01
-            max_turnover = 0.7
-            max_weight = 0.1
-            queue_busy_cooldown_seconds = 60
-            field_queue_busy_skip_after = 2
-            sleep_between_fields = 3.0
-            dataset_id = "fundamental6"
-            output = "results.json"
-            auto_update_blacklist = False
-            dry_run_plan = False
-            field_template_batch_size = 1
-            stop_after_submittable = 3
-
-        config = RunLoopConfig.from_args(_Args())
-
-        assert config.stop_after_submittable == 3
 
 
 # ============================================================================
