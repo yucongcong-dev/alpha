@@ -19,6 +19,12 @@ from alpha.core.scheduler import (
     register_queue_busy_field,
     throttle_before_submission,
 )
+from alpha.core.scheduler_decisions import (
+    decide_drain_state_updates,
+    decide_queue_busy_update,
+    should_restore_runtime_concurrency,
+    submission_throttle_delay,
+)
 from alpha.models.domain import FieldTestResult
 from alpha.models.runtime import (
     ExecutionState,
@@ -27,6 +33,62 @@ from alpha.models.runtime import (
     RuntimeConcurrencyState,
 )
 from tests.conftest import MockArgs
+
+
+def test_drain_state_decision_combines_stop_queue_and_cooldown() -> None:
+    decision = decide_drain_state_updates(
+        stop_threshold=2,
+        current_submittable_count=2,
+        congestion_detected=True,
+        queue_busy_field_id="field_1",
+        current_queue_busy_count=1,
+        queue_busy_skip_after=2,
+    )
+
+    assert decision.activate_stop_signal is True
+    assert decision.apply_congestion_cooldown is True
+    assert decision.queue_busy.field_id == "field_1"
+    assert decision.queue_busy.next_count == 2
+    assert decision.queue_busy.should_skip is True
+
+
+def test_queue_busy_decision_is_disabled_without_positive_threshold() -> None:
+    decision = decide_queue_busy_update("field_1", current_count=7, skip_after=0)
+
+    assert decision.should_register is False
+    assert decision.next_count == 0
+
+
+def test_submission_throttle_delay_is_deterministic_and_clamped() -> None:
+    assert (
+        submission_throttle_delay(
+            interval_seconds=5.0,
+            last_submission_at=100.0,
+            now=103.5,
+        )
+        == 1.5
+    )
+    assert (
+        submission_throttle_delay(
+            interval_seconds=5.0,
+            last_submission_at=100.0,
+            now=106.0,
+        )
+        == 0.0
+    )
+
+
+def test_restore_concurrency_decision_has_no_clock_side_effect() -> None:
+    assert (
+        should_restore_runtime_concurrency(
+            cooldown_until=10.0,
+            runtime_max_workers=1,
+            max_workers=5,
+            now=10.0,
+        )
+        is True
+    )
+
 
 # ============================================================================
 # maybe_restore_runtime_concurrency 测试
@@ -451,3 +513,70 @@ def test_drain_completed_futures_sets_stop_signal_and_cancels_unstarted_future()
         assert execution_state.stop_signal.is_set() is True
         assert queued_future not in execution_state.pending_futures
         blocker.cancel()
+
+
+def test_drain_completed_futures_keeps_queued_future_before_stop_threshold() -> None:
+    done_future: Future[object] = Future()
+    done_future.set_result(None)
+    queued_future: Future[object] = Future()
+    execution_state = ExecutionState(
+        results=[
+            FieldTestResult(
+                field_id="field_done",
+                field_type="MATRIX",
+                field_name="field_done",
+                template_name="tpl_done",
+                status="simulated",
+                submittable=True,
+                expression="rank(field_done)",
+            )
+        ],
+        attempted_keys=set(),
+        template_stats={},
+        pending_futures={
+            done_future: PendingFutureContext(
+                field_id="field_done",
+                field_name="field_done",
+                field_type="MATRIX",
+                template_name="tpl_done",
+                expression="rank(field_done)",
+                settings_fingerprint="done-fp",
+            ),
+            queued_future: PendingFutureContext(
+                field_id="field_queued",
+                field_name="field_queued",
+                field_type="MATRIX",
+                template_name="tpl_queued",
+                expression="rank(field_queued)",
+                settings_fingerprint="queued-fp",
+            ),
+        },
+        field_queue_busy_counts={},
+        skipped_fields_due_to_queue=set(),
+    )
+    args = argparse.Namespace(
+        dataset_id="fundamental6",
+        output="raw-results.json",
+        auto_update_blacklist=False,
+        field_queue_busy_skip_after=0,
+        queue_busy_cooldown_seconds=0,
+        stop_after_submittable=2,
+    )
+
+    with patch(
+        "alpha.core.scheduler.apply_completed_result",
+        return_value=({}, False, None),
+    ):
+        drain_completed_futures(
+            completed_futures=[done_future],
+            execution_state=execution_state,
+            args=args,
+            settings_fingerprint="settings-fp",
+            template_library_fingerprint="templates-fp",
+            run_config={},
+            runtime_state=RuntimeConcurrencyState(max_workers=1, runtime_max_workers=1),
+        )
+
+    assert execution_state.stop_signal.is_set() is False
+    assert queued_future in execution_state.pending_futures
+    assert queued_future.cancelled() is False

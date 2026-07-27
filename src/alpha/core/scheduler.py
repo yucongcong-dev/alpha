@@ -16,9 +16,9 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 from concurrent.futures import Future
-from dataclasses import dataclass
 import logging
 import time
+from typing import NamedTuple
 
 from ..analysis.result_identity import (
     is_informative_result,
@@ -34,9 +34,17 @@ from ..runtime.contexts import FutureCompletionContext
 from ..runtime.state import ExecutionState, RuntimeConcurrencyState
 from .result_processing import apply_completed_result
 from .scheduler_completion import (
-    apply_drain_feedback,
     build_completion_context,
     resolve_completed_future_result,
+)
+from .scheduler_decisions import (
+    DrainStateDecision,
+    QueueBusyDecision,
+    decide_drain_state_updates,
+    decide_queue_busy_update,
+    resolve_congestion_cooldown_until,
+    should_restore_runtime_concurrency,
+    submission_throttle_delay,
 )
 
 logger = logging.getLogger(__name__)
@@ -47,16 +55,6 @@ def _stop_after_submittable_threshold(args: SchedulerRuntimeArgs) -> int:
         return int(getattr(args, "stop_after_submittable", 0) or 0)
     except (TypeError, ValueError):
         return 0
-
-
-def _activate_stop_signal_if_ready(
-    args: SchedulerRuntimeArgs,
-    execution_state: ExecutionState,
-) -> None:
-    stop_threshold = _stop_after_submittable_threshold(args)
-    current_count = execution_state.refresh_metrics().submittable_count
-    if stop_threshold > 0 and current_count >= stop_threshold:
-        execution_state.stop_signal.set()
 
 
 def _cancel_unstarted_pending_futures(execution_state: ExecutionState) -> None:
@@ -70,8 +68,28 @@ def _cancel_unstarted_pending_futures(execution_state: ExecutionState) -> None:
             )
 
 
-@dataclass
-class DrainResult:
+def _apply_queue_busy_decision(
+    decision: QueueBusyDecision,
+    *,
+    skip_after: int,
+    field_queue_busy_counts: dict[str, int],
+    skipped_fields_due_to_queue: set[str],
+) -> None:
+    """Apply one queue-busy state decision and emit its transition log."""
+    if not decision.should_register or decision.field_id is None:
+        return
+    field_queue_busy_counts[decision.field_id] = decision.next_count
+    if decision.should_skip:
+        skipped_fields_due_to_queue.add(decision.field_id)
+        logger.info(
+            "[skip] field=%s hit queue-busy limit %d/%d",
+            decision.field_id,
+            decision.next_count,
+            skip_after,
+        )
+
+
+class DrainResult(NamedTuple):
     """批量结果消费的结果对象（不可变）"""
 
     template_stats: dict[str, dict[str, int]]
@@ -86,10 +104,11 @@ class DrainResult:
 
 def maybe_restore_runtime_concurrency(state: RuntimeConcurrencyState) -> None:
     """在拥塞冷却结束后恢复正常并发度。"""
-    if (
-        state.cooldown_until
-        and time.monotonic() >= state.cooldown_until
-        and state.runtime_max_workers != state.max_workers
+    if should_restore_runtime_concurrency(
+        cooldown_until=state.cooldown_until,
+        runtime_max_workers=state.runtime_max_workers,
+        max_workers=state.max_workers,
+        now=time.monotonic(),
     ):
         state.runtime_max_workers = state.max_workers
         state.cooldown_until = 0.0
@@ -102,7 +121,10 @@ def maybe_restore_runtime_concurrency(state: RuntimeConcurrencyState) -> None:
 def apply_congestion_cooldown(args: SchedulerRuntimeArgs, state: RuntimeConcurrencyState) -> None:
     """检测到拥塞后，临时切换到单 worker 运行模式。"""
     state.runtime_max_workers = 1
-    state.cooldown_until = time.monotonic() + max(args.queue_busy_cooldown_seconds, 0.0)
+    state.cooldown_until = resolve_congestion_cooldown_until(
+        now=time.monotonic(),
+        cooldown_seconds=args.queue_busy_cooldown_seconds,
+    )
     logger.info(
         "[cooldown] detected queue congestion, runtime concurrency -> 1 for %.0fs",
         args.queue_busy_cooldown_seconds,
@@ -116,29 +138,51 @@ def register_queue_busy_field(
     skipped_fields_due_to_queue: set[str],
 ) -> None:
     """记录重复的排队拥塞字段，并在达到阈值后跳过该字段。"""
-    if not field_id or args.field_queue_busy_skip_after <= 0:
-        return
-    field_queue_busy_counts[field_id] = field_queue_busy_counts.get(field_id, 0) + 1
-    if field_queue_busy_counts[field_id] >= args.field_queue_busy_skip_after:
-        skipped_fields_due_to_queue.add(field_id)
-        logger.info(
-            "[skip] field=%s hit queue-busy limit %d/%d",
-            field_id,
-            field_queue_busy_counts[field_id],
-            args.field_queue_busy_skip_after,
-        )
+    decision = decide_queue_busy_update(
+        field_id,
+        current_count=field_queue_busy_counts.get(field_id or "", 0),
+        skip_after=args.field_queue_busy_skip_after,
+    )
+    _apply_queue_busy_decision(
+        decision,
+        skip_after=args.field_queue_busy_skip_after,
+        field_queue_busy_counts=field_queue_busy_counts,
+        skipped_fields_due_to_queue=skipped_fields_due_to_queue,
+    )
 
 
 def throttle_before_submission(args: SchedulerRuntimeArgs, execution_state: ExecutionState) -> None:
     """在提交新任务前控制节奏，避免阻塞已完成任务处理。"""
-    if args.sleep_between_fields <= 0:
-        return
-    if execution_state.last_submission_at <= 0:
-        return
-    elapsed = time.monotonic() - execution_state.last_submission_at
-    remaining = args.sleep_between_fields - elapsed
+    remaining = submission_throttle_delay(
+        interval_seconds=args.sleep_between_fields,
+        last_submission_at=execution_state.last_submission_at,
+        now=time.monotonic(),
+    )
     if remaining > 0:
         wait_seconds(remaining, "before next template submission")
+
+
+def _apply_drain_state_decision(
+    decision: DrainStateDecision,
+    *,
+    args: SchedulerRuntimeArgs,
+    execution_state: ExecutionState,
+    runtime_state: RuntimeConcurrencyState,
+) -> None:
+    """Apply a previously computed post-persistence scheduler decision."""
+    if decision.activate_stop_signal:
+        execution_state.stop_signal.set()
+        _cancel_unstarted_pending_futures(execution_state)
+
+    _apply_queue_busy_decision(
+        decision.queue_busy,
+        skip_after=args.field_queue_busy_skip_after,
+        field_queue_busy_counts=execution_state.field_queue_busy_counts,
+        skipped_fields_due_to_queue=execution_state.skipped_fields_due_to_queue,
+    )
+
+    if decision.apply_congestion_cooldown:
+        apply_congestion_cooldown(args, runtime_state)
 
 
 # ============================================================================
@@ -151,7 +195,7 @@ def handle_completed_future(
     *,
     completion_ctx: FutureCompletionContext,
     execution_state: ExecutionState,
-) -> tuple[dict[str, dict[str, int]], bool, str | None]:
+) -> DrainResult:
     """
     收尾一个 worker future，落盘结果并回传拥塞信号。
 
@@ -180,7 +224,7 @@ def handle_completed_future(
         template_library_fingerprint=completion_ctx.template_library_fingerprint,
     )
 
-    return apply_completed_result(
+    template_stats, congestion_detected, queue_busy_field_id = apply_completed_result(
         result,
         completion_ctx=completion_ctx,
         execution_state=execution_state,
@@ -189,6 +233,7 @@ def handle_completed_future(
         result_identity_fn=result_identity,
         update_template_stats_with_result_fn=update_template_stats_with_result,
     )
+    return DrainResult(template_stats, congestion_detected, queue_busy_field_id)
 
 
 # ============================================================================
@@ -255,22 +300,28 @@ def drain_completed_futures_with_context(
 ) -> dict[str, dict[str, int]]:
     """Consume completed futures using a prebuilt immutable completion context."""
     for done_future in completed_futures:
-        execution_state.template_stats, congestion_detected, queue_busy_field_id = (
-            handle_completed_future(
-                done_future,
-                completion_ctx=completion_ctx,
-                execution_state=execution_state,
-            )
+        drain_result = handle_completed_future(
+            done_future,
+            completion_ctx=completion_ctx,
+            execution_state=execution_state,
         )
-        _activate_stop_signal_if_ready(args, execution_state)
-        _cancel_unstarted_pending_futures(execution_state)
-        apply_drain_feedback(
+        execution_state.template_stats = drain_result.template_stats
+        current_submittable_count = execution_state.refresh_metrics().submittable_count
+        queue_busy_field_id = drain_result.queue_busy_field_id
+        decision = decide_drain_state_updates(
+            stop_threshold=_stop_after_submittable_threshold(args),
+            current_submittable_count=current_submittable_count,
+            congestion_detected=drain_result.congestion_detected,
+            queue_busy_field_id=queue_busy_field_id,
+            current_queue_busy_count=execution_state.field_queue_busy_counts.get(
+                queue_busy_field_id or "", 0
+            ),
+            queue_busy_skip_after=args.field_queue_busy_skip_after,
+        )
+        _apply_drain_state_decision(
+            decision,
             args=args,
             execution_state=execution_state,
             runtime_state=runtime_state,
-            congestion_detected=congestion_detected,
-            queue_busy_field_id=queue_busy_field_id,
-            register_queue_busy_field_fn=register_queue_busy_field,
-            apply_congestion_cooldown_fn=apply_congestion_cooldown,
         )
     return execution_state.template_stats

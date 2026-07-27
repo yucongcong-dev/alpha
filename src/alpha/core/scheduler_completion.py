@@ -1,4 +1,4 @@
-"""Helpers for future completion and drain-time scheduler effects."""
+"""Helpers for future completion context and result resolution."""
 
 from __future__ import annotations
 
@@ -11,7 +11,6 @@ from ..runtime.contexts import (
     FutureCompletionContext,
     PendingFutureContext,
 )
-from ..runtime.state import ExecutionState, RuntimeConcurrencyState
 from .simulation import build_failure_result
 
 
@@ -70,24 +69,3 @@ def resolve_completed_future_result(
             failed_stage="worker",
             message=str(exc),
         )
-
-
-def apply_drain_feedback(
-    *,
-    args: SchedulerRuntimeArgs,
-    execution_state: ExecutionState,
-    runtime_state: RuntimeConcurrencyState,
-    congestion_detected: bool,
-    queue_busy_field_id: str | None,
-    register_queue_busy_field_fn,
-    apply_congestion_cooldown_fn,
-) -> None:
-    """Apply queue-busy tracking and cooldown side effects after one completed future."""
-    register_queue_busy_field_fn(
-        queue_busy_field_id,
-        args,
-        execution_state.field_queue_busy_counts,
-        execution_state.skipped_fields_due_to_queue,
-    )
-    if congestion_detected:
-        apply_congestion_cooldown_fn(args, runtime_state)
