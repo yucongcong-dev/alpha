@@ -116,6 +116,6 @@ clean-runtime:
 
 clean-dev:
 	@find src tests -type d -name '__pycache__' -prune -exec rm -rf {} +
-	@rm -rf __pycache__ .pycache .mypy_cache .pytest_cache .ruff_cache tmp/pycache
+	@rm -rf __pycache__ .pycache .mypy_cache .pytest_cache .ruff_cache .coverage htmlcov tmp/pycache
 	@find src -maxdepth 2 -type d -name '*.egg-info' -prune -exec rm -rf {} +
-	@echo "[clean-dev] removed Python bytecode, tool caches, and package metadata"
+	@echo "[clean-dev] removed Python bytecode, tool caches, coverage, and package metadata"

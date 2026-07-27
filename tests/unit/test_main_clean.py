@@ -9,10 +9,20 @@ from alpha.main import clean_runtime_artifacts
 
 def test_clean_runtime_artifacts_preserves_credentials(tmp_path) -> None:
     """clean should remove runtime dirs while keeping credentials by default."""
-    for dirname in ("cache", "results", ".credentials"):
+    for dirname in (
+        "cache",
+        "results",
+        ".credentials",
+        ".pytest_cache",
+        ".mypy_cache",
+        ".ruff_cache",
+        "htmlcov",
+    ):
         path = tmp_path / dirname
         path.mkdir()
         (path / "marker.txt").write_text("x", encoding="utf-8")
+    coverage_file = tmp_path / ".coverage"
+    coverage_file.write_text("x", encoding="utf-8")
     dataset_dir = tmp_path / "datasets" / "fundamental6"
     for dirname in ("cache", "runs", "presets"):
         path = dataset_dir / dirname
@@ -34,6 +44,11 @@ def test_clean_runtime_artifacts_preserves_credentials(tmp_path) -> None:
     assert blacklist_file.exists()
     assert template_file.exists()
     assert (tmp_path / ".credentials").exists()
+    assert (tmp_path / ".pytest_cache").exists()
+    assert (tmp_path / ".mypy_cache").exists()
+    assert (tmp_path / ".ruff_cache").exists()
+    assert (tmp_path / "htmlcov").exists()
+    assert coverage_file.exists()
 
 
 def test_clean_runtime_artifacts_can_include_credentials(tmp_path) -> None:

@@ -32,11 +32,6 @@ def clean_runtime_artifacts(
         # Legacy runtime roots remain cleanable during the layout transition.
         project_root / "cache",
         project_root / "results",
-        project_root / ".pytest_cache",
-        project_root / ".mypy_cache",
-        project_root / ".ruff_cache",
-        project_root / ".coverage",
-        project_root / "htmlcov",
     ]
     if args.include_credentials:
         targets.append(project_root / ".credentials")

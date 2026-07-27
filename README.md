@@ -351,9 +351,10 @@ python3.10 -m alpha clean --include-credentials
 make clean-dev
 ```
 
-`alpha clean` 只负责数据集的 `cache/`、`runs/` 等运行产物；`make clean-dev`
-只负责 `__pycache__`、`.pycache`、`.mypy_cache`、`.pytest_cache`、`.ruff_cache`
-和 `*.egg-info` 等可重建的开发环境产物。
+`alpha clean` 只负责数据集的 `cache/`、`runs/` 和迁移前遗留的根目录
+`cache/`、`results/`；`make clean-dev` 只负责 `__pycache__`、`.pycache`、
+`.mypy_cache`、`.pytest_cache`、`.ruff_cache`、coverage 和 `*.egg-info` 等
+可重建的开发环境产物。
 
 ### YAML 开关覆盖
 
