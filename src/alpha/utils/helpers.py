@@ -45,4 +45,8 @@ def is_event_field_name(field_name: str, prefixes: tuple[str, ...] = ()) -> bool
     normalized = str(field_name).strip().lower()
     if not normalized:
         return False
-    return any(normalized.startswith(str(prefix).strip().lower()) for prefix in prefixes if str(prefix).strip())
+    return any(
+        normalized.startswith(str(prefix).strip().lower())
+        for prefix in prefixes
+        if str(prefix).strip()
+    )

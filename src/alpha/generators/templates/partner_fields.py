@@ -105,7 +105,10 @@ def discover_partner_fields(
     for partner_name in policy.ratio_partner_candidates.get(field_name, ()):
         if partner_name == field_name:
             continue
-        if partner_name not in available_by_name and partner_name not in ALLOWED_EXTERNAL_RATIO_PARTNERS:
+        if (
+            partner_name not in available_by_name
+            and partner_name not in ALLOWED_EXTERNAL_RATIO_PARTNERS
+        ):
             continue
         candidates.append((10_000 - len(candidates), partner_name))
 

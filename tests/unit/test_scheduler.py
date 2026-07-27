@@ -358,7 +358,9 @@ def test_drain_completed_futures_prefers_explicit_result_write_options() -> None
         auto_update_blacklist=False,
     )
 
-    with patch("alpha.core.scheduler.apply_completed_result", return_value=({}, False, None)) as mock_apply:
+    with patch(
+        "alpha.core.scheduler.apply_completed_result", return_value=({}, False, None)
+    ) as mock_apply:
         drain_completed_futures(
             completed_futures=[future],
             execution_state=execution_state,

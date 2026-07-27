@@ -29,6 +29,7 @@ def _json_default(obj: Any) -> Any:
         return obj.to_dict()
     if hasattr(obj, "__dataclass_fields__"):
         import dataclasses
+
         return dataclasses.asdict(obj)
     raise TypeError(f"Object of type {type(obj).__name__} is not JSON serializable")
 
@@ -39,5 +40,7 @@ def stable_fingerprint(payload: Any) -> str:
 
     Generate a stable short hash for config, template, or result identity.
     """
-    text = json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":"), default=_json_default)
+    text = json.dumps(
+        payload, ensure_ascii=False, sort_keys=True, separators=(",", ":"), default=_json_default
+    )
     return hashlib.sha256(text.encode("utf-8")).hexdigest()[:STABLE_FINGERPRINT_HEX_LEN]

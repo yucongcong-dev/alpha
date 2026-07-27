@@ -80,7 +80,10 @@ _EXPORT_MAP: ExportMap = {
     "run_field_test_in_worker": (".simulation", "run_field_test_in_worker"),
     "summarize_failure": (".simulation", "summarize_failure"),
     "build_pending_template_variants": (".template_planning", "build_pending_template_variants"),
-    "resolve_field_template_candidates": (".template_planning", "resolve_field_template_candidates"),
+    "resolve_field_template_candidates": (
+        ".template_planning",
+        "resolve_field_template_candidates",
+    ),
 }
 
 __all__ = list(_EXPORT_MAP)

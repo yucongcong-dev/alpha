@@ -57,49 +57,115 @@ def apply_yaml_global_defaults(
             if yaml_key in sim_section:
                 _assign_if_supported(args, arg_key, sim_section[yaml_key], explicit_cli_keys)
 
-    _merge_section(args, sim_section, {
-        "region", "universe", "delay", "decay", "neutralization",
-        "truncation", "pasteurization", "language",
-    }, explicit_cli_keys)
+    _merge_section(
+        args,
+        sim_section,
+        {
+            "region",
+            "universe",
+            "delay",
+            "decay",
+            "neutralization",
+            "truncation",
+            "pasteurization",
+            "language",
+        },
+        explicit_cli_keys,
+    )
 
-    _merge_section(args, global_cfg.get("limits", {}), {
-        "limit", "offset", "page_size", "sleep_between_fields",
-        "max_templates_per_field", "max_templates_per_family", "field_template_batch_size",
-        "legacy_similarity_penalty", "disable_legacy_after",
-    }, explicit_cli_keys)
+    _merge_section(
+        args,
+        global_cfg.get("limits", {}),
+        {
+            "limit",
+            "offset",
+            "page_size",
+            "sleep_between_fields",
+            "max_templates_per_field",
+            "max_templates_per_family",
+            "field_template_batch_size",
+            "legacy_similarity_penalty",
+            "disable_legacy_after",
+        },
+        explicit_cli_keys,
+    )
 
-    _merge_section(args, global_cfg.get("concurrency", {}), {
-        "max_concurrent_simulations",
-        "max_concurrent_creates",
-    }, explicit_cli_keys)
+    _merge_section(
+        args,
+        global_cfg.get("concurrency", {}),
+        {
+            "max_concurrent_simulations",
+            "max_concurrent_creates",
+        },
+        explicit_cli_keys,
+    )
 
-    _merge_section(args, global_cfg.get("retries", {}), {
-        "simulation_create_retries", "simulation_poll_retries",
-        "simulation_max_polls", "simulation_max_wait_seconds",
-        "simulation_max_pending_cycles", "simulation_max_queue_seconds",
-        "queue_busy_cooldown_seconds", "field_queue_busy_skip_after",
-        "check_submit_retries",
-        "rate_limit_max_retries", "login_retries", "min_request_interval",
-    }, explicit_cli_keys)
+    _merge_section(
+        args,
+        global_cfg.get("retries", {}),
+        {
+            "simulation_create_retries",
+            "simulation_poll_retries",
+            "simulation_max_polls",
+            "simulation_max_wait_seconds",
+            "simulation_max_pending_cycles",
+            "simulation_max_queue_seconds",
+            "queue_busy_cooldown_seconds",
+            "field_queue_busy_skip_after",
+            "check_submit_retries",
+            "rate_limit_max_retries",
+            "login_retries",
+            "min_request_interval",
+        },
+        explicit_cli_keys,
+    )
 
-    _merge_section(args, global_cfg.get("filters", {}), {
-        "template_disable_after", "top_fields_by_feedback",
-        "stop_after_submittable",
-    }, explicit_cli_keys)
+    _merge_section(
+        args,
+        global_cfg.get("filters", {}),
+        {
+            "template_disable_after",
+            "top_fields_by_feedback",
+            "stop_after_submittable",
+        },
+        explicit_cli_keys,
+    )
 
-    _merge_section(args, global_cfg.get("quality", {}), {
-        "min_sharpe", "min_fitness", "min_turnover",
-        "max_turnover", "max_weight",
-    }, explicit_cli_keys)
+    _merge_section(
+        args,
+        global_cfg.get("quality", {}),
+        {
+            "min_sharpe",
+            "min_fitness",
+            "min_turnover",
+            "max_turnover",
+            "max_weight",
+        },
+        explicit_cli_keys,
+    )
 
-    _merge_section(args, global_cfg.get("expression", {}), {
-        "backfill_window",
-    }, explicit_cli_keys)
+    _merge_section(
+        args,
+        global_cfg.get("expression", {}),
+        {
+            "backfill_window",
+        },
+        explicit_cli_keys,
+    )
 
-    _merge_section(args, global_cfg.get("runtime", {}), {
-        "auto_update_blacklist", "smoke_test", "dry_run_plan", "full_run",
-        "verbose", "quiet",
-    }, explicit_cli_keys)
+    _merge_section(
+        args,
+        global_cfg.get("runtime", {}),
+        {
+            "auto_update_blacklist",
+            "smoke_test",
+            "dry_run_plan",
+            "full_run",
+            "verbose",
+            "quiet",
+        },
+        explicit_cli_keys,
+    )
 
 
 def _merge_section(

@@ -92,7 +92,10 @@ def _build_blacklist_entry_from_runtime_summary(
     ):
         return None
     if (
-        (summary.template_role in _REGISTRY_SOFT_ROLES or summary.template_activation_scope in _REGISTRY_SOFT_SCOPES)
+        (
+            summary.template_role in _REGISTRY_SOFT_ROLES
+            or summary.template_activation_scope in _REGISTRY_SOFT_SCOPES
+        )
         and not has_concentrated_failure_pattern
         and (
             (avg_sharpe is None or avg_sharpe >= policy.blacklist_protected_min_avg_sharpe)
@@ -163,7 +166,9 @@ def auto_update_blacklist(
     }
     added = 0
     for entry in new_entries:
-        entry_key = build_blacklist_entry_key(entry.name, entry.template_stage, entry.template_family)
+        entry_key = build_blacklist_entry_key(
+            entry.name, entry.template_stage, entry.template_family
+        )
         if entry_key not in existing_keys:
             bl_data[LEARNED_BLACKLIST_KEY].append(entry.to_dict())
             existing_keys.add(entry_key)

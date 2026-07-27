@@ -225,7 +225,9 @@ def fetch_fields_with_cache(
     """
     if cached_fields:
         fields = [parse_template_field(f) if isinstance(f, dict) else f for f in cached_fields]
-        logger.info("[cache] 从 %s 加载 %d 个字段", os.path.basename(fields_cache_file), len(fields))
+        logger.info(
+            "[cache] 从 %s 加载 %d 个字段", os.path.basename(fields_cache_file), len(fields)
+        )
         return fields
 
     logger.info("[cache] 未命中有效缓存，首次拉取当前上下文下的全量字段")

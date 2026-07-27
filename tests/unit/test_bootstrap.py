@@ -60,8 +60,12 @@ def test_initialize_run_context_prefers_run_paths_for_cache_and_credentials(monk
     monkeypatch.setattr(
         "alpha.app.bootstrap.cleanup_legacy_sidecar_files", lambda *_args, **_kwargs: None
     )
-    monkeypatch.setattr("alpha.app.bootstrap.ensure_analysis_synced", lambda *_args, **_kwargs: None)
-    monkeypatch.setattr("alpha.app.bootstrap.build_run_config_snapshot", lambda *_args, **_kwargs: {})
+    monkeypatch.setattr(
+        "alpha.app.bootstrap.ensure_analysis_synced", lambda *_args, **_kwargs: None
+    )
+    monkeypatch.setattr(
+        "alpha.app.bootstrap.build_run_config_snapshot", lambda *_args, **_kwargs: {}
+    )
     monkeypatch.setattr(
         "alpha.app.bootstrap.ensure_dataset_template_library",
         lambda template_library_file, _dataset_id: template_library_file,
@@ -88,7 +92,9 @@ def test_initialize_run_context_prefers_run_paths_for_cache_and_credentials(monk
         "alpha.app.bootstrap.get_dataset_expression_policy",
         lambda *_args, **_kwargs: type("Policy", (), {"use_curated_heuristics": False})(),
     )
-    monkeypatch.setattr("alpha.app.bootstrap.stable_fingerprint", lambda *_args, **_kwargs: "tpl-fp")
+    monkeypatch.setattr(
+        "alpha.app.bootstrap.stable_fingerprint", lambda *_args, **_kwargs: "tpl-fp"
+    )
     monkeypatch.setattr(
         "alpha.app.bootstrap.build_settings_fingerprint", lambda *_args, **_kwargs: "settings-fp"
     )
@@ -158,7 +164,9 @@ def test_initialize_run_context_builds_fallback_run_paths_when_missing(monkeypat
     monkeypatch.setattr(
         "alpha.app.bootstrap.cleanup_legacy_sidecar_files", lambda *_args, **_kwargs: None
     )
-    monkeypatch.setattr("alpha.app.bootstrap.ensure_analysis_synced", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr(
+        "alpha.app.bootstrap.ensure_analysis_synced", lambda *_args, **_kwargs: None
+    )
 
     def _capture_run_config(_args, run_paths):
         captured["run_paths"] = run_paths
@@ -191,7 +199,9 @@ def test_initialize_run_context_builds_fallback_run_paths_when_missing(monkeypat
         "alpha.app.bootstrap.get_dataset_expression_policy",
         lambda *_args, **_kwargs: type("Policy", (), {"use_curated_heuristics": False})(),
     )
-    monkeypatch.setattr("alpha.app.bootstrap.stable_fingerprint", lambda *_args, **_kwargs: "tpl-fp")
+    monkeypatch.setattr(
+        "alpha.app.bootstrap.stable_fingerprint", lambda *_args, **_kwargs: "tpl-fp"
+    )
     monkeypatch.setattr(
         "alpha.app.bootstrap.build_settings_fingerprint", lambda *_args, **_kwargs: "settings-fp"
     )

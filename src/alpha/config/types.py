@@ -13,16 +13,17 @@ from typing import Any, Optional, TypedDict
 
 class ConfigSource(Enum):
     """配置来源枚举"""
-    CODE_CONSTANTS = "code_constants"           # 代码常量 (最低优先级)
-    CONSTANTS_DEFAULTS = "constants_defaults"   # 代码级默认值
-    TEMPLATES = "templates"                     # 模板默认值
-    QUALITY_FEEDBACK = "quality_feedback"       # 质量反馈默认值
-    DATASET_PROFILES = "dataset_profiles"       # 数据集profile
-    EXPRESSION_POLICIES = "expression_policies" # 数据集策略
-    SETTINGS = "settings"                       # 主配置文件
-    CUSTOM_CONFIG = "custom_config"            # 自定义配置文件
-    RUNTIME_OVERRIDE = "runtime_override"      # 运行时覆盖
-    COMMAND_LINE = "command_line"               # 命令行参数 (最高优先级)
+
+    CODE_CONSTANTS = "code_constants"  # 代码常量 (最低优先级)
+    CONSTANTS_DEFAULTS = "constants_defaults"  # 代码级默认值
+    TEMPLATES = "templates"  # 模板默认值
+    QUALITY_FEEDBACK = "quality_feedback"  # 质量反馈默认值
+    DATASET_PROFILES = "dataset_profiles"  # 数据集profile
+    EXPRESSION_POLICIES = "expression_policies"  # 数据集策略
+    SETTINGS = "settings"  # 主配置文件
+    CUSTOM_CONFIG = "custom_config"  # 自定义配置文件
+    RUNTIME_OVERRIDE = "runtime_override"  # 运行时覆盖
+    COMMAND_LINE = "command_line"  # 命令行参数 (最高优先级)
 
     @classmethod
     def from_yaml_name(cls, name: str) -> Optional[ConfigSource]:
@@ -61,6 +62,7 @@ YamlConfig = dict[str, Any]
 
 class YamlConfigTyped(TypedDict, total=False):
     """YAML 配置 TypedDict（用于类型提示和自动补全）。"""
+
     global_: ConfigSection
     dataset_profiles: dict[str, DatasetProfile]
     expression_policies: dict[str, ExpressionPolicyOverrides]
@@ -68,11 +70,13 @@ class YamlConfigTyped(TypedDict, total=False):
 
 class ConfigSection(TypedDict, total=False):
     """任意一级配置段。"""
+
     pass  # 字段由具体路径决定
 
 
 class DatasetProfile(TypedDict, total=False):
     """单个数据集的运行参数 profile。"""
+
     min_request_interval: float
     sleep_between_fields: float
     max_concurrent_simulations: int
@@ -87,6 +91,7 @@ class DatasetProfile(TypedDict, total=False):
 
 class ExpressionPolicyOverrides(TypedDict, total=False):
     """expression_policies 段中单个数据集的覆盖配置。"""
+
     use_curated_heuristics: bool
     closed_default_template_library: bool
     partner_limit: int

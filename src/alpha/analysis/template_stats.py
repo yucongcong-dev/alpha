@@ -126,7 +126,11 @@ def historical_template_priority_bonus(
     if stat[STAT_FIELD_SUBMITTABLE] > 0:
         return TEMPLATE_HISTORY_SUBMITTABLE_BONUS * multiplier
     if stat[STAT_FIELD_SIMULATED] > 0:
-        bonus = TEMPLATE_HISTORY_SIMULATED_BASE + min(stat[STAT_FIELD_SIMULATED], TEMPLATE_HISTORY_SIMULATED_CAP) * TEMPLATE_HISTORY_SIMULATED_STEP
+        bonus = (
+            TEMPLATE_HISTORY_SIMULATED_BASE
+            + min(stat[STAT_FIELD_SIMULATED], TEMPLATE_HISTORY_SIMULATED_CAP)
+            * TEMPLATE_HISTORY_SIMULATED_STEP
+        )
         if stat.get(STAT_FIELD_SUBMITTABLE, 0) == 0 and stat.get(STAT_FIELD_SIMULATED, 0) >= 3:
             if stat.get(STAT_FIELD_LOW_SHARPE, 0) >= 3 and stat.get(STAT_FIELD_LOW_FITNESS, 0) >= 3:
                 bonus += TEMPLATE_HISTORY_LOW_PERF_PENALTY

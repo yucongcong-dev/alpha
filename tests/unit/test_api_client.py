@@ -78,7 +78,9 @@ def test_httpx_backend_syncs_cookies_in_both_directions() -> None:
             self.jar = CookieJar()
 
         def set(self, name: str, value: str, *, domain: str | None = None, path: str = "/") -> None:
-            self.jar.set_cookie(_make_cookie(name, value, domain=domain or "api.worldquantbrain.com"))
+            self.jar.set_cookie(
+                _make_cookie(name, value, domain=domain or "api.worldquantbrain.com")
+            )
 
     class _FakeResponse:
         def __init__(self) -> None:
@@ -100,7 +102,9 @@ def test_httpx_backend_syncs_cookies_in_both_directions() -> None:
     jar.set_cookie(_make_cookie("session", "old"))
 
     backend.load_cookies(jar)
-    assert any(cookie.name == "session" and cookie.value == "old" for cookie in backend._client.cookies.jar)
+    assert any(
+        cookie.name == "session" and cookie.value == "old" for cookie in backend._client.cookies.jar
+    )
 
     status, _headers, body = backend.request("GET", "https://api.worldquantbrain.com/ping")
 

@@ -83,6 +83,7 @@ class FailedCheck:
             result["result"] = self.result
         return result
 
+
 @dataclass(frozen=True)
 class TemplateLibraryItem:
     """模板库中的单个模板项。"""

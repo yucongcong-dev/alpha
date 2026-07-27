@@ -52,9 +52,7 @@ def _merge_manual_override(
         priority_adjustment=int(
             manual_override.get("priority_adjustment", merged["priority_adjustment"]) or 0
         ),
-        should_suppress=bool(
-            manual_override.get("should_suppress", merged["should_suppress"])
-        ),
+        should_suppress=bool(manual_override.get("should_suppress", merged["should_suppress"])),
         reason=str(manual_override.get("reason", merged["reason"]) or ""),
     )
     return merged
@@ -184,9 +182,11 @@ def build_template_execution_decision(
         reason=role_recommendation["reason"],
     )
 
-    effective_priority = priority + historical_template_priority_bonus(
-        template_name, template_stats
-    ) + int(role_recommendation["priority_adjustment"])
+    effective_priority = (
+        priority
+        + historical_template_priority_bonus(template_name, template_stats)
+        + int(role_recommendation["priority_adjustment"])
+    )
     effective_variant_budget = _resolve_effective_variant_budget(
         base_variant_budget=base_variant_budget,
         role_recommendation=role_recommendation,

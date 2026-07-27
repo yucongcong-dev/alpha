@@ -197,7 +197,9 @@ def load_pipeline_state(
     # 恢复上次提交时间（需注意单调钟在进程重启后不连续）
     if last_submission > 0:
         # 保守估计：减去一个安全余量，避免立即节流
-        execution_state.last_submission_at = max(0, time.monotonic() - CHECKPOINT_RESUME_SAFETY_SECONDS)
+        execution_state.last_submission_at = max(
+            0, time.monotonic() - CHECKPOINT_RESUME_SAFETY_SECONDS
+        )
 
     logger.info(
         "[checkpoint] resumed from state_file=%s completed=%d "
@@ -256,7 +258,9 @@ def save_checkpoint(
             "expression": str(meta.expression),
             "settings_fingerprint": str(meta.settings_fingerprint),
         }
-        for meta in list(execution_state.pending_futures.values())[-CHECKPOINT_PENDING_FUTURES_LIMIT:]
+        for meta in list(execution_state.pending_futures.values())[
+            -CHECKPOINT_PENDING_FUTURES_LIMIT:
+        ]
     ]
 
     payload: dict[str, Any] = {

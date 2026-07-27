@@ -78,7 +78,9 @@ def test_update_field_feedback_includes_self_correlation_pending() -> None:
     result = _make_result(
         status="simulated",
         submittable=True,
-        failed_checks=[{"name": "SELF_CORRELATION", "result": "PENDING", "value": None, "limit": None}],
+        failed_checks=[
+            {"name": "SELF_CORRELATION", "result": "PENDING", "value": None, "limit": None}
+        ],
     )
     update_field_feedback_with_result(feedback, result)
     assert "cash_st" in feedback

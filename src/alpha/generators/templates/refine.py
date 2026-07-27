@@ -32,6 +32,7 @@ from .variation_common import is_blacklisted_template as _is_blacklisted_templat
 
 def _make_window_replacer(replacement: int) -> Callable[[re.Match[str]], str]:
     """构建时间窗替换回调，显式绑定 replacement 避免循环闭包问题。"""
+
     def replacer(m: re.Match[str]) -> str:
         return f"{m.group(1)}{replacement}{m.group(3)}"
 
@@ -145,7 +146,12 @@ def build_refine_templates(
         if GROUP_NAME_SUBINDUSTRY in lower_expr:
             add_candidate(
                 f"refine_industry_{index}_{candidate.template_name}",
-                re.sub(rf"\b{GROUP_NAME_SUBINDUSTRY}\b", GROUP_NAME_INDUSTRY, candidate.expression, count=1),
+                re.sub(
+                    rf"\b{GROUP_NAME_SUBINDUSTRY}\b",
+                    GROUP_NAME_INDUSTRY,
+                    candidate.expression,
+                    count=1,
+                ),
                 base_priority + REFINE_PRIORITY_SUBINDUSTRY_DELTA,
                 family=family,
                 stage=stage,

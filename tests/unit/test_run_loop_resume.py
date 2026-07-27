@@ -104,7 +104,9 @@ def test_drain_remaining_futures_persists_total_field_count() -> None:
 
     with (
         patch("alpha.app.loop_future_support.wait", return_value=({future}, set())),
-        patch("alpha.app.loop_future_support.drain_completed_futures_with_context", side_effect=_drain),
+        patch(
+            "alpha.app.loop_future_support.drain_completed_futures_with_context", side_effect=_drain
+        ),
         patch("alpha.app.run_loop_resume.save_pipeline_state") as mock_save,
     ):
         drain_remaining_futures(
@@ -123,7 +125,10 @@ def test_drain_remaining_futures_persists_total_field_count() -> None:
 
 
 def test_run_field_test_loop_persists_progress_for_skipped_fields(tmp_path) -> None:
-    fields = [{"id": "f1", "type": "MATRIX", "name": "f1"}, {"id": "f2", "type": "MATRIX", "name": "f2"}]
+    fields = [
+        {"id": "f1", "type": "MATRIX", "name": "f1"},
+        {"id": "f2", "type": "MATRIX", "name": "f2"},
+    ]
     run_ctx = _build_run_ctx(fields)
     args = argparse.Namespace(
         dry_run_plan=False,

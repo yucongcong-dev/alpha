@@ -82,7 +82,9 @@ class BrainSessionMixin:
                     response_headers.get("Retry-After"),
                 )
                 wait_seconds(
-                    doubled_retry_after(response_headers, default=http_config.rate_limit_default_wait),
+                    doubled_retry_after(
+                        response_headers, default=http_config.rate_limit_default_wait
+                    ),
                     "rate limit",
                 )
                 continue
@@ -92,7 +94,10 @@ class BrainSessionMixin:
                 continue
             if status in (500, 502, 503, 504):
                 wait_seconds(
-                    min(http_config.server_error_backoff_max, attempt * http_config.server_error_backoff_step),
+                    min(
+                        http_config.server_error_backoff_max,
+                        attempt * http_config.server_error_backoff_step,
+                    ),
                     f"server error {status}",
                 )
                 continue
@@ -104,7 +109,9 @@ class BrainSessionMixin:
             raise BrainAPIError(f"No response from {method} {url}")
         status, response_headers, content = last_response
         if status == 429:
-            retry_after = doubled_retry_after(response_headers, default=http_config.rate_limit_default_wait)
+            retry_after = doubled_retry_after(
+                response_headers, default=http_config.rate_limit_default_wait
+            )
             detail = safe_json_bytes(content)
             raise BrainRateLimitError(
                 f"{method} {url} rate limited after {retries} attempts, "

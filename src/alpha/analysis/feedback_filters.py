@@ -87,7 +87,9 @@ def is_legacy_family_disabled(
 def _is_high_conviction_ratio(expression: str, policy: DatasetExpressionPolicy) -> bool:
     """识别策略中值得继续探索的高经济含义比值方向。"""
     lower_expr = expression.lower()
-    return any(f"{left}/{right}" in lower_expr for left, right in policy.high_conviction_ratio_pairs)
+    return any(
+        f"{left}/{right}" in lower_expr for left, right in policy.high_conviction_ratio_pairs
+    )
 
 
 def should_keep_template_for_feedback(

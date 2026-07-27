@@ -91,9 +91,15 @@ def field_priority(field_id: str, field_feedback: FieldFeedbackMap) -> float:
         return STATS_DEFAULT_SCORE
     best_score = float(summary.get("best_score", STATS_DEFAULT_SCORE))
     attempted_templates = int(summary.get(STAT_FIELD_ATTEMPTED_TEMPLATES, 0) or 0)
-    if attempted_templates >= FIELD_PRIORITY_ATTEMPTED_HIGH and best_score < FIELD_PRIORITY_SCORE_HIGH:
+    if (
+        attempted_templates >= FIELD_PRIORITY_ATTEMPTED_HIGH
+        and best_score < FIELD_PRIORITY_SCORE_HIGH
+    ):
         return STATS_DEFAULT_SCORE - float(attempted_templates)
-    if attempted_templates >= FIELD_PRIORITY_ATTEMPTED_LOW and best_score < FIELD_PRIORITY_SCORE_LOW:
+    if (
+        attempted_templates >= FIELD_PRIORITY_ATTEMPTED_LOW
+        and best_score < FIELD_PRIORITY_SCORE_LOW
+    ):
         return STATS_DEFAULT_SCORE - float(attempted_templates)
     return best_score
 

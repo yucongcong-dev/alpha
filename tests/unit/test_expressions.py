@@ -253,7 +253,9 @@ def test_load_default_avoid_rules_ignores_invalid_json_shape(monkeypatch, tmp_pa
 def test_build_expression_candidates_narrows_event_field_template_pool() -> None:
     policy = get_dataset_expression_policy("fundamental6")
     field = {"id": "fnd6_cptnewqeventv110_apq", "type": "VECTOR"}
-    template_file = Path(__file__).resolve().parents[2] / "templates" / "fundamental6" / "library.json"
+    template_file = (
+        Path(__file__).resolve().parents[2] / "templates" / "fundamental6" / "library.json"
+    )
     template_library = load_template_library(str(template_file))
 
     build_ctx = TemplateBuildContext(
@@ -292,7 +294,9 @@ def test_fundamental6_refine_vector_templates_do_not_double_wrap_vec_avg() -> No
     template_library = load_template_library(str(template_file))
 
     build_ctx = TemplateBuildContext(
-        options=TemplateBuildOptions(**_DEFAULT_SIM_SETTINGS, dataset_id="fundamental6", legacy_similarity_penalty=0),
+        options=TemplateBuildOptions(
+            **_DEFAULT_SIM_SETTINGS, dataset_id="fundamental6", legacy_similarity_penalty=0
+        ),
         all_fields=[field],
         template_library_file=str(template_file),
         template_library=template_library,

@@ -33,9 +33,7 @@ def collect_explicit_cli_keys(parser: argparse.ArgumentParser, argv: list[str]) 
     """Collect argparse destination names explicitly provided on the command line."""
     explicit_keys: set[str] = set()
     option_to_dest = {
-        option: action.dest
-        for action in parser._actions
-        for option in action.option_strings
+        option: action.dest for action in parser._actions for option in action.option_strings
     }
     for token in argv:
         option = token.split("=", 1)[0]

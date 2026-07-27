@@ -227,7 +227,7 @@ def retry_on_error(
                     last_exception = exc
                     if attempt == max_retries - 1:
                         raise
-                    current_delay = delay * (backoff_factor ** attempt)
+                    current_delay = delay * (backoff_factor**attempt)
                     logger.warning(
                         "Retry %d/%d for %s: %s. Waiting %.1fs",
                         attempt + 1,

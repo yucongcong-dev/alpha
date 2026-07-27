@@ -54,7 +54,6 @@ class SimulationStageConfig(SimulationSettingsConfig):
     simulation_max_queue_seconds: int = 0
     check_submit_retries: int = 0
 
-
     min_sharpe: float = 0.0
     min_fitness: float = 0.0
     min_turnover: float = 0.0

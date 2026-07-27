@@ -103,7 +103,9 @@ def deep_merge(base: YamlConfig, override: YamlConfig, max_depth: int = 6) -> Ya
     result: YamlConfig = cast(YamlConfig, dict(base))
     for key, value in override.items():
         if key in result and isinstance(result[key], dict) and isinstance(value, dict):
-            result[key] = deep_merge(cast(YamlConfig, result[key]), cast(YamlConfig, value), max_depth - 1)
+            result[key] = deep_merge(
+                cast(YamlConfig, result[key]), cast(YamlConfig, value), max_depth - 1
+            )
         else:
             result[key] = value
     return result
@@ -150,7 +152,9 @@ def config_file_signature(path: str | None) -> tuple[int, int] | None:
     return (stat.st_mtime_ns, stat.st_size)
 
 
-def all_files_signature(settings_path: str | None = None) -> tuple[tuple[str, int, int], ...] | None:
+def all_files_signature(
+    settings_path: str | None = None,
+) -> tuple[tuple[str, int, int], ...] | None:
     """Return an aggregate signature for all resolved YAML files."""
     sigs: list[tuple[str, int, int]] = []
     resolved_files = resolve_all_yaml_files(settings_path)

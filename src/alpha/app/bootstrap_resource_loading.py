@@ -42,7 +42,9 @@ def load_bootstrap_supporting_resources(
 ) -> BootstrapLoadedResources:
     """Load template library, blacklist, filters, and historical feedback state."""
     set_active_blacklists_dir_fn(paths.blacklists_dir)
-    template_library_file = ensure_dataset_template_library_fn(paths.template_library_file, dataset_id)
+    template_library_file = ensure_dataset_template_library_fn(
+        paths.template_library_file, dataset_id
+    )
     blacklist_path = ensure_template_blacklist_file_fn(dataset_id)
 
     template_library = load_template_library_fn(template_library_file)

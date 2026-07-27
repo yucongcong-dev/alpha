@@ -29,8 +29,7 @@ _DEFAULT_SIM_SETTINGS = {
 def test_apply_transform_pipeline_backfill_then_winsorize() -> None:
     spec = FieldTransformSpec(backfill_window=120, winsorize_std=4.0)
     assert (
-        apply_transform_pipeline("cash_st", spec)
-        == "winsorize(ts_backfill(cash_st, 120), std=4)"
+        apply_transform_pipeline("cash_st", spec) == "winsorize(ts_backfill(cash_st, 120), std=4)"
     )
 
 
@@ -64,7 +63,9 @@ def test_build_expression_candidates_uses_preprocessed_raw_field_view() -> None:
     policy = get_dataset_expression_policy("fundamental6")
     template_library = {"default": []}
     build_ctx = TemplateBuildContext(
-        options=TemplateBuildOptions(**_DEFAULT_SIM_SETTINGS, dataset_id="fundamental6", legacy_similarity_penalty=0),
+        options=TemplateBuildOptions(
+            **_DEFAULT_SIM_SETTINGS, dataset_id="fundamental6", legacy_similarity_penalty=0
+        ),
         all_fields=[{"id": "assets_curr", "type": "MATRIX"}],
         template_library=template_library,
     )
@@ -72,7 +73,6 @@ def test_build_expression_candidates_uses_preprocessed_raw_field_view() -> None:
         field={"id": "cash_st", "type": "MATRIX"},
         build_ctx=build_ctx,
         max_templates_per_field=200,
-
         max_templates_per_family=200,
         expression_policy=policy,
     )
@@ -89,7 +89,9 @@ def test_fundamental6_account_templates_use_preprocessed_field_view() -> None:
     policy = get_dataset_expression_policy("fundamental6")
     template_library = load_template_library("templates/fundamental6/library.json")
     build_ctx = TemplateBuildContext(
-        options=TemplateBuildOptions(**_DEFAULT_SIM_SETTINGS, dataset_id="fundamental6", legacy_similarity_penalty=0),
+        options=TemplateBuildOptions(
+            **_DEFAULT_SIM_SETTINGS, dataset_id="fundamental6", legacy_similarity_penalty=0
+        ),
         all_fields=[{"id": "assets_curr", "type": "MATRIX"}],
         template_library=template_library,
     )
@@ -102,7 +104,9 @@ def test_fundamental6_account_templates_use_preprocessed_field_view() -> None:
     )
 
     by_name = {name: expression for name, expression, _ in candidates}
-    assert by_name["account_rank_backfill_504"] == "rank(winsorize(ts_backfill(cash_st, 120), std=4))"
+    assert (
+        by_name["account_rank_backfill_504"] == "rank(winsorize(ts_backfill(cash_st, 120), std=4))"
+    )
     assert by_name["account_bucket_cap_zscore_60"] == (
         "group_rank(ts_zscore(winsorize(ts_backfill(cash_st, 120), std=4), 60), densify(bucket(rank(cap), range='0.1, 1, 0.1')))"
     )
@@ -112,7 +116,9 @@ def test_model16_templates_include_bucket_groups() -> None:
     policy = get_dataset_expression_policy("model16")
     template_library = load_template_library("templates/model16/library.json")
     build_ctx = TemplateBuildContext(
-        options=TemplateBuildOptions(**_DEFAULT_SIM_SETTINGS, dataset_id="model16", legacy_similarity_penalty=0),
+        options=TemplateBuildOptions(
+            **_DEFAULT_SIM_SETTINGS, dataset_id="model16", legacy_similarity_penalty=0
+        ),
         all_fields=[{"id": "quality_score", "type": "MATRIX"}],
         template_library=template_library,
     )
@@ -133,7 +139,9 @@ def test_model51_templates_include_bucket_groups() -> None:
     policy = get_dataset_expression_policy("model51")
     template_library = load_template_library("templates/model51/library.json")
     build_ctx = TemplateBuildContext(
-        options=TemplateBuildOptions(**_DEFAULT_SIM_SETTINGS, dataset_id="model51", legacy_similarity_penalty=0),
+        options=TemplateBuildOptions(
+            **_DEFAULT_SIM_SETTINGS, dataset_id="model51", legacy_similarity_penalty=0
+        ),
         all_fields=[{"id": "market_beta", "type": "MATRIX"}],
         template_library=template_library,
     )

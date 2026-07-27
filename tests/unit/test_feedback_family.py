@@ -250,7 +250,10 @@ def test_build_historical_run_state_loads_persisted_template_registry(tmp_path) 
     assert state.template_registry["core_template"]["recommended_role"] == "promoted_core"
     assert state.template_stats["core_template"]["registry_recommended_role"] == "promoted_core"
     assert state.template_family_registry["ts_rank"]["recommended_scope"] == "broad"
-    assert state.template_registry_overrides["template_overrides"]["core_template"]["recommended_role"] == "promoted_core"
+    assert (
+        state.template_registry_overrides["template_overrides"]["core_template"]["recommended_role"]
+        == "promoted_core"
+    )
 
 
 def test_resimulate_stage_blocks_iter_templates_outside_preferred_stages() -> None:
@@ -449,7 +452,11 @@ def test_build_refine_templates_deduplicates_identical_expressions() -> None:
         expression_policy=get_dataset_expression_policy("fundamental6"),
     )
 
-    exact_templates = [template for template in templates if template.expression == "rank(ts_zscore(ts_backfill(cash_st, 504), 120))"]
+    exact_templates = [
+        template
+        for template in templates
+        if template.expression == "rank(ts_zscore(ts_backfill(cash_st, 504), 120))"
+    ]
 
     assert len(exact_templates) == 1
     assert exact_templates[0].name == "refine_exact_1_model51_ts_zscore_120"

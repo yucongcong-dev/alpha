@@ -178,7 +178,9 @@ def compile_optimization_hints(
     near_pass_summary: Sequence[dict[str, Any]],
 ) -> list[str]:
     """根据失败分布生成下一轮搜索建议。"""
-    dominant_names = {str(row.get("name")) for row in failed_check_leaderboard[:OPTIMIZATION_HINT_TOP_N]}
+    dominant_names = {
+        str(row.get("name")) for row in failed_check_leaderboard[:OPTIMIZATION_HINT_TOP_N]
+    }
     hints: list[str] = []
     if not failed_check_leaderboard:
         return ["还没有失败检查记录；先运行更广泛的探索样本。"]

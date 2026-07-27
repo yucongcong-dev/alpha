@@ -105,7 +105,9 @@ def apply_similarity_penalty(
     return penalized
 
 
-def dominant_failed_check_names(counts: dict[str, int], limit: int = DOMINANT_FAILED_CHECK_LIMIT) -> set[str]:
+def dominant_failed_check_names(
+    counts: dict[str, int], limit: int = DOMINANT_FAILED_CHECK_LIMIT
+) -> set[str]:
     """
     返回失败检查计数最高的若干名称。
 
@@ -174,11 +176,27 @@ _PRIORITY_RULES: list[tuple[set[str], Any, int]] = [
         lambda f, n: f.startswith("group_") or f in _GROUP_FAMILIES,
         PRIORITY_ADJ_GROUP_LOW_SHARPE,
     ),
-    ({CHECK_LOW_SHARPE, CHECK_LOW_SUB_UNIVERSE_SHARPE}, lambda f, n: f in _SIGNAL_FAMILIES, PRIORITY_ADJ_SIGNAL_LOW_SHARPE),
-    ({CHECK_LOW_SHARPE, CHECK_LOW_SUB_UNIVERSE_SHARPE}, lambda f, n: f in _LEGACY_FAMILIES, PRIORITY_ADJ_LEGACY_LOW_SHARPE),
-    ({CHECK_LOW_FITNESS}, lambda f, n: "delta" in f or "spread" in f or n.startswith("iter_"), PRIORITY_ADJ_DELTA_LOW_FITNESS),
+    (
+        {CHECK_LOW_SHARPE, CHECK_LOW_SUB_UNIVERSE_SHARPE},
+        lambda f, n: f in _SIGNAL_FAMILIES,
+        PRIORITY_ADJ_SIGNAL_LOW_SHARPE,
+    ),
+    (
+        {CHECK_LOW_SHARPE, CHECK_LOW_SUB_UNIVERSE_SHARPE},
+        lambda f, n: f in _LEGACY_FAMILIES,
+        PRIORITY_ADJ_LEGACY_LOW_SHARPE,
+    ),
+    (
+        {CHECK_LOW_FITNESS},
+        lambda f, n: "delta" in f or "spread" in f or n.startswith("iter_"),
+        PRIORITY_ADJ_DELTA_LOW_FITNESS,
+    ),
     ({CHECK_LOW_FITNESS}, lambda f, n: f in _LEGACY_BASIC, PRIORITY_ADJ_LEGACY_BASIC_LOW_FITNESS),
-    ({CHECK_LOW_FITNESS}, lambda f, n: f in {"group_vol_scaled_delta", "vol_scaled_delta"}, PRIORITY_ADJ_VOL_SCALED_LOW_FITNESS),
+    (
+        {CHECK_LOW_FITNESS},
+        lambda f, n: f in {"group_vol_scaled_delta", "vol_scaled_delta"},
+        PRIORITY_ADJ_VOL_SCALED_LOW_FITNESS,
+    ),
     (
         {CHECK_LOW_TURNOVER},
         lambda f, n: "delta" in f or n.startswith(("iter_rank_delta", "iter_rank_then_delta")),
@@ -197,10 +215,16 @@ _PRIORITY_RULES: list[tuple[set[str], Any, int]] = [
     ({CHECK_HIGH_TURNOVER}, lambda f, n: "delta" in f, PRIORITY_ADJ_DELTA_HIGH_TURNOVER),
     (
         {CHECK_CONCENTRATED_WEIGHT},
-        lambda f, n: f.startswith("group_") and f not in {"group_vol_scaled_delta", "vol_scaled_delta"},
+        lambda f, n: (
+            f.startswith("group_") and f not in {"group_vol_scaled_delta", "vol_scaled_delta"}
+        ),
         PRIORITY_ADJ_GROUP_CONCENTRATED,
     ),
-    ({CHECK_CONCENTRATED_WEIGHT}, lambda f, n: f in {"group_vol_scaled_delta", "vol_scaled_delta"}, PRIORITY_ADJ_VOL_SCALED_CONCENTRATED),
+    (
+        {CHECK_CONCENTRATED_WEIGHT},
+        lambda f, n: f in {"group_vol_scaled_delta", "vol_scaled_delta"},
+        PRIORITY_ADJ_VOL_SCALED_CONCENTRATED,
+    ),
     (
         {CHECK_CONCENTRATED_WEIGHT},
         lambda f, n: f in {"legacy_ratio", "legacy_neg_ratio", "group_ratio_level"},

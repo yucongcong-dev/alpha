@@ -175,7 +175,6 @@ def _is_closed_candidate_library(
     )
 
 
-
 def sort_templates_by_priority(
     templates: Sequence[TemplateCandidate | tuple[str, str, int]],
 ) -> list[TemplateCandidate]:
@@ -240,7 +239,9 @@ def build_expression_candidates(
         dataset_id=policy.dataset_id,
         policy=policy,
     )
-    raw_templates = _select_template_items(build_ctx.template_library, field_type, policy.dataset_id)
+    raw_templates = _select_template_items(
+        build_ctx.template_library, field_type, policy.dataset_id
+    )
     templates = [
         _make_template_candidate(
             item.name,

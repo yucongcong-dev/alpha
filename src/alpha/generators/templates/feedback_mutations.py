@@ -59,7 +59,8 @@ def build_feedback_mutations(
         mutations.extend(build_nearpass_extension_mutations(field_name, bw))
 
     if feedback_stage == FEEDBACK_STAGE_RESIMULATE and (
-        best_template_name in {"account_rank_backfill_504", "account_ir_60"} or best_score >= MUTATION_ACCOUNT_EXTEND_THRESHOLD
+        best_template_name in {"account_rank_backfill_504", "account_ir_60"}
+        or best_score >= MUTATION_ACCOUNT_EXTEND_THRESHOLD
     ):
         mutations.extend(build_account_resimulation_mutations(field_name, bw))
 

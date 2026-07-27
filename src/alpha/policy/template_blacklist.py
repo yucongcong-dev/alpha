@@ -176,7 +176,10 @@ def _load_blacklist(dataset_id: str) -> None:
                     if normalized_rule is not None:
                         pattern_rules.append(normalized_rule)
         except OSError:
-            logger.warning("[blacklist] failed to load dataset blacklist from %s; ignoring file", blacklist_path)
+            logger.warning(
+                "[blacklist] failed to load dataset blacklist from %s; ignoring file",
+                blacklist_path,
+            )
 
     for rule in default_rules:
         if isinstance(rule, dict):

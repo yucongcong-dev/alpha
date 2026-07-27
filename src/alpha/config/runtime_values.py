@@ -130,12 +130,22 @@ def load_http_runtime_config() -> HttpRuntimeConfig:
     section = yaml_global_section("http")
     return HttpRuntimeConfig(
         request_timeout=float(section.get("request_timeout", HTTP_REQUEST_TIMEOUT)),
-        rate_limit_default_wait=float(section.get("rate_limit_default_wait", RATE_LIMIT_DEFAULT_WAIT)),
+        rate_limit_default_wait=float(
+            section.get("rate_limit_default_wait", RATE_LIMIT_DEFAULT_WAIT)
+        ),
         polling_default_wait=float(section.get("polling_default_wait", POLLING_DEFAULT_WAIT)),
-        polling_no_retry_after_wait=float(section.get("polling_no_retry_after_wait", POLLING_NO_RETRY_AFTER_WAIT)),
-        server_error_backoff_max=float(section.get("server_error_backoff_max", SERVER_ERROR_BACKOFF_MAX)),
-        server_error_backoff_step=float(section.get("server_error_backoff_step", SERVER_ERROR_BACKOFF_STEP)),
-        retry_operation_default_wait=float(section.get("retry_operation_default_wait", RETRY_OPERATION_DEFAULT_WAIT)),
+        polling_no_retry_after_wait=float(
+            section.get("polling_no_retry_after_wait", POLLING_NO_RETRY_AFTER_WAIT)
+        ),
+        server_error_backoff_max=float(
+            section.get("server_error_backoff_max", SERVER_ERROR_BACKOFF_MAX)
+        ),
+        server_error_backoff_step=float(
+            section.get("server_error_backoff_step", SERVER_ERROR_BACKOFF_STEP)
+        ),
+        retry_operation_default_wait=float(
+            section.get("retry_operation_default_wait", RETRY_OPERATION_DEFAULT_WAIT)
+        ),
         login_retry_wait=float(section.get("login_retry_wait", LOGIN_RETRY_WAIT)),
         simulation_retry_wait=float(section.get("simulation_retry_wait", SIMULATION_RETRY_WAIT)),
         polling_retry_buffer=float(section.get("polling_retry_buffer", POLLING_RETRY_BUFFER)),
@@ -150,18 +160,46 @@ def load_feedback_runtime_config() -> FeedbackRuntimeConfig:
     """
     section = yaml_global_section("feedback")
     return FeedbackRuntimeConfig(
-        settings_variant_budget_high=float(section.get("settings_variant_budget_high", SETTINGS_VARIANT_BUDGET_HIGH)),
-        settings_variant_budget_mid=float(section.get("settings_variant_budget_mid", SETTINGS_VARIANT_BUDGET_MID)),
-        feedback_mutation_nearpass_threshold=float(section.get("feedback_mutation_nearpass_threshold", FEEDBACK_MUTATION_NEARPASS_THRESHOLD)),
-        feedback_mutation_highscore_threshold=float(section.get("feedback_mutation_highscore_threshold", FEEDBACK_MUTATION_HIGHSCORE_THRESHOLD)),
-        feedback_template_min_priority=int(section.get("feedback_template_min_priority", FEEDBACK_TEMPLATE_MIN_PRIORITY)),
-        delta_std_priority_boost=int(section.get("delta_std_priority_boost", DELTA_STD_PRIORITY_BOOST)),
-        settings_nearpass_threshold=float(section.get("settings_nearpass_threshold", SETTINGS_NEARPASS_THRESHOLD)),
-        settings_close_threshold=float(section.get("settings_close_threshold", SETTINGS_CLOSE_THRESHOLD)),
-        expr_nearpass_boost_threshold=float(section.get("expr_nearpass_boost_threshold", EXPR_NEARPASS_BOOST_THRESHOLD)),
-        expr_iter_boost_threshold=float(section.get("expr_iter_boost_threshold", EXPR_ITER_BOOST_THRESHOLD)),
-        expr_ratio_penalty_threshold=float(section.get("expr_ratio_penalty_threshold", EXPR_RATIO_PENALTY_THRESHOLD)),
-        expr_mutation_extend_threshold=float(section.get("expr_mutation_extend_threshold", EXPR_MUTATION_EXTEND_THRESHOLD)),
+        settings_variant_budget_high=float(
+            section.get("settings_variant_budget_high", SETTINGS_VARIANT_BUDGET_HIGH)
+        ),
+        settings_variant_budget_mid=float(
+            section.get("settings_variant_budget_mid", SETTINGS_VARIANT_BUDGET_MID)
+        ),
+        feedback_mutation_nearpass_threshold=float(
+            section.get(
+                "feedback_mutation_nearpass_threshold", FEEDBACK_MUTATION_NEARPASS_THRESHOLD
+            )
+        ),
+        feedback_mutation_highscore_threshold=float(
+            section.get(
+                "feedback_mutation_highscore_threshold", FEEDBACK_MUTATION_HIGHSCORE_THRESHOLD
+            )
+        ),
+        feedback_template_min_priority=int(
+            section.get("feedback_template_min_priority", FEEDBACK_TEMPLATE_MIN_PRIORITY)
+        ),
+        delta_std_priority_boost=int(
+            section.get("delta_std_priority_boost", DELTA_STD_PRIORITY_BOOST)
+        ),
+        settings_nearpass_threshold=float(
+            section.get("settings_nearpass_threshold", SETTINGS_NEARPASS_THRESHOLD)
+        ),
+        settings_close_threshold=float(
+            section.get("settings_close_threshold", SETTINGS_CLOSE_THRESHOLD)
+        ),
+        expr_nearpass_boost_threshold=float(
+            section.get("expr_nearpass_boost_threshold", EXPR_NEARPASS_BOOST_THRESHOLD)
+        ),
+        expr_iter_boost_threshold=float(
+            section.get("expr_iter_boost_threshold", EXPR_ITER_BOOST_THRESHOLD)
+        ),
+        expr_ratio_penalty_threshold=float(
+            section.get("expr_ratio_penalty_threshold", EXPR_RATIO_PENALTY_THRESHOLD)
+        ),
+        expr_mutation_extend_threshold=float(
+            section.get("expr_mutation_extend_threshold", EXPR_MUTATION_EXTEND_THRESHOLD)
+        ),
     )
 
 
@@ -210,9 +248,11 @@ def load_submit_quality_runtime_config() -> QualityRuntimeConfig:
 # 统一运行时配置复合对象 — 消除 30 个 getter 包装函数的冗余 YAML 查询
 # ---------------------------------------------------------------------------
 
+
 @dataclass(frozen=True)
 class RuntimeConfig:
     """运行时配置的单一聚合快照。调用方直接通过属性访问，无需包装函数。"""
+
     http: HttpRuntimeConfig
     feedback: FeedbackRuntimeConfig
     expression: ExpressionRuntimeConfig
@@ -251,4 +291,3 @@ def clear_runtime_config_cache() -> None:
     """清除运行时配置缓存，强制下次访问重新加载。"""
     global _runtime_config_cache
     _runtime_config_cache = None
-

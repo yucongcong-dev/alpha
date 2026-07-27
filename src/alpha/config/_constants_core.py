@@ -65,8 +65,12 @@ def _yaml_val(*keys: str, default: Any = None, cast: type | None = str) -> Any:
         node = _resolve_yaml_key(yaml_data, keys)
 
     if node is None:
-        _warn_once(key_path, "YAML 配置 key '%s' 未找到，使用代码默认值。"
-                   "建议在 config/constants_defaults.yaml 中添加此项。", key_path)
+        _warn_once(
+            key_path,
+            "YAML 配置 key '%s' 未找到，使用代码默认值。"
+            "建议在 config/constants_defaults.yaml 中添加此项。",
+            key_path,
+        )
         return default
 
     if cast is None:
@@ -77,8 +81,13 @@ def _yaml_val(*keys: str, default: Any = None, cast: type | None = str) -> Any:
             return bool(node)
         return cast(node)
     except (TypeError, ValueError):
-        _warn_once(key_path, "配置 key '%s' 值类型转换失败 (cast=%s, got=%r)，使用默认值。",
-                   key_path, cast.__name__, type(node).__name__)
+        _warn_once(
+            key_path,
+            "配置 key '%s' 值类型转换失败 (cast=%s, got=%r)，使用默认值。",
+            key_path,
+            cast.__name__,
+            type(node).__name__,
+        )
         return default
 
 

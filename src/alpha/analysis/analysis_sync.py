@@ -21,6 +21,7 @@ from .template_stats import compile_template_stats
 
 logger = logging.getLogger(__name__)
 
+
 def ensure_analysis_synced(output_path: str) -> None:
     """确保 analysis 派生文件与主结果文件一致。"""
     if not output_path or not os.path.exists(output_path):

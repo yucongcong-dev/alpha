@@ -125,7 +125,7 @@ def test_expression_policy_can_be_overridden_from_yaml(monkeypatch) -> None:
                     "template_prefix_penalties": [
                         {"prefixes": ["delta_", "group_delta_"], "penalty": -500}
                     ],
-                }
+                },
             }
         },
     )
@@ -184,7 +184,12 @@ def test_fundamental6_default_policy_is_loaded_from_settings_yaml() -> None:
         FieldTransformStage(kind="backfill", window=120, std=None),
         FieldTransformStage(kind="winsorize", window=0, std=4.0),
     )
-    assert policy.template_prefix_penalties[("vec_avg_delta_", "vec_avg_rank_delta_", "vec_avg_vol_scaled_delta_")] == -820
+    assert (
+        policy.template_prefix_penalties[
+            ("vec_avg_delta_", "vec_avg_rank_delta_", "vec_avg_vol_scaled_delta_")
+        ]
+        == -820
+    )
     assert policy.feedback_loop_policy.resimulate.preferred_template_stages == (
         "group_second_order",
         "event_conditioned",
@@ -201,7 +206,10 @@ def test_model16_policy_uses_long_backfill_with_winsorize() -> None:
     )
     assert "model16_bucket_cap_ratio_zscore_120" in policy.protected_templates
     assert "model16_ratio_cap_zscore_120" in policy.protected_templates
-    assert ("analyst_revision_rank_derivative", "earnings_certainty_rank_derivative") not in policy.high_conviction_ratio_pairs
+    assert (
+        "analyst_revision_rank_derivative",
+        "earnings_certainty_rank_derivative",
+    ) not in policy.high_conviction_ratio_pairs
     assert not policy.ratio_delta_over_std_windows
 
 

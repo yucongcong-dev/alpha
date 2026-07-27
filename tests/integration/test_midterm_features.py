@@ -71,7 +71,7 @@ class TestErrorHandlingFramework:
                 ErrorContext(
                     severity=ErrorSeverity.WARNING,
                     category=ErrorCategory.VALIDATION,
-                )
+                ),
             )
 
         metrics = handler.get_metrics()
@@ -108,7 +108,7 @@ class TestIntegration:
                 e,
                 severity=ErrorSeverity.WARNING,
                 category=ErrorCategory.SYSTEM,
-                operation="integration_test"
+                operation="integration_test",
             )
 
         assert record.recovered is False

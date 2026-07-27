@@ -345,7 +345,11 @@ def test_precheck_simulation_metrics_loads_runtime_defaults(monkeypatch) -> None
     passed, _reason, failures = precheck_simulation_metrics(payload)
 
     assert passed is False
-    assert {item["name"] for item in failures} == {"LOW_SHARPE", "LOW_FITNESS", "CONCENTRATED_WEIGHT"}
+    assert {item["name"] for item in failures} == {
+        "LOW_SHARPE",
+        "LOW_FITNESS",
+        "CONCENTRATED_WEIGHT",
+    }
 
 
 def test_precheck_simulation_metrics_preserves_explicit_thresholds(monkeypatch) -> None:

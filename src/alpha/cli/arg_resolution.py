@@ -54,7 +54,9 @@ def apply_dataset_profile_defaults(
     profile = get_dataset_profile(args.dataset_id, yaml_config)
     profile_dict = cast(dict[str, object], profile)
     yaml_profiles = (yaml_config or {}).get("dataset_profiles", {})
-    yaml_dataset_cfg = yaml_profiles.get(args.dataset_id, {}) if isinstance(yaml_profiles, dict) else {}
+    yaml_dataset_cfg = (
+        yaml_profiles.get(args.dataset_id, {}) if isinstance(yaml_profiles, dict) else {}
+    )
 
     for key in DATASET_PROFILE_KEYS:
         if key in explicit_cli_keys or key not in profile_dict:
@@ -73,8 +75,12 @@ def apply_run_mode_overrides(args: argparse.Namespace) -> None:
         args.max_templates_per_field = 1
         args.max_concurrent_simulations = 1
         args.max_concurrent_creates = 1
-        args.simulation_max_pending_cycles = min(args.simulation_max_pending_cycles, SMOKE_TEST_MAX_PENDING_CYCLES)
-        args.simulation_max_queue_seconds = min(args.simulation_max_queue_seconds, SMOKE_TEST_MAX_QUEUE_SECONDS)
+        args.simulation_max_pending_cycles = min(
+            args.simulation_max_pending_cycles, SMOKE_TEST_MAX_PENDING_CYCLES
+        )
+        args.simulation_max_queue_seconds = min(
+            args.simulation_max_queue_seconds, SMOKE_TEST_MAX_QUEUE_SECONDS
+        )
         return
     if args.full_run:
         args.limit = 0

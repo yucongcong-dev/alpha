@@ -54,6 +54,7 @@ def _rc() -> RuntimeConfig:
 
 # ---- HTTP ----
 
+
 def get_http_backend() -> str:
     return _rc().http.backend
 
@@ -99,6 +100,7 @@ def get_polling_retry_buffer() -> float:
 
 
 # ---- Feedback ----
+
 
 def get_settings_variant_budget_high() -> float:
     return _rc().feedback.settings_variant_budget_high
@@ -150,11 +152,13 @@ def get_expr_mutation_extend_threshold() -> float:
 
 # ---- Expression ----
 
+
 def get_backfill_window() -> int:
     return _rc().expression.backfill_window
 
 
 # ---- Simulation ----
+
 
 def get_simulation_default_start_date() -> str:
     return _rc().simulation.start_date
@@ -165,6 +169,7 @@ def get_simulation_default_end_date() -> str:
 
 
 # ---- Precheck Quality ----
+
 
 def get_precheck_fallback_min_sharpe() -> float:
     return _rc().precheck_quality.min_sharpe
@@ -187,6 +192,7 @@ def get_precheck_fallback_max_weight() -> float:
 
 
 # ---- Submit Quality ----
+
 
 def get_submit_min_sharpe() -> float:
     return _rc().submit_quality.min_sharpe

@@ -140,7 +140,9 @@ def get_dataset_expression_policy(
     if use_curated_heuristics is None:
         use_curated_heuristics = _yaml_curated_heuristics(dataset_id)
 
-    default_transform, matrix_transform, vector_transform, ratio_transform = _default_transform_specs()
+    default_transform, matrix_transform, vector_transform, ratio_transform = (
+        _default_transform_specs()
+    )
     base_policy = _base_expression_policy(
         dataset_id,
         use_curated_heuristics=use_curated_heuristics,

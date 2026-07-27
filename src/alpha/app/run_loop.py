@@ -107,7 +107,9 @@ def run_field_test_loop(
                 if field_template_batch_size <= 0 or round_result.stop_requested:
                     break
                 if not round_result.progressed:
-                    logger.info("[schedule] no pending templates remain after round=%d", round_index)
+                    logger.info(
+                        "[schedule] no pending templates remain after round=%d", round_index
+                    )
                     break
 
             drain_remaining_futures(

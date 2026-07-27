@@ -35,7 +35,10 @@ if TYPE_CHECKING:
 
 _EXPORT_MAP: ExportMap = {
     "auto_update_blacklist": (".blacklist_runtime", "auto_update_blacklist"),
-    "auto_update_blacklist_incremental": (".blacklist_runtime", "auto_update_blacklist_incremental"),
+    "auto_update_blacklist_incremental": (
+        ".blacklist_runtime",
+        "auto_update_blacklist_incremental",
+    ),
     "build_blacklist_runtime_stats": (".blacklist_runtime", "build_blacklist_runtime_stats"),
     "ensure_template_blacklist_file": (".blacklist_store", "ensure_template_blacklist_file"),
     "get_dataset_expression_policy": (".expression", "get_dataset_expression_policy"),

@@ -46,7 +46,8 @@ def resolve_bootstrap_paths(
         template_library_file=(
             run_path_value(run_paths, "template_library_file") or str(args.template_library_file)
         ),
-        fields_cache_file=run_path_value(run_paths, "fields_cache_file") or str(args.fields_cache_file),
+        fields_cache_file=run_path_value(run_paths, "fields_cache_file")
+        or str(args.fields_cache_file),
         feedback_output=run_path_value(run_paths, "feedback_output") or output_file,
         creds_file=run_path_value(run_paths, "creds_file") or str(args.creds_file),
         creds_key_file=run_path_value(run_paths, "creds_key_file") or str(args.creds_key_file),

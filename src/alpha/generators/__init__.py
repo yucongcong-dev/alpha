@@ -27,7 +27,11 @@ from typing import TYPE_CHECKING
 from .._facade import ExportMap, facade_dir, resolve_export
 
 if TYPE_CHECKING:
-    from .expression_builder import build_expression_candidates, limit_templates, sort_templates_by_priority
+    from .expression_builder import (
+        build_expression_candidates,
+        limit_templates,
+        sort_templates_by_priority,
+    )
     from .fields import choose_field_name, choose_field_type
     from .fingerprint import stable_fingerprint
     from .payload import build_settings_fingerprint, build_simulation_payload

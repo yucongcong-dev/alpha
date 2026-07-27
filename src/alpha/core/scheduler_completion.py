@@ -15,7 +15,9 @@ from ..runtime.state import ExecutionState, RuntimeConcurrencyState
 from .simulation import build_failure_result
 
 
-def _context_value(context: PendingFutureContext | dict[str, object], key: str, default: object = "") -> object:
+def _context_value(
+    context: PendingFutureContext | dict[str, object], key: str, default: object = ""
+) -> object:
     """Read one value from either PendingFutureContext or legacy dict-style test contexts."""
     if isinstance(context, dict):
         return context.get(key, default)

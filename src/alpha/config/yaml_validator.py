@@ -156,7 +156,9 @@ def _validate_cross_consistency(
         for skey in gdata:
             if skey in defaults_keys:
                 continue
-            if skey in aliases and (aliases[skey] in defaults_keys or aliases[skey] == "@settings_only"):
+            if skey in aliases and (
+                aliases[skey] in defaults_keys or aliases[skey] == "@settings_only"
+            ):
                 continue
             extra.append(skey)
 

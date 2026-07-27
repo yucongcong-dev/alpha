@@ -119,7 +119,9 @@ def add_run_mode_arguments(parser: argparse.ArgumentParser) -> None:
 
 def add_search_arguments(parser: argparse.ArgumentParser) -> None:
     """Add field/template search-space arguments."""
-    parser.add_argument("--limit", type=int, default=200, help="要获取/测试的字段数量；0 表示所有字段")
+    parser.add_argument(
+        "--limit", type=int, default=200, help="要获取/测试的字段数量；0 表示所有字段"
+    )
     parser.add_argument("--offset", type=int, default=0, help="字段偏移量")
     parser.add_argument("--page-size", type=int, default=50, help="分页大小")
     parser.add_argument(
@@ -162,9 +164,19 @@ def add_search_arguments(parser: argparse.ArgumentParser) -> None:
 
 def add_file_filter_arguments(parser: argparse.ArgumentParser) -> None:
     """Add template/data file and include/exclude filter arguments."""
-    parser.add_argument("--template-library-file", default="", help="本地 JSON 模板库文件路径；留空则根据 dataset_id 自动选择")
-    parser.add_argument("--feedback-output", default="", help="用于反馈排序的历史结果 JSON 文件；默认使用 --output")
-    parser.add_argument("--fields-cache-file", default="", help="本地 JSON 字段缓存文件路径（留空则根据 dataset_id 自动生成）")
+    parser.add_argument(
+        "--template-library-file",
+        default="",
+        help="本地 JSON 模板库文件路径；留空则根据 dataset_id 自动选择",
+    )
+    parser.add_argument(
+        "--feedback-output", default="", help="用于反馈排序的历史结果 JSON 文件；默认使用 --output"
+    )
+    parser.add_argument(
+        "--fields-cache-file",
+        default="",
+        help="本地 JSON 字段缓存文件路径（留空则根据 dataset_id 自动生成）",
+    )
     add_bool_argument(
         parser,
         "--dry-run-plan",
@@ -172,42 +184,105 @@ def add_file_filter_arguments(parser: argparse.ArgumentParser) -> None:
         help_enable="仅打印计划，不创建模拟",
         help_disable="关闭干运行模式（覆盖 YAML runtime.dry_run_plan=true）",
     )
-    parser.add_argument("--include-fields-file", default="", help="包含字段 ID/名称的文本文件，每行一个")
-    parser.add_argument("--exclude-fields-file", default="", help="排除字段 ID/名称的文本文件，每行一个")
-    parser.add_argument("--include-templates-file", default="", help="包含模板名称的文本文件，每行一个")
-    parser.add_argument("--exclude-templates-file", default="", help="排除模板名称的文本文件，每行一个")
-    parser.add_argument("--template-disable-after", type=int, default=12, help="在多少次尝试后禁用模板；0 表示不自动剪枝")
-    parser.add_argument("--top-fields-by-feedback", type=int, default=0, help="如果大于 0，仅测试按反馈排序的前 N 个字段")
-    parser.add_argument("--stop-after-submittable", type=int, default=0, help="如果大于 0，在找到指定数量的可提交 Alpha 后停止")
+    parser.add_argument(
+        "--include-fields-file", default="", help="包含字段 ID/名称的文本文件，每行一个"
+    )
+    parser.add_argument(
+        "--exclude-fields-file", default="", help="排除字段 ID/名称的文本文件，每行一个"
+    )
+    parser.add_argument(
+        "--include-templates-file", default="", help="包含模板名称的文本文件，每行一个"
+    )
+    parser.add_argument(
+        "--exclude-templates-file", default="", help="排除模板名称的文本文件，每行一个"
+    )
+    parser.add_argument(
+        "--template-disable-after",
+        type=int,
+        default=12,
+        help="在多少次尝试后禁用模板；0 表示不自动剪枝",
+    )
+    parser.add_argument(
+        "--top-fields-by-feedback",
+        type=int,
+        default=0,
+        help="如果大于 0，仅测试按反馈排序的前 N 个字段",
+    )
+    parser.add_argument(
+        "--stop-after-submittable",
+        type=int,
+        default=0,
+        help="如果大于 0，在找到指定数量的可提交 Alpha 后停止",
+    )
 
 
 def add_api_runtime_arguments(parser: argparse.ArgumentParser) -> None:
     """Add API retry/concurrency/runtime wait arguments."""
-    parser.add_argument("--min-request-interval", type=float, default=2.5, help="请求间的最小间隔，用于降低速率限制（增大以应对 API 429）")
-    parser.add_argument("--rate-limit-max-retries", type=int, default=5, help="速率限制时的最大重试次数")
+    parser.add_argument(
+        "--min-request-interval",
+        type=float,
+        default=2.5,
+        help="请求间的最小间隔，用于降低速率限制（增大以应对 API 429）",
+    )
+    parser.add_argument(
+        "--rate-limit-max-retries", type=int, default=5, help="速率限制时的最大重试次数"
+    )
     parser.add_argument("--login-retries", type=int, default=3, help="登录重试次数")
     parser.add_argument("--simulation-create-retries", type=int, default=3, help="模拟创建重试次数")
     parser.add_argument("--simulation-poll-retries", type=int, default=3, help="模拟轮询重试次数")
-    parser.add_argument("--max-concurrent-simulations", type=int, default=1, help="并发模拟的最大数量（降低以避免 API 限流）")
-    parser.add_argument("--max-concurrent-creates", type=int, default=1, help="并发模拟创建请求的最大数量")
-    parser.add_argument("--simulation-max-polls", type=int, default=240, help="单个模拟的最大轮询次数")
-    parser.add_argument("--simulation-max-wait-seconds", type=float, default=1800.0, help="单个模拟的最大等待时间（秒）")
-    parser.add_argument("--simulation-max-pending-cycles", type=int, default=120, help="最大等待周期数")
-    parser.add_argument("--simulation-max-queue-seconds", type=float, default=600.0, help="最大队列等待时间（秒）")
-    parser.add_argument("--queue-busy-cooldown-seconds", type=float, default=300.0, help="队列拥塞后的冷却时间（秒，增大以避免重复触发限流）")
-    parser.add_argument("--field-queue-busy-skip-after", type=int, default=2, help="字段队列拥塞后跳过阈值；0 表示不跳过")
+    parser.add_argument(
+        "--max-concurrent-simulations",
+        type=int,
+        default=1,
+        help="并发模拟的最大数量（降低以避免 API 限流）",
+    )
+    parser.add_argument(
+        "--max-concurrent-creates", type=int, default=1, help="并发模拟创建请求的最大数量"
+    )
+    parser.add_argument(
+        "--simulation-max-polls", type=int, default=240, help="单个模拟的最大轮询次数"
+    )
+    parser.add_argument(
+        "--simulation-max-wait-seconds",
+        type=float,
+        default=1800.0,
+        help="单个模拟的最大等待时间（秒）",
+    )
+    parser.add_argument(
+        "--simulation-max-pending-cycles", type=int, default=120, help="最大等待周期数"
+    )
+    parser.add_argument(
+        "--simulation-max-queue-seconds", type=float, default=600.0, help="最大队列等待时间（秒）"
+    )
+    parser.add_argument(
+        "--queue-busy-cooldown-seconds",
+        type=float,
+        default=300.0,
+        help="队列拥塞后的冷却时间（秒，增大以避免重复触发限流）",
+    )
+    parser.add_argument(
+        "--field-queue-busy-skip-after",
+        type=int,
+        default=2,
+        help="字段队列拥塞后跳过阈值；0 表示不跳过",
+    )
     parser.add_argument("--check-submit-retries", type=int, default=3, help="检查提交重试次数")
-
 
 
 def add_precheck_arguments(parser: argparse.ArgumentParser) -> None:
     """Add local precheck threshold arguments."""
     parser.add_argument("--min-sharpe", type=float, default=1.25, help="本地预检最低 Sharpe 阈值")
     parser.add_argument("--min-fitness", type=float, default=1.00, help="本地预检最低 Fitness 阈值")
-    parser.add_argument("--min-turnover", type=float, default=0.01, help="本地预检最低 Turnover 阈值")
-    parser.add_argument("--max-turnover", type=float, default=0.70, help="本地预检最高 Turnover 阈值")
+    parser.add_argument(
+        "--min-turnover", type=float, default=0.01, help="本地预检最低 Turnover 阈值"
+    )
+    parser.add_argument(
+        "--max-turnover", type=float, default=0.70, help="本地预检最高 Turnover 阈值"
+    )
     parser.add_argument("--max-weight", type=float, default=0.10, help="本地预检单股最大权重阈值")
-    parser.add_argument("--backfill-window", type=int, default=240, help="ts_backfill 时间窗口大小（天）")
+    parser.add_argument(
+        "--backfill-window", type=int, default=240, help="ts_backfill 时间窗口大小（天）"
+    )
 
 
 def add_output_logging_arguments(parser: argparse.ArgumentParser) -> None:
@@ -219,7 +294,9 @@ def add_output_logging_arguments(parser: argparse.ArgumentParser) -> None:
         help_enable="根据本次结果自动追加低质量模板到 blacklists/<dataset>/blacklist.json",
         help_disable="不自动更新模板黑名单（覆盖 YAML runtime.auto_update_blacklist=true）",
     )
-    parser.add_argument("--output", default="", help="结果 JSON 输出文件路径（留空则根据 dataset_id 自动生成）")
+    parser.add_argument(
+        "--output", default="", help="结果 JSON 输出文件路径（留空则根据 dataset_id 自动生成）"
+    )
     add_bool_argument(
         parser,
         "--verbose",
@@ -235,5 +312,11 @@ def add_output_logging_arguments(parser: argparse.ArgumentParser) -> None:
         help_disable="关闭安静模式（覆盖 YAML runtime.quiet=true）",
     )
     parser.add_argument("--log-file", default="", help="日志文件路径")
-    parser.add_argument("--include-credentials", action="store_true", help="clean 命令同时删除 .credentials/（默认不会删除凭据）")
-    parser.add_argument("--dry-run-clean", action="store_true", help="预览 clean 命令会删除的路径，不实际删除")
+    parser.add_argument(
+        "--include-credentials",
+        action="store_true",
+        help="clean 命令同时删除 .credentials/（默认不会删除凭据）",
+    )
+    parser.add_argument(
+        "--dry-run-clean", action="store_true", help="预览 clean 命令会删除的路径，不实际删除"
+    )

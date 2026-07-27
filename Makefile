@@ -1,4 +1,4 @@
-.PHONY: test help-check whitespace-check scan-secrets repo-boundary-check removed-compat-file-check compat-import-check arch-boundary-check todo-check config-sync-check ruff-check check clean-runtime
+.PHONY: test help-check whitespace-check scan-secrets repo-boundary-check removed-compat-file-check compat-import-check arch-boundary-check todo-check config-sync-check ruff-check format-check check clean-runtime
 
 PYTHON ?= python3.10
 PYTHONPATH ?= src
@@ -92,7 +92,15 @@ ruff-check:
 		exit 1; \
 	fi
 
-check: test help-check whitespace-check scan-secrets repo-boundary-check removed-compat-file-check compat-import-check arch-boundary-check todo-check config-sync-check ruff-check
+format-check:
+	@if $(RUFF) --version >/dev/null 2>&1; then \
+		$(RUFF) format --check src tests; \
+	else \
+		echo "[check] ruff executable not installed; install the dev dependencies or Ruff binary" >&2; \
+		exit 1; \
+	fi
+
+check: test help-check whitespace-check scan-secrets repo-boundary-check removed-compat-file-check compat-import-check arch-boundary-check todo-check config-sync-check ruff-check format-check
 
 clean-runtime:
 	PYTHONPATH=$(PYTHONPATH) $(PYTHON) -m alpha clean

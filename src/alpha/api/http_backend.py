@@ -103,9 +103,7 @@ class HttpxHttpBackend:
             )
             return self._client
         except ImportError as exc:
-            raise ImportError(
-                "httpx 后端需要安装 httpx 包: pip install httpx"
-            ) from exc
+            raise ImportError("httpx 后端需要安装 httpx 包: pip install httpx") from exc
 
     def _sync_cookies_to_client(self) -> None:
         """Copy CookieJar state into the lazy httpx client before a request."""

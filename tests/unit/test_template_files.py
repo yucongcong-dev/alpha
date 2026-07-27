@@ -124,7 +124,7 @@ def test_build_expression_candidates_respects_template_field_tags(tmp_path) -> N
                         "priority": 90,
                         "field_tags": ["model16_sparse_fscore"],
                     },
-                ]
+                ],
             }
         ),
         encoding="utf-8",
@@ -167,7 +167,9 @@ def test_build_expression_candidates_respects_template_field_tags(tmp_path) -> N
     assert "sparse_only" not in names
 
 
-def test_build_expression_candidates_skip_refine_only_templates_in_default_library(tmp_path) -> None:
+def test_build_expression_candidates_skip_refine_only_templates_in_default_library(
+    tmp_path,
+) -> None:
     template_file = tmp_path / "library.json"
     template_file.write_text(
         json.dumps(
@@ -223,7 +225,9 @@ def test_build_expression_candidates_skip_refine_only_templates_in_default_libra
     assert "refine_template" not in names
 
 
-def test_build_expression_candidates_include_refine_only_templates_in_refine_library(tmp_path) -> None:
+def test_build_expression_candidates_include_refine_only_templates_in_refine_library(
+    tmp_path,
+) -> None:
     refine_dir = tmp_path / "templates" / "fundamental6" / "refine"
     refine_dir.mkdir(parents=True)
     template_file = refine_dir / "default_neighbors.json"
@@ -401,7 +405,9 @@ def test_auto_update_blacklist_appends_low_quality_template_once(tmp_path) -> No
     auto_update_blacklist(results, "custom_ds", data_dir=str(tmp_path))
     auto_update_blacklist(results, "custom_ds", data_dir=str(tmp_path))
 
-    payload = json.loads((tmp_path / "blacklists" / "custom_ds" / "blacklist.json").read_text(encoding="utf-8"))
+    payload = json.loads(
+        (tmp_path / "blacklists" / "custom_ds" / "blacklist.json").read_text(encoding="utf-8")
+    )
     entries = payload["learned_templates"]
     assert [entry["name"] for entry in entries] == ["weak_template"]
     assert entries[0]["template_family"] == "group_vol_scaled_delta"
@@ -673,7 +679,9 @@ def test_scheduler_dump_results_shrinks_next_template_queue(monkeypatch, tmp_pat
 
 def test_fundamental6_template_library_has_family_and_layer_metadata() -> None:
     """Common dataset template library entries should carry explicit family/layer metadata."""
-    template_file = Path(__file__).resolve().parents[2] / "templates" / "fundamental6" / "library.json"
+    template_file = (
+        Path(__file__).resolve().parents[2] / "templates" / "fundamental6" / "library.json"
+    )
     payload = json.loads(template_file.read_text(encoding="utf-8"))
 
     missing = []
@@ -748,9 +756,7 @@ def test_build_pending_templates_skips_inflight_duplicate(monkeypatch) -> None:
             template_family="neutralize_decay",
             template_stage="group_second_order",
             expression="ts_decay_linear(group_neutralize(ts_zscore(winsorize(ts_backfill(unsystematic_risk_last_360_days, 504), std=4), 63), market), 20)",
-            settings_fingerprint=build_settings_fingerprint_from_payload(
-                settings_payload
-            ),
+            settings_fingerprint=build_settings_fingerprint_from_payload(settings_payload),
         )
     }
 
@@ -772,7 +778,9 @@ def test_build_pending_templates_skips_inflight_duplicate(monkeypatch) -> None:
     assert pending == []
 
 
-def test_build_pending_templates_promotes_core_templates_with_extra_variant_budget(monkeypatch) -> None:
+def test_build_pending_templates_promotes_core_templates_with_extra_variant_budget(
+    monkeypatch,
+) -> None:
     monkeypatch.setattr(
         "alpha.core.executor.build_setting_variants",
         lambda *args, **kwargs: [
@@ -919,7 +927,9 @@ def test_build_pending_templates_uses_persisted_registry_recommendation(monkeypa
     assert pending[0].template_role == "promoted_core"
 
 
-def test_build_pending_templates_dedupes_same_expression_variant_across_template_names(monkeypatch) -> None:
+def test_build_pending_templates_dedupes_same_expression_variant_across_template_names(
+    monkeypatch,
+) -> None:
     monkeypatch.setattr(
         "alpha.core.executor.build_setting_variants",
         lambda *args, **kwargs: [{"neutralization": "SUBINDUSTRY", "truncation": 0.08}],
@@ -993,7 +1003,9 @@ def test_build_pending_templates_dedupes_same_expression_variant_across_template
     assert pending[0].expression == "rank(cash_st)"
 
 
-def test_build_pending_templates_skips_attempted_expression_variant_across_template_names(monkeypatch) -> None:
+def test_build_pending_templates_skips_attempted_expression_variant_across_template_names(
+    monkeypatch,
+) -> None:
     monkeypatch.setattr(
         "alpha.core.executor.build_setting_variants",
         lambda *args, **kwargs: [{"neutralization": "SUBINDUSTRY", "truncation": 0.08}],
@@ -1045,7 +1057,9 @@ def test_build_pending_templates_skips_attempted_expression_variant_across_templ
             "cash_st",
             "template_a",
             "rank(cash_st)",
-            build_settings_fingerprint_from_payload({"neutralization": "SUBINDUSTRY", "truncation": 0.08}),
+            build_settings_fingerprint_from_payload(
+                {"neutralization": "SUBINDUSTRY", "truncation": 0.08}
+            ),
         )
     }
 
@@ -1104,7 +1118,14 @@ def test_build_pending_templates_respects_manual_registry_override(monkeypatch) 
     )
     build_ctx = TemplateBuildContext(
         options=TemplateBuildOptions.from_args(args),
-        all_fields=[{"id": "cash_st", "type": "VECTOR", "name": "cash_st", "runtime_field_tags": ["high_coverage"]}],
+        all_fields=[
+            {
+                "id": "cash_st",
+                "type": "VECTOR",
+                "name": "cash_st",
+                "runtime_field_tags": ["high_coverage"],
+            }
+        ],
         template_library={},
         template_registry_overrides={
             "template_overrides": {
@@ -1124,7 +1145,12 @@ def test_build_pending_templates_respects_manual_registry_override(monkeypatch) 
 
     pending, disabled, total = build_pending_templates_for_field(
         build_ctx,
-        {"id": "cash_st", "type": "VECTOR", "name": "cash_st", "runtime_field_tags": ["high_coverage"]},
+        {
+            "id": "cash_st",
+            "type": "VECTOR",
+            "name": "cash_st",
+            "runtime_field_tags": ["high_coverage"],
+        },
         template_stats={},
         attempted_keys=set(),
         prior_results=[],
@@ -1136,7 +1162,9 @@ def test_build_pending_templates_respects_manual_registry_override(monkeypatch) 
 
 
 def test_fundamental6_template_library_removes_known_weak_short_window_templates() -> None:
-    template_file = Path(__file__).resolve().parents[2] / "templates" / "fundamental6" / "library.json"
+    template_file = (
+        Path(__file__).resolve().parents[2] / "templates" / "fundamental6" / "library.json"
+    )
     payload = json.loads(template_file.read_text(encoding="utf-8"))
 
     names = {
@@ -1214,7 +1242,9 @@ def test_blacklist_prefers_name_and_stage_over_name_only(monkeypatch, tmp_path) 
     )
 
 
-def test_legacy_blacklist_name_only_only_applies_without_runtime_metadata(monkeypatch, tmp_path) -> None:
+def test_legacy_blacklist_name_only_only_applies_without_runtime_metadata(
+    monkeypatch, tmp_path
+) -> None:
     blacklist_file = tmp_path / "blacklists" / "custom_ds" / "blacklist.json"
     blacklist_file.parent.mkdir(parents=True)
     blacklist_file.write_text(
@@ -1484,7 +1514,13 @@ def test_event_field_uses_narrower_template_budget(monkeypatch) -> None:
     )
     build_ctx = TemplateBuildContext(
         options=TemplateBuildOptions.from_args(args),
-        all_fields=[{"id": "fnd6_cptnewqeventv110_apq", "type": "VECTOR", "name": "fnd6_cptnewqeventv110_apq"}],
+        all_fields=[
+            {
+                "id": "fnd6_cptnewqeventv110_apq",
+                "type": "VECTOR",
+                "name": "fnd6_cptnewqeventv110_apq",
+            }
+        ],
         template_library={},
         use_dataset_heuristics=False,
         expression_policy=get_dataset_expression_policy("fundamental6"),
@@ -1514,7 +1550,12 @@ def test_build_pending_templates_demotes_persistently_weak_broad_templates(monke
                 "weak_template",
                 "rank(cash_st)",
                 1000,
-                {"family": "mean_spread", "stage": "first_order", "role": "default_seed", "activation_scope": "broad"},
+                {
+                    "family": "mean_spread",
+                    "stage": "first_order",
+                    "role": "default_seed",
+                    "activation_scope": "broad",
+                },
             )
         ],
     )

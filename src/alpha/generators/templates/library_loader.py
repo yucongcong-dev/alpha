@@ -110,11 +110,7 @@ def load_template_library(path: str) -> TemplateLibrary:
             if not isinstance(priority, int):
                 raise BrainAPIError(f"模板 '{field_type}[{index}]' 的 priority 必须是整数。")
             resolved_expression = resolve_placeholders(item["expression"].strip(), backfill_window)
-            metadata = {
-                key: item[key]
-                for key in _OPTIONAL_TEMPLATE_METADATA_KEYS
-                if key in item
-            }
+            metadata = {key: item[key] for key in _OPTIONAL_TEMPLATE_METADATA_KEYS if key in item}
             validated[field_type].append(
                 TemplateLibraryItem(
                     name=item["name"].strip(),

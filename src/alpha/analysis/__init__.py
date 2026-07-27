@@ -53,7 +53,11 @@ if TYPE_CHECKING:
         update_field_feedback_with_result,
         update_global_failed_check_counts_with_result,
     )
-    from .field_stats import compile_field_performance_summary, current_submittable_count, field_priority
+    from .field_stats import (
+        compile_field_performance_summary,
+        current_submittable_count,
+        field_priority,
+    )
     from .result_identity import attempted_template_keys, is_informative_result, result_identity
     from .results_loader import load_existing_results
     from .template_execution_policy import build_template_execution_decision
@@ -92,7 +96,10 @@ _EXPORT_MAP: ExportMap = {
     "dominant_failed_check_names": (".feedback_stats", "dominant_failed_check_names"),
     "merge_failed_check_counts": (".feedback_stats", "merge_failed_check_counts"),
     "update_field_feedback_with_result": (".feedback_stats", "update_field_feedback_with_result"),
-    "update_global_failed_check_counts_with_result": (".feedback_stats", "update_global_failed_check_counts_with_result"),
+    "update_global_failed_check_counts_with_result": (
+        ".feedback_stats",
+        "update_global_failed_check_counts_with_result",
+    ),
     "compile_field_performance_summary": (".field_stats", "compile_field_performance_summary"),
     "current_submittable_count": (".field_stats", "current_submittable_count"),
     "field_priority": (".field_stats", "field_priority"),
@@ -100,12 +107,24 @@ _EXPORT_MAP: ExportMap = {
     "is_informative_result": (".result_identity", "is_informative_result"),
     "result_identity": (".result_identity", "result_identity"),
     "load_existing_results": (".results_loader", "load_existing_results"),
-    "build_template_execution_decision": (".template_execution_policy", "build_template_execution_decision"),
-    "compile_template_registry_summary": (".template_registry_rules", "compile_template_registry_summary"),
+    "build_template_execution_decision": (
+        ".template_execution_policy",
+        "build_template_execution_decision",
+    ),
+    "compile_template_registry_summary": (
+        ".template_registry_rules",
+        "compile_template_registry_summary",
+    ),
     "normalize_activation_scope": (".template_registry_rules", "normalize_activation_scope"),
     "normalize_template_role": (".template_registry_rules", "normalize_template_role"),
-    "recommend_template_role_transition": (".template_registry_rules", "recommend_template_role_transition"),
-    "compile_template_performance_summary": (".template_stats", "compile_template_performance_summary"),
+    "recommend_template_role_transition": (
+        ".template_registry_rules",
+        "recommend_template_role_transition",
+    ),
+    "compile_template_performance_summary": (
+        ".template_stats",
+        "compile_template_performance_summary",
+    ),
     "compile_template_stats": (".template_stats", "compile_template_stats"),
     "historical_template_priority_bonus": (".template_stats", "historical_template_priority_bonus"),
     "update_template_stats_with_result": (".template_stats", "update_template_stats_with_result"),

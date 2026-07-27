@@ -51,7 +51,9 @@ def build_setting_variants(
         str(check.get("name", "")).strip()
         for check in (refine_candidate.failed_checks if refine_candidate else [])
     }
-    tighter_truncation = min(float(base_settings.get("truncation", TRUNCATION_WEB_DEFAULT)), TRUNCATION_TIGHTER_MAX)
+    tighter_truncation = min(
+        float(base_settings.get("truncation", TRUNCATION_WEB_DEFAULT)), TRUNCATION_TIGHTER_MAX
+    )
 
     add_variant(truncation=tighter_truncation)
 

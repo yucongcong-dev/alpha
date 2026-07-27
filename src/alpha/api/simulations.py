@@ -28,9 +28,7 @@ class BrainSimulationsMixin:
     """Simulation creation and polling helpers for BrainClient."""
 
     @error_handler(
-        severity=ErrorSeverity.ERROR,
-        category=ErrorCategory.API,
-        operation="create_simulation"
+        severity=ErrorSeverity.ERROR, category=ErrorCategory.API, operation="create_simulation"
     )
     def create_simulation(self, payload: SimulationPayload) -> str:
         """创建模拟任务并返回后续轮询使用的 Location 地址。"""
@@ -72,9 +70,7 @@ class BrainSimulationsMixin:
             )
 
     @error_handler(
-        severity=ErrorSeverity.WARNING,
-        category=ErrorCategory.API,
-        operation="poll_simulation"
+        severity=ErrorSeverity.WARNING, category=ErrorCategory.API, operation="poll_simulation"
     )
     def poll_simulation(
         self,
@@ -132,7 +128,9 @@ class BrainSimulationsMixin:
                 )
                 if response_headers.get("Retry-After"):
                     wait_seconds(
-                        polling_retry_after(response_headers, default=http_config.polling_default_wait),
+                        polling_retry_after(
+                            response_headers, default=http_config.polling_default_wait
+                        ),
                         "simulation pending",
                         verbose=False,
                     )

@@ -247,8 +247,10 @@ def prepare_fields_for_execution(
             + expression_policy.field_theme_bonus_weight * norm_theme_values[idx]
         )
         crowding_penalty = (
-            expression_policy.field_alpha_crowding_penalty_weight * norm_alpha_validation_values[idx]
-            + expression_policy.field_user_crowding_penalty_weight * norm_user_validation_values[idx]
+            expression_policy.field_alpha_crowding_penalty_weight
+            * norm_alpha_validation_values[idx]
+            + expression_policy.field_user_crowding_penalty_weight
+            * norm_user_validation_values[idx]
         )
         field_metadata_scores[field_id] = validation_score - crowding_penalty
 
@@ -261,7 +263,9 @@ def prepare_fields_for_execution(
             feedback is not None and priority >= expression_policy.promising_field_min_priority
         )
         is_unexplored = feedback is None
-        preferred_rank = expression_policy.preferred_field_order.get(field_name, PREFERRED_FIELD_RANK_SENTINEL)
+        preferred_rank = expression_policy.preferred_field_order.get(
+            field_name, PREFERRED_FIELD_RANK_SENTINEL
+        )
         is_preferred_direction = preferred_rank < PREFERRED_FIELD_RANK_SENTINEL
         is_overtested_weak = (
             field_name in expression_policy.overtested_weak_fields and feedback is not None

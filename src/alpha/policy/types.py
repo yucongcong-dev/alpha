@@ -30,6 +30,7 @@ def build_blacklist_entry_key(
         str(template_family).strip().lower(),
     )
 
+
 BlacklistPayload = dict[str, Any]
 """黑名单文件的完整 JSON payload。"""
 

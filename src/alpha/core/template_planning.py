@@ -69,7 +69,9 @@ def _resolve_field_planning_policy(
     field_id = str(first_non_empty(field.get("id"), SENTINEL_UNKNOWN))
     field_name = choose_field_name(field)
     field_feedback = build_ctx.field_feedback.get(field_id)
-    expression_policy = build_ctx.expression_policy or get_dataset_expression_policy(options.dataset_id)
+    expression_policy = build_ctx.expression_policy or get_dataset_expression_policy(
+        options.dataset_id
+    )
     return field_id, field_name, field_feedback, expression_policy
 
 
@@ -199,7 +201,10 @@ def build_pending_template_variants(
         priority = template.priority
         template_metadata = template.metadata
         expression_key = (field_id, expression)
-        if feedback_stage == FEEDBACK_STAGE_RESIMULATE and expression_key in seen_resimulate_expressions:
+        if (
+            feedback_stage == FEEDBACK_STAGE_RESIMULATE
+            and expression_key in seen_resimulate_expressions
+        ):
             continue
         template_family = classify_expression_family(
             template_name,
@@ -264,5 +269,12 @@ def build_pending_template_variants(
             if feedback_stage == FEEDBACK_STAGE_RESIMULATE:
                 seen_resimulate_expressions.add(expression_key)
                 break
-    pending_templates.sort(key=lambda item: (-item.priority, item.template_name, item.expression, item.variant_fingerprint))
+    pending_templates.sort(
+        key=lambda item: (
+            -item.priority,
+            item.template_name,
+            item.expression,
+            item.variant_fingerprint,
+        )
+    )
     return pending_templates

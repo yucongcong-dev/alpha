@@ -83,7 +83,11 @@ def resolve_registry_override(
         if isinstance(family_value, Mapping):
             resolved.update(dict(family_value))
     template_overrides = overrides.get("template_overrides", {})
-    if isinstance(template_overrides, Mapping) and template_key and template_key in template_overrides:
+    if (
+        isinstance(template_overrides, Mapping)
+        and template_key
+        and template_key in template_overrides
+    ):
         template_value = template_overrides[template_key]
         if isinstance(template_value, Mapping):
             resolved.update(dict(template_value))

@@ -62,7 +62,6 @@ def _serialize_settings_overrides(
     return simulation_settings.to_dict()
 
 
-
 def create_simulation_with_retry(
     client: BrainClient,
     payload: SimulationPayload,
@@ -123,7 +122,9 @@ def checksubmit_with_retry(
         retry_wait_seconds=SIMULATION_RETRY_WAIT,
     )
     checks = extract_checks(alpha_detail)
-    submittable = is_submittable_from_checks([parse_failed_check(c) for c in checks if isinstance(c, dict)])
+    submittable = is_submittable_from_checks(
+        [parse_failed_check(c) for c in checks if isinstance(c, dict)]
+    )
     failed_checks = extract_failed_checks(alpha_detail)
     message = (
         "checks unavailable"
@@ -152,7 +153,9 @@ def run_simulation_create_stage(
 ) -> FieldTestResult | tuple[str, str]:
     try:
         if should_abort is not None and should_abort():
-            raise BrainStopRequested("simulation create aborted after stop-after-submittable triggered")
+            raise BrainStopRequested(
+                "simulation create aborted after stop-after-submittable triggered"
+            )
         config = SimulationStageConfig.from_args(args)
         payload = build_simulation_payload(args, ctx.expression)
         if simulation_settings is not None:
@@ -168,7 +171,9 @@ def run_simulation_create_stage(
             _ = create_semaphore.acquire()
         try:
             if should_abort is not None and should_abort():
-                raise BrainStopRequested("simulation create aborted after stop-after-submittable triggered")
+                raise BrainStopRequested(
+                    "simulation create aborted after stop-after-submittable triggered"
+                )
             simulation_location, simulation_id = create_simulation_with_retry(
                 client,
                 payload,
@@ -263,7 +268,11 @@ def run_checksubmit_stage(
                 simulation_id,
                 reason,
             )
-            return False, f"precheck_failed: {reason}", [parse_failed_check(check) for check in precheck_failed_checks]
+            return (
+                False,
+                f"precheck_failed: {reason}",
+                [parse_failed_check(check) for check in precheck_failed_checks],
+            )
 
     try:
         return checksubmit_with_retry(

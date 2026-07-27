@@ -47,7 +47,9 @@ def build_matrix_templates(
     field_name = field_view.field_name
     preprocessed_expression = field_view.preprocessed_expression
     default_backfill_window = get_runtime_config().expression.backfill_window
-    backfill_window = expression_policy.matrix_field_transform.backfill_window or default_backfill_window
+    backfill_window = (
+        expression_policy.matrix_field_transform.backfill_window or default_backfill_window
+    )
 
     diversified: list[TemplateCandidate] = []
     for delta, std, pri in expression_policy.matrix_delta_over_std_windows:
@@ -150,9 +152,15 @@ def _build_legacy_matrix_templates(
             ),
         ),
     ]
-    if expression_policy.use_curated_heuristics and field_name in expression_policy.positive_raw_fields:
+    if (
+        expression_policy.use_curated_heuristics
+        and field_name in expression_policy.positive_raw_fields
+    ):
         priority = LEGACY_MATRIX_NEG_POSITIVE_RAW_PRIORITY
-    elif expression_policy.use_curated_heuristics and field_name in expression_policy.negative_raw_fields:
+    elif (
+        expression_policy.use_curated_heuristics
+        and field_name in expression_policy.negative_raw_fields
+    ):
         priority = LEGACY_MATRIX_NEG_NEGATIVE_RAW_PRIORITY
     elif expression_policy.use_curated_heuristics:
         priority = LEGACY_MATRIX_NEG_DEFAULT_PRIORITY

@@ -259,7 +259,10 @@ def compile_template_family_registry(
         elif (
             row["attempted"] >= _FAMILY_WEAK_MIN_ATTEMPTED
             and row["submittable"] == 0
-            and ((row["low_sharpe"] >= 4 and row["low_fitness"] >= 4) or row["concentrated_weight"] >= 3)
+            and (
+                (row["low_sharpe"] >= 4 and row["low_fitness"] >= 4)
+                or row["concentrated_weight"] >= 3
+            )
         ):
             row["recommended_scope"] = "diagnostic"
             row["budget_adjustment"] = -1
