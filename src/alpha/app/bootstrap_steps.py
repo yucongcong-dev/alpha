@@ -20,7 +20,9 @@ from .bootstrap_resource_loading import (
     load_bootstrap_supporting_resources,
 )
 from .bootstrap_types import (
+    ApiClientServices,
     BootstrapPaths,
+    CredentialServices,
     FieldLoadingServices,
     PreparedBootstrapResources,
     ResolvedCredentials,
@@ -109,7 +111,7 @@ def resolve_credentials(
     args: BootstrapRuntimeArgs,
     paths: BootstrapPaths,
     *,
-    load_credentials_fn,
+    services: CredentialServices,
 ) -> tuple[str, str]:
     """Resolve credentials without mutating the runtime args object."""
     credentials_args = ResolvedCredentials(
@@ -118,7 +120,7 @@ def resolve_credentials(
         creds_file=paths.creds_file,
         creds_key_file=paths.creds_key_file,
     )
-    email, password = load_credentials_fn(credentials_args)
+    email, password = services.load_credentials(credentials_args)
     return str(email or ""), str(password or "")
 
 
@@ -250,12 +252,11 @@ def create_and_login_client(
     password: str,
     args: ApiClientArgs,
     *,
-    get_runtime_config_fn,
-    login_with_retry_fn,
+    services: ApiClientServices,
 ) -> tuple[BrainClient, WorkerClientFactory]:
     """创建 Brain API 客户端并完成登录，同时创建工作线程客户端工厂。"""
     client_options = ApiClientOptions.from_args(args)
-    http_backend = get_runtime_config_fn().http.backend
+    http_backend = services.get_runtime_config().http.backend
     bootstrap_client = BrainClient(
         email,
         password,
@@ -263,7 +264,7 @@ def create_and_login_client(
         rate_limit_max_retries=client_options.rate_limit_max_retries,
         http_backend=http_backend,
     )
-    login_with_retry_fn(bootstrap_client, client_options.login_retries)
+    services.login_with_retry(bootstrap_client, client_options.login_retries)
     client_factory = WorkerClientFactory(
         client_options,
         email,

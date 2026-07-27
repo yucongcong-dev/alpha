@@ -7,12 +7,14 @@ from dataclasses import dataclass
 from threading import Semaphore
 from typing import Protocol
 
+from ..api.client import BrainClient
 from ..config.models import DatasetExpressionPolicy
+from ..config.runtime_values import RuntimeConfig
 from ..generators.fields import DatasetFieldClient
 from ..models.domain import TemplateField, TemplateLibrary
 from ..models.io_types import RunFilters, RunPaths
 from ..models.runtime_options import FieldFetchOptions
-from ..models.runtime_protocols import BootstrapRuntimeArgs, RunConfig
+from ..models.runtime_protocols import BootstrapRuntimeArgs, CredentialsArgs, RunConfig
 from ..policy.types import BlacklistPayload
 from ..runtime.contexts import HistoricalRunState
 from ..runtime.state import RuntimeConcurrencyState
@@ -102,12 +104,29 @@ class FieldLoadingServices:
 
 
 @dataclass(frozen=True)
+class CredentialServices:
+    """Credential resolution services used during bootstrap."""
+
+    load_credentials: Callable[[CredentialsArgs], tuple[str | None, str | None]]
+
+
+@dataclass(frozen=True)
+class ApiClientServices:
+    """Runtime configuration and login services used to create API clients."""
+
+    get_runtime_config: Callable[[], RuntimeConfig]
+    login_with_retry: Callable[[BrainClient, int], None]
+
+
+@dataclass(frozen=True)
 class BootstrapServices:
     """Typed dependency bundle for the bootstrap orchestration boundary."""
 
     runtime_outputs: RuntimeOutputServices
     supporting_resources: SupportingResourceServices
     field_loading: FieldLoadingServices
+    credentials: CredentialServices
+    api_client: ApiClientServices
 
 
 @dataclass(frozen=True)

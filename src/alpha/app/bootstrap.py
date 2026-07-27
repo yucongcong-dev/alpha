@@ -59,7 +59,9 @@ from .bootstrap_steps import (
     resolve_credentials as _resolve_credentials,
 )
 from .bootstrap_types import (
+    ApiClientServices,
     BootstrapServices,
+    CredentialServices,
     FieldLoadingServices,
     PreparedBootstrapResources,
     RuntimeConcurrencyResources,
@@ -97,19 +99,31 @@ def build_bootstrap_services() -> BootstrapServices:
             fetch_fields_with_cache=fetch_fields_with_cache,
             prepare_fields_for_execution=prepare_fields_for_execution,
         ),
+        credentials=CredentialServices(load_credentials=load_credentials),
+        api_client=ApiClientServices(
+            get_runtime_config=get_runtime_config,
+            login_with_retry=login_with_retry,
+        ),
     )
 
 
 def create_and_login_client(
-    email: str, password: str, args: ApiClientArgs
+    email: str,
+    password: str,
+    args: ApiClientArgs,
+    *,
+    services: ApiClientServices | None = None,
 ) -> tuple[BrainClient, WorkerClientFactory]:
     """兼容导出：创建 Brain API 客户端并完成登录。"""
+    active_services = services or ApiClientServices(
+        get_runtime_config=get_runtime_config,
+        login_with_retry=login_with_retry,
+    )
     return _create_and_login_client(
         email,
         password,
         args,
-        get_runtime_config_fn=get_runtime_config,
-        login_with_retry_fn=login_with_retry,
+        services=active_services,
     )
 
 
@@ -177,13 +191,18 @@ def initialize_run_context(
     email, password = _resolve_credentials(
         args,
         paths,
-        load_credentials_fn=load_credentials,
+        services=services.credentials,
     )
     if not email or not password:
         logger.error("[error] 缺少凭证，无法继续")
         return None
 
-    bootstrap_client, client_factory = create_and_login_client(email, password, args)
+    bootstrap_client, client_factory = create_and_login_client(
+        email,
+        password,
+        args,
+        services=services.api_client,
+    )
     prepared = _prepare_bootstrap_resources(
         args,
         paths,

@@ -48,10 +48,14 @@ def test_build_bootstrap_services_reads_current_module_dependencies(monkeypatch)
     def second_fingerprint(_payload) -> str:
         return "second"
 
+    def replacement_login(_client, _retries) -> None:
+        return None
+
     monkeypatch.setattr(bootstrap_module, "stable_fingerprint", first_fingerprint)
     first_services = bootstrap_module.build_bootstrap_services()
 
     monkeypatch.setattr(bootstrap_module, "stable_fingerprint", second_fingerprint)
+    monkeypatch.setattr(bootstrap_module, "login_with_retry", replacement_login)
     second_services = bootstrap_module.build_bootstrap_services()
 
     assert first_services.supporting_resources.stable_fingerprint is first_fingerprint
@@ -64,6 +68,8 @@ def test_build_bootstrap_services_reads_current_module_dependencies(monkeypatch)
         second_services.field_loading.prepare_fields_for_execution
         is bootstrap_module.prepare_fields_for_execution
     )
+    assert second_services.credentials.load_credentials is bootstrap_module.load_credentials
+    assert second_services.api_client.login_with_retry is replacement_login
 
 
 def test_initialize_run_context_prefers_run_paths_for_cache_and_credentials(monkeypatch) -> None:
