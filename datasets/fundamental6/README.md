@@ -56,13 +56,13 @@
 - 今日唯一正式主干：
   - `cashflow_op`
 - 今日现役资产：
-  - 模板包：[cashflow_submit_core_pack.json](/Users/boyaa/Downloads/alpha/templates/fundamental6/refine/cashflow_submit_core_pack.json)
-  - 字段白名单：[cashflow_submit_core_field.txt](/Users/boyaa/Downloads/alpha/templates/fundamental6/refine/fields/cashflow_submit_core_field.txt)
-  - 模板白名单：[cashflow_submit_core_templates.txt](/Users/boyaa/Downloads/alpha/templates/fundamental6/refine/templates/cashflow_submit_core_templates.txt)
+  - 模板包：[cashflow_submit_core_pack.json](/Users/boyaa/Downloads/alpha/datasets/fundamental6/templates/refine/cashflow_submit_core_pack.json)
+  - 字段白名单：[cashflow_submit_core_field.txt](/Users/boyaa/Downloads/alpha/datasets/fundamental6/profiles/fields/cashflow_submit_core_field.txt)
+  - 模板白名单：[cashflow_submit_core_templates.txt](/Users/boyaa/Downloads/alpha/datasets/fundamental6/profiles/templates/cashflow_submit_core_templates.txt)
 - 今日次主线验证资产：
-  - 模板包：[cashflow_submit_zscore_core_pack.json](/Users/boyaa/Downloads/alpha/templates/fundamental6/refine/cashflow_submit_zscore_core_pack.json)
+  - 模板包：[cashflow_submit_zscore_core_pack.json](/Users/boyaa/Downloads/alpha/datasets/fundamental6/templates/refine/cashflow_submit_zscore_core_pack.json)
 - 今日观察线：
-  - [lctq_watch_pack.json](/Users/boyaa/Downloads/alpha/templates/fundamental6/refine/lctq_watch_pack.json)
+  - [lctq_watch_pack.json](/Users/boyaa/Downloads/alpha/datasets/fundamental6/templates/refine/lctq_watch_pack.json)
 - 今日不建议做的事：
   - 不恢复 broad-search
   - 不继续扩 `cogs`
@@ -75,12 +75,11 @@
 cd /Users/boyaa/Downloads/alpha
 PYTHONPATH=src python3.10 -m alpha \
   --dataset-id fundamental6 \
-  --template-library-file templates/fundamental6/refine/cashflow_submit_core_pack.json \
-  --include-fields-file templates/fundamental6/refine/fields/cashflow_submit_core_field.txt \
-  --include-templates-file templates/fundamental6/refine/templates/cashflow_submit_core_templates.txt \
+  --template-library-file datasets/fundamental6/templates/refine/cashflow_submit_core_pack.json \
+  --include-fields-file datasets/fundamental6/profiles/fields/cashflow_submit_core_field.txt \
+  --include-templates-file datasets/fundamental6/profiles/templates/cashflow_submit_core_templates.txt \
   --no-auto-update-blacklist \
-  --output results/fundamental6/verify_cashflow_core_$(date +%F).json \
-  --feedback-output results/fundamental6/verify_cashflow_core_$(date +%F).json
+  --run-name verify_cashflow_core_$(date +%F)
 ```
 
 如果只是想快速判断“这条线还活不活着”，优先跑上面这条，不要先去翻历史归档包。
@@ -337,11 +336,11 @@ PYTHONPATH=src python3.10 -m alpha \
 
 对应字段文件：
 
-- `templates/fundamental6/refine/archive/fields/clean_verify_round12_second_line_fields.txt`
+- `datasets/fundamental6/profiles/fields/archive/clean_verify_round12_second_line_fields.txt`
 
 推荐执行包：
 
-- `templates/fundamental6/refine/archive/round7_low_corr_pack.json`
+- `datasets/fundamental6/templates/refine/archive/round7_low_corr_pack.json`
 
 推荐用途：
 
@@ -383,11 +382,11 @@ PYTHONPATH=src python3.10 -m alpha \
 
 为避免 `VECTOR` 观察线再次扩散成大包，新增一个最小观察包：
 
-- `templates/fundamental6/refine/lctq_watch_pack.json`
+- `datasets/fundamental6/templates/refine/lctq_watch_pack.json`
 
 对应字段文件：
 
-- `templates/fundamental6/refine/fields/clean_verify_round13_lctq_watch_field.txt`
+- `datasets/fundamental6/profiles/fields/clean_verify_round13_lctq_watch_field.txt`
 
 这个包的设计原则是：
 
@@ -406,7 +405,7 @@ PYTHONPATH=src python3.10 -m alpha \
 
 为了避免后续每次都从大 refine 包里挑主线，当前 `cashflow_op` 已经单独收成一个最小提交包：
 
-- `templates/fundamental6/refine/cashflow_submit_core_pack.json`
+- `datasets/fundamental6/templates/refine/cashflow_submit_core_pack.json`
 
 这个包只保留两条已验证可提交主线：
 
@@ -426,31 +425,29 @@ cd /Users/boyaa/Downloads/alpha
 
 PYTHONPATH=src python3.10 -m alpha --dry-run-plan \
   --dataset-id fundamental6 \
-  --template-library-file templates/fundamental6/refine/cashflow_submit_core_pack.json \
-  --include-fields-file templates/fundamental6/refine/fields/cashflow_submit_core_field.txt \
-  --include-templates-file templates/fundamental6/refine/templates/cashflow_submit_core_templates.txt \
+  --template-library-file datasets/fundamental6/templates/refine/cashflow_submit_core_pack.json \
+  --include-fields-file datasets/fundamental6/profiles/fields/cashflow_submit_core_field.txt \
+  --include-templates-file datasets/fundamental6/profiles/templates/cashflow_submit_core_templates.txt \
   --limit 1 \
   --max-templates-per-field 5 \
   --max-templates-per-family 2 \
   --field-template-batch-size 1 \
   --stop-after-submittable 1 \
   --no-auto-update-blacklist \
-  --output results/fundamental6/verify_cashflow_core_$(date +%F).json \
-  --feedback-output results/fundamental6/verify_cashflow_core_$(date +%F).json
+  --run-name verify_cashflow_core_$(date +%F)
 
 PYTHONPATH=src python3.10 -m alpha \
   --dataset-id fundamental6 \
-  --template-library-file templates/fundamental6/refine/cashflow_submit_core_pack.json \
-  --include-fields-file templates/fundamental6/refine/fields/cashflow_submit_core_field.txt \
-  --include-templates-file templates/fundamental6/refine/templates/cashflow_submit_core_templates.txt \
+  --template-library-file datasets/fundamental6/templates/refine/cashflow_submit_core_pack.json \
+  --include-fields-file datasets/fundamental6/profiles/fields/cashflow_submit_core_field.txt \
+  --include-templates-file datasets/fundamental6/profiles/templates/cashflow_submit_core_templates.txt \
   --limit 1 \
   --max-templates-per-field 5 \
   --max-templates-per-family 2 \
   --field-template-batch-size 1 \
   --stop-after-submittable 1 \
   --no-auto-update-blacklist \
-  --output results/fundamental6/verify_cashflow_core_$(date +%F).json \
-  --feedback-output results/fundamental6/verify_cashflow_core_$(date +%F).json
+  --run-name verify_cashflow_core_$(date +%F)
 ```
 
 这个脚本默认会带上：
@@ -470,9 +467,9 @@ PYTHONPATH=src python3.10 -m alpha \
 
 当前现役闭环入口应理解为：
 
-- 模板包：`templates/fundamental6/refine/cashflow_submit_core_pack.json`
-- 字段白名单：`templates/fundamental6/refine/fields/cashflow_submit_core_field.txt`
-- 模板白名单：`templates/fundamental6/refine/templates/cashflow_submit_core_templates.txt`
+- 模板包：`datasets/fundamental6/templates/refine/cashflow_submit_core_pack.json`
+- 字段白名单：`datasets/fundamental6/profiles/fields/cashflow_submit_core_field.txt`
+- 模板白名单：`datasets/fundamental6/profiles/templates/cashflow_submit_core_templates.txt`
 - 执行方式：直接运行上面的固定命令
 
 如果省略 `--stop-after-submittable`，当前流程会继续：
@@ -494,8 +491,8 @@ PYTHONPATH=src python3.10 -m alpha \
 
 对应结果文件：
 
-- `results/fundamental6/clean_verify_round15_cashflow_core_analysis.json`
-- `results/fundamental6/clean_verify_round15_cashflow_core_results.jsonl`
+- `datasets/fundamental6/runs/clean_verify_round15_cashflow_core/analysis.json`
+- `datasets/fundamental6/runs/clean_verify_round15_cashflow_core/results.jsonl`
 
 核心结果：
 
@@ -528,8 +525,8 @@ PYTHONPATH=src python3.10 -m alpha \
 
 对应结果文件：
 
-- `results/fundamental6/clean_verify_round16_cashflow_core_analysis.json`
-- `results/fundamental6/clean_verify_round16_cashflow_core_results.jsonl`
+- `datasets/fundamental6/runs/clean_verify_round16_cashflow_core/analysis.json`
+- `datasets/fundamental6/runs/clean_verify_round16_cashflow_core/results.jsonl`
 
 核心结果：
 
@@ -585,7 +582,7 @@ PYTHONPATH=src python3.10 -m alpha \
 在把现役字段白名单和模板白名单收正之后，同一天又做了一次真实验证：
 
 - 执行方式：直接运行最小健康检查命令
-- 结果文件：`results/fundamental6/verify_cashflow_core_2026-07-24.json`
+- 结果文件：`datasets/fundamental6/runs/verify_cashflow_core_2026-07-24/summary.json`
 - 本轮实际是“单枪健康检查”，不是“双模板全量展开”
 
 本轮落地结果：
@@ -615,7 +612,7 @@ PYTHONPATH=src python3.10 -m alpha \
 
 在当天后续又做了一轮 `core pack` 真实复跑：
 
-- 结果文件：`results/fundamental6/verify_cashflow_core_2026-07-24_rerun.json`
+- 结果文件：`datasets/fundamental6/runs/verify_cashflow_core_2026-07-24_rerun/summary.json`
 - 本轮目标：不是继续找新模板，而是确认现役双主线能否在同一天再次一起复现
 
 核心结果：
@@ -641,8 +638,8 @@ PYTHONPATH=src python3.10 -m alpha \
 
 除了双主线 `core pack` 复跑之外，当天还单独把 `grouped zscore over cap` 这条主线拆成一模板 pack 做了独立验证：
 
-- 模板包：`templates/fundamental6/refine/cashflow_submit_zscore_core_pack.json`
-- 结果文件：`results/fundamental6/verify_cashflow_zscore_pack_2026-07-24_fixed.json`
+- 模板包：`datasets/fundamental6/templates/refine/cashflow_submit_zscore_core_pack.json`
+- 结果文件：`datasets/fundamental6/runs/verify_cashflow_zscore_pack_2026-07-24_fixed/summary.json`
 
 核心结果：
 
@@ -666,24 +663,24 @@ PYTHONPATH=src python3.10 -m alpha \
 到当前阶段，`fundamental6` 的本地资产应按“现役 / 观察 / 归档”理解：
 
 现役：
-- `templates/fundamental6/library.json`
+- `datasets/fundamental6/templates/library.json`
   - 第一阶段 broad 主干探索
-- `templates/fundamental6/refine/default_neighbors.json`
+- `datasets/fundamental6/templates/refine/default_neighbors.json`
   - 第二阶段现役 refine 扩展带
   - 只保留仍有增量价值的 `cashflow_op` 主线近邻，以及最小 `VECTOR` 哨兵
-- `templates/fundamental6/refine/cashflow_submit_core_pack.json`
+- `datasets/fundamental6/templates/refine/cashflow_submit_core_pack.json`
   - 最小复跑、主干健康检查、提交前低成本稳定性确认
 
 观察：
-- `templates/fundamental6/refine/lctq_watch_pack.json`
+- `datasets/fundamental6/templates/refine/lctq_watch_pack.json`
   - 长期观察 `VECTOR` 支路是否自然改善
   - 不是 submit 主包
 
 归档：
-- `templates/fundamental6/refine/archive/*.json`
+- `datasets/fundamental6/templates/refine/archive/*.json`
   - 保存 round5~round9 这类历史轮次包
   - 用途是回看结论，不再作为现役执行入口
-- `templates/fundamental6/refine/archive/fields/*.txt`
+- `datasets/fundamental6/profiles/fields/archive/*.txt`
   - 保存历史字段白名单 fixture
   - 当前只保留观察线所需的最小字段文件在现役目录
 
@@ -715,7 +712,7 @@ PYTHONPATH=src python3.10 -m alpha \
 - cross-field ratio/pair 探索集中在 account/matrix 专用支路，不要把 scalar `default` 撑得过宽
 - 额外长窗口邻居、`rawfill/longfill` 近邻、旧式横截面包装器，如果没有反复证明有效，就都作为 refine 候选
 - 单独的 decay 邻居、liquidity-bucket 变体，也都更适合作为 refine 候选，而不是 broad-search 默认
-- 当前这些仍值得保留的恢复分支，收敛在 `templates/fundamental6/refine/default_neighbors.json`
+- 当前这些仍值得保留的恢复分支，收敛在 `datasets/fundamental6/templates/refine/default_neighbors.json`
 
 Refine pack 约定：
 - `default_neighbors.json` 现在应被理解为新默认主干外侧的一圈“现役扩展带”，而不是旧 scalar 剩余物的堆放地
@@ -764,7 +761,7 @@ Focused refine：
 
 ## blacklist 的当前作用
 
-- `blacklists/fundamental6/blacklist.json` 仍然有保留必要
+- `datasets/fundamental6/blacklists/blacklist.json` 仍然有保留必要
 - 原因不是它现在内容丰富，而是运行时策略仍会读写这个文件；它是统一 blacklist 机制的一部分，不是纯文档摆设
 - 当前它为空，意味着：
   - 现阶段 `fundamental6` 的主问题已经主要通过模板收窄和流程收口解决

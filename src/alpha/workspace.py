@@ -29,7 +29,15 @@ def find_resource_root(start: Path | None = None) -> Path:
 def _looks_like_workspace(path: Path) -> bool:
     return any(
         (path / marker).exists()
-        for marker in ("pyproject.toml", "config", "templates", "data", ".alpha-workspace")
+        for marker in (
+            "pyproject.toml",
+            "config",
+            "datasets",
+            "shared",
+            "templates",
+            "data",
+            ".alpha-workspace",
+        )
     )
 
 
@@ -77,11 +85,29 @@ class WorkspacePaths:
         return self.root / ".credentials"
 
     @property
+    def datasets_dir(self) -> Path:
+        return self.root / "datasets"
+
+    @property
+    def shared_dir(self) -> Path:
+        return self.root / "shared"
+
+    @property
+    def shared_blacklists_dir(self) -> Path:
+        return self.shared_dir / "blacklists"
+
+    def dataset_dir(self, dataset_key: str) -> Path:
+        """Return one dataset-owned workspace root."""
+        return self.datasets_dir / dataset_key
+
+    @property
     def cache_dir(self) -> Path:
+        """Legacy top-level cache root retained for cleanup compatibility."""
         return self.root / "cache"
 
     @property
     def results_dir(self) -> Path:
+        """Legacy top-level results root retained for cleanup compatibility."""
         return self.root / "results"
 
     @property
@@ -90,11 +116,13 @@ class WorkspacePaths:
 
     @property
     def templates_dir(self) -> Path:
-        return self.root / "templates"
+        """Compatibility alias for the dataset workspace root."""
+        return self.datasets_dir
 
     @property
     def blacklists_dir(self) -> Path:
-        return self.root / "blacklists"
+        """Compatibility alias for the dataset workspace root."""
+        return self.datasets_dir
 
     @property
     def config_dir(self) -> Path:

@@ -18,6 +18,8 @@ dist/
 # Local run outputs and logs
 cache/
 results/
+datasets/*/cache/
+datasets/*/runs/
 tmp/
 scratch/
 tmp_*.txt

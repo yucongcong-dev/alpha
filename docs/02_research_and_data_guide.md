@@ -478,8 +478,9 @@ ts_zscore(group_rank(x, industry), 252)
 
 ### 11.5 仓库知识边界
 
-- `results/`：运行产物，不承担长期知识库职责
-- `templates/<dataset_id>/`：可复用模板和数据集经验
+- `datasets/<dataset_id>/runs/`：运行产物，不承担长期知识库职责
+- `datasets/<dataset_id>/templates/`：可复用模板
+- `datasets/<dataset_id>/profiles/`：可复用字段和模板筛选清单
 - `docs/`：跨数据集的方法论和平台知识
 - 根 `README.md`：工程结构、安装与运行入口
 

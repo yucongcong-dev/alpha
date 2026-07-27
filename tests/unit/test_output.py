@@ -690,7 +690,9 @@ def test_auto_update_blacklist_incremental_blacklists_only_changed_template(tmp_
     )
 
     payload = json.loads(
-        (tmp_path / "blacklists" / "custom_ds" / "blacklist.json").read_text(encoding="utf-8")
+        (tmp_path / "datasets" / "custom_ds" / "blacklists" / "blacklist.json").read_text(
+            encoding="utf-8"
+        )
     )
     assert added_after_first is False
     assert added_after_second is False
@@ -718,16 +720,33 @@ def test_build_dataset_scoped_paths_includes_runtime_context_in_cache_path() -> 
     )
 
     template_path = Path(paths["template_library_file"])
-    assert template_path.parts[-3:] == ("templates", "fundamental6", "library.json")
+    assert template_path.parts[-4:] == ("datasets", "fundamental6", "templates", "library.json")
     cache_path = Path(paths["fields_cache_file"])
-    assert cache_path.parent.parts[-4:] == (
+    assert cache_path.parent.parts[-5:] == (
+        "datasets",
+        "fundamental6",
         "cache",
         "fields",
-        "fundamental6",
         "usa_top3000_equity_d1",
     )
     assert cache_path.name == "fields.json"
-    assert Path(paths["output"]).name == "test_results.json"
+    assert Path(paths["output"]).parts[-4:] == (
+        "fundamental6",
+        "runs",
+        "default",
+        "summary.json",
+    )
+
+
+def test_build_dataset_scoped_paths_sanitizes_run_directory_segments() -> None:
+    paths = build_dataset_scoped_paths("fundamental6", run_name="../nightly run")
+
+    assert Path(paths["output"]).parts[-4:] == (
+        "fundamental6",
+        "runs",
+        "_nightly_run",
+        "summary.json",
+    )
 
 
 def test_build_fields_cache_scope_key_uses_short_readable_context_key() -> None:

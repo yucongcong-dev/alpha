@@ -79,8 +79,8 @@ Reference 主要回答“这个词是什么意思”；具体怎么优化，回�
 
 - `docs/`：通用学习路径、研究方法、优化流程和平台查表
 - 根 [README.md](../README.md)：安装、项目结构和运行方式
-- `templates/<dataset_id>/README.md`：具体数据集策略与本地经验
-- `results/`：运行产物，不作为长期知识库
+- `datasets/<dataset_id>/README.md`：具体数据集策略与本地经验
+- `datasets/<dataset_id>/runs/`：运行产物，不作为长期知识库
 
 新增知识前先判断归属：
 
@@ -88,6 +88,6 @@ Reference 主要回答“这个词是什么意思”；具体怎么优化，回�
 - 数据、示例和仓库研究方法放 02
 - 诊断、稳健性和提交方法放 03
 - 纯定义、状态和错误码放 04
-- 数据集专属经验放对应模板目录
+- 数据集专属经验放对应 dataset 的 README、templates 或 profiles
 
 原则上不再新增与四篇主线平行的 FAQ 或专题摘录页。

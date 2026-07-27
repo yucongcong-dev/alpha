@@ -24,6 +24,9 @@ PROJECT_ROOT = DEFAULT_WORKSPACE.root
 CACHE_DIR = DEFAULT_WORKSPACE.cache_dir
 RESULTS_DIR = DEFAULT_WORKSPACE.results_dir
 DATA_DIR = DEFAULT_WORKSPACE.data_dir
+DATASETS_DIR = DEFAULT_WORKSPACE.datasets_dir
+SHARED_DIR = DEFAULT_WORKSPACE.shared_dir
+SHARED_BLACKLISTS_DIR = DEFAULT_WORKSPACE.shared_blacklists_dir
 TEMPLATES_DIR = DEFAULT_WORKSPACE.templates_dir
 BLACKLISTS_DIR = DEFAULT_WORKSPACE.blacklists_dir
 
@@ -49,7 +52,7 @@ def sanitize_dataset_id_for_filename(dataset_id: str) -> str:
     """将 dataset_id 转成适合文件名的安全片段。"""
     import re
 
-    sanitized = re.sub(r"[^A-Za-z0-9._-]+", "_", dataset_id.strip())
+    sanitized = re.sub(r"[^A-Za-z0-9._-]+", "_", dataset_id.strip()).strip(".")
     return sanitized or DEFAULT_DATASET_ID
 
 
@@ -76,14 +79,14 @@ def resolve_templates_dir(templates_dir: str = "") -> Path:
 
     优先级：
     1. 显式传入的 templates_dir
-    2. 当前工作目录下存在的 templates/
-    3. 项目根目录下的 templates/
+    2. 当前工作目录下存在的 datasets/
+    3. 工作区 datasets/
     """
     if templates_dir:
         return Path(templates_dir)
-    cwd_templates_dir = Path.cwd() / "templates"
-    if cwd_templates_dir.exists():
-        return cwd_templates_dir
+    cwd_datasets_dir = Path.cwd() / "datasets"
+    if cwd_datasets_dir.exists():
+        return cwd_datasets_dir
     return TEMPLATES_DIR
 
 
@@ -93,12 +96,22 @@ def resolve_blacklists_dir(blacklists_dir: str = "") -> Path:
 
     优先级：
     1. 显式传入的 blacklists_dir
-    2. 当前工作目录下存在的 blacklists/
-    3. 项目根目录下的 blacklists/
+    2. 当前工作目录下存在的 datasets/
+    3. 工作区 datasets/
     """
     if blacklists_dir:
         return Path(blacklists_dir)
-    cwd_blacklists_dir = Path.cwd() / "blacklists"
-    if cwd_blacklists_dir.exists():
-        return cwd_blacklists_dir
+    cwd_datasets_dir = Path.cwd() / "datasets"
+    if cwd_datasets_dir.exists():
+        return cwd_datasets_dir
     return BLACKLISTS_DIR
+
+
+def resolve_shared_blacklists_dir(shared_blacklists_dir: str = "") -> Path:
+    """Resolve cross-dataset blacklist rules independently from dataset assets."""
+    if shared_blacklists_dir:
+        return Path(shared_blacklists_dir)
+    cwd_shared_dir = Path.cwd() / "shared" / "blacklists"
+    if cwd_shared_dir.exists():
+        return cwd_shared_dir
+    return SHARED_BLACKLISTS_DIR

@@ -10,9 +10,7 @@ import time
 
 from ..config.constants import DATE_FORMAT_ISO
 from ..io.common import (
-    CACHE_DIR,
-    RESULTS_DIR,
-    TEMPLATES_DIR,
+    DATASETS_DIR,
     sanitize_dataset_id_for_filename,
 )
 
@@ -57,20 +55,27 @@ def build_dataset_scoped_paths(
     universe: str = "",
     instrument_type: str = "",
     delay: int | None = None,
+    run_name: str = "default",
 ) -> dict[str, str]:
-    """根据 dataset_id 派生默认缓存、结果与模板库路径。"""
+    """根据 dataset_id 派生模板、策略、缓存与运行目录路径。"""
     dataset_key = sanitize_dataset_id_for_filename(dataset_id)
+    run_key = sanitize_dataset_id_for_filename(run_name or "default")
+    dataset_root = DATASETS_DIR / dataset_key
     cache_scope_key = build_fields_cache_scope_key(
         region=region,
         universe=universe,
         instrument_type=instrument_type,
         delay=delay,
     )
-    fields_cache_path = CACHE_DIR / "fields" / dataset_key / cache_scope_key / "fields.json"
+    fields_cache_path = dataset_root / "cache" / "fields" / cache_scope_key / "fields.json"
+    run_dir = dataset_root / "runs" / run_key
     return {
-        "template_library_file": str(TEMPLATES_DIR / dataset_key / "library.json"),
+        "dataset_root": str(dataset_root),
+        "template_library_file": str(dataset_root / "templates" / "library.json"),
+        "blacklists_dir": str(DATASETS_DIR),
         "fields_cache_file": str(fields_cache_path),
-        "output": str(RESULTS_DIR / dataset_key / "test_results.json"),
+        "run_dir": str(run_dir),
+        "output": str(run_dir / "summary.json"),
     }
 
 
@@ -78,6 +83,14 @@ def build_output_sidecar_paths(output_path: str) -> dict[str, str]:
     """根据主结果文件路径生成配套边车文件路径。"""
     output = Path(output_path)
     base_dir = output.parent
+    if output.name.lower() == "summary.json":
+        return {
+            "analysis": str(base_dir / "analysis.json"),
+            "template_registry": str(base_dir / "template_registry.json"),
+            "template_registry_overrides": str(base_dir / "template_registry_overrides.json"),
+            "results_journal": str(base_dir / "results.jsonl"),
+            "run_log": str(base_dir / "run.log"),
+        }
     base_name = output.stem or "results"
     if not output.suffix:
         base_name = output.name or "results"

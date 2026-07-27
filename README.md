@@ -5,7 +5,7 @@
 ## 文档导航
 
 - 通用学习与问题索引：先看 [docs/README.md](docs/README.md)
-- 数据集专属策略：看 `templates/<dataset_id>/README.md`
+- 数据集专属策略：看 `datasets/<dataset_id>/README.md`
 - 想快速上手仓库：继续看本文档的“安装 / 运行 / 结果解读”
 
 ## Python 版本
@@ -42,8 +42,8 @@ alpha/
 │   ├── quality_feedback.yaml
 │   ├── templates.yaml
 │   └── constants_defaults.yaml
-├── templates/             # 数据集模板库与说明
-├── blacklists/            # 数据集 blacklist
+├── datasets/              # 每个 dataset 的模板、黑名单、profiles、缓存和运行结果
+├── shared/                # 跨数据集共享策略资产
 ├── docs/                  # 四篇主文档 + 索引
 └── tests/                 # unit / integration
 ```
@@ -53,39 +53,41 @@ alpha/
 哪些文件进仓：
 
 - `config/*.yaml`：统一配置入口，按职责维护默认运行参数、数据集 profile、表达式策略、质量阈值和模板参数。
-- `templates/<dataset_id>/`：数据集专属模板、聚焦字段/模板白名单，以及经过验证值得复用的本地 refine 模板。
-- `templates/<dataset_id>/refine/fields/*.txt`：少量、可复用、人工裁剪的字段白名单；它们服务于稳定复现实验，不应再混入 `cache/`。
-- `blacklists/<dataset_id>/blacklist.json`：统一黑名单。脚本会自动追加，也允许人工维护；空黑名单也可以进仓，用于固定数据集目录边界。
+- `datasets/<dataset_id>/templates/`：数据集专属默认模板库和 refine 模板包。
+- `datasets/<dataset_id>/profiles/fields/*.txt`：少量、可复用、人工裁剪的字段白名单；它们服务于稳定复现实验，不应再混入 `cache/`。
+- `datasets/<dataset_id>/profiles/templates/*.txt`：人工维护的模板筛选清单。
+- `datasets/<dataset_id>/blacklists/blacklist.json`：统一黑名单。脚本会自动追加，也允许人工维护；空黑名单也可以进仓，用于固定数据集目录边界。
+- `shared/blacklists/default_rules.json`：跨数据集通用的表达式规避规则。
 
 哪些文件不进仓：
 
-- `results/`：每次运行的结果、分析、日志、checkpoint 和 state。
-- `cache/`：磁盘上的可重建缓存目录。当前主要承载字段缓存；内存态的 YAML / blacklist / runtime cache 不落在这里。
+- `datasets/<dataset_id>/runs/`：每次运行的结果、分析、日志、checkpoint 和 state。
+- `datasets/<dataset_id>/cache/`：磁盘上的可重建缓存目录。当前主要承载字段缓存；内存态的 YAML / blacklist / runtime cache 不落在这里。
 - `tmp/`：一次性实验输入、临时 include/exclude 列表、临时模板库。
 - `scratch/`：外部脚本、对照材料、手工实验草稿。
 - `.credentials/`：本地加密凭证和密钥。
 
-根目录只保留项目入口和说明文件。配置统一放 `config/`；临时文件不要放根目录。如果只是一次性实验，放 `tmp/`；如果已经验证值得长期复用，再整理命名后放入 `templates/<dataset_id>/`。
+根目录只保留项目入口和说明文件。配置统一放 `config/`；临时文件不要放根目录。如果只是一次性实验，放 `tmp/`；如果已经验证值得长期复用，再整理命名后放入对应数据集的 `templates/` 或 `profiles/`。
 
 ## 结果目录约定
 
-`results/` 仍然是纯运行产物目录，不进仓；但建议在数据集子目录下按意图分层，避免长期扁平堆叠：
+`datasets/<dataset_id>/runs/` 是纯运行产物目录，不进仓。每次实验使用独立的 `run_name`，例如：
 
-- `results/<dataset_id>/explore/`：广泛探索、overnight sweep、初筛轮次
-- `results/<dataset_id>/refine/`：局部精修、triplet/density/window 等 focused 轮次
-- `results/<dataset_id>/compare/`：同一字段或同一家族的对照实验
-- `results/<dataset_id>/scratch/`：短期排障、filter probe、临时验证
+- `20260727-explore-overnight`：广泛探索、overnight sweep、初筛轮次
+- `20260727-refine-cashflow`：局部精修、triplet/density/window 等 focused 轮次
+- `20260727-compare-neutralization`：同一字段或同一家族的对照实验
+- `20260727-scratch-filter-probe`：短期排障或临时验证
 
-如果暂时没迁移旧文件，至少在新命名中保持阶段前缀一致；一旦某轮结果成为长期参考，再把对应模板/字段知识沉淀回 `templates/<dataset_id>/`，而不是继续让 `results/` 承担知识库角色。
+一旦某轮结果成为长期参考，把对应模板/字段知识沉淀回同一数据集的 `templates/`、`profiles/` 或 `README.md`，不要让 `runs/` 承担知识库角色。
 
 ## 模板目录
 
-当前模板目录统一放在 `templates/`：
+当前模板目录统一放在每个数据集自己的 `templates/`：
 
-- 数据集专属模板库：`templates/<dataset_id>/library.json`
-- 数据集专属模板说明：`templates/<dataset_id>/README.md`
-- 数据集聚焦白名单：可选放在 `templates/<dataset_id>/*.txt`
-- 数据集 refine 模板库：可选放在 `templates/<dataset_id>/refine/*.json`
+- 数据集专属模板库：`datasets/<dataset_id>/templates/library.json`
+- 数据集专属模板说明：`datasets/<dataset_id>/README.md`
+- 数据集字段/模板聚焦白名单：`datasets/<dataset_id>/profiles/{fields,templates}/*.txt`
+- 数据集 refine 模板库：可选放在 `datasets/<dataset_id>/templates/refine/*.json`
 
 当前实现采用“数据集专属模板库”模式：
 
@@ -107,7 +109,7 @@ alpha/
 
 ## 黑名单目录
 
-- 统一黑名单：`blacklists/<dataset_id>/blacklist.json`。
+- 统一黑名单：`datasets/<dataset_id>/blacklists/blacklist.json`。
 - 当运行结果持续不佳时，脚本会直接把低质量模板追加到该文件，下次运行自动跳过。
 - 你也可以手工编辑同一个文件，用于补充明确不想再跑的模板或表达式规则。
 
@@ -173,7 +175,7 @@ python3.10 -m alpha
 
 不传参时使用内置默认值（`--limit 200 --max-templates-per-field 6 --field-template-batch-size 2`）。
 首次运行会先按当前数据集上下文全量拉取字段并写入磁盘缓存
-`cache/fields/<dataset>/<cache_key>/fields.json`，
+`datasets/<dataset>/cache/fields/<cache_key>/fields.json`，
 其中 `cache_key` 由 `region + universe + instrument_type + delay` 生成，例如
 `usa_top3000_equity_d1`，
 后续同一 `dataset_id + region + universe + instrument_type + delay` 组合直接复用缓存。
@@ -200,9 +202,9 @@ python3.10 -m alpha
 - 适合放这里的参数包括：`partner_limit`、字段质量阈值、反馈阶段设置、少量运行期策略开关
 - `policy_version` 标识启发式版本，失败反馈默认按 `field_type` 隔离
 - `evaluation_holdout_percent` 会按 dataset/field/version 稳定分配对照组；holdout 不应用自适应优先级
-- 模板本身优先放在 `templates/<dataset_id>/` 下维护，而不是继续把模板内容塞回 Python 常量
+- 模板本身优先放在 `datasets/<dataset_id>/templates/` 下维护，而不是继续把模板内容塞回 Python 常量
 
-**输出**：`*_analysis.json` 中的关键字段：
+**输出**：默认 `datasets/<dataset>/runs/<run_name>/analysis.json` 中的关键字段：
 - `near_pass_summary`：接近通过的候选（按 score 排序）
 - `failed_check_leaderboard`：主要失败原因分布
 - `optimization_hints`：自动生成的优化建议
@@ -256,7 +258,7 @@ python3.10 -m alpha --top-fields-by-feedback 10 --max-templates-per-field 15
 
 根 `README` 只保留通用运行方法，不长期维护具体数据集的作战细节。
 
-- `fundamental6`、`model51`、`model16` 的当前策略，统一下沉到对应的 `templates/<dataset_id>/README.md`
+- `fundamental6`、`model51`、`model16` 的当前策略，统一下沉到对应的 `datasets/<dataset_id>/README.md`
 - 如果某个数据集有聚焦字段白名单、模板白名单、refine 包，也应优先放在对应模板目录说明里维护
 - 根文档只回答“怎么运行这个仓库”，数据集文档再回答“这个数据集现在该怎么跑”
 
@@ -279,7 +281,7 @@ python3.10 -m alpha --full-run
 - 已完成的字段+模板组合不会重复
 - 新结果追加到同一输出文件
 - 中断后再次运行自动继续
-- 如需重新开始，使用不同的 `--output` 路径
+- 如需重新开始，优先使用新的 `--run-name`；显式 `--output` 仍用于兼容自定义路径
 
 ### Pending 复查
 
@@ -287,8 +289,7 @@ python3.10 -m alpha --full-run
 
 ```bash
 python3.10 -m alpha --dataset-id model51 \
-  --output results/model51/stage2_explore_clean.json \
-  --feedback-output results/model51/stage2_explore_clean.json \
+  --run-name stage2-explore-clean \
   --recheck-pending-self-correlation-only \
   --no-auto-update-blacklist
 ```
@@ -320,12 +321,13 @@ python3.10 -m alpha
 
 所有相对路径参数（如 `--output`、`--fields-cache-file`、`--include-fields-file`）都相对于当前命令执行目录解析。
 
-运行时资源目录按类型分别解析：
-- 模板目录：显式传入的路径 > 当前命令目录下的 `templates/` > 项目内置 `templates/`
-- 黑名单目录：显式传入的路径 > 当前命令目录下的 `blacklists/` > 项目内置 `blacklists/`
-- 其余普通数据目录仍是：显式传入的 `data_dir` > 当前命令目录下的 `data/` > 项目内置 `data/`
+运行时默认路径统一从工作区根目录派生。工作区选择优先级是：
 
-这意味着你可以在临时工作目录放一份独立的 `templates/` 或 `blacklists/`，而不用改动仓库内置数据。
+1. `ALPHA_WORKSPACE_ROOT` 显式指定的目录。
+2. 源码仓库根目录，或包含 `datasets/`、`config/` 等标记的当前目录。
+3. 用户目录下的 `~/.alpha/`。
+
+单个文件参数（如 `--output`、`--template-library-file`）仍可显式覆盖默认路径。
 
 清理本地运行产物（默认保留 `.credentials/`）：
 
@@ -367,9 +369,9 @@ python3.10 -m alpha --no-smoke-test --no-full-run
 - `config/policy.py`：dataset expression policy 构建与反馈阶段解析
 - `config/profiles.py`：dataset profile fallback
 
-YAML 分层优先级为：`config/settings.yaml` > `config/expression_policies.yaml` > `config/dataset_profiles.yaml` > `config/templates.yaml` / `config/quality_feedback.yaml` > `config/constants_defaults.yaml`。其中 `config/settings.yaml` 面向日常运行调参，其余 `config/*.yaml` 面向按职责拆分的默认值；`templates/` 面向表达式模板，`blacklists/` 面向低质量模板过滤。
+YAML 分层优先级为：`config/settings.yaml` > `config/expression_policies.yaml` > `config/dataset_profiles.yaml` > `config/templates.yaml` / `config/quality_feedback.yaml` > `config/constants_defaults.yaml`。其中 `config/settings.yaml` 面向日常运行调参，其余 `config/*.yaml` 面向按职责拆分的默认值；`datasets/<dataset_id>/templates/` 面向表达式模板，`datasets/<dataset_id>/blacklists/` 面向低质量模板过滤。
 
-实际运行配置优先维护在 `config/*.yaml`、`templates/` 和 `blacklists/`，不要把数据集专属模板重新塞回 Python 常量。
+实际运行配置优先维护在 `config/*.yaml` 和对应的 dataset 目录中，不要把数据集专属模板重新塞回 Python 常量。
 
 ## 结果解读
 
@@ -386,13 +388,13 @@ YAML 分层优先级为：`config/settings.yaml` > `config/expression_policies.y
 
 如果后续要做正式提交，仍然需要人工干预，而不是依赖默认 CLI 运行流程。
 
-每次运行至少会生成一组结果文件；若未显式指定 `--output`，常见默认命名如下：
+每次运行至少会生成一组结果文件；若未显式指定 `--output`，默认目录如下：
 
 | 文件 | 用途 |
 |------|------|
-| `results/<dataset>/test_results.json` | 轻量运行 summary 与 journal 指针 |
-| `results/<dataset>/test_results_results.jsonl` | 权威结果 journal；主 summary 和分析文件都可由它重建 |
-| `results/<dataset>/test_results_analysis.json` | 分析汇总（用于决策下一步） |
+| `datasets/<dataset>/runs/<run_name>/summary.json` | 轻量运行 summary 与 journal 指针 |
+| `datasets/<dataset>/runs/<run_name>/results.jsonl` | 权威结果 journal；主 summary 和分析文件都可由它重建 |
+| `datasets/<dataset>/runs/<run_name>/analysis.json` | 分析汇总（用于决策下一步） |
 
 ### 关键分析字段
 

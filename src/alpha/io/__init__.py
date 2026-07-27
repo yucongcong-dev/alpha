@@ -22,8 +22,11 @@ if TYPE_CHECKING:
         BLACKLISTS_DIR,
         CACHE_DIR,
         DATA_DIR,
+        DATASETS_DIR,
         PROJECT_ROOT,
         RESULTS_DIR,
+        SHARED_BLACKLISTS_DIR,
+        SHARED_DIR,
         TEMPLATES_DIR,
     )
     from .output_paths import (
@@ -43,8 +46,11 @@ _EXPORT_MAP: ExportMap = {
     "BLACKLISTS_DIR": (".common", "BLACKLISTS_DIR"),
     "CACHE_DIR": (".common", "CACHE_DIR"),
     "DATA_DIR": (".common", "DATA_DIR"),
+    "DATASETS_DIR": (".common", "DATASETS_DIR"),
     "PROJECT_ROOT": (".common", "PROJECT_ROOT"),
     "RESULTS_DIR": (".common", "RESULTS_DIR"),
+    "SHARED_BLACKLISTS_DIR": (".common", "SHARED_BLACKLISTS_DIR"),
+    "SHARED_DIR": (".common", "SHARED_DIR"),
     "TEMPLATES_DIR": (".common", "TEMPLATES_DIR"),
     "build_dataset_scoped_paths": (".output_paths", "build_dataset_scoped_paths"),
     "build_output_sidecar_paths": (".output_paths", "build_output_sidecar_paths"),

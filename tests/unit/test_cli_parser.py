@@ -241,9 +241,13 @@ def test_normalize_args_paths_uses_dataset_scoped_defaults(monkeypatch, tmp_path
     paths = normalize_args_paths(args)
 
     assert paths.fields_cache_file.replace("\\", "/").endswith(
-        "/cache/fields/pv1/usa_top1000_equity_d2/fields.json"
+        "/datasets/pv1/cache/fields/usa_top1000_equity_d2/fields.json"
     )
-    assert paths.output.replace("\\", "/").endswith("/results/pv1/test_results.json")
+    assert paths.template_library_file.replace("\\", "/").endswith(
+        "/datasets/pv1/templates/library.json"
+    )
+    assert paths.output.replace("\\", "/").endswith("/datasets/pv1/runs/default/summary.json")
+    assert paths.log_file.replace("\\", "/").endswith("/datasets/pv1/runs/default/run.log")
 
 
 def test_normalize_args_paths_does_not_mutate_original_args(monkeypatch, tmp_path) -> None:
@@ -265,7 +269,26 @@ def test_normalize_args_paths_does_not_mutate_original_args(monkeypatch, tmp_pat
     assert args.output == ""
     assert args.template_library_file == ""
     assert args.fields_cache_file == ""
-    assert paths.output.replace("\\", "/").endswith("/results/pv1/test_results.json")
+    assert paths.output.replace("\\", "/").endswith("/datasets/pv1/runs/default/summary.json")
+
+
+def test_normalize_args_paths_uses_named_run_directory(monkeypatch, tmp_path) -> None:
+    clear_yaml_cache()
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        ["alpha", "--dataset-id", "pv1", "--run-name", "20260727-entry-validation"],
+    )
+
+    paths = normalize_args_paths(parse_args())
+
+    assert paths.output.replace("\\", "/").endswith(
+        "/datasets/pv1/runs/20260727-entry-validation/summary.json"
+    )
+    assert paths.state_file.replace("\\", "/").endswith(
+        "/datasets/pv1/runs/20260727-entry-validation/state.json"
+    )
 
 
 def test_parse_application_config_is_immutable_and_uses_normalized_paths(

@@ -26,6 +26,7 @@ def normalize_args_paths(args: argparse.Namespace) -> RunPaths:
         universe=args.universe,
         instrument_type=args.instrument_type,
         delay=args.delay,
+        run_name=str(getattr(args, "run_name", "default") or "default"),
     )
 
     template_library_file = (
@@ -42,7 +43,7 @@ def normalize_args_paths(args: argparse.Namespace) -> RunPaths:
     creds_key_file = (
         resolve_cli_path(args.creds_key_file, base_dir=os.getcwd()) or DEFAULT_CREDS_KEY_FILE
     )
-    blacklists_dir = str(resolve_blacklists_dir())
+    blacklists_dir = scoped_paths["blacklists_dir"] or str(resolve_blacklists_dir())
     include_fields_file = resolve_cli_path(args.include_fields_file, base_dir=os.getcwd())
     exclude_fields_file = resolve_cli_path(args.exclude_fields_file, base_dir=os.getcwd())
     include_templates_file = resolve_cli_path(args.include_templates_file, base_dir=os.getcwd())
@@ -51,10 +52,14 @@ def normalize_args_paths(args: argparse.Namespace) -> RunPaths:
     sidecar_paths = build_output_sidecar_paths(output_file)
     log_file = resolve_cli_path(args.log_file, base_dir=os.getcwd()) or sidecar_paths["run_log"]
     results_dir = str(Path(output_file).parent)
-    output_stem = Path(output_file).stem
     output_dir = Path(output_file).parent
-    state_file = str(output_dir / f"{output_stem}_state.json")
-    checkpoint_file = str(output_dir / f"{output_stem}_checkpoint.json")
+    if Path(output_file).name.lower() == "summary.json":
+        state_file = str(output_dir / "state.json")
+        checkpoint_file = str(output_dir / "checkpoint.json")
+    else:
+        output_stem = Path(output_file).stem
+        state_file = str(output_dir / f"{output_stem}_state.json")
+        checkpoint_file = str(output_dir / f"{output_stem}_checkpoint.json")
 
     return RunPaths(
         results_dir=results_dir,

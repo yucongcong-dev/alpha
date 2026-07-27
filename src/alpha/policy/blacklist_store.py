@@ -7,6 +7,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+from pathlib import Path
 import time
 from typing import cast
 
@@ -30,13 +31,13 @@ _BLACKLIST_PATH_CACHE: dict[str, str] = {}
 
 
 def _resolve_blacklist_root(data_dir: str = "") -> str:
-    """Resolve the canonical blacklist root from an optional runtime root override."""
+    """Resolve the canonical datasets root from an optional workspace override."""
     if not data_dir:
         return str(get_active_blacklists_dir())
-    candidate = os.path.abspath(data_dir)
-    if os.path.basename(candidate.rstrip(os.sep)) == "blacklists":
-        return candidate
-    return os.path.join(candidate, "blacklists")
+    candidate = Path(data_dir).expanduser().resolve()
+    if candidate.name in {"datasets", "blacklists"}:
+        return str(candidate)
+    return str(candidate / "datasets")
 
 
 def activate_blacklist_root(data_dir: str = "") -> str:
@@ -51,7 +52,15 @@ def resolve_blacklist_path(dataset_id: str, *, data_dir: str = "") -> str:
         return _BLACKLIST_PATH_CACHE[cache_key]
     base = _resolve_blacklist_root(data_dir)
     dataset_key = sanitize_dataset_id_for_filename(dataset_id)
-    resolved = os.path.join(base, dataset_key, "blacklist.json")
+    base_path = Path(base)
+    if base_path.name == "blacklists":
+        if base_path.parent.name == dataset_key:
+            resolved_path = base_path / "blacklist.json"
+        else:
+            resolved_path = base_path / dataset_key / "blacklist.json"
+    else:
+        resolved_path = base_path / dataset_key / "blacklists" / "blacklist.json"
+    resolved = str(resolved_path)
     _BLACKLIST_PATH_CACHE[cache_key] = resolved
     return resolved
 

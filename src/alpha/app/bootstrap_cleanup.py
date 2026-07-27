@@ -15,7 +15,21 @@ def clean_runtime_artifacts(
     project_root: Path = PROJECT_ROOT,
 ) -> int:
     """Remove local runtime artifacts while preserving encrypted credentials by default."""
+    dataset_runtime_targets: list[Path] = []
+    datasets_dir = project_root / "datasets"
+    if datasets_dir.is_dir():
+        for dataset_dir in datasets_dir.iterdir():
+            if not dataset_dir.is_dir():
+                continue
+            dataset_runtime_targets.extend(
+                [
+                    dataset_dir / "cache",
+                    dataset_dir / "runs",
+                ]
+            )
     targets: list[Path] = [
+        *dataset_runtime_targets,
+        # Legacy runtime roots remain cleanable during the layout transition.
         project_root / "cache",
         project_root / "results",
         project_root / ".pytest_cache",

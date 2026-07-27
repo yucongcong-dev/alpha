@@ -12,6 +12,7 @@ import logging
 import os
 import re
 
+from ..io.common import resolve_shared_blacklists_dir
 from ..models.domain_types import TemplateMetadata
 from .blacklist_context import clear_active_blacklists_dir, get_active_blacklists_dir
 from .blacklist_store import (
@@ -72,10 +73,11 @@ def load_default_avoid_rules() -> list[BlacklistPatternRule]:
 
 
 def _load_default_avoid_rules() -> list[BlacklistPatternRule]:
-    """加载跨数据集默认规避规则 template_blacklist.json。"""
+    """加载 shared/blacklists/default_rules.json 中的跨数据集规则。"""
     global _DEFAULT_AVOID_RULES_CACHE
-    blacklist_root = get_active_blacklists_dir()
-    path = os.path.join(str(blacklist_root), "template_blacklist.json")
+    shared_path = resolve_shared_blacklists_dir() / "default_rules.json"
+    legacy_path = get_active_blacklists_dir() / "template_blacklist.json"
+    path = str(shared_path if shared_path.is_file() else legacy_path)
     if os.path.isfile(path):
         signature = _file_signature(path)
         if (
@@ -134,7 +136,7 @@ def _match_pattern_rule(expression: str, rule: BlacklistPatternRule) -> bool:
 
 
 def _load_blacklist(dataset_id: str) -> None:
-    """按 dataset_id 加载统一黑名单文件 blacklists/{dataset_id}/blacklist.json。"""
+    """加载 datasets/<dataset>/blacklists/blacklist.json。"""
     names: set[str] = set()
     pattern_rules: list[BlacklistPatternRule] = []
     entries: list[BlacklistMatcherEntry] = []

@@ -443,6 +443,9 @@ misc:
 # ---------------------------------------------------------------------------
 paths:
   credentials_dir: ".credentials"
+  datasets_dir: "datasets"
+  shared_dir: "shared"
+  # Legacy top-level runtime roots, retained only for compatibility cleanup.
   cache_dir: "cache"
   results_dir: "results"
   data_dir: "data"

@@ -95,15 +95,14 @@ PYTHONPATH=src python3.10 -m alpha \
   --limit 8 \
   --max-templates-per-field 3 \
   --max-templates-per-family 1 \
-  --include-fields-file templates/option8/refine/fields/phase1_core_fields.txt \
-  --output results/option8/phase1entryvalidation.json \
-  --feedback-output results/option8/phase1entryvalidation.json \
+  --include-fields-file datasets/option8/profiles/fields/phase1_core_fields.txt \
+  --run-name phase1entryvalidation \
   --no-auto-update-blacklist
 ```
 
 当前已落地结果摘要：
 
-- 结果文件：`results/option8/phase1entryvalidation_results.jsonl`
+- 结果文件：`datasets/option8/runs/phase1entryvalidation/results.jsonl`
 - 已落地总数：`3`
 - `submittable = 0`
 - 当前通过率：`0%`
@@ -146,7 +145,7 @@ PYTHONPATH=src python3.10 -m alpha \
   --dataset-id option8 \
   --neutralization MARKET \
   --limit 8 \
-  --include-fields-file templates/option8/refine/fields/phase1_core_fields.txt \
+  --include-fields-file datasets/option8/profiles/fields/phase1_core_fields.txt \
   --dry-run-plan \
   --no-auto-update-blacklist
 ```
@@ -161,9 +160,8 @@ PYTHONPATH=src python3.10 -m alpha \
   --limit 8 \
   --max-templates-per-field 3 \
   --max-templates-per-family 1 \
-  --include-fields-file templates/option8/refine/fields/phase1_core_fields.txt \
-  --output results/option8/phase1entryvalidation.json \
-  --feedback-output results/option8/phase1entryvalidation.json \
+  --include-fields-file datasets/option8/profiles/fields/phase1_core_fields.txt \
+  --run-name phase1entryvalidation \
   --no-auto-update-blacklist
 ```
 

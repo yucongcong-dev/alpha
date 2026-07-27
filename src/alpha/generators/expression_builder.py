@@ -121,16 +121,16 @@ def _is_explicit_refine_library(template_library_file: str) -> bool:
 
 
 def _is_dataset_default_library(template_library_file: str, dataset_id: str) -> bool:
-    """判断是否正在使用 templates/<dataset>/library.json 这类默认主模板库。"""
+    """判断是否正在使用 datasets/<dataset>/templates/library.json。"""
     if not template_library_file or not dataset_id:
         return False
     path = Path(template_library_file)
     if path.name.lower() != "library.json":
         return False
     parts = [part.strip().lower() for part in path.parts]
-    if len(parts) < 2:
+    if len(parts) < 3:
         return False
-    return parts[-2] == dataset_id.strip().lower()
+    return parts[-2] == "templates" and parts[-3] == dataset_id.strip().lower()
 
 
 def _resolve_activation_scope(candidate: TemplateCandidate) -> str:

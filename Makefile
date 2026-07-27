@@ -23,7 +23,7 @@ scan-secrets:
 
 repo-boundary-check:
 	@if find . -maxdepth 1 -type f \( -name 'tmp_*.txt' -o -name 'tmp_*.json' \) | rg -n .; then \
-		echo "[check] root tmp_* files are not allowed; move them to tmp/ or templates/<dataset>/" >&2; \
+		echo "[check] root tmp_* files are not allowed; move them to tmp/ or datasets/<dataset>/profiles/" >&2; \
 		exit 1; \
 	fi
 

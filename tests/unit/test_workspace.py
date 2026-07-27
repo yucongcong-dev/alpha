@@ -34,6 +34,18 @@ def test_installed_package_falls_back_to_user_workspace(monkeypatch, tmp_path) -
     assert package_root not in resolved.parents
 
 
+def test_dataset_directory_marks_current_directory_as_workspace(monkeypatch, tmp_path) -> None:
+    monkeypatch.delenv(WORKSPACE_ENV, raising=False)
+    package_root = tmp_path / "site-packages" / "alpha"
+    current_workspace = tmp_path / "research"
+    package_root.mkdir(parents=True)
+    (current_workspace / "datasets").mkdir(parents=True)
+
+    resolved = discover_workspace_root(resource_root=package_root, cwd=current_workspace)
+
+    assert resolved == current_workspace.resolve()
+
+
 def test_workspace_separates_runtime_and_resource_paths(tmp_path) -> None:
     runtime_root = tmp_path / "runtime"
     resource_root = tmp_path / "resources"
@@ -41,8 +53,9 @@ def test_workspace_separates_runtime_and_resource_paths(tmp_path) -> None:
     (resource_root / "config" / "settings.yaml").write_text("global: {}\n", encoding="utf-8")
     workspace = WorkspacePaths(root=runtime_root, resource_root=resource_root)
 
-    assert workspace.results_dir == runtime_root / "results"
-    assert workspace.cache_dir == runtime_root / "cache"
+    assert workspace.datasets_dir == runtime_root / "datasets"
+    assert workspace.dataset_dir("fundamental6") == runtime_root / "datasets" / "fundamental6"
+    assert workspace.shared_blacklists_dir == runtime_root / "shared" / "blacklists"
     assert workspace.config_dir == resource_root / "config"
 
 
