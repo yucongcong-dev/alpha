@@ -163,6 +163,6 @@ def build_settings_fingerprint(args: SimulationSettingsArgs) -> str:
     return stable_fingerprint(payload["settings"])
 
 
-def build_settings_fingerprint_from_payload(payload: dict[str, Any]) -> str:
+def build_settings_fingerprint_from_payload(payload: object) -> str:
     """为单个具体 settings 变体生成配置指纹。"""
     return stable_fingerprint(payload)

@@ -7,7 +7,9 @@
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
+from dataclasses import dataclass
+from typing import Protocol
 
 from ..analysis.feedback_history import (
     choose_settings_variant_budget,
@@ -35,13 +37,76 @@ from ..generators.templates.refine import build_refine_templates
 from ..generators.variants import build_setting_variants
 from ..models.domain import (
     FieldTestResult,
+    NearPassCandidate,
+    SettingsVariant,
     TemplateCandidate,
     TemplateField,
 )
-from ..models.runtime_protocols import TemplateFeedback
+from ..models.runtime_protocols import SimulationSettingsArgs, TemplateFeedback
 from ..policy.expression import get_dataset_expression_policy, resolve_feedback_stage
 from ..runtime.contexts import PendingTemplateEntry, TemplateBuildContext
 from ..utils.helpers import first_non_empty, is_event_field_name
+
+
+class RefineTemplateBuilder(Protocol):
+    """Near-pass refinement template generation port."""
+
+    def __call__(
+        self,
+        field_name: str,
+        nearpass_candidates: Sequence[NearPassCandidate],
+        *,
+        expression_policy: DatasetExpressionPolicy | None = None,
+    ) -> list[TemplateCandidate]: ...
+
+
+class ExpressionCandidateBuilder(Protocol):
+    """Broad expression candidate generation port."""
+
+    def __call__(
+        self,
+        field: TemplateField,
+        build_ctx: TemplateBuildContext,
+        *,
+        max_templates_per_field: int,
+        max_templates_per_family: int,
+        field_feedback: TemplateFeedback | None = None,
+        expression_policy: DatasetExpressionPolicy | None = None,
+    ) -> list[TemplateCandidate]: ...
+
+
+class SettingVariantsBuilder(Protocol):
+    """Settings variant expansion port."""
+
+    def __call__(
+        self,
+        args: SimulationSettingsArgs,
+        template_name: str,
+        expression: str,
+        *,
+        field_feedback: TemplateFeedback | None = None,
+        refine_candidate: NearPassCandidate | None = None,
+    ) -> list[SettingsVariant]: ...
+
+
+@dataclass(frozen=True)
+class TemplatePlanningServices:
+    """Typed dependencies used while planning templates and settings variants."""
+
+    build_refine_templates: RefineTemplateBuilder
+    build_expression_candidates: ExpressionCandidateBuilder
+    build_setting_variants: SettingVariantsBuilder
+    build_settings_fingerprint: Callable[[object], str]
+
+
+def build_template_planning_services() -> TemplatePlanningServices:
+    """Resolve current planning dependencies so runtime overrides remain effective."""
+    return TemplatePlanningServices(
+        build_refine_templates=build_refine_templates,
+        build_expression_candidates=build_expression_candidates,
+        build_setting_variants=build_setting_variants,
+        build_settings_fingerprint=build_settings_fingerprint_from_payload,
+    )
 
 
 def _limit_template_candidates(
@@ -112,10 +177,10 @@ def resolve_field_template_candidates(
     field: TemplateField,
     *,
     prior_results: Sequence[FieldTestResult],
-    build_refine_templates_fn=build_refine_templates,
-    build_expression_candidates_fn=build_expression_candidates,
+    services: TemplatePlanningServices | None = None,
 ) -> tuple[list[TemplateCandidate], TemplateFeedback, DatasetExpressionPolicy]:
     """为单个字段解析模板候选、字段反馈和表达式策略。"""
+    active_services = services or build_template_planning_services()
     options = build_ctx.options
     field_id, field_name, field_feedback, expression_policy = _resolve_field_planning_policy(
         build_ctx,
@@ -137,7 +202,7 @@ def resolve_field_template_candidates(
         else []
     )
     if nearpass_candidates:
-        templates = build_refine_templates_fn(
+        templates = active_services.build_refine_templates(
             field_name,
             nearpass_candidates,
             expression_policy=expression_policy,
@@ -148,7 +213,7 @@ def resolve_field_template_candidates(
             max_templates_per_field=max_templates_per_field,
         )
     else:
-        templates = build_expression_candidates_fn(
+        templates = active_services.build_expression_candidates(
             field,
             build_ctx,
             max_templates_per_field=max_templates_per_field,
@@ -173,10 +238,10 @@ def build_pending_template_variants(
     attempted_keys: set[tuple[str, str, str, str]],
     reserved_keys: set[tuple[str, str, str, str]],
     field_feedback: TemplateFeedback | None,
-    build_setting_variants_fn=build_setting_variants,
-    build_settings_fingerprint_fn=build_settings_fingerprint_from_payload,
+    services: TemplatePlanningServices | None = None,
 ) -> list[PendingTemplateEntry]:
     """把模板候选展开为真正待执行的 settings 变体队列。"""
+    active_services = services or build_template_planning_services()
     options = build_ctx.options
     field_id, field_name, _policy_feedback, expression_policy = _resolve_field_planning_policy(
         build_ctx,
@@ -235,14 +300,14 @@ def build_pending_template_variants(
         )
         if execution_decision is None:
             continue
-        for settings_variant in build_setting_variants_fn(
+        for settings_variant in active_services.build_setting_variants(
             options,
             template_name,
             expression,
             field_feedback=field_feedback,
             refine_candidate=execution_decision.refine_candidate,
         )[: execution_decision.effective_variant_budget]:
-            variant_fingerprint = build_settings_fingerprint_fn(settings_variant)
+            variant_fingerprint = active_services.build_settings_fingerprint(settings_variant)
             expression_variant_key = (field_id, expression, variant_fingerprint)
             if expression_variant_key in reserved_expression_variant_keys:
                 continue

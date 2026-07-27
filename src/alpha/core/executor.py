@@ -48,11 +48,23 @@ from .execution_filters import (
     should_skip_expression_by_history as should_skip_expression_by_history,
 )
 from .template_planning import (
+    TemplatePlanningServices,
     build_pending_template_variants,
     resolve_field_template_candidates,
 )
 
 logger = logging.getLogger(__name__)
+
+
+def build_executor_template_planning_services() -> TemplatePlanningServices:
+    """Build planning dependencies from current executor module overrides."""
+    return TemplatePlanningServices(
+        build_refine_templates=build_refine_templates,
+        build_expression_candidates=build_expression_candidates,
+        build_setting_variants=build_setting_variants,
+        build_settings_fingerprint=build_settings_fingerprint_from_payload,
+    )
+
 
 # ============================================================================
 # 模板队列构建函数
@@ -121,6 +133,7 @@ def build_pending_templates_for_field(
     attempted_keys: set[tuple[str, str, str, str]],
     prior_results: Sequence[FieldTestResult],
     reserved_keys: set[tuple[str, str, str, str]] | None = None,
+    planning_services: TemplatePlanningServices | None = None,
 ) -> tuple[list[PendingTemplateEntry], int, int]:
     """
     为单个字段构建真正可执行的模板与 settings 队列。
@@ -147,14 +160,14 @@ def build_pending_templates_for_field(
         - 模板按优先级降序排列
         - 已尝试的键会被跳过
     """
+    active_services = planning_services or build_executor_template_planning_services()
     field_id = str(first_non_empty(field.get("id"), SENTINEL_UNKNOWN))
     field_name = choose_field_name(field)
     templates, field_feedback, expression_policy = resolve_field_template_candidates(
         build_ctx,
         field,
         prior_results=prior_results,
-        build_refine_templates_fn=build_refine_templates,
-        build_expression_candidates_fn=build_expression_candidates,
+        services=active_services,
     )
     enabled_templates: list[TemplateCandidate] = []
     disabled_templates = 0
@@ -182,8 +195,7 @@ def build_pending_templates_for_field(
         attempted_keys=attempted_keys,
         reserved_keys=reserved_keys or set(),
         field_feedback=field_feedback,
-        build_setting_variants_fn=build_setting_variants,
-        build_settings_fingerprint_fn=build_settings_fingerprint_from_payload,
+        services=active_services,
     )
     return pending_templates, disabled_templates, len(templates)
 
