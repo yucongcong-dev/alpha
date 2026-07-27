@@ -4,7 +4,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable, Iterator
+from collections.abc import Iterator
 from contextlib import contextmanager, suppress
 import hashlib
 import json
@@ -21,7 +21,6 @@ from .output_paths import build_output_sidecar_paths, cleanup_legacy_sidecar_fil
 
 logger = logging.getLogger(__name__)
 
-BlacklistUpdater = Callable[[list[FieldTestResult], str], None]
 JOURNAL_SCHEMA_VERSION = 1
 JOURNAL_SCHEMA_FIELD = "_journal_schema_version"
 JOURNAL_CHECKSUM_FIELD = "_journal_checksum"
@@ -181,9 +180,7 @@ def dump_results(
     settings_fingerprint: str,
     template_library_fingerprint: str,
     run_config: dict[str, Any] | None = None,
-    auto_update_template_blacklist: bool = False,
     include_analysis: bool = True,
-    auto_update_blacklist_fn: BlacklistUpdater | None = None,
 ) -> None:
     """持久化完整运行结果，并按需同步分析边车文件。"""
     sidecar_paths = build_output_sidecar_paths(path)
@@ -217,8 +214,6 @@ def dump_results(
     )
     if include_analysis:
         logger.debug("[done] wrote analysis to %s", sidecar_paths["analysis"])
-    if auto_update_template_blacklist and auto_update_blacklist_fn is not None:
-        auto_update_blacklist_fn(results, dataset_id)
 
 
 def dump_results_incremental(

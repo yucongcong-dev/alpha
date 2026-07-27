@@ -55,7 +55,7 @@ def finalize_run(
         settings_fingerprint=run_ctx.settings_fingerprint,
         template_library_fingerprint=run_ctx.template_library_fingerprint,
         run_config=run_ctx.run_config,
-        auto_update_template_blacklist=write_options.auto_update_blacklist,
-        auto_update_blacklist_fn=auto_update_blacklist,
     )
+    if write_options.auto_update_blacklist:
+        auto_update_blacklist(execution_state.results, write_options.dataset_id)
     delete_pipeline_state(state_file)

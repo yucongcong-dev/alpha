@@ -47,8 +47,8 @@ def _append_process_batch(journal_path: str, batch_index: int) -> None:
     _append_results_journal(journal_path, results)
 
 
-def test_dump_results_does_not_update_blacklist_by_default(monkeypatch, tmp_path) -> None:
-    """Runtime result writes must not mutate tracked blacklist files unless requested."""
+def test_dump_results_is_policy_side_effect_free(monkeypatch, tmp_path) -> None:
+    """The persistence layer must not trigger policy updates."""
     calls: list[tuple[object, ...]] = []
     monkeypatch.setattr(
         blacklist_runtime, "auto_update_blacklist", lambda *args, **kwargs: calls.append(args)
@@ -60,30 +60,9 @@ def test_dump_results_does_not_update_blacklist_by_default(monkeypatch, tmp_path
         [],
         settings_fingerprint="settings",
         template_library_fingerprint="templates",
-        auto_update_blacklist_fn=blacklist_runtime.auto_update_blacklist,
     )
 
     assert calls == []
-
-
-def test_dump_results_updates_blacklist_when_enabled(monkeypatch, tmp_path) -> None:
-    """The explicit opt-in flag should preserve the previous auto-update capability."""
-    calls: list[tuple[object, ...]] = []
-    monkeypatch.setattr(
-        blacklist_runtime, "auto_update_blacklist", lambda *args, **kwargs: calls.append(args)
-    )
-
-    dump_results(
-        str(tmp_path / "results.json"),
-        "fundamental6",
-        [],
-        settings_fingerprint="settings",
-        template_library_fingerprint="templates",
-        auto_update_template_blacklist=True,
-        auto_update_blacklist_fn=blacklist_runtime.auto_update_blacklist,
-    )
-
-    assert len(calls) == 1
 
 
 def test_dump_results_can_skip_analysis_sidecar_for_intermediate_flushes(tmp_path) -> None:
