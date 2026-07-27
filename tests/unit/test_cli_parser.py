@@ -244,7 +244,7 @@ def test_normalize_args_paths_uses_dataset_scoped_defaults(monkeypatch, tmp_path
         "/datasets/pv1/cache/fields/usa_top1000_equity_d2/fields.json"
     )
     assert paths.template_library_file.replace("\\", "/").endswith(
-        "/datasets/pv1/templates/library.json"
+        "/datasets/pv1/templates/template.json"
     )
     assert paths.output.replace("\\", "/").endswith("/datasets/pv1/runs/default/summary.json")
     assert paths.log_file.replace("\\", "/").endswith("/datasets/pv1/runs/default/run.log")

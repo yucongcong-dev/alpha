@@ -241,7 +241,7 @@ def test_build_expression_candidates_narrows_event_field_template_pool() -> None
         / "datasets"
         / "fundamental6"
         / "templates"
-        / "library.json"
+        / "template.json"
     )
     template_library = load_template_library(str(template_file))
 

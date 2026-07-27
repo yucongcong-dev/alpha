@@ -55,7 +55,7 @@ alpha/
 - `datasets/<dataset_id>/templates/`：数据集专属默认模板库和 refine 模板包。
 - `datasets/<dataset_id>/profiles/fields/*.txt`：少量、可复用、人工裁剪的字段白名单；它们服务于稳定复现实验，不应再混入 `cache/`。
 - `datasets/<dataset_id>/profiles/templates/*.txt`：人工维护的模板筛选清单。
-- `datasets/<dataset_id>/blacklists/blacklist.json`：统一黑名单。脚本会自动追加，也允许人工维护；空黑名单也可以进仓，用于固定数据集目录边界。
+- `datasets/<dataset_id>/blacklist.json`：统一黑名单。脚本会自动追加，也允许人工维护；空黑名单也可以进仓，用于固定数据集目录边界。
 
 哪些文件不进仓：
 
@@ -82,14 +82,14 @@ alpha/
 
 当前模板目录统一放在每个数据集自己的 `templates/`：
 
-- 数据集专属模板库：`datasets/<dataset_id>/templates/library.json`
+- 数据集专属模板库：`datasets/<dataset_id>/templates/template.json`
 - 数据集专属模板说明：`datasets/<dataset_id>/README.md`
 - 数据集字段/模板聚焦白名单：`datasets/<dataset_id>/profiles/{fields,templates}/*.txt`
 - 数据集 refine 模板库：可选放在 `datasets/<dataset_id>/templates/refine/*.json`
 
 当前实现采用“数据集专属模板库”模式：
 
-- 每个数据集都显式维护自己的 `library.json`
+- 每个数据集都显式维护自己的 `template.json`
 - 运行时直接读取该数据集模板库，不做额外模板继承
 - 缺失的模板 priority 只在内存中按文件顺序补齐，运行启动不会改写模板源文件
 - 真正的搜索方向应直接在数据集专属目录里定制和收敛
@@ -105,9 +105,9 @@ alpha/
 - `refine.py`：near-pass 候选的局部精修
 - `variations.py`：feedback mutation、bucket group、trade_when、历史优秀表达式复用
 
-## 黑名单目录
+## 黑名单文件
 
-- 统一黑名单：`datasets/<dataset_id>/blacklists/blacklist.json`。
+- 统一黑名单：`datasets/<dataset_id>/blacklist.json`。
 - 当运行结果持续不佳时，脚本会直接把低质量模板追加到该文件，下次运行自动跳过。
 - 你也可以手工编辑同一个文件，用于补充明确不想再跑的模板或表达式规则。
 
@@ -367,7 +367,7 @@ python3.10 -m alpha --no-smoke-test --no-full-run
 - `config/policy.py`：dataset expression policy 构建与反馈阶段解析
 - `config/profiles.py`：dataset profile fallback
 
-YAML 分层优先级为：`config/settings.yaml` > `config/expression_policies.yaml` > `config/dataset_profiles.yaml` > `config/templates.yaml` / `config/quality_feedback.yaml` > `config/constants_defaults.yaml`。其中 `config/settings.yaml` 面向日常运行调参，其余 `config/*.yaml` 面向按职责拆分的默认值；`datasets/<dataset_id>/templates/` 面向表达式模板，`datasets/<dataset_id>/blacklists/` 面向低质量模板过滤。
+YAML 分层优先级为：`config/settings.yaml` > `config/expression_policies.yaml` > `config/dataset_profiles.yaml` > `config/templates.yaml` / `config/quality_feedback.yaml` > `config/constants_defaults.yaml`。其中 `config/settings.yaml` 面向日常运行调参，其余 `config/*.yaml` 面向按职责拆分的默认值；`datasets/<dataset_id>/templates/` 面向表达式模板，`datasets/<dataset_id>/blacklist.json` 面向低质量模板过滤。
 
 实际运行配置优先维护在 `config/*.yaml` 和对应的 dataset 目录中，不要把数据集专属模板重新塞回 Python 常量。
 

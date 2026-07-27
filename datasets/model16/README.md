@@ -42,7 +42,7 @@ Neutralization 的选择应看一组稳定结果，而不是只挑 Sharpe 最高
 
 运行与策略证据：
 - 当前整理后的模板库，已经明显优于过去的 fallback 形态，因此一批旧模板已移出默认库。
-- 从 `2026-07-24` 起，默认 `library.json` 已被收成真正的闭合候选集：
+- 从 `2026-07-24` 起，默认 `template.json` 已被收成真正的闭合候选集：
   - 默认 broad run 不再偷偷混入自动生成的 MATRIX 邻居
   - 也不再把 feedback mutation 静默扩回默认计划
   - 因此现在看到的默认 dry-run / 实跑结果，才真正对应这份 README 里描述的窄模板库

@@ -115,11 +115,11 @@ def _is_explicit_refine_library(template_library_file: str) -> bool:
 
 
 def _is_dataset_default_library(template_library_file: str, dataset_id: str) -> bool:
-    """判断是否正在使用 datasets/<dataset>/templates/library.json。"""
+    """判断是否正在使用 datasets/<dataset>/templates/template.json。"""
     if not template_library_file or not dataset_id:
         return False
     path = Path(template_library_file)
-    if path.name.lower() != "library.json":
+    if path.name.lower() != "template.json":
         return False
     parts = [part.strip().lower() for part in path.parts]
     if len(parts) < 3:

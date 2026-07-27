@@ -690,9 +690,7 @@ def test_auto_update_blacklist_incremental_blacklists_only_changed_template(tmp_
     )
 
     payload = json.loads(
-        (tmp_path / "datasets" / "custom_ds" / "blacklists" / "blacklist.json").read_text(
-            encoding="utf-8"
-        )
+        (tmp_path / "datasets" / "custom_ds" / "blacklist.json").read_text(encoding="utf-8")
     )
     assert added_after_first is False
     assert added_after_second is False
@@ -720,7 +718,7 @@ def test_build_dataset_scoped_paths_includes_runtime_context_in_cache_path() -> 
     )
 
     template_path = Path(paths["template_library_file"])
-    assert template_path.parts[-4:] == ("datasets", "fundamental6", "templates", "library.json")
+    assert template_path.parts[-4:] == ("datasets", "fundamental6", "templates", "template.json")
     cache_path = Path(paths["fields_cache_file"])
     assert cache_path.parent.parts[-5:] == (
         "datasets",

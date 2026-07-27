@@ -59,7 +59,7 @@ def resolve_blacklist_path(dataset_id: str, *, data_dir: str = "") -> str:
         else:
             resolved_path = base_path / dataset_key / "blacklist.json"
     else:
-        resolved_path = base_path / dataset_key / "blacklists" / "blacklist.json"
+        resolved_path = base_path / dataset_key / "blacklist.json"
     resolved = str(resolved_path)
     _BLACKLIST_PATH_CACHE[cache_key] = resolved
     return resolved

@@ -52,7 +52,7 @@
 运行证据：
 - 短窗和泛化 `delta` 家族已经弱到在策略中被显式禁用。
 - 整理后的长窗口、带 market/industry neutralization 的模板，更符合这类数据的预期用法。
-- 从 `2026-07-24` 起，默认 `library.json` 也已经被收成真正的闭合候选集：
+- 从 `2026-07-24` 起，默认 `template.json` 也已经被收成真正的闭合候选集：
   - 默认 broad run 不再自动混入 `hc_ratio_*`、`group_ratio_delta_over_std_*` 等额外外扩模板
   - 因此当前默认计划看到的，就是仓库明确保留的 5 条主模板，而不是“文档很窄、运行时又变宽”
 - 在 `checksubmit` 流程改成等待 `SELF_CORRELATION` 终态之后，当前风险字段分支已不再像可直接生产的候选：
@@ -111,7 +111,7 @@ Focused refine：
   - [profiles/fields/systematic30_refine_round16_fields.txt](/Users/boyaa/Downloads/alpha/datasets/model51/profiles/fields/systematic30_refine_round16_fields.txt)
 
 Refine pack 约定：
-- `library.json` 保持为默认、窄化后的生产模板库。
+- `template.json` 保持为默认、窄化后的生产模板库。
 - 定向本地 sweep 保留在 `refine/` 下。
 - 需要使用 refine pack 时，显式通过 `--template-library-file datasets/model51/templates/refine/<file>.json` 加载。
 - 当前 broadening pack 是 `datasets/model51/templates/refine/broad_search_neighbors.json`

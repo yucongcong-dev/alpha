@@ -82,7 +82,7 @@ def _match_pattern_rule(expression: str, rule: BlacklistPatternRule) -> bool:
 
 
 def _load_blacklist(dataset_id: str) -> None:
-    """加载 datasets/<dataset>/blacklists/blacklist.json。"""
+    """加载 datasets/<dataset>/blacklist.json。"""
     names: set[str] = set()
     pattern_rules: list[BlacklistPatternRule] = []
     entries: list[BlacklistMatcherEntry] = []

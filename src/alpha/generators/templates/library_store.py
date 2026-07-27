@@ -48,7 +48,7 @@ def ensure_dataset_template_library(path: str, dataset_id: str) -> str:
         raise BrainAPIError(
             f"数据集 {dataset_id} 缺少模板库文件路径。"
             "请通过 --template-library-file 指定，或在 "
-            f"datasets/{dataset_id}/templates/library.json 创建专属模板库。"
+            f"datasets/{dataset_id}/templates/template.json 创建专属模板库。"
         )
 
     if not Path(path).exists():

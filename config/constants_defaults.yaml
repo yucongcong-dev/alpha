@@ -451,7 +451,7 @@ paths:
   credentials_filename: "worldquant_brain_credentials.json"
   credentials_key_filename: "worldquant_brain_credentials.key"
   template_library_subpath: "templates"
-  library_filename: "library.json"
+  library_filename: "template.json"
   fields_cache_filename: "fields.json"
   default_results_filename: "test_results.json"
   analysis_suffix: "_analysis.json"

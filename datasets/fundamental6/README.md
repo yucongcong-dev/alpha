@@ -663,7 +663,7 @@ PYTHONPATH=src python3.10 -m alpha \
 到当前阶段，`fundamental6` 的本地资产应按“现役 / 观察 / 归档”理解：
 
 现役：
-- `datasets/fundamental6/templates/library.json`
+- `datasets/fundamental6/templates/template.json`
   - 第一阶段 broad 主干探索
 - `datasets/fundamental6/templates/refine/default_neighbors.json`
   - 第二阶段现役 refine 扩展带
@@ -761,7 +761,7 @@ Focused refine：
 
 ## blacklist 的当前作用
 
-- `datasets/fundamental6/blacklists/blacklist.json` 仍然有保留必要
+- `datasets/fundamental6/blacklist.json` 仍然有保留必要
 - 原因不是它现在内容丰富，而是运行时策略仍会读写这个文件；它是统一 blacklist 机制的一部分，不是纯文档摆设
 - 当前它为空，意味着：
   - 现阶段 `fundamental6` 的主问题已经主要通过模板收窄和流程收口解决
