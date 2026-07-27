@@ -51,7 +51,7 @@ alpha/
 
 哪些文件进仓：
 
-- `config/*.yaml`：统一配置入口，按职责维护默认运行参数、数据集 profile、表达式策略、质量阈值和模板参数。
+- `config/*.yaml`：唯一可编辑的 YAML 配置源，按职责维护默认运行参数、数据集 profile、表达式策略、质量阈值和模板参数。
 - `datasets/<dataset_id>/template.json`：数据集专属默认模板库。
 - `datasets/<dataset_id>/presets/`：按研究目的集中保存专项模板、字段清单和模板筛选清单。
 - `datasets/<dataset_id>/blacklist.json`：统一黑名单。脚本会自动追加，也允许人工维护；空黑名单也可以进仓，用于固定数据集目录边界。
@@ -383,6 +383,9 @@ YAML 分层优先级为：`config/settings.yaml` > `config/expression_policies.y
 
 实际运行配置优先维护在 `config/*.yaml` 和对应的 dataset 目录中，不要把数据集专属模板重新塞回 Python 常量。
 
+`src/alpha/resources/config/*.yaml` 只是安装包使用的生成镜像，不要直接编辑。修改根
+`config/*.yaml` 后运行 `make sync-config`；`make check` 会验证文件名和内容完全一致。
+
 ## 结果解读
 
 当前仓库的默认运行语义是：
@@ -466,7 +469,7 @@ python3.10 -m ruff format .
 
 ```bash
 python3.10 -m pip install build
-python3.10 -m build
+make package
 ```
 
-生成的包在 `dist/` 目录下。
+`make package` 会先同步包内 YAML 镜像，再生成 `dist/` 下的发布包。

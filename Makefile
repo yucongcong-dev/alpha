@@ -1,4 +1,4 @@
-.PHONY: test help-check whitespace-check docs-check scan-secrets repo-boundary-check removed-compat-file-check compat-import-check arch-boundary-check todo-check config-sync-check ruff-check format-check mypy-check check clean-runtime clean-dev
+.PHONY: test help-check whitespace-check docs-check scan-secrets repo-boundary-check removed-compat-file-check compat-import-check arch-boundary-check todo-check sync-config config-sync-check ruff-check format-check mypy-check check clean-runtime clean-dev package
 
 PYTHON ?= python3.10
 PYTHONPATH ?= src
@@ -78,14 +78,11 @@ todo-check:
 		exit 1; \
 	fi
 
+sync-config:
+	$(PYTHON) scripts/sync_config.py
+
 config-sync-check:
-	@for source in config/*.yaml; do \
-		packaged="src/alpha/resources/$$source"; \
-		if ! cmp -s "$$source" "$$packaged"; then \
-			echo "[check] packaged config is out of sync: $$source -> $$packaged" >&2; \
-			exit 1; \
-		fi; \
-	done
+	$(PYTHON) scripts/sync_config.py --check
 
 ruff-check:
 	@if $(RUFF) --version >/dev/null 2>&1; then \
@@ -121,3 +118,6 @@ clean-dev:
 	@rm -rf __pycache__ .pycache .mypy_cache .pytest_cache .ruff_cache .coverage htmlcov tmp/pycache
 	@find src -maxdepth 2 -type d -name '*.egg-info' -prune -exec rm -rf {} +
 	@echo "[clean-dev] removed Python bytecode, tool caches, coverage, and package metadata"
+
+package: sync-config
+	$(PYTHON) -m build
