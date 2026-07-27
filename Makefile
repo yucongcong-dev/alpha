@@ -55,8 +55,7 @@ compat-import-check:
 		echo "[check] internal code should import alpha.app modules instead of root compatibility exports" >&2; \
 		exit 1; \
 	fi
-	@if rg -n "from \.\.generators\.settings|from \.generators\.settings|from alpha\.generators\.settings|import alpha\.generators\.settings" src/alpha \
-		--glob '!generators/settings.py'; then \
+	@if rg -n "from \.\.generators\.settings|from \.generators\.settings|from alpha\.generators\.settings|import alpha\.generators\.settings" src/alpha; then \
 		echo "[check] internal code should import generators.payload/fingerprint/variants instead of generators.settings" >&2; \
 		exit 1; \
 	fi
