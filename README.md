@@ -450,6 +450,7 @@ make check
 ```bash
 make test
 make help-check
+make docs-check
 make scan-secrets
 ```
 

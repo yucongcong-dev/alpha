@@ -1,4 +1,4 @@
-.PHONY: test help-check whitespace-check scan-secrets repo-boundary-check removed-compat-file-check compat-import-check arch-boundary-check todo-check config-sync-check ruff-check format-check mypy-check check clean-runtime clean-dev
+.PHONY: test help-check whitespace-check docs-check scan-secrets repo-boundary-check removed-compat-file-check compat-import-check arch-boundary-check todo-check config-sync-check ruff-check format-check mypy-check check clean-runtime clean-dev
 
 PYTHON ?= python3.10
 PYTHONPATH ?= src
@@ -14,6 +14,9 @@ help-check:
 
 whitespace-check:
 	git diff --check
+
+docs-check:
+	$(PYTHON) scripts/check_docs.py
 
 scan-secrets:
 	@if rg -n "$(SECRET_PATTERN)" . --glob '!Makefile'; then \
@@ -94,7 +97,7 @@ ruff-check:
 
 format-check:
 	@if $(RUFF) --version >/dev/null 2>&1; then \
-		$(RUFF) format --check src tests; \
+		$(RUFF) format --check src tests scripts; \
 	else \
 		echo "[check] ruff executable not installed; install the dev dependencies or Ruff binary" >&2; \
 		exit 1; \
@@ -108,13 +111,13 @@ mypy-check:
 		exit 1; \
 	fi
 
-check: test help-check whitespace-check scan-secrets repo-boundary-check removed-compat-file-check compat-import-check arch-boundary-check todo-check config-sync-check ruff-check format-check mypy-check
+check: test help-check whitespace-check docs-check scan-secrets repo-boundary-check removed-compat-file-check compat-import-check arch-boundary-check todo-check config-sync-check ruff-check format-check mypy-check
 
 clean-runtime:
 	PYTHONPATH=$(PYTHONPATH) $(PYTHON) -m alpha clean
 
 clean-dev:
-	@find src tests -type d -name '__pycache__' -prune -exec rm -rf {} +
+	@find src tests scripts -type d -name '__pycache__' -prune -exec rm -rf {} +
 	@rm -rf __pycache__ .pycache .mypy_cache .pytest_cache .ruff_cache .coverage htmlcov tmp/pycache
 	@find src -maxdepth 2 -type d -name '*.egg-info' -prune -exec rm -rf {} +
 	@echo "[clean-dev] removed Python bytecode, tool caches, coverage, and package metadata"
