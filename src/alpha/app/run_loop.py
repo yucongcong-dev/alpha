@@ -59,7 +59,6 @@ def run_field_test_loop(
         state_file=state_file,
         runtime_state=runtime_state,
         execution_state=execution_state,
-        clamp_resume_index_fn=clamp_resume_index,
     )
 
     if args.dry_run_plan:

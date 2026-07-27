@@ -10,7 +10,6 @@ from unittest.mock import patch
 
 from alpha.app.run_loop import (
     ScheduleRoundResult,
-    clamp_resume_index,
     drain_remaining_futures,
     persist_field_progress,
     resolve_result_write_options,
@@ -72,7 +71,6 @@ def test_restore_fields_from_state_returns_empty_when_all_fields_completed(tmp_p
         state_file=str(state_file),
         runtime_state=RuntimeConcurrencyState(max_workers=2, runtime_max_workers=2),
         execution_state=_build_execution_state(),
-        clamp_resume_index_fn=clamp_resume_index,
     )
 
     assert restored_fields == []

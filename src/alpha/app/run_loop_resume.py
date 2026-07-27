@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable
 import logging
 
 from ..config.constants import SENTINEL_UNKNOWN
@@ -12,8 +11,6 @@ from ..runtime.state import ExecutionState, RuntimeConcurrencyState
 from ..utils.helpers import first_non_empty
 
 logger = logging.getLogger(__name__)
-
-ResumeIndexClamp = Callable[[int, int], int]
 
 
 def build_field_resume_positions(fields: list[TemplateField]) -> dict[str, int]:
@@ -44,7 +41,6 @@ def restore_fields_from_state(
     state_file: str,
     runtime_state: RuntimeConcurrencyState,
     execution_state: ExecutionState,
-    clamp_resume_index_fn: ResumeIndexClamp,
 ) -> tuple[list[TemplateField], int]:
     """Restore field start position from pipeline state and rotate field order accordingly."""
     resumed_index = 0
@@ -57,7 +53,7 @@ def restore_fields_from_state(
     )
     if resumed_index <= 0:
         return fields, resumed_index
-    resumed_index = clamp_resume_index_fn(resumed_index, len(fields))
+    resumed_index = clamp_resume_index(resumed_index, len(fields))
     if resumed_index >= len(fields):
         logger.info(
             "[resume] state_file 记录的字段进度已覆盖全部 %d 个字段，直接进入收尾阶段",
