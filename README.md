@@ -42,7 +42,7 @@ alpha/
 │   ├── quality_feedback.yaml
 │   ├── templates.yaml
 │   └── constants_defaults.yaml
-├── datasets/              # 每个 dataset 的模板、黑名单、profiles、缓存和运行结果
+├── datasets/              # 每个 dataset 的模板、黑名单、presets、缓存和运行结果
 ├── docs/                  # 四篇主文档 + 索引
 └── tests/                 # unit / integration
 ```
@@ -53,9 +53,7 @@ alpha/
 
 - `config/*.yaml`：统一配置入口，按职责维护默认运行参数、数据集 profile、表达式策略、质量阈值和模板参数。
 - `datasets/<dataset_id>/template.json`：数据集专属默认模板库。
-- `datasets/<dataset_id>/packs/`：需要显式加载的专项模板包及历史归档。
-- `datasets/<dataset_id>/profiles/fields/*.txt`：少量、可复用、人工裁剪的字段白名单；它们服务于稳定复现实验，不应再混入 `cache/`。
-- `datasets/<dataset_id>/profiles/templates/*.txt`：人工维护的模板筛选清单。
+- `datasets/<dataset_id>/presets/`：按研究目的集中保存专项模板、字段清单和模板筛选清单。
 - `datasets/<dataset_id>/blacklist.json`：统一黑名单。脚本会自动追加，也允许人工维护；空黑名单也可以进仓，用于固定数据集目录边界。
 
 哪些文件不进仓：
@@ -66,7 +64,7 @@ alpha/
 - `scratch/`：外部脚本、对照材料、手工实验草稿。
 - `.credentials/`：本地加密凭证和密钥。
 
-根目录只保留项目入口和说明文件。配置统一放 `config/`；临时文件不要放根目录。如果只是一次性实验，放 `tmp/`；如果已经验证值得长期复用，再整理命名后放入对应数据集的 `template.json`、`packs/` 或 `profiles/`。
+根目录只保留项目入口和说明文件。配置统一放 `config/`；临时文件不要放根目录。如果只是一次性实验，放 `tmp/`；如果已经验证值得长期复用，再整理命名后放入对应数据集的 `template.json` 或 `presets/`。
 
 ## 结果目录约定
 
@@ -77,7 +75,7 @@ alpha/
 - `20260727-compare-neutralization`：同一字段或同一家族的对照实验
 - `20260727-scratch-filter-probe`：短期排障或临时验证
 
-一旦某轮结果成为长期参考，把对应模板/字段知识沉淀回同一数据集的 `template.json`、`packs/`、`profiles/` 或 `README.md`，不要让 `runs/` 承担知识库角色。
+一旦某轮结果成为长期参考，把对应模板/字段知识沉淀回同一数据集的 `template.json`、`presets/` 或 `README.md`，不要让 `runs/` 承担知识库角色。
 
 ## 模板资产
 
@@ -85,9 +83,9 @@ alpha/
 
 - 数据集专属模板库：`datasets/<dataset_id>/template.json`
 - 数据集专属模板说明：`datasets/<dataset_id>/README.md`
-- 数据集字段/模板聚焦白名单：`datasets/<dataset_id>/profiles/{fields,templates}/*.txt`
-- 专项模板包：可选放在 `datasets/<dataset_id>/packs/*.json`
-- 历史模板包：放在 `datasets/<dataset_id>/packs/archive/`
+- 专项运行预设：`datasets/<dataset_id>/presets/<name>/`
+- 预设内可按需提供 `template.json`、`fields.txt` 和 `templates.txt`
+- 历史预设：放在 `datasets/<dataset_id>/presets/archive/`
 
 当前实现采用“数据集专属模板库”模式：
 
@@ -202,7 +200,7 @@ python3.10 -m alpha
 - 适合放这里的参数包括：`partner_limit`、字段质量阈值、反馈阶段设置、少量运行期策略开关
 - `policy_version` 标识启发式版本，失败反馈默认按 `field_type` 隔离
 - `evaluation_holdout_percent` 会按 dataset/field/version 稳定分配对照组；holdout 不应用自适应优先级
-- 默认模板优先维护在 `datasets/<dataset_id>/template.json`，专项模板放在 `packs/`，不要把模板内容塞回 Python 常量
+- 默认模板优先维护在 `datasets/<dataset_id>/template.json`，专项运行资产集中放在 `presets/`，不要把模板内容塞回 Python 常量
 
 **输出**：默认 `datasets/<dataset>/runs/<run_name>/analysis.json` 中的关键字段：
 - `near_pass_summary`：接近通过的候选（按 score 排序）
@@ -369,7 +367,7 @@ python3.10 -m alpha --no-smoke-test --no-full-run
 - `config/policy.py`：dataset expression policy 构建与反馈阶段解析
 - `config/profiles.py`：dataset profile fallback
 
-YAML 分层优先级为：`config/settings.yaml` > `config/expression_policies.yaml` > `config/dataset_profiles.yaml` > `config/templates.yaml` / `config/quality_feedback.yaml` > `config/constants_defaults.yaml`。其中 `config/settings.yaml` 面向日常运行调参，其余 `config/*.yaml` 面向按职责拆分的默认值；dataset 根目录的 `template.json` 与 `packs/` 面向表达式模板，`blacklist.json` 面向低质量模板过滤。
+YAML 分层优先级为：`config/settings.yaml` > `config/expression_policies.yaml` > `config/dataset_profiles.yaml` > `config/templates.yaml` / `config/quality_feedback.yaml` > `config/constants_defaults.yaml`。其中 `config/settings.yaml` 面向日常运行调参，其余 `config/*.yaml` 面向按职责拆分的默认值；dataset 根目录的 `template.json` 与 `presets/` 面向表达式模板和定向运行输入，`blacklist.json` 面向低质量模板过滤。
 
 实际运行配置优先维护在 `config/*.yaml` 和对应的 dataset 目录中，不要把数据集专属模板重新塞回 Python 常量。
 

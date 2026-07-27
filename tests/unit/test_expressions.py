@@ -271,8 +271,9 @@ def test_fundamental6_refine_vector_templates_do_not_double_wrap_vec_avg() -> No
         Path(__file__).resolve().parents[2]
         / "datasets"
         / "fundamental6"
-        / "packs"
-        / "default_neighbors.json"
+        / "presets"
+        / "default_neighbors"
+        / "template.json"
     )
     template_library = load_template_library(str(template_file))
 

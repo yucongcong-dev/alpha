@@ -1,5 +1,5 @@
 {
-  "_comment": "model51 round16 refine pack — 切换到 systematic_risk_last_30_days，围绕 bucket_cap_ratio / ratio_cap 局部邻域继续压缩",
+  "_comment": "model51 round16 refine preset — 切换到 systematic_risk_last_30_days，围绕 bucket_cap_ratio / ratio_cap 局部邻域继续压缩",
   "_comment_placeholders": "{field}=字段名, {field_preprocessed}=winsorize(ts_backfill({field}, {backfill_window}), std=4), {backfill_window}=settings.yaml expression.backfill_window",
   "_dataset_id": "model51",
   "default": [

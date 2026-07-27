@@ -103,21 +103,21 @@ Broad exploration：
 Focused refine：
 - 历史上的 focused fixtures 并没有完整保留为现役文件集合；当前更适合作为“历史轮次说明”，而不是可直接点击复用的本地入口。
 - 当前仓库里仍然存在、可直接复用的 refine 资产主要是：
-  - [packs/broad_search_neighbors.json](/Users/boyaa/Downloads/alpha/datasets/model51/packs/broad_search_neighbors.json)
-  - [packs/unsystematic60_refine_round14.json](/Users/boyaa/Downloads/alpha/datasets/model51/packs/unsystematic60_refine_round14.json)
-  - [packs/unsystematic60_refine_round15.json](/Users/boyaa/Downloads/alpha/datasets/model51/packs/unsystematic60_refine_round15.json)
-  - [packs/systematic30_refine_round16.json](/Users/boyaa/Downloads/alpha/datasets/model51/packs/systematic30_refine_round16.json)
-  - [profiles/fields/unsystematic60_refine_round14_fields.txt](/Users/boyaa/Downloads/alpha/datasets/model51/profiles/fields/unsystematic60_refine_round14_fields.txt)
-  - [profiles/fields/systematic30_refine_round16_fields.txt](/Users/boyaa/Downloads/alpha/datasets/model51/profiles/fields/systematic30_refine_round16_fields.txt)
+  - [presets/broad_search_neighbors/template.json](/Users/boyaa/Downloads/alpha/datasets/model51/presets/broad_search_neighbors/template.json)
+  - [presets/unsystematic60_refine_round14/template.json](/Users/boyaa/Downloads/alpha/datasets/model51/presets/unsystematic60_refine_round14/template.json)
+  - [presets/unsystematic60_refine_round15/template.json](/Users/boyaa/Downloads/alpha/datasets/model51/presets/unsystematic60_refine_round15/template.json)
+  - [presets/systematic30_refine_round16/template.json](/Users/boyaa/Downloads/alpha/datasets/model51/presets/systematic30_refine_round16/template.json)
+  - [presets/unsystematic60_refine_round14/fields.txt](/Users/boyaa/Downloads/alpha/datasets/model51/presets/unsystematic60_refine_round14/fields.txt)
+  - [presets/systematic30_refine_round16/fields.txt](/Users/boyaa/Downloads/alpha/datasets/model51/presets/systematic30_refine_round16/fields.txt)
 
-Refine pack 约定：
+Preset 约定：
 - `template.json` 保持为默认、窄化后的生产模板库。
-- 定向本地 sweep 保留在 `refine/` 下。
-- 需要使用专项模板包时，显式通过 `--template-library-file datasets/model51/packs/<file>.json` 加载。
-- 当前 broadening pack 是 `datasets/model51/packs/broad_search_neighbors.json`
-- 如果某个 focused experiment 需要稳定的手工字段清单，把它放在 `profiles/fields/`，而不是 `cache/`
+- 定向本地 sweep 保留在对应的 `presets/<name>/` 下。
+- 需要使用专项预设时，从 `datasets/model51/presets/<name>/` 显式加载所需文件。
+- 当前 broadening pack 是 `datasets/model51/presets/broad_search_neighbors/template.json`
+- 如果某个 focused experiment 需要稳定的手工字段清单，把它放在对应 preset 的 `fields.txt`，而不是 `cache/`
 - grouped `market` zscore 家族、额外 decay-window 家族，以及 bucket-volatility 变体，在失去默认队列资格后，都应放在这里
-- 专项模板包现在应该优先围绕新的默认主干展开：
+- 专项 preset 现在应该优先围绕新的默认主干展开：
   - `ts_zscore_120`
   - `group_zscore_subindustry_120`
   - `ratio_cap_zscore_60/120`
@@ -127,7 +127,7 @@ Refine pack 约定：
 当前这轮更窄聚焦背后的证据：
 - 历史运行中，某些风险字段分支曾经出现过 `submittable=true` 或 near-pass，但在 self-correlation 门槛收紧后，这些信号本身已不足以支撑继续扩预算。
 - `beta_last_*_spy` 和 `correlation_last_*_spy` 在 broad 与 focused 运行里都持续偏弱，因此已移出默认 refine 白名单。
-- 当前 `focused_fields.txt` / `focused_templates.txt` 因而只保留仍值得试探的 `systematic/unsystematic risk` 主分支，并把更弱的 `beta/correlation` spy 分支剔除。
+- 当前 `focused` preset 的 `fields.txt` / `templates.txt` 只保留仍值得试探的 `systematic/unsystematic risk` 主分支，并把更弱的 `beta/correlation` spy 分支剔除。
 - `window_sweep_round11_selfcorr_recheck` 重新验证了 `unsystematic_risk_last_360_days` 的 decay-window 分支（`market/industry`，窗口 `56/63/70`），全部 6 条候选都因 `SELF_CORRELATION` 一直 `PENDING` 被排除。
 - `group_branch_round12_recheck` 随后在 `unsystematic_risk_last_60/90/360_days` 上使用非 decay 的 group/bucket/time-series 模板重试，前 9 条候选仍然因为同样原因被排除。
 - `systematic_branch_round13_recheck` 又在 `systematic_risk_last_30/60/90_days` 上重复这些非 decay 模板家族，全部 9 条候选同样因为 `SELF_CORRELATION` 未终态而被排除。
@@ -144,8 +144,8 @@ Refine pack 约定：
 
 随后仓库把 active branch 切到了 `systematic_risk_last_30_days`，并准备了：
 
-- [profiles/fields/systematic30_refine_round16_fields.txt](/Users/boyaa/Downloads/alpha/datasets/model51/profiles/fields/systematic30_refine_round16_fields.txt)
-- [packs/systematic30_refine_round16.json](/Users/boyaa/Downloads/alpha/datasets/model51/packs/systematic30_refine_round16.json)
+- [presets/systematic30_refine_round16/fields.txt](/Users/boyaa/Downloads/alpha/datasets/model51/presets/systematic30_refine_round16/fields.txt)
+- [presets/systematic30_refine_round16/template.json](/Users/boyaa/Downloads/alpha/datasets/model51/presets/systematic30_refine_round16/template.json)
 
 但 `2026-07-17 round16` 的最新结果同样没有形成新增价值：
 

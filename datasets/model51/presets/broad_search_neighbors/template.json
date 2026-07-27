@@ -1,5 +1,5 @@
 {
-  "_comment": "model51 refine pack — 围绕默认主线做结构替代与邻域扩展，适合定向复探而非默认广撒网",
+  "_comment": "model51 refine preset — 围绕默认主线做结构替代与邻域扩展，适合定向复探而非默认广撒网",
   "_comment_placeholders": "{field}=字段名, {field_preprocessed}=winsorize(ts_backfill({field}, {backfill_window}), std=4), {backfill_window}=settings.yaml expression.backfill_window",
   "_dataset_id": "model51",
   "default": [

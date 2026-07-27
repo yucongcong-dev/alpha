@@ -106,12 +106,12 @@ def _template_supports_field_tags(
     return bool(allowed_tags & current_tags)
 
 
-def _is_explicit_template_pack(template_library_file: str) -> bool:
-    """显式专项模板库使用 dataset 的 packs/ 子目录路径。"""
+def _is_explicit_template_preset(template_library_file: str) -> bool:
+    """显式专项模板库使用 dataset 的 presets/ 子目录路径。"""
     if not template_library_file:
         return False
     parts = {part.strip().lower() for part in Path(template_library_file).parts}
-    return "packs" in parts
+    return "presets" in parts
 
 
 def _is_dataset_default_library(template_library_file: str, dataset_id: str) -> bool:
@@ -146,11 +146,11 @@ def _template_scope_allowed(
     if activation_scope == "broad":
         return True
 
-    explicit_refine_library = _is_explicit_template_pack(template_library_file)
+    explicit_preset = _is_explicit_template_preset(template_library_file)
     if activation_scope == "refine":
-        return explicit_refine_library or feedback_stage != FEEDBACK_STAGE_GENERATE
+        return explicit_preset or feedback_stage != FEEDBACK_STAGE_GENERATE
     if activation_scope == "diagnostic":
-        return explicit_refine_library or feedback_stage == FEEDBACK_STAGE_RESIMULATE
+        return explicit_preset or feedback_stage == FEEDBACK_STAGE_RESIMULATE
     return True
 
 
@@ -161,7 +161,7 @@ def _is_closed_candidate_library(
     policy: DatasetExpressionPolicy,
 ) -> bool:
     """判断当前模板库是否应被视为闭合集，不再自动外扩默认候选。"""
-    if _is_explicit_template_pack(template_library_file):
+    if _is_explicit_template_preset(template_library_file):
         return True
     return bool(
         policy.closed_default_template_library

@@ -225,12 +225,12 @@ def test_build_expression_candidates_skip_refine_only_templates_in_default_libra
     assert "refine_template" not in names
 
 
-def test_build_expression_candidates_include_refine_only_templates_in_explicit_pack(
+def test_build_expression_candidates_include_refine_only_templates_in_explicit_preset(
     tmp_path,
 ) -> None:
-    pack_dir = tmp_path / "datasets" / "fundamental6" / "packs"
-    pack_dir.mkdir(parents=True)
-    template_file = pack_dir / "default_neighbors.json"
+    preset_dir = tmp_path / "datasets" / "fundamental6" / "presets" / "default_neighbors"
+    preset_dir.mkdir(parents=True)
+    template_file = preset_dir / "template.json"
     template_file.write_text(
         json.dumps(
             {

@@ -480,8 +480,7 @@ ts_zscore(group_rank(x, industry), 252)
 
 - `datasets/<dataset_id>/runs/`：运行产物，不承担长期知识库职责
 - `datasets/<dataset_id>/template.json`：默认模板库
-- `datasets/<dataset_id>/packs/`：可复用专项模板包
-- `datasets/<dataset_id>/profiles/`：可复用字段和模板筛选清单
+- `datasets/<dataset_id>/presets/`：按研究目的组织的专项模板、字段与模板筛选清单
 - `docs/`：跨数据集的方法论和平台知识
 - 根 `README.md`：工程结构、安装与运行入口
 

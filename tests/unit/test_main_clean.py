@@ -14,7 +14,7 @@ def test_clean_runtime_artifacts_preserves_credentials(tmp_path) -> None:
         path.mkdir()
         (path / "marker.txt").write_text("x", encoding="utf-8")
     dataset_dir = tmp_path / "datasets" / "fundamental6"
-    for dirname in ("cache", "runs", "packs", "profiles"):
+    for dirname in ("cache", "runs", "presets"):
         path = dataset_dir / dirname
         path.mkdir(parents=True)
         (path / "marker.txt").write_text("x", encoding="utf-8")
@@ -30,8 +30,7 @@ def test_clean_runtime_artifacts_preserves_credentials(tmp_path) -> None:
     assert not (tmp_path / "results").exists()
     assert not (dataset_dir / "cache").exists()
     assert not (dataset_dir / "runs").exists()
-    assert (dataset_dir / "packs").exists()
-    assert (dataset_dir / "profiles").exists()
+    assert (dataset_dir / "presets").exists()
     assert blacklist_file.exists()
     assert template_file.exists()
     assert (tmp_path / ".credentials").exists()

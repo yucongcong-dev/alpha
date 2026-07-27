@@ -88,6 +88,6 @@ Reference 主要回答“这个词是什么意思”；具体怎么优化，回�
 - 数据、示例和仓库研究方法放 02
 - 诊断、稳健性和提交方法放 03
 - 纯定义、状态和错误码放 04
-- 数据集专属经验放对应 dataset 的 README、templates 或 profiles
+- 数据集专属经验放对应 dataset 的 README、template.json 或 presets
 
 原则上不再新增与四篇主线平行的 FAQ 或专题摘录页。

@@ -1,5 +1,5 @@
 {
-  "_comment": "model51 round14 refine pack — 围绕 unsystematic_risk_last_60_days 的新默认主线做小半径结构扩展",
+  "_comment": "model51 round14 refine preset — 围绕 unsystematic_risk_last_60_days 的新默认主线做小半径结构扩展",
   "_comment_placeholders": "{field}=字段名, {field_preprocessed}=winsorize(ts_backfill({field}, {backfill_window}), std=4), {backfill_window}=settings.yaml expression.backfill_window",
   "_dataset_id": "model51",
   "default": [
