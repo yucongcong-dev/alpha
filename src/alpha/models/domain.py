@@ -7,30 +7,49 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass, field
-from typing import Any, Sequence
+from typing import Any
 
 from ..config.constants import STATUS_ERROR
-from .domain_conversion import coerce_failed_check, coerce_failed_checks, serialize_failed_check
+from .domain_conversion import (
+    coerce_failed_check,
+    coerce_failed_checks,
+)
+from .domain_conversion import (
+    serialize_failed_check as serialize_failed_check,
+)
 from .domain_parsers import (
     parse_failed_check,
     parse_settings_variant,
     parse_template_field,
     parse_template_library_item,
 )
-from .domain_serializers import serialize_field_test_result
 from .domain_serializers import (
+    serialize_field_test_result,
     serialize_settings_variant,
     serialize_template_field,
     serialize_template_library_item,
 )
 from .domain_types import (
-    AnalysisInputs,
-    AnalysisPayload,
-    FieldFeedbackMap,
-    FieldFeedbackSummary,
-    ResultRow,
-    SummaryPayload,
+    AnalysisInputs as AnalysisInputs,
+)
+from .domain_types import (
+    AnalysisPayload as AnalysisPayload,
+)
+from .domain_types import (
+    FieldFeedbackMap as FieldFeedbackMap,
+)
+from .domain_types import (
+    FieldFeedbackSummary as FieldFeedbackSummary,
+)
+from .domain_types import (
+    ResultRow as ResultRow,
+)
+from .domain_types import (
+    SummaryPayload as SummaryPayload,
+)
+from .domain_types import (
     TemplateMetadata,
 )
 
@@ -158,6 +177,8 @@ class FieldTestResult:
     template_stage: str = ""
     template_role: str = ""
     template_activation_scope: str = ""
+    policy_version: str = ""
+    policy_arm: str = ""
     simulation_id: str | None = None
     alpha_id: str | None = None
     status: str = "unknown"
@@ -246,6 +267,8 @@ class FieldTestContext:
     template_stage: str = ""
     template_role: str = ""
     template_activation_scope: str = ""
+    policy_version: str = ""
+    policy_arm: str = ""
     settings_fingerprint: str = ""
     template_library_fingerprint: str = ""
 
@@ -268,6 +291,8 @@ class FieldTestContext:
             template_stage=self.template_stage,
             template_role=self.template_role,
             template_activation_scope=self.template_activation_scope,
+            policy_version=self.policy_version,
+            policy_arm=self.policy_arm,
             simulation_id=simulation_id,
             alpha_id=alpha_id,
             status=status,
@@ -301,6 +326,8 @@ class FieldTestContext:
             template_stage=self.template_stage,
             template_role=self.template_role,
             template_activation_scope=self.template_activation_scope,
+            policy_version=self.policy_version,
+            policy_arm=self.policy_arm,
             simulation_id=simulation_id,
             alpha_id=alpha_id,
             status=status,

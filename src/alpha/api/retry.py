@@ -77,7 +77,9 @@ def retry_operation(
             )
             if attempt < retries:
                 if should_abort is not None and should_abort():
-                    raise BrainStopRequested(f"{name} aborted after stop-after-submittable triggered")
+                    raise BrainStopRequested(
+                        f"{name} aborted after stop-after-submittable triggered"
+                    ) from exc
                 wait_seconds(retry_wait_seconds, f"retry {name}")
 
     raise BrainAPIError(f"{name} failed after {retries} attempts: {last_error}")

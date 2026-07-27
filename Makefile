@@ -2,6 +2,7 @@
 
 PYTHON ?= python3.10
 PYTHONPATH ?= src
+RUFF ?= ruff
 SECRET_PATTERN := github_[p]at_[A-Za-z0-9_]+|WQB_[P]ASSWORD=|Authorization: [B]asic
 
 test:
@@ -60,7 +61,7 @@ compat-import-check:
 	fi
 
 arch-boundary-check:
-	@if rg -n "(from alpha\.app|import alpha\.app|from \.\.app|from \.app)" src/alpha \
+	@if rg -n "(from alpha\.app(\.| import)|import alpha\.app(\.|$$)|from \.\.app(\.| import)|from \.app(\.| import))" src/alpha \
 		--glob '!app/**' \
 		--glob '!main.py' \
 		--glob '!__main__.py'; then \
@@ -75,10 +76,10 @@ todo-check:
 	fi
 
 ruff-check:
-	@if $(PYTHON) -m ruff --version >/dev/null 2>&1; then \
-		$(PYTHON) -m ruff check .; \
+	@if $(RUFF) --version >/dev/null 2>&1; then \
+		$(RUFF) check .; \
 	else \
-		echo "[check] ruff not installed; run: $(PYTHON) -m pip install -r requirements.txt" >&2; \
+		echo "[check] ruff executable not installed; install the dev dependencies or Ruff binary" >&2; \
 		exit 1; \
 	fi
 

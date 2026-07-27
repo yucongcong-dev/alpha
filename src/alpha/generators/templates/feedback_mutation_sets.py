@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
-from ...config import (
+from ...config.constants import (
     TEMPLATE_STAGE_FIRST_ORDER,
     TEMPLATE_STAGE_GROUP_SECOND_ORDER,
-    DatasetExpressionPolicy,
 )
+from ...config.models import DatasetExpressionPolicy
 from ...models.domain import TemplateCandidate
 from .candidates import _candidate_metadata, _make_template_candidate
 from .variation_common import is_blacklisted_template

@@ -65,6 +65,8 @@ def _rows_to_results(rows: list[Any]) -> list[FieldTestResult]:
                     template_stage=str(row.get("template_stage", "")),
                     template_role=str(row.get("template_role", "")),
                     template_activation_scope=str(row.get("template_activation_scope", "")),
+                    policy_version=str(row.get("policy_version", "")),
+                    policy_arm=str(row.get("policy_arm", "")),
                     simulation_id=row.get("simulation_id"),
                     alpha_id=row.get("alpha_id"),
                     status=str(row.get(API_KEY_STATUS, SENTINEL_UNKNOWN_STATUS)),
@@ -146,21 +148,21 @@ def load_existing_results(path: str) -> list[FieldTestResult]:
         return _recover_results_from_journal(path)
 
     rows: list[Any] | None = None
-    if payload.get("results_embedded", True):
-        payload_rows = payload.get("results")
-        if isinstance(payload_rows, list):
-            rows = payload_rows
-
-    if rows is None:
-        journal_path_value = payload.get("results_journal")
-        journal_path = (
-            str(journal_path_value)
-            if isinstance(journal_path_value, str) and journal_path_value
-            else _default_results_journal_path(path)
-        )
+    journal_path_value = payload.get("results_journal")
+    journal_path = (
+        str(journal_path_value)
+        if isinstance(journal_path_value, str) and journal_path_value
+        else _default_results_journal_path(path)
+    )
+    if os.path.exists(journal_path):
         try:
             rows = _load_results_rows_from_journal(journal_path)
         except Exception as exc:
             logger.warning("[recovery] failed to read results journal %s: %s", journal_path, exc)
-            return []
+    if rows is None and payload.get("results_embedded", True):
+        payload_rows = payload.get("results")
+        if isinstance(payload_rows, list):
+            rows = payload_rows
+    if rows is None:
+        return []
     return _rows_to_results(rows)

@@ -10,7 +10,7 @@ from __future__ import annotations
 from collections.abc import Sequence
 from typing import Any
 
-from ...config import (
+from ...config.constants import (
     CHECK_CONCENTRATED_WEIGHT,
     CHECK_HIGH_TURNOVER,
     CHECK_LOW_FITNESS,

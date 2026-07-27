@@ -7,26 +7,21 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable
 import json
 import logging
 import os
 
 from ..config.constants import DEFAULT_DATASET_ID
+from ..io.common import atomic_write_json
 from ..io.output_paths import build_output_sidecar_paths
-from ..io.results_store import dump_results as dump_results_store
+from .report_builder import build_analysis_payload, build_results_summary_payload
 from .results_loader import load_existing_results
+from .template_registry_sidecars import sync_template_registry_sidecars
+from .template_stats import compile_template_stats
 
 logger = logging.getLogger(__name__)
 
-DumpResultsFn = Callable[..., None]
-
-
-def ensure_analysis_synced(
-    output_path: str,
-    *,
-    dump_results_fn: DumpResultsFn = dump_results_store,
-) -> None:
+def ensure_analysis_synced(output_path: str) -> None:
     """确保 analysis 派生文件与主结果文件一致。"""
     if not output_path or not os.path.exists(output_path):
         return
@@ -66,12 +61,18 @@ def ensure_analysis_synced(
         return
 
     results = load_existing_results(output_path)
-    dump_results_fn(
-        output_path,
+    derived_summary, analysis_inputs = build_results_summary_payload(
         str(summary.get("dataset_id", DEFAULT_DATASET_ID)),
         results,
         settings_fingerprint=str(summary.get("settings_fingerprint", "")),
         template_library_fingerprint=str(summary.get("template_library_fingerprint", "")),
         run_config=summary.get("run_config") if isinstance(summary.get("run_config"), dict) else {},
+        results_journal_path=sidecar_paths["results_journal"],
+    )
+    analysis = build_analysis_payload(results, derived_summary, analysis_inputs)
+    atomic_write_json(sidecar_paths["analysis"], analysis)
+    sync_template_registry_sidecars(
+        output_path,
+        template_stats=compile_template_stats(results),
     )
     logger.info("[analysis] rebuilt analysis from main results: %s", sidecar_paths["analysis"])

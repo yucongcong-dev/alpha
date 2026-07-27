@@ -7,8 +7,6 @@
 
 from __future__ import annotations
 
-from typing import Any
-
 from ...config.runtime_values import get_runtime_config
 from ...models.domain import FieldView, TemplateLibrary, TemplateLibraryItem
 from ...models.domain_types import TemplateMetadata

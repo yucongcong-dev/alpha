@@ -15,6 +15,9 @@ expression_policies:
   # __default__ — 所有数据集的通用优先级 tier 定义
   # --------------------------------------------------------------------------
   __default__:
+    policy_version: "2026-07-27.1"
+    feedback_scope: "field_type"
+    evaluation_holdout_percent: 10
     priority_tiers:
       account_boost: 820          # account_ 前缀模板加成
       high_conviction_boost: 780  # 高信心 ratio 模板加成

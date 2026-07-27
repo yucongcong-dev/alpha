@@ -29,18 +29,18 @@ from ..models.domain import FieldTestResult, TemplateCandidate, TemplateField, T
 from ..models.io_types import RunFilters
 from ..models.runtime_options import TemplateBuildOptions
 from ..models.runtime_protocols import TemplateBuildArgs
-from ..runtime import (
-    ExecutionState,
+from ..policy.expression import get_dataset_expression_policy
+from ..runtime.contexts import (
     HistoricalRunState,
     PendingFutureContext,
     PendingTemplateEntry,
     TemplateBuildContext,
 )
-from ..policy.expression import get_dataset_expression_policy
+from ..runtime.state import ExecutionState
 from ..utils.helpers import first_non_empty
 from .execution_filters import (
-    is_template_selected_by_filters,
     is_template_actionable,
+    is_template_selected_by_filters,
     should_skip_field,
 )
 from .execution_filters import (

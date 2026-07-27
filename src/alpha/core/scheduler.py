@@ -30,7 +30,8 @@ from ..api.timing import wait_seconds
 from ..models.domain import FieldTestResult
 from ..models.runtime_options import ResultWriteOptions
 from ..models.runtime_protocols import RunConfig, SchedulerRuntimeArgs
-from ..runtime import ExecutionState, FutureCompletionContext, PendingFutureContext, RuntimeConcurrencyState
+from ..runtime.contexts import FutureCompletionContext
+from ..runtime.state import ExecutionState, RuntimeConcurrencyState
 from .result_processing import apply_completed_result
 from .scheduler_completion import (
     apply_drain_feedback,
@@ -53,7 +54,8 @@ def _activate_stop_signal_if_ready(
     execution_state: ExecutionState,
 ) -> None:
     stop_threshold = _stop_after_submittable_threshold(args)
-    if stop_threshold > 0 and execution_state.submittable_count >= stop_threshold:
+    current_count = execution_state.refresh_metrics().submittable_count
+    if stop_threshold > 0 and current_count >= stop_threshold:
         execution_state.stop_signal.set()
 
 

@@ -6,22 +6,16 @@ import os
 from pathlib import Path
 from typing import cast
 
+from ..workspace import DEFAULT_WORKSPACE, find_resource_root
 from .types import YamlConfig
 
 
 def find_project_root() -> Path:
-    """Find the project root by walking up to pyproject.toml or config/settings.yaml."""
-    current = Path(__file__).resolve().parent
-    for _ in range(8):
-        if (current / "pyproject.toml").is_file() or (current / "config" / "settings.yaml").is_file():
-            return current
-        if current.parent == current:
-            break
-        current = current.parent
-    return Path(__file__).resolve().parent.parent.parent.parent
+    """Compatibility wrapper for the canonical resource-root resolver."""
+    return find_resource_root()
 
 
-PROJECT_ROOT = find_project_root()
+PROJECT_ROOT = DEFAULT_WORKSPACE.config_dir.parent
 
 DEFAULT_CONFIG_NAMES: set[str] = {
     "constants_defaults",

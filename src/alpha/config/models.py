@@ -53,6 +53,9 @@ class DatasetExpressionPolicy:
     """数据集表达式生成策略。"""
 
     dataset_id: str = ""
+    policy_version: str = "unversioned"
+    feedback_scope: str = "field_type"
+    evaluation_holdout_percent: int = 0
     use_curated_heuristics: bool = False
     closed_default_template_library: bool = False
     partner_limit: int = 4

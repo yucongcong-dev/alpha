@@ -9,14 +9,12 @@ import time
 from ..core.scheduler import drain_completed_futures_with_context
 from ..core.simulation import run_field_test_in_worker
 from ..models.domain import FieldTestResult, SettingsVariant, TemplateField
-from ..models.runtime_protocols import ClientFactoryLike, SchedulerRuntimeArgs, SimulationStageArgs
-from ..runtime import (
-    ExecutionState,
+from ..models.runtime_protocols import SchedulerRuntimeArgs, SimulationStageArgs
+from ..runtime.contexts import (
     FutureCompletionContext,
-    InitializedRunContext,
     PendingFutureContext,
-    RuntimeConcurrencyState,
 )
+from ..runtime.state import ExecutionState, InitializedRunContext, RuntimeConcurrencyState
 from .run_loop_resume import save_terminal_pipeline_state
 
 
@@ -79,6 +77,8 @@ def submit_template_future(
     template_stage: str,
     template_role: str,
     template_activation_scope: str,
+    policy_version: str = "",
+    policy_arm: str = "",
     expression: str,
     settings_variant: SettingsVariant,
     variant_fingerprint: str,
@@ -92,6 +92,8 @@ def submit_template_future(
             "template_stage": template_stage,
             "template_role": template_role,
             "template_activation_scope": template_activation_scope,
+            "policy_version": policy_version,
+            "policy_arm": policy_arm,
         },
     )
     future = executor.submit(
@@ -118,6 +120,8 @@ def submit_template_future(
         template_stage=template_stage,
         template_role=template_role,
         template_activation_scope=template_activation_scope,
+        policy_version=policy_version,
+        policy_arm=policy_arm,
         expression=expression,
         settings_fingerprint=variant_fingerprint,
     )

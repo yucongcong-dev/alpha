@@ -7,7 +7,6 @@ import logging
 from pathlib import Path
 
 from ...exceptions import BrainAPIError
-from ...io.common import atomic_write_json
 
 logger = logging.getLogger(__name__)
 
@@ -60,11 +59,16 @@ def ensure_dataset_template_library(path: str, dataset_id: str) -> str:
     try:
         with open(path, encoding="utf-8") as handle:
             existing_payload = json.load(handle)
-        if isinstance(existing_payload, dict) and add_missing_template_priorities(
-            existing_payload
-        ):
-            atomic_write_json(path, existing_payload)
-            logger.info("[templates] filled missing template priorities: %s", path)
+        if not isinstance(existing_payload, dict):
+            raise BrainAPIError(f"模板库文件 {path} 必须包含一个 JSON 对象。")
+        normalized_payload = json.loads(json.dumps(existing_payload))
+        if add_missing_template_priorities(normalized_payload):
+            logger.warning(
+                "[templates] missing priorities will be resolved in memory; source file is unchanged: %s",
+                path,
+            )
+    except BrainAPIError:
+        raise
     except Exception as exc:
         raise BrainAPIError(f"读取模板库文件失败 {path}: {exc}") from exc
     return path

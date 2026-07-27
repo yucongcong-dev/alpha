@@ -72,6 +72,27 @@ def compile_global_failed_check_counts(results: Sequence[FieldTestResult]) -> di
     return counts
 
 
+def compile_failed_check_counts_by_field_type(
+    results: Sequence[FieldTestResult],
+) -> dict[str, dict[str, int]]:
+    """Aggregate feedback within field-type cohorts to prevent cross-type contamination."""
+    scoped: dict[str, dict[str, int]] = {}
+    for result in results:
+        counts = scoped.setdefault(result.field_type.upper() or "UNKNOWN", {})
+        update_global_failed_check_counts_with_result(counts, result)
+    return scoped
+
+
+def update_failed_check_counts_by_field_type(
+    scoped_counts: dict[str, dict[str, int]],
+    result: FieldTestResult,
+) -> dict[str, dict[str, int]]:
+    """Increment one field-type feedback cohort."""
+    counts = scoped_counts.setdefault(result.field_type.upper() or "UNKNOWN", {})
+    update_global_failed_check_counts_with_result(counts, result)
+    return scoped_counts
+
+
 def update_global_failed_check_counts_with_result(
     counts: dict[str, int],
     result: FieldTestResult,

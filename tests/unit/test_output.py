@@ -5,8 +5,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from alpha.analysis.results_loader import load_existing_results
 from alpha.analysis.analysis_sync import ensure_analysis_synced
+from alpha.analysis.results_loader import load_existing_results
 from alpha.analysis.template_registry_rules import compile_template_registry_summary
 from alpha.analysis.template_stats import compile_template_stats
 from alpha.io.output_paths import (
@@ -109,6 +109,46 @@ def test_initialize_results_journal_and_load_existing_results(tmp_path) -> None:
 
     assert len(loaded) == 1
     assert loaded[0].field_id == "field_1"
+
+
+def test_load_existing_results_prefers_journal_over_embedded_summary(tmp_path) -> None:
+    """The append-only journal is authoritative when legacy embedded rows disagree."""
+    output_path = tmp_path / "results.json"
+    initialize_results_journal(
+        str(output_path),
+        [
+            FieldTestResult(
+                field_id="journal_field",
+                field_type="MATRIX",
+                field_name="journal_field",
+                template_name="tpl",
+                status="simulated",
+                submittable=False,
+                expression="rank(journal_field)",
+            )
+        ],
+    )
+    output_path.write_text(
+        json.dumps(
+            {
+                "results_embedded": True,
+                "results_journal": str(tmp_path / "results_results.jsonl"),
+                "results": [
+                    {
+                        "field_id": "stale_embedded_field",
+                        "field_type": "MATRIX",
+                        "field_name": "stale_embedded_field",
+                        "template_name": "tpl",
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    loaded = load_existing_results(str(output_path))
+
+    assert [result.field_id for result in loaded] == ["journal_field"]
 
 
 def test_load_existing_results_preserves_template_role_metadata(tmp_path) -> None:
@@ -402,6 +442,39 @@ def test_ensure_analysis_synced_skips_invalid_main_summary_shape(tmp_path) -> No
 
     assert output_path.read_text(encoding="utf-8") == "[]"
     assert not (tmp_path / "results_analysis.json").exists()
+
+
+def test_ensure_analysis_synced_only_rebuilds_derived_sidecars(tmp_path) -> None:
+    """Startup repair must not rewrite the authoritative journal or main summary."""
+    output_path = tmp_path / "results.json"
+    dump_results(
+        str(output_path),
+        "fundamental6",
+        [
+            FieldTestResult(
+                field_id="field_derived",
+                field_type="MATRIX",
+                field_name="field_derived",
+                template_name="tpl",
+                status="simulated",
+                submittable=False,
+                expression="rank(field_derived)",
+            )
+        ],
+        settings_fingerprint="settings",
+        template_library_fingerprint="templates",
+        include_analysis=False,
+    )
+    journal_path = tmp_path / "results_results.jsonl"
+    summary_before = output_path.read_bytes()
+    journal_before = journal_path.read_bytes()
+
+    ensure_analysis_synced(str(output_path))
+
+    assert output_path.read_bytes() == summary_before
+    assert journal_path.read_bytes() == journal_before
+    assert (tmp_path / "results_analysis.json").exists()
+    assert (tmp_path / "results_template_registry.json").exists()
 
 
 def test_auto_update_blacklist_incremental_blacklists_only_changed_template(tmp_path) -> None:

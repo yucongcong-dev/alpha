@@ -4,7 +4,9 @@ from __future__ import annotations
 
 import sys
 
-from alpha.cli.parser import normalize_args_paths, parse_args
+import pytest
+
+from alpha.cli.parser import normalize_args_paths, parse_application_config, parse_args
 from alpha.cli.path_resolution import apply_run_paths
 from alpha.config import get_yaml_config
 
@@ -264,6 +266,26 @@ def test_normalize_args_paths_does_not_mutate_original_args(monkeypatch, tmp_pat
     assert args.template_library_file == ""
     assert args.fields_cache_file == ""
     assert paths.output.replace("\\", "/").endswith("/results/pv1/test_results.json")
+
+
+def test_parse_application_config_is_immutable_and_uses_normalized_paths(
+    monkeypatch, tmp_path
+) -> None:
+    """The active runtime config should be immutable and own normalized paths."""
+    clear_yaml_cache()
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        ["alpha", "--dataset-id", "pv1", "--output", "results/custom.json"],
+    )
+
+    config = parse_application_config()
+
+    assert config.output == config.paths.output
+    assert config.output == str((tmp_path / "results/custom.json").resolve())
+    with pytest.raises((AttributeError, TypeError)):
+        config.limit = 999
 
 
 def test_normalize_args_paths_resolves_relative_files_from_cwd(monkeypatch, tmp_path) -> None:

@@ -14,7 +14,7 @@ from ..config.models import DatasetExpressionPolicy
 from ..generators.fields import choose_field_name
 from ..models.domain import TemplateField
 from ..models.io_types import RunFilters
-from ..runtime import HistoricalRunState
+from ..runtime.contexts import HistoricalRunState
 from ..utils.helpers import first_non_empty, is_event_field_name
 
 

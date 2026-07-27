@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from ...config import DatasetExpressionPolicy
+from ...config.models import DatasetExpressionPolicy
 from ...models.domain_types import TemplateMetadata
 from ...policy.template_blacklist import is_blacklisted_template as _policy_is_blacklisted_template
 from .classification import classify_expression_family, classify_template_stage

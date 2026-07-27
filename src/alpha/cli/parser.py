@@ -19,6 +19,7 @@ from __future__ import annotations
 import argparse
 import sys
 
+from ..config.application import ApplicationConfig
 from ..models.io_types import RunPaths
 from .arg_resolution import resolve_cli_args
 
@@ -147,6 +148,13 @@ def parse_args() -> argparse.Namespace:
         parser_defaults=parser_defaults,
         explicit_cli_keys=explicit_cli_keys,
     )
+
+
+def parse_application_config() -> ApplicationConfig:
+    """Parse CLI input and cross the boundary into immutable runtime config."""
+    args = parse_args()
+    run_paths = _normalize_args_paths(args)
+    return ApplicationConfig.from_args(args, run_paths)
 
 
 # ============================================================================

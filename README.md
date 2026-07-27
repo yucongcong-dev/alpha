@@ -22,6 +22,7 @@ alpha/
 ├── src/alpha/             # 主包
 │   ├── __main__.py        # `python3.10 -m alpha` 入口
 │   ├── main.py            # 精简 CLI 主入口
+│   ├── workspace.py       # 可写工作区与只读资源根目录
 │   ├── app/               # 应用编排：bootstrap / run_loop / finalize / clean
 │   ├── core/              # 调度、simulation、checkpoint、template planning
 │   ├── generators/        # 字段变换、表达式候选、模板变体、payload
@@ -90,6 +91,7 @@ alpha/
 
 - 每个数据集都显式维护自己的 `library.json`
 - 运行时直接读取该数据集模板库，不做额外模板继承
+- 缺失的模板 priority 只在内存中按文件顺序补齐，运行启动不会改写模板源文件
 - 真正的搜索方向应直接在数据集专属目录里定制和收敛
 
 代码中的模板相关逻辑统一放在 `src/alpha/generators/templates/`：
@@ -112,6 +114,8 @@ alpha/
 ## 当前代码分层
 
 - `main.py` / `__main__.py`：CLI 入口与顶层异常处理
+- `ApplicationConfig`：CLI/YAML 合并完成后的不可变运行配置；`argparse.Namespace` 不进入主运行链路
+- `WorkspacePaths`：统一管理可写工作区和只读配置资源；可用 `ALPHA_WORKSPACE_ROOT` 显式指定工作区
 - `app/`：应用编排层，负责初始化、执行主循环、最终收尾和 `clean`
 - `core/`：核心执行层，负责 scheduler、simulation、checkpoint、template planning
 - `generators/`：字段预处理、表达式候选构造、settings 变体、模板细分策略
@@ -127,6 +131,7 @@ alpha/
 
 - 内部代码现在优先直接依赖具体模块，不再鼓励继续增加新的“兼容壳”。
 - 包级 facade 仍然保留在 `alpha.models`、`alpha.core`、`alpha.config` 等入口，用来维持已有导入路径稳定。
+- 生产代码使用具体模块导入；facade 只承担外部兼容，不再参与内部依赖方向。
 - 如果 README 的结构说明再次过期，应优先更新这里的高层分层说明，而不是回到逐文件枚举。
 
 这次重构的目标是把原先集中在少数大文件里的职责拆开，让入口、运行态、分析构建、配置、模板生成、策略和 IO 边界更清晰。旧入口仍保持兼容，例如 `from alpha.config import get_yaml_config`、`from alpha.generators.templates import load_template_library` 仍然可用。
@@ -193,6 +198,8 @@ python3.10 -m alpha
 **表达式策略配置**：
 - 数据集级表达式搜索策略可在 `config/expression_policies.yaml` 或 `config/settings.yaml` 的 `expression_policies.<dataset_id>` 下覆盖
 - 适合放这里的参数包括：`partner_limit`、字段质量阈值、反馈阶段设置、少量运行期策略开关
+- `policy_version` 标识启发式版本，失败反馈默认按 `field_type` 隔离
+- `evaluation_holdout_percent` 会按 dataset/field/version 稳定分配对照组；holdout 不应用自适应优先级
 - 模板本身优先放在 `templates/<dataset_id>/` 下维护，而不是继续把模板内容塞回 Python 常量
 
 **输出**：`*_analysis.json` 中的关键字段：
@@ -379,7 +386,8 @@ YAML 分层优先级为：`config/settings.yaml` > `config/expression_policies.y
 
 | 文件 | 用途 |
 |------|------|
-| `results/<dataset>/test_results.json` | 原始结果（每个模拟的详细数据） |
+| `results/<dataset>/test_results.json` | 轻量运行 summary 与 journal 指针 |
+| `results/<dataset>/test_results_results.jsonl` | 权威结果 journal；主 summary 和分析文件都可由它重建 |
 | `results/<dataset>/test_results_analysis.json` | 分析汇总（用于决策下一步） |
 
 ### 关键分析字段
@@ -392,6 +400,10 @@ YAML 分层优先级为：`config/settings.yaml` > `config/expression_policies.y
 | `optimization_hints` | 自动生成的建议 | 直接参考执行 |
 | `template_performance_summary` | 模板家族表现 | 看哪些模板类型效果好 |
 | `field_performance_summary` | 字段表现 | 看哪些字段有潜力 |
+| `policy_evaluation` | 按策略版本和 adaptive/holdout 分组的通过率 | 判断自适应启发式是否真正优于对照组 |
+
+结果恢复以 JSONL journal 为唯一事实来源。`test_results.json`、analysis 和 template registry
+都是派生视图；启动时缺失的分析边车只会被重建，不会反向改写 journal 或主 summary。
 
 ### 失败检查含义
 

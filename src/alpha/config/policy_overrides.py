@@ -126,6 +126,7 @@ def apply_yaml_expression_policy_overrides(
     # 单一 int 字段，支持 @tier 引用
     int_fields = {
         "account_template_boost",
+        "evaluation_holdout_percent",
         "high_conviction_ratio_priority_boost",
         "partner_limit",
     }

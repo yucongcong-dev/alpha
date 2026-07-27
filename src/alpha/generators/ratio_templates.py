@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
-from typing import Any
 
 from ..config.constants import (
     ALLOWED_EXTERNAL_RATIO_PARTNERS,
@@ -20,10 +19,8 @@ from .templates.candidates import (
     _make_template_candidate,
     _render_template_specs,
 )
-from .templates.classification import classify_expression_family, classify_template_stage
 from .templates.partner_fields import discover_partner_fields
 from .templates.variation_common import is_blacklisted_template as _is_blacklisted_template
-
 
 
 def build_high_conviction_ratio_templates(

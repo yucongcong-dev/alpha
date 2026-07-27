@@ -17,6 +17,7 @@ from alpha.generators.expression_builder import (
     build_expression_candidates,
 )
 from alpha.generators.ratio_templates import build_high_conviction_ratio_templates
+from alpha.generators.templates import load_template_library
 from alpha.generators.templates.classification import (
     classify_expression_family,
     is_legacy_family,
@@ -27,24 +28,23 @@ from alpha.generators.templates.variations import (
     build_historical_reuse_templates,
     build_trade_when_templates,
 )
-from alpha.generators.templates import load_template_library
 from alpha.models.runtime import TemplateBuildContext, TemplateBuildOptions
 from alpha.policy.expression import get_dataset_expression_policy
 from alpha.policy.template_blacklist import invalidate_default_avoid_rules_cache
 
-_DEFAULT_SIM_SETTINGS = dict(
-    region="USA",
-    universe="TOP3000",
-    instrument_type="EQUITY",
-    delay=1,
-    decay=4,
-    neutralization="SUBINDUSTRY",
-    truncation=0.08,
-    pasteurization="ON",
-    unit_handling="VERIFY",
-    nan_handling="OFF",
-    language="FASTEXPR",
-)
+_DEFAULT_SIM_SETTINGS = {
+    "region": "USA",
+    "universe": "TOP3000",
+    "instrument_type": "EQUITY",
+    "delay": 1,
+    "decay": 4,
+    "neutralization": "SUBINDUSTRY",
+    "truncation": 0.08,
+    "pasteurization": "ON",
+    "unit_handling": "VERIFY",
+    "nan_handling": "OFF",
+    "language": "FASTEXPR",
+}
 
 
 class TestClassifyExpressionFamily:

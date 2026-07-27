@@ -7,9 +7,11 @@ from dataclasses import dataclass, field
 from threading import Event
 import time
 
+from ..config.constants import STATUS_ERROR
 from ..config.models import DatasetExpressionPolicy
 from ..models.domain import FieldTestResult, TemplateField, TemplateLibrary
 from ..models.io_types import RunFilters
+from ..models.result_predicates import is_queue_timeout_result
 from ..models.runtime_protocols import (
     ClientFactoryLike,
     RunConfig,
@@ -39,6 +41,27 @@ class RuntimeConcurrencyState:
         )
 
 
+@dataclass(frozen=True, slots=True)
+class ExecutionMetrics:
+    """Counts derived from the authoritative in-memory result sequence."""
+
+    unique_field_ids: frozenset[str]
+    submittable_count: int
+    submitted_count: int
+    error_count: int
+    queue_timeout_count: int
+
+    @classmethod
+    def from_results(cls, results: list[FieldTestResult]) -> ExecutionMetrics:
+        return cls(
+            unique_field_ids=frozenset(result.field_id for result in results),
+            submittable_count=sum(1 for result in results if result.submittable),
+            submitted_count=sum(1 for result in results if result.submitted),
+            error_count=sum(1 for result in results if result.status == STATUS_ERROR),
+            queue_timeout_count=sum(1 for result in results if is_queue_timeout_result(result)),
+        )
+
+
 @dataclass
 class ExecutionState:
     """执行过程中可变的待运行、跳过与累计结果状态。"""
@@ -59,6 +82,16 @@ class ExecutionState:
     blacklisted_template_keys: set[tuple[str, str, str]] = field(default_factory=set)
     last_submission_at: float = 0.0
     stop_signal: Event = field(default_factory=Event)
+
+    def refresh_metrics(self) -> ExecutionMetrics:
+        """Recompute compatibility counters from results and return one snapshot."""
+        metrics = ExecutionMetrics.from_results(self.results)
+        self.unique_field_ids = set(metrics.unique_field_ids)
+        self.submittable_count = metrics.submittable_count
+        self.submitted_count = metrics.submitted_count
+        self.error_count = metrics.error_count
+        self.queue_timeout_count = metrics.queue_timeout_count
+        return metrics
 
 
 @dataclass(frozen=True)

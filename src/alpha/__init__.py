@@ -120,7 +120,7 @@ _EXPORT_MAP: dict[str, tuple[str, str]] = {
     "first_non_empty": (".utils", "first_non_empty"),
 }
 
-__all__ = [*_EXPORT_MAP, "__author__", "__version__"]
+__all__ = [*list(_EXPORT_MAP), "__author__", "__version__"]
 
 
 def __getattr__(name: str) -> object:

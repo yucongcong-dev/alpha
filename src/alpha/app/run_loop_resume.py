@@ -2,13 +2,13 @@
 
 from __future__ import annotations
 
-import logging
 from collections.abc import Callable
+import logging
 
 from ..config.constants import SENTINEL_UNKNOWN
 from ..core.checkpoint import load_pipeline_state, save_checkpoint, save_pipeline_state
 from ..models.domain import TemplateField
-from ..runtime import ExecutionState, RuntimeConcurrencyState
+from ..runtime.state import ExecutionState, RuntimeConcurrencyState
 from ..utils.helpers import first_non_empty
 
 logger = logging.getLogger(__name__)

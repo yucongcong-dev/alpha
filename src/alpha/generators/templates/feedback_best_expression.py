@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from ...config import (
+from ...config.constants import (
     FEEDBACK_MUTATION_HIGHSCORE_THRESHOLD,
     TEMPLATE_STAGE_FIRST_ORDER,
     TEMPLATE_STAGE_GROUP_SECOND_ORDER,

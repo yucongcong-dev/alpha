@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
-from typing import Protocol, Union
+from typing import Protocol
 
 from .domain import FieldTestResult, TemplateCandidate
 from .domain_types import FieldFeedbackSummary

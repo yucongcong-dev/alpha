@@ -5,7 +5,7 @@ from __future__ import annotations
 import argparse
 import os
 
-from ..config.constants import DEFAULT_DATASET_ID, NEUTRALIZATION_SUBINDUSTRY
+from ..config.constants import DEFAULT_DATASET_ID
 from .constants import DEFAULT_CREDS_FILE, DEFAULT_CREDS_KEY_FILE
 
 

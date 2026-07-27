@@ -10,7 +10,7 @@ from __future__ import annotations
 from collections.abc import Callable, Sequence
 import re
 
-from ...config import (
+from ...config.constants import (
     GROUP_NAME_INDUSTRY,
     GROUP_NAME_SUBINDUSTRY,
     REFINE_PRIORITY_BACKFILL_DELTA,
@@ -22,13 +22,12 @@ from ...config import (
     REFINE_PRIORITY_TSRANK_DELTA,
     TEMPLATE_STAGE_EVENT_CONDITIONED,
     TEMPLATE_STAGE_GROUP_SECOND_ORDER,
-    DatasetExpressionPolicy,
 )
+from ...config.models import DatasetExpressionPolicy
 from ...models.domain import NearPassCandidate, TemplateCandidate
 from ...models.domain_types import TemplateMetadata
 from .candidates import _candidate_metadata, _make_template_candidate
 from .variation_common import is_blacklisted_template as _is_blacklisted_template
-
 
 
 def _make_window_replacer(replacement: int) -> Callable[[re.Match[str]], str]:

@@ -12,7 +12,6 @@ import os
 import tempfile
 from typing import Any
 
-
 from ..models.domain import FieldTestResult
 from ..models.domain_serializers import serialize_field_test_result
 from .common import atomic_write_json
@@ -85,8 +84,8 @@ def dump_results(
 ) -> None:
     """持久化完整运行结果，并按需同步分析边车文件。"""
     sidecar_paths = build_output_sidecar_paths(path)
-    from ..analysis.template_registry_sidecars import sync_template_registry_sidecars
     from ..analysis.report_builder import build_analysis_payload, build_results_summary_payload
+    from ..analysis.template_registry_sidecars import sync_template_registry_sidecars
     from ..analysis.template_stats import compile_template_stats
 
     summary, analysis_inputs = build_results_summary_payload(
@@ -97,10 +96,11 @@ def dump_results(
         run_config=run_config,
         results_journal_path=sidecar_paths["results_journal"],
     )
-    summary["results_embedded"] = True
+    summary["results_embedded"] = False
+    summary.pop("results", None)
     template_stats = compile_template_stats(results)
-    atomic_write_json(path, summary)
     initialize_results_journal(path, results)
+    atomic_write_json(path, summary)
     sync_template_registry_sidecars(path, template_stats=template_stats)
     if include_analysis:
         analysis = build_analysis_payload(results, summary, analysis_inputs)
@@ -135,6 +135,7 @@ def dump_results_incremental(
     run_config: dict[str, Any] | None = None,
     template_registry_summary: list[dict[str, Any]] | None = None,
     template_stats: dict[str, dict[str, Any]] | None = None,
+    policy_evaluation: dict[str, Any] | None = None,
 ) -> int:
     """仅把新增结果追加到 journal，并写轻量 summary。"""
     sidecar_paths = build_output_sidecar_paths(path)
@@ -156,6 +157,7 @@ def dump_results_incremental(
         "submitted": submitted_count,
         "errors": error_count,
         "queue_timeouts": queue_timeout_count,
+        "policy_evaluation": policy_evaluation or {"groups": []},
         "results_embedded": False,
         "results_journal": sidecar_paths["results_journal"],
     }

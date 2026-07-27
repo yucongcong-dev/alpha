@@ -43,9 +43,13 @@ def _discover_module_exports(module_name: str) -> tuple[str, ...]:
             targets = [node.target]
         else:
             continue
-        for target in targets:
-            if isinstance(target, ast.Name) and target.id.isupper() and not target.id.startswith("_"):
-                exported.append(target.id)
+        exported.extend(
+            target.id
+            for target in targets
+            if isinstance(target, ast.Name)
+            and target.id.isupper()
+            and not target.id.startswith("_")
+        )
     return tuple(dict.fromkeys(exported))
 
 

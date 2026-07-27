@@ -9,7 +9,8 @@ from ..config.models import DatasetExpressionPolicy
 from ..models.domain import TemplateField, TemplateLibrary
 from ..models.io_types import RunFilters
 from ..models.runtime_protocols import RunConfig
-from ..runtime import HistoricalRunState, RuntimeConcurrencyState
+from ..runtime.contexts import HistoricalRunState
+from ..runtime.state import RuntimeConcurrencyState
 
 
 @dataclass(frozen=True)

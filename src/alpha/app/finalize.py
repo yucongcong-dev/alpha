@@ -10,7 +10,6 @@
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING
 
 from ..analysis.field_stats import current_submittable_count
 from ..config.constants import STATUS_ERROR
@@ -19,9 +18,8 @@ from ..io.results_store import dump_results
 from ..models.io_types import RunPaths
 from ..models.runtime_options import ResultWriteOptions
 from ..models.runtime_protocols import ResultWriteArgs
-from ..policy import auto_update_blacklist
-from ..runtime import InitializedRunContext
-
+from ..policy.blacklist_runtime_updates import auto_update_blacklist
+from ..runtime.state import InitializedRunContext
 
 logger = logging.getLogger(__name__)
 

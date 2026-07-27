@@ -235,6 +235,18 @@ def prepare_bootstrap_resources(
             len(supporting_resources.historical_state.existing_results),
         )
 
+    effective_run_config = dict(run_config)
+    expression_policy = supporting_resources.expression_policy
+    effective_run_config["heuristic_policy"] = {
+        "dataset_id": dataset_id,
+        "policy_version": str(getattr(expression_policy, "policy_version", "unversioned")),
+        "feedback_scope": str(getattr(expression_policy, "feedback_scope", "field_type")),
+        "evaluation_holdout_percent": int(
+            getattr(expression_policy, "evaluation_holdout_percent", 0) or 0
+        ),
+        "use_curated_heuristics": bool(expression_policy.use_curated_heuristics),
+    }
+
     return PreparedBootstrapResources(
         template_library=supporting_resources.template_library,
         filters=supporting_resources.filters,
@@ -244,7 +256,7 @@ def prepare_bootstrap_resources(
         settings_fingerprint=build_settings_fingerprint_fn(args),
         historical_state=supporting_resources.historical_state,
         fields=prepared_fields,
-        run_config=run_config,
+        run_config=effective_run_config,
     )
 
 

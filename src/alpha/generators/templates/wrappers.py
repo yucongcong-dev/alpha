@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from ...config import TEMPLATE_STAGE_EVENT_CONDITIONED, TEMPLATE_STAGE_GROUP_SECOND_ORDER
+from ...config.constants import TEMPLATE_STAGE_EVENT_CONDITIONED, TEMPLATE_STAGE_GROUP_SECOND_ORDER
 from ...models.domain import TemplateCandidate
 from .candidates import _candidate_metadata, _make_template_candidate
 

@@ -4,11 +4,12 @@ from __future__ import annotations
 
 from ..core.executor import build_template_build_context
 from ..core.scheduler_completion import build_completion_context
-from ..models.io_types import RunPaths
 from ..models.domain import TemplateField
+from ..models.io_types import RunPaths
 from ..models.runtime_options import ResultWriteOptions
 from ..models.runtime_protocols import ResultWriteArgs, SchedulerRuntimeArgs, TemplateBuildArgs
-from ..runtime import FutureCompletionContext, InitializedRunContext, TemplateBuildContext
+from ..runtime.contexts import FutureCompletionContext, TemplateBuildContext
+from ..runtime.state import InitializedRunContext
 
 
 def run_path_value(run_paths: RunPaths | None, attr: str) -> str:

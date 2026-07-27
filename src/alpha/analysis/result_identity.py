@@ -9,7 +9,12 @@ from __future__ import annotations
 from collections.abc import Sequence
 
 from ..models.domain import FieldTestResult
-from ..models.result_predicates import is_informative_result, is_queue_timeout_result
+from ..models.result_predicates import (
+    is_informative_result,
+)
+from ..models.result_predicates import (
+    is_queue_timeout_result as is_queue_timeout_result,
+)
 
 
 def result_identity(result: FieldTestResult) -> tuple[str, str, str, str]:

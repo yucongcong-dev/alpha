@@ -16,15 +16,13 @@ from ..core.executor import (
 from ..core.scheduler import maybe_restore_runtime_concurrency, throttle_before_submission
 from ..generators.fields import choose_field_name, choose_field_type
 from ..models.domain import TemplateField
-from ..runtime import FutureCompletionContext
 from ..models.runtime_protocols import RunLoopArgs
-from ..runtime import (
-    ExecutionState,
-    InitializedRunContext,
+from ..runtime.contexts import (
+    FutureCompletionContext,
     PendingTemplateEntry,
-    RuntimeConcurrencyState,
     TemplateBuildContext,
 )
+from ..runtime.state import InitializedRunContext
 from ..utils.helpers import first_non_empty
 from .loop_future_support import drain_until_capacity, submit_template_future
 from .run_loop_feedback import refresh_runtime_feedback
@@ -42,34 +40,41 @@ class ScheduleRoundResult:
     last_field_id: str
 
 
+@dataclass
+class ScheduleRoundContext:
+    """Stable dependencies shared by every breadth-first scheduling round."""
+
+    args: RunLoopArgs
+    run_ctx: InitializedRunContext
+    executor: ThreadPoolExecutor
+    template_build_ctx: TemplateBuildContext
+    fields: list[TemplateField]
+    original_fields: list[TemplateField]
+    field_resume_positions: dict[str, int]
+    completion_ctx: FutureCompletionContext
+    state_file: str
+    field_template_batch_size: int
+
+
 def execute_schedule_round(
+    context: ScheduleRoundContext,
     *,
-    args: RunLoopArgs,
-    run_ctx: InitializedRunContext,
-    executor: ThreadPoolExecutor,
-    template_build_ctx: TemplateBuildContext,
-    fields: list[TemplateField],
-    original_fields: list[TemplateField],
-    field_resume_positions: dict[str, int],
-    execution_state: ExecutionState,
-    runtime_state: RuntimeConcurrencyState,
-    completion_ctx: FutureCompletionContext,
-    state_file: str,
     round_index: int,
-    field_template_batch_size: int,
 ) -> ScheduleRoundResult:
     """Execute one scheduling round across every remaining field."""
+    args = context.args
+    execution_state = context.run_ctx.execution_state
     progressed_this_round = False
     last_field_id = ""
-    if field_template_batch_size > 0:
+    if context.field_template_batch_size > 0:
         logger.info(
             "[schedule] round=%d breadth-first batch_size=%d fields=%d",
             round_index,
-            field_template_batch_size,
-            len(fields),
+            context.field_template_batch_size,
+            len(context.fields),
         )
 
-    for field_index, field in enumerate(fields, start=1):
+    for field_index, field in enumerate(context.fields, start=1):
         if should_stop_after_submittable(args.stop_after_submittable, execution_state.results):
             execution_state.stop_signal.set()
             logger.info("[stop] 达到 stop-after-submittable=%d", args.stop_after_submittable)
@@ -80,21 +85,11 @@ def execute_schedule_round(
             )
 
         field_result = schedule_field_round(
-            args=args,
-            run_ctx=run_ctx,
-            executor=executor,
-            template_build_ctx=template_build_ctx,
+            context=context,
             field=field,
             field_index=field_index,
-            total_fields=len(fields),
-            original_fields=original_fields,
-            field_resume_positions=field_resume_positions,
-            execution_state=execution_state,
-            runtime_state=runtime_state,
-            completion_ctx=completion_ctx,
-            state_file=state_file,
+            total_fields=len(context.fields),
             round_index=round_index,
-            field_template_batch_size=field_template_batch_size,
         )
         last_field_id = field_result.last_field_id or last_field_id
         progressed_this_round = progressed_this_round or field_result.progressed
@@ -114,27 +109,20 @@ def execute_schedule_round(
 
 def schedule_field_round(
     *,
-    args: RunLoopArgs,
-    run_ctx: InitializedRunContext,
-    executor: ThreadPoolExecutor,
-    template_build_ctx: TemplateBuildContext,
+    context: ScheduleRoundContext,
     field: TemplateField,
     field_index: int,
     total_fields: int,
-    original_fields: list[TemplateField],
-    field_resume_positions: dict[str, int],
-    execution_state: ExecutionState,
-    runtime_state: RuntimeConcurrencyState,
-    completion_ctx: FutureCompletionContext,
-    state_file: str,
     round_index: int,
-    field_template_batch_size: int,
 ) -> ScheduleRoundResult:
     """Schedule one field for the current round and persist its progress."""
+    run_ctx = context.run_ctx
+    execution_state = run_ctx.execution_state
+    runtime_state = run_ctx.runtime_state
     field_id = str(first_non_empty(field.get("id"), SENTINEL_UNKNOWN))
     field_name = choose_field_name(field)
     field_type = choose_field_type(field)
-    refresh_runtime_feedback(template_build_ctx, execution_state.results)
+    refresh_runtime_feedback(context.template_build_ctx, execution_state.results)
 
     if should_skip_field(
         field_id,
@@ -143,18 +131,18 @@ def schedule_field_round(
         execution_state.skipped_fields_due_to_queue,
     ):
         persist_field_progress(
-            state_file=state_file,
+            state_file=context.state_file,
             field_id=field_id,
             field_index=field_index,
-            original_fields=original_fields,
-            field_resume_positions=field_resume_positions,
+            original_fields=context.original_fields,
+            field_resume_positions=context.field_resume_positions,
             execution_state=execution_state,
             runtime_state=runtime_state,
         )
         return ScheduleRoundResult(progressed=False, stop_requested=False, last_field_id=field_id)
 
     pending_templates, disabled_templates, template_count = build_pending_templates_for_field(
-        template_build_ctx,
+        context.template_build_ctx,
         field,
         template_stats=execution_state.template_stats,
         attempted_keys=execution_state.attempted_keys,
@@ -171,8 +159,8 @@ def schedule_field_round(
         disabled_templates,
     )
 
-    if field_template_batch_size > 0:
-        scheduled_templates = pending_templates[:field_template_batch_size]
+    if context.field_template_batch_size > 0:
+        scheduled_templates = pending_templates[: context.field_template_batch_size]
         deferred_templates = max(0, len(pending_templates) - len(scheduled_templates))
     else:
         scheduled_templates = pending_templates
@@ -188,12 +176,7 @@ def schedule_field_round(
         )
 
     stop_requested = _dispatch_templates_for_field(
-        args=args,
-        run_ctx=run_ctx,
-        executor=executor,
-        execution_state=execution_state,
-        runtime_state=runtime_state,
-        completion_ctx=completion_ctx,
+        context=context,
         field=field,
         field_id=field_id,
         field_name=field_name,
@@ -201,11 +184,11 @@ def schedule_field_round(
         scheduled_templates=scheduled_templates,
     )
     persist_field_progress(
-        state_file=state_file,
+        state_file=context.state_file,
         field_id=field_id,
         field_index=field_index,
-        original_fields=original_fields,
-        field_resume_positions=field_resume_positions,
+        original_fields=context.original_fields,
+        field_resume_positions=context.field_resume_positions,
         execution_state=execution_state,
         runtime_state=runtime_state,
     )
@@ -218,12 +201,7 @@ def schedule_field_round(
 
 def _dispatch_templates_for_field(
     *,
-    args: RunLoopArgs,
-    run_ctx: InitializedRunContext,
-    executor: ThreadPoolExecutor,
-    execution_state: ExecutionState,
-    runtime_state: RuntimeConcurrencyState,
-    completion_ctx: FutureCompletionContext,
+    context: ScheduleRoundContext,
     field: TemplateField,
     field_id: str,
     field_name: str,
@@ -231,6 +209,10 @@ def _dispatch_templates_for_field(
     scheduled_templates: list[PendingTemplateEntry],
 ) -> bool:
     """Dispatch scheduled templates for a single field; return whether a stop was requested."""
+    args = context.args
+    run_ctx = context.run_ctx
+    execution_state = run_ctx.execution_state
+    runtime_state = run_ctx.runtime_state
     for template_index, entry in enumerate(scheduled_templates, start=1):
         if should_stop_after_submittable(args.stop_after_submittable, execution_state.results):
             execution_state.stop_signal.set()
@@ -248,7 +230,7 @@ def _dispatch_templates_for_field(
             executor_state=execution_state,
             runtime_state=runtime_state,
             args=args,
-            completion_ctx=completion_ctx,
+            completion_ctx=context.completion_ctx,
             field_id=field_id,
         ):
             return False
@@ -268,7 +250,7 @@ def _dispatch_templates_for_field(
         )
         throttle_before_submission(args, execution_state)
         submit_template_future(
-            executor=executor,
+            executor=context.executor,
             run_ctx=run_ctx,
             execution_state=execution_state,
             args=args,
@@ -281,6 +263,8 @@ def _dispatch_templates_for_field(
             template_stage=entry.template_stage,
             template_role=entry.template_role,
             template_activation_scope=entry.template_activation_scope,
+            policy_version=entry.policy_version,
+            policy_arm=entry.policy_arm,
             expression=entry.expression,
             settings_variant=entry.settings_variant,
             variant_fingerprint=entry.variant_fingerprint,

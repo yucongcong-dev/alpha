@@ -1,21 +1,17 @@
 #!/usr/bin/env python3
-"""
-中期改进功能集成测试
-测试错误处理框架
-"""
+"""错误记录与重试装饰器的集成测试。"""
 
 import pytest
 
 from alpha.error_handling import (
-    CircuitBreakerStrategy,
     ErrorCategory,
     ErrorContext,
     ErrorHandler,
     ErrorSeverity,
-    FallbackStrategy,
-    RetryStrategy,
     get_error_handler,
     handle_global_error,
+    retry_on_error,
+    set_error_handler,
 )
 
 
@@ -25,12 +21,11 @@ class TestErrorHandlingFramework:
     def setup_method(self):
         """设置测试环境"""
         handler = ErrorHandler()
-        handler.clear_errors()
+        set_error_handler(handler)
 
-    def test_error_handler_with_strategies(self):
-        """测试错误处理器的恢复策略"""
+    def test_error_handler_records_error(self):
+        """测试错误处理器记录异常与上下文。"""
         handler = get_error_handler()
-        handler.clear_errors()
 
         exception = ValueError("Test error")
         context = ErrorContext(
@@ -38,77 +33,32 @@ class TestErrorHandlingFramework:
             category=ErrorCategory.VALIDATION,
             operation="test_op",
             module="test_module",
-            function="test_func"
+            function="test_func",
         )
 
         error_record = handler.handle_error(exception, context)
 
         assert error_record.exception == exception
-        assert error_record.recovered is True
-        assert error_record.recovery_action is not None
+        assert error_record.context == context
+        assert error_record.recovered is False
+        assert error_record.recovery_action is None
+        assert handler.get_recent_errors() == [error_record]
 
-    def test_retry_strategy(self):
-        """测试重试策略"""
-        strategy = RetryStrategy(max_retries=2, delay=0.1)
-        handler = get_error_handler()
+    def test_retry_decorator_retries_until_success(self, monkeypatch):
+        """测试重试装饰器按配置重试并最终返回。"""
+        monkeypatch.setattr("alpha.error_handling.time.sleep", lambda _delay: None)
+        attempts = 0
 
-        context = ErrorContext(
-            severity=ErrorSeverity.ERROR,
-            category=ErrorCategory.NETWORK,
-            operation="test_op",
-            module="test_module",
-            function="test_func"
-        )
+        @retry_on_error(max_retries=3, delay=0.1, exceptions=(ValueError,))
+        def flaky_operation():
+            nonlocal attempts
+            attempts += 1
+            if attempts < 3:
+                raise ValueError("temporary error")
+            return "ok"
 
-        from alpha.exceptions import BrainRateLimitError
-
-        error_record = handler.handle_error(BrainRateLimitError("rate limit"), context)
-        assert strategy.can_recover(error_record)
-
-        result = strategy.recover(error_record)
-        assert result["action"] == "retry"
-
-    def test_fallback_strategy(self):
-        """测试降级策略"""
-        strategy = FallbackStrategy(fallback_value="fallback_result")
-        handler = get_error_handler()
-
-        context = ErrorContext(
-            severity=ErrorSeverity.ERROR,
-            category=ErrorCategory.CONFIG,
-            operation="test_op",
-            module="test_module",
-            function="test_func"
-        )
-
-        error_record = handler.handle_error(ValueError("config error"), context)
-        assert strategy.can_recover(error_record)
-
-        result = strategy.recover(error_record)
-        assert result["action"] == "fallback_value"
-        assert result["value"] == "fallback_result"
-
-    def test_circuit_breaker_strategy(self):
-        """测试熔断器策略"""
-        strategy = CircuitBreakerStrategy(failure_threshold=2, recovery_timeout=0.1)
-        handler = get_error_handler()
-
-        context = ErrorContext(
-            severity=ErrorSeverity.ERROR,
-            category=ErrorCategory.API,
-            operation="test_op",
-            module="test_module",
-            function="test_func"
-        )
-
-        error_record = handler.handle_error(ValueError("api error"), context)
-        assert strategy.can_recover(error_record)
-
-        result1 = strategy.recover(error_record)
-        assert result1["action"] == "circuit_breaker_monitor"
-
-        result2 = strategy.recover(error_record)
-        assert result2["action"] == "circuit_breaker_open"
+        assert flaky_operation() == "ok"
+        assert attempts == 3
 
     def test_error_handler_metrics(self):
         """测试错误处理器指标"""
@@ -118,7 +68,10 @@ class TestErrorHandlingFramework:
         for _ in range(3):
             handler.handle_error(
                 ValueError("test"),
-                ErrorContext(severity=ErrorSeverity.WARNING, category=ErrorCategory.VALIDATION)
+                ErrorContext(
+                    severity=ErrorSeverity.WARNING,
+                    category=ErrorCategory.VALIDATION,
+                )
             )
 
         metrics = handler.get_metrics()
@@ -158,5 +111,5 @@ class TestIntegration:
                 operation="integration_test"
             )
 
-        assert record.recovered is True
+        assert record.recovered is False
         assert handler.get_metrics()["errors_total"] == 1

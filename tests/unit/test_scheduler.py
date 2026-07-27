@@ -19,6 +19,7 @@ from alpha.core.scheduler import (
     register_queue_busy_field,
     throttle_before_submission,
 )
+from alpha.models.domain import FieldTestResult
 from alpha.models.runtime import (
     ExecutionState,
     PendingFutureContext,
@@ -423,7 +424,17 @@ def test_drain_completed_futures_sets_stop_signal_and_cancels_unstarted_future()
             "alpha.core.scheduler.apply_completed_result",
             return_value=({}, False, None),
         ):
-            execution_state.submittable_count = 1
+            execution_state.results.append(
+                FieldTestResult(
+                    field_id="field_done",
+                    field_type="MATRIX",
+                    field_name="field_done",
+                    template_name="tpl_done",
+                    status="simulated",
+                    submittable=True,
+                    expression="rank(field_done)",
+                )
+            )
             drain_completed_futures(
                 completed_futures=[done_future],
                 execution_state=execution_state,

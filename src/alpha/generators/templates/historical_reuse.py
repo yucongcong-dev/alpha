@@ -2,14 +2,14 @@
 
 from __future__ import annotations
 
-from ...config import (
+from ...config.constants import (
     EXPR_MUTATION_EXTEND_THRESHOLD,
     FEEDBACK_MUTATION_HIGHSCORE_THRESHOLD,
     FEEDBACK_STAGE_GENERATE,
     STATS_DEFAULT_SCORE,
     TEMPLATE_STAGE_GROUP_SECOND_ORDER,
-    DatasetExpressionPolicy,
 )
+from ...config.models import DatasetExpressionPolicy
 from ...models.domain import TemplateCandidate
 from ...models.domain_types import FieldFeedbackSummary
 from .candidates import _candidate_metadata, _make_template_candidate

@@ -11,19 +11,19 @@ from alpha.generators.templates import load_template_library
 from alpha.models.runtime import TemplateBuildContext, TemplateBuildOptions
 from alpha.policy.expression import get_dataset_expression_policy
 
-_DEFAULT_SIM_SETTINGS = dict(
-    region="USA",
-    universe="TOP3000",
-    instrument_type="EQUITY",
-    delay=1,
-    decay=4,
-    neutralization="SUBINDUSTRY",
-    truncation=0.08,
-    pasteurization="ON",
-    unit_handling="VERIFY",
-    nan_handling="OFF",
-    language="FASTEXPR",
-)
+_DEFAULT_SIM_SETTINGS = {
+    "region": "USA",
+    "universe": "TOP3000",
+    "instrument_type": "EQUITY",
+    "delay": 1,
+    "decay": 4,
+    "neutralization": "SUBINDUSTRY",
+    "truncation": 0.08,
+    "pasteurization": "ON",
+    "unit_handling": "VERIFY",
+    "nan_handling": "OFF",
+    "language": "FASTEXPR",
+}
 
 
 def test_apply_transform_pipeline_backfill_then_winsorize() -> None:

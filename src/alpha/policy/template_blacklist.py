@@ -12,22 +12,22 @@ import logging
 import os
 import re
 
+from ..models.domain_types import TemplateMetadata
 from .blacklist_context import clear_active_blacklists_dir, get_active_blacklists_dir
 from .blacklist_store import (
     invalidate_blacklist_path_cache,
     read_blacklist_payload,
     resolve_blacklist_path,
 )
-from ..models.domain_types import TemplateMetadata
 from .types import (
+    DEFAULT_RULES_KEY,
+    LEARNED_BLACKLIST_KEY,
+    PATTERN_RULES_KEY,
     BlacklistCacheEntry,
     BlacklistMatcherEntry,
     BlacklistPatternRule,
     BlacklistRuntimePolicy,
-    DEFAULT_RULES_KEY,
     DefaultAvoidRulesCache,
-    LEARNED_BLACKLIST_KEY,
-    PATTERN_RULES_KEY,
 )
 
 _BLACKLIST_CACHE: dict[str, BlacklistCacheEntry] = {}

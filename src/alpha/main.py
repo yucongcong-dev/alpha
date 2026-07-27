@@ -19,8 +19,7 @@ import logging
 from .app.bootstrap import clean_runtime_artifacts, initialize_run_context
 from .app.finalize import finalize_run
 from .app.run_loop import run_field_test_loop
-from .cli.parser import parse_args
-from .cli.path_resolution import apply_run_paths, normalize_args_paths
+from .cli.parser import parse_application_config
 
 logger = logging.getLogger(__name__)
 
@@ -37,28 +36,24 @@ def main() -> int:
     Returns:
         int: 退出状态码（0=正常, 1=错误, 130=用户中断）。
     """
-    args = parse_args()
+    config = parse_application_config()
 
-    if args.command == "clean":
-        return clean_runtime_artifacts(args)
+    if config.command == "clean":
+        return clean_runtime_artifacts(config)
 
-    run_paths = normalize_args_paths(args)
-    apply_run_paths(args, run_paths)
-
-    init_result = initialize_run_context(args, run_paths)
+    init_result = initialize_run_context(config, config.paths)
     if init_result is None:
         return 1
 
-
     run_field_test_loop(
-        args=args,
+        args=config,
         run_ctx=init_result,
-        run_paths=run_paths,
+        run_paths=config.paths,
     )
     finalize_run(
-        args=args,
+        args=config,
         run_ctx=init_result,
-        run_paths=run_paths,
+        run_paths=config.paths,
     )
     return 0
 

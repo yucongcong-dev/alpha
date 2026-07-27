@@ -17,8 +17,11 @@ from ..analysis.result_identity import (
 from ..analysis.template_stats import update_template_stats_with_result
 from ..config.constants import STATUS_ERROR, STATUS_SKIPPED
 from ..models.domain import FieldTestResult
-from ..runtime import ExecutionState, FutureCompletionContext
-from ..policy import auto_update_blacklist_incremental, build_blacklist_runtime_stats
+from ..policy.blacklist_runtime_stats import build_blacklist_runtime_stats
+from ..policy.blacklist_runtime_updates import auto_update_blacklist_incremental
+from ..policy.evaluation import summarize_policy_evaluation
+from ..runtime.contexts import FutureCompletionContext
+from ..runtime.state import ExecutionState
 
 logger = logging.getLogger(__name__)
 
@@ -57,15 +60,7 @@ def apply_result_state_updates(
 ) -> dict[str, dict[str, int]]:
     """Apply one completed result to execution counters and template stats."""
     execution_state.results.append(result)
-    execution_state.unique_field_ids.add(result.field_id)
-    if result.submittable:
-        execution_state.submittable_count += 1
-    if result.submitted:
-        execution_state.submitted_count += 1
-    if result.status == STATUS_ERROR:
-        execution_state.error_count += 1
-    if is_queue_timeout_result_fn(result):
-        execution_state.queue_timeout_count += 1
+    execution_state.refresh_metrics()
     if is_informative_result_fn(result):
         execution_state.attempted_keys.add(result_identity_fn(result))
     template_stats = update_template_stats_with_result_fn(execution_state.template_stats, result)
@@ -143,21 +138,23 @@ def persist_incremental_result(
 ) -> None:
     """Persist one completed result and updated counters to the journal/results store."""
     result_write_options = completion_ctx.result_write_options
+    metrics = execution_state.refresh_metrics()
     execution_state.persisted_result_count = dump_results_incremental_fn(
         result_write_options.output_path,
         result_write_options.dataset_id,
         [result],
         persisted_result_count=execution_state.persisted_result_count,
         tested=len(execution_state.results),
-        unique_fields_tested=len(execution_state.unique_field_ids),
-        submittable_count=execution_state.submittable_count,
-        submitted_count=execution_state.submitted_count,
-        error_count=execution_state.error_count,
-        queue_timeout_count=execution_state.queue_timeout_count,
+        unique_fields_tested=len(metrics.unique_field_ids),
+        submittable_count=metrics.submittable_count,
+        submitted_count=metrics.submitted_count,
+        error_count=metrics.error_count,
+        queue_timeout_count=metrics.queue_timeout_count,
         settings_fingerprint=completion_ctx.settings_fingerprint,
         template_library_fingerprint=completion_ctx.template_library_fingerprint,
         run_config=completion_ctx.run_config,
         template_stats=execution_state.template_stats,
+        policy_evaluation=summarize_policy_evaluation(execution_state.results),
     )
 
 

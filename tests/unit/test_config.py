@@ -151,6 +151,9 @@ def test_expression_policy_can_be_overridden_from_yaml(monkeypatch) -> None:
 def test_fundamental6_default_policy_is_loaded_from_settings_yaml() -> None:
     policy = get_dataset_expression_policy("fundamental6")
 
+    assert policy.policy_version == "2026-07-27.1"
+    assert policy.feedback_scope == "field_type"
+    assert policy.evaluation_holdout_percent == 10
     assert policy.partner_limit == 6
     assert "account_rank_backfill_504" in policy.protected_templates
     assert policy.disabled_templates == set()

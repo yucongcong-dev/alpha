@@ -20,16 +20,15 @@ from ..models.domain import (
 )
 from ..models.domain_serializers import serialize_field_test_result
 from ..models.result_predicates import is_queue_timeout_result
+from ..policy.evaluation import summarize_policy_evaluation
 from .failed_checks import (
     compile_failed_check_leaderboard,
     compile_near_pass_summary,
     compile_optimization_hints,
 )
 from .field_stats import compile_field_performance_summary
-
 from .template_registry_rules import compile_template_registry_summary
-from .template_stats import compile_template_performance_summary
-from .template_stats import compile_template_stats
+from .template_stats import compile_template_performance_summary, compile_template_stats
 
 
 def build_results_summary_payload(
@@ -88,6 +87,7 @@ def build_results_summary_payload(
         "submitted": submitted_count,
         "errors": error_count,
         "queue_timeouts": queue_timeout_count,
+        "policy_evaluation": summarize_policy_evaluation(results),
         "template_registry_embedded": False,
         "results_journal": results_journal_path,
         "results": results_dicts,
@@ -125,6 +125,7 @@ def build_analysis_payload(
         "submitted_count": summary["submitted"],
         "error_count": summary["errors"],
         "queue_timeout_count": summary["queue_timeouts"],
+        "policy_evaluation": summary["policy_evaluation"],
         "submittable": analysis_inputs["submittable_results"],
         "submitted": analysis_inputs["submitted_results"],
         "failed_checks_summary": analysis_inputs["failed_checks_summary"],

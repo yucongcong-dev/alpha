@@ -6,11 +6,16 @@ objects while preserving backward-compatible instance methods.
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 from .domain_conversion import serialize_failed_check
 from .domain_types import ResultRow
 
+if TYPE_CHECKING:
+    from .domain import FieldTestResult, SettingsVariant, TemplateField, TemplateLibraryItem
 
-def serialize_template_library_item(item: "TemplateLibraryItem") -> dict[str, object]:
+
+def serialize_template_library_item(item: TemplateLibraryItem) -> dict[str, object]:
     """Serialize a template-library item into its JSON shape."""
     return {
         "name": item.name,
@@ -22,7 +27,7 @@ def serialize_template_library_item(item: "TemplateLibraryItem") -> dict[str, ob
     }
 
 
-def serialize_settings_variant(settings: "SettingsVariant") -> dict[str, object]:
+def serialize_settings_variant(settings: SettingsVariant) -> dict[str, object]:
     """Serialize a settings variant, omitting unset values."""
     serialized: dict[str, object] = {}
     key_map = {
@@ -40,12 +45,12 @@ def serialize_settings_variant(settings: "SettingsVariant") -> dict[str, object]
     return serialized
 
 
-def serialize_template_field(field: "TemplateField") -> dict[str, object]:
+def serialize_template_field(field: TemplateField) -> dict[str, object]:
     """Serialize a template field while preserving the original metadata payload."""
     return dict(field.metadata)
 
 
-def serialize_field_test_result(result: "FieldTestResult") -> ResultRow:
+def serialize_field_test_result(result: FieldTestResult) -> ResultRow:
     """Serialize a field test result into its persisted JSON row shape."""
     return {
         "field_id": result.field_id,
@@ -56,6 +61,8 @@ def serialize_field_test_result(result: "FieldTestResult") -> ResultRow:
         "template_stage": result.template_stage,
         "template_role": result.template_role,
         "template_activation_scope": result.template_activation_scope,
+        "policy_version": result.policy_version,
+        "policy_arm": result.policy_arm,
         "simulation_id": result.simulation_id,
         "alpha_id": result.alpha_id,
         "status": result.status,

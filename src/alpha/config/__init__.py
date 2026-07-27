@@ -9,11 +9,12 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from .constants import __all__ as _CONSTANT_EXPORTS
-from .getters import __all__ as _GETTER_EXPORTS
+from .constants import __all__ as _constant_exports
+from .getters import __all__ as _getter_exports
 from .._facade import facade_dir, resolve_export
 
 if TYPE_CHECKING:
+    from .application import ApplicationConfig
     from .constants import *
     from .defaults import apply_yaml_global_defaults
     from .getters import *
@@ -34,8 +35,9 @@ if TYPE_CHECKING:
     )
 
 _EXPORT_MAP: dict[str, tuple[str, str]] = {
-    **{name: (".constants", name) for name in _CONSTANT_EXPORTS},
-    **{name: (".getters", name) for name in _GETTER_EXPORTS},
+    **{name: (".constants", name) for name in _constant_exports},
+    **{name: (".getters", name) for name in _getter_exports},
+    "ApplicationConfig": (".application", "ApplicationConfig"),
     "apply_yaml_global_defaults": (".defaults", "apply_yaml_global_defaults"),
     "DatasetExpressionPolicy": (".models", "DatasetExpressionPolicy"),
     "FeedbackLoopPolicy": (".models", "FeedbackLoopPolicy"),

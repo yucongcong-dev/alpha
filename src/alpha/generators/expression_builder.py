@@ -13,8 +13,8 @@ dataset policy, and feedback into ordered alpha expression candidates.
 from __future__ import annotations
 
 from collections.abc import Sequence
+from dataclasses import replace
 from pathlib import Path
-from typing import Any
 
 from ..config.constants import FEEDBACK_STAGE_GENERATE, FEEDBACK_STAGE_RESIMULATE
 from ..config.models import DatasetExpressionPolicy
@@ -22,10 +22,10 @@ from ..config.runtime_values import get_runtime_config
 from ..generators.field_transforms import build_field_view
 from ..models.domain import FieldView, TemplateCandidate, TemplateField, TemplateLibraryItem
 from ..models.runtime_protocols import TemplateFeedback
-from ..runtime import TemplateBuildContext
+from ..policy.evaluation import POLICY_ARM_ADAPTIVE, assign_policy_arm
 from ..policy.expression import get_dataset_expression_policy, resolve_feedback_stage
 from ..policy.template_blacklist import load_default_avoid_rules
-from .templates.variation_common import is_blacklisted_template as _is_blacklisted_template
+from ..runtime.contexts import TemplateBuildContext
 from ..utils.helpers import is_event_field_name
 from .fields import choose_field_name, choose_field_type
 from .matrix_templates import build_matrix_templates
@@ -40,6 +40,7 @@ from .templates.priority import (
     apply_similarity_penalty,
     cap_templates_per_family,
 )
+from .templates.variation_common import is_blacklisted_template as _is_blacklisted_template
 from .templates.variations import build_feedback_mutations
 
 
@@ -207,11 +208,27 @@ def build_expression_candidates(
     options = build_ctx.options
     field_name = choose_field_name(field)
     field_type = choose_field_type(field)
+    field_id = (
+        field.field_id
+        if isinstance(field, TemplateField)
+        else str(field.get("id", field.get("name", "")))
+    )
     all_fields = list(build_ctx.all_fields)
-    global_failed_check_counts = dict(build_ctx.global_failed_check_counts)
     policy = expression_policy or get_dataset_expression_policy(
         options.dataset_id,
         use_curated_heuristics=build_ctx.use_dataset_heuristics,
+    )
+    if policy.feedback_scope == "field_type":
+        global_failed_check_counts = dict(
+            build_ctx.failed_check_counts_by_field_type.get(field_type.upper(), {})
+        )
+    else:
+        global_failed_check_counts = dict(build_ctx.global_failed_check_counts)
+    policy_arm = assign_policy_arm(
+        dataset_id=policy.dataset_id,
+        field_id=field_id,
+        policy_version=policy.policy_version,
+        holdout_percent=policy.evaluation_holdout_percent,
     )
     feedback_stage = resolve_feedback_stage(field_feedback, policy.feedback_loop_policy)
     field_view = build_field_view(field, policy)
@@ -283,11 +300,24 @@ def build_expression_candidates(
     templates = [item for item in templates if _template_supports_field_tags(item, field_view)]
 
     templates = apply_similarity_penalty(templates, options.legacy_similarity_penalty)
-    templates = apply_adaptive_priority(
-        templates,
-        field_feedback=field_feedback,
-        global_failed_check_counts=global_failed_check_counts,
-    )
+    if policy_arm == POLICY_ARM_ADAPTIVE:
+        templates = apply_adaptive_priority(
+            templates,
+            field_feedback=field_feedback,
+            global_failed_check_counts=global_failed_check_counts,
+        )
+    templates = [
+        replace(
+            template,
+            metadata={
+                **template.metadata,
+                "policy_version": policy.policy_version,
+                "policy_arm": policy_arm,
+                "feedback_scope": policy.feedback_scope,
+            },
+        )
+        for template in templates
+    ]
     templates = sort_templates_by_priority(templates)
     return limit_templates(
         cap_templates_per_family(templates, max_templates_per_family),

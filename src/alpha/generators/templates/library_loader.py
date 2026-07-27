@@ -9,7 +9,7 @@ from ...config.runtime_values import get_runtime_config
 from ...exceptions import BrainAPIError
 from ...models.domain import TemplateLibrary, TemplateLibraryItem
 from ...policy.expression import get_dataset_expression_policy
-
+from .library_store import default_priority_for_index
 
 _OPTIONAL_TEMPLATE_METADATA_KEYS = (
     "family",
@@ -106,7 +106,7 @@ def load_template_library(path: str) -> TemplateLibrary:
                 raise BrainAPIError(
                     f"模板 '{field_type}[{index}]' 的 expression 必须是非空字符串。"
                 )
-            priority = item.get("priority", 0)
+            priority = item.get("priority", default_priority_for_index(index))
             if not isinstance(priority, int):
                 raise BrainAPIError(f"模板 '{field_type}[{index}]' 的 priority 必须是整数。")
             resolved_expression = resolve_placeholders(item["expression"].strip(), backfill_window)

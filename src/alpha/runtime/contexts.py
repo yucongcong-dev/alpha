@@ -29,6 +29,8 @@ class PendingFutureContext:
     template_stage: str = ""
     template_role: str = ""
     template_activation_scope: str = ""
+    policy_version: str = ""
+    policy_arm: str = ""
     expression: str = ""
     settings_fingerprint: str = ""
 
@@ -46,6 +48,8 @@ class PendingTemplateEntry:
     priority: int
     settings_variant: SettingsVariant
     variant_fingerprint: str
+    policy_version: str = ""
+    policy_arm: str = ""
 
 
 @dataclass
@@ -61,6 +65,7 @@ class TemplateBuildContext:
     template_registry_overrides: dict[str, object] = field(default_factory=dict)
     field_feedback: FieldFeedbackMap = field(default_factory=dict)
     global_failed_check_counts: dict[str, int] = field(default_factory=dict)
+    failed_check_counts_by_field_type: dict[str, dict[str, int]] = field(default_factory=dict)
     include_templates: set[str] = field(default_factory=set)
     exclude_templates: set[str] = field(default_factory=set)
     use_dataset_heuristics: bool = False

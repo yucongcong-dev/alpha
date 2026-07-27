@@ -39,8 +39,8 @@ from ..models.domain import (
     TemplateField,
 )
 from ..models.runtime_protocols import TemplateFeedback
-from ..runtime import PendingTemplateEntry, TemplateBuildContext
 from ..policy.expression import get_dataset_expression_policy, resolve_feedback_stage
+from ..runtime.contexts import PendingTemplateEntry, TemplateBuildContext
 from ..utils.helpers import first_non_empty, is_event_field_name
 
 
@@ -253,6 +253,8 @@ def build_pending_template_variants(
                     template_stage=template_stage,
                     template_role=execution_decision.template_role,
                     template_activation_scope=execution_decision.template_activation_scope,
+                    policy_version=str(template_metadata.get("policy_version", "")),
+                    policy_arm=str(template_metadata.get("policy_arm", "")),
                     expression=expression,
                     priority=execution_decision.effective_priority,
                     settings_variant=settings_variant,

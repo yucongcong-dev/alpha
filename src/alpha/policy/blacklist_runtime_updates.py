@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-import logging
 from datetime import datetime
+import logging
 
 from ..config.constants import DATE_FORMAT_ISO, DATE_FORMAT_ISO_MINUTES
 from ..config.models import DatasetExpressionPolicy
@@ -20,11 +20,11 @@ from .blacklist_store import (
 )
 from .expression import get_dataset_expression_policy
 from .types import (
+    LEARNED_BLACKLIST_KEY,
     BlacklistEntryKey,
     BlacklistRuntimeStats,
     BlacklistRuntimeSummary,
     BlacklistTemplateEntry,
-    LEARNED_BLACKLIST_KEY,
     build_blacklist_entry_key,
 )
 

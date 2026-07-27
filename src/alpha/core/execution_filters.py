@@ -26,7 +26,7 @@ from ..config.models import DatasetExpressionPolicy
 from ..models.domain import FieldTestResult, TemplateCandidate
 from ..models.io_types import RunFilters
 from ..models.runtime_protocols import TemplateFeedback
-from ..runtime import TemplateBuildContext
+from ..runtime.contexts import TemplateBuildContext
 
 logger = logging.getLogger(__name__)
 
@@ -38,9 +38,7 @@ def is_template_selected_by_filters(
     """Return whether a template survives explicit include/exclude name filters."""
     if build_ctx.include_templates and template_name not in build_ctx.include_templates:
         return False
-    if template_name in build_ctx.exclude_templates:
-        return False
-    return True
+    return template_name not in build_ctx.exclude_templates
 
 
 def should_skip_expression_by_history(

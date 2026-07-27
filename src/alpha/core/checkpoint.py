@@ -21,7 +21,7 @@ import time
 from typing import Any
 
 from ..config.constants import CHECKPOINT_PENDING_FUTURES_LIMIT, CHECKPOINT_RESUME_SAFETY_SECONDS
-from ..runtime import ExecutionState, RuntimeConcurrencyState
+from ..runtime.state import ExecutionState, RuntimeConcurrencyState
 
 logger = logging.getLogger(__name__)
 
@@ -32,17 +32,15 @@ def _serialize_pending_template_keys(
     execution_state: ExecutionState,
 ) -> list[dict[str, str]]:
     """Serialize inflight template identities so resume can suppress duplicate scheduling."""
-    payload: list[dict[str, str]] = []
-    for meta in execution_state.pending_futures.values():
-        payload.append(
-            {
-                "field_id": str(getattr(meta, "field_id", "") or ""),
-                "template_name": str(getattr(meta, "template_name", "") or ""),
-                "expression": str(getattr(meta, "expression", "") or ""),
-                "settings_fingerprint": str(getattr(meta, "settings_fingerprint", "") or ""),
-            }
-        )
-    return payload
+    return [
+        {
+            "field_id": str(getattr(meta, "field_id", "") or ""),
+            "template_name": str(getattr(meta, "template_name", "") or ""),
+            "expression": str(getattr(meta, "expression", "") or ""),
+            "settings_fingerprint": str(getattr(meta, "settings_fingerprint", "") or ""),
+        }
+        for meta in execution_state.pending_futures.values()
+    ]
 
 
 def _restore_pending_template_keys(payload: object) -> set[tuple[str, str, str, str]]:

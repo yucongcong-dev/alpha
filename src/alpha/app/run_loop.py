@@ -6,10 +6,9 @@ from concurrent.futures import ThreadPoolExecutor
 import logging
 
 from ..core.executor import print_dry_run_plan
-from ..models.domain import TemplateField
 from ..models.io_types import RunPaths
 from ..models.runtime_protocols import RunLoopArgs
-from ..runtime import ExecutionState, InitializedRunContext, RuntimeConcurrencyState
+from ..runtime.state import InitializedRunContext
 from .loop_future_support import drain_remaining_futures as drain_remaining_futures
 from .run_loop_feedback import refresh_runtime_feedback as refresh_runtime_feedback
 from .run_loop_paths import (
@@ -30,6 +29,7 @@ from .run_loop_resume import normalize_resume_index as normalize_resume_index
 from .run_loop_resume import persist_field_progress as persist_field_progress
 from .run_loop_resume import restore_fields_from_state as restore_fields_from_state
 from .run_loop_resume import save_runtime_checkpoint as save_runtime_checkpoint
+from .run_loop_rounds import ScheduleRoundContext
 from .run_loop_rounds import ScheduleRoundResult as ScheduleRoundResult
 from .run_loop_rounds import execute_schedule_round as execute_schedule_round
 
@@ -82,25 +82,26 @@ def run_field_test_loop(
     )
 
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        schedule_context = ScheduleRoundContext(
+            args=args,
+            run_ctx=run_ctx,
+            executor=executor,
+            template_build_ctx=template_build_ctx,
+            fields=fields,
+            original_fields=original_fields,
+            field_resume_positions=field_resume_positions,
+            completion_ctx=completion_ctx,
+            state_file=state_file,
+            field_template_batch_size=field_template_batch_size,
+        )
         last_field_id = ""
         try:
             round_index = 0
             while True:
                 round_index += 1
                 round_result = execute_schedule_round(
-                    args=args,
-                    run_ctx=run_ctx,
-                    executor=executor,
-                    template_build_ctx=template_build_ctx,
-                    fields=fields,
-                    original_fields=original_fields,
-                    field_resume_positions=field_resume_positions,
-                    execution_state=execution_state,
-                    runtime_state=runtime_state,
-                    completion_ctx=completion_ctx,
-                    state_file=state_file,
+                    schedule_context,
                     round_index=round_index,
-                    field_template_batch_size=field_template_batch_size,
                 )
                 last_field_id = round_result.last_field_id or last_field_id
                 if field_template_batch_size <= 0 or round_result.stop_requested:

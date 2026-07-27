@@ -7,7 +7,11 @@ from concurrent.futures import Future
 from ..models.domain import FieldTestResult
 from ..models.runtime_options import ResultWriteOptions
 from ..models.runtime_protocols import RunConfig, SchedulerRuntimeArgs
-from ..runtime import ExecutionState, FutureCompletionContext, PendingFutureContext, RuntimeConcurrencyState
+from ..runtime.contexts import (
+    FutureCompletionContext,
+    PendingFutureContext,
+)
+from ..runtime.state import ExecutionState, RuntimeConcurrencyState
 from .simulation import build_failure_result
 
 
@@ -54,6 +58,8 @@ def resolve_completed_future_result(
             template_stage=str(_context_value(context, "template_stage")),
             template_role=str(_context_value(context, "template_role")),
             template_activation_scope=str(_context_value(context, "template_activation_scope")),
+            policy_version=str(_context_value(context, "policy_version")),
+            policy_arm=str(_context_value(context, "policy_arm")),
             simulation_id=None,
             alpha_id=None,
             expression=str(_context_value(context, "expression")),

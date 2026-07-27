@@ -10,7 +10,7 @@ from __future__ import annotations
 from collections.abc import Sequence
 import re
 
-from ...config import (
+from ...config.constants import (
     ALLOWED_EXTERNAL_RATIO_PARTNERS,
     PARTNER_KEYWORD_MATCH_SCORE,
     PARTNER_PREFERRED_BASE_SCORE,
@@ -20,10 +20,10 @@ from ...config import (
     PARTNER_SELF_MATCH_PENALTY,
     PARTNER_SHARED_TOKEN_WEIGHT,
     PARTNER_SUBSTRING_SCORE,
-    DatasetExpressionPolicy,
 )
+from ...config.models import DatasetExpressionPolicy
 from ...generators.fields import choose_field_name, choose_field_type
-from ...models.runtime import TemplateField
+from ...models.domain import TemplateField
 
 _TOKENIZE_REGEX: re.Pattern = re.compile(r"[^a-z0-9]+")
 """字段名分词正则模式（预编译）。"""

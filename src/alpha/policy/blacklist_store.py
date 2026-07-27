@@ -17,10 +17,10 @@ from ..io.common import (
 )
 from .blacklist_context import get_active_blacklists_dir, set_active_blacklists_dir
 from .types import (
-    BlacklistEntryKey,
-    BlacklistPayload,
     LEARNED_BLACKLIST_KEY,
     PATTERN_RULES_KEY,
+    BlacklistEntryKey,
+    BlacklistPayload,
     build_blacklist_entry_key,
 )
 

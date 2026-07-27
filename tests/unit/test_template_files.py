@@ -11,12 +11,19 @@ import pytest
 from alpha.core.executor import build_pending_templates_for_field, inflight_template_keys
 from alpha.core.scheduler import handle_completed_future
 from alpha.exceptions import BrainAPIError
-from alpha.generators.expression_builder import _is_blacklisted_template, build_expression_candidates
+from alpha.generators.expression_builder import (
+    _is_blacklisted_template,
+    build_expression_candidates,
+)
 from alpha.generators.payload import build_settings_fingerprint_from_payload
 from alpha.generators.templates import ensure_dataset_template_library, load_template_library
-from alpha.policy.blacklist_runtime import auto_update_blacklist
-from alpha.policy.blacklist_store import ensure_template_blacklist_file, invalidate_blacklist_path_cache
-from alpha.models.domain import FailedCheck, FieldTestResult, TemplateCandidate, TemplateField, TemplateLibraryItem
+from alpha.models.domain import (
+    FailedCheck,
+    FieldTestResult,
+    TemplateCandidate,
+    TemplateField,
+    TemplateLibraryItem,
+)
 from alpha.models.runtime import (
     ExecutionState,
     FutureCompletionContext,
@@ -24,6 +31,11 @@ from alpha.models.runtime import (
     ResultWriteOptions,
     TemplateBuildContext,
     TemplateBuildOptions,
+)
+from alpha.policy.blacklist_runtime import auto_update_blacklist
+from alpha.policy.blacklist_store import (
+    ensure_template_blacklist_file,
+    invalidate_blacklist_path_cache,
 )
 from alpha.policy.expression import get_dataset_expression_policy
 from alpha.policy.template_blacklist import invalidate_blacklist_cache
@@ -292,8 +304,8 @@ def test_load_template_library_infers_stage_from_layer(tmp_path) -> None:
     assert library["default"][0].stage == "group_second_order"
 
 
-def test_ensure_dataset_template_library_fills_missing_priorities(tmp_path) -> None:
-    """Missing priorities should be filled by file order without overwriting manual values."""
+def test_missing_template_priorities_are_resolved_without_mutating_source(tmp_path) -> None:
+    """Missing priorities should resolve in memory while source JSON stays unchanged."""
     target = tmp_path / "library.json"
     target.write_text(
         json.dumps(
@@ -308,10 +320,12 @@ def test_ensure_dataset_template_library_fills_missing_priorities(tmp_path) -> N
         encoding="utf-8",
     )
 
+    original = target.read_text(encoding="utf-8")
     ensure_dataset_template_library(str(target), "custom_ds")
+    library = load_template_library(str(target))
 
-    payload = json.loads(target.read_text(encoding="utf-8"))
-    assert [item["priority"] for item in payload["default"]] == [1000, 999, 998]
+    assert target.read_text(encoding="utf-8") == original
+    assert [item.priority for item in library["default"]] == [1000, 999, 998]
 
 
 def test_load_template_library_raises_on_missing_file(tmp_path) -> None:

@@ -2,10 +2,13 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from .domain import FailedCheck, SettingsVariant, TemplateField, TemplateLibraryItem
 
 
-def parse_failed_check(data: dict[str, Any]) -> "FailedCheck":
+def parse_failed_check(data: dict[str, Any]) -> FailedCheck:
     """从字典创建失败检查项。"""
     from .domain import FailedCheck
 
@@ -17,7 +20,7 @@ def parse_failed_check(data: dict[str, Any]) -> "FailedCheck":
     )
 
 
-def parse_template_library_item(item: dict[str, Any]) -> "TemplateLibraryItem":
+def parse_template_library_item(item: dict[str, Any]) -> TemplateLibraryItem:
     """从字典创建模板项。"""
     from .domain import TemplateLibraryItem
 
@@ -31,7 +34,7 @@ def parse_template_library_item(item: dict[str, Any]) -> "TemplateLibraryItem":
     )
 
 
-def parse_settings_variant(data: dict[str, Any]) -> "SettingsVariant":
+def parse_settings_variant(data: dict[str, Any]) -> SettingsVariant:
     """从字典创建设置变体。"""
     from .domain import SettingsVariant
 
@@ -54,7 +57,7 @@ def parse_settings_variant(data: dict[str, Any]) -> "SettingsVariant":
     )
 
 
-def parse_template_field(field: dict[str, Any]) -> "TemplateField":
+def parse_template_field(field: dict[str, Any]) -> TemplateField:
     """从字典创建字段对象，兼容 API 原始格式和旧版序列化格式。"""
     from .domain import TemplateField
 

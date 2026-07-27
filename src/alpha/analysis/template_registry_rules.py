@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import Any
 
-from ..config.constants import FEEDBACK_STAGE_GENERATE, FEEDBACK_STAGE_RESIMULATE
+from ..config.constants import FEEDBACK_STAGE_GENERATE
 
 _DEFAULT_ROLE = "default_seed"
 _DEFAULT_SCOPE = "broad"

@@ -10,15 +10,15 @@ from __future__ import annotations
 from collections.abc import Callable
 import logging
 
-from ..api.client import BrainClient, WorkerClientFactory
+from ..api.client import BrainClient
 from ..config.constants import SENTINEL_UNKNOWN
 from ..generators.fields import choose_field_type
 from ..models.domain import (
     FieldTestContext,
     FieldTestResult,
     SettingsVariant,
+    TemplateField,
 )
-from ..models.domain import TemplateField
 from ..models.runtime_protocols import ClientFactoryLike, SemaphoreLike, SimulationStageArgs
 from ..utils.helpers import first_non_empty
 from .simulation_parsing import (
@@ -39,7 +39,6 @@ from .simulation_stages import (
     run_checksubmit_stage,
     run_simulation_create_stage,
     run_simulation_poll_stage,
-
 )
 
 logger = logging.getLogger(__name__)
@@ -78,6 +77,8 @@ def run_field_test(
         template_stage=str(first_non_empty(field.get("template_stage"), "")),
         template_role=str(first_non_empty(field.get("template_role"), "")),
         template_activation_scope=str(first_non_empty(field.get("template_activation_scope"), "")),
+        policy_version=str(first_non_empty(field.get("policy_version"), "")),
+        policy_arm=str(first_non_empty(field.get("policy_arm"), "")),
         expression=expression,
         settings_fingerprint=settings_fingerprint,
         template_library_fingerprint=template_library_fingerprint,

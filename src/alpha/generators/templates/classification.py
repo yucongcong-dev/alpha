@@ -7,7 +7,7 @@
 
 from __future__ import annotations
 
-from ...config import (
+from ...config.constants import (
     TEMPLATE_STAGE_EVENT_CONDITIONED,
     TEMPLATE_STAGE_FIRST_ORDER,
     TEMPLATE_STAGE_GROUP_SECOND_ORDER,

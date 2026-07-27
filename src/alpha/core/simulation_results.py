@@ -4,7 +4,8 @@ simulation 结果构建辅助模块。
 
 from __future__ import annotations
 
-from typing import Any, Sequence
+from collections.abc import Sequence
+from typing import Any
 
 from ..config.constants import STATUS_ERROR
 from ..models.domain import FailedCheck, FieldTestContext, FieldTestResult, coerce_failed_checks
@@ -27,6 +28,8 @@ def build_failure_result(
     template_stage: str = "",
     template_role: str = "",
     template_activation_scope: str = "",
+    policy_version: str = "",
+    policy_arm: str = "",
     status: str = STATUS_ERROR,
     failed_checks: Sequence[FailedCheck | dict[str, Any]] | None = None,
 ) -> FieldTestResult:
@@ -39,6 +42,8 @@ def build_failure_result(
         template_stage=template_stage,
         template_role=template_role,
         template_activation_scope=template_activation_scope,
+        policy_version=policy_version,
+        policy_arm=policy_arm,
         simulation_id=simulation_id,
         alpha_id=alpha_id,
         status=status,

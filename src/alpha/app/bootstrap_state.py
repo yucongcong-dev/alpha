@@ -4,28 +4,19 @@ bootstrap 执行态与历史结果装配辅助模块。
 
 from __future__ import annotations
 
-from ..analysis.result_identity import is_queue_timeout_result
-from ..config.constants import STATUS_ERROR
 from ..io.results_store import dump_results_incremental, initialize_results_journal
 from ..models.runtime_protocols import RunConfig
-from ..runtime import ExecutionState
-from ..policy import build_blacklist_runtime_stats
 from ..policy.blacklist_context import set_active_blacklists_dir
+from ..policy.blacklist_runtime_stats import build_blacklist_runtime_stats
 from ..policy.blacklist_store import load_blacklisted_template_keys
-from ..runtime import HistoricalRunState
+from ..policy.evaluation import summarize_policy_evaluation
+from ..runtime.contexts import HistoricalRunState
+from ..runtime.state import ExecutionState
 
 
 def populate_execution_metrics(execution_state: ExecutionState) -> None:
     """根据当前结果列表回填增量持久化所需的轻量计数。"""
-    execution_state.unique_field_ids = {result.field_id for result in execution_state.results}
-    execution_state.submittable_count = sum(
-        1 for result in execution_state.results if result.submittable
-    )
-    execution_state.submitted_count = sum(1 for result in execution_state.results if result.submitted)
-    execution_state.error_count = sum(1 for result in execution_state.results if result.status == STATUS_ERROR)
-    execution_state.queue_timeout_count = sum(
-        1 for result in execution_state.results if is_queue_timeout_result(result)
-    )
+    execution_state.refresh_metrics()
 
 
 def build_execution_state(
@@ -70,5 +61,6 @@ def build_execution_state(
         template_library_fingerprint=template_library_fingerprint,
         run_config=run_config,
         template_stats=execution_state.template_stats,
+        policy_evaluation=summarize_policy_evaluation(execution_state.results),
     )
     return execution_state
