@@ -53,6 +53,9 @@ where = ["src"]
 [tool.setuptools]
 package-dir = {"alpha" = "src/alpha"}
 
+[tool.setuptools.package-data]
+alpha = ["resources/config/*.yaml"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 python_files = ["test_*.py"]

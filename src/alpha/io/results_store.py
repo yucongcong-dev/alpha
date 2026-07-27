@@ -4,12 +4,14 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable
-from contextlib import suppress
+from collections.abc import Callable, Iterator
+from contextlib import contextmanager, suppress
+import hashlib
 import json
 import logging
 import os
 import tempfile
+import threading
 from typing import Any
 
 from ..models.domain import FieldTestResult
@@ -20,6 +22,94 @@ from .output_paths import build_output_sidecar_paths, cleanup_legacy_sidecar_fil
 logger = logging.getLogger(__name__)
 
 BlacklistUpdater = Callable[[list[FieldTestResult], str], None]
+JOURNAL_SCHEMA_VERSION = 1
+JOURNAL_SCHEMA_FIELD = "_journal_schema_version"
+JOURNAL_CHECKSUM_FIELD = "_journal_checksum"
+
+_JOURNAL_LOCKS_GUARD = threading.Lock()
+_JOURNAL_LOCKS: dict[str, threading.Lock] = {}
+
+
+def _journal_thread_lock(journal_path: str) -> threading.Lock:
+    canonical_path = os.path.abspath(journal_path)
+    with _JOURNAL_LOCKS_GUARD:
+        return _JOURNAL_LOCKS.setdefault(canonical_path, threading.Lock())
+
+
+@contextmanager
+def _exclusive_journal_lock(journal_path: str) -> Iterator[None]:
+    """Serialize journal replacement/appends across threads and POSIX processes."""
+    directory = os.path.dirname(os.path.abspath(journal_path)) or "."
+    os.makedirs(directory, exist_ok=True)
+    lock_path = f"{journal_path}.lock"
+    thread_lock = _journal_thread_lock(journal_path)
+    with thread_lock, open(lock_path, "a+b") as lock_handle:
+        try:
+            import fcntl
+        except ImportError:  # pragma: no cover - Windows fallback uses the thread lock.
+            fcntl = None
+        if fcntl is not None:
+            fcntl.flock(lock_handle.fileno(), fcntl.LOCK_EX)
+        try:
+            yield
+        finally:
+            if fcntl is not None:
+                fcntl.flock(lock_handle.fileno(), fcntl.LOCK_UN)
+
+
+def _journal_row_payload(result: FieldTestResult) -> dict[str, Any]:
+    row = dict(serialize_field_test_result(result))
+    row[JOURNAL_SCHEMA_FIELD] = JOURNAL_SCHEMA_VERSION
+    checksum_source = json.dumps(
+        row,
+        ensure_ascii=False,
+        sort_keys=True,
+        separators=(",", ":"),
+    ).encode("utf-8")
+    row[JOURNAL_CHECKSUM_FIELD] = hashlib.sha256(checksum_source).hexdigest()
+    return row
+
+
+def _validate_journal_row(row: dict[str, Any], journal_path: str, line_number: int) -> None:
+    version = row.get(JOURNAL_SCHEMA_FIELD)
+    if version is not None and version != JOURNAL_SCHEMA_VERSION:
+        raise ValueError(
+            f"unsupported results journal schema version {version!r} "
+            f"at {journal_path}:{line_number}"
+        )
+    checksum = row.get(JOURNAL_CHECKSUM_FIELD)
+    if checksum is None:
+        return
+    checksum_row = dict(row)
+    checksum_row.pop(JOURNAL_CHECKSUM_FIELD, None)
+    checksum_source = json.dumps(
+        checksum_row,
+        ensure_ascii=False,
+        sort_keys=True,
+        separators=(",", ":"),
+    ).encode("utf-8")
+    expected = hashlib.sha256(checksum_source).hexdigest()
+    if checksum != expected:
+        raise ValueError(f"results journal checksum mismatch at {journal_path}:{line_number}")
+
+
+def _serialize_journal_batch(results: list[FieldTestResult]) -> str:
+    return "".join(
+        f"{json.dumps(_journal_row_payload(result), ensure_ascii=False)}\n" for result in results
+    )
+
+
+def _fsync_directory(directory: str) -> None:
+    """Persist a replace operation where directory fsync is supported."""
+    flags = os.O_RDONLY | getattr(os, "O_DIRECTORY", 0)
+    try:
+        directory_fd = os.open(directory, flags)
+    except OSError:
+        return
+    try:
+        os.fsync(directory_fd)
+    finally:
+        os.close(directory_fd)
 
 
 def load_results_rows_from_journal(journal_path: str) -> list[dict[str, Any]]:
@@ -28,12 +118,23 @@ def load_results_rows_from_journal(journal_path: str) -> list[dict[str, Any]]:
         return []
     rows: list[dict[str, Any]] = []
     with open(journal_path, encoding="utf-8") as handle:
-        for raw_line in handle:
+        for line_number, raw_line in enumerate(handle, start=1):
             line = raw_line.strip()
             if not line:
                 continue
-            row = json.loads(line)
+            try:
+                row = json.loads(line)
+            except json.JSONDecodeError:
+                if not raw_line.endswith("\n"):
+                    logger.warning(
+                        "[recovery] ignored incomplete trailing journal row %s:%d",
+                        journal_path,
+                        line_number,
+                    )
+                    break
+                raise
             if isinstance(row, dict):
+                _validate_journal_row(row, journal_path, line_number)
                 rows.append(row)
     return rows
 
@@ -44,17 +145,19 @@ def initialize_results_journal(output_path: str, results: list[FieldTestResult])
     journal_path = sidecar_paths["results_journal"]
     directory = os.path.dirname(os.path.abspath(journal_path)) or "."
     os.makedirs(directory, exist_ok=True)
-    fd, temp_path = tempfile.mkstemp(prefix=".tmp_", suffix=".jsonl", dir=directory)
-    try:
-        with os.fdopen(fd, "w", encoding="utf-8") as handle:
-            for result in results:
-                handle.write(json.dumps(serialize_field_test_result(result), ensure_ascii=False))
-                handle.write("\n")
-        os.replace(temp_path, journal_path)
-    finally:
-        if os.path.exists(temp_path):
-            with suppress(OSError):
-                os.remove(temp_path)
+    with _exclusive_journal_lock(journal_path):
+        fd, temp_path = tempfile.mkstemp(prefix=".tmp_", suffix=".jsonl", dir=directory)
+        try:
+            with os.fdopen(fd, "w", encoding="utf-8") as handle:
+                handle.write(_serialize_journal_batch(results))
+                handle.flush()
+                os.fsync(handle.fileno())
+            os.replace(temp_path, journal_path)
+            _fsync_directory(directory)
+        finally:
+            if os.path.exists(temp_path):
+                with suppress(OSError):
+                    os.remove(temp_path)
     return len(results)
 
 
@@ -64,10 +167,11 @@ def _append_results_journal(journal_path: str, results: list[FieldTestResult]) -
         return
     directory = os.path.dirname(os.path.abspath(journal_path)) or "."
     os.makedirs(directory, exist_ok=True)
-    with open(journal_path, "a", encoding="utf-8") as handle:
-        for result in results:
-            handle.write(json.dumps(serialize_field_test_result(result), ensure_ascii=False))
-            handle.write("\n")
+    payload = _serialize_journal_batch(results)
+    with _exclusive_journal_lock(journal_path), open(journal_path, "a", encoding="utf-8") as handle:
+        handle.write(payload)
+        handle.flush()
+        os.fsync(handle.fileno())
 
 
 def dump_results(

@@ -308,6 +308,10 @@ python3.10 -m alpha --dataset-id model51 \
 python3.10 -m alpha --dry-run-plan
 ```
 
+该命令是只读离线预览：不会读取登录凭证、连接 Brain、创建 simulation，
+也不会初始化或重写结果、journal、checkpoint 和日志文件。它会复用当前数据集上下文的
+本地字段缓存（即使缓存已超过在线刷新 TTL）；若没有匹配缓存，会提示先执行一次正常认证运行。
+
 首次生成或复用本地字段缓存：
 
 ```bash

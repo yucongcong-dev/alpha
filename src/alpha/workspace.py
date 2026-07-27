@@ -14,10 +14,14 @@ def find_resource_root(start: Path | None = None) -> Path:
     current = (start or Path(__file__)).resolve()
     if current.is_file():
         current = current.parent
-    for candidate in (current, *current.parents):
+    candidates = (current, *current.parents)
+    for candidate in candidates:
         if (candidate / "pyproject.toml").is_file():
             return candidate
         if (candidate / "config" / "settings.yaml").is_file():
+            return candidate
+    for candidate in candidates:
+        if (candidate / "resources" / "config" / "settings.yaml").is_file():
             return candidate
     return Path(__file__).resolve().parent
 
@@ -41,7 +45,10 @@ def discover_workspace_root(
 
     resolved_resource_root = (resource_root or find_resource_root()).resolve()
     package_root = Path(__file__).resolve().parent
-    if resolved_resource_root != package_root and (resolved_resource_root / "pyproject.toml").is_file():
+    if (
+        resolved_resource_root != package_root
+        and (resolved_resource_root / "pyproject.toml").is_file()
+    ):
         return resolved_resource_root
 
     current_dir = (cwd or Path.cwd()).resolve()
@@ -92,8 +99,11 @@ class WorkspacePaths:
     @property
     def config_dir(self) -> Path:
         packaged_config = self.resource_root / "config"
-        if packaged_config.is_dir():
+        if (packaged_config / "settings.yaml").is_file():
             return packaged_config
+        installed_config = self.resource_root / "resources" / "config"
+        if (installed_config / "settings.yaml").is_file():
+            return installed_config
         return self.root / "config"
 
 

@@ -18,6 +18,7 @@ import logging
 
 from .app.bootstrap import clean_runtime_artifacts, initialize_run_context
 from .app.finalize import finalize_run
+from .app.planning import run_dry_run_plan
 from .app.run_loop import run_field_test_loop
 from .cli.parser import parse_application_config
 
@@ -40,6 +41,9 @@ def main() -> int:
 
     if config.command == "clean":
         return clean_runtime_artifacts(config)
+
+    if config.dry_run_plan:
+        return 0 if run_dry_run_plan(config, config.paths) else 1
 
     init_result = initialize_run_context(config, config.paths)
     if init_result is None:

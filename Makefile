@@ -1,4 +1,4 @@
-.PHONY: test help-check whitespace-check scan-secrets repo-boundary-check removed-compat-file-check compat-import-check arch-boundary-check todo-check ruff-check check clean-runtime
+.PHONY: test help-check whitespace-check scan-secrets repo-boundary-check removed-compat-file-check compat-import-check arch-boundary-check todo-check config-sync-check ruff-check check clean-runtime
 
 PYTHON ?= python3.10
 PYTHONPATH ?= src
@@ -75,6 +75,15 @@ todo-check:
 		exit 1; \
 	fi
 
+config-sync-check:
+	@for source in config/*.yaml; do \
+		packaged="src/alpha/resources/$$source"; \
+		if ! cmp -s "$$source" "$$packaged"; then \
+			echo "[check] packaged config is out of sync: $$source -> $$packaged" >&2; \
+			exit 1; \
+		fi; \
+	done
+
 ruff-check:
 	@if $(RUFF) --version >/dev/null 2>&1; then \
 		$(RUFF) check .; \
@@ -83,7 +92,7 @@ ruff-check:
 		exit 1; \
 	fi
 
-check: test help-check whitespace-check scan-secrets repo-boundary-check removed-compat-file-check compat-import-check arch-boundary-check todo-check ruff-check
+check: test help-check whitespace-check scan-secrets repo-boundary-check removed-compat-file-check compat-import-check arch-boundary-check todo-check config-sync-check ruff-check
 
 clean-runtime:
 	PYTHONPATH=$(PYTHONPATH) $(PYTHON) -m alpha clean

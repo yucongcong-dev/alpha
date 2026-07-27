@@ -2,8 +2,12 @@
 
 from __future__ import annotations
 
+from concurrent.futures import ThreadPoolExecutor
 import json
+import multiprocessing
 from pathlib import Path
+
+import pytest
 
 from alpha.analysis.analysis_sync import ensure_analysis_synced
 from alpha.analysis.results_loader import load_existing_results
@@ -15,18 +19,40 @@ from alpha.io.output_paths import (
     resolve_cli_path,
 )
 from alpha.io.results_store import (
+    JOURNAL_CHECKSUM_FIELD,
+    JOURNAL_SCHEMA_FIELD,
+    _append_results_journal,
     dump_results,
     dump_results_incremental,
     initialize_results_journal,
+    load_results_rows_from_journal,
 )
 from alpha.models.domain import FailedCheck, FieldTestResult
 from alpha.policy import blacklist_runtime, blacklist_store
 
 
+def _append_process_batch(journal_path: str, batch_index: int) -> None:
+    results = [
+        FieldTestResult(
+            field_id=f"process_{batch_index}_{item_index}",
+            field_type="MATRIX",
+            field_name=f"process_{batch_index}_{item_index}",
+            template_name="tpl",
+            status="simulated",
+            submittable=False,
+            expression=f"rank(process_{batch_index}_{item_index})",
+        )
+        for item_index in range(5)
+    ]
+    _append_results_journal(journal_path, results)
+
+
 def test_dump_results_does_not_update_blacklist_by_default(monkeypatch, tmp_path) -> None:
     """Runtime result writes must not mutate tracked blacklist files unless requested."""
     calls: list[tuple[object, ...]] = []
-    monkeypatch.setattr(blacklist_runtime, "auto_update_blacklist", lambda *args, **kwargs: calls.append(args))
+    monkeypatch.setattr(
+        blacklist_runtime, "auto_update_blacklist", lambda *args, **kwargs: calls.append(args)
+    )
 
     dump_results(
         str(tmp_path / "results.json"),
@@ -43,7 +69,9 @@ def test_dump_results_does_not_update_blacklist_by_default(monkeypatch, tmp_path
 def test_dump_results_updates_blacklist_when_enabled(monkeypatch, tmp_path) -> None:
     """The explicit opt-in flag should preserve the previous auto-update capability."""
     calls: list[tuple[object, ...]] = []
-    monkeypatch.setattr(blacklist_runtime, "auto_update_blacklist", lambda *args, **kwargs: calls.append(args))
+    monkeypatch.setattr(
+        blacklist_runtime, "auto_update_blacklist", lambda *args, **kwargs: calls.append(args)
+    )
 
     dump_results(
         str(tmp_path / "results.json"),
@@ -109,6 +137,109 @@ def test_initialize_results_journal_and_load_existing_results(tmp_path) -> None:
 
     assert len(loaded) == 1
     assert loaded[0].field_id == "field_1"
+
+
+def test_journal_rows_are_versioned_and_checksums_are_validated(tmp_path) -> None:
+    output_path = tmp_path / "results.json"
+    initialize_results_journal(
+        str(output_path),
+        [
+            FieldTestResult(
+                field_id="field_versioned",
+                field_type="MATRIX",
+                field_name="field_versioned",
+                template_name="tpl",
+                status="simulated",
+                submittable=False,
+                expression="rank(field_versioned)",
+            )
+        ],
+    )
+    journal_path = tmp_path / "results_results.jsonl"
+
+    rows = load_results_rows_from_journal(str(journal_path))
+
+    assert rows[0][JOURNAL_SCHEMA_FIELD] == 1
+    assert rows[0][JOURNAL_CHECKSUM_FIELD]
+    rows[0]["field_id"] = "tampered"
+    journal_path.write_text(json.dumps(rows[0]) + "\n", encoding="utf-8")
+    with pytest.raises(ValueError, match="checksum mismatch"):
+        load_results_rows_from_journal(str(journal_path))
+
+
+def test_journal_reader_ignores_only_an_incomplete_trailing_row(tmp_path) -> None:
+    output_path = tmp_path / "results.json"
+    initialize_results_journal(
+        str(output_path),
+        [
+            FieldTestResult(
+                field_id="field_complete",
+                field_type="MATRIX",
+                field_name="field_complete",
+                template_name="tpl",
+                status="simulated",
+                submittable=False,
+                expression="rank(field_complete)",
+            )
+        ],
+    )
+    journal_path = tmp_path / "results_results.jsonl"
+    with journal_path.open("a", encoding="utf-8") as handle:
+        handle.write('{"field_id":"partial"')
+
+    rows = load_results_rows_from_journal(str(journal_path))
+
+    assert [row["field_id"] for row in rows] == ["field_complete"]
+
+
+def test_concurrent_journal_batches_do_not_interleave(tmp_path) -> None:
+    output_path = tmp_path / "results.json"
+    initialize_results_journal(str(output_path), [])
+    journal_path = tmp_path / "results_results.jsonl"
+    batches = [
+        [
+            FieldTestResult(
+                field_id=f"field_{batch_index}_{item_index}",
+                field_type="MATRIX",
+                field_name=f"field_{batch_index}_{item_index}",
+                template_name="tpl",
+                status="simulated",
+                submittable=False,
+                expression=f"rank(field_{batch_index}_{item_index})",
+            )
+            for item_index in range(10)
+        ]
+        for batch_index in range(8)
+    ]
+
+    with ThreadPoolExecutor(max_workers=8) as executor:
+        list(executor.map(lambda batch: _append_results_journal(str(journal_path), batch), batches))
+
+    rows = load_results_rows_from_journal(str(journal_path))
+
+    assert len(rows) == 80
+    assert len({row["field_id"] for row in rows}) == 80
+
+
+def test_concurrent_processes_share_the_journal_lock(tmp_path) -> None:
+    output_path = tmp_path / "results.json"
+    initialize_results_journal(str(output_path), [])
+    journal_path = tmp_path / "results_results.jsonl"
+    context = multiprocessing.get_context("fork")
+    processes = [
+        context.Process(target=_append_process_batch, args=(str(journal_path), batch_index))
+        for batch_index in range(4)
+    ]
+
+    for process in processes:
+        process.start()
+    for process in processes:
+        process.join(timeout=10)
+        assert process.exitcode == 0
+
+    rows = load_results_rows_from_journal(str(journal_path))
+    assert len(rows) == 20
+    assert len({row["field_id"] for row in rows}) == 20
 
 
 def test_load_existing_results_prefers_journal_over_embedded_summary(tmp_path) -> None:
@@ -283,7 +414,9 @@ def test_load_existing_results_preserves_self_correlation_pending_metadata(tmp_p
         status="simulated",
         submittable=True,
         expression="rank(field_pending)",
-        failed_checks=[FailedCheck(name="SELF_CORRELATION", result="PENDING", value=None, limit=None)],
+        failed_checks=[
+            FailedCheck(name="SELF_CORRELATION", result="PENDING", value=None, limit=None)
+        ],
     )
 
     dump_results(
@@ -355,7 +488,9 @@ def test_compile_template_registry_summary_recommends_demotion_for_weak_template
     assert row["should_suppress_in_generate"] is True
 
 
-def test_load_existing_results_falls_back_to_orphaned_journal_when_summary_missing(tmp_path) -> None:
+def test_load_existing_results_falls_back_to_orphaned_journal_when_summary_missing(
+    tmp_path,
+) -> None:
     """Journal should still be recoverable even if the lightweight summary is gone."""
     output_path = tmp_path / "results.json"
     initialize_results_journal(
@@ -403,6 +538,33 @@ def test_load_existing_results_falls_back_to_journal_when_summary_corrupted(tmp_
     assert len(loaded) == 1
     assert loaded[0].field_id == "field_5"
     assert not output_path.exists()
+
+
+def test_read_only_result_load_does_not_rename_corrupted_summary(tmp_path) -> None:
+    """Planning may recover from journal but must leave a corrupt summary untouched."""
+    output_path = tmp_path / "results.json"
+    initialize_results_journal(
+        str(output_path),
+        [
+            FieldTestResult(
+                field_id="field_read_only",
+                field_type="MATRIX",
+                field_name="field_read_only",
+                template_name="tpl",
+                status="simulated",
+                submittable=False,
+                expression="rank(field_read_only)",
+            )
+        ],
+    )
+    output_path.write_text("{not-json", encoding="utf-8")
+
+    loaded = load_existing_results(str(output_path), repair_corrupt_summary=False)
+
+    assert len(loaded) == 1
+    assert loaded[0].field_id == "field_read_only"
+    assert output_path.read_text(encoding="utf-8") == "{not-json"
+    assert not list(tmp_path.glob("results.json.corrupted.*"))
 
 
 def test_load_existing_results_falls_back_to_journal_when_summary_has_invalid_json_shape(
@@ -480,7 +642,9 @@ def test_ensure_analysis_synced_only_rebuilds_derived_sidecars(tmp_path) -> None
 def test_auto_update_blacklist_incremental_blacklists_only_changed_template(tmp_path) -> None:
     """Incremental blacklist updates should blacklist qualifying templates without full rescans."""
     runtime_stats = blacklist_runtime.build_blacklist_runtime_stats([])
-    blacklisted_keys = blacklist_store.load_blacklisted_template_keys("custom_ds", data_dir=str(tmp_path))
+    blacklisted_keys = blacklist_store.load_blacklisted_template_keys(
+        "custom_ds", data_dir=str(tmp_path)
+    )
     first = FieldTestResult(
         field_id="f1",
         field_type="MATRIX",
@@ -546,7 +710,9 @@ def test_auto_update_blacklist_incremental_blacklists_only_changed_template(tmp_
         data_dir=str(tmp_path),
     )
 
-    payload = json.loads((tmp_path / "blacklists" / "custom_ds" / "blacklist.json").read_text(encoding="utf-8"))
+    payload = json.loads(
+        (tmp_path / "blacklists" / "custom_ds" / "blacklist.json").read_text(encoding="utf-8")
+    )
     assert added_after_first is False
     assert added_after_second is False
     assert added_after_third is True
@@ -575,16 +741,24 @@ def test_build_dataset_scoped_paths_includes_runtime_context_in_cache_path() -> 
     template_path = Path(paths["template_library_file"])
     assert template_path.parts[-3:] == ("templates", "fundamental6", "library.json")
     cache_path = Path(paths["fields_cache_file"])
-    assert cache_path.parent.parts[-4:] == ("cache", "fields", "fundamental6", "usa_top3000_equity_d1")
+    assert cache_path.parent.parts[-4:] == (
+        "cache",
+        "fields",
+        "fundamental6",
+        "usa_top3000_equity_d1",
+    )
     assert cache_path.name == "fields.json"
     assert Path(paths["output"]).name == "test_results.json"
 
 
 def test_build_fields_cache_scope_key_uses_short_readable_context_key() -> None:
-    assert build_fields_cache_scope_key(
-        region="USA",
-        universe="TOP3000",
-        instrument_type="EQUITY",
-        delay=1,
-    ) == "usa_top3000_equity_d1"
+    assert (
+        build_fields_cache_scope_key(
+            region="USA",
+            universe="TOP3000",
+            instrument_type="EQUITY",
+            delay=1,
+        )
+        == "usa_top3000_equity_d1"
+    )
     assert build_fields_cache_scope_key() == "default"

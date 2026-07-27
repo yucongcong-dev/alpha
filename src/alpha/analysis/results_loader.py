@@ -21,6 +21,7 @@ from ..config.constants import (
     STAT_FIELD_SUBMITTED,
     STAT_FIELD_TEMPLATE_NAME,
 )
+from ..io.results_store import load_results_rows_from_journal
 from ..models.domain import FieldTestResult, ResultRow
 from ..models.domain_parsers import parse_failed_check
 
@@ -36,16 +37,7 @@ def _default_results_journal_path(path: str) -> str:
 
 def _load_results_rows_from_journal(journal_path: str) -> list[ResultRow]:
     """从结果 journal 读取原始结果行。"""
-    rows: list[ResultRow] = []
-    with open(journal_path, encoding="utf-8") as handle:
-        for raw_line in handle:
-            line = raw_line.strip()
-            if not line:
-                continue
-            row = json.loads(line)
-            if isinstance(row, dict):
-                rows.append(row)
-    return rows
+    return load_results_rows_from_journal(journal_path)
 
 
 def _rows_to_results(rows: list[Any]) -> list[FieldTestResult]:
@@ -78,11 +70,12 @@ def _rows_to_results(rows: list[Any]) -> list[FieldTestResult]:
                     template_library_fingerprint=str(row.get("template_library_fingerprint", "")),
                     failed_stage=row.get("failed_stage"),
                     failed_checks=[
-                        parse_failed_check(check) for check in row.get("failed_checks", []) if isinstance(check, dict)
+                        parse_failed_check(check)
+                        for check in row.get("failed_checks", [])
+                        if isinstance(check, dict)
                     ]
                     if isinstance(row.get("failed_checks"), list)
                     else None,
-
                 )
             )
         except Exception:
@@ -98,13 +91,24 @@ def _recover_results_from_journal(path: str) -> list[FieldTestResult]:
     try:
         rows = _load_results_rows_from_journal(journal_path)
     except Exception as exc:
-        logger.warning("[recovery] failed to read orphaned results journal %s: %s", journal_path, exc)
+        logger.warning(
+            "[recovery] failed to read orphaned results journal %s: %s", journal_path, exc
+        )
         return []
     return _rows_to_results(rows)
 
 
-def load_existing_results(path: str) -> list[FieldTestResult]:
-    """加载历史运行结果，以便续跑和复用反馈信息。"""
+def load_existing_results(
+    path: str,
+    *,
+    repair_corrupt_summary: bool = True,
+) -> list[FieldTestResult]:
+    """加载历史运行结果，以便续跑和复用反馈信息。
+
+    ``repair_corrupt_summary=False`` is used by read-only planning so inspecting
+    a plan never renames user files.  Journal recovery remains available in
+    either mode.
+    """
     if not path:
         return []
     if not os.path.exists(path):
@@ -114,34 +118,50 @@ def load_existing_results(path: str) -> list[FieldTestResult]:
         with open(path, encoding="utf-8") as handle:
             payload = json.load(handle)
     except Exception as exc:
-        now = int(time.time())
-        backup_path = f"{path}.corrupted.{now}"
-        try:
-            os.rename(path, backup_path)
+        if repair_corrupt_summary:
+            now = int(time.time())
+            backup_path = f"{path}.corrupted.{now}"
+            try:
+                os.rename(path, backup_path)
+                logger.warning(
+                    "[recovery] renamed corrupted result file %s -> %s (error: %s)",
+                    path,
+                    backup_path,
+                    exc,
+                )
+            except OSError:
+                logger.warning(
+                    "[recovery] failed to rename corrupted result file %s: %s", path, exc
+                )
+        else:
             logger.warning(
-                "[recovery] renamed corrupted result file %s -> %s (error: %s)",
+                "[recovery] read-only load ignored corrupted result file %s: %s",
                 path,
-                backup_path,
                 exc,
             )
-        except OSError:
-            logger.warning("[recovery] failed to rename corrupted result file %s: %s", path, exc)
         return _recover_results_from_journal(path)
 
     if not isinstance(payload, dict):
-        now = int(time.time())
-        backup_path = f"{path}.invalid.{now}"
-        try:
-            os.rename(path, backup_path)
+        if repair_corrupt_summary:
+            now = int(time.time())
+            backup_path = f"{path}.invalid.{now}"
+            try:
+                os.rename(path, backup_path)
+                logger.warning(
+                    "[recovery] renamed invalid result file %s -> %s (unexpected JSON type: %s)",
+                    path,
+                    backup_path,
+                    type(payload).__name__,
+                )
+            except OSError:
+                logger.warning(
+                    "[recovery] failed to rename invalid result file %s (unexpected JSON type: %s)",
+                    path,
+                    type(payload).__name__,
+                )
+        else:
             logger.warning(
-                "[recovery] renamed invalid result file %s -> %s (unexpected JSON type: %s)",
-                path,
-                backup_path,
-                type(payload).__name__,
-            )
-        except OSError:
-            logger.warning(
-                "[recovery] failed to rename invalid result file %s (unexpected JSON type: %s)",
+                "[recovery] read-only load ignored invalid result file %s (unexpected JSON type: %s)",
                 path,
                 type(payload).__name__,
             )

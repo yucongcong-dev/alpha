@@ -39,9 +39,17 @@ from .template_registry_store import (
 from .template_stats import compile_template_stats
 
 
-def build_historical_run_state(output_path: str, feedback_output_path: str) -> HistoricalRunState:
+def build_historical_run_state(
+    output_path: str,
+    feedback_output_path: str,
+    *,
+    repair_corrupt_summary: bool = True,
+) -> HistoricalRunState:
     """加载历史结果并构建续跑与反馈所需的状态对象。"""
-    existing_results = load_existing_results(output_path)
+    existing_results = load_existing_results(
+        output_path,
+        repair_corrupt_summary=repair_corrupt_summary,
+    )
     attempted_keys = attempted_template_keys(existing_results)
     template_stats = compile_template_stats(existing_results)
     persisted_template_registry_rows = load_persisted_template_registry(output_path)
@@ -55,7 +63,10 @@ def build_historical_run_state(output_path: str, feedback_output_path: str) -> H
     feedback_results = (
         existing_results
         if feedback_output_path == output_path
-        else load_existing_results(feedback_output_path)
+        else load_existing_results(
+            feedback_output_path,
+            repair_corrupt_summary=repair_corrupt_summary,
+        )
     )
     field_feedback = compile_field_feedback(feedback_results)
     global_failed_check_counts = compile_global_failed_check_counts(feedback_results)
@@ -95,7 +106,10 @@ def _nearpass_penalty(failed_checks: Sequence[FailedCheck] | None) -> float:
         gap = failed_check_gap(check)
         if name == CHECK_CONCENTRATED_WEIGHT:
             penalty += NEARPASS_PENALTY_CONCENTRATED_WEIGHT
-            if isinstance(gap, (int, float)) and gap >= NEARPASS_PENALTY_CONCENTRATED_WEIGHT_GAP_THRESHOLD:
+            if (
+                isinstance(gap, (int, float))
+                and gap >= NEARPASS_PENALTY_CONCENTRATED_WEIGHT_GAP_THRESHOLD
+            ):
                 penalty += NEARPASS_PENALTY_CONCENTRATED_WEIGHT_EXTRA
         elif name == CHECK_LOW_TURNOVER:
             penalty += NEARPASS_PENALTY_LOW_TURNOVER

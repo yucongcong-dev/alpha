@@ -19,6 +19,28 @@ def populate_execution_metrics(execution_state: ExecutionState) -> None:
     execution_state.refresh_metrics()
 
 
+def create_execution_state(
+    *,
+    dataset_id: str,
+    historical_state: HistoricalRunState,
+    blacklists_dir: str = "",
+) -> ExecutionState:
+    """Build in-memory execution state without writing runtime artifacts."""
+    set_active_blacklists_dir(blacklists_dir)
+    execution_state = ExecutionState(
+        results=list(historical_state.existing_results),
+        attempted_keys=set(historical_state.attempted_keys),
+        template_stats=dict(historical_state.template_stats),
+        pending_futures={},
+        field_queue_busy_counts={},
+        skipped_fields_due_to_queue=set(),
+    )
+    populate_execution_metrics(execution_state)
+    execution_state.blacklist_runtime_stats = build_blacklist_runtime_stats(execution_state.results)
+    execution_state.blacklisted_template_keys = load_blacklisted_template_keys(dataset_id)
+    return execution_state
+
+
 def build_execution_state(
     *,
     dataset_id: str,
@@ -30,22 +52,15 @@ def build_execution_state(
     blacklists_dir: str = "",
 ) -> ExecutionState:
     """根据历史结果恢复 execution_state，并初始化 journal / sidecar 计数。"""
-    set_active_blacklists_dir(blacklists_dir)
-    execution_state = ExecutionState(
-        results=list(historical_state.existing_results),
-        attempted_keys=set(historical_state.attempted_keys),
-        template_stats=dict(historical_state.template_stats),
-        pending_futures={},
-        field_queue_busy_counts={},
-        skipped_fields_due_to_queue=set(),
+    execution_state = create_execution_state(
+        dataset_id=dataset_id,
+        historical_state=historical_state,
+        blacklists_dir=blacklists_dir,
     )
-    populate_execution_metrics(execution_state)
     execution_state.persisted_result_count = initialize_results_journal(
         output_file,
         execution_state.results,
     )
-    execution_state.blacklist_runtime_stats = build_blacklist_runtime_stats(execution_state.results)
-    execution_state.blacklisted_template_keys = load_blacklisted_template_keys(dataset_id)
     execution_state.persisted_result_count = dump_results_incremental(
         output_file,
         dataset_id,

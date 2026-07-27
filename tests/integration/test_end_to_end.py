@@ -210,7 +210,7 @@ class TestResultProcessingFlow:
     - 结果应用和统计更新
     """
 
-    def test_apply_completed_result(self):
+    def test_apply_completed_result(self, tmp_path):
         """测试应用完成结果"""
         from alpha.models.runtime import FutureCompletionContext, ResultWriteOptions
 
@@ -235,7 +235,7 @@ class TestResultProcessingFlow:
         completion_ctx = FutureCompletionContext(
             result_write_options=ResultWriteOptions(
                 dataset_id="test_dataset",
-                output_path="test_output.jsonl",
+                output_path=str(tmp_path / "test_output.jsonl"),
                 auto_update_blacklist=False,
             ),
             settings_fingerprint="abc",

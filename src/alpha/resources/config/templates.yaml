@@ -1,0 +1,185 @@
+# ============================================================================
+# Template / ratio-generation defaults
+# ============================================================================
+# Template priorities, adaptive priority adjustments, ratio partner heuristics,
+# and built-in expression snippets.
+
+templates:
+  legacy_matrix:
+    raw_field: 145
+    group_rank_subindustry: 143
+    group_rank_industry: 141
+    rank_raw_field: 118
+    neg_positive_raw: 132
+    neg_negative_raw: 144
+    neg_default: 128
+  disable:
+    min_simulated: 3
+    min_low_sharpe: 3
+    min_low_fitness: 3
+    min_concentrated_weight: 2
+  history:
+    submittable_bonus: 200
+    simulated_base: 40
+    simulated_cap: 5
+    simulated_step: 8
+    low_perf_penalty: -90
+    concentrated_penalty: -60
+    error_penalty: -20
+  priority_adj:
+    group_low_sharpe: 28
+    signal_low_sharpe: 18
+    legacy_low_sharpe: -35
+    delta_low_fitness: 22
+    legacy_basic_low_fitness: -25
+    vol_scaled_low_fitness: -18
+    delta_low_turnover: 30
+    legacy_mean_spread_low_turnover: -18
+    stable_high_turnover: 20
+    delta_high_turnover: -20
+    group_concentrated: 24
+    vol_scaled_concentrated: -30
+    legacy_ratio_concentrated: -30
+    high_turnover_concentrated_rank_spread: -50
+    high_turnover_concentrated_zscore_spread: -45
+    nearpass_boost: 40
+    iter_boost: 18
+    legacy_ratio_penalty: -40
+    nearpass_group_rank_delta: 20
+    vol_scaled_delta_base: -28
+    vol_scaled_delta_concentrated: -18
+    vol_scaled_delta_nearpass: -8
+    account_templates: 22
+  similarity_penalty_offset:
+    legacy_level: 0
+    legacy_group_level: 6
+    legacy_ratio: 10
+    legacy_neg_ratio: 8
+    group_ratio_level: 14
+  refine_priority:
+    base: 260
+    step: 12
+    subindustry_delta: -2
+    zscore_delta: -3
+    tsrank_delta: -4
+    backfill_delta: -5
+    trade_when_delta: -6
+    decay_delta: -7
+
+ratio:
+  positive_raw_fields:
+    - "assets"
+    - "assets_curr"
+    - "bookvalue_ps"
+    - "cash"
+    - "cash_st"
+    - "cashflow"
+    - "cashflow_op"
+    - "current_ratio"
+    - "ebit"
+    - "ebitda"
+    - "enterprise_value"
+    - "eps"
+    - "equity"
+  negative_raw_fields:
+    - "cogs"
+    - "debt"
+    - "debt_lt"
+    - "debt_st"
+    - "liabilities"
+  allowed_external_partners:
+    - "cap"
+  partner_candidates:
+    debt: ["cap", "assets", "equity", "enterprise_value"]
+    debt_lt: ["cap", "assets", "equity", "enterprise_value"]
+    debt_st: ["assets", "cash", "cash_st"]
+    assets_curr: ["cash_st", "debt_st", "liabilities_curr"]
+    liabilities: ["assets", "equity", "cap", "liabilities_curr"]
+    liabilities_curr: ["assets", "equity", "cap"]
+    cash: ["assets", "debt", "liabilities"]
+    cash_st: ["assets_curr", "assets", "debt_st", "liabilities_curr"]
+    cashflow: ["assets", "enterprise_value", "debt"]
+    cashflow_op: ["cap", "assets", "debt", "enterprise_value"]
+    cashflow_invst: ["assets", "enterprise_value", "capex"]
+    cashflow_fin: ["assets", "debt", "equity"]
+    capex: ["assets", "cashflow_op", "cashflow_invst", "enterprise_value"]
+    cogs: ["assets", "cash", "enterprise_value"]
+    current_ratio: ["cash_st", "debt_st", "liabilities_curr"]
+    income: ["assets", "sales", "revenue", "enterprise_value"]
+    ebit: ["assets", "sales", "revenue", "enterprise_value"]
+    ebitda: ["assets", "sales", "revenue", "enterprise_value"]
+    revenue: ["assets", "enterprise_value"]
+    sales: ["assets", "enterprise_value"]
+    equity: ["assets", "debt", "enterprise_value"]
+    enterprise_value: ["assets", "ebitda", "ebit", "cashflow_op"]
+  keywords:
+    debt: ["cap", "assets", "equity", "enterprise_value", "liabilities"]
+    liabilities: ["assets", "equity", "cap", "enterprise_value"]
+    cash: ["debt", "liabilities", "assets", "enterprise_value"]
+    cash_st: ["assets_curr", "assets", "debt_st", "liabilities_curr"]
+    cashflow: ["assets", "enterprise_value", "debt"]
+    cashflow_op: ["cap", "assets", "enterprise_value", "debt"]
+    cashflow_invst: ["assets", "enterprise_value", "capex"]
+    cashflow_fin: ["assets", "debt", "equity"]
+    capex: ["cashflow_op", "assets", "enterprise_value", "cashflow_invst"]
+    cogs: ["assets", "cash", "enterprise_value"]
+    income: ["assets", "enterprise_value", "sales", "revenue"]
+    ebit: ["assets", "enterprise_value", "sales", "revenue"]
+    ebitda: ["assets", "enterprise_value", "sales", "revenue"]
+    revenue: ["assets", "enterprise_value"]
+    sales: ["assets", "enterprise_value"]
+    equity: ["assets", "enterprise_value", "debt"]
+    enterprise_value: ["assets", "ebitda", "ebit", "cashflow_op"]
+    assets: ["debt", "liabilities", "equity", "cash", "enterprise_value"]
+  preferred_partner_score_bonuses:
+    assets: 15
+    equity: 15
+    debt: 15
+    liabilities: 15
+    cash: 15
+    enterprise_value: 15
+    cap: 15
+  default_matrix_delta_over_std_windows:
+    - [5, 20, 176]
+    - [15, 40, 172]
+    - [10, 60, 170]
+    - [20, 60, 174]
+    - [25, 90, 168]
+    - [30, 120, 166]
+  default_matrix_diversified_template_specs:
+    - ["group_delta_over_std_industry_20_60", "group_rank(ts_delta(ts_backfill({field}, {backfill_window}), 20) / ts_std_dev(ts_backfill({field}, {backfill_window}), 60), industry)", 166]
+    - ["group_short_long_mean_spread_subindustry_20_{backfill_window}", "group_rank(ts_mean(ts_backfill({field}, {backfill_window}), 20) - ts_mean(ts_backfill({field}, {backfill_window}), {backfill_window}), subindustry)", 164]
+    - ["group_zscore_subindustry_60", "group_rank(ts_zscore(ts_backfill({field}, {backfill_window}), 60), subindustry)", 161]
+    - ["rank_mean_spread_over_std_20_{backfill_window}_60", "rank((ts_mean(ts_backfill({field}, {backfill_window}), 20) - ts_mean(ts_backfill({field}, {backfill_window}), {backfill_window})) / ts_std_dev(ts_backfill({field}, {backfill_window}), 60))", 158]
+    - ["rank_zscore_spread_20_{backfill_window}", "rank(ts_zscore(ts_backfill({field}, {backfill_window}), 20) - ts_zscore(ts_backfill({field}, {backfill_window}), {backfill_window}))", 154]
+    - ["group_rank_delta_of_rank_20", "group_rank(ts_delta(rank(ts_backfill({field}, {backfill_window})), 20), subindustry)", 150]
+  default_ratio_delta_rank_windows:
+    - [3, 188]
+    - [5, 184]
+    - [10, 176]
+  default_ratio_delta_over_std_windows:
+    - [5, 20, 180]
+    - [15, 40, 176]
+    - [10, 60, 174]
+    - [20, 60, 178]
+    - [25, 90, 172]
+    - [30, 120, 170]
+  default_ratio_diversified_template_specs:
+    - ["group_ratio_zscore_{ratio_label}", "group_rank(ts_zscore(ts_backfill({ratio_expr}, {backfill_window}), 60), subindustry)", 160]
+    - ["ratio_mean_spread_over_std_{ratio_label}", "rank((ts_mean(ts_backfill({ratio_expr}, {backfill_window}), 20) - ts_mean(ts_backfill({ratio_expr}, {backfill_window}), {backfill_window})) / ts_std_dev(ts_backfill({ratio_expr}, {backfill_window}), 60))", 156]
+    - ["ratio_zscore_spread_{ratio_label}", "rank(ts_zscore(ts_backfill({ratio_expr}, {backfill_window}), 20) - ts_zscore(ts_backfill({ratio_expr}, {backfill_window}), {backfill_window}))", 152]
+  legacy_template_specs:
+    - ["raw_ratio_{ratio_label}", "{ratio_expr}", 154]
+    - ["group_rank_ratio_{ratio_label}", "group_rank({ratio_expr}, subindustry)", 152]
+    - ["ratio_{ratio_label}", "rank({ratio_expr})", 148]
+    - ["decay_ratio_{ratio_label}", "rank(ts_decay_linear(ts_backfill({ratio_expr}, {backfill_window}), 63))", 126]
+
+partner:
+  self_match_penalty: -10000
+  preferred_base_score: 180
+  rank_max_score: 30
+  rank_step_penalty: 5
+  keyword_match_score: 100
+  reverse_keyword_score: 80
+  shared_token_weight: 10
+  substring_score: 5
