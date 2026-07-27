@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import logging
-from typing import cast
 
 from ..api.client import BrainClient, WorkerClientFactory
 from ..io.common import resolve_blacklists_dir
@@ -20,7 +19,14 @@ from .bootstrap_resource_loading import (
     load_bootstrap_fields,
     load_bootstrap_supporting_resources,
 )
-from .bootstrap_types import BootstrapPaths, PreparedBootstrapResources, ResolvedCredentials
+from .bootstrap_types import (
+    BootstrapPaths,
+    FieldLoadingServices,
+    PreparedBootstrapResources,
+    ResolvedCredentials,
+    RuntimeOutputServices,
+    SupportingResourceServices,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -86,18 +92,15 @@ def prepare_runtime_outputs(
     run_paths: RunPaths | None,
     paths: BootstrapPaths,
     *,
-    setup_runtime_logging_fn,
-    cleanup_legacy_sidecar_files_fn,
-    ensure_analysis_synced_fn,
-    build_run_config_snapshot_fn,
+    services: RuntimeOutputServices,
 ) -> RunConfig:
     """Prepare logging/output side effects and capture the embedded run config."""
     effective_run_paths = build_effective_run_paths(args, paths, run_paths)
     if paths.log_file:
-        setup_runtime_logging_fn(paths.log_file)
-    cleanup_legacy_sidecar_files_fn(paths.output_file, verbose=True)
-    ensure_analysis_synced_fn(paths.output_file)
-    run_config = cast(RunConfig, build_run_config_snapshot_fn(args, effective_run_paths))
+        services.setup_runtime_logging(paths.log_file)
+    services.cleanup_legacy_sidecar_files(paths.output_file, verbose=True)
+    services.ensure_analysis_synced(paths.output_file)
+    run_config = services.build_run_config_snapshot(args, effective_run_paths)
     logger.info("[config] 运行配置将嵌入主结果文件")
     return run_config
 
@@ -174,20 +177,8 @@ def prepare_bootstrap_resources(
     *,
     run_config: RunConfig,
     run_paths: RunPaths | None,
-    set_active_blacklists_dir_fn,
-    ensure_dataset_template_library_fn,
-    ensure_template_blacklist_file_fn,
-    load_template_library_fn,
-    read_blacklist_payload_fn,
-    summarize_blacklist_payload_fn,
-    load_run_filters_extended_fn,
-    get_dataset_expression_policy_fn,
-    stable_fingerprint_fn,
-    build_settings_fingerprint_fn,
-    build_historical_run_state_fn,
-    load_fields_cache_fn,
-    fetch_fields_with_cache_fn,
-    prepare_fields_for_execution_fn,
+    supporting_services: SupportingResourceServices,
+    field_services: FieldLoadingServices,
 ) -> PreparedBootstrapResources | None:
     """Load template, feedback, and field resources needed to build the run context."""
     dataset_id = str(args.dataset_id)
@@ -196,15 +187,7 @@ def prepare_bootstrap_resources(
         dataset_id=dataset_id,
         paths=paths,
         effective_run_paths=effective_run_paths,
-        set_active_blacklists_dir_fn=set_active_blacklists_dir_fn,
-        ensure_dataset_template_library_fn=ensure_dataset_template_library_fn,
-        ensure_template_blacklist_file_fn=ensure_template_blacklist_file_fn,
-        load_template_library_fn=load_template_library_fn,
-        read_blacklist_payload_fn=read_blacklist_payload_fn,
-        summarize_blacklist_payload_fn=summarize_blacklist_payload_fn,
-        load_run_filters_extended_fn=load_run_filters_extended_fn,
-        get_dataset_expression_policy_fn=get_dataset_expression_policy_fn,
-        build_historical_run_state_fn=build_historical_run_state_fn,
+        services=supporting_services,
     )
     field_fetch_options = FieldFetchOptions.from_args(args)
     fields = load_bootstrap_fields(
@@ -212,14 +195,13 @@ def prepare_bootstrap_resources(
         bootstrap_client=bootstrap_client,
         paths=paths,
         field_fetch_options=field_fetch_options,
-        load_fields_cache_fn=load_fields_cache_fn,
-        fetch_fields_with_cache_fn=fetch_fields_with_cache_fn,
+        services=field_services,
     )
     if not fields:
         logger.error("[error] 数据集 %s 未返回任何字段", args.dataset_id)
         return None
 
-    prepared_fields, field_stats = prepare_fields_for_execution_fn(
+    prepared_fields, field_stats = field_services.prepare_fields_for_execution(
         list(fields),
         filters_dict=supporting_resources.filters,
         expression_policy=supporting_resources.expression_policy,
@@ -253,8 +235,10 @@ def prepare_bootstrap_resources(
         filters=supporting_resources.filters,
         expression_policy=supporting_resources.expression_policy,
         use_dataset_heuristics=supporting_resources.expression_policy.use_curated_heuristics,
-        template_library_fingerprint=stable_fingerprint_fn(supporting_resources.template_library),
-        settings_fingerprint=build_settings_fingerprint_fn(args),
+        template_library_fingerprint=supporting_services.stable_fingerprint(
+            supporting_resources.template_library
+        ),
+        settings_fingerprint=supporting_services.build_settings_fingerprint(args),
         historical_state=supporting_resources.historical_state,
         fields=prepared_fields,
         run_config=effective_run_config,

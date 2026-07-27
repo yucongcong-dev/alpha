@@ -58,9 +58,46 @@ from .bootstrap_steps import (
 from .bootstrap_steps import (
     resolve_credentials as _resolve_credentials,
 )
-from .bootstrap_types import PreparedBootstrapResources, RuntimeConcurrencyResources
+from .bootstrap_types import (
+    BootstrapServices,
+    FieldLoadingServices,
+    PreparedBootstrapResources,
+    RuntimeConcurrencyResources,
+    RuntimeOutputServices,
+    SupportingResourceServices,
+)
 
 logger = logging.getLogger(__name__)
+
+
+def build_bootstrap_services() -> BootstrapServices:
+    """Build bootstrap dependencies dynamically so test/runtime overrides stay effective."""
+    return BootstrapServices(
+        runtime_outputs=RuntimeOutputServices(
+            setup_runtime_logging=setup_runtime_logging,
+            cleanup_legacy_sidecar_files=cleanup_legacy_sidecar_files,
+            ensure_analysis_synced=ensure_analysis_synced,
+            build_run_config_snapshot=build_run_config_snapshot,
+        ),
+        supporting_resources=SupportingResourceServices(
+            set_active_blacklists_dir=set_active_blacklists_dir,
+            ensure_dataset_template_library=ensure_dataset_template_library,
+            ensure_template_blacklist_file=ensure_template_blacklist_file,
+            load_template_library=load_template_library,
+            read_blacklist_payload=read_blacklist_payload,
+            summarize_blacklist_payload=summarize_blacklist_payload,
+            load_run_filters_extended=load_run_filters_extended,
+            get_dataset_expression_policy=get_dataset_expression_policy,
+            stable_fingerprint=stable_fingerprint,
+            build_settings_fingerprint=build_settings_fingerprint,
+            build_historical_run_state=build_historical_run_state,
+        ),
+        field_loading=FieldLoadingServices(
+            load_fields_cache=load_fields_cache,
+            fetch_fields_with_cache=fetch_fields_with_cache,
+            prepare_fields_for_execution=prepare_fields_for_execution,
+        ),
+    )
 
 
 def create_and_login_client(
@@ -129,15 +166,13 @@ def initialize_run_context(
     run_paths: RunPaths | None,
 ) -> InitializedRunContext | None:
     """执行主流程的初始化阶段，返回结构化运行上下文。"""
+    services = build_bootstrap_services()
     paths = _resolve_bootstrap_paths(args, run_paths)
     run_config = _prepare_runtime_outputs(
         args,
         run_paths,
         paths,
-        setup_runtime_logging_fn=setup_runtime_logging,
-        cleanup_legacy_sidecar_files_fn=cleanup_legacy_sidecar_files,
-        ensure_analysis_synced_fn=ensure_analysis_synced,
-        build_run_config_snapshot_fn=build_run_config_snapshot,
+        services=services.runtime_outputs,
     )
     email, password = _resolve_credentials(
         args,
@@ -155,20 +190,8 @@ def initialize_run_context(
         bootstrap_client,
         run_config=run_config,
         run_paths=run_paths,
-        set_active_blacklists_dir_fn=set_active_blacklists_dir,
-        ensure_dataset_template_library_fn=ensure_dataset_template_library,
-        ensure_template_blacklist_file_fn=ensure_template_blacklist_file,
-        load_template_library_fn=load_template_library,
-        read_blacklist_payload_fn=read_blacklist_payload,
-        summarize_blacklist_payload_fn=summarize_blacklist_payload,
-        load_run_filters_extended_fn=load_run_filters_extended,
-        get_dataset_expression_policy_fn=get_dataset_expression_policy,
-        stable_fingerprint_fn=stable_fingerprint,
-        build_settings_fingerprint_fn=build_settings_fingerprint,
-        build_historical_run_state_fn=build_historical_run_state,
-        load_fields_cache_fn=load_fields_cache,
-        fetch_fields_with_cache_fn=fetch_fields_with_cache,
-        prepare_fields_for_execution_fn=prepare_fields_for_execution,
+        supporting_services=services.supporting_resources,
+        field_services=services.field_loading,
     )
     if prepared is None:
         return None

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 
+import alpha.app.bootstrap as bootstrap_module
 from alpha.app.bootstrap import initialize_run_context
 from alpha.models.io_types import RunFilters, RunPaths
 from alpha.models.runtime import ExecutionState, HistoricalRunState
@@ -35,6 +36,33 @@ def _build_args() -> argparse.Namespace:
         exclude_fields_file="",
         include_templates_file="",
         exclude_templates_file="",
+    )
+
+
+def test_build_bootstrap_services_reads_current_module_dependencies(monkeypatch) -> None:
+    """Service assembly should preserve late monkeypatch/plugin overrides."""
+
+    def first_fingerprint(_payload) -> str:
+        return "first"
+
+    def second_fingerprint(_payload) -> str:
+        return "second"
+
+    monkeypatch.setattr(bootstrap_module, "stable_fingerprint", first_fingerprint)
+    first_services = bootstrap_module.build_bootstrap_services()
+
+    monkeypatch.setattr(bootstrap_module, "stable_fingerprint", second_fingerprint)
+    second_services = bootstrap_module.build_bootstrap_services()
+
+    assert first_services.supporting_resources.stable_fingerprint is first_fingerprint
+    assert second_services.supporting_resources.stable_fingerprint is second_fingerprint
+    assert (
+        second_services.runtime_outputs.cleanup_legacy_sidecar_files
+        is bootstrap_module.cleanup_legacy_sidecar_files
+    )
+    assert (
+        second_services.field_loading.prepare_fields_for_execution
+        is bootstrap_module.prepare_fields_for_execution
     )
 
 

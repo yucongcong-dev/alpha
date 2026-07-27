@@ -4,14 +4,17 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 import logging
-from typing import cast
 
 from ..config.models import DatasetExpressionPolicy
 from ..models.domain import TemplateField, TemplateLibrary
 from ..models.io_types import RunFilters, RunPaths
 from ..models.runtime_options import FieldFetchOptions
 from ..runtime.contexts import HistoricalRunState
-from .bootstrap_types import BootstrapPaths
+from .bootstrap_types import (
+    BootstrapPaths,
+    FieldLoadingServices,
+    SupportingResourceServices,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -31,24 +34,16 @@ def load_bootstrap_supporting_resources(
     dataset_id: str,
     paths: BootstrapPaths,
     effective_run_paths: RunPaths,
-    set_active_blacklists_dir_fn,
-    ensure_dataset_template_library_fn,
-    ensure_template_blacklist_file_fn,
-    load_template_library_fn,
-    read_blacklist_payload_fn,
-    summarize_blacklist_payload_fn,
-    load_run_filters_extended_fn,
-    get_dataset_expression_policy_fn,
-    build_historical_run_state_fn,
+    services: SupportingResourceServices,
 ) -> BootstrapLoadedResources:
     """Load template library, blacklist, filters, and historical feedback state."""
-    set_active_blacklists_dir_fn(paths.blacklists_dir)
-    template_library_file = ensure_dataset_template_library_fn(
+    services.set_active_blacklists_dir(paths.blacklists_dir)
+    template_library_file = services.ensure_dataset_template_library(
         paths.template_library_file, dataset_id
     )
-    blacklist_path = ensure_template_blacklist_file_fn(dataset_id)
+    blacklist_path = services.ensure_template_blacklist_file(dataset_id)
 
-    template_library = load_template_library_fn(template_library_file)
+    template_library = services.load_template_library(template_library_file)
     logger.info(
         "[templates] dataset=%s library=%s entries=%d",
         dataset_id,
@@ -56,8 +51,8 @@ def load_bootstrap_supporting_resources(
         sum(len(items) for items in template_library.values()),
     )
 
-    blacklist_payload = read_blacklist_payload_fn(dataset_id)
-    learned_count, rule_count = summarize_blacklist_payload_fn(blacklist_payload)
+    blacklist_payload = services.read_blacklist_payload(dataset_id)
+    learned_count, rule_count = services.summarize_blacklist_payload(blacklist_payload)
     logger.info(
         "[blacklist] dataset=%s file=%s learned_templates=%d expression_rules=%d",
         dataset_id,
@@ -68,9 +63,11 @@ def load_bootstrap_supporting_resources(
 
     return BootstrapLoadedResources(
         template_library=template_library,
-        filters=load_run_filters_extended_fn(effective_run_paths),
-        expression_policy=get_dataset_expression_policy_fn(dataset_id),
-        historical_state=build_historical_run_state_fn(paths.output_file, paths.feedback_output),
+        filters=services.load_run_filters_extended(effective_run_paths),
+        expression_policy=services.get_dataset_expression_policy(dataset_id),
+        historical_state=services.build_historical_run_state(
+            paths.output_file, paths.feedback_output
+        ),
     )
 
 
@@ -80,11 +77,10 @@ def load_bootstrap_fields(
     bootstrap_client,
     paths: BootstrapPaths,
     field_fetch_options: FieldFetchOptions,
-    load_fields_cache_fn,
-    fetch_fields_with_cache_fn,
+    services: FieldLoadingServices,
 ) -> list[TemplateField]:
     """Load cached fields and refresh from the upstream source when needed."""
-    cached_fields = load_fields_cache_fn(
+    cached_fields = services.load_fields_cache(
         paths.fields_cache_file,
         dataset_id=dataset_id,
         region=field_fetch_options.region,
@@ -92,12 +88,9 @@ def load_bootstrap_fields(
         instrument_type=field_fetch_options.instrument_type,
         delay=field_fetch_options.delay,
     )
-    return cast(
-        list[TemplateField],
-        fetch_fields_with_cache_fn(
-            bootstrap_client,
-            field_fetch_options,
-            paths.fields_cache_file,
-            cached_fields,
-        ),
+    return services.fetch_fields_with_cache(
+        bootstrap_client,
+        field_fetch_options,
+        paths.fields_cache_file,
+        cached_fields,
     )

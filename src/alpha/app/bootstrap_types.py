@@ -2,15 +2,112 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from threading import Semaphore
+from typing import Protocol
 
 from ..config.models import DatasetExpressionPolicy
+from ..generators.fields import DatasetFieldClient
 from ..models.domain import TemplateField, TemplateLibrary
-from ..models.io_types import RunFilters
-from ..models.runtime_protocols import RunConfig
+from ..models.io_types import RunFilters, RunPaths
+from ..models.runtime_options import FieldFetchOptions
+from ..models.runtime_protocols import BootstrapRuntimeArgs, RunConfig
+from ..policy.types import BlacklistPayload
 from ..runtime.contexts import HistoricalRunState
 from ..runtime.state import RuntimeConcurrencyState
+
+
+class CleanupLegacySidecarFiles(Protocol):
+    """Legacy output cleanup port with its keyword-only verbosity flag."""
+
+    def __call__(self, output_path: str, *, verbose: bool = False) -> None: ...
+
+
+class LoadFieldsCache(Protocol):
+    """Field-cache loading port scoped by the complete dataset context."""
+
+    def __call__(
+        self,
+        path: str,
+        *,
+        dataset_id: str,
+        region: str,
+        universe: str,
+        instrument_type: str,
+        delay: int,
+    ) -> list[TemplateField]: ...
+
+
+class FetchFieldsWithCache(Protocol):
+    """Field fetch port; the client is intentionally structural at this boundary."""
+
+    def __call__(
+        self,
+        client: DatasetFieldClient,
+        options: FieldFetchOptions,
+        fields_cache_file: str,
+        cached_fields: Sequence[TemplateField],
+    ) -> list[TemplateField]: ...
+
+
+class PrepareFieldsForExecution(Protocol):
+    """Field filtering and ranking port."""
+
+    def __call__(
+        self,
+        fields: list[TemplateField],
+        *,
+        filters_dict: RunFilters,
+        expression_policy: DatasetExpressionPolicy,
+        historical_state: HistoricalRunState,
+        args: object,
+    ) -> tuple[list[TemplateField], dict[str, int]]: ...
+
+
+@dataclass(frozen=True)
+class RuntimeOutputServices:
+    """Side-effecting services used to prepare runtime outputs."""
+
+    setup_runtime_logging: Callable[[str], None]
+    cleanup_legacy_sidecar_files: CleanupLegacySidecarFiles
+    ensure_analysis_synced: Callable[[str], None]
+    build_run_config_snapshot: Callable[[BootstrapRuntimeArgs, RunPaths], RunConfig]
+
+
+@dataclass(frozen=True)
+class SupportingResourceServices:
+    """Services that load templates, policy, filters, and historical feedback."""
+
+    set_active_blacklists_dir: Callable[[str], str]
+    ensure_dataset_template_library: Callable[[str, str], str]
+    ensure_template_blacklist_file: Callable[[str], str]
+    load_template_library: Callable[[str], TemplateLibrary]
+    read_blacklist_payload: Callable[[str], BlacklistPayload]
+    summarize_blacklist_payload: Callable[[BlacklistPayload], tuple[int, int]]
+    load_run_filters_extended: Callable[[RunPaths], RunFilters]
+    get_dataset_expression_policy: Callable[[str], DatasetExpressionPolicy]
+    stable_fingerprint: Callable[[object], str]
+    build_settings_fingerprint: Callable[[BootstrapRuntimeArgs], str]
+    build_historical_run_state: Callable[[str, str], HistoricalRunState]
+
+
+@dataclass(frozen=True)
+class FieldLoadingServices:
+    """Services used to load, refresh, filter, and rank dataset fields."""
+
+    load_fields_cache: LoadFieldsCache
+    fetch_fields_with_cache: FetchFieldsWithCache
+    prepare_fields_for_execution: PrepareFieldsForExecution
+
+
+@dataclass(frozen=True)
+class BootstrapServices:
+    """Typed dependency bundle for the bootstrap orchestration boundary."""
+
+    runtime_outputs: RuntimeOutputServices
+    supporting_resources: SupportingResourceServices
+    field_loading: FieldLoadingServices
 
 
 @dataclass(frozen=True)
