@@ -67,7 +67,7 @@ def build_dataset_scoped_paths(
         instrument_type=instrument_type,
         delay=delay,
     )
-    fields_cache_path = dataset_root / "cache" / "fields" / cache_scope_key / "fields.json"
+    fields_cache_path = dataset_root / "cache" / f"{cache_scope_key}.json"
     run_dir = dataset_root / "runs" / run_key
     return {
         "dataset_root": str(dataset_root),

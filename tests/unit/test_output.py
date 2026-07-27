@@ -720,14 +720,8 @@ def test_build_dataset_scoped_paths_includes_runtime_context_in_cache_path() -> 
     template_path = Path(paths["template_library_file"])
     assert template_path.parts[-3:] == ("datasets", "fundamental6", "template.json")
     cache_path = Path(paths["fields_cache_file"])
-    assert cache_path.parent.parts[-5:] == (
-        "datasets",
-        "fundamental6",
-        "cache",
-        "fields",
-        "usa_top3000_equity_d1",
-    )
-    assert cache_path.name == "fields.json"
+    assert cache_path.parent.parts[-3:] == ("datasets", "fundamental6", "cache")
+    assert cache_path.name == "usa_top3000_equity_d1.json"
     assert Path(paths["output"]).parts[-4:] == (
         "fundamental6",
         "runs",

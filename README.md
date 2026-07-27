@@ -175,7 +175,7 @@ python3.10 -m alpha
 
 不传参时使用内置默认值（`--limit 200 --max-templates-per-field 6 --field-template-batch-size 2`）。
 首次运行会先按当前数据集上下文全量拉取字段并写入磁盘缓存
-`datasets/<dataset>/cache/fields/<cache_key>/fields.json`，
+`datasets/<dataset>/cache/<cache_key>.json`，
 其中 `cache_key` 由 `region + universe + instrument_type + delay` 生成，例如
 `usa_top3000_equity_d1`，
 后续同一 `dataset_id + region + universe + instrument_type + delay` 组合直接复用缓存。
