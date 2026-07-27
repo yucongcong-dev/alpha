@@ -17,6 +17,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
+from concurrent.futures import Future
 import logging
 
 from ..config.constants import DRY_RUN_SAMPLE_LIMIT, SENTINEL_UNKNOWN
@@ -93,7 +94,7 @@ def build_template_build_context(
 
 
 def inflight_template_keys(
-    pending_futures: Mapping[object, PendingFutureContext],
+    pending_futures: Mapping[Future[FieldTestResult], PendingFutureContext],
 ) -> set[tuple[str, str, str, str]]:
     """
     从尚未完成的 future 上下文中提取去重键。

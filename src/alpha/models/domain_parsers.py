@@ -2,13 +2,14 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from .domain import FailedCheck, SettingsVariant, TemplateField, TemplateLibraryItem
 
 
-def parse_failed_check(data: dict[str, Any]) -> FailedCheck:
+def parse_failed_check(data: Mapping[str, Any]) -> FailedCheck:
     """从字典创建失败检查项。"""
     from .domain import FailedCheck
 

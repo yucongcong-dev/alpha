@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 import logging
+from typing import cast
 
 from ..config.models import DatasetExpressionPolicy
 from ..models.domain import TemplateField, TemplateLibrary
@@ -81,7 +82,7 @@ def load_bootstrap_fields(
     field_fetch_options: FieldFetchOptions,
     load_fields_cache_fn,
     fetch_fields_with_cache_fn,
-) -> list[TemplateField] | list[dict[str, object]]:
+) -> list[TemplateField]:
     """Load cached fields and refresh from the upstream source when needed."""
     cached_fields = load_fields_cache_fn(
         paths.fields_cache_file,
@@ -91,9 +92,12 @@ def load_bootstrap_fields(
         instrument_type=field_fetch_options.instrument_type,
         delay=field_fetch_options.delay,
     )
-    return fetch_fields_with_cache_fn(
-        bootstrap_client,
-        field_fetch_options,
-        paths.fields_cache_file,
-        cached_fields,
+    return cast(
+        list[TemplateField],
+        fetch_fields_with_cache_fn(
+            bootstrap_client,
+            field_fetch_options,
+            paths.fields_cache_file,
+            cached_fields,
+        ),
     )

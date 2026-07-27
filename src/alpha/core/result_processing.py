@@ -8,6 +8,7 @@
 from __future__ import annotations
 
 import logging
+from typing import cast
 
 from ..analysis.result_identity import (
     is_informative_result,
@@ -17,6 +18,7 @@ from ..analysis.result_identity import (
 from ..analysis.template_stats import update_template_stats_with_result
 from ..config.constants import STATUS_ERROR, STATUS_SKIPPED
 from ..models.domain import FieldTestResult
+from ..models.runtime_protocols import TemplateStats
 from ..policy.blacklist_runtime_stats import build_blacklist_runtime_stats
 from ..policy.blacklist_runtime_updates import auto_update_blacklist_incremental
 from ..policy.evaluation import summarize_policy_evaluation
@@ -63,7 +65,10 @@ def apply_result_state_updates(
     execution_state.refresh_metrics()
     if is_informative_result_fn(result):
         execution_state.attempted_keys.add(result_identity_fn(result))
-    template_stats = update_template_stats_with_result_fn(execution_state.template_stats, result)
+    template_stats = cast(
+        TemplateStats,
+        update_template_stats_with_result_fn(execution_state.template_stats, result),
+    )
     execution_state.template_stats = template_stats
     return template_stats
 

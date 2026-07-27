@@ -47,14 +47,13 @@ def _exclusive_journal_lock(journal_path: str) -> Iterator[None]:
         try:
             import fcntl
         except ImportError:  # pragma: no cover - Windows fallback uses the thread lock.
-            fcntl = None
-        if fcntl is not None:
-            fcntl.flock(lock_handle.fileno(), fcntl.LOCK_EX)
+            yield
+            return
+        fcntl.flock(lock_handle.fileno(), fcntl.LOCK_EX)
         try:
             yield
         finally:
-            if fcntl is not None:
-                fcntl.flock(lock_handle.fileno(), fcntl.LOCK_UN)
+            fcntl.flock(lock_handle.fileno(), fcntl.LOCK_UN)
 
 
 def _journal_row_payload(result: FieldTestResult) -> dict[str, Any]:

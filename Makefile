@@ -1,8 +1,9 @@
-.PHONY: test help-check whitespace-check scan-secrets repo-boundary-check removed-compat-file-check compat-import-check arch-boundary-check todo-check config-sync-check ruff-check format-check check clean-runtime
+.PHONY: test help-check whitespace-check scan-secrets repo-boundary-check removed-compat-file-check compat-import-check arch-boundary-check todo-check config-sync-check ruff-check format-check mypy-check check clean-runtime
 
 PYTHON ?= python3.10
 PYTHONPATH ?= src
 RUFF ?= ruff
+MYPY ?= $(PYTHON) -m mypy
 SECRET_PATTERN := github_[p]at_[A-Za-z0-9_]+|WQB_[P]ASSWORD=|Authorization: [B]asic
 
 test:
@@ -100,7 +101,15 @@ format-check:
 		exit 1; \
 	fi
 
-check: test help-check whitespace-check scan-secrets repo-boundary-check removed-compat-file-check compat-import-check arch-boundary-check todo-check config-sync-check ruff-check format-check
+mypy-check:
+	@if PYTHONPATH=$(PYTHONPATH) $(MYPY) --version >/dev/null 2>&1; then \
+		PYTHONPATH=$(PYTHONPATH) $(MYPY) src/alpha; \
+	else \
+		echo "[check] mypy is not installed; install the dev dependencies" >&2; \
+		exit 1; \
+	fi
+
+check: test help-check whitespace-check scan-secrets repo-boundary-check removed-compat-file-check compat-import-check arch-boundary-check todo-check config-sync-check ruff-check format-check mypy-check
 
 clean-runtime:
 	PYTHONPATH=$(PYTHONPATH) $(PYTHON) -m alpha clean

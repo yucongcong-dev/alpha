@@ -56,7 +56,7 @@ class PendingTemplateEntry:
 class TemplateBuildContext:
     """模板队列构建的只读上下文数据类。"""
 
-    options: TemplateBuildOptions = field(default_factory=TemplateBuildOptions)
+    options: TemplateBuildOptions
     template_library_file: str = ""
     all_fields: Sequence[TemplateField] = field(default_factory=list)
     template_library: TemplateLibrary = field(default_factory=dict)

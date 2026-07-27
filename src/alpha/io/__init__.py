@@ -24,7 +24,6 @@ if TYPE_CHECKING:
         DATA_DIR,
         PROJECT_ROOT,
         RESULTS_DIR,
-        SCRIPT_DIR,
         TEMPLATES_DIR,
     )
     from .output_paths import (
@@ -46,7 +45,6 @@ _EXPORT_MAP: ExportMap = {
     "DATA_DIR": (".common", "DATA_DIR"),
     "PROJECT_ROOT": (".common", "PROJECT_ROOT"),
     "RESULTS_DIR": (".common", "RESULTS_DIR"),
-    "SCRIPT_DIR": (".common", "SCRIPT_DIR"),
     "TEMPLATES_DIR": (".common", "TEMPLATES_DIR"),
     "build_dataset_scoped_paths": (".output_paths", "build_dataset_scoped_paths"),
     "build_output_sidecar_paths": (".output_paths", "build_output_sidecar_paths"),

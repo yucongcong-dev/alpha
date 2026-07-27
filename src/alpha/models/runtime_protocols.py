@@ -3,7 +3,10 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
-from typing import Protocol
+from typing import TYPE_CHECKING, Protocol
+
+if TYPE_CHECKING:
+    from ..api.client import BrainClient
 
 from .domain import FieldTestResult, TemplateCandidate
 from .domain_types import FieldFeedbackSummary
@@ -15,42 +18,85 @@ BlacklistRuntimeStats = dict[str, dict[str, object]]
 
 
 class DatasetIdentityArgs(Protocol):
-    dataset_id: str
+    @property
+    def dataset_id(self) -> str: ...
 
 
 class MarketScopeArgs(Protocol):
-    region: str
-    universe: str
-    instrument_type: str
-    delay: int
+    @property
+    def region(self) -> str: ...
+
+    @property
+    def universe(self) -> str: ...
+
+    @property
+    def instrument_type(self) -> str: ...
+
+    @property
+    def delay(self) -> int: ...
 
 
 class ApiClientArgs(Protocol):
-    min_request_interval: float
-    rate_limit_max_retries: int
-    login_retries: int
+    @property
+    def min_request_interval(self) -> float: ...
+
+    @property
+    def rate_limit_max_retries(self) -> int: ...
+
+    @property
+    def login_retries(self) -> int: ...
 
 
 class TemplateSelectionArgs(Protocol):
-    max_templates_per_field: int
-    max_templates_per_family: int
-    legacy_similarity_penalty: int
-    template_disable_after: int
-    disable_legacy_after: int
-    template_library_file: str
+    @property
+    def max_templates_per_field(self) -> int: ...
+
+    @property
+    def max_templates_per_family(self) -> int: ...
+
+    @property
+    def legacy_similarity_penalty(self) -> int: ...
+
+    @property
+    def template_disable_after(self) -> int: ...
+
+    @property
+    def disable_legacy_after(self) -> int: ...
+
+    @property
+    def template_library_file(self) -> str: ...
 
 
 class SimulationSettingsArgs(MarketScopeArgs, Protocol):
-    decay: int
-    neutralization: str
-    truncation: float
-    pasteurization: str
-    unit_handling: str
-    nan_handling: str
-    max_trade: str
-    language: str
-    start_date: str | None
-    end_date: str | None
+    @property
+    def decay(self) -> int: ...
+
+    @property
+    def neutralization(self) -> str: ...
+
+    @property
+    def truncation(self) -> float: ...
+
+    @property
+    def pasteurization(self) -> str: ...
+
+    @property
+    def unit_handling(self) -> str: ...
+
+    @property
+    def nan_handling(self) -> str: ...
+
+    @property
+    def max_trade(self) -> str: ...
+
+    @property
+    def language(self) -> str: ...
+
+    @property
+    def start_date(self) -> str | None: ...
+
+    @property
+    def end_date(self) -> str | None: ...
 
 
 class TemplateBuildArgs(
@@ -63,86 +109,167 @@ class TemplateBuildArgs(
 
 
 class ResultWriteArgs(Protocol):
-    dataset_id: str
-    output: str
-    auto_update_blacklist: bool
+    @property
+    def dataset_id(self) -> str: ...
+
+    @property
+    def output(self) -> str: ...
+
+    @property
+    def auto_update_blacklist(self) -> bool: ...
 
 
 class CleanRuntimeArgs(Protocol):
-    include_credentials: bool
-    dry_run_clean: bool
+    @property
+    def include_credentials(self) -> bool: ...
+
+    @property
+    def dry_run_clean(self) -> bool: ...
 
 
 class CredentialsArgs(Protocol):
-    email: str | None
-    password: str | None
-    creds_file: str
-    creds_key_file: str
+    @property
+    def email(self) -> str | None: ...
+
+    @property
+    def password(self) -> str | None: ...
+
+    @property
+    def creds_file(self) -> str: ...
+
+    @property
+    def creds_key_file(self) -> str: ...
 
 
 class FieldFetchArgs(DatasetIdentityArgs, MarketScopeArgs, Protocol):
-    page_size: int
+    @property
+    def page_size(self) -> int: ...
 
 
 class RunSettingsArgs(Protocol):
-    decay: int
-    neutralization: str
-    truncation: float
-    nan_handling: str
-    max_trade: str
+    @property
+    def decay(self) -> int: ...
+
+    @property
+    def neutralization(self) -> str: ...
+
+    @property
+    def truncation(self) -> float: ...
+
+    @property
+    def nan_handling(self) -> str: ...
+
+    @property
+    def max_trade(self) -> str: ...
 
 
 class PlanningRuntimeArgs(Protocol):
-    limit: int
-    offset: int
-    page_size: int
-    sleep_between_fields: float
-    max_templates_per_field: int
-    max_templates_per_family: int
-    field_template_batch_size: int
-    legacy_similarity_penalty: int
-    disable_legacy_after: int
+    @property
+    def limit(self) -> int: ...
 
-    template_disable_after: int
-    top_fields_by_feedback: int
-    stop_after_submittable: int
+    @property
+    def offset(self) -> int: ...
+
+    @property
+    def page_size(self) -> int: ...
+
+    @property
+    def sleep_between_fields(self) -> float: ...
+
+    @property
+    def max_templates_per_field(self) -> int: ...
+
+    @property
+    def max_templates_per_family(self) -> int: ...
+
+    @property
+    def field_template_batch_size(self) -> int: ...
+
+    @property
+    def legacy_similarity_penalty(self) -> int: ...
+
+    @property
+    def disable_legacy_after(self) -> int: ...
+
+    @property
+    def template_disable_after(self) -> int: ...
+
+    @property
+    def top_fields_by_feedback(self) -> int: ...
+
+    @property
+    def stop_after_submittable(self) -> int: ...
 
 
 class RuntimeConcurrencyArgs(Protocol):
-    max_concurrent_simulations: int
-    max_concurrent_creates: int
-    simulation_max_pending_cycles: int
+    @property
+    def max_concurrent_simulations(self) -> int: ...
+
+    @property
+    def max_concurrent_creates(self) -> int: ...
+
+    @property
+    def simulation_max_pending_cycles(self) -> int: ...
 
 
 class SimulationRetryArgs(Protocol):
-    simulation_create_retries: int
-    simulation_poll_retries: int
-    simulation_max_polls: int
-    simulation_max_wait_seconds: float
-    simulation_max_pending_cycles: int
-    simulation_max_queue_seconds: float
-    check_submit_retries: int
+    @property
+    def simulation_create_retries(self) -> int: ...
+
+    @property
+    def simulation_poll_retries(self) -> int: ...
+
+    @property
+    def simulation_max_polls(self) -> int: ...
+
+    @property
+    def simulation_max_wait_seconds(self) -> float: ...
+
+    @property
+    def simulation_max_pending_cycles(self) -> int: ...
+
+    @property
+    def simulation_max_queue_seconds(self) -> float: ...
+
+    @property
+    def check_submit_retries(self) -> int: ...
 
 
 class SchedulerControlArgs(Protocol):
-    queue_busy_cooldown_seconds: float
-    field_queue_busy_skip_after: int
-    sleep_between_fields: float
+    @property
+    def queue_busy_cooldown_seconds(self) -> float: ...
+
+    @property
+    def field_queue_busy_skip_after(self) -> int: ...
+
+    @property
+    def sleep_between_fields(self) -> float: ...
 
 
 class RuntimeModeArgs(Protocol):
-    auto_update_blacklist: bool
-    smoke_test: bool
-    dry_run_plan: bool
-    full_run: bool
-    verbose: bool
-    quiet: bool
+    @property
+    def auto_update_blacklist(self) -> bool: ...
+
+    @property
+    def smoke_test(self) -> bool: ...
+
+    @property
+    def dry_run_plan(self) -> bool: ...
+
+    @property
+    def full_run(self) -> bool: ...
+
+    @property
+    def verbose(self) -> bool: ...
+
+    @property
+    def quiet(self) -> bool: ...
 
 
 class RunConfigArgs(
     DatasetIdentityArgs,
-    MarketScopeArgs,
-    RunSettingsArgs,
+    SimulationSettingsArgs,
+    TemplateSelectionArgs,
     PlanningRuntimeArgs,
     RuntimeConcurrencyArgs,
     SimulationRetryArgs,
@@ -159,25 +286,40 @@ class BootstrapRuntimeArgs(
     RunConfigArgs,
     Protocol,
 ):
-    output: str
-    template_library_file: str
-    fields_cache_file: str
-    max_concurrent_simulations: int
-    max_concurrent_creates: int
-    email: str | None
-    password: str | None
-    include_fields_file: str
-    exclude_fields_file: str
-    include_templates_file: str
-    exclude_templates_file: str
+    @property
+    def output(self) -> str: ...
+
+    @property
+    def fields_cache_file(self) -> str: ...
+
+    @property
+    def include_fields_file(self) -> str: ...
+
+    @property
+    def exclude_fields_file(self) -> str: ...
+
+    @property
+    def include_templates_file(self) -> str: ...
+
+    @property
+    def exclude_templates_file(self) -> str: ...
 
 
 class QualityThresholdArgs(Protocol):
-    min_sharpe: float
-    min_fitness: float
-    min_turnover: float
-    max_turnover: float
-    max_weight: float
+    @property
+    def min_sharpe(self) -> float: ...
+
+    @property
+    def min_fitness(self) -> float: ...
+
+    @property
+    def min_turnover(self) -> float: ...
+
+    @property
+    def max_turnover(self) -> float: ...
+
+    @property
+    def max_weight(self) -> float: ...
 
 
 class SimulationStageArgs(
@@ -194,8 +336,11 @@ class SchedulerRuntimeArgs(
     SchedulerControlArgs,
     Protocol,
 ):
-    output: str
-    auto_update_blacklist: bool
+    @property
+    def output(self) -> str: ...
+
+    @property
+    def auto_update_blacklist(self) -> bool: ...
 
 
 class RunLoopArgs(
@@ -204,13 +349,18 @@ class RunLoopArgs(
     SchedulerRuntimeArgs,
     Protocol,
 ):
-    dry_run_plan: bool
-    field_template_batch_size: int
-    stop_after_submittable: int
+    @property
+    def dry_run_plan(self) -> bool: ...
+
+    @property
+    def field_template_batch_size(self) -> int: ...
+
+    @property
+    def stop_after_submittable(self) -> int: ...
 
 
 class ClientFactoryLike(Protocol):
-    def get_client(self) -> object: ...
+    def get_client(self) -> BrainClient: ...
 
 
 class SemaphoreLike(Protocol):

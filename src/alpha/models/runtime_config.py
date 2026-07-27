@@ -61,7 +61,7 @@ class SimulationStageConfig(SimulationSettingsConfig):
     max_weight: float = 0.0
 
     @classmethod
-    def from_args(cls, args: SimulationStageArgs) -> SimulationStageConfig:
+    def from_stage_args(cls, args: SimulationStageArgs) -> SimulationStageConfig:
         settings = SimulationSettingsConfig.from_args(args)
         return cls(
             instrument_type=settings.instrument_type,

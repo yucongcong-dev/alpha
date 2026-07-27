@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from typing import Any
 
 from ..config.constants import (
@@ -116,7 +116,7 @@ def update_template_stats_with_result(
 
 def historical_template_priority_bonus(
     template_name: str,
-    template_stats: dict[str, dict[str, int]],
+    template_stats: Mapping[str, Mapping[str, int]],
     multiplier: int = 1,
 ) -> int:
     """为历史上模拟成功或通过检查的模板提供优先级奖励。"""

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Iterable, Mapping
 from typing import Any
 
 from ..config.constants import FEEDBACK_STAGE_GENERATE, FEEDBACK_STAGE_RESIMULATE
@@ -69,7 +69,9 @@ def choose_field_cluster_settings_budget(
 ) -> int:
     """Adjust budget using field-cluster tags and optional manual overrides."""
     budget = max(0, int(base_budget or 0))
-    tags = [str(tag).strip().lower() for tag in field_tags or [] if str(tag).strip()]
+    if isinstance(field_tags, (str, bytes)) or not isinstance(field_tags, Iterable):
+        return budget
+    tags = [str(tag).strip().lower() for tag in field_tags if str(tag).strip()]
     if not tags:
         return budget
     cluster_overrides = overrides.get("field_cluster_overrides", {})

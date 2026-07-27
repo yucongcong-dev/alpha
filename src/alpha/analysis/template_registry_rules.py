@@ -148,8 +148,6 @@ def compile_template_registry_summary(
     """Build a sorted, JSON-ready registry summary from template stats."""
     rows: list[dict[str, Any]] = []
     for template_name, stat in template_stats.items():
-        if not isinstance(stat, Mapping):
-            continue
         current_role = normalize_template_role(stat.get("template_role"))
         current_scope = normalize_activation_scope(stat.get("template_activation_scope"))
         recommendation = recommend_template_role_transition(
@@ -223,8 +221,6 @@ def compile_template_family_registry(
     """Aggregate registry-like summary at template-family granularity."""
     grouped: dict[str, dict[str, Any]] = {}
     for stat in template_stats.values():
-        if not isinstance(stat, Mapping):
-            continue
         family = str(stat.get("template_family", "") or "").strip().lower()
         if not family:
             continue

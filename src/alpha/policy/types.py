@@ -50,9 +50,14 @@ DefaultAvoidRulesCache = dict[str, Any]
 class BlacklistRuntimePolicy(Protocol):
     """黑名单判断所需的最小运行时策略视图。"""
 
-    dataset_id: str
-    protected_templates: set[str]
-    blacklisted_template_name_substrings: tuple[str, ...]
+    @property
+    def dataset_id(self) -> str: ...
+
+    @property
+    def protected_templates(self) -> set[str]: ...
+
+    @property
+    def blacklisted_template_name_substrings(self) -> tuple[str, ...]: ...
 
 
 @dataclass

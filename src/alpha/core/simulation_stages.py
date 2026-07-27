@@ -156,7 +156,7 @@ def run_simulation_create_stage(
             raise BrainStopRequested(
                 "simulation create aborted after stop-after-submittable triggered"
             )
-        config = SimulationStageConfig.from_args(args)
+        config = SimulationStageConfig.from_stage_args(args)
         payload = build_simulation_payload(args, ctx.expression)
         if simulation_settings is not None:
             # Merge partial variant overrides into the baseline website/default payload
@@ -203,7 +203,7 @@ def run_simulation_poll_stage(
     simulation_id: str,
 ) -> FieldTestResult | tuple[str, SimulationPayload]:
     try:
-        config = SimulationStageConfig.from_args(args)
+        config = SimulationStageConfig.from_stage_args(args)
         simulation_result = poll_simulation_with_retry(
             client,
             simulation_location,

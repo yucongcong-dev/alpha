@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+from typing import cast
 
 from ..api.client import BrainClient, WorkerClientFactory
 from ..io.common import resolve_blacklists_dir
@@ -12,7 +13,6 @@ from ..models.runtime_options import ApiClientOptions, FieldFetchOptions
 from ..models.runtime_protocols import (
     ApiClientArgs,
     BootstrapRuntimeArgs,
-    ClientFactoryLike,
     RunConfig,
 )
 from .bootstrap_fields import resolve_field_selection
@@ -97,7 +97,7 @@ def prepare_runtime_outputs(
         setup_runtime_logging_fn(paths.log_file)
     cleanup_legacy_sidecar_files_fn(paths.output_file, verbose=True)
     ensure_analysis_synced_fn(paths.output_file)
-    run_config = build_run_config_snapshot_fn(args, effective_run_paths)
+    run_config = cast(RunConfig, build_run_config_snapshot_fn(args, effective_run_paths))
     logger.info("[config] 运行配置将嵌入主结果文件")
     return run_config
 
@@ -268,7 +268,7 @@ def create_and_login_client(
     *,
     get_runtime_config_fn,
     login_with_retry_fn,
-) -> tuple[BrainClient, ClientFactoryLike]:
+) -> tuple[BrainClient, WorkerClientFactory]:
     """创建 Brain API 客户端并完成登录，同时创建工作线程客户端工厂。"""
     client_options = ApiClientOptions.from_args(args)
     http_backend = get_runtime_config_fn().http.backend

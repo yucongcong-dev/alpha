@@ -201,7 +201,9 @@ def prepare_fields_for_execution(
                 _attach_runtime_metadata(field, runtime_field_tags=runtime_field_tags)
             )
             continue
-        field_copy = dict(field)
+        # Compatibility for legacy dict-shaped test/plugin inputs; production
+        # field loaders normalize rows to TemplateField before this boundary.
+        field_copy = dict(field)  # type: ignore[unreachable]
         if runtime_field_tags:
             field_copy["runtime_field_tags"] = list(runtime_field_tags)
         filtered_fields.append(field_copy)

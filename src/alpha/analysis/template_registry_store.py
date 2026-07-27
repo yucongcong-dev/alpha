@@ -9,7 +9,7 @@ from typing import Any
 
 from ..io.output_paths import build_output_sidecar_paths
 
-DEFAULT_OVERRIDE_PAYLOAD = {
+DEFAULT_OVERRIDE_PAYLOAD: dict[str, dict[str, Any]] = {
     "template_overrides": {},
     "family_overrides": {},
     "field_cluster_overrides": {},
