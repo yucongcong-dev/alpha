@@ -14,11 +14,6 @@ from ..runtime.contexts import HistoricalRunState
 from ..runtime.state import ExecutionState
 
 
-def populate_execution_metrics(execution_state: ExecutionState) -> None:
-    """根据当前结果列表回填增量持久化所需的轻量计数。"""
-    execution_state.refresh_metrics()
-
-
 def create_execution_state(
     *,
     dataset_id: str,
@@ -35,7 +30,6 @@ def create_execution_state(
         field_queue_busy_counts={},
         skipped_fields_due_to_queue=set(),
     )
-    populate_execution_metrics(execution_state)
     execution_state.blacklist_runtime_stats = build_blacklist_runtime_stats(execution_state.results)
     execution_state.blacklisted_template_keys = load_blacklisted_template_keys(dataset_id)
     return execution_state
@@ -61,17 +55,18 @@ def build_execution_state(
         output_file,
         execution_state.results,
     )
+    metrics = execution_state.metrics
     execution_state.persisted_result_count = dump_results_incremental(
         output_file,
         dataset_id,
         [],
         persisted_result_count=execution_state.persisted_result_count,
         tested=len(execution_state.results),
-        unique_fields_tested=len(execution_state.unique_field_ids),
-        submittable_count=execution_state.submittable_count,
-        submitted_count=execution_state.submitted_count,
-        error_count=execution_state.error_count,
-        queue_timeout_count=execution_state.queue_timeout_count,
+        unique_fields_tested=len(metrics.unique_field_ids),
+        submittable_count=metrics.submittable_count,
+        submitted_count=metrics.submitted_count,
+        error_count=metrics.error_count,
+        queue_timeout_count=metrics.queue_timeout_count,
         settings_fingerprint=settings_fingerprint,
         template_library_fingerprint=template_library_fingerprint,
         run_config=run_config,

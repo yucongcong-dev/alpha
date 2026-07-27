@@ -15,6 +15,15 @@ from .._facade import facade_dir, resolve_export
 
 if TYPE_CHECKING:
     from .application import ApplicationConfig
+    from .application_sections import (
+        CredentialsConfig,
+        DatasetConfig,
+        ExecutionConfig,
+        PlanningConfig,
+        QualityConfig,
+        RuntimeFlagsConfig,
+        SimulationConfig,
+    )
     from .constants import *
     from .defaults import apply_yaml_global_defaults
     from .getters import *
@@ -38,6 +47,13 @@ _EXPORT_MAP: dict[str, tuple[str, str]] = {
     **{name: (".constants", name) for name in _constant_exports},
     **{name: (".getters", name) for name in _getter_exports},
     "ApplicationConfig": (".application", "ApplicationConfig"),
+    "CredentialsConfig": (".application_sections", "CredentialsConfig"),
+    "DatasetConfig": (".application_sections", "DatasetConfig"),
+    "ExecutionConfig": (".application_sections", "ExecutionConfig"),
+    "PlanningConfig": (".application_sections", "PlanningConfig"),
+    "QualityConfig": (".application_sections", "QualityConfig"),
+    "RuntimeFlagsConfig": (".application_sections", "RuntimeFlagsConfig"),
+    "SimulationConfig": (".application_sections", "SimulationConfig"),
     "apply_yaml_global_defaults": (".defaults", "apply_yaml_global_defaults"),
     "DatasetExpressionPolicy": (".models", "DatasetExpressionPolicy"),
     "FeedbackLoopPolicy": (".models", "FeedbackLoopPolicy"),

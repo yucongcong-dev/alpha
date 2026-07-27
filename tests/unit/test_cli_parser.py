@@ -240,10 +240,10 @@ def test_normalize_args_paths_uses_dataset_scoped_defaults(monkeypatch, tmp_path
     args = parse_args()
     paths = normalize_args_paths(args)
 
-    assert paths.fields_cache_file.replace("\\", "/").endswith("/cache/fields/pv1/usa_top1000_equity_d2/fields.json")
+    assert paths.fields_cache_file.replace("\\", "/").endswith(
+        "/cache/fields/pv1/usa_top1000_equity_d2/fields.json"
+    )
     assert paths.output.replace("\\", "/").endswith("/results/pv1/test_results.json")
-
-
 
 
 def test_normalize_args_paths_does_not_mutate_original_args(monkeypatch, tmp_path) -> None:
@@ -284,8 +284,16 @@ def test_parse_application_config_is_immutable_and_uses_normalized_paths(
 
     assert config.output == config.paths.output
     assert config.output == str((tmp_path / "results/custom.json").resolve())
+    assert config.dataset.dataset_id == "pv1"
+    assert config.dataset_id == config.dataset.dataset_id
+    assert config.planning.limit == config.limit
+    assert config.execution.max_concurrent_simulations == config.max_concurrent_simulations
+    assert config.quality.min_sharpe == config.min_sharpe
+    assert not hasattr(config, "__dict__")
     with pytest.raises((AttributeError, TypeError)):
         config.limit = 999
+    with pytest.raises((AttributeError, TypeError)):
+        config.dataset.delay = 0
 
 
 def test_normalize_args_paths_resolves_relative_files_from_cwd(monkeypatch, tmp_path) -> None:

@@ -72,26 +72,40 @@ class ExecutionState:
     pending_futures: dict[Future[FieldTestResult], PendingFutureContext]
     field_queue_busy_counts: dict[str, int]
     skipped_fields_due_to_queue: set[str]
-    unique_field_ids: set[str] = field(default_factory=set)
-    submittable_count: int = 0
-    submitted_count: int = 0
-    error_count: int = 0
-    queue_timeout_count: int = 0
     persisted_result_count: int = 0
     blacklist_runtime_stats: BlacklistRuntimeStats = field(default_factory=dict)
     blacklisted_template_keys: set[tuple[str, str, str]] = field(default_factory=set)
     last_submission_at: float = 0.0
     stop_signal: Event = field(default_factory=Event)
 
+    @property
+    def metrics(self) -> ExecutionMetrics:
+        """Return a current snapshot derived from the authoritative results list."""
+        return ExecutionMetrics.from_results(self.results)
+
+    @property
+    def unique_field_ids(self) -> set[str]:
+        return set(self.metrics.unique_field_ids)
+
+    @property
+    def submittable_count(self) -> int:
+        return self.metrics.submittable_count
+
+    @property
+    def submitted_count(self) -> int:
+        return self.metrics.submitted_count
+
+    @property
+    def error_count(self) -> int:
+        return self.metrics.error_count
+
+    @property
+    def queue_timeout_count(self) -> int:
+        return self.metrics.queue_timeout_count
+
     def refresh_metrics(self) -> ExecutionMetrics:
-        """Recompute compatibility counters from results and return one snapshot."""
-        metrics = ExecutionMetrics.from_results(self.results)
-        self.unique_field_ids = set(metrics.unique_field_ids)
-        self.submittable_count = metrics.submittable_count
-        self.submitted_count = metrics.submitted_count
-        self.error_count = metrics.error_count
-        self.queue_timeout_count = metrics.queue_timeout_count
-        return metrics
+        """Compatibility method returning the current derived snapshot."""
+        return self.metrics
 
 
 @dataclass(frozen=True)
@@ -112,5 +126,6 @@ class InitializedRunContext:
     runtime_state: RuntimeConcurrencyState
     create_semaphore: SemaphoreLike
     run_config: RunConfig
+
 
 PendingFutureLike = PendingFutureContext
