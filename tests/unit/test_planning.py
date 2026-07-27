@@ -16,7 +16,7 @@ def _paths(tmp_path) -> RunPaths:
         log_file=str(tmp_path / "run.log"),
         state_file=str(tmp_path / "state.json"),
         checkpoint_file=str(tmp_path / "checkpoint.json"),
-        blacklists_dir=str(tmp_path / "blacklists"),
+        datasets_root=str(tmp_path / "datasets"),
         fields_cache_file=str(tmp_path / "fields.json"),
         template_library_file=str(tmp_path / "library.json"),
         output=str(tmp_path / "output.json"),

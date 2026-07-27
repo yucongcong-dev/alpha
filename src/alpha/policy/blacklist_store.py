@@ -16,7 +16,7 @@ from ..io.common import (
     atomic_write_json,
     sanitize_dataset_id_for_filename,
 )
-from .blacklist_context import get_active_blacklists_dir, set_active_blacklists_dir
+from .blacklist_context import get_active_datasets_root, set_active_datasets_root
 from .types import (
     LEARNED_BLACKLIST_KEY,
     PATTERN_RULES_KEY,
@@ -30,47 +30,36 @@ logger = logging.getLogger(__name__)
 _BLACKLIST_PATH_CACHE: dict[str, str] = {}
 
 
-def _resolve_blacklist_root(data_dir: str = "") -> str:
-    """Resolve the canonical datasets root from an optional workspace override."""
-    if not data_dir:
-        return str(get_active_blacklists_dir())
-    candidate = Path(data_dir).expanduser().resolve()
-    if candidate.name in {"datasets", "blacklists"}:
-        return str(candidate)
-    return str(candidate / "datasets")
+def _resolve_datasets_root(datasets_root: str = "") -> str:
+    """Resolve the canonical datasets root from an explicit root or active context."""
+    if not datasets_root:
+        return str(get_active_datasets_root())
+    return str(Path(datasets_root).expanduser().resolve())
 
 
-def activate_blacklist_root(data_dir: str = "") -> str:
-    """Explicitly bind the process-local blacklist root for subsequent matching."""
-    return set_active_blacklists_dir(_resolve_blacklist_root(data_dir))
+def activate_datasets_root(datasets_root: str = "") -> str:
+    """Explicitly bind the process-local datasets root for blacklist matching."""
+    return set_active_datasets_root(_resolve_datasets_root(datasets_root))
 
 
-def resolve_blacklist_path(dataset_id: str, *, data_dir: str = "") -> str:
+def resolve_blacklist_path(dataset_id: str, *, datasets_root: str = "") -> str:
     """按数据集解析统一黑名单路径。"""
-    cache_key = f"{dataset_id}|{data_dir}" if data_dir else dataset_id
+    cache_key = f"{dataset_id}|{datasets_root}" if datasets_root else dataset_id
     if cache_key in _BLACKLIST_PATH_CACHE:
         return _BLACKLIST_PATH_CACHE[cache_key]
-    base = _resolve_blacklist_root(data_dir)
     dataset_key = sanitize_dataset_id_for_filename(dataset_id)
-    base_path = Path(base)
-    if base_path.name == "blacklists":
-        if base_path.parent.name == dataset_key:
-            resolved_path = base_path / "blacklist.json"
-        else:
-            resolved_path = base_path / dataset_key / "blacklist.json"
-    else:
-        resolved_path = base_path / dataset_key / "blacklist.json"
+    resolved_path = Path(_resolve_datasets_root(datasets_root)) / dataset_key / "blacklist.json"
     resolved = str(resolved_path)
     _BLACKLIST_PATH_CACHE[cache_key] = resolved
     return resolved
 
 
-def invalidate_blacklist_path_cache(dataset_id: str = "", *, data_dir: str = "") -> None:
+def invalidate_blacklist_path_cache(dataset_id: str = "", *, datasets_root: str = "") -> None:
     """Invalidate cached blacklist path lookups."""
     if not dataset_id:
         _BLACKLIST_PATH_CACHE.clear()
         return
-    cache_key = f"{dataset_id}|{data_dir}" if data_dir else dataset_id
+    cache_key = f"{dataset_id}|{datasets_root}" if datasets_root else dataset_id
     _BLACKLIST_PATH_CACHE.pop(cache_key, None)
 
 
@@ -120,8 +109,8 @@ def normalize_blacklist_payload(
     return cast(BlacklistPayload, normalized)
 
 
-def read_blacklist_payload(dataset_id: str, *, data_dir: str = "") -> BlacklistPayload:
-    blacklist_path = resolve_blacklist_path(dataset_id, data_dir=data_dir)
+def read_blacklist_payload(dataset_id: str, *, datasets_root: str = "") -> BlacklistPayload:
+    blacklist_path = resolve_blacklist_path(dataset_id, datasets_root=datasets_root)
     try:
         if os.path.isfile(blacklist_path):
             with open(blacklist_path, encoding="utf-8") as fh:
@@ -141,9 +130,9 @@ def write_blacklist_payload(
     dataset_id: str,
     payload: BlacklistPayload,
     *,
-    data_dir: str = "",
+    datasets_root: str = "",
 ) -> str:
-    blacklist_path = resolve_blacklist_path(dataset_id, data_dir=data_dir)
+    blacklist_path = resolve_blacklist_path(dataset_id, datasets_root=datasets_root)
     atomic_write_json(blacklist_path, normalize_blacklist_payload(payload, dataset_id))
     return blacklist_path
 
@@ -154,8 +143,8 @@ def invalidate_blacklist_runtime_cache(dataset_id: str) -> None:
     invalidate_blacklist_cache(dataset_id)
 
 
-def load_blacklisted_template_names(dataset_id: str, *, data_dir: str = "") -> set[str]:
-    payload = read_blacklist_payload(dataset_id, data_dir=data_dir)
+def load_blacklisted_template_names(dataset_id: str, *, datasets_root: str = "") -> set[str]:
+    payload = read_blacklist_payload(dataset_id, datasets_root=datasets_root)
     entries = payload.get(LEARNED_BLACKLIST_KEY, [])
     if not isinstance(entries, list):
         return set()
@@ -169,10 +158,10 @@ def load_blacklisted_template_names(dataset_id: str, *, data_dir: str = "") -> s
 def load_blacklisted_template_keys(
     dataset_id: str,
     *,
-    data_dir: str = "",
+    datasets_root: str = "",
 ) -> set[BlacklistEntryKey]:
     """Load canonical learned blacklist entry identities."""
-    payload = read_blacklist_payload(dataset_id, data_dir=data_dir)
+    payload = read_blacklist_payload(dataset_id, datasets_root=datasets_root)
     entries = payload.get(LEARNED_BLACKLIST_KEY, [])
     if not isinstance(entries, list):
         return set()
@@ -202,10 +191,12 @@ def summarize_blacklist_payload(payload: BlacklistPayload) -> tuple[int, int]:
     return learned_count, rule_count
 
 
-def ensure_template_blacklist_file(dataset_id: str, *, data_dir: str = "") -> str:
-    blacklist_path = resolve_blacklist_path(dataset_id, data_dir=data_dir)
+def ensure_template_blacklist_file(dataset_id: str, *, datasets_root: str = "") -> str:
+    blacklist_path = resolve_blacklist_path(dataset_id, datasets_root=datasets_root)
     if os.path.isfile(blacklist_path):
         return blacklist_path
-    write_blacklist_payload(dataset_id, build_default_blacklist(dataset_id), data_dir=data_dir)
+    write_blacklist_payload(
+        dataset_id, build_default_blacklist(dataset_id), datasets_root=datasets_root
+    )
     logger.info("[blacklist] created dataset blacklist file: %s", blacklist_path)
     return blacklist_path

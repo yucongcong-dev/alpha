@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 
 from ..api.client import BrainClient, WorkerClientFactory
-from ..io.common import resolve_blacklists_dir
+from ..io.common import resolve_datasets_root
 from ..models.domain import TemplateField
 from ..models.io_types import RunPaths
 from ..models.runtime_options import ApiClientOptions, FieldFetchOptions
@@ -50,7 +50,7 @@ def resolve_bootstrap_paths(
     return BootstrapPaths(
         output_file=output_file,
         log_file=run_path_value(run_paths, "log_file"),
-        blacklists_dir=run_path_value(run_paths, "blacklists_dir") or str(resolve_blacklists_dir()),
+        datasets_root=run_path_value(run_paths, "datasets_root") or str(resolve_datasets_root()),
         template_library_file=(
             run_path_value(run_paths, "template_library_file") or str(args.template_library_file)
         ),
@@ -75,7 +75,7 @@ def build_effective_run_paths(
         log_file=paths.log_file,
         state_file="",
         checkpoint_file="",
-        blacklists_dir=paths.blacklists_dir,
+        datasets_root=paths.datasets_root,
         fields_cache_file=paths.fields_cache_file,
         template_library_file=paths.template_library_file,
         output=paths.output_file,

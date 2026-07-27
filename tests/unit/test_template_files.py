@@ -348,7 +348,7 @@ def test_load_template_library_raises_on_empty_path() -> None:
 
 def test_ensure_template_blacklist_file_creates_empty_dataset_file(tmp_path) -> None:
     """Missing dataset blacklist files should be created with the expected schema."""
-    path = ensure_template_blacklist_file("custom_ds", data_dir=str(tmp_path))
+    path = ensure_template_blacklist_file("custom_ds", datasets_root=str(tmp_path / "datasets"))
 
     blacklist_file = tmp_path / "datasets" / "custom_ds" / "blacklist.json"
     payload = json.loads(blacklist_file.read_text(encoding="utf-8"))
@@ -402,8 +402,8 @@ def test_auto_update_blacklist_appends_low_quality_template_once(tmp_path) -> No
         ),
     ]
 
-    auto_update_blacklist(results, "custom_ds", data_dir=str(tmp_path))
-    auto_update_blacklist(results, "custom_ds", data_dir=str(tmp_path))
+    auto_update_blacklist(results, "custom_ds", datasets_root=str(tmp_path / "datasets"))
+    auto_update_blacklist(results, "custom_ds", datasets_root=str(tmp_path / "datasets"))
 
     payload = json.loads(
         (tmp_path / "datasets" / "custom_ds" / "blacklist.json").read_text(encoding="utf-8")
@@ -465,7 +465,7 @@ def test_auto_update_blacklist_is_visible_to_same_process(monkeypatch, tmp_path)
         ),
     ]
 
-    auto_update_blacklist(results, "custom_ds", data_dir=str(tmp_path))
+    auto_update_blacklist(results, "custom_ds", datasets_root=str(tmp_path / "datasets"))
 
     assert _is_blacklisted_template(
         "weak_template",
@@ -500,7 +500,7 @@ def test_auto_update_blacklist_defers_promoted_templates_to_registry(tmp_path) -
         for idx in range(3)
     ]
 
-    auto_update_blacklist(results, "custom_ds", data_dir=str(tmp_path))
+    auto_update_blacklist(results, "custom_ds", datasets_root=str(tmp_path / "datasets"))
 
     blacklist_file = tmp_path / "datasets" / "custom_ds" / "blacklist.json"
     assert not blacklist_file.exists()

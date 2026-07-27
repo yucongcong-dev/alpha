@@ -47,17 +47,16 @@ def sanitize_dataset_id_for_filename(dataset_id: str) -> str:
     return sanitized or DEFAULT_DATASET_ID
 
 
-def resolve_blacklists_dir(blacklists_dir: str = "") -> Path:
-    """
-    解析黑名单根目录。
+def resolve_datasets_root(datasets_root: str = "") -> Path:
+    """解析 datasets 根目录。
 
     优先级：
-    1. 显式传入的 blacklists_dir
+    1. 显式传入的 datasets_root
     2. 当前工作目录下存在的 datasets/
     3. 工作区 datasets/
     """
-    if blacklists_dir:
-        return Path(blacklists_dir)
+    if datasets_root:
+        return Path(datasets_root).expanduser().resolve()
     cwd_datasets_dir = Path.cwd() / "datasets"
     if cwd_datasets_dir.exists():
         return cwd_datasets_dir

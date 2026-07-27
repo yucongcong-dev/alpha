@@ -37,7 +37,7 @@ def load_bootstrap_supporting_resources(
     services: SupportingResourceServices,
 ) -> BootstrapLoadedResources:
     """Load template library, blacklist, filters, and historical feedback state."""
-    services.set_active_blacklists_dir(paths.blacklists_dir)
+    services.set_active_datasets_root(paths.datasets_root)
     template_library_file = services.ensure_dataset_template_library(
         paths.template_library_file, dataset_id
     )

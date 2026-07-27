@@ -48,7 +48,6 @@ def _build_run_ctx(fields: list[dict[str, str]]) -> InitializedRunContext:
         use_dataset_heuristics=False,
         template_library_fingerprint="tpl-fp",
         settings_fingerprint="settings-fp",
-        blacklists_dir="/tmp/blacklists",
         historical_state=HistoricalRunState(),
         fields=fields,
         execution_state=_build_execution_state(),
@@ -180,7 +179,6 @@ def test_resolve_result_write_options_prefers_run_paths_output() -> None:
         log_file="/tmp/run.log",
         state_file="/tmp/state.json",
         checkpoint_file="/tmp/checkpoint.json",
-        blacklists_dir="/tmp/blacklists",
         output="/tmp/normalized-results.json",
     )
 

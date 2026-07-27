@@ -119,7 +119,3 @@ class ApplicationConfig(
     @property
     def checkpoint_file(self) -> str:
         return self.paths.checkpoint_file
-
-    @property
-    def blacklists_dir(self) -> str:
-        return self.paths.blacklists_dir

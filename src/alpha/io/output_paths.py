@@ -72,7 +72,7 @@ def build_dataset_scoped_paths(
     return {
         "dataset_root": str(dataset_root),
         "template_library_file": str(dataset_root / "template.json"),
-        "blacklists_dir": str(DATASETS_DIR),
+        "datasets_root": str(DATASETS_DIR),
         "fields_cache_file": str(fields_cache_path),
         "run_dir": str(run_dir),
         "output": str(run_dir / "summary.json"),

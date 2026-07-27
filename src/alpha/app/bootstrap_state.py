@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from ..io.results_store import dump_results_incremental, initialize_results_journal
 from ..models.runtime_protocols import RunConfig
-from ..policy.blacklist_context import set_active_blacklists_dir
+from ..policy.blacklist_context import set_active_datasets_root
 from ..policy.blacklist_runtime_stats import build_blacklist_runtime_stats
 from ..policy.blacklist_store import load_blacklisted_template_keys
 from ..policy.evaluation import summarize_policy_evaluation
@@ -18,10 +18,10 @@ def create_execution_state(
     *,
     dataset_id: str,
     historical_state: HistoricalRunState,
-    blacklists_dir: str = "",
+    datasets_root: str = "",
 ) -> ExecutionState:
     """Build in-memory execution state without writing runtime artifacts."""
-    set_active_blacklists_dir(blacklists_dir)
+    set_active_datasets_root(datasets_root)
     execution_state = ExecutionState(
         results=list(historical_state.existing_results),
         attempted_keys=set(historical_state.attempted_keys),
@@ -43,13 +43,13 @@ def build_execution_state(
     settings_fingerprint: str,
     template_library_fingerprint: str,
     run_config: RunConfig,
-    blacklists_dir: str = "",
+    datasets_root: str = "",
 ) -> ExecutionState:
     """根据历史结果恢复 execution_state，并初始化 journal / sidecar 计数。"""
     execution_state = create_execution_state(
         dataset_id=dataset_id,
         historical_state=historical_state,
-        blacklists_dir=blacklists_dir,
+        datasets_root=datasets_root,
     )
     execution_state.persisted_result_count = initialize_results_journal(
         output_file,

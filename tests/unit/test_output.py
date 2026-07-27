@@ -622,7 +622,7 @@ def test_auto_update_blacklist_incremental_blacklists_only_changed_template(tmp_
     """Incremental blacklist updates should blacklist qualifying templates without full rescans."""
     runtime_stats = blacklist_runtime.build_blacklist_runtime_stats([])
     blacklisted_keys = blacklist_store.load_blacklisted_template_keys(
-        "custom_ds", data_dir=str(tmp_path)
+        "custom_ds", datasets_root=str(tmp_path / "datasets")
     )
     first = FieldTestResult(
         field_id="f1",
@@ -672,21 +672,21 @@ def test_auto_update_blacklist_incremental_blacklists_only_changed_template(tmp_
         blacklisted_keys,
         first,
         "custom_ds",
-        data_dir=str(tmp_path),
+        datasets_root=str(tmp_path / "datasets"),
     )
     added_after_second = blacklist_runtime.auto_update_blacklist_incremental(
         runtime_stats,
         blacklisted_keys,
         second,
         "custom_ds",
-        data_dir=str(tmp_path),
+        datasets_root=str(tmp_path / "datasets"),
     )
     added_after_third = blacklist_runtime.auto_update_blacklist_incremental(
         runtime_stats,
         blacklisted_keys,
         third,
         "custom_ds",
-        data_dir=str(tmp_path),
+        datasets_root=str(tmp_path / "datasets"),
     )
 
     payload = json.loads(

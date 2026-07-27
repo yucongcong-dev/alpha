@@ -81,7 +81,7 @@ class RuntimeOutputServices:
 class SupportingResourceServices:
     """Services that load templates, policy, filters, and historical feedback."""
 
-    set_active_blacklists_dir: Callable[[str], str]
+    set_active_datasets_root: Callable[[str], str]
     ensure_dataset_template_library: Callable[[str, str], str]
     ensure_template_blacklist_file: Callable[[str], str]
     load_template_library: Callable[[str], TemplateLibrary]
@@ -145,7 +145,7 @@ class BootstrapPaths:
 
     output_file: str
     log_file: str
-    blacklists_dir: str
+    datasets_root: str
     template_library_file: str
     fields_cache_file: str
     feedback_output: str

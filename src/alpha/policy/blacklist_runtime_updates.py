@@ -13,7 +13,7 @@ from .blacklist_runtime_stats import (
     update_blacklist_runtime_stats_with_result,
 )
 from .blacklist_store import (
-    activate_blacklist_root,
+    activate_datasets_root,
     invalidate_blacklist_runtime_cache,
     read_blacklist_payload,
     write_blacklist_payload,
@@ -132,7 +132,7 @@ def auto_update_blacklist(
     results: list[FieldTestResult],
     dataset_id: str,
     *,
-    data_dir: str = "",
+    datasets_root: str = "",
     min_fields_tested: int = 2,
     min_fail_checks: int = 2,
     expression_policy: DatasetExpressionPolicy | None = None,
@@ -140,8 +140,8 @@ def auto_update_blacklist(
     """Persist newly qualified learned blacklist entries from full results."""
     if not dataset_id or not results:
         return
-    if data_dir:
-        activate_blacklist_root(data_dir)
+    if datasets_root:
+        activate_datasets_root(datasets_root)
     policy = expression_policy or get_dataset_expression_policy(dataset_id)
     runtime_stats = build_blacklist_runtime_stats(results)
     new_entries: list[BlacklistTemplateEntry] = []
@@ -158,7 +158,7 @@ def auto_update_blacklist(
     if not new_entries:
         return
 
-    bl_data = read_blacklist_payload(dataset_id, data_dir=data_dir)
+    bl_data = read_blacklist_payload(dataset_id, datasets_root=datasets_root)
     existing_keys = {
         _entry_key_from_payload(item)
         for item in bl_data[LEARNED_BLACKLIST_KEY]
@@ -177,7 +177,7 @@ def auto_update_blacklist(
         return
 
     bl_data["_updated"] = datetime.now().strftime(DATE_FORMAT_ISO_MINUTES)
-    blacklist_path = write_blacklist_payload(dataset_id, bl_data, data_dir=data_dir)
+    blacklist_path = write_blacklist_payload(dataset_id, bl_data, datasets_root=datasets_root)
     invalidate_blacklist_runtime_cache(dataset_id)
     logger.info(
         "[blacklist] auto-updated %s: added %d new entries (total=%d)",
@@ -193,7 +193,7 @@ def auto_update_blacklist_incremental(
     result: FieldTestResult,
     dataset_id: str,
     *,
-    data_dir: str = "",
+    datasets_root: str = "",
     min_fields_tested: int = 2,
     min_fail_checks: int = 2,
     expression_policy: DatasetExpressionPolicy | None = None,
@@ -201,8 +201,8 @@ def auto_update_blacklist_incremental(
     """Incrementally persist one newly qualified learned blacklist entry."""
     if not dataset_id:
         return False
-    if data_dir:
-        activate_blacklist_root(data_dir)
+    if datasets_root:
+        activate_datasets_root(datasets_root)
     policy = expression_policy or get_dataset_expression_policy(dataset_id)
     summary = update_blacklist_runtime_stats_with_result(runtime_stats, result)
     if summary is None:
@@ -224,7 +224,7 @@ def auto_update_blacklist_incremental(
     )
     if entry is None:
         return False
-    bl_data = read_blacklist_payload(dataset_id, data_dir=data_dir)
+    bl_data = read_blacklist_payload(dataset_id, datasets_root=datasets_root)
     existing_keys = {
         _entry_key_from_payload(item)
         for item in bl_data[LEARNED_BLACKLIST_KEY]
@@ -235,7 +235,7 @@ def auto_update_blacklist_incremental(
         return False
     bl_data[LEARNED_BLACKLIST_KEY].append(entry.to_dict())
     bl_data["_updated"] = datetime.now().strftime(DATE_FORMAT_ISO_MINUTES)
-    blacklist_path = write_blacklist_payload(dataset_id, bl_data, data_dir=data_dir)
+    blacklist_path = write_blacklist_payload(dataset_id, bl_data, datasets_root=datasets_root)
     invalidate_blacklist_runtime_cache(dataset_id)
     blacklisted_template_keys.add(entry_key)
     logger.info(

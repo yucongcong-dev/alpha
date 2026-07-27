@@ -12,7 +12,7 @@ import os
 import re
 
 from ..models.domain_types import TemplateMetadata
-from .blacklist_context import clear_active_blacklists_dir
+from .blacklist_context import clear_active_datasets_root
 from .blacklist_store import (
     invalidate_blacklist_path_cache,
     read_blacklist_payload,
@@ -51,7 +51,7 @@ def invalidate_blacklist_cache(dataset_id: str = "") -> None:
         return
     _BLACKLIST_CACHE.clear()
     invalidate_blacklist_path_cache()
-    clear_active_blacklists_dir()
+    clear_active_datasets_root()
 
 
 def _normalize_pattern_rule(rule: dict[str, object]) -> BlacklistPatternRule | None:

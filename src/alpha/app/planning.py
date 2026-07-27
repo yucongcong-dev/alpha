@@ -12,7 +12,7 @@ from ..generators.templates import ensure_dataset_template_library, load_templat
 from ..models.io_types import RunPaths
 from ..models.runtime_options import FieldFetchOptions
 from ..models.runtime_protocols import BootstrapRuntimeArgs
-from ..policy.blacklist_context import set_active_blacklists_dir
+from ..policy.blacklist_context import set_active_datasets_root
 from ..policy.expression import get_dataset_expression_policy
 from .bootstrap_fields import prepare_fields_for_execution
 from .bootstrap_state import create_execution_state
@@ -27,7 +27,7 @@ def run_dry_run_plan(args: BootstrapRuntimeArgs, run_paths: RunPaths | None) -> 
     effective_run_paths = build_effective_run_paths(args, paths, run_paths)
     dataset_id = str(args.dataset_id)
 
-    set_active_blacklists_dir(paths.blacklists_dir)
+    set_active_datasets_root(paths.datasets_root)
     template_library_file = ensure_dataset_template_library(paths.template_library_file, dataset_id)
     template_library = load_template_library(template_library_file)
     filters = load_run_filters_extended(effective_run_paths)
@@ -70,7 +70,7 @@ def run_dry_run_plan(args: BootstrapRuntimeArgs, run_paths: RunPaths | None) -> 
     execution_state = create_execution_state(
         dataset_id=dataset_id,
         historical_state=historical_state,
-        blacklists_dir=paths.blacklists_dir,
+        datasets_root=paths.datasets_root,
     )
     print_dry_run_plan(
         args=args,
