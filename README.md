@@ -345,6 +345,16 @@ python3.10 -m alpha clean --dry-run-clean
 python3.10 -m alpha clean --include-credentials
 ```
 
+清理 Python 字节码、检查工具缓存和开发安装产生的包元数据：
+
+```bash
+make clean-dev
+```
+
+`alpha clean` 只负责数据集的 `cache/`、`runs/` 等运行产物；`make clean-dev`
+只负责 `__pycache__`、`.pycache`、`.mypy_cache`、`.pytest_cache`、`.ruff_cache`
+和 `*.egg-info` 等可重建的开发环境产物。
+
 ### YAML 开关覆盖
 
 YAML 中打开的布尔开关可以用对应的 `--no-*` 在命令行临时关闭：
@@ -364,7 +374,8 @@ python3.10 -m alpha --no-smoke-test --no-full-run
 - `config/yaml.py`：`config/*.yaml` 查找、加载和缓存
 - `config/defaults.py`：把 YAML `global` 配置合并到 CLI 参数
 - `config/getters.py`：运行参数 getter
-- `config/policy.py`：dataset expression policy 构建与反馈阶段解析
+- `config/policy_overrides.py`：解析并应用 dataset expression policy 的 YAML 覆盖
+- `config/policy_coercers.py`：把 YAML policy 值转换成类型化配置
 - `config/profiles.py`：dataset profile fallback
 
 YAML 分层优先级为：`config/settings.yaml` > `config/expression_policies.yaml` > `config/dataset_profiles.yaml` > `config/templates.yaml` / `config/quality_feedback.yaml` > `config/constants_defaults.yaml`。其中 `config/settings.yaml` 面向日常运行调参，其余 `config/*.yaml` 面向按职责拆分的默认值；dataset 根目录的 `template.json` 与 `presets/` 面向表达式模板和定向运行输入，`blacklist.json` 面向低质量模板过滤。

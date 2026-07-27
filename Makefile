@@ -1,4 +1,4 @@
-.PHONY: test help-check whitespace-check scan-secrets repo-boundary-check removed-compat-file-check compat-import-check arch-boundary-check todo-check config-sync-check ruff-check format-check mypy-check check clean-runtime
+.PHONY: test help-check whitespace-check scan-secrets repo-boundary-check removed-compat-file-check compat-import-check arch-boundary-check todo-check config-sync-check ruff-check format-check mypy-check check clean-runtime clean-dev
 
 PYTHON ?= python3.10
 PYTHONPATH ?= src
@@ -23,7 +23,7 @@ scan-secrets:
 
 repo-boundary-check:
 	@if find . -maxdepth 1 -type f \( -name 'tmp_*.txt' -o -name 'tmp_*.json' \) | rg -n .; then \
-		echo "[check] root tmp_* files are not allowed; move them to tmp/ or datasets/<dataset>/profiles/" >&2; \
+		echo "[check] root tmp_* files are not allowed; move them to tmp/ or datasets/<dataset>/presets/" >&2; \
 		exit 1; \
 	fi
 
@@ -113,3 +113,9 @@ check: test help-check whitespace-check scan-secrets repo-boundary-check removed
 
 clean-runtime:
 	PYTHONPATH=$(PYTHONPATH) $(PYTHON) -m alpha clean
+
+clean-dev:
+	@find src tests -type d -name '__pycache__' -prune -exec rm -rf {} +
+	@rm -rf __pycache__ .pycache .mypy_cache .pytest_cache .ruff_cache tmp/pycache
+	@find src -maxdepth 2 -type d -name '*.egg-info' -prune -exec rm -rf {} +
+	@echo "[clean-dev] removed Python bytecode, tool caches, and package metadata"
