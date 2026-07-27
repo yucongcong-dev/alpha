@@ -87,7 +87,7 @@ def test_build_expression_candidates_uses_preprocessed_raw_field_view() -> None:
 
 def test_fundamental6_account_templates_use_preprocessed_field_view() -> None:
     policy = get_dataset_expression_policy("fundamental6")
-    template_library = load_template_library("datasets/fundamental6/templates/template.json")
+    template_library = load_template_library("datasets/fundamental6/template.json")
     build_ctx = TemplateBuildContext(
         options=TemplateBuildOptions(
             **_DEFAULT_SIM_SETTINGS, dataset_id="fundamental6", legacy_similarity_penalty=0
@@ -114,7 +114,7 @@ def test_fundamental6_account_templates_use_preprocessed_field_view() -> None:
 
 def test_model16_templates_include_bucket_groups() -> None:
     policy = get_dataset_expression_policy("model16")
-    template_library = load_template_library("datasets/model16/templates/template.json")
+    template_library = load_template_library("datasets/model16/template.json")
     build_ctx = TemplateBuildContext(
         options=TemplateBuildOptions(
             **_DEFAULT_SIM_SETTINGS, dataset_id="model16", legacy_similarity_penalty=0
@@ -137,7 +137,7 @@ def test_model16_templates_include_bucket_groups() -> None:
 
 def test_model51_templates_include_bucket_groups() -> None:
     policy = get_dataset_expression_policy("model51")
-    template_library = load_template_library("datasets/model51/templates/template.json")
+    template_library = load_template_library("datasets/model51/template.json")
     build_ctx = TemplateBuildContext(
         options=TemplateBuildOptions(
             **_DEFAULT_SIM_SETTINGS, dataset_id="model51", legacy_similarity_penalty=0

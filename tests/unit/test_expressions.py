@@ -237,11 +237,7 @@ def test_build_expression_candidates_narrows_event_field_template_pool() -> None
     policy = get_dataset_expression_policy("fundamental6")
     field = {"id": "fnd6_cptnewqeventv110_apq", "type": "VECTOR"}
     template_file = (
-        Path(__file__).resolve().parents[2]
-        / "datasets"
-        / "fundamental6"
-        / "templates"
-        / "template.json"
+        Path(__file__).resolve().parents[2] / "datasets" / "fundamental6" / "template.json"
     )
     template_library = load_template_library(str(template_file))
 
@@ -275,8 +271,7 @@ def test_fundamental6_refine_vector_templates_do_not_double_wrap_vec_avg() -> No
         Path(__file__).resolve().parents[2]
         / "datasets"
         / "fundamental6"
-        / "templates"
-        / "refine"
+        / "packs"
         / "default_neighbors.json"
     )
     template_library = load_template_library(str(template_file))

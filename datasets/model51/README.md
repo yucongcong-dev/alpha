@@ -103,21 +103,21 @@ Broad exploration：
 Focused refine：
 - 历史上的 focused fixtures 并没有完整保留为现役文件集合；当前更适合作为“历史轮次说明”，而不是可直接点击复用的本地入口。
 - 当前仓库里仍然存在、可直接复用的 refine 资产主要是：
-  - [refine/broad_search_neighbors.json](/Users/boyaa/Downloads/alpha/datasets/model51/templates/refine/broad_search_neighbors.json)
-  - [refine/unsystematic60_refine_round14.json](/Users/boyaa/Downloads/alpha/datasets/model51/templates/refine/unsystematic60_refine_round14.json)
-  - [refine/unsystematic60_refine_round15.json](/Users/boyaa/Downloads/alpha/datasets/model51/templates/refine/unsystematic60_refine_round15.json)
-  - [refine/systematic30_refine_round16.json](/Users/boyaa/Downloads/alpha/datasets/model51/templates/refine/systematic30_refine_round16.json)
+  - [packs/broad_search_neighbors.json](/Users/boyaa/Downloads/alpha/datasets/model51/packs/broad_search_neighbors.json)
+  - [packs/unsystematic60_refine_round14.json](/Users/boyaa/Downloads/alpha/datasets/model51/packs/unsystematic60_refine_round14.json)
+  - [packs/unsystematic60_refine_round15.json](/Users/boyaa/Downloads/alpha/datasets/model51/packs/unsystematic60_refine_round15.json)
+  - [packs/systematic30_refine_round16.json](/Users/boyaa/Downloads/alpha/datasets/model51/packs/systematic30_refine_round16.json)
   - [profiles/fields/unsystematic60_refine_round14_fields.txt](/Users/boyaa/Downloads/alpha/datasets/model51/profiles/fields/unsystematic60_refine_round14_fields.txt)
   - [profiles/fields/systematic30_refine_round16_fields.txt](/Users/boyaa/Downloads/alpha/datasets/model51/profiles/fields/systematic30_refine_round16_fields.txt)
 
 Refine pack 约定：
 - `template.json` 保持为默认、窄化后的生产模板库。
 - 定向本地 sweep 保留在 `refine/` 下。
-- 需要使用 refine pack 时，显式通过 `--template-library-file datasets/model51/templates/refine/<file>.json` 加载。
-- 当前 broadening pack 是 `datasets/model51/templates/refine/broad_search_neighbors.json`
+- 需要使用专项模板包时，显式通过 `--template-library-file datasets/model51/packs/<file>.json` 加载。
+- 当前 broadening pack 是 `datasets/model51/packs/broad_search_neighbors.json`
 - 如果某个 focused experiment 需要稳定的手工字段清单，把它放在 `profiles/fields/`，而不是 `cache/`
 - grouped `market` zscore 家族、额外 decay-window 家族，以及 bucket-volatility 变体，在失去默认队列资格后，都应放在这里
-- refine pack 现在应该优先围绕新的默认主干展开：
+- 专项模板包现在应该优先围绕新的默认主干展开：
   - `ts_zscore_120`
   - `group_zscore_subindustry_120`
   - `ratio_cap_zscore_60/120`
@@ -145,7 +145,7 @@ Refine pack 约定：
 随后仓库把 active branch 切到了 `systematic_risk_last_30_days`，并准备了：
 
 - [profiles/fields/systematic30_refine_round16_fields.txt](/Users/boyaa/Downloads/alpha/datasets/model51/profiles/fields/systematic30_refine_round16_fields.txt)
-- [refine/systematic30_refine_round16.json](/Users/boyaa/Downloads/alpha/datasets/model51/templates/refine/systematic30_refine_round16.json)
+- [packs/systematic30_refine_round16.json](/Users/boyaa/Downloads/alpha/datasets/model51/packs/systematic30_refine_round16.json)
 
 但 `2026-07-17 round16` 的最新结果同样没有形成新增价值：
 

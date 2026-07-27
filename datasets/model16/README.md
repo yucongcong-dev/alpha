@@ -108,7 +108,7 @@ Broad exploration：
 - 让“结构差异”胜过“近邻窗口堆叠”。
 
 Focused refine：
-- 只有在明确出现 near-pass 证据后，再用 refine pack 重新打开已下沉分支。
+- 只有在明确出现 near-pass 证据后，再用专项模板包重新打开已下沉分支。
 - 相比恢复弱势导数 pair-ratio，更优先扩 `cap-ratio` / `bucket-cap-ratio`
 - 但在 `2026-07-20 round3_dense_derivative_focus` 之后，`cap-ratio` / `bucket-cap-ratio` 这条支路也应暂时停止继续加预算，除非平台状态或字段集合发生明显变化。
 - `2026-07-24` 的闭合默认库实跑没有改变这个结论，因此当前不建议把 `model16` 提升为新的主预算数据集。
@@ -116,7 +116,7 @@ Focused refine：
 旧模板处理：
 - 过去较弱的 fallback 模板已经从默认主库下沉，不再作为 broad-search 默认入口。
 - `mean-reversion`、`information_ratio`、`normalize/quantile` 包装器，以及额外的长窗口近邻，更适合作为 refine/实验分支，而不是默认 broad-search 主力。
-- 当前恢复包位于 `datasets/model16/templates/refine/broad_search_neighbors.json`
+- 当前恢复包位于 `datasets/model16/packs/broad_search_neighbors.json`
 
 ## 待确认问题
 

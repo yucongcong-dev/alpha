@@ -225,12 +225,12 @@ def test_build_expression_candidates_skip_refine_only_templates_in_default_libra
     assert "refine_template" not in names
 
 
-def test_build_expression_candidates_include_refine_only_templates_in_refine_library(
+def test_build_expression_candidates_include_refine_only_templates_in_explicit_pack(
     tmp_path,
 ) -> None:
-    refine_dir = tmp_path / "templates" / "fundamental6" / "refine"
-    refine_dir.mkdir(parents=True)
-    template_file = refine_dir / "default_neighbors.json"
+    pack_dir = tmp_path / "datasets" / "fundamental6" / "packs"
+    pack_dir.mkdir(parents=True)
+    template_file = pack_dir / "default_neighbors.json"
     template_file.write_text(
         json.dumps(
             {
@@ -680,11 +680,7 @@ def test_scheduler_dump_results_shrinks_next_template_queue(monkeypatch, tmp_pat
 def test_fundamental6_template_library_has_family_and_layer_metadata() -> None:
     """Common dataset template library entries should carry explicit family/layer metadata."""
     template_file = (
-        Path(__file__).resolve().parents[2]
-        / "datasets"
-        / "fundamental6"
-        / "templates"
-        / "template.json"
+        Path(__file__).resolve().parents[2] / "datasets" / "fundamental6" / "template.json"
     )
     payload = json.loads(template_file.read_text(encoding="utf-8"))
 
@@ -1167,11 +1163,7 @@ def test_build_pending_templates_respects_manual_registry_override(monkeypatch) 
 
 def test_fundamental6_template_library_removes_known_weak_short_window_templates() -> None:
     template_file = (
-        Path(__file__).resolve().parents[2]
-        / "datasets"
-        / "fundamental6"
-        / "templates"
-        / "template.json"
+        Path(__file__).resolve().parents[2] / "datasets" / "fundamental6" / "template.json"
     )
     payload = json.loads(template_file.read_text(encoding="utf-8"))
 

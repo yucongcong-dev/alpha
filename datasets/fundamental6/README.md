@@ -56,13 +56,13 @@
 - 今日唯一正式主干：
   - `cashflow_op`
 - 今日现役资产：
-  - 模板包：[cashflow_submit_core_pack.json](/Users/boyaa/Downloads/alpha/datasets/fundamental6/templates/refine/cashflow_submit_core_pack.json)
+  - 模板包：[cashflow_submit_core_pack.json](/Users/boyaa/Downloads/alpha/datasets/fundamental6/packs/cashflow_submit_core_pack.json)
   - 字段白名单：[cashflow_submit_core_field.txt](/Users/boyaa/Downloads/alpha/datasets/fundamental6/profiles/fields/cashflow_submit_core_field.txt)
   - 模板白名单：[cashflow_submit_core_templates.txt](/Users/boyaa/Downloads/alpha/datasets/fundamental6/profiles/templates/cashflow_submit_core_templates.txt)
 - 今日次主线验证资产：
-  - 模板包：[cashflow_submit_zscore_core_pack.json](/Users/boyaa/Downloads/alpha/datasets/fundamental6/templates/refine/cashflow_submit_zscore_core_pack.json)
+  - 模板包：[cashflow_submit_zscore_core_pack.json](/Users/boyaa/Downloads/alpha/datasets/fundamental6/packs/cashflow_submit_zscore_core_pack.json)
 - 今日观察线：
-  - [lctq_watch_pack.json](/Users/boyaa/Downloads/alpha/datasets/fundamental6/templates/refine/lctq_watch_pack.json)
+  - [lctq_watch_pack.json](/Users/boyaa/Downloads/alpha/datasets/fundamental6/packs/lctq_watch_pack.json)
 - 今日不建议做的事：
   - 不恢复 broad-search
   - 不继续扩 `cogs`
@@ -75,7 +75,7 @@
 cd /Users/boyaa/Downloads/alpha
 PYTHONPATH=src python3.10 -m alpha \
   --dataset-id fundamental6 \
-  --template-library-file datasets/fundamental6/templates/refine/cashflow_submit_core_pack.json \
+  --template-library-file datasets/fundamental6/packs/cashflow_submit_core_pack.json \
   --include-fields-file datasets/fundamental6/profiles/fields/cashflow_submit_core_field.txt \
   --include-templates-file datasets/fundamental6/profiles/templates/cashflow_submit_core_templates.txt \
   --no-auto-update-blacklist \
@@ -340,7 +340,7 @@ PYTHONPATH=src python3.10 -m alpha \
 
 推荐执行包：
 
-- `datasets/fundamental6/templates/refine/archive/round7_low_corr_pack.json`
+- `datasets/fundamental6/packs/archive/round7_low_corr_pack.json`
 
 推荐用途：
 
@@ -382,7 +382,7 @@ PYTHONPATH=src python3.10 -m alpha \
 
 为避免 `VECTOR` 观察线再次扩散成大包，新增一个最小观察包：
 
-- `datasets/fundamental6/templates/refine/lctq_watch_pack.json`
+- `datasets/fundamental6/packs/lctq_watch_pack.json`
 
 对应字段文件：
 
@@ -405,7 +405,7 @@ PYTHONPATH=src python3.10 -m alpha \
 
 为了避免后续每次都从大 refine 包里挑主线，当前 `cashflow_op` 已经单独收成一个最小提交包：
 
-- `datasets/fundamental6/templates/refine/cashflow_submit_core_pack.json`
+- `datasets/fundamental6/packs/cashflow_submit_core_pack.json`
 
 这个包只保留两条已验证可提交主线：
 
@@ -425,7 +425,7 @@ cd /Users/boyaa/Downloads/alpha
 
 PYTHONPATH=src python3.10 -m alpha --dry-run-plan \
   --dataset-id fundamental6 \
-  --template-library-file datasets/fundamental6/templates/refine/cashflow_submit_core_pack.json \
+  --template-library-file datasets/fundamental6/packs/cashflow_submit_core_pack.json \
   --include-fields-file datasets/fundamental6/profiles/fields/cashflow_submit_core_field.txt \
   --include-templates-file datasets/fundamental6/profiles/templates/cashflow_submit_core_templates.txt \
   --limit 1 \
@@ -438,7 +438,7 @@ PYTHONPATH=src python3.10 -m alpha --dry-run-plan \
 
 PYTHONPATH=src python3.10 -m alpha \
   --dataset-id fundamental6 \
-  --template-library-file datasets/fundamental6/templates/refine/cashflow_submit_core_pack.json \
+  --template-library-file datasets/fundamental6/packs/cashflow_submit_core_pack.json \
   --include-fields-file datasets/fundamental6/profiles/fields/cashflow_submit_core_field.txt \
   --include-templates-file datasets/fundamental6/profiles/templates/cashflow_submit_core_templates.txt \
   --limit 1 \
@@ -467,7 +467,7 @@ PYTHONPATH=src python3.10 -m alpha \
 
 当前现役闭环入口应理解为：
 
-- 模板包：`datasets/fundamental6/templates/refine/cashflow_submit_core_pack.json`
+- 模板包：`datasets/fundamental6/packs/cashflow_submit_core_pack.json`
 - 字段白名单：`datasets/fundamental6/profiles/fields/cashflow_submit_core_field.txt`
 - 模板白名单：`datasets/fundamental6/profiles/templates/cashflow_submit_core_templates.txt`
 - 执行方式：直接运行上面的固定命令
@@ -638,7 +638,7 @@ PYTHONPATH=src python3.10 -m alpha \
 
 除了双主线 `core pack` 复跑之外，当天还单独把 `grouped zscore over cap` 这条主线拆成一模板 pack 做了独立验证：
 
-- 模板包：`datasets/fundamental6/templates/refine/cashflow_submit_zscore_core_pack.json`
+- 模板包：`datasets/fundamental6/packs/cashflow_submit_zscore_core_pack.json`
 - 结果文件：`datasets/fundamental6/runs/verify_cashflow_zscore_pack_2026-07-24_fixed/summary.json`
 
 核心结果：
@@ -663,21 +663,21 @@ PYTHONPATH=src python3.10 -m alpha \
 到当前阶段，`fundamental6` 的本地资产应按“现役 / 观察 / 归档”理解：
 
 现役：
-- `datasets/fundamental6/templates/template.json`
+- `datasets/fundamental6/template.json`
   - 第一阶段 broad 主干探索
-- `datasets/fundamental6/templates/refine/default_neighbors.json`
+- `datasets/fundamental6/packs/default_neighbors.json`
   - 第二阶段现役 refine 扩展带
   - 只保留仍有增量价值的 `cashflow_op` 主线近邻，以及最小 `VECTOR` 哨兵
-- `datasets/fundamental6/templates/refine/cashflow_submit_core_pack.json`
+- `datasets/fundamental6/packs/cashflow_submit_core_pack.json`
   - 最小复跑、主干健康检查、提交前低成本稳定性确认
 
 观察：
-- `datasets/fundamental6/templates/refine/lctq_watch_pack.json`
+- `datasets/fundamental6/packs/lctq_watch_pack.json`
   - 长期观察 `VECTOR` 支路是否自然改善
   - 不是 submit 主包
 
 归档：
-- `datasets/fundamental6/templates/refine/archive/*.json`
+- `datasets/fundamental6/packs/archive/*.json`
   - 保存 round5~round9 这类历史轮次包
   - 用途是回看结论，不再作为现役执行入口
 - `datasets/fundamental6/profiles/fields/archive/*.txt`
@@ -712,7 +712,7 @@ PYTHONPATH=src python3.10 -m alpha \
 - cross-field ratio/pair 探索集中在 account/matrix 专用支路，不要把 scalar `default` 撑得过宽
 - 额外长窗口邻居、`rawfill/longfill` 近邻、旧式横截面包装器，如果没有反复证明有效，就都作为 refine 候选
 - 单独的 decay 邻居、liquidity-bucket 变体，也都更适合作为 refine 候选，而不是 broad-search 默认
-- 当前这些仍值得保留的恢复分支，收敛在 `datasets/fundamental6/templates/refine/default_neighbors.json`
+- 当前这些仍值得保留的恢复分支，收敛在 `datasets/fundamental6/packs/default_neighbors.json`
 
 Refine pack 约定：
 - `default_neighbors.json` 现在应被理解为新默认主干外侧的一圈“现役扩展带”，而不是旧 scalar 剩余物的堆放地
