@@ -24,7 +24,6 @@ from ..models.domain import FieldView, TemplateCandidate, TemplateField, Templat
 from ..models.runtime_protocols import TemplateFeedback
 from ..policy.evaluation import POLICY_ARM_ADAPTIVE, assign_policy_arm
 from ..policy.expression import get_dataset_expression_policy, resolve_feedback_stage
-from ..policy.template_blacklist import load_default_avoid_rules
 from ..runtime.contexts import TemplateBuildContext
 from ..utils.helpers import is_event_field_name
 from .fields import choose_field_name, choose_field_type
@@ -42,11 +41,6 @@ from .templates.priority import (
 )
 from .templates.variation_common import is_blacklisted_template as _is_blacklisted_template
 from .templates.variations import build_feedback_mutations
-
-
-def _load_default_avoid_rules() -> list[dict[str, str]]:
-    """兼容导出：加载跨数据集默认规避规则。"""
-    return list(load_default_avoid_rules())
 
 
 def _policy_template_priority_adjustment(

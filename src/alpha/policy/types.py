@@ -13,7 +13,6 @@ from typing import Any, Protocol
 
 LEARNED_BLACKLIST_KEY = "learned_templates"
 PATTERN_RULES_KEY = "expression_rules"
-DEFAULT_RULES_KEY = "default_rules"
 
 BlacklistEntryKey = tuple[str, str, str]
 
@@ -42,9 +41,6 @@ BlacklistPatternRule = dict[str, str]
 
 BlacklistCacheEntry = dict[str, Any]
 """单个数据集的黑名单缓存项。"""
-
-DefaultAvoidRulesCache = dict[str, Any]
-"""跨数据集默认规避规则缓存项。"""
 
 
 class BlacklistRuntimePolicy(Protocol):

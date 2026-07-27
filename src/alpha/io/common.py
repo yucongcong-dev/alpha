@@ -25,8 +25,6 @@ CACHE_DIR = DEFAULT_WORKSPACE.cache_dir
 RESULTS_DIR = DEFAULT_WORKSPACE.results_dir
 DATA_DIR = DEFAULT_WORKSPACE.data_dir
 DATASETS_DIR = DEFAULT_WORKSPACE.datasets_dir
-SHARED_DIR = DEFAULT_WORKSPACE.shared_dir
-SHARED_BLACKLISTS_DIR = DEFAULT_WORKSPACE.shared_blacklists_dir
 TEMPLATES_DIR = DEFAULT_WORKSPACE.templates_dir
 BLACKLISTS_DIR = DEFAULT_WORKSPACE.blacklists_dir
 
@@ -105,13 +103,3 @@ def resolve_blacklists_dir(blacklists_dir: str = "") -> Path:
     if cwd_datasets_dir.exists():
         return cwd_datasets_dir
     return BLACKLISTS_DIR
-
-
-def resolve_shared_blacklists_dir(shared_blacklists_dir: str = "") -> Path:
-    """Resolve cross-dataset blacklist rules independently from dataset assets."""
-    if shared_blacklists_dir:
-        return Path(shared_blacklists_dir)
-    cwd_shared_dir = Path.cwd() / "shared" / "blacklists"
-    if cwd_shared_dir.exists():
-        return cwd_shared_dir
-    return SHARED_BLACKLISTS_DIR

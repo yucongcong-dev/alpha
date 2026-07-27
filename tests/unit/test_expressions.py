@@ -7,15 +7,11 @@
 
 from __future__ import annotations
 
-import json
 from pathlib import Path
 
 import pytest
 
-from alpha.generators.expression_builder import (
-    _load_default_avoid_rules,
-    build_expression_candidates,
-)
+from alpha.generators.expression_builder import build_expression_candidates
 from alpha.generators.ratio_templates import build_high_conviction_ratio_templates
 from alpha.generators.templates import load_template_library
 from alpha.generators.templates.classification import (
@@ -30,7 +26,6 @@ from alpha.generators.templates.variations import (
 )
 from alpha.models.runtime import TemplateBuildContext, TemplateBuildOptions
 from alpha.policy.expression import get_dataset_expression_policy
-from alpha.policy.template_blacklist import invalidate_default_avoid_rules_cache
 
 _DEFAULT_SIM_SETTINGS = {
     "region": "USA",
@@ -236,18 +231,6 @@ def test_build_expression_candidates_adds_financial_ratio_templates() -> None:
     names = {item.name for item in candidates}
     assert "hc_ratio_group_level_cashflow_op_over_assets" in names
     assert "hc_ratio_group_zscore_252_cashflow_op_over_assets" in names
-
-
-def test_load_default_avoid_rules_ignores_invalid_json_shape(monkeypatch, tmp_path) -> None:
-    """A valid JSON file with the wrong top-level type should not crash rule loading."""
-    blacklists_dir = tmp_path / "shared" / "blacklists"
-    blacklists_dir.mkdir(parents=True)
-    (blacklists_dir / "default_rules.json").write_text(json.dumps([]), encoding="utf-8")
-
-    monkeypatch.chdir(tmp_path)
-    invalidate_default_avoid_rules_cache()
-
-    assert _load_default_avoid_rules() == []
 
 
 def test_build_expression_candidates_narrows_event_field_template_pool() -> None:

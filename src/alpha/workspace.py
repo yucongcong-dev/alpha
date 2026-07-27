@@ -33,7 +33,6 @@ def _looks_like_workspace(path: Path) -> bool:
             "pyproject.toml",
             "config",
             "datasets",
-            "shared",
             "templates",
             "data",
             ".alpha-workspace",
@@ -87,14 +86,6 @@ class WorkspacePaths:
     @property
     def datasets_dir(self) -> Path:
         return self.root / "datasets"
-
-    @property
-    def shared_dir(self) -> Path:
-        return self.root / "shared"
-
-    @property
-    def shared_blacklists_dir(self) -> Path:
-        return self.shared_dir / "blacklists"
 
     def dataset_dir(self, dataset_key: str) -> Path:
         """Return one dataset-owned workspace root."""

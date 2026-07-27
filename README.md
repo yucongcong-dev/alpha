@@ -43,7 +43,6 @@ alpha/
 │   ├── templates.yaml
 │   └── constants_defaults.yaml
 ├── datasets/              # 每个 dataset 的模板、黑名单、profiles、缓存和运行结果
-├── shared/                # 跨数据集共享策略资产
 ├── docs/                  # 四篇主文档 + 索引
 └── tests/                 # unit / integration
 ```
@@ -57,7 +56,6 @@ alpha/
 - `datasets/<dataset_id>/profiles/fields/*.txt`：少量、可复用、人工裁剪的字段白名单；它们服务于稳定复现实验，不应再混入 `cache/`。
 - `datasets/<dataset_id>/profiles/templates/*.txt`：人工维护的模板筛选清单。
 - `datasets/<dataset_id>/blacklists/blacklist.json`：统一黑名单。脚本会自动追加，也允许人工维护；空黑名单也可以进仓，用于固定数据集目录边界。
-- `shared/blacklists/default_rules.json`：跨数据集通用的表达式规避规则。
 
 哪些文件不进仓：
 

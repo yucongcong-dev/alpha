@@ -55,7 +55,6 @@ def test_workspace_separates_runtime_and_resource_paths(tmp_path) -> None:
 
     assert workspace.datasets_dir == runtime_root / "datasets"
     assert workspace.dataset_dir("fundamental6") == runtime_root / "datasets" / "fundamental6"
-    assert workspace.shared_blacklists_dir == runtime_root / "shared" / "blacklists"
     assert workspace.config_dir == resource_root / "config"
 
 

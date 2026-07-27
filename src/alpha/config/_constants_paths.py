@@ -10,7 +10,6 @@ from ._constants_core import _yaml_str
 CREDENTIALS_DIR: str = _yaml_str("paths", "credentials_dir", default=".credentials")
 # Canonical workspace roots. Runtime cache/results live below a dataset directory.
 DATASETS_DIR: str = _yaml_str("paths", "datasets_dir", default="datasets")
-SHARED_DIR: str = _yaml_str("paths", "shared_dir", default="shared")
 # Legacy roots retained for compatibility and cleanup of pre-migration artifacts.
 CACHE_DIR: str = _yaml_str("paths", "cache_dir", default="cache")
 RESULTS_DIR: str = _yaml_str("paths", "results_dir", default="results")
