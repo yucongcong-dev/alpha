@@ -19,13 +19,8 @@ from .._facade import ExportMap, facade_dir, resolve_export
 
 if TYPE_CHECKING:
     from .common import (
-        BLACKLISTS_DIR,
-        CACHE_DIR,
-        DATA_DIR,
         DATASETS_DIR,
         PROJECT_ROOT,
-        RESULTS_DIR,
-        TEMPLATES_DIR,
     )
     from .output_paths import (
         build_dataset_scoped_paths,
@@ -41,13 +36,8 @@ if TYPE_CHECKING:
     )
 
 _EXPORT_MAP: ExportMap = {
-    "BLACKLISTS_DIR": (".common", "BLACKLISTS_DIR"),
-    "CACHE_DIR": (".common", "CACHE_DIR"),
-    "DATA_DIR": (".common", "DATA_DIR"),
     "DATASETS_DIR": (".common", "DATASETS_DIR"),
     "PROJECT_ROOT": (".common", "PROJECT_ROOT"),
-    "RESULTS_DIR": (".common", "RESULTS_DIR"),
-    "TEMPLATES_DIR": (".common", "TEMPLATES_DIR"),
     "build_dataset_scoped_paths": (".output_paths", "build_dataset_scoped_paths"),
     "build_output_sidecar_paths": (".output_paths", "build_output_sidecar_paths"),
     "cleanup_legacy_sidecar_files": (".output_paths", "cleanup_legacy_sidecar_files"),

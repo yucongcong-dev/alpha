@@ -19,14 +19,7 @@ from ..config.constants import DEFAULT_DATASET_ID
 from ..workspace import DEFAULT_WORKSPACE
 
 PROJECT_ROOT = DEFAULT_WORKSPACE.root
-# Disk-backed, reproducible runtime cache root. In-memory YAML / blacklist /
-# runtime caches use separate module-level state and do not live here.
-CACHE_DIR = DEFAULT_WORKSPACE.cache_dir
-RESULTS_DIR = DEFAULT_WORKSPACE.results_dir
-DATA_DIR = DEFAULT_WORKSPACE.data_dir
 DATASETS_DIR = DEFAULT_WORKSPACE.datasets_dir
-TEMPLATES_DIR = DEFAULT_WORKSPACE.templates_dir
-BLACKLISTS_DIR = DEFAULT_WORKSPACE.blacklists_dir
 
 
 def atomic_write_json(path: str, payload: Any) -> None:
@@ -54,40 +47,6 @@ def sanitize_dataset_id_for_filename(dataset_id: str) -> str:
     return sanitized or DEFAULT_DATASET_ID
 
 
-def resolve_runtime_data_dir(data_dir: str = "") -> Path:
-    """
-    解析运行时 data 目录。
-
-    优先级：
-    1. 显式传入的 data_dir
-    2. 当前工作目录下存在的 data/
-    3. 项目内置 data/
-    """
-    if data_dir:
-        return Path(data_dir)
-    cwd_data_dir = Path.cwd() / "data"
-    if cwd_data_dir.exists():
-        return cwd_data_dir
-    return DATA_DIR
-
-
-def resolve_templates_dir(templates_dir: str = "") -> Path:
-    """
-    解析模板库根目录。
-
-    优先级：
-    1. 显式传入的 templates_dir
-    2. 当前工作目录下存在的 datasets/
-    3. 工作区 datasets/
-    """
-    if templates_dir:
-        return Path(templates_dir)
-    cwd_datasets_dir = Path.cwd() / "datasets"
-    if cwd_datasets_dir.exists():
-        return cwd_datasets_dir
-    return TEMPLATES_DIR
-
-
 def resolve_blacklists_dir(blacklists_dir: str = "") -> Path:
     """
     解析黑名单根目录。
@@ -102,4 +61,4 @@ def resolve_blacklists_dir(blacklists_dir: str = "") -> Path:
     cwd_datasets_dir = Path.cwd() / "datasets"
     if cwd_datasets_dir.exists():
         return cwd_datasets_dir
-    return BLACKLISTS_DIR
+    return DATASETS_DIR

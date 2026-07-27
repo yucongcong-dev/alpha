@@ -507,14 +507,11 @@ def test_auto_update_blacklist_defers_promoted_templates_to_registry(tmp_path) -
 
 
 def test_scheduler_dump_results_shrinks_next_template_queue(monkeypatch, tmp_path) -> None:
-    data_dir = tmp_path / "data"
-    data_dir.mkdir()
     results_path = tmp_path / "results.json"
     monkeypatch.chdir(tmp_path)
     invalidate_blacklist_cache()
     invalidate_blacklist_path_cache()
-    monkeypatch.setattr("alpha.io.common.DATA_DIR", data_dir)
-    monkeypatch.setattr("alpha.io.common.BLACKLISTS_DIR", tmp_path / "datasets")
+    monkeypatch.setattr("alpha.io.common.DATASETS_DIR", tmp_path / "datasets")
     monkeypatch.setattr(
         "alpha.core.executor.build_setting_variants",
         lambda *args, **kwargs: [{"neutralization": "SUBINDUSTRY", "truncation": 0.08}],

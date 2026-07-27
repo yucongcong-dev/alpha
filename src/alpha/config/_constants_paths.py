@@ -8,12 +8,7 @@ from __future__ import annotations
 from ._constants_core import _yaml_str
 
 CREDENTIALS_DIR: str = _yaml_str("paths", "credentials_dir", default=".credentials")
-# Canonical workspace roots. Runtime cache/results live below a dataset directory.
 DATASETS_DIR: str = _yaml_str("paths", "datasets_dir", default="datasets")
-# Legacy roots retained for compatibility and cleanup of pre-migration artifacts.
-CACHE_DIR: str = _yaml_str("paths", "cache_dir", default="cache")
-RESULTS_DIR: str = _yaml_str("paths", "results_dir", default="results")
-DATA_DIR: str = _yaml_str("paths", "data_dir", default="data")
 CREDENTIALS_FILENAME: str = _yaml_str(
     "paths", "credentials_filename", default="worldquant_brain_credentials.json"
 )

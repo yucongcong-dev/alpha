@@ -444,10 +444,6 @@ misc:
 paths:
   credentials_dir: ".credentials"
   datasets_dir: "datasets"
-  # Legacy top-level runtime roots, retained only for compatibility cleanup.
-  cache_dir: "cache"
-  results_dir: "results"
-  data_dir: "data"
   credentials_filename: "worldquant_brain_credentials.json"
   credentials_key_filename: "worldquant_brain_credentials.key"
   analysis_suffix: "_analysis.json"

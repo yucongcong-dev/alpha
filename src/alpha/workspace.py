@@ -92,30 +92,6 @@ class WorkspacePaths:
         return self.datasets_dir / dataset_key
 
     @property
-    def cache_dir(self) -> Path:
-        """Legacy top-level cache root retained for cleanup compatibility."""
-        return self.root / "cache"
-
-    @property
-    def results_dir(self) -> Path:
-        """Legacy top-level results root retained for cleanup compatibility."""
-        return self.root / "results"
-
-    @property
-    def data_dir(self) -> Path:
-        return self.root / "data"
-
-    @property
-    def templates_dir(self) -> Path:
-        """Compatibility alias for the dataset workspace root."""
-        return self.datasets_dir
-
-    @property
-    def blacklists_dir(self) -> Path:
-        """Compatibility alias for the dataset workspace root."""
-        return self.datasets_dir
-
-    @property
     def config_dir(self) -> Path:
         packaged_config = self.resource_root / "config"
         if (packaged_config / "settings.yaml").is_file():
