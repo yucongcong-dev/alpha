@@ -20,16 +20,10 @@ import logging
 import time
 from typing import NamedTuple
 
-from ..analysis.result_identity import (
-    is_informative_result,
-    is_queue_timeout_result,
-    result_identity,
-)
-from ..analysis.template_stats import update_template_stats_with_result
 from ..api.timing import wait_seconds
 from ..models.domain import FieldTestResult
 from ..models.runtime_options import ResultWriteOptions
-from ..models.runtime_protocols import RunConfig, SchedulerRuntimeArgs
+from ..models.runtime_protocols import RunConfig, SchedulerRuntimeArgs, TemplateStats
 from ..runtime.contexts import FutureCompletionContext
 from ..runtime.state import ExecutionState, RuntimeConcurrencyState
 from .result_processing import apply_completed_result
@@ -92,7 +86,7 @@ def _apply_queue_busy_decision(
 class DrainResult(NamedTuple):
     """批量结果消费的结果对象（不可变）"""
 
-    template_stats: dict[str, dict[str, int]]
+    template_stats: TemplateStats
     congestion_detected: bool
     queue_busy_field_id: str | None
 
@@ -228,10 +222,6 @@ def handle_completed_future(
         result,
         completion_ctx=completion_ctx,
         execution_state=execution_state,
-        is_informative_result_fn=is_informative_result,
-        is_queue_timeout_result_fn=is_queue_timeout_result,
-        result_identity_fn=result_identity,
-        update_template_stats_with_result_fn=update_template_stats_with_result,
     )
     return DrainResult(template_stats, congestion_detected, queue_busy_field_id)
 
@@ -251,7 +241,7 @@ def drain_completed_futures(
     template_library_fingerprint: str,
     run_config: RunConfig | None,
     runtime_state: RuntimeConcurrencyState,
-) -> dict[str, dict[str, int]]:
+) -> TemplateStats:
     """
     消费已完成的 future，落盘结果并更新队列退避状态。
 
@@ -297,7 +287,7 @@ def drain_completed_futures_with_context(
     args: SchedulerRuntimeArgs,
     completion_ctx: FutureCompletionContext,
     runtime_state: RuntimeConcurrencyState,
-) -> dict[str, dict[str, int]]:
+) -> TemplateStats:
     """Consume completed futures using a prebuilt immutable completion context."""
     for done_future in completed_futures:
         drain_result = handle_completed_future(

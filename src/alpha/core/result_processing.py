@@ -7,14 +7,12 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable, Sequence
+from dataclasses import dataclass
 import logging
-from typing import cast
+from typing import Any, Protocol
 
-from ..analysis.result_identity import (
-    is_informative_result,
-    is_queue_timeout_result,
-    result_identity,
-)
+from ..analysis.result_identity import is_informative_result, result_identity
 from ..analysis.template_stats import update_template_stats_with_result
 from ..config.constants import STATUS_ERROR, STATUS_SKIPPED
 from ..models.domain import FieldTestResult
@@ -22,10 +20,68 @@ from ..models.runtime_protocols import TemplateStats
 from ..policy.blacklist_runtime_stats import build_blacklist_runtime_stats
 from ..policy.blacklist_runtime_updates import auto_update_blacklist_incremental
 from ..policy.evaluation import summarize_policy_evaluation
+from ..policy.types import BlacklistEntryKey, BlacklistRuntimeStats
 from ..runtime.contexts import FutureCompletionContext
 from ..runtime.state import ExecutionState
 
 logger = logging.getLogger(__name__)
+
+ResultIdentity = tuple[str, str, str, str]
+
+
+class IncrementalResultsWriter(Protocol):
+    """Persistence port for one incremental result batch."""
+
+    def __call__(
+        self,
+        path: str,
+        dataset_id: str,
+        new_results: list[FieldTestResult],
+        *,
+        persisted_result_count: int,
+        tested: int,
+        unique_fields_tested: int,
+        submittable_count: int,
+        submitted_count: int,
+        error_count: int,
+        queue_timeout_count: int,
+        settings_fingerprint: str,
+        template_library_fingerprint: str,
+        run_config: dict[str, Any] | None = None,
+        template_registry_summary: list[dict[str, Any]] | None = None,
+        template_stats: TemplateStats | None = None,
+        policy_evaluation: dict[str, Any] | None = None,
+    ) -> int: ...
+
+
+@dataclass(frozen=True)
+class ResultProcessingServices:
+    """Typed dependencies for state updates, policy effects, and persistence."""
+
+    is_informative_result: Callable[[FieldTestResult], bool]
+    result_identity: Callable[[FieldTestResult], ResultIdentity]
+    update_template_stats_with_result: Callable[[TemplateStats, FieldTestResult], TemplateStats]
+    build_blacklist_runtime_stats: Callable[[list[FieldTestResult]], BlacklistRuntimeStats]
+    auto_update_blacklist_incremental: Callable[
+        [BlacklistRuntimeStats, set[BlacklistEntryKey], FieldTestResult, str], bool
+    ]
+    dump_results_incremental: IncrementalResultsWriter
+    summarize_policy_evaluation: Callable[[Sequence[FieldTestResult]], dict[str, Any]]
+
+
+def build_result_processing_services() -> ResultProcessingServices:
+    """Resolve current module/I/O dependencies so runtime overrides remain effective."""
+    from ..io.results_store import dump_results_incremental
+
+    return ResultProcessingServices(
+        is_informative_result=is_informative_result,
+        result_identity=result_identity,
+        update_template_stats_with_result=update_template_stats_with_result,
+        build_blacklist_runtime_stats=build_blacklist_runtime_stats,
+        auto_update_blacklist_incremental=auto_update_blacklist_incremental,
+        dump_results_incremental=dump_results_incremental,
+        summarize_policy_evaluation=summarize_policy_evaluation,
+    )
 
 
 def detect_result_congestion(
@@ -55,19 +111,15 @@ def apply_result_state_updates(
     result: FieldTestResult,
     *,
     execution_state: ExecutionState,
-    is_informative_result_fn,
-    is_queue_timeout_result_fn,
-    result_identity_fn,
-    update_template_stats_with_result_fn,
-) -> dict[str, dict[str, int]]:
+    services: ResultProcessingServices,
+) -> TemplateStats:
     """Apply one completed result to execution counters and template stats."""
     execution_state.results.append(result)
     execution_state.refresh_metrics()
-    if is_informative_result_fn(result):
-        execution_state.attempted_keys.add(result_identity_fn(result))
-    template_stats = cast(
-        TemplateStats,
-        update_template_stats_with_result_fn(execution_state.template_stats, result),
+    if services.is_informative_result(result):
+        execution_state.attempted_keys.add(services.result_identity(result))
+    template_stats = services.update_template_stats_with_result(
+        execution_state.template_stats, result
     )
     execution_state.template_stats = template_stats
     return template_stats
@@ -116,17 +168,16 @@ def maybe_update_blacklist_incrementally(
     execution_state: ExecutionState,
     dataset_id: str,
     auto_update_enabled: bool,
-    build_blacklist_runtime_stats_fn,
-    auto_update_blacklist_incremental_fn,
+    services: ResultProcessingServices,
 ) -> None:
     """Apply incremental blacklist side effects for one completed result if enabled."""
     if not auto_update_enabled:
         return
     if not execution_state.blacklist_runtime_stats and len(execution_state.results) > 1:
-        execution_state.blacklist_runtime_stats = build_blacklist_runtime_stats_fn(
+        execution_state.blacklist_runtime_stats = services.build_blacklist_runtime_stats(
             execution_state.results[:-1]
         )
-    auto_update_blacklist_incremental_fn(
+    services.auto_update_blacklist_incremental(
         execution_state.blacklist_runtime_stats,
         execution_state.blacklisted_template_keys,
         result,
@@ -139,12 +190,12 @@ def persist_incremental_result(
     *,
     completion_ctx: FutureCompletionContext,
     execution_state: ExecutionState,
-    dump_results_incremental_fn,
+    services: ResultProcessingServices,
 ) -> None:
     """Persist one completed result and updated counters to the journal/results store."""
     result_write_options = completion_ctx.result_write_options
     metrics = execution_state.refresh_metrics()
-    execution_state.persisted_result_count = dump_results_incremental_fn(
+    execution_state.persisted_result_count = services.dump_results_incremental(
         result_write_options.output_path,
         result_write_options.dataset_id,
         [result],
@@ -159,7 +210,7 @@ def persist_incremental_result(
         template_library_fingerprint=completion_ctx.template_library_fingerprint,
         run_config=completion_ctx.run_config,
         template_stats=execution_state.template_stats,
-        policy_evaluation=summarize_policy_evaluation(execution_state.results),
+        policy_evaluation=services.summarize_policy_evaluation(execution_state.results),
     )
 
 
@@ -183,23 +234,15 @@ def apply_completed_result(
     *,
     completion_ctx: FutureCompletionContext,
     execution_state: ExecutionState,
-    is_informative_result_fn=is_informative_result,
-    is_queue_timeout_result_fn=is_queue_timeout_result,
-    result_identity_fn=result_identity,
-    update_template_stats_with_result_fn=update_template_stats_with_result,
-    build_blacklist_runtime_stats_fn=build_blacklist_runtime_stats,
-    auto_update_blacklist_incremental_fn=auto_update_blacklist_incremental,
-    dump_results_incremental_fn=None,
-) -> tuple[dict[str, dict[str, int]], bool, str | None]:
+    services: ResultProcessingServices | None = None,
+) -> tuple[TemplateStats, bool, str | None]:
     """把单条结果并入执行状态，并执行增量持久化与策略副作用。"""
+    active_services = services or build_result_processing_services()
     result_write_options = completion_ctx.result_write_options
     template_stats = apply_result_state_updates(
         result,
         execution_state=execution_state,
-        is_informative_result_fn=is_informative_result_fn,
-        is_queue_timeout_result_fn=is_queue_timeout_result_fn,
-        result_identity_fn=result_identity_fn,
-        update_template_stats_with_result_fn=update_template_stats_with_result_fn,
+        services=active_services,
     )
     log_completed_result(result)
     maybe_update_blacklist_incrementally(
@@ -207,19 +250,14 @@ def apply_completed_result(
         execution_state=execution_state,
         dataset_id=result_write_options.dataset_id,
         auto_update_enabled=result_write_options.auto_update_blacklist,
-        build_blacklist_runtime_stats_fn=build_blacklist_runtime_stats_fn,
-        auto_update_blacklist_incremental_fn=auto_update_blacklist_incremental_fn,
+        services=active_services,
     )
 
-    if dump_results_incremental_fn is None:
-        from ..io.results_store import dump_results_incremental
-
-        dump_results_incremental_fn = dump_results_incremental
     persist_incremental_result(
         result,
         completion_ctx=completion_ctx,
         execution_state=execution_state,
-        dump_results_incremental_fn=dump_results_incremental_fn,
+        services=active_services,
     )
     congestion_detected, queue_busy_field_id = detect_result_congestion(result)
     log_congestion_signals(result)

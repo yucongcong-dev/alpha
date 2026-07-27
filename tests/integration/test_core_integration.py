@@ -395,9 +395,9 @@ class TestDrainCompletedFuturesFlow:
 
         with (
             patch("alpha.io.results_store.dump_results_incremental"),
-            patch("alpha.core.scheduler.is_informative_result", return_value=True),
+            patch("alpha.core.result_processing.is_informative_result", return_value=True),
             patch(
-                "alpha.core.scheduler.result_identity",
+                "alpha.core.result_processing.result_identity",
                 return_value=("f1", "tpl", "rank(test)", "abc"),
             ),
         ):
@@ -449,7 +449,7 @@ class TestDrainCompletedFuturesFlow:
 
         with (
             patch("alpha.io.results_store.dump_results_incremental"),
-            patch("alpha.core.scheduler.is_informative_result", return_value=False),
+            patch("alpha.core.result_processing.is_informative_result", return_value=False),
         ):
             drain_completed_futures(
                 completed_futures=[future],
@@ -487,7 +487,7 @@ class TestDrainCompletedFuturesFlow:
 
         with (
             patch("alpha.io.results_store.dump_results_incremental"),
-            patch("alpha.core.scheduler.is_informative_result", return_value=False),
+            patch("alpha.core.result_processing.is_informative_result", return_value=False),
         ):
             drain_completed_futures(
                 completed_futures=[future],

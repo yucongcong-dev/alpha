@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
-from typing import TYPE_CHECKING, Protocol
+from typing import TYPE_CHECKING, Any, Protocol
 
 if TYPE_CHECKING:
     from ..api.client import BrainClient
@@ -12,7 +12,7 @@ from .domain import FieldTestResult, TemplateCandidate
 from .domain_types import FieldFeedbackSummary
 
 TemplateFeedback = FieldFeedbackSummary
-TemplateStats = dict[str, dict[str, int]]
+TemplateStats = dict[str, dict[str, Any]]
 RunConfig = dict[str, object]
 BlacklistRuntimeStats = dict[str, dict[str, object]]
 
