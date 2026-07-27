@@ -56,13 +56,13 @@
 - 今日唯一正式主干：
   - `cashflow_op`
 - 今日现役资产：
-  - 模板包：[cashflow_submit_core preset](/Users/boyaa/Downloads/alpha/datasets/fundamental6/presets/cashflow_submit_core/template.json)
-  - 字段白名单：[cashflow_submit_core_field.txt](/Users/boyaa/Downloads/alpha/datasets/fundamental6/presets/cashflow_submit_core/fields.txt)
-  - 模板白名单：[cashflow_submit_core_templates.txt](/Users/boyaa/Downloads/alpha/datasets/fundamental6/presets/cashflow_submit_core/templates.txt)
+  - 模板包：[cashflow_submit_core preset](presets/cashflow_submit_core/template.json)
+  - 字段白名单：[fields.txt](presets/cashflow_submit_core/fields.txt)
+  - 模板白名单：[templates.txt](presets/cashflow_submit_core/templates.txt)
 - 今日次主线验证资产：
-  - 模板包：[cashflow_submit_zscore_core preset](/Users/boyaa/Downloads/alpha/datasets/fundamental6/presets/cashflow_submit_zscore_core/template.json)
+  - 模板包：[cashflow_submit_zscore_core preset](presets/cashflow_submit_zscore_core/template.json)
 - 今日观察线：
-  - [lctq_watch preset](/Users/boyaa/Downloads/alpha/datasets/fundamental6/presets/lctq_watch/template.json)
+  - [lctq_watch preset](presets/lctq_watch/template.json)
 - 今日不建议做的事：
   - 不恢复 broad-search
   - 不继续扩 `cogs`
@@ -489,10 +489,7 @@ PYTHONPATH=src python3.10 -m alpha \
 
 `round15` 的意义，不是继续找新结构，而是验证上面这个最小提交包能不能稳定复跑。
 
-对应结果文件：
-
-- `datasets/fundamental6/runs/clean_verify_round15_cashflow_core/analysis.json`
-- `datasets/fundamental6/runs/clean_verify_round15_cashflow_core/results.jsonl`
+当时的本地运行产物未作为长期资产保留；核心指标和表达式结论已完整沉淀如下。
 
 核心结果：
 
@@ -523,10 +520,7 @@ PYTHONPATH=src python3.10 -m alpha \
 
 `round16` 的意义，是在新一天重新跑一次同一个最小提交包，确认主干没有漂移。
 
-对应结果文件：
-
-- `datasets/fundamental6/runs/clean_verify_round16_cashflow_core/analysis.json`
-- `datasets/fundamental6/runs/clean_verify_round16_cashflow_core/results.jsonl`
+当时的本地运行产物未作为长期资产保留；核心指标和复现结论已完整沉淀如下。
 
 核心结果：
 
@@ -582,7 +576,7 @@ PYTHONPATH=src python3.10 -m alpha \
 在把现役字段白名单和模板白名单收正之后，同一天又做了一次真实验证：
 
 - 执行方式：直接运行最小健康检查命令
-- 结果文件：`datasets/fundamental6/runs/verify_cashflow_core_2026-07-24/summary.json`
+- 运行产物不作为长期知识资产；本轮关键结果已记录在本节
 - 本轮实际是“单枪健康检查”，不是“双模板全量展开”
 
 本轮落地结果：
@@ -612,7 +606,7 @@ PYTHONPATH=src python3.10 -m alpha \
 
 在当天后续又做了一轮 `core pack` 真实复跑：
 
-- 结果文件：`datasets/fundamental6/runs/verify_cashflow_core_2026-07-24_rerun/summary.json`
+- 运行产物不作为长期知识资产；本轮关键结果已记录在本节
 - 本轮目标：不是继续找新模板，而是确认现役双主线能否在同一天再次一起复现
 
 核心结果：
@@ -639,7 +633,7 @@ PYTHONPATH=src python3.10 -m alpha \
 除了双主线 `core pack` 复跑之外，当天还单独把 `grouped zscore over cap` 这条主线拆成一模板 pack 做了独立验证：
 
 - 模板包：`datasets/fundamental6/presets/cashflow_submit_zscore_core/template.json`
-- 结果文件：`datasets/fundamental6/runs/verify_cashflow_zscore_pack_2026-07-24_fixed/summary.json`
+- 运行产物不作为长期知识资产；本轮关键结果已记录在本节
 
 核心结果：
 

@@ -102,7 +102,7 @@ PYTHONPATH=src python3.10 -m alpha \
 
 当前已落地结果摘要：
 
-- 结果文件：`datasets/option8/runs/phase1entryvalidation/results.jsonl`
+- 运行产物不作为长期知识资产；本轮关键结果已记录在本节
 - 已落地总数：`3`
 - `submittable = 0`
 - 当前通过率：`0%`

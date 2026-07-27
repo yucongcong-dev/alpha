@@ -103,12 +103,12 @@ Broad exploration：
 Focused refine：
 - 历史上的 focused fixtures 并没有完整保留为现役文件集合；当前更适合作为“历史轮次说明”，而不是可直接点击复用的本地入口。
 - 当前仓库里仍然存在、可直接复用的 refine 资产主要是：
-  - [presets/broad_search_neighbors/template.json](/Users/boyaa/Downloads/alpha/datasets/model51/presets/broad_search_neighbors/template.json)
-  - [presets/unsystematic60_refine_round14/template.json](/Users/boyaa/Downloads/alpha/datasets/model51/presets/unsystematic60_refine_round14/template.json)
-  - [presets/unsystematic60_refine_round15/template.json](/Users/boyaa/Downloads/alpha/datasets/model51/presets/unsystematic60_refine_round15/template.json)
-  - [presets/systematic30_refine_round16/template.json](/Users/boyaa/Downloads/alpha/datasets/model51/presets/systematic30_refine_round16/template.json)
-  - [presets/unsystematic60_refine_round14/fields.txt](/Users/boyaa/Downloads/alpha/datasets/model51/presets/unsystematic60_refine_round14/fields.txt)
-  - [presets/systematic30_refine_round16/fields.txt](/Users/boyaa/Downloads/alpha/datasets/model51/presets/systematic30_refine_round16/fields.txt)
+  - [presets/broad_search_neighbors/template.json](presets/broad_search_neighbors/template.json)
+  - [presets/unsystematic60_refine_round14/template.json](presets/unsystematic60_refine_round14/template.json)
+  - [presets/unsystematic60_refine_round15/template.json](presets/unsystematic60_refine_round15/template.json)
+  - [presets/systematic30_refine_round16/template.json](presets/systematic30_refine_round16/template.json)
+  - [presets/unsystematic60_refine_round14/fields.txt](presets/unsystematic60_refine_round14/fields.txt)
+  - [presets/systematic30_refine_round16/fields.txt](presets/systematic30_refine_round16/fields.txt)
 
 Preset 约定：
 - `template.json` 保持为默认、窄化后的生产模板库。
@@ -144,8 +144,8 @@ Preset 约定：
 
 随后仓库把 active branch 切到了 `systematic_risk_last_30_days`，并准备了：
 
-- [presets/systematic30_refine_round16/fields.txt](/Users/boyaa/Downloads/alpha/datasets/model51/presets/systematic30_refine_round16/fields.txt)
-- [presets/systematic30_refine_round16/template.json](/Users/boyaa/Downloads/alpha/datasets/model51/presets/systematic30_refine_round16/template.json)
+- [presets/systematic30_refine_round16/fields.txt](presets/systematic30_refine_round16/fields.txt)
+- [presets/systematic30_refine_round16/template.json](presets/systematic30_refine_round16/template.json)
 
 但 `2026-07-17 round16` 的最新结果同样没有形成新增价值：
 

@@ -26,17 +26,7 @@
 
 这里只讲第一次学习所需的最小知识；平台状态的完整定义放在 Reference。
 
-### 02 优化与提交
-
-[03_optimization_and_submission.md](03_optimization_and_submission.md) 负责研究后半程：
-
-- `LOW_SHARPE / LOW_FITNESS / HIGH_TURNOVER`
-- 权重、Sub-Universe、相关性和成本问题
-- 抗过拟合与稳定性验证
-- Neutralization 和 D0 的最终决策
-- 提交前统一检查顺序
-
-### 03 数据研究与仓库实践
+### 02 数据研究与仓库实践
 
 [02_research_and_data_guide.md](02_research_and_data_guide.md) 负责从想法到实验：
 
@@ -47,6 +37,16 @@
 - Broad search、Local refine、模板库设计
 - 仓库知识边界和候选池视角
 
+### 03 优化与提交
+
+[03_optimization_and_submission.md](03_optimization_and_submission.md) 负责研究后半程：
+
+- `LOW_SHARPE / LOW_FITNESS / HIGH_TURNOVER`
+- 权重、Sub-Universe、相关性和成本问题
+- 抗过拟合与稳定性验证
+- Neutralization 和 D0 的最终决策
+- 提交前统一检查顺序
+
 ### 04 平台 Reference
 
 [04_platform_reference.md](04_platform_reference.md) 是查表文档：
@@ -56,7 +56,7 @@
 - NaN、Pasteurize、Coverage、Correlation
 - submission check 名称和页面语义
 
-Reference 主要回答“这个词是什么意思”；具体怎么优化，回到 02。
+Reference 主要回答“这个词是什么意思”；具体怎么优化，回到 03。
 
 ## 按问题快速定位
 
