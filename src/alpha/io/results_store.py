@@ -261,7 +261,14 @@ def dump_results_incremental(
         "submitted": submitted_count,
         "errors": error_count,
         "queue_timeouts": queue_timeout_count,
-        "policy_evaluation": policy_evaluation or {"groups": []},
+        "policy_evaluation": policy_evaluation
+        or {
+            "evaluation_unit": "field",
+            "confidence_level": 0.95,
+            "minimum_fields_per_arm": 20,
+            "groups": [],
+            "comparisons": [],
+        },
         "results_embedded": False,
         "results_journal": sidecar_paths["results_journal"],
     }
