@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, Generic, TypeVar, cast, overload
+
+_T = TypeVar("_T")
 
 
 def _value(args: object, name: str, default: Any = None) -> Any:
@@ -199,271 +201,31 @@ class RuntimeFlagsConfig:
         )
 
 
-class CredentialsConfigView:
-    __slots__ = ()
-
-    credentials: CredentialsConfig
-
-    @property
-    def email(self) -> str | None:
-        return self.credentials.email
-
-    @property
-    def password(self) -> str | None:
-        return self.credentials.password
-
-    @property
-    def include_credentials(self) -> bool:
-        return self.credentials.include_credentials
-
-    @property
-    def dry_run_clean(self) -> bool:
-        return self.credentials.dry_run_clean
-
-
-class DatasetConfigView:
-    __slots__ = ()
-
-    dataset: DatasetConfig
-
-    @property
-    def dataset_id(self) -> str:
-        return self.dataset.dataset_id
-
-    @property
-    def region(self) -> str:
-        return self.dataset.region
-
-    @property
-    def universe(self) -> str:
-        return self.dataset.universe
-
-    @property
-    def instrument_type(self) -> str:
-        return self.dataset.instrument_type
-
-    @property
-    def delay(self) -> int:
-        return self.dataset.delay
-
-
-class SimulationConfigView:
-    __slots__ = ()
-
-    simulation: SimulationConfig
-
-    @property
-    def decay(self) -> int:
-        return self.simulation.decay
-
-    @property
-    def neutralization(self) -> str:
-        return self.simulation.neutralization
-
-    @property
-    def truncation(self) -> float:
-        return self.simulation.truncation
-
-    @property
-    def nan_handling(self) -> str:
-        return self.simulation.nan_handling
-
-    @property
-    def pasteurization(self) -> str:
-        return self.simulation.pasteurization
-
-    @property
-    def unit_handling(self) -> str:
-        return self.simulation.unit_handling
-
-    @property
-    def max_trade(self) -> str:
-        return self.simulation.max_trade
-
-    @property
-    def language(self) -> str:
-        return self.simulation.language
-
-    @property
-    def start_date(self) -> str | None:
-        return self.simulation.start_date
-
-    @property
-    def end_date(self) -> str | None:
-        return self.simulation.end_date
-
-    @property
-    def backfill_window(self) -> int:
-        return self.simulation.backfill_window
-
-
-class PlanningConfigView:
-    __slots__ = ()
-
-    planning: PlanningConfig
-
-    @property
-    def smoke_test(self) -> bool:
-        return self.planning.smoke_test
-
-    @property
-    def full_run(self) -> bool:
-        return self.planning.full_run
-
-    @property
-    def dry_run_plan(self) -> bool:
-        return self.planning.dry_run_plan
-
-    @property
-    def limit(self) -> int:
-        return self.planning.limit
-
-    @property
-    def offset(self) -> int:
-        return self.planning.offset
-
-    @property
-    def page_size(self) -> int:
-        return self.planning.page_size
-
-    @property
-    def sleep_between_fields(self) -> float:
-        return self.planning.sleep_between_fields
-
-    @property
-    def max_templates_per_field(self) -> int:
-        return self.planning.max_templates_per_field
-
-    @property
-    def max_templates_per_family(self) -> int:
-        return self.planning.max_templates_per_family
-
-    @property
-    def field_template_batch_size(self) -> int:
-        return self.planning.field_template_batch_size
-
-    @property
-    def legacy_similarity_penalty(self) -> int:
-        return self.planning.legacy_similarity_penalty
-
-    @property
-    def disable_legacy_after(self) -> int:
-        return self.planning.disable_legacy_after
-
-    @property
-    def template_disable_after(self) -> int:
-        return self.planning.template_disable_after
-
-    @property
-    def top_fields_by_feedback(self) -> int:
-        return self.planning.top_fields_by_feedback
-
-    @property
-    def stop_after_submittable(self) -> int:
-        return self.planning.stop_after_submittable
-
-
-class ExecutionConfigView:
-    __slots__ = ()
-
-    execution: ExecutionConfig
-
-    @property
-    def min_request_interval(self) -> float:
-        return self.execution.min_request_interval
-
-    @property
-    def rate_limit_max_retries(self) -> int:
-        return self.execution.rate_limit_max_retries
-
-    @property
-    def login_retries(self) -> int:
-        return self.execution.login_retries
-
-    @property
-    def simulation_create_retries(self) -> int:
-        return self.execution.simulation_create_retries
-
-    @property
-    def simulation_poll_retries(self) -> int:
-        return self.execution.simulation_poll_retries
-
-    @property
-    def max_concurrent_simulations(self) -> int:
-        return self.execution.max_concurrent_simulations
-
-    @property
-    def max_concurrent_creates(self) -> int:
-        return self.execution.max_concurrent_creates
-
-    @property
-    def simulation_max_polls(self) -> int:
-        return self.execution.simulation_max_polls
-
-    @property
-    def simulation_max_wait_seconds(self) -> float:
-        return self.execution.simulation_max_wait_seconds
-
-    @property
-    def simulation_max_pending_cycles(self) -> int:
-        return self.execution.simulation_max_pending_cycles
-
-    @property
-    def simulation_max_queue_seconds(self) -> float:
-        return self.execution.simulation_max_queue_seconds
-
-    @property
-    def queue_busy_cooldown_seconds(self) -> float:
-        return self.execution.queue_busy_cooldown_seconds
-
-    @property
-    def field_queue_busy_skip_after(self) -> int:
-        return self.execution.field_queue_busy_skip_after
-
-    @property
-    def check_submit_retries(self) -> int:
-        return self.execution.check_submit_retries
-
-
-class QualityConfigView:
-    __slots__ = ()
-
-    quality: QualityConfig
-
-    @property
-    def min_sharpe(self) -> float:
-        return self.quality.min_sharpe
-
-    @property
-    def min_fitness(self) -> float:
-        return self.quality.min_fitness
-
-    @property
-    def min_turnover(self) -> float:
-        return self.quality.min_turnover
-
-    @property
-    def max_turnover(self) -> float:
-        return self.quality.max_turnover
-
-    @property
-    def max_weight(self) -> float:
-        return self.quality.max_weight
-
-
-class RuntimeFlagsConfigView:
-    __slots__ = ()
-
-    runtime_flags: RuntimeFlagsConfig
-
-    @property
-    def auto_update_blacklist(self) -> bool:
-        return self.runtime_flags.auto_update_blacklist
-
-    @property
-    def verbose(self) -> bool:
-        return self.runtime_flags.verbose
-
-    @property
-    def quiet(self) -> bool:
-        return self.runtime_flags.quiet
+class SectionField(Generic[_T]):
+    """Read-only descriptor forwarding one flat compatibility field to a section."""
+
+    __slots__ = ("field_name", "section_name")
+
+    def __init__(self, section_name: str, field_name: str = "") -> None:
+        self.section_name = section_name
+        self.field_name = field_name
+
+    def __set_name__(self, _owner: type[object], name: str) -> None:
+        if not self.field_name:
+            self.field_name = name
+
+    @overload
+    def __get__(self, instance: None, owner: type[object] | None = None) -> SectionField[_T]: ...
+
+    @overload
+    def __get__(self, instance: object, owner: type[object] | None = None) -> _T: ...
+
+    def __get__(
+        self,
+        instance: object | None,
+        owner: type[object] | None = None,
+    ) -> SectionField[_T] | _T:
+        if instance is None:
+            return self
+        section = getattr(instance, self.section_name)
+        return cast(_T, getattr(section, self.field_name))
