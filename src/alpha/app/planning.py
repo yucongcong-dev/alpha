@@ -8,7 +8,8 @@ from ..analysis.feedback_history import build_historical_run_state
 from ..cli.filters import load_run_filters_extended
 from ..core.executor import print_dry_run_plan
 from ..generators.fields import load_fields_cache
-from ..generators.templates import ensure_dataset_template_library, load_template_library
+from ..generators.templates.library_loader import load_template_library
+from ..generators.templates.library_store import ensure_dataset_template_library
 from ..models.io_types import RunPaths
 from ..models.runtime_options import FieldFetchOptions
 from ..models.runtime_protocols import BootstrapRuntimeArgs

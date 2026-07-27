@@ -62,6 +62,11 @@ compat-import-check:
 		echo "[check] internal code should import generators.payload/fingerprint/variants instead of generators.settings" >&2; \
 		exit 1; \
 	fi
+	@if rg -n "from \.\.generators\.templates import|from \.generators\.templates import|from alpha\.generators\.templates import" src/alpha \
+		--glob '!generators/templates/__init__.py'; then \
+		echo "[check] internal code should import concrete generators.templates modules instead of compatibility exports" >&2; \
+		exit 1; \
+	fi
 
 arch-boundary-check:
 	@if rg -n "(from alpha\.app(\.| import)|import alpha\.app(\.|$$)|from \.\.app(\.| import)|from \.app(\.| import))" src/alpha \

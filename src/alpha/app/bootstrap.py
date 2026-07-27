@@ -22,7 +22,8 @@ from ..config.runtime_values import get_runtime_config
 from ..generators.fields import fetch_fields_with_cache, load_fields_cache
 from ..generators.fingerprint import stable_fingerprint
 from ..generators.payload import build_settings_fingerprint
-from ..generators.templates import ensure_dataset_template_library, load_template_library
+from ..generators.templates.library_loader import load_template_library
+from ..generators.templates.library_store import ensure_dataset_template_library
 from ..io.credentials import load_credentials
 from ..io.output_paths import cleanup_legacy_sidecar_files
 from ..models.io_types import RunPaths
