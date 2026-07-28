@@ -43,6 +43,8 @@ from .scheduler_decisions import (
 
 logger = logging.getLogger(__name__)
 
+QueueRetryKey = tuple[str, str, str, str]
+
 
 def _stop_after_submittable_threshold(args: SchedulerRuntimeArgs) -> int:
     try:
@@ -88,7 +90,7 @@ class DrainResult(NamedTuple):
 
     template_stats: TemplateStats
     congestion_detected: bool
-    queue_busy_field_id: str | None
+    queue_busy_key: QueueRetryKey | None
 
 
 # ============================================================================
@@ -143,6 +145,37 @@ def register_queue_busy_field(
         field_queue_busy_counts=field_queue_busy_counts,
         skipped_fields_due_to_queue=skipped_fields_due_to_queue,
     )
+
+
+def register_queue_busy_template(
+    key: QueueRetryKey | None,
+    args: SchedulerRuntimeArgs,
+    execution_state: ExecutionState,
+) -> None:
+    """Bound retries for one candidate without blacklisting its whole field."""
+    if key is None:
+        return
+    retry_limit = max(0, int(args.field_queue_busy_skip_after or 0))
+    next_count = execution_state.queue_retry_counts.get(key, 0) + 1
+    execution_state.queue_retry_counts[key] = next_count
+    if retry_limit > 0 and next_count >= retry_limit:
+        execution_state.queue_exhausted_keys.add(key)
+        logger.info(
+            "[queue] exhausted retry budget %d/%d field=%s template=%s settings=%s",
+            next_count,
+            retry_limit,
+            key[0],
+            key[1],
+            key[3],
+        )
+    else:
+        logger.info(
+            "[queue] candidate remains retryable attempt=%d%s field=%s template=%s",
+            next_count,
+            f"/{retry_limit}" if retry_limit > 0 else "",
+            key[0],
+            key[1],
+        )
 
 
 def throttle_before_submission(args: SchedulerRuntimeArgs, execution_state: ExecutionState) -> None:
@@ -202,10 +235,10 @@ def handle_completed_future(
         execution_state: 执行状态对象（会被修改）。
 
     Returns:
-        tuple[dict[str, dict[str, int]], bool, str | None]: 返回一个元组，包含：
+        DrainResult: 返回已更新的模板统计和拥塞信息：
             - template_stats: 更新后的模板统计数据
             - congestion_detected: 是否检测到拥塞
-            - queue_busy_field_id: 队列拥塞的字段 ID（如果有）
+            - queue_busy_key: 队列超时的候选身份（如果有）
 
     Note:
         - 结果立即落盘以防止中断丢失
@@ -218,12 +251,12 @@ def handle_completed_future(
         template_library_fingerprint=completion_ctx.template_library_fingerprint,
     )
 
-    template_stats, congestion_detected, queue_busy_field_id = apply_completed_result(
+    template_stats, congestion_detected, queue_busy_key = apply_completed_result(
         result,
         completion_ctx=completion_ctx,
         execution_state=execution_state,
     )
-    return DrainResult(template_stats, congestion_detected, queue_busy_field_id)
+    return DrainResult(template_stats, congestion_detected, queue_busy_key)
 
 
 # ============================================================================
@@ -297,15 +330,14 @@ def drain_completed_futures_with_context(
         )
         execution_state.template_stats = drain_result.template_stats
         current_submittable_count = execution_state.refresh_metrics().submittable_count
-        queue_busy_field_id = drain_result.queue_busy_field_id
+        # Queue timeouts are tracked per candidate below. Keep the shared
+        # decision helper focused here on stop/cooldown state only.
         decision = decide_drain_state_updates(
             stop_threshold=_stop_after_submittable_threshold(args),
             current_submittable_count=current_submittable_count,
             congestion_detected=drain_result.congestion_detected,
-            queue_busy_field_id=queue_busy_field_id,
-            current_queue_busy_count=execution_state.field_queue_busy_counts.get(
-                queue_busy_field_id or "", 0
-            ),
+            queue_busy_field_id=None,
+            current_queue_busy_count=0,
             queue_busy_skip_after=args.field_queue_busy_skip_after,
         )
         _apply_drain_state_decision(
@@ -314,4 +346,5 @@ def drain_completed_futures_with_context(
             execution_state=execution_state,
             runtime_state=runtime_state,
         )
+        register_queue_busy_template(drain_result.queue_busy_key, args, execution_state)
     return execution_state.template_stats

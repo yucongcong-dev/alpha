@@ -87,8 +87,8 @@ def build_result_processing_services() -> ResultProcessingServices:
 
 def detect_result_congestion(
     result: FieldTestResult,
-) -> tuple[bool, str | None]:
-    """识别单条结果中的拥塞信号和应跳过的字段。"""
+) -> tuple[bool, ResultIdentity | None]:
+    """识别单条结果中的全局拥塞信号和候选级队列超时。"""
     congestion_detected = False
     if "CONCURRENT_SIMULATION_LIMIT_EXCEEDED" in result.message:
         congestion_detected = True
@@ -100,12 +100,12 @@ def detect_result_congestion(
         and "rate limited" in result.message.lower()
     ):
         congestion_detected = True
-    queue_busy_field_id = None
+    queue_busy_key = None
     if result.failed_stage == "simulation" and isinstance(result.message, str):
         lowered = result.message.lower()
         if "queued too long" in lowered or "queue budget" in lowered:
-            queue_busy_field_id = result.field_id
-    return congestion_detected, queue_busy_field_id
+            queue_busy_key = result_identity(result)
+    return congestion_detected, queue_busy_key
 
 
 def apply_result_state_updates(
@@ -237,7 +237,7 @@ def apply_completed_result(
     completion_ctx: FutureCompletionContext,
     execution_state: ExecutionState,
     services: ResultProcessingServices | None = None,
-) -> tuple[TemplateStats, bool, str | None]:
+) -> tuple[TemplateStats, bool, ResultIdentity | None]:
     """把单条结果并入执行状态，并执行增量持久化与策略副作用。"""
     active_services = services or build_result_processing_services()
     result_write_options = completion_ctx.result_write_options
@@ -261,6 +261,6 @@ def apply_completed_result(
         execution_state=execution_state,
         services=active_services,
     )
-    congestion_detected, queue_busy_field_id = detect_result_congestion(result)
+    congestion_detected, queue_busy_key = detect_result_congestion(result)
     log_congestion_signals(result)
-    return template_stats, congestion_detected, queue_busy_field_id
+    return template_stats, congestion_detected, queue_busy_key

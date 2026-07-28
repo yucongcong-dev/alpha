@@ -103,7 +103,7 @@ def parse_args() -> argparse.Namespace:
             --simulation-max-pending-cycles: 最大等待周期
             --simulation-max-queue-seconds: 最大队列时间
             --queue-busy-cooldown-seconds: 队列冷却时间
-            --field-queue-busy-skip-after: 字段队列跳过阈值
+            --field-queue-busy-skip-after: 单候选队列重试阈值（保留旧参数名）
             --check-submit-retries: 检查提交重试次数
 
             --rate-limit-max-retries: 速率限制重试次数

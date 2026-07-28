@@ -264,7 +264,7 @@ def add_api_runtime_arguments(parser: argparse.ArgumentParser) -> None:
         "--field-queue-busy-skip-after",
         type=int,
         default=2,
-        help="字段队列拥塞后跳过阈值；0 表示不跳过",
+        help="单候选队列拥塞重试阈值（保留旧参数名）；0 表示不限制",
     )
     parser.add_argument("--check-submit-retries", type=int, default=3, help="检查提交重试次数")
 

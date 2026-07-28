@@ -210,8 +210,6 @@ def save_pipeline_state(
         "version": STATE_VERSION,
         "completed_field_index": completed_field_index,
         "last_field_id": field_id,
-        "field_queue_busy_counts": dict(execution_state.field_queue_busy_counts),
-        "skipped_fields_due_to_queue": sorted(execution_state.skipped_fields_due_to_queue),
         "pending_simulations": _serialize_pending_simulations(execution_state),
         "runtime_max_workers": runtime_state.runtime_max_workers,
         "remaining_cooldown_seconds": round(remaining_cooldown, 3),
@@ -289,14 +287,11 @@ def load_pipeline_state(
         )
         return 0
 
-    # 恢复拥塞状态
-    execution_state.field_queue_busy_counts = _restore_queue_busy_counts(
-        payload.get("field_queue_busy_counts")
-    )
-
-    execution_state.skipped_fields_due_to_queue = _restore_string_set(
-        payload.get("skipped_fields_due_to_queue")
-    )
+    # 平台拥塞是瞬时全局状态，不从 checkpoint 恢复字段级跳过信息。
+    execution_state.field_queue_busy_counts = {}
+    execution_state.skipped_fields_due_to_queue = set()
+    execution_state.queue_retry_counts = {}
+    execution_state.queue_exhausted_keys = set()
 
     pending_payload = payload.get("pending_simulations")
     if pending_payload is None:
@@ -347,7 +342,7 @@ def load_pipeline_state(
     logger.info(
         "[checkpoint] resumed from state_file=%s completed=%d "
         "results=%d attempted=%d resumable=%d already_completed=%d retry_from_start=%d "
-        "skipped_fields=%d cooldown=%.1fs",
+        "cooldown=%.1fs",
         state_file,
         completed_index,
         payload.get("result_count", 0),
@@ -355,7 +350,6 @@ def load_pipeline_state(
         len(resumable_simulations),
         already_completed,
         retry_from_start,
-        len(execution_state.skipped_fields_due_to_queue),
         remaining,
     )
 
@@ -420,8 +414,6 @@ def save_checkpoint(
         "pending_count": len(pending_contexts),
         "pending_summary": pending_summary,
         "pending_simulations": _serialize_pending_simulations(execution_state),
-        "field_queue_busy_counts": dict(execution_state.field_queue_busy_counts),
-        "skipped_fields_due_to_queue": sorted(execution_state.skipped_fields_due_to_queue),
         "template_stats": dict(execution_state.template_stats),
         "runtime_max_workers": runtime_state.runtime_max_workers,
         "completed_at": datetime.now(timezone.utc).isoformat(),

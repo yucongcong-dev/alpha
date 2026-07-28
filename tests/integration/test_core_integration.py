@@ -70,11 +70,11 @@ class TestCongestionSignalPropagation:
         "rate limited - please slow down",
     ]
 
-    def test_queue_budget_sets_field_id(
+    def test_queue_budget_sets_candidate_retry_key(
         self,
         scheduler_args: MockArgs,
     ) -> None:
-        """queue budget 消息应设置 queue_busy_field_id（而非 congestion_detected）。"""
+        """queue budget should identify only the affected candidate."""
         future = MagicMock()
         future.result.return_value = FieldTestResult(
             field_id="test_field",
@@ -114,14 +114,14 @@ class TestCongestionSignalPropagation:
         with (
             patch("alpha.analysis.results_persistence.dump_results_incremental"),
         ):
-            _stats, congestion_detected, queue_busy_field_id = handle_completed_future(
+            _stats, congestion_detected, queue_busy_key = handle_completed_future(
                 future,
                 completion_ctx=completion_ctx,
                 execution_state=execution_state,
             )
 
         assert congestion_detected is False
-        assert queue_busy_field_id == "test_field"
+        assert queue_busy_key == ("test_field", "test_tpl", "rank(test)", "")
         assert len(execution_state.results) == 1
 
     @pytest.mark.parametrize("congestion_msg", CONGESTION_MESSAGES)
@@ -174,7 +174,7 @@ class TestCongestionSignalPropagation:
         with (
             patch("alpha.analysis.results_persistence.dump_results_incremental"),
         ):
-            _stats, congestion_detected, _queue_busy_field_id = handle_completed_future(
+            _stats, congestion_detected, _queue_busy_key = handle_completed_future(
                 future,
                 completion_ctx=completion_ctx,
                 execution_state=execution_state,

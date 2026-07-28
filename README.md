@@ -219,7 +219,13 @@ python3.10 -m alpha
 - `PENDING` 不等于通过；这类结果会以 `submittable=null` 落盘，并在 `failed_checks` 中保留原始未决检查
 - 未决结果仍算一次已经执行的组合，续跑时不会重复创建相同 simulation
 - 未决结果不会参与模板统计、字段反馈画像、near-pass 排行、failed-check 学习和策略效果评估
-- 当前 CLI 没有独立的 pending 重查命令；需要在平台确认终态，或使用新的 run 做后续验证
+- 后续正常启动时会先重新查询历史记录中仍为 `PENDING` 且已有 `alpha_id` 的 submission checks；只刷新检查结果，不会重新创建 simulation
+- 如果平台仍返回 `PENDING`，结果会继续保持未决，等待下一次启动再查询
+
+**关于平台队列拥塞的当前流程**：
+- 全局并发冷却仍然生效，避免平台繁忙时持续创建新 simulation
+- `--field-queue-busy-skip-after` 保留旧参数名，但现在按“字段 + 模板 + 表达式 + settings”候选分别计数，不会因为一个候选排队超时而跳过整个字段
+- 候选达到阈值后只在当前进程中停止重试；队列计数不写入 checkpoint，重启后可重新尝试
 
 #### 阶段 3：聚焦深挖（针对高反馈字段）
 

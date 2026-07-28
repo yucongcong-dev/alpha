@@ -98,8 +98,8 @@ def test_load_pipeline_state_restores_runtime_data_with_zero_cursor(tmp_path) ->
     )
 
     assert resumed == 0
-    assert execution_state.field_queue_busy_counts == {"f1": 2}
-    assert execution_state.skipped_fields_due_to_queue == {"f2"}
+    assert execution_state.field_queue_busy_counts == {}
+    assert execution_state.skipped_fields_due_to_queue == set()
     assert execution_state.template_stats["base"]["attempted"] == 3
     assert execution_state.template_stats["base"]["submittable"] == 0
     assert execution_state.attempted_keys == set()
@@ -150,8 +150,8 @@ def test_load_pipeline_state_sanitizes_corrupt_runtime_collections(tmp_path) -> 
     )
 
     assert resumed == 0
-    assert execution_state.field_queue_busy_counts == {"f1": 3}
-    assert execution_state.skipped_fields_due_to_queue == {"f1"}
+    assert execution_state.field_queue_busy_counts == {}
+    assert execution_state.skipped_fields_due_to_queue == set()
     assert set(execution_state.template_stats) == {"base"}
     assert execution_state.template_stats["base"]["attempted"] == 2
     assert execution_state.template_stats["base"]["submittable"] == 0

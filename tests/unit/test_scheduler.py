@@ -17,6 +17,7 @@ from alpha.core.scheduler import (
     drain_completed_futures,
     maybe_restore_runtime_concurrency,
     register_queue_busy_field,
+    register_queue_busy_template,
     throttle_before_submission,
 )
 from alpha.core.scheduler_decisions import (
@@ -276,6 +277,38 @@ class TestRegisterQueueBusyField:
         counts, skipped = empty_counts_and_skipped
         register_queue_busy_field("", scheduler_args, counts, skipped)
         assert counts == {}
+
+
+class TestRegisterQueueBusyTemplate:
+    def test_exhausts_only_one_candidate_key(
+        self,
+        scheduler_args: MockArgs,
+        empty_execution_state: ExecutionState,
+    ) -> None:
+        scheduler_args.field_queue_busy_skip_after = 2
+        first_key = ("field_1", "template_1", "rank(field_1)", "settings_1")
+        second_key = ("field_1", "template_2", "rank(field_1)", "settings_1")
+
+        register_queue_busy_template(first_key, scheduler_args, empty_execution_state)
+        register_queue_busy_template(first_key, scheduler_args, empty_execution_state)
+
+        assert first_key in empty_execution_state.queue_exhausted_keys
+        assert second_key not in empty_execution_state.queue_exhausted_keys
+        assert empty_execution_state.skipped_fields_due_to_queue == set()
+
+    def test_zero_retry_limit_keeps_candidate_retryable(
+        self,
+        scheduler_args: MockArgs,
+        empty_execution_state: ExecutionState,
+    ) -> None:
+        scheduler_args.field_queue_busy_skip_after = 0
+        key = ("field_1", "template_1", "rank(field_1)", "settings_1")
+
+        for _ in range(3):
+            register_queue_busy_template(key, scheduler_args, empty_execution_state)
+
+        assert empty_execution_state.queue_retry_counts[key] == 3
+        assert empty_execution_state.queue_exhausted_keys == set()
 
 
 # ============================================================================

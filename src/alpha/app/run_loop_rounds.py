@@ -146,7 +146,7 @@ def schedule_field_round(
         context.template_build_ctx,
         field,
         template_stats=execution_state.template_stats,
-        attempted_keys=execution_state.attempted_keys,
+        attempted_keys=execution_state.attempted_keys | execution_state.queue_exhausted_keys,
         prior_results=execution_state.results,
         reserved_keys=inflight_template_keys(execution_state.pending_futures),
     )
@@ -221,9 +221,6 @@ def _dispatch_templates_for_field(
             logger.info("[stop] 达到 stop-after-submittable=%d", args.stop_after_submittable)
             return True
 
-        if field_id in execution_state.skipped_fields_due_to_queue:
-            logger.warning("[skip] field=%s 队列拥塞后停止剩余模板", field_id)
-            return False
         if execution_state.stop_signal.is_set():
             return True
 

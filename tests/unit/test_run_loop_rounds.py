@@ -109,3 +109,35 @@ def test_unbatched_field_progress_keeps_linear_resume_cursor() -> None:
         )
 
     assert mock_persist.call_args.kwargs["completed_field_index_override"] is None
+
+
+def test_queue_exhausted_candidate_is_excluded_from_next_round() -> None:
+    context = _build_context(field_template_batch_size=1)
+    exhausted_key = ("f1", "t1", "rank(f1)", "settings")
+    context.run_ctx.execution_state.queue_exhausted_keys.add(exhausted_key)
+    captured_attempted: list[set[tuple[str, str, str, str]]] = []
+
+    def _capture_pending(*_args, attempted_keys, **_kwargs):
+        captured_attempted.append(attempted_keys)
+        return [], 0, 0
+
+    with (
+        context.executor,
+        patch("alpha.app.run_loop_rounds.refresh_runtime_feedback"),
+        patch("alpha.app.run_loop_rounds.should_skip_field", return_value=False),
+        patch(
+            "alpha.app.run_loop_rounds.build_pending_templates_for_field",
+            side_effect=_capture_pending,
+        ),
+        patch("alpha.app.run_loop_rounds._dispatch_templates_for_field", return_value=False),
+        patch("alpha.app.run_loop_rounds.persist_field_progress"),
+    ):
+        schedule_field_round(
+            context=context,
+            field=context.fields[0],
+            field_index=1,
+            total_fields=1,
+            round_index=2,
+        )
+
+    assert exhausted_key in captured_attempted[0]
