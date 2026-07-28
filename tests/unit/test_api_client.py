@@ -5,8 +5,25 @@ from __future__ import annotations
 from http.cookiejar import Cookie, CookieJar
 import logging
 
+import pytest
+
 from alpha.api.client import BrainClient
-from alpha.api.http_backend import HttpxHttpBackend
+from alpha.api.http_backend import (
+    HttpxHttpBackend,
+    UrllibHttpBackend,
+    create_http_backend,
+)
+
+
+def test_create_http_backend_accepts_supported_names() -> None:
+    assert isinstance(create_http_backend(""), UrllibHttpBackend)
+    assert isinstance(create_http_backend(" urllib "), UrllibHttpBackend)
+    assert isinstance(create_http_backend("HTTPX"), HttpxHttpBackend)
+
+
+def test_create_http_backend_rejects_unknown_name() -> None:
+    with pytest.raises(ValueError, match="Unsupported HTTP backend 'httpxx'"):
+        create_http_backend("httpxx")
 
 
 def _make_cookie(name: str, value: str, *, domain: str = "api.worldquantbrain.com") -> Cookie:

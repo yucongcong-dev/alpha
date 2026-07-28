@@ -179,9 +179,11 @@ def create_http_backend(backend_name: str = "") -> HttpBackend:
     Raises:
         ImportError: 当指定的后端所需的包未安装时。
     """
-    name = (backend_name or "").strip().lower()
+    name = (backend_name or "urllib").strip().lower()
     if name == "httpx":
         logger.info("[http] 使用 httpx 后端 (连接池 + HTTP/2)")
         return HttpxHttpBackend()
-    logger.info("[http] 使用 urllib 后端 (标准库)")
-    return UrllibHttpBackend()
+    if name == "urllib":
+        logger.info("[http] 使用 urllib 后端 (标准库)")
+        return UrllibHttpBackend()
+    raise ValueError(f"Unsupported HTTP backend {backend_name!r}; expected one of: httpx, urllib")
