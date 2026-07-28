@@ -1,0 +1,644 @@
+"""Dataset template and blacklist file lifecycle tests."""
+
+from __future__ import annotations
+
+from argparse import Namespace
+
+from alpha.core.executor import build_pending_templates_for_field, inflight_template_keys
+from alpha.generators.payload import build_settings_fingerprint_from_payload
+from alpha.models.domain import TemplateCandidate, TemplateLibraryItem
+from alpha.models.runtime import (
+    PendingFutureContext,
+    TemplateBuildContext,
+    TemplateBuildOptions,
+)
+from alpha.policy.expression import get_dataset_expression_policy
+
+
+def test_build_pending_templates_skips_inflight_duplicate(monkeypatch) -> None:
+    settings_payload = {"neutralization": "SUBINDUSTRY", "truncation": 0.08}
+    monkeypatch.setattr(
+        "alpha.core.executor.build_setting_variants",
+        lambda *args, **kwargs: [settings_payload],
+    )
+    monkeypatch.setattr(
+        "alpha.core.executor.build_expression_candidates",
+        lambda *args, **kwargs: [
+            TemplateCandidate(
+                "model51_market_zscore_decay_63",
+                "ts_decay_linear(group_neutralize(ts_zscore(winsorize(ts_backfill(unsystematic_risk_last_360_days, 504), std=4), 63), market), 20)",
+                1000,
+                {"family": "neutralize_decay", "stage": "group_second_order"},
+            )
+        ],
+    )
+    args = Namespace(
+        dataset_id="model51",
+        template_disable_after=0,
+        disable_legacy_after=0,
+        max_templates_per_field=3,
+        max_templates_per_family=1,
+        legacy_similarity_penalty=0,
+        region="USA",
+        universe="TOP3000",
+        instrument_type="EQUITY",
+        delay=1,
+        decay=4,
+        neutralization="SUBINDUSTRY",
+        truncation=0.08,
+        pasteurization="ON",
+        unit_handling="VERIFY",
+        nan_handling="OFF",
+        language="FASTEXPR",
+    )
+    build_ctx = TemplateBuildContext(
+        options=TemplateBuildOptions.from_args(args),
+        all_fields=[
+            {
+                "id": "unsystematic_risk_last_360_days",
+                "type": "MATRIX",
+                "name": "unsystematic_risk_last_360_days",
+            }
+        ],
+        template_library={},
+        use_dataset_heuristics=False,
+        expression_policy=get_dataset_expression_policy("model51"),
+    )
+
+    pending_futures = {
+        object(): PendingFutureContext(
+            field_id="unsystematic_risk_last_360_days",
+            field_name="unsystematic_risk_last_360_days",
+            field_type="MATRIX",
+            template_name="model51_market_zscore_decay_63",
+            template_family="neutralize_decay",
+            template_stage="group_second_order",
+            expression="ts_decay_linear(group_neutralize(ts_zscore(winsorize(ts_backfill(unsystematic_risk_last_360_days, 504), std=4), 63), market), 20)",
+            settings_fingerprint=build_settings_fingerprint_from_payload(settings_payload),
+        )
+    }
+
+    pending, disabled, total = build_pending_templates_for_field(
+        build_ctx,
+        {
+            "id": "unsystematic_risk_last_360_days",
+            "type": "MATRIX",
+            "name": "unsystematic_risk_last_360_days",
+        },
+        template_stats={},
+        attempted_keys=set(),
+        prior_results=[],
+        reserved_keys=inflight_template_keys(pending_futures),
+    )
+
+    assert total >= 1
+    assert disabled == 0
+    assert pending == []
+
+
+def test_build_pending_templates_promotes_core_templates_with_extra_variant_budget(
+    monkeypatch,
+) -> None:
+    monkeypatch.setattr(
+        "alpha.core.executor.build_setting_variants",
+        lambda *args, **kwargs: [
+            {"neutralization": "SUBINDUSTRY", "truncation": 0.08, "decay": 4},
+            {"neutralization": "SUBINDUSTRY", "truncation": 0.08, "decay": 8},
+        ],
+    )
+    monkeypatch.setattr(
+        "alpha.core.executor.build_expression_candidates",
+        lambda *args, **kwargs: [
+            TemplateCandidate(
+                "strong_template",
+                "rank(cash_st)",
+                1000,
+                {
+                    "family": "ts_rank",
+                    "stage": "first_order",
+                    "role": "default_seed",
+                    "activation_scope": "broad",
+                },
+            )
+        ],
+    )
+    args = Namespace(
+        dataset_id="fundamental6",
+        template_disable_after=0,
+        disable_legacy_after=0,
+        max_templates_per_field=6,
+        max_templates_per_family=3,
+        legacy_similarity_penalty=0,
+        region="USA",
+        universe="TOP3000",
+        instrument_type="EQUITY",
+        delay=1,
+        decay=4,
+        neutralization="SUBINDUSTRY",
+        truncation=0.08,
+        pasteurization="ON",
+        unit_handling="VERIFY",
+        nan_handling="OFF",
+        language="FASTEXPR",
+    )
+    build_ctx = TemplateBuildContext(
+        options=TemplateBuildOptions.from_args(args),
+        all_fields=[{"id": "cash_st", "type": "VECTOR", "name": "cash_st"}],
+        template_library={},
+        use_dataset_heuristics=False,
+        expression_policy=get_dataset_expression_policy("fundamental6"),
+    )
+
+    pending, disabled, total = build_pending_templates_for_field(
+        build_ctx,
+        {"id": "cash_st", "type": "VECTOR", "name": "cash_st"},
+        template_stats={
+            "strong_template": {
+                "attempted": 3,
+                "submittable": 1,
+                "simulated": 3,
+                "errors": 0,
+                "low_sharpe": 0,
+                "low_fitness": 0,
+                "concentrated_weight": 0,
+                "template_family": "ts_rank",
+                "template_stage": "first_order",
+                "template_role": "default_seed",
+                "template_activation_scope": "broad",
+            }
+        },
+        attempted_keys=set(),
+        prior_results=[],
+    )
+
+    assert total == 1
+    assert disabled == 0
+    assert len(pending) == 2
+    assert all(item.template_role == "promoted_core" for item in pending)
+
+
+def test_build_pending_templates_uses_persisted_registry_recommendation(monkeypatch) -> None:
+    monkeypatch.setattr(
+        "alpha.core.executor.build_setting_variants",
+        lambda *args, **kwargs: [{"neutralization": "SUBINDUSTRY", "truncation": 0.08}],
+    )
+    monkeypatch.setattr(
+        "alpha.core.executor.build_expression_candidates",
+        lambda *args, **kwargs: [
+            TemplateCandidate(
+                "persisted_core_template",
+                "rank(cash_st)",
+                1000,
+                {
+                    "family": "ts_rank",
+                    "stage": "first_order",
+                    "role": "default_seed",
+                    "activation_scope": "broad",
+                },
+            )
+        ],
+    )
+    args = Namespace(
+        dataset_id="fundamental6",
+        template_disable_after=0,
+        disable_legacy_after=0,
+        max_templates_per_field=6,
+        max_templates_per_family=3,
+        legacy_similarity_penalty=0,
+        region="USA",
+        universe="TOP3000",
+        instrument_type="EQUITY",
+        delay=1,
+        decay=4,
+        neutralization="SUBINDUSTRY",
+        truncation=0.08,
+        pasteurization="ON",
+        unit_handling="VERIFY",
+        nan_handling="OFF",
+        language="FASTEXPR",
+    )
+    build_ctx = TemplateBuildContext(
+        options=TemplateBuildOptions.from_args(args),
+        all_fields=[{"id": "cash_st", "type": "VECTOR", "name": "cash_st"}],
+        template_library={},
+        template_registry={
+            "persisted_core_template": {
+                "recommended_role": "promoted_core",
+                "recommended_scope": "broad",
+            }
+        },
+        use_dataset_heuristics=False,
+        expression_policy=get_dataset_expression_policy("fundamental6"),
+    )
+
+    pending, disabled, total = build_pending_templates_for_field(
+        build_ctx,
+        {"id": "cash_st", "type": "VECTOR", "name": "cash_st"},
+        template_stats={},
+        attempted_keys=set(),
+        prior_results=[],
+    )
+
+    assert total == 1
+    assert disabled == 0
+    assert len(pending) == 1
+    assert pending[0].template_role == "promoted_core"
+
+
+def test_build_pending_templates_dedupes_same_expression_variant_across_template_names(
+    monkeypatch,
+) -> None:
+    monkeypatch.setattr(
+        "alpha.core.executor.build_setting_variants",
+        lambda *args, **kwargs: [{"neutralization": "SUBINDUSTRY", "truncation": 0.08}],
+    )
+    monkeypatch.setattr(
+        "alpha.core.executor.build_expression_candidates",
+        lambda *args, **kwargs: [
+            TemplateCandidate(
+                "template_a",
+                "rank(cash_st)",
+                1000,
+                {
+                    "family": "ts_rank",
+                    "stage": "first_order",
+                    "role": "default_seed",
+                    "activation_scope": "broad",
+                },
+            ),
+            TemplateCandidate(
+                "template_b",
+                "rank(cash_st)",
+                900,
+                {
+                    "family": "ts_rank",
+                    "stage": "first_order",
+                    "role": "refine_neighbor",
+                    "activation_scope": "refine",
+                },
+            ),
+        ],
+    )
+    args = Namespace(
+        dataset_id="fundamental6",
+        template_disable_after=0,
+        disable_legacy_after=0,
+        max_templates_per_field=6,
+        max_templates_per_family=6,
+        legacy_similarity_penalty=0,
+        region="USA",
+        universe="TOP3000",
+        instrument_type="EQUITY",
+        delay=1,
+        decay=4,
+        neutralization="SUBINDUSTRY",
+        truncation=0.08,
+        pasteurization="ON",
+        unit_handling="VERIFY",
+        nan_handling="OFF",
+        language="FASTEXPR",
+    )
+    build_ctx = TemplateBuildContext(
+        options=TemplateBuildOptions.from_args(args),
+        all_fields=[{"id": "cash_st", "type": "VECTOR", "name": "cash_st"}],
+        template_library={},
+        use_dataset_heuristics=False,
+        expression_policy=get_dataset_expression_policy("fundamental6"),
+    )
+
+    pending, disabled, total = build_pending_templates_for_field(
+        build_ctx,
+        {"id": "cash_st", "type": "VECTOR", "name": "cash_st"},
+        template_stats={},
+        attempted_keys=set(),
+        prior_results=[],
+    )
+
+    assert total == 2
+    assert disabled == 0
+    assert len(pending) == 1
+    assert pending[0].template_name == "template_a"
+    assert pending[0].expression == "rank(cash_st)"
+
+
+def test_build_pending_templates_skips_attempted_expression_variant_across_template_names(
+    monkeypatch,
+) -> None:
+    monkeypatch.setattr(
+        "alpha.core.executor.build_setting_variants",
+        lambda *args, **kwargs: [{"neutralization": "SUBINDUSTRY", "truncation": 0.08}],
+    )
+    monkeypatch.setattr(
+        "alpha.core.executor.build_expression_candidates",
+        lambda *args, **kwargs: [
+            TemplateCandidate(
+                "template_b",
+                "rank(cash_st)",
+                900,
+                {
+                    "family": "ts_rank",
+                    "stage": "first_order",
+                    "role": "refine_neighbor",
+                    "activation_scope": "refine",
+                },
+            )
+        ],
+    )
+    args = Namespace(
+        dataset_id="fundamental6",
+        template_disable_after=0,
+        disable_legacy_after=0,
+        max_templates_per_field=6,
+        max_templates_per_family=6,
+        legacy_similarity_penalty=0,
+        region="USA",
+        universe="TOP3000",
+        instrument_type="EQUITY",
+        delay=1,
+        decay=4,
+        neutralization="SUBINDUSTRY",
+        truncation=0.08,
+        pasteurization="ON",
+        unit_handling="VERIFY",
+        nan_handling="OFF",
+        language="FASTEXPR",
+    )
+    build_ctx = TemplateBuildContext(
+        options=TemplateBuildOptions.from_args(args),
+        all_fields=[{"id": "cash_st", "type": "VECTOR", "name": "cash_st"}],
+        template_library={},
+        use_dataset_heuristics=False,
+        expression_policy=get_dataset_expression_policy("fundamental6"),
+    )
+    attempted_keys = {
+        (
+            "cash_st",
+            "template_a",
+            "rank(cash_st)",
+            build_settings_fingerprint_from_payload(
+                {"neutralization": "SUBINDUSTRY", "truncation": 0.08}
+            ),
+        )
+    }
+
+    pending, disabled, total = build_pending_templates_for_field(
+        build_ctx,
+        {"id": "cash_st", "type": "VECTOR", "name": "cash_st"},
+        template_stats={},
+        attempted_keys=attempted_keys,
+        prior_results=[],
+    )
+
+    assert total == 1
+    assert disabled == 0
+    assert pending == []
+
+
+def test_build_pending_templates_respects_manual_registry_override(monkeypatch) -> None:
+    monkeypatch.setattr(
+        "alpha.core.executor.build_setting_variants",
+        lambda *args, **kwargs: [{"neutralization": "SUBINDUSTRY", "truncation": 0.08}],
+    )
+    monkeypatch.setattr(
+        "alpha.core.executor.build_expression_candidates",
+        lambda *args, **kwargs: [
+            TemplateCandidate(
+                "manual_override_template",
+                "rank(cash_st)",
+                1000,
+                {
+                    "family": "ts_rank",
+                    "stage": "first_order",
+                    "role": "default_seed",
+                    "activation_scope": "broad",
+                },
+            )
+        ],
+    )
+    args = Namespace(
+        dataset_id="fundamental6",
+        template_disable_after=0,
+        disable_legacy_after=0,
+        max_templates_per_field=6,
+        max_templates_per_family=3,
+        legacy_similarity_penalty=0,
+        region="USA",
+        universe="TOP3000",
+        instrument_type="EQUITY",
+        delay=1,
+        decay=4,
+        neutralization="SUBINDUSTRY",
+        truncation=0.08,
+        pasteurization="ON",
+        unit_handling="VERIFY",
+        nan_handling="OFF",
+        language="FASTEXPR",
+    )
+    build_ctx = TemplateBuildContext(
+        options=TemplateBuildOptions.from_args(args),
+        all_fields=[
+            {
+                "id": "cash_st",
+                "type": "VECTOR",
+                "name": "cash_st",
+                "runtime_field_tags": ["high_coverage"],
+            }
+        ],
+        template_library={},
+        template_registry_overrides={
+            "template_overrides": {
+                "manual_override_template": {
+                    "recommended_role": "diagnostic_probe",
+                    "recommended_scope": "diagnostic",
+                    "should_suppress": True,
+                    "reason": "manual_pause",
+                }
+            },
+            "family_overrides": {},
+            "field_cluster_overrides": {},
+        },
+        use_dataset_heuristics=False,
+        expression_policy=get_dataset_expression_policy("fundamental6"),
+    )
+
+    pending, disabled, total = build_pending_templates_for_field(
+        build_ctx,
+        {
+            "id": "cash_st",
+            "type": "VECTOR",
+            "name": "cash_st",
+            "runtime_field_tags": ["high_coverage"],
+        },
+        template_stats={},
+        attempted_keys=set(),
+        prior_results=[],
+    )
+
+    assert total == 1
+    assert disabled == 0
+    assert pending == []
+
+
+def test_event_field_uses_narrower_template_budget(monkeypatch) -> None:
+    monkeypatch.setattr(
+        "alpha.core.executor.build_setting_variants",
+        lambda *args, **kwargs: [{"neutralization": "SUBINDUSTRY", "truncation": 0.08}],
+    )
+    monkeypatch.setattr(
+        "alpha.core.executor.build_expression_candidates",
+        lambda *args, **kwargs: [
+            TemplateCandidate(
+                "vec_avg_ts_rank_63",
+                "rank(ts_rank(vec_avg(x), 63))",
+                100,
+                {"family": "ts_rank", "stage": "first_order"},
+            ),
+            TemplateCandidate(
+                "vec_avg_ts_zscore_63",
+                "rank(ts_zscore(vec_avg(x), 63))",
+                99,
+                {"family": "zscore_time", "stage": "first_order"},
+            ),
+            TemplateCandidate(
+                "vec_avg_decay_20",
+                "rank(ts_decay_linear(vec_avg(x), 20))",
+                98,
+                {"family": "decay_level", "stage": "first_order"},
+            ),
+            TemplateCandidate(
+                "iter_reuse_best_trade_when_volume_expansion",
+                "trade_when(ts_mean(volume, 10) > ts_mean(volume, 60), rank(x), -1)",
+                97,
+                {"family": "event_trade_when", "stage": "event_conditioned"},
+            ),
+        ],
+    )
+    args = Namespace(
+        dataset_id="fundamental6",
+        template_disable_after=0,
+        disable_legacy_after=0,
+        max_templates_per_field=10,
+        max_templates_per_family=3,
+        legacy_similarity_penalty=0,
+        region="USA",
+        universe="TOP3000",
+        instrument_type="EQUITY",
+        delay=1,
+        decay=4,
+        neutralization="SUBINDUSTRY",
+        truncation=0.08,
+        pasteurization="ON",
+        unit_handling="VERIFY",
+        nan_handling="OFF",
+        language="FASTEXPR",
+    )
+    build_ctx = TemplateBuildContext(
+        options=TemplateBuildOptions.from_args(args),
+        all_fields=[
+            {
+                "id": "fnd6_cptnewqeventv110_apq",
+                "type": "VECTOR",
+                "name": "fnd6_cptnewqeventv110_apq",
+            }
+        ],
+        template_library={},
+        use_dataset_heuristics=False,
+        expression_policy=get_dataset_expression_policy("fundamental6"),
+    )
+
+    pending, _disabled, total = build_pending_templates_for_field(
+        build_ctx,
+        {"id": "fnd6_cptnewqeventv110_apq", "type": "VECTOR", "name": "fnd6_cptnewqeventv110_apq"},
+        template_stats={},
+        attempted_keys=set(),
+        prior_results=[],
+    )
+
+    assert total == 3
+    assert len(pending) == 3
+
+
+def test_build_pending_templates_demotes_persistently_weak_broad_templates(monkeypatch) -> None:
+    monkeypatch.setattr(
+        "alpha.core.executor.build_setting_variants",
+        lambda *args, **kwargs: [{"neutralization": "SUBINDUSTRY", "truncation": 0.08}],
+    )
+    monkeypatch.setattr(
+        "alpha.core.executor.build_expression_candidates",
+        lambda *args, **kwargs: [
+            TemplateCandidate(
+                "weak_template",
+                "rank(cash_st)",
+                1000,
+                {
+                    "family": "mean_spread",
+                    "stage": "first_order",
+                    "role": "default_seed",
+                    "activation_scope": "broad",
+                },
+            )
+        ],
+    )
+    args = Namespace(
+        dataset_id="fundamental6",
+        template_disable_after=0,
+        disable_legacy_after=0,
+        max_templates_per_field=6,
+        max_templates_per_family=3,
+        legacy_similarity_penalty=0,
+        region="USA",
+        universe="TOP3000",
+        instrument_type="EQUITY",
+        delay=1,
+        decay=4,
+        neutralization="SUBINDUSTRY",
+        truncation=0.08,
+        pasteurization="ON",
+        unit_handling="VERIFY",
+        nan_handling="OFF",
+        language="FASTEXPR",
+    )
+    build_ctx = TemplateBuildContext(
+        options=TemplateBuildOptions.from_args(args),
+        all_fields=[{"id": "cash_st", "type": "VECTOR", "name": "cash_st"}],
+        template_library={
+            "default": [
+                TemplateLibraryItem(
+                    name="weak_template",
+                    expression="rank({field})",
+                    priority=1000,
+                    family="mean_spread",
+                    stage="first_order",
+                    metadata={"role": "default_seed", "activation_scope": "broad"},
+                )
+            ]
+        },
+        use_dataset_heuristics=False,
+        expression_policy=get_dataset_expression_policy("fundamental6"),
+    )
+
+    pending, disabled, total = build_pending_templates_for_field(
+        build_ctx,
+        {"id": "cash_st", "type": "VECTOR", "name": "cash_st"},
+        template_stats={
+            "weak_template": {
+                "attempted": 6,
+                "submittable": 0,
+                "simulated": 6,
+                "errors": 0,
+                "low_sharpe": 4,
+                "low_fitness": 4,
+                "concentrated_weight": 0,
+                "template_family": "mean_spread",
+                "template_stage": "first_order",
+                "template_role": "default_seed",
+                "template_activation_scope": "broad",
+            }
+        },
+        attempted_keys=set(),
+        prior_results=[],
+    )
+
+    assert total >= 1
+    assert disabled == 0
+    assert pending == []
