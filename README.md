@@ -434,7 +434,7 @@ PYTHONPATH=src python3.10 -m pytest -q
 make check
 ```
 
-`make check` 同时要求分支覆盖率不低于 `75%`。如只想单独运行覆盖率检查：
+`make check` 同时要求分支覆盖率不低于 `80%`。如只想单独运行覆盖率检查：
 
 ```bash
 make coverage-check

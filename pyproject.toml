@@ -70,7 +70,7 @@ source = ["src/alpha"]
 branch = true
 
 [tool.coverage.report]
-fail_under = 75
+fail_under = 80
 precision = 1
 show_missing = false
 exclude_lines = [
