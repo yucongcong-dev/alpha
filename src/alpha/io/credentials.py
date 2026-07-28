@@ -51,6 +51,7 @@ def write_credentials_file(path: str, key_path: str, email: str, password: str) 
     """将 WorldQuant 凭证加密写入本地 JSON 文件。"""
     ensure_parent_dir(path)
     atomic_write_json(path, encrypt_credentials_payload(email, password, key_path))
+    restrict_file_to_owner(path)
 
 
 def prompt_and_store_credentials(path: str, key_path: str) -> tuple[str, str]:
@@ -92,8 +93,10 @@ def _load_credentials_from_file(
     if is_encrypted_credentials_payload(payload):
         return decrypt_credentials_payload(payload, creds_key_file)
 
-    file_email = payload.get("email")
-    file_password = payload.get("password")
+    raw_email = payload.get("email")
+    raw_password = payload.get("password")
+    file_email = str(raw_email) if raw_email else None
+    file_password = str(raw_password) if raw_password else None
     if file_email and file_password:
         write_credentials_file(creds_file, creds_key_file, str(file_email), str(file_password))
         logger.info("[creds] migrated plaintext credentials to encrypted storage: %s", creds_file)

@@ -17,6 +17,7 @@ datasets/<dataset_id>/
 
 - 可复用、需要审阅的策略资产放在 `template.json`、`presets/` 和 `blacklist.json`。
 - 每个 preset 以研究目的命名，并按需包含 `template.json`、`fields.txt`、`templates.txt`。
+- `fields.txt` 和 `templates.txt` 支持以 `#` 开头的说明行，空行和重复项会自动忽略。
 - API 字段缓存只放在 `cache/<market_scope>.json`。
 - 跨 run 反馈只在相同 `<market_scope>` 内聚合，避免不同 universe、region 或 delay 相互污染。
 - 每次运行使用独立的 `runs/<run_name>/`，不要让多个实验共享同一组 sidecar。

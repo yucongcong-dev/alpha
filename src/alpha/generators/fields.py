@@ -32,6 +32,25 @@ from ..models.runtime_options import FieldFetchOptions
 logger = logging.getLogger(__name__)
 
 
+def _normalize_fields(rows: Sequence[object]) -> list[TemplateField]:
+    """Convert API/cache rows to unique usable domain fields."""
+    fields: list[TemplateField] = []
+    seen_ids: set[str] = set()
+    for row in rows:
+        if isinstance(row, TemplateField):
+            field = row
+        elif isinstance(row, dict):
+            field = parse_template_field(row)
+        else:
+            continue
+        field_id = field.field_id.strip()
+        if not field_id or field_id in seen_ids:
+            continue
+        seen_ids.add(field_id)
+        fields.append(field)
+    return fields
+
+
 def choose_field_name(field: dict[str, Any] | TemplateField) -> str:
     if isinstance(field, TemplateField):
         return field.field_name
@@ -108,7 +127,8 @@ def load_fields_cache(
     try:
         with open(path, encoding="utf-8") as handle:
             payload = json.load(handle)
-    except Exception:
+    except (OSError, json.JSONDecodeError, UnicodeError) as exc:
+        logger.warning("[cache] failed to read field cache %s: %s", path, exc)
         return []
     if not isinstance(payload, dict):
         return []
@@ -136,7 +156,9 @@ def load_fields_cache(
     if cache_key != expected_key:
         return []
     rows = payload.get("fields")
-    return rows if isinstance(rows, list) else []
+    if not isinstance(rows, list):
+        return []
+    return _normalize_fields(rows)
 
 
 def save_fields_cache(
@@ -224,11 +246,13 @@ def fetch_fields_with_cache(
         使用重试机制处理临时 API 不稳定性。
     """
     if cached_fields:
-        fields = [parse_template_field(f) if isinstance(f, dict) else f for f in cached_fields]
-        logger.info(
-            "[cache] 从 %s 加载 %d 个字段", os.path.basename(fields_cache_file), len(fields)
-        )
-        return fields
+        fields = _normalize_fields(cached_fields)
+        if fields:
+            logger.info(
+                "[cache] 从 %s 加载 %d 个字段", os.path.basename(fields_cache_file), len(fields)
+            )
+            return fields
+        logger.warning("[cache] cached field rows were unusable; fetching a fresh copy")
 
     logger.info("[cache] 未命中有效缓存，首次拉取当前上下文下的全量字段")
 
@@ -244,7 +268,7 @@ def fetch_fields_with_cache(
         instrument_type=options.instrument_type,
         delay=options.delay,
     )
-    fields = [parse_template_field(f) if isinstance(f, dict) else f for f in fetched_fields]
+    fields = _normalize_fields(fetched_fields)
     save_fields_cache(
         fields_cache_file,
         dataset_id=options.dataset_id,

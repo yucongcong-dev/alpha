@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any
 
 from ..exceptions import BrainAPIError
+from .file_lock import exclusive_file_lock
 
 logger = logging.getLogger(__name__)
 
@@ -41,21 +42,28 @@ def restrict_file_to_owner(path: str) -> None:
 def read_or_create_credentials_key(key_path: str) -> bytes:
     """读取本地凭证加密密钥；不存在时生成并保存。"""
     fernet_cls, _ = load_crypto_dependencies()
-    if os.path.exists(key_path):
-        restrict_file_to_owner(key_path)
-        with open(key_path, "rb") as handle:
-            key = handle.read().strip()
-        if key:
-            return key
-        raise BrainAPIError(f"Credentials key file is empty: {key_path}")
-
     ensure_parent_dir(key_path)
-    key = fernet_cls.generate_key()
-    with open(key_path, "wb") as handle:
-        handle.write(key + b"\n")
-    restrict_file_to_owner(key_path)
-    logger.info("[creds] generated local credentials key file: %s", key_path)
-    return bytes(key)
+    with exclusive_file_lock(f"{key_path}.lock"):
+        if os.path.exists(key_path):
+            restrict_file_to_owner(key_path)
+            with open(key_path, "rb") as handle:
+                key = handle.read().strip()
+            if key:
+                try:
+                    fernet_cls(key)
+                except (TypeError, ValueError) as exc:
+                    raise BrainAPIError(f"Credentials key file is invalid: {key_path}") from exc
+                return key
+            raise BrainAPIError(f"Credentials key file is empty: {key_path}")
+
+        key = fernet_cls.generate_key()
+        with open(key_path, "wb") as handle:
+            handle.write(key + b"\n")
+            handle.flush()
+            os.fsync(handle.fileno())
+        restrict_file_to_owner(key_path)
+        logger.info("[creds] generated local credentials key file: %s", key_path)
+        return bytes(key)
 
 
 def encrypt_credentials_payload(email: str, password: str, key_path: str) -> dict[str, Any]:
@@ -65,10 +73,14 @@ def encrypt_credentials_payload(email: str, password: str, key_path: str) -> dic
     plaintext = json.dumps(
         {"email": email, "password": password}, ensure_ascii=False, separators=(",", ":")
     )
+    try:
+        ciphertext = fernet_cls(key).encrypt(plaintext.encode("utf-8")).decode("ascii")
+    except (TypeError, ValueError) as exc:
+        raise BrainAPIError(f"Failed to initialize credentials encryption: {exc}") from exc
     return {
         "version": CREDENTIALS_STORAGE_VERSION,
         "storage": "cryptography-fernet-local-key-file",
-        "ciphertext": fernet_cls(key).encrypt(plaintext.encode("utf-8")).decode("ascii"),
+        "ciphertext": ciphertext,
     }
 
 
@@ -87,7 +99,7 @@ def decrypt_credentials_payload(
     key = read_or_create_credentials_key(key_path)
     try:
         plaintext = fernet_cls(key).decrypt(ciphertext.strip().encode("ascii")).decode("utf-8")
-    except invalid_token_cls as exc:
+    except (invalid_token_cls, TypeError, ValueError, UnicodeError) as exc:
         raise BrainAPIError(
             "Failed to decrypt credentials. The local credentials key file may not match."
         ) from exc
@@ -97,7 +109,11 @@ def decrypt_credentials_payload(
         raise BrainAPIError(f"Failed to parse decrypted credentials: {exc}") from exc
     if not isinstance(decoded, dict):
         raise BrainAPIError("Decrypted credentials payload must be a JSON object.")
-    return decoded.get("email"), decoded.get("password")
+    raw_email = decoded.get("email")
+    raw_password = decoded.get("password")
+    email = raw_email.strip() if isinstance(raw_email, str) and raw_email.strip() else None
+    password = raw_password if isinstance(raw_password, str) and raw_password else None
+    return email, password
 
 
 def is_encrypted_credentials_payload(payload: dict[str, Any]) -> bool:

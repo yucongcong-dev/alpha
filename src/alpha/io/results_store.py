@@ -11,12 +11,12 @@ import json
 import logging
 import os
 import tempfile
-import threading
 from typing import Any
 
 from .._facade import ExportMap, facade_dir, resolve_export
 from ..models.domain import FieldTestResult
 from ..models.domain_serializers import serialize_field_test_result
+from .file_lock import exclusive_file_lock
 from .output_paths import build_output_sidecar_paths
 
 logger = logging.getLogger(__name__)
@@ -26,46 +26,18 @@ SUPPORTED_JOURNAL_SCHEMA_VERSIONS = frozenset({1, JOURNAL_SCHEMA_VERSION})
 JOURNAL_SCHEMA_FIELD = "_journal_schema_version"
 JOURNAL_CHECKSUM_FIELD = "_journal_checksum"
 
-_FILE_LOCKS_GUARD = threading.Lock()
-_FILE_LOCKS: dict[str, threading.RLock] = {}
-
-
-def _file_thread_lock(lock_path: str) -> threading.RLock:
-    canonical_path = os.path.abspath(lock_path)
-    with _FILE_LOCKS_GUARD:
-        return _FILE_LOCKS.setdefault(canonical_path, threading.RLock())
-
-
-@contextmanager
-def _exclusive_file_lock(lock_path: str) -> Iterator[None]:
-    """Serialize a filesystem transaction across threads and POSIX processes."""
-    directory = os.path.dirname(os.path.abspath(lock_path)) or "."
-    os.makedirs(directory, exist_ok=True)
-    thread_lock = _file_thread_lock(lock_path)
-    with thread_lock, open(lock_path, "a+b") as lock_handle:
-        try:
-            import fcntl
-        except ImportError:  # pragma: no cover - Windows fallback uses the thread lock.
-            yield
-            return
-        fcntl.flock(lock_handle.fileno(), fcntl.LOCK_EX)
-        try:
-            yield
-        finally:
-            fcntl.flock(lock_handle.fileno(), fcntl.LOCK_UN)
-
 
 @contextmanager
 def _exclusive_journal_lock(journal_path: str) -> Iterator[None]:
     """Serialize journal replacement/appends across threads and POSIX processes."""
-    with _exclusive_file_lock(f"{journal_path}.lock"):
+    with exclusive_file_lock(f"{journal_path}.lock"):
         yield
 
 
 @contextmanager
 def exclusive_results_transaction(output_path: str) -> Iterator[None]:
     """Lock a complete read-merge-write transaction for one result snapshot."""
-    with _exclusive_file_lock(f"{output_path}.transaction.lock"):
+    with exclusive_file_lock(f"{output_path}.transaction.lock"):
         yield
 
 

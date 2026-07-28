@@ -16,6 +16,11 @@ CRITICAL_COVERAGE_FLOORS = {
     "src/alpha/analysis/feedback_run_index.py": 80.0,
     "src/alpha/analysis/result_identity.py": 75.0,
     "src/alpha/app/finalize.py": 80.0,
+    "src/alpha/generators/fields.py": 65.0,
+    "src/alpha/cli/filters.py": 90.0,
+    "src/alpha/io/credentials.py": 80.0,
+    "src/alpha/io/credentials_crypto.py": 80.0,
+    "src/alpha/io/file_lock.py": 95.0,
 }
 
 

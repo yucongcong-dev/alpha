@@ -5,6 +5,7 @@
 
 from __future__ import annotations
 
+from contextlib import suppress
 import logging
 import logging.handlers
 import os
@@ -29,8 +30,11 @@ def load_line_set(path: str) -> set[str]:
         return set()
     try:
         with open(path, encoding="utf-8") as handle:
-            return {line.strip() for line in handle if line.strip()}
-    except Exception:
+            return {
+                value for line in handle if (value := line.strip()) and not value.startswith("#")
+            }
+    except (OSError, UnicodeError) as exc:
+        logger.warning("[filters] failed to read %s: %s", path, exc)
         return set()
 
 
@@ -100,6 +104,8 @@ def setup_runtime_logging(log_path: str) -> None:
 
     for handler in root.handlers[:]:
         root.removeHandler(handler)
+        with suppress(Exception):
+            handler.close()
 
     coloredlogs.install(
         level="INFO",

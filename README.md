@@ -64,7 +64,7 @@ alpha/
 - `datasets/<dataset_id>/cache/`：磁盘上的可重建缓存目录。当前主要承载字段缓存；内存态的 YAML / blacklist / runtime cache 不落在这里。
 - `tmp/`：一次性实验输入、临时 include/exclude 列表、临时模板库。
 - `scratch/`：外部脚本、对照材料、手工实验草稿。
-- `.credentials/`：本地加密凭证和密钥。
+- `.credentials/`：本地 Fernet 加密凭证和独立密钥；两个文件都会收紧为仅当前用户可读写（`0600`）。
 
 根目录只保留项目入口和说明文件。配置统一放 `config/`；临时文件不要放根目录。如果只是一次性实验，放 `tmp/`；如果已经验证值得长期复用，再整理命名后放入对应数据集的 `template.json` 或 `presets/`。
 
@@ -319,6 +319,8 @@ python3.10 -m alpha --dry-run-plan
 ```bash
 python3.10 -m alpha
 ```
+
+字段缓存会校验完整 market scope、TTL 和字段结构；全部记录无效时会自动重新从 API 拉取，重复 field ID 只保留第一条。
 
 所有相对路径参数（如 `--output`、`--fields-cache-file`、`--include-fields-file`）都相对于当前命令执行目录解析。
 
