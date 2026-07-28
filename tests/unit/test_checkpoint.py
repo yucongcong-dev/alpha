@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import json
 
-from alpha.core.checkpoint import load_pipeline_state
-from alpha.models.runtime import ExecutionState, RuntimeConcurrencyState
+from alpha.core.checkpoint import load_pipeline_state, save_pipeline_state
+from alpha.models.runtime import ExecutionState, PendingFutureContext, RuntimeConcurrencyState
 
 
 def _build_execution_state() -> ExecutionState:
@@ -70,12 +70,16 @@ def test_load_pipeline_state_restores_runtime_data_with_zero_cursor(tmp_path) ->
                 "field_queue_busy_counts": {"f1": 2},
                 "skipped_fields_due_to_queue": ["f2"],
                 "template_stats": {"base": {"attempted": 3}},
-                "pending_template_keys": [
+                "pending_simulations": [
                     {
                         "field_id": "f1",
+                        "field_name": "Field 1",
+                        "field_type": "MATRIX",
                         "template_name": "base",
                         "expression": "rank(f1)",
                         "settings_fingerprint": "settings-v1",
+                        "simulation_location": "/simulations/sim-1",
+                        "simulation_id": "sim-1",
                     }
                 ],
                 "runtime_max_workers": 1,
@@ -98,7 +102,12 @@ def test_load_pipeline_state_restores_runtime_data_with_zero_cursor(tmp_path) ->
     assert execution_state.skipped_fields_due_to_queue == {"f2"}
     assert execution_state.template_stats["base"]["attempted"] == 3
     assert execution_state.template_stats["base"]["submittable"] == 0
-    assert execution_state.attempted_keys == {("f1", "base", "rank(f1)", "settings-v1")}
+    assert execution_state.attempted_keys == set()
+    assert len(execution_state.resumable_simulations) == 1
+    restored = execution_state.resumable_simulations[0]
+    assert restored.field_name == "Field 1"
+    assert restored.simulation_location == "/simulations/sim-1"
+    assert restored.simulation_id == "sim-1"
     assert runtime_state.runtime_max_workers == 1
     assert runtime_state.cooldown_until > 0
 
@@ -202,3 +211,99 @@ def test_load_pipeline_state_discards_non_finite_cooldown_and_counters(tmp_path)
     assert execution_state.field_queue_busy_counts == {}
     assert runtime_state.runtime_max_workers == 4
     assert runtime_state.cooldown_until == 0
+
+
+def test_load_pipeline_state_retries_legacy_pending_entries_without_location(tmp_path) -> None:
+    """Legacy pending keys cannot be resumed and must remain eligible for recreation."""
+    state_file = tmp_path / "state.json"
+    state_file.write_text(
+        json.dumps(
+            {
+                "version": 1,
+                "completed_field_index": 2,
+                "pending_template_keys": [
+                    {
+                        "field_id": "f1",
+                        "template_name": "base",
+                        "expression": "rank(f1)",
+                        "settings_fingerprint": "settings-v1",
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    execution_state = _build_execution_state()
+
+    resumed = load_pipeline_state(
+        str(state_file),
+        runtime_state=RuntimeConcurrencyState(max_workers=2, runtime_max_workers=2),
+        execution_state=execution_state,
+    )
+
+    assert resumed == 0
+    assert execution_state.attempted_keys == set()
+    assert execution_state.resumable_simulations == []
+
+
+def test_save_pipeline_state_persists_remote_simulation_location(tmp_path) -> None:
+    """A created remote simulation carries enough metadata for restart polling."""
+    state_file = tmp_path / "state.json"
+    execution_state = _build_execution_state()
+    future = object()
+    execution_state.pending_futures[future] = PendingFutureContext(  # type: ignore[index]
+        field_id="f1",
+        field_name="Field 1",
+        field_type="MATRIX",
+        template_name="base",
+        expression="rank(f1)",
+        settings_fingerprint="settings-v1",
+        simulation_location="/simulations/sim-1",
+        simulation_id="sim-1",
+    )
+
+    saved = save_pipeline_state(
+        str(state_file),
+        completed_field_index=1,
+        execution_state=execution_state,
+        runtime_state=RuntimeConcurrencyState(max_workers=2, runtime_max_workers=2),
+        field_id="f1",
+    )
+
+    payload = json.loads(state_file.read_text(encoding="utf-8"))
+    assert saved is True
+    assert payload["pending_simulations"][0]["simulation_location"] == "/simulations/sim-1"
+
+
+def test_load_pipeline_state_skips_resumable_simulation_already_in_results(tmp_path) -> None:
+    """A stale state file must not append a duplicate for an already persisted result."""
+    state_file = tmp_path / "state.json"
+    state_file.write_text(
+        json.dumps(
+            {
+                "version": 1,
+                "completed_field_index": 1,
+                "pending_simulations": [
+                    {
+                        "field_id": "f1",
+                        "template_name": "base",
+                        "expression": "rank(f1)",
+                        "settings_fingerprint": "settings-v1",
+                        "simulation_location": "/simulations/sim-1",
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    execution_state = _build_execution_state()
+    execution_state.attempted_keys.add(("f1", "base", "rank(f1)", "settings-v1"))
+
+    resumed = load_pipeline_state(
+        str(state_file),
+        runtime_state=RuntimeConcurrencyState(max_workers=2, runtime_max_workers=2),
+        execution_state=execution_state,
+    )
+
+    assert resumed == 1
+    assert execution_state.resumable_simulations == []

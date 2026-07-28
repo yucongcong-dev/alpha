@@ -22,6 +22,7 @@ import time
 from typing import Any
 
 from ..config.constants import CHECKPOINT_PENDING_FUTURES_LIMIT, CHECKPOINT_RESUME_SAFETY_SECONDS
+from ..runtime.contexts import PendingFutureContext
 from ..runtime.state import ExecutionState, RuntimeConcurrencyState
 
 logger = logging.getLogger(__name__)
@@ -90,37 +91,82 @@ def _restore_template_stats(payload: object) -> dict[str, dict[str, Any]]:
     return restored
 
 
-def _serialize_pending_template_keys(
-    execution_state: ExecutionState,
-) -> list[dict[str, str]]:
-    """Serialize inflight template identities so resume can suppress duplicate scheduling."""
+def _all_pending_contexts(execution_state: ExecutionState) -> list[PendingFutureContext]:
+    """Return submitted and not-yet-resubmitted simulation contexts."""
     return [
-        {
-            "field_id": str(getattr(meta, "field_id", "") or ""),
-            "template_name": str(getattr(meta, "template_name", "") or ""),
-            "expression": str(getattr(meta, "expression", "") or ""),
-            "settings_fingerprint": str(getattr(meta, "settings_fingerprint", "") or ""),
-        }
-        for meta in execution_state.pending_futures.values()
+        *execution_state.pending_futures.values(),
+        *execution_state.resumable_simulations,
     ]
 
 
-def _restore_pending_template_keys(payload: object) -> set[tuple[str, str, str, str]]:
-    """Restore inflight template identities from persisted state."""
-    restored: set[tuple[str, str, str, str]] = set()
+def _serialize_pending_simulations(
+    execution_state: ExecutionState,
+) -> list[dict[str, str]]:
+    """Serialize inflight metadata required to resume remote simulation polling."""
+    return [
+        {
+            "field_id": str(getattr(meta, "field_id", "") or ""),
+            "field_name": str(getattr(meta, "field_name", "") or ""),
+            "field_type": str(getattr(meta, "field_type", "") or ""),
+            "template_name": str(getattr(meta, "template_name", "") or ""),
+            "template_family": str(getattr(meta, "template_family", "") or ""),
+            "template_stage": str(getattr(meta, "template_stage", "") or ""),
+            "template_role": str(getattr(meta, "template_role", "") or ""),
+            "template_activation_scope": str(getattr(meta, "template_activation_scope", "") or ""),
+            "policy_version": str(getattr(meta, "policy_version", "") or ""),
+            "policy_arm": str(getattr(meta, "policy_arm", "") or ""),
+            "expression": str(getattr(meta, "expression", "") or ""),
+            "settings_fingerprint": str(getattr(meta, "settings_fingerprint", "") or ""),
+            "simulation_location": str(getattr(meta, "simulation_location", "") or ""),
+            "simulation_id": str(getattr(meta, "simulation_id", "") or ""),
+        }
+        for meta in _all_pending_contexts(execution_state)
+    ]
+
+
+def _restore_pending_simulations(
+    payload: object,
+) -> tuple[list[PendingFutureContext], int]:
+    """Restore resumable simulations and count entries that require recreation."""
+    restored: list[PendingFutureContext] = []
+    retry_from_start = 0
     if not isinstance(payload, list):
-        return restored
+        return restored, retry_from_start
     for item in payload:
         if not isinstance(item, dict):
             continue
-        field_id = str(item.get("field_id", "") or "")
-        template_name = str(item.get("template_name", "") or "")
-        expression = str(item.get("expression", "") or "")
-        settings_fingerprint = str(item.get("settings_fingerprint", "") or "")
+        field_id = str(item.get("field_id", "") or "").strip()
+        template_name = str(item.get("template_name", "") or "").strip()
+        expression = str(item.get("expression", "") or "").strip()
+        settings_fingerprint = str(item.get("settings_fingerprint", "") or "").strip()
         if not field_id or not template_name or not expression or not settings_fingerprint:
             continue
-        restored.add((field_id, template_name, expression, settings_fingerprint))
-    return restored
+        simulation_location = str(item.get("simulation_location", "") or "").strip()
+        if not simulation_location:
+            retry_from_start += 1
+            continue
+        simulation_id = str(item.get("simulation_id", "") or "").strip()
+        if not simulation_id:
+            simulation_id = simulation_location.rstrip("/").rsplit("/", 1)[-1]
+        restored.append(
+            PendingFutureContext(
+                field_id=field_id,
+                field_name=str(item.get("field_name", "") or field_id),
+                field_type=str(item.get("field_type", "") or "UNKNOWN"),
+                template_name=template_name,
+                template_family=str(item.get("template_family", "") or ""),
+                template_stage=str(item.get("template_stage", "") or ""),
+                template_role=str(item.get("template_role", "") or ""),
+                template_activation_scope=str(item.get("template_activation_scope", "") or ""),
+                policy_version=str(item.get("policy_version", "") or ""),
+                policy_arm=str(item.get("policy_arm", "") or ""),
+                expression=expression,
+                settings_fingerprint=settings_fingerprint,
+                simulation_location=simulation_location,
+                simulation_id=simulation_id,
+            )
+        )
+    return restored, retry_from_start
 
 
 # ============================================================================
@@ -166,7 +212,7 @@ def save_pipeline_state(
         "last_field_id": field_id,
         "field_queue_busy_counts": dict(execution_state.field_queue_busy_counts),
         "skipped_fields_due_to_queue": sorted(execution_state.skipped_fields_due_to_queue),
-        "pending_template_keys": _serialize_pending_template_keys(execution_state),
+        "pending_simulations": _serialize_pending_simulations(execution_state),
         "runtime_max_workers": runtime_state.runtime_max_workers,
         "remaining_cooldown_seconds": round(remaining_cooldown, 3),
         "template_stats": dict(execution_state.template_stats),
@@ -252,9 +298,30 @@ def load_pipeline_state(
         payload.get("skipped_fields_due_to_queue")
     )
 
-    restored_pending_keys = _restore_pending_template_keys(payload.get("pending_template_keys"))
-    if restored_pending_keys:
-        execution_state.attempted_keys.update(restored_pending_keys)
+    pending_payload = payload.get("pending_simulations")
+    if pending_payload is None:
+        pending_payload = payload.get("pending_template_keys")
+    resumable_simulations, retry_from_start = _restore_pending_simulations(pending_payload)
+    restored_before_dedup = len(resumable_simulations)
+    resumable_simulations = [
+        pending
+        for pending in resumable_simulations
+        if (
+            pending.field_id,
+            pending.template_name,
+            pending.expression,
+            pending.settings_fingerprint,
+        )
+        not in execution_state.attempted_keys
+    ]
+    already_completed = restored_before_dedup - len(resumable_simulations)
+    execution_state.resumable_simulations = resumable_simulations
+    if retry_from_start:
+        completed_index = 0
+        logger.warning(
+            "[checkpoint] %d pending simulations had no Location; restarting field scheduling",
+            retry_from_start,
+        )
 
     # 恢复模板统计
     execution_state.template_stats = _restore_template_stats(payload.get("template_stats"))
@@ -279,12 +346,15 @@ def load_pipeline_state(
 
     logger.info(
         "[checkpoint] resumed from state_file=%s completed=%d "
-        "results=%d attempted=%d restored_pending=%d skipped_fields=%d cooldown=%.1fs",
+        "results=%d attempted=%d resumable=%d already_completed=%d retry_from_start=%d "
+        "skipped_fields=%d cooldown=%.1fs",
         state_file,
         completed_index,
         payload.get("result_count", 0),
         payload.get("attempted_keys_count", 0),
-        len(restored_pending_keys),
+        len(resumable_simulations),
+        already_completed,
+        retry_from_start,
         len(execution_state.skipped_fields_due_to_queue),
         remaining,
     )
@@ -327,16 +397,17 @@ def save_checkpoint(
         return False
 
     # 收集待处理任务摘要
+    pending_contexts = _all_pending_contexts(execution_state)
     pending_summary: list[dict[str, str]] = [
         {
             "field_id": str(meta.field_id),
             "template_name": str(meta.template_name),
             "expression": str(meta.expression),
             "settings_fingerprint": str(meta.settings_fingerprint),
+            "simulation_location": str(meta.simulation_location),
+            "simulation_id": str(meta.simulation_id),
         }
-        for meta in list(execution_state.pending_futures.values())[
-            -CHECKPOINT_PENDING_FUTURES_LIMIT:
-        ]
+        for meta in pending_contexts[-CHECKPOINT_PENDING_FUTURES_LIMIT:]
     ]
 
     payload: dict[str, Any] = {
@@ -346,9 +417,9 @@ def save_checkpoint(
         "remaining_fields": remaining_fields,
         "result_count": len(execution_state.results),
         "attempted_keys_count": len(execution_state.attempted_keys),
-        "pending_count": len(execution_state.pending_futures),
+        "pending_count": len(pending_contexts),
         "pending_summary": pending_summary,
-        "pending_template_keys": _serialize_pending_template_keys(execution_state),
+        "pending_simulations": _serialize_pending_simulations(execution_state),
         "field_queue_busy_counts": dict(execution_state.field_queue_busy_counts),
         "skipped_fields_due_to_queue": sorted(execution_state.skipped_fields_due_to_queue),
         "template_stats": dict(execution_state.template_stats),
@@ -361,7 +432,7 @@ def save_checkpoint(
         logger.info(
             "[checkpoint] saved crash checkpoint to %s (pending=%d, reason=%s)",
             checkpoint_file,
-            len(execution_state.pending_futures),
+            len(pending_contexts),
             reason,
         )
     return success

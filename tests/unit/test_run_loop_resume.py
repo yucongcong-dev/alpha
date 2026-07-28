@@ -16,6 +16,7 @@ from alpha.app.run_loop import (
     restore_fields_from_state,
     run_field_test_loop,
 )
+from alpha.app.run_loop_resume import save_runtime_checkpoint
 from alpha.models.io_types import RunFilters, RunPaths
 from alpha.models.runtime import (
     ExecutionState,
@@ -171,6 +172,7 @@ def test_run_field_test_loop_persists_progress_for_skipped_fields(tmp_path) -> N
                 last_field_id="f2",
             ),
         ) as mock_round,
+        patch("alpha.app.run_loop.submit_resumable_futures") as mock_resume,
         patch("alpha.app.run_loop.drain_remaining_futures"),
     ):
         run_field_test_loop(
@@ -182,6 +184,7 @@ def test_run_field_test_loop_persists_progress_for_skipped_fields(tmp_path) -> N
             ),
         )
 
+    assert mock_resume.call_count == 1
     assert mock_round.call_count == 1
 
 
@@ -206,3 +209,28 @@ def test_resolve_result_write_options_prefers_run_paths_output() -> None:
         output_path="/tmp/normalized-results.json",
         auto_update_blacklist=False,
     )
+
+
+def test_save_runtime_checkpoint_updates_resumable_pipeline_state() -> None:
+    """Interrupt handling must persist live simulation locations to the resume file."""
+    execution_state = _build_execution_state()
+    runtime_state = RuntimeConcurrencyState(max_workers=2, runtime_max_workers=2)
+
+    with (
+        patch("alpha.app.run_loop_resume.save_pipeline_state") as mock_state,
+        patch("alpha.app.run_loop_resume.save_checkpoint") as mock_checkpoint,
+    ):
+        save_runtime_checkpoint(
+            state_file="/tmp/state.json",
+            checkpoint_file="/tmp/checkpoint.json",
+            completed_field_index=1,
+            execution_state=execution_state,
+            runtime_state=runtime_state,
+            last_field_id="f1",
+            fields=[{"id": "f1"}, {"id": "f2"}],
+            reason="KeyboardInterrupt",
+        )
+
+    assert mock_state.call_args.kwargs["completed_field_index"] == 1
+    assert mock_state.call_args.kwargs["field_id"] == "f1"
+    assert mock_checkpoint.call_args.kwargs["reason"] == "KeyboardInterrupt"

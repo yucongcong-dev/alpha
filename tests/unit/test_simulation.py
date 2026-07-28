@@ -8,6 +8,7 @@
 from __future__ import annotations
 
 from threading import Event
+from unittest.mock import patch
 
 from alpha.config.constants import STATUS_SKIPPED
 from alpha.core.simulation import (
@@ -20,11 +21,13 @@ from alpha.core.simulation import (
     extract_pending_checks,
     is_submittable_from_checks,
     precheck_simulation_metrics,
+    resume_field_test,
     run_checksubmit_stage,
     run_simulation_create_stage,
     summarize_failure,
 )
 from alpha.models.domain import FailedCheck, FieldTestContext, FieldTestResult, SettingsVariant
+from alpha.models.runtime import PendingFutureContext
 from tests.conftest import MockArgs
 
 # ============================================================================
@@ -811,3 +814,40 @@ def test_run_simulation_create_stage_skips_when_stop_signal_is_set() -> None:
     assert isinstance(result, FieldTestResult)
     assert result.status == STATUS_SKIPPED
     assert result.failed_stage == "stopped"
+
+
+def test_resume_field_test_skips_create_and_completes_existing_simulation() -> None:
+    pending = PendingFutureContext(
+        field_id="cashflow_op",
+        field_type="MATRIX",
+        field_name="Cashflow",
+        template_name="group_ratio",
+        expression="rank(cashflow_op)",
+        settings_fingerprint="settings-v1",
+        simulation_location="/simulations/sim-1",
+        simulation_id="sim-1",
+    )
+
+    with (
+        patch("alpha.core.simulation.run_simulation_create_stage") as mock_create,
+        patch(
+            "alpha.core.simulation.run_simulation_poll_stage",
+            return_value=("alpha-1", {"status": "COMPLETE"}),
+        ) as mock_poll,
+        patch(
+            "alpha.core.simulation.run_checksubmit_stage",
+            return_value=(True, "checks passed", []),
+        ),
+    ):
+        result = resume_field_test(
+            client=object(),  # type: ignore[arg-type]
+            args=MockArgs(),
+            pending=pending,
+            template_library_fingerprint="library-v1",
+        )
+
+    mock_create.assert_not_called()
+    mock_poll.assert_called_once()
+    assert result.simulation_id == "sim-1"
+    assert result.alpha_id == "alpha-1"
+    assert result.submittable is True

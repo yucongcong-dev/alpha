@@ -74,6 +74,7 @@ class ExecutionState:
     pending_futures: dict[Future[FieldTestResult], PendingFutureContext]
     field_queue_busy_counts: dict[str, int]
     skipped_fields_due_to_queue: set[str]
+    resumable_simulations: list[PendingFutureContext] = field(default_factory=list)
     persisted_result_count: int = 0
     blacklist_runtime_stats: BlacklistRuntimeStats = field(default_factory=dict)
     blacklisted_template_keys: set[tuple[str, str, str]] = field(default_factory=set)

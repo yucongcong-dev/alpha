@@ -4,10 +4,11 @@ from __future__ import annotations
 
 from concurrent.futures import FIRST_COMPLETED, Future, ThreadPoolExecutor, wait
 import dataclasses
+import logging
 import time
 
 from ..core.scheduler import drain_completed_futures_with_context
-from ..core.simulation import run_field_test_in_worker
+from ..core.simulation import resume_field_test_in_worker, run_field_test_in_worker
 from ..models.domain import FieldTestResult, SettingsVariant, TemplateField
 from ..models.runtime_protocols import SchedulerRuntimeArgs, SimulationStageArgs
 from ..runtime.contexts import (
@@ -16,6 +17,8 @@ from ..runtime.contexts import (
 )
 from ..runtime.state import ExecutionState, InitializedRunContext, RuntimeConcurrencyState
 from .run_loop_resume import save_terminal_pipeline_state
+
+logger = logging.getLogger(__name__)
 
 
 def _drain_completed_cycle(
@@ -96,22 +99,7 @@ def submit_template_future(
             "policy_arm": policy_arm,
         },
     )
-    future = executor.submit(
-        run_field_test_in_worker,
-        run_ctx.client_factory,
-        args,
-        field_with_template,
-        template_name,
-        expression,
-        variant_fingerprint,
-        run_ctx.template_library_fingerprint,
-        settings_variant,
-        run_ctx.create_semaphore,
-        execution_state.stop_signal.is_set,
-    )
-    execution_state.last_submission_at = time.monotonic()
-    typed_future: Future[FieldTestResult] = future
-    execution_state.pending_futures[typed_future] = PendingFutureContext(
+    pending_context = PendingFutureContext(
         field_id=field_id,
         field_name=field_name,
         field_type=field_type,
@@ -125,6 +113,61 @@ def submit_template_future(
         expression=expression,
         settings_fingerprint=variant_fingerprint,
     )
+
+    def _record_simulation_created(simulation_location: str, simulation_id: str) -> None:
+        pending_context.simulation_location = simulation_location
+        pending_context.simulation_id = simulation_id
+
+    future = executor.submit(
+        run_field_test_in_worker,
+        run_ctx.client_factory,
+        args,
+        field_with_template,
+        template_name,
+        expression,
+        variant_fingerprint,
+        run_ctx.template_library_fingerprint,
+        settings_variant,
+        run_ctx.create_semaphore,
+        execution_state.stop_signal.is_set,
+        _record_simulation_created,
+    )
+    execution_state.last_submission_at = time.monotonic()
+    typed_future: Future[FieldTestResult] = future
+    execution_state.pending_futures[typed_future] = pending_context
+
+
+def submit_resumable_futures(
+    *,
+    executor: ThreadPoolExecutor,
+    run_ctx: InitializedRunContext,
+    execution_state: ExecutionState,
+    args: SimulationStageArgs,
+) -> int:
+    """Submit restored remote simulations for polling before scheduling new work."""
+    pending_contexts = list(execution_state.resumable_simulations)
+    execution_state.resumable_simulations.clear()
+    submitted_count = 0
+    try:
+        for pending_context in pending_contexts:
+            future = executor.submit(
+                resume_field_test_in_worker,
+                run_ctx.client_factory,
+                args,
+                pending_context,
+                run_ctx.template_library_fingerprint,
+            )
+            typed_future: Future[FieldTestResult] = future
+            execution_state.pending_futures[typed_future] = pending_context
+            submitted_count += 1
+    except Exception:
+        execution_state.resumable_simulations.extend(pending_contexts[submitted_count:])
+        raise
+    if pending_contexts:
+        logger.info(
+            "[resume] submitted %d simulations for continued polling", len(pending_contexts)
+        )
+    return len(pending_contexts)
 
 
 def drain_remaining_futures(

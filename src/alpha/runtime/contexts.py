@@ -17,9 +17,9 @@ from ..models.runtime_options import ResultWriteOptions, TemplateBuildOptions
 from ..models.runtime_protocols import RunConfig, TemplateStats
 
 
-@dataclass(frozen=True)
+@dataclass
 class PendingFutureContext:
-    """尚未完成的 future 对应的只读元数据。"""
+    """尚未完成的 future 元数据及可恢复的远端 simulation 状态。"""
 
     field_id: str = ""
     field_name: str = ""
@@ -33,6 +33,8 @@ class PendingFutureContext:
     policy_arm: str = ""
     expression: str = ""
     settings_fingerprint: str = ""
+    simulation_location: str = ""
+    simulation_id: str = ""
 
 
 @dataclass(frozen=True)

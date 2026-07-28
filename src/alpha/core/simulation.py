@@ -20,6 +20,7 @@ from ..models.domain import (
     TemplateField,
 )
 from ..models.runtime_protocols import ClientFactoryLike, SemaphoreLike, SimulationStageArgs
+from ..runtime.contexts import PendingFutureContext
 from ..utils.helpers import first_non_empty
 from .simulation_parsing import (
     extract_alpha_id,
@@ -43,6 +44,59 @@ from .simulation_stages import (
 
 logger = logging.getLogger(__name__)
 
+SimulationCreatedCallback = Callable[[str, str], None]
+
+
+def _complete_field_test_from_simulation(
+    ctx: FieldTestContext,
+    client: BrainClient,
+    args: SimulationStageArgs,
+    *,
+    simulation_location: str,
+    simulation_id: str,
+) -> FieldTestResult:
+    """Poll an existing simulation and execute the remaining check stage."""
+    poll_result = run_simulation_poll_stage(
+        ctx,
+        client,
+        args,
+        simulation_location=simulation_location,
+        simulation_id=simulation_id,
+    )
+    if isinstance(poll_result, FieldTestResult):
+        return poll_result
+    alpha_id, simulation_result = poll_result
+
+    check_result = run_checksubmit_stage(
+        ctx,
+        client,
+        args,
+        alpha_id=alpha_id,
+        simulation_id=simulation_id,
+        simulation_result=simulation_result,
+    )
+    if isinstance(check_result, FieldTestResult):
+        return check_result
+    submittable, message, failed_checks = check_result
+
+    if submittable:
+        logger.info(
+            "[checksubmit] submittable alpha_id=%s simulation_id=%s simulation_location=%s",
+            alpha_id,
+            simulation_id,
+            simulation_location,
+        )
+
+    return ctx.success(
+        simulation_id=simulation_id,
+        alpha_id=alpha_id,
+        submittable=submittable,
+        submitted=False,
+        message=message,
+        status="simulated",
+        failed_checks=failed_checks,
+    )
+
 
 def run_field_test(
     client: BrainClient,
@@ -55,6 +109,7 @@ def run_field_test(
     simulation_settings: SettingsVariant | None = None,
     create_semaphore: SemaphoreLike | None = None,
     should_abort: Callable[[], bool] | None = None,
+    on_simulation_created: SimulationCreatedCallback | None = None,
 ) -> FieldTestResult:
     """执行单个候选表达式的 simulation / checksubmit 两阶段流程。"""
     if not expression or not expression.strip():
@@ -103,49 +158,59 @@ def run_field_test(
     if isinstance(create_result, FieldTestResult):
         return create_result
     simulation_location, simulation_id = create_result
+    if on_simulation_created is not None:
+        on_simulation_created(simulation_location, simulation_id)
 
-    poll_result = run_simulation_poll_stage(
+    return _complete_field_test_from_simulation(
         ctx,
         client,
         args,
         simulation_location=simulation_location,
         simulation_id=simulation_id,
     )
-    if isinstance(poll_result, FieldTestResult):
-        return poll_result
-    alpha_id, simulation_result = poll_result
 
-    check_result = run_checksubmit_stage(
+
+def resume_field_test(
+    client: BrainClient,
+    args: SimulationStageArgs,
+    pending: PendingFutureContext,
+    template_library_fingerprint: str,
+) -> FieldTestResult:
+    """Resume polling a previously created remote simulation."""
+    if not pending.simulation_location:
+        raise ValueError("resumable simulation must contain simulation_location")
+    simulation_id = (
+        pending.simulation_id or pending.simulation_location.rstrip("/").rsplit("/", 1)[-1]
+    )
+    ctx = FieldTestContext(
+        field_id=pending.field_id,
+        field_type=pending.field_type,
+        field_name=pending.field_name,
+        template_name=pending.template_name,
+        template_family=pending.template_family,
+        template_stage=pending.template_stage,
+        template_role=pending.template_role,
+        template_activation_scope=pending.template_activation_scope,
+        policy_version=pending.policy_version,
+        policy_arm=pending.policy_arm,
+        expression=pending.expression,
+        settings_fingerprint=pending.settings_fingerprint,
+        template_library_fingerprint=template_library_fingerprint,
+    )
+    logger.info(
+        "[resume] continuing simulation_id=%s location=%s field=%s template=%s",
+        simulation_id,
+        pending.simulation_location,
+        pending.field_id,
+        pending.template_name,
+    )
+    return _complete_field_test_from_simulation(
         ctx,
         client,
         args,
-        alpha_id=alpha_id,
+        simulation_location=pending.simulation_location,
         simulation_id=simulation_id,
-        simulation_result=simulation_result,
     )
-    if isinstance(check_result, FieldTestResult):
-        return check_result
-    submittable, message, failed_checks = check_result
-
-    if submittable:
-        logger.info(
-            "[checksubmit] submittable alpha_id=%s simulation_id=%s simulation_location=%s",
-            alpha_id,
-            simulation_id,
-            simulation_location,
-        )
-
-    result = ctx.success(
-        simulation_id=simulation_id,
-        alpha_id=alpha_id,
-        submittable=submittable,
-        submitted=False,
-        message=message,
-        status="simulated",
-        failed_checks=failed_checks,
-    )
-
-    return result
 
 
 def run_field_test_in_worker(
@@ -159,6 +224,7 @@ def run_field_test_in_worker(
     simulation_settings: SettingsVariant | None = None,
     create_semaphore: SemaphoreLike | None = None,
     should_abort: Callable[[], bool] | None = None,
+    on_simulation_created: SimulationCreatedCallback | None = None,
 ) -> FieldTestResult:
     """工作线程入口，先解析线程本地客户端再执行测试。"""
     client = client_factory.get_client()
@@ -173,6 +239,23 @@ def run_field_test_in_worker(
         simulation_settings,
         create_semaphore,
         should_abort,
+        on_simulation_created,
+    )
+
+
+def resume_field_test_in_worker(
+    client_factory: ClientFactoryLike,
+    args: SimulationStageArgs,
+    pending: PendingFutureContext,
+    template_library_fingerprint: str,
+) -> FieldTestResult:
+    """Worker entrypoint for resuming an existing remote simulation."""
+    client = client_factory.get_client()
+    return resume_field_test(
+        client,
+        args,
+        pending,
+        template_library_fingerprint,
     )
 
 
@@ -188,6 +271,8 @@ __all__ = [
     "is_submittable_from_checks",
     "poll_simulation_with_retry",
     "precheck_simulation_metrics",
+    "resume_field_test",
+    "resume_field_test_in_worker",
     "run_field_test",
     "run_field_test_in_worker",
     "summarize_failure",

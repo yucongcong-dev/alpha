@@ -10,6 +10,7 @@ from ..models.io_types import RunPaths
 from ..models.runtime_protocols import RunLoopArgs
 from ..runtime.state import InitializedRunContext
 from .loop_future_support import drain_remaining_futures as drain_remaining_futures
+from .loop_future_support import submit_resumable_futures as submit_resumable_futures
 from .run_loop_feedback import refresh_runtime_feedback as refresh_runtime_feedback
 from .run_loop_paths import (
     create_template_build_context as create_template_build_context,
@@ -95,6 +96,12 @@ def run_field_test_loop(
         )
         last_field_id = ""
         try:
+            submit_resumable_futures(
+                executor=executor,
+                run_ctx=run_ctx,
+                execution_state=execution_state,
+                args=args,
+            )
             round_index = 0
             while True:
                 round_index += 1
@@ -121,8 +128,13 @@ def run_field_test_loop(
                 completion_ctx=completion_ctx,
             )
         except KeyboardInterrupt:
+            completed_field_index = (
+                0 if field_template_batch_size > 0 else field_resume_positions.get(last_field_id, 0)
+            )
             save_runtime_checkpoint(
+                state_file=state_file,
                 checkpoint_file=checkpoint_file,
+                completed_field_index=completed_field_index,
                 execution_state=execution_state,
                 runtime_state=runtime_state,
                 last_field_id=last_field_id,
@@ -131,8 +143,13 @@ def run_field_test_loop(
             )
             raise
         except Exception:
+            completed_field_index = (
+                0 if field_template_batch_size > 0 else field_resume_positions.get(last_field_id, 0)
+            )
             save_runtime_checkpoint(
+                state_file=state_file,
                 checkpoint_file=checkpoint_file,
+                completed_field_index=completed_field_index,
                 execution_state=execution_state,
                 runtime_state=runtime_state,
                 last_field_id=last_field_id,

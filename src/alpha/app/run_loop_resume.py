@@ -99,24 +99,33 @@ def persist_field_progress(
 
 def save_runtime_checkpoint(
     *,
+    state_file: str,
     checkpoint_file: str,
+    completed_field_index: int,
     execution_state: ExecutionState,
     runtime_state: RuntimeConcurrencyState,
     last_field_id: str,
     fields: list[TemplateField],
     reason: str,
 ) -> None:
-    """Persist a checkpoint on interrupt or exception."""
-    if not checkpoint_file:
-        return
-    save_checkpoint(
-        checkpoint_file,
-        execution_state=execution_state,
-        runtime_state=runtime_state,
-        field_id=last_field_id or "",
-        remaining_fields=max(0, len(fields)),
-        reason=reason,
-    )
+    """Persist resumable pipeline state and a diagnostic crash checkpoint."""
+    if state_file:
+        save_pipeline_state(
+            state_file,
+            completed_field_index=max(0, completed_field_index),
+            execution_state=execution_state,
+            runtime_state=runtime_state,
+            field_id=last_field_id or "",
+        )
+    if checkpoint_file:
+        save_checkpoint(
+            checkpoint_file,
+            execution_state=execution_state,
+            runtime_state=runtime_state,
+            field_id=last_field_id or "",
+            remaining_fields=max(0, len(fields)),
+            reason=reason,
+        )
 
 
 def save_terminal_pipeline_state(

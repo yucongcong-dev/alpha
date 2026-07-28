@@ -1,0 +1,167 @@
+"""Future submission and remote simulation resume tests."""
+
+from __future__ import annotations
+
+from concurrent.futures import Future
+from threading import Semaphore
+from types import SimpleNamespace
+from unittest.mock import patch
+
+from alpha.app.loop_future_support import submit_resumable_futures, submit_template_future
+from alpha.models.domain import FieldTestResult, SettingsVariant, TemplateField
+from alpha.models.runtime import ExecutionState, PendingFutureContext
+
+
+def _execution_state() -> ExecutionState:
+    return ExecutionState(
+        results=[],
+        attempted_keys=set(),
+        template_stats={},
+        pending_futures={},
+        field_queue_busy_counts={},
+        skipped_fields_due_to_queue=set(),
+    )
+
+
+class _ImmediateExecutor:
+    def submit(self, function, *args):
+        future: Future[FieldTestResult] = Future()
+        future.set_result(function(*args))
+        return future
+
+
+class _RecordingExecutor:
+    def __init__(self) -> None:
+        self.calls: list[tuple[object, tuple[object, ...]]] = []
+
+    def submit(self, function, *args):
+        self.calls.append((function, args))
+        return Future()
+
+
+class _FailingExecutor(_RecordingExecutor):
+    def submit(self, function, *args):
+        if self.calls:
+            raise RuntimeError("executor unavailable")
+        return super().submit(function, *args)
+
+
+def test_submit_template_future_records_created_simulation_location() -> None:
+    execution_state = _execution_state()
+    run_ctx = SimpleNamespace(
+        client_factory=object(),
+        template_library_fingerprint="library-v1",
+        create_semaphore=Semaphore(1),
+    )
+    field = TemplateField(
+        field_id="f1",
+        field_name="Field 1",
+        field_type="MATRIX",
+        metadata={"id": "f1", "name": "Field 1", "type": "MATRIX"},
+    )
+
+    def _worker(*args):
+        on_created = args[-1]
+        on_created("/simulations/sim-1", "sim-1")
+        return FieldTestResult(
+            field_id="f1",
+            field_type="MATRIX",
+            field_name="Field 1",
+            template_name="base",
+            expression="rank(f1)",
+        )
+
+    with patch("alpha.app.loop_future_support.run_field_test_in_worker", side_effect=_worker):
+        submit_template_future(
+            executor=_ImmediateExecutor(),  # type: ignore[arg-type]
+            run_ctx=run_ctx,  # type: ignore[arg-type]
+            execution_state=execution_state,
+            args=SimpleNamespace(),  # type: ignore[arg-type]
+            field=field,
+            field_id="f1",
+            field_name="Field 1",
+            field_type="MATRIX",
+            template_name="base",
+            template_family="base",
+            template_stage="generate",
+            template_role="signal",
+            template_activation_scope="dataset",
+            expression="rank(f1)",
+            settings_variant=SettingsVariant(),
+            variant_fingerprint="settings-v1",
+        )
+
+    pending = next(iter(execution_state.pending_futures.values()))
+    assert pending.simulation_location == "/simulations/sim-1"
+    assert pending.simulation_id == "sim-1"
+
+
+def test_submit_resumable_futures_registers_restored_contexts() -> None:
+    execution_state = _execution_state()
+    pending = PendingFutureContext(
+        field_id="f1",
+        field_name="Field 1",
+        field_type="MATRIX",
+        template_name="base",
+        expression="rank(f1)",
+        settings_fingerprint="settings-v1",
+        simulation_location="/simulations/sim-1",
+        simulation_id="sim-1",
+    )
+    execution_state.resumable_simulations = [pending]
+    executor = _RecordingExecutor()
+    run_ctx = SimpleNamespace(
+        client_factory=object(),
+        template_library_fingerprint="library-v1",
+    )
+
+    submitted = submit_resumable_futures(
+        executor=executor,  # type: ignore[arg-type]
+        run_ctx=run_ctx,  # type: ignore[arg-type]
+        execution_state=execution_state,
+        args=SimpleNamespace(),  # type: ignore[arg-type]
+    )
+
+    assert submitted == 1
+    assert execution_state.resumable_simulations == []
+    assert list(execution_state.pending_futures.values()) == [pending]
+    assert len(executor.calls) == 1
+
+
+def test_submit_resumable_futures_restores_unsubmitted_contexts_on_failure() -> None:
+    execution_state = _execution_state()
+    first = PendingFutureContext(
+        field_id="f1",
+        template_name="base",
+        expression="rank(f1)",
+        settings_fingerprint="settings-v1",
+        simulation_location="/simulations/sim-1",
+    )
+    second = PendingFutureContext(
+        field_id="f2",
+        template_name="base",
+        expression="rank(f2)",
+        settings_fingerprint="settings-v1",
+        simulation_location="/simulations/sim-2",
+    )
+    execution_state.resumable_simulations = [first, second]
+    executor = _FailingExecutor()
+    run_ctx = SimpleNamespace(
+        client_factory=object(),
+        template_library_fingerprint="library-v1",
+    )
+
+    try:
+        submit_resumable_futures(
+            executor=executor,  # type: ignore[arg-type]
+            run_ctx=run_ctx,  # type: ignore[arg-type]
+            execution_state=execution_state,
+            args=SimpleNamespace(),  # type: ignore[arg-type]
+        )
+    except RuntimeError as exc:
+        assert "executor unavailable" in str(exc)
+    else:
+        raise AssertionError("executor failure should propagate")
+
+    assert list(execution_state.pending_futures.values()) == [first]
+    assert execution_state.resumable_simulations == [second]
