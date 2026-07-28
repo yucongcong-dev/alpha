@@ -16,6 +16,7 @@ from .policy_coercers import (
     tuple_tuple_str_int,
 )
 from .types import ExpressionPolicyOverrides, YamlConfig
+from .yaml import get_yaml_config
 
 
 def _merge_policy_values(base: Any, override: Any, *, key: str = "") -> Any:
@@ -47,8 +48,6 @@ def _policy_config_for_dataset(
     yaml_config: YamlConfig | None = None,
 ) -> ExpressionPolicyOverrides:
     if yaml_config is None:
-        from . import get_yaml_config
-
         yaml_config = get_yaml_config()
     section = yaml_config.get("expression_policies", {})
     if not isinstance(section, dict):

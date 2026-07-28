@@ -94,7 +94,7 @@ class TestUseFundamental6Heuristics:
 
 def test_expression_policy_can_be_overridden_from_yaml(monkeypatch) -> None:
     monkeypatch.setattr(
-        "alpha.config.get_yaml_config",
+        "alpha.config.policy_overrides.get_yaml_config",
         lambda config_path="": {
             "expression_policies": {
                 "__default__": {
@@ -244,7 +244,7 @@ def test_get_yaml_config_reloads_when_file_changes(tmp_path) -> None:
 
 def test_expression_policy_default_section_applies_to_non_curated_dataset(monkeypatch) -> None:
     monkeypatch.setattr(
-        "alpha.config.get_yaml_config",
+        "alpha.config.policy_overrides.get_yaml_config",
         lambda config_path="": {
             "expression_policies": {
                 "__default__": {
@@ -267,7 +267,7 @@ def test_expression_policy_default_section_applies_to_non_curated_dataset(monkey
 
 def test_load_submit_quality_runtime_config_reads_yaml_globals(monkeypatch) -> None:
     monkeypatch.setattr(
-        "alpha.config.get_yaml_config",
+        "alpha.config.runtime_values.get_yaml_config",
         lambda config_path="": {
             "global": {
                 "quality": {

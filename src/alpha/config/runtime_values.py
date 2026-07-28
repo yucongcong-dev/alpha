@@ -46,12 +46,11 @@ from .constants import (
     SUBMIT_MIN_SHARPE,
     SUBMIT_MIN_TURNOVER,
 )
+from .yaml import get_yaml_config
 
 
 def _get_yaml_global() -> dict[str, Any]:
     """获取整个 global 段（一次查询，避免重复遍历）。"""
-    from . import get_yaml_config
-
     yaml_cfg = get_yaml_config()
     if not yaml_cfg:
         return {}

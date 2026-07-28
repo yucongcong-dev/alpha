@@ -67,6 +67,10 @@ compat-import-check:
 		echo "[check] internal code should import concrete generators.templates modules instead of compatibility exports" >&2; \
 		exit 1; \
 	fi
+	@if rg -n "from \. import get_yaml_config" src/alpha/config --glob '!__init__.py'; then \
+		echo "[check] internal config modules should import config.yaml instead of the package facade" >&2; \
+		exit 1; \
+	fi
 
 arch-boundary-check:
 	@if rg -n "(from alpha\.app(\.| import)|import alpha\.app(\.|$$)|from \.\.app(\.| import)|from \.app(\.| import))" src/alpha \
