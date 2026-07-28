@@ -1,4 +1,4 @@
-.PHONY: test help-check whitespace-check docs-check scan-secrets repo-boundary-check removed-compat-file-check compat-import-check arch-boundary-check todo-check sync-config config-sync-check ruff-check format-check mypy-check check clean-runtime clean-dev package
+.PHONY: test coverage-check help-check whitespace-check docs-check scan-secrets repo-boundary-check removed-compat-file-check compat-import-check arch-boundary-check todo-check sync-config config-sync-check ruff-check format-check mypy-check check clean-runtime clean-dev package
 
 PYTHON ?= python3.10
 PYTHONPATH ?= src
@@ -8,6 +8,9 @@ SECRET_PATTERN := github_[p]at_[A-Za-z0-9_]+|WQB_[P]ASSWORD=|Authorization: [B]a
 
 test:
 	PYTHONPATH=$(PYTHONPATH) $(PYTHON) -m pytest -q
+
+coverage-check:
+	PYTHONPATH=$(PYTHONPATH) $(PYTHON) -m pytest --cov=alpha --cov-report=term:skip-covered -q
 
 help-check:
 	PYTHONPATH=$(PYTHONPATH) $(PYTHON) -m alpha --help >/dev/null
@@ -122,7 +125,7 @@ mypy-check:
 		exit 1; \
 	fi
 
-check: test help-check whitespace-check docs-check scan-secrets repo-boundary-check removed-compat-file-check compat-import-check arch-boundary-check todo-check config-sync-check ruff-check format-check mypy-check
+check: coverage-check help-check whitespace-check docs-check scan-secrets repo-boundary-check removed-compat-file-check compat-import-check arch-boundary-check todo-check config-sync-check ruff-check format-check mypy-check
 
 clean-runtime:
 	PYTHONPATH=$(PYTHONPATH) $(PYTHON) -m alpha clean
