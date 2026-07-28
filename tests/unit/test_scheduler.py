@@ -548,7 +548,7 @@ def test_drain_completed_futures_sets_stop_signal_and_cancels_unstarted_future()
         blocker.cancel()
 
 
-def test_drain_completed_futures_keeps_queued_future_before_stop_threshold() -> None:
+def test_drain_completed_futures_ignores_historical_submittable_baseline() -> None:
     done_future: Future[object] = Future()
     done_future.set_result(None)
     queued_future: Future[object] = Future()
@@ -586,6 +586,7 @@ def test_drain_completed_futures_keeps_queued_future_before_stop_threshold() -> 
         },
         field_queue_busy_counts={},
         skipped_fields_due_to_queue=set(),
+        submittable_baseline_count=1,
     )
     args = argparse.Namespace(
         dataset_id="fundamental6",
@@ -593,7 +594,7 @@ def test_drain_completed_futures_keeps_queued_future_before_stop_threshold() -> 
         auto_update_blacklist=False,
         field_queue_busy_skip_after=0,
         queue_busy_cooldown_seconds=0,
-        stop_after_submittable=2,
+        stop_after_submittable=1,
     )
 
     with patch(

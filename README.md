@@ -155,6 +155,8 @@ export PYTHONPATH=src
 python3.10 -m alpha --smoke-test
 ```
 
+`alpha` 控制台命令与 `python3.10 -m alpha` 使用同一入口；如果误用低于 3.10 的解释器，入口会直接报告当前版本并退出，不再进入包内模块后才出现语法错误。
+
 ## 运行
 
 ### 推荐工作流
@@ -226,6 +228,8 @@ python3.10 -m alpha
 - 全局并发冷却仍然生效，避免平台繁忙时持续创建新 simulation
 - `--field-queue-busy-skip-after` 保留旧参数名，但现在按“字段 + 模板 + 表达式 + settings”候选分别计数，不会因为一个候选排队超时而跳过整个字段
 - 候选达到阈值后只在当前进程中停止重试；队列计数不写入 checkpoint，重启后可重新尝试
+
+`--stop-after-submittable N` 只统计本次启动后新增的可提交 Alpha；输出文件中的历史可提交结果仍用于续跑和分析，但不会让新进程一启动就提前停止。
 
 #### 阶段 3：聚焦深挖（针对高反馈字段）
 

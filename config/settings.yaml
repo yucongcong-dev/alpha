@@ -139,7 +139,7 @@ global:
   filters:
     template_disable_after: 0       # 模板自动禁用阈值 (N 次失败后禁用)，0=不剪枝
     top_fields_by_feedback: 0       # 仅测试反馈排序前 N 个字段，0=不限制
-    stop_after_submittable: 0       # 找到 N 个可提交 Alpha 后停止，0=不停止
+    stop_after_submittable: 0       # 本次启动新增 N 个可提交 Alpha 后停止，0=不停止
 
   # --------------------------------------------------------------------------
   # 质量阈值 —— 对应 CLI --min-sharpe / --min-fitness / --min-turnover / --max-turnover / --max-weight

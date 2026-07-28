@@ -212,7 +212,7 @@ def add_file_filter_arguments(parser: argparse.ArgumentParser) -> None:
         "--stop-after-submittable",
         type=int,
         default=0,
-        help="如果大于 0，在找到指定数量的可提交 Alpha 后停止",
+        help="如果大于 0，在本次启动新增指定数量的可提交 Alpha 后停止",
     )
 
 

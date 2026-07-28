@@ -200,9 +200,11 @@ def select_nearpass_candidates(
 def should_stop_after_submittable(
     stop_threshold: int,
     results: Sequence[FieldTestResult],
+    *,
+    baseline_count: int = 0,
 ) -> bool:
-    """判断当前运行是否已达到要求的可提交数量上限。"""
+    """判断本次启动后新增的可提交结果是否达到停止阈值。"""
     if stop_threshold <= 0:
         return False
-    current_count = current_submittable_count(results)
+    current_count = max(0, current_submittable_count(results) - baseline_count)
     return bool(current_count >= stop_threshold)

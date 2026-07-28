@@ -329,7 +329,7 @@ def drain_completed_futures_with_context(
             execution_state=execution_state,
         )
         execution_state.template_stats = drain_result.template_stats
-        current_submittable_count = execution_state.refresh_metrics().submittable_count
+        current_submittable_count = execution_state.current_run_submittable_count
         # Queue timeouts are tracked per candidate below. Keep the shared
         # decision helper focused here on stop/cooldown state only.
         decision = decide_drain_state_updates(

@@ -75,7 +75,11 @@ def execute_schedule_round(
         )
 
     for field_index, field in enumerate(context.fields, start=1):
-        if should_stop_after_submittable(args.stop_after_submittable, execution_state.results):
+        if should_stop_after_submittable(
+            args.stop_after_submittable,
+            execution_state.results,
+            baseline_count=execution_state.submittable_baseline_count,
+        ):
             execution_state.stop_signal.set()
             logger.info("[stop] 达到 stop-after-submittable=%d", args.stop_after_submittable)
             return ScheduleRoundResult(
@@ -216,7 +220,11 @@ def _dispatch_templates_for_field(
     execution_state = run_ctx.execution_state
     runtime_state = run_ctx.runtime_state
     for template_index, entry in enumerate(scheduled_templates, start=1):
-        if should_stop_after_submittable(args.stop_after_submittable, execution_state.results):
+        if should_stop_after_submittable(
+            args.stop_after_submittable,
+            execution_state.results,
+            baseline_count=execution_state.submittable_baseline_count,
+        ):
             execution_state.stop_signal.set()
             logger.info("[stop] 达到 stop-after-submittable=%d", args.stop_after_submittable)
             return True

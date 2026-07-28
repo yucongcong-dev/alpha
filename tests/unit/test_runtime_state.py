@@ -2,8 +2,13 @@
 
 from __future__ import annotations
 
+from unittest.mock import patch
+
+from alpha.analysis.feedback_history import should_stop_after_submittable
+from alpha.app.bootstrap_state import create_execution_state
 from alpha.config.application_sections import QualityConfig
 from alpha.models.domain import FieldTestResult
+from alpha.runtime.contexts import HistoricalRunState
 from alpha.runtime.state import ExecutionState
 
 
@@ -41,6 +46,58 @@ def test_execution_metrics_follow_results_without_manual_refresh() -> None:
     state.results.clear()
     assert state.unique_field_ids == set()
     assert state.submittable_count == 0
+
+
+def test_bootstrap_baseline_excludes_historical_submittable_results() -> None:
+    historical = FieldTestResult(
+        field_id="field_1",
+        field_type="MATRIX",
+        field_name="field_1",
+        template_name="tpl",
+        status="simulated",
+        submittable=True,
+        expression="rank(field_1)",
+    )
+    with (
+        patch("alpha.app.bootstrap_state.build_blacklist_runtime_stats", return_value={}),
+        patch("alpha.app.bootstrap_state.load_blacklisted_template_keys", return_value=set()),
+    ):
+        state = create_execution_state(
+            dataset_id="fundamental6",
+            historical_state=HistoricalRunState(existing_results=[historical]),
+        )
+
+    assert state.submittable_baseline_count == 1
+    assert state.current_run_submittable_count == 0
+    assert (
+        should_stop_after_submittable(
+            1,
+            state.results,
+            baseline_count=state.submittable_baseline_count,
+        )
+        is False
+    )
+
+    state.results.append(
+        FieldTestResult(
+            field_id="field_2",
+            field_type="MATRIX",
+            field_name="field_2",
+            template_name="tpl",
+            status="simulated",
+            submittable=True,
+            expression="rank(field_2)",
+        )
+    )
+    assert state.current_run_submittable_count == 1
+    assert (
+        should_stop_after_submittable(
+            1,
+            state.results,
+            baseline_count=state.submittable_baseline_count,
+        )
+        is True
+    )
     assert state.submitted_count == 0
 
 

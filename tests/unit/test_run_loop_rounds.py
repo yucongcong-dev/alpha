@@ -7,7 +7,13 @@ from concurrent.futures import ThreadPoolExecutor
 from threading import Semaphore
 from unittest.mock import MagicMock, patch
 
-from alpha.app.run_loop_rounds import ScheduleRoundContext, schedule_field_round
+from alpha.app.run_loop_rounds import (
+    ScheduleRoundContext,
+    ScheduleRoundResult,
+    execute_schedule_round,
+    schedule_field_round,
+)
+from alpha.models.domain import FieldTestResult
 from alpha.models.io_types import RunFilters
 from alpha.models.runtime import (
     ExecutionState,
@@ -141,3 +147,33 @@ def test_queue_exhausted_candidate_is_excluded_from_next_round() -> None:
         )
 
     assert exhausted_key in captured_attempted[0]
+
+
+def test_historical_submittable_result_does_not_stop_new_round() -> None:
+    context = _build_context(field_template_batch_size=1)
+    context.args.stop_after_submittable = 1
+    context.run_ctx.execution_state.results.append(
+        FieldTestResult(
+            field_id="historical",
+            field_type="MATRIX",
+            field_name="historical",
+            template_name="tpl",
+            status="simulated",
+            submittable=True,
+            expression="rank(historical)",
+        )
+    )
+    context.run_ctx.execution_state.submittable_baseline_count = 1
+
+    with patch(
+        "alpha.app.run_loop_rounds.schedule_field_round",
+        return_value=ScheduleRoundResult(
+            progressed=False,
+            stop_requested=False,
+            last_field_id="f1",
+        ),
+    ) as mock_schedule:
+        result = execute_schedule_round(context, round_index=1)
+
+    assert result.stop_requested is False
+    mock_schedule.assert_called_once()

@@ -31,6 +31,7 @@ def create_execution_state(
         field_queue_busy_counts={},
         skipped_fields_due_to_queue=set(),
     )
+    execution_state.submittable_baseline_count = execution_state.metrics.submittable_count
     execution_state.blacklist_runtime_stats = build_blacklist_runtime_stats(execution_state.results)
     execution_state.blacklisted_template_keys = load_blacklisted_template_keys(dataset_id)
     return execution_state

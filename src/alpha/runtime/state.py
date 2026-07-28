@@ -77,6 +77,7 @@ class ExecutionState:
     resumable_simulations: list[PendingFutureContext] = field(default_factory=list)
     queue_retry_counts: dict[tuple[str, str, str, str], int] = field(default_factory=dict)
     queue_exhausted_keys: set[tuple[str, str, str, str]] = field(default_factory=set)
+    submittable_baseline_count: int = 0
     persisted_result_count: int = 0
     blacklist_runtime_stats: BlacklistRuntimeStats = field(default_factory=dict)
     blacklisted_template_keys: set[tuple[str, str, str]] = field(default_factory=set)
@@ -95,6 +96,11 @@ class ExecutionState:
     @property
     def submittable_count(self) -> int:
         return self.metrics.submittable_count
+
+    @property
+    def current_run_submittable_count(self) -> int:
+        """Return submittable results added after this process initialized."""
+        return max(0, self.metrics.submittable_count - self.submittable_baseline_count)
 
     @property
     def submitted_count(self) -> int:
