@@ -16,6 +16,7 @@ from contextlib import suppress
 from datetime import datetime, timezone
 import json
 import logging
+import math
 import os
 import time
 from typing import Any
@@ -26,6 +27,67 @@ from ..runtime.state import ExecutionState, RuntimeConcurrencyState
 logger = logging.getLogger(__name__)
 
 STATE_VERSION = 1
+_TEMPLATE_STAT_COUNT_FIELDS = (
+    "attempted",
+    "submittable",
+    "submitted",
+    "errors",
+    "simulated",
+    "queue_timeouts",
+    "low_sharpe",
+    "low_fitness",
+    "concentrated_weight",
+    "low_sub_universe_sharpe",
+)
+
+
+def _non_negative_int(value: object) -> int | None:
+    """Return a safe non-negative integer or None for unusable persisted values."""
+    if isinstance(value, bool):
+        return None
+    if not isinstance(value, (int, float, str)):
+        return None
+    try:
+        parsed = int(value)
+    except (OverflowError, TypeError, ValueError):
+        return None
+    return parsed if parsed >= 0 else None
+
+
+def _restore_queue_busy_counts(payload: object) -> dict[str, int]:
+    """Restore only valid queue-busy counters from an untrusted state payload."""
+    if not isinstance(payload, dict):
+        return {}
+    restored: dict[str, int] = {}
+    for field_id, raw_count in payload.items():
+        normalized_field_id = str(field_id or "").strip()
+        count = _non_negative_int(raw_count)
+        if normalized_field_id and count is not None:
+            restored[normalized_field_id] = count
+    return restored
+
+
+def _restore_string_set(payload: object) -> set[str]:
+    """Restore a set containing only non-empty persisted strings."""
+    if not isinstance(payload, list):
+        return set()
+    return {item.strip() for item in payload if isinstance(item, str) and item.strip()}
+
+
+def _restore_template_stats(payload: object) -> dict[str, dict[str, Any]]:
+    """Restore template statistics with safe numeric counters."""
+    if not isinstance(payload, dict):
+        return {}
+    restored: dict[str, dict[str, Any]] = {}
+    for template_name, raw_stat in payload.items():
+        normalized_name = str(template_name or "").strip()
+        if not normalized_name or not isinstance(raw_stat, dict):
+            continue
+        stat = dict(raw_stat)
+        for field_name in _TEMPLATE_STAT_COUNT_FIELDS:
+            stat[field_name] = _non_negative_int(stat.get(field_name)) or 0
+        restored[normalized_name] = stat
+    return restored
 
 
 def _serialize_pending_template_keys(
@@ -165,6 +227,14 @@ def load_pipeline_state(
         logger.warning("[checkpoint] invalid state payload in %s: %s", state_file, exc)
         return 0
 
+    if not math.isfinite(remaining) or remaining < 0:
+        logger.warning(
+            "[checkpoint] invalid remaining cooldown in %s: %s",
+            state_file,
+            remaining,
+        )
+        remaining = 0.0
+
     if completed_index < 0:
         logger.warning(
             "[checkpoint] invalid negative completed index in %s: %d",
@@ -174,27 +244,28 @@ def load_pipeline_state(
         return 0
 
     # 恢复拥塞状态
-    queue_busy = payload.get("field_queue_busy_counts", {})
-    if isinstance(queue_busy, dict):
-        execution_state.field_queue_busy_counts = queue_busy
+    execution_state.field_queue_busy_counts = _restore_queue_busy_counts(
+        payload.get("field_queue_busy_counts")
+    )
 
-    skipped = payload.get("skipped_fields_due_to_queue", [])
-    if isinstance(skipped, list):
-        execution_state.skipped_fields_due_to_queue = set(skipped)
+    execution_state.skipped_fields_due_to_queue = _restore_string_set(
+        payload.get("skipped_fields_due_to_queue")
+    )
 
     restored_pending_keys = _restore_pending_template_keys(payload.get("pending_template_keys"))
     if restored_pending_keys:
         execution_state.attempted_keys.update(restored_pending_keys)
 
     # 恢复模板统计
-    template_stats = payload.get("template_stats", {})
-    if isinstance(template_stats, dict):
-        execution_state.template_stats = template_stats
+    execution_state.template_stats = _restore_template_stats(payload.get("template_stats"))
 
     # 恢复冷却状态（用剩余秒数重建绝对单调钟）
     if remaining > 0:
         runtime_state.cooldown_until = time.monotonic() + remaining
-        runtime_state.runtime_max_workers = runtime_max_workers
+        runtime_state.runtime_max_workers = max(
+            1,
+            min(runtime_max_workers, max(1, runtime_state.max_workers)),
+        )
     else:
         runtime_state.cooldown_until = 0.0
         runtime_state.runtime_max_workers = runtime_state.max_workers
