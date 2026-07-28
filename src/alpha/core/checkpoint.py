@@ -2,7 +2,7 @@
 管道状态与检查点持久化模块
 
 本模块实现可恢复状态（state_file）和中断诊断报告（interrupt_report_file），
-支持断点续传：重启时跳过已完成的字段、恢复拥塞控制状态和模板统计数据。
+支持断点续传：重启时跳过已完成的字段、恢复远端模拟、冷却状态和模板统计数据。
 
 模块内容：
     - save_pipeline_state: 在每个字段完成后保存运行进度
@@ -53,26 +53,6 @@ def _non_negative_int(value: object) -> int | None:
     except (OverflowError, TypeError, ValueError):
         return None
     return parsed if parsed >= 0 else None
-
-
-def _restore_queue_busy_counts(payload: object) -> dict[str, int]:
-    """Restore only valid queue-busy counters from an untrusted state payload."""
-    if not isinstance(payload, dict):
-        return {}
-    restored: dict[str, int] = {}
-    for field_id, raw_count in payload.items():
-        normalized_field_id = str(field_id or "").strip()
-        count = _non_negative_int(raw_count)
-        if normalized_field_id and count is not None:
-            restored[normalized_field_id] = count
-    return restored
-
-
-def _restore_string_set(payload: object) -> set[str]:
-    """Restore a set containing only non-empty persisted strings."""
-    if not isinstance(payload, list):
-        return set()
-    return {item.strip() for item in payload if isinstance(item, str) and item.strip()}
 
 
 def _restore_template_stats(payload: object) -> dict[str, dict[str, Any]]:
@@ -473,11 +453,14 @@ def _atomic_save(path: str, payload: dict[str, Any]) -> bool:
 
     if not path:
         return False
-    directory = os.path.dirname(os.path.abspath(path)) or "."
-    os.makedirs(directory, exist_ok=True)
-    fd, tmp = tempfile.mkstemp(prefix=".tmp_state_", suffix=".json", dir=directory)
+    fd: int | None = None
+    tmp = ""
     try:
+        directory = os.path.dirname(os.path.abspath(path)) or "."
+        os.makedirs(directory, exist_ok=True)
+        fd, tmp = tempfile.mkstemp(prefix=".tmp_state_", suffix=".json", dir=directory)
         with os.fdopen(fd, "w", encoding="utf-8") as handle:
+            fd = None
             json.dump(payload, handle, ensure_ascii=False, indent=2)
         os.replace(tmp, path)
         return True
@@ -485,6 +468,9 @@ def _atomic_save(path: str, payload: dict[str, Any]) -> bool:
         logger.debug("[checkpoint] failed to save %s: %s", path, exc)
         return False
     finally:
+        if fd is not None:
+            with suppress(OSError):
+                os.close(fd)
         with suppress(OSError):
-            if os.path.exists(tmp):
+            if tmp and os.path.exists(tmp):
                 os.remove(tmp)

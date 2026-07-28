@@ -49,7 +49,8 @@ _SIM_ID_REGEX: re.Pattern[str] = re.compile(r"/simulations/([^/]+)", re.IGNORECA
 
 def _int_arg(args: object, name: str, default: int = 0) -> int:
     try:
-        return int(getattr(args, name, default) or default)
+        value = getattr(args, name, default)
+        return int(default if value is None else value)
     except (TypeError, ValueError):
         return default
 

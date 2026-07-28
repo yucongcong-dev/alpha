@@ -3,8 +3,16 @@
 from __future__ import annotations
 
 import json
+from unittest.mock import patch
 
-from alpha.core.checkpoint import load_pipeline_state, save_pipeline_state
+from alpha.core import checkpoint as checkpoint_module
+from alpha.core.checkpoint import (
+    delete_pipeline_state,
+    load_pipeline_state,
+    save_checkpoint,
+    save_interrupt_report,
+    save_pipeline_state,
+)
 from alpha.models.runtime import ExecutionState, PendingFutureContext, RuntimeConcurrencyState
 
 
@@ -307,3 +315,198 @@ def test_load_pipeline_state_skips_resumable_simulation_already_in_results(tmp_p
 
     assert resumed == 1
     assert execution_state.resumable_simulations == []
+
+
+def test_non_negative_int_rejects_untrusted_values() -> None:
+    assert checkpoint_module._non_negative_int(True) is None
+    assert checkpoint_module._non_negative_int(object()) is None
+    assert checkpoint_module._non_negative_int("invalid") is None
+    assert checkpoint_module._non_negative_int(-1) is None
+    assert checkpoint_module._non_negative_int("3") == 3
+
+
+def test_load_pipeline_state_handles_missing_invalid_and_version_mismatch(tmp_path) -> None:
+    runtime_state = RuntimeConcurrencyState(max_workers=2, runtime_max_workers=2)
+
+    assert (
+        load_pipeline_state(
+            "",
+            runtime_state=runtime_state,
+            execution_state=_build_execution_state(),
+        )
+        == 0
+    )
+    invalid_json = tmp_path / "invalid.json"
+    invalid_json.write_text("{", encoding="utf-8")
+    assert (
+        load_pipeline_state(
+            str(invalid_json),
+            runtime_state=runtime_state,
+            execution_state=_build_execution_state(),
+        )
+        == 0
+    )
+    wrong_version = tmp_path / "wrong-version.json"
+    wrong_version.write_text(json.dumps({"version": 99}), encoding="utf-8")
+    assert (
+        load_pipeline_state(
+            str(wrong_version),
+            runtime_state=runtime_state,
+            execution_state=_build_execution_state(),
+        )
+        == 0
+    )
+
+
+def test_load_pipeline_state_rejects_negative_cursor_and_restores_idle_runtime(tmp_path) -> None:
+    negative = tmp_path / "negative.json"
+    negative.write_text(
+        json.dumps({"version": 1, "completed_field_index": -1}),
+        encoding="utf-8",
+    )
+    runtime_state = RuntimeConcurrencyState(max_workers=3, runtime_max_workers=1)
+    assert (
+        load_pipeline_state(
+            str(negative),
+            runtime_state=runtime_state,
+            execution_state=_build_execution_state(),
+        )
+        == 0
+    )
+
+    idle = tmp_path / "idle.json"
+    idle.write_text(
+        json.dumps(
+            {
+                "version": 1,
+                "completed_field_index": 2,
+                "remaining_cooldown_seconds": 0,
+                "runtime_max_workers": 1,
+                "last_submission_at": 10,
+            }
+        ),
+        encoding="utf-8",
+    )
+    execution_state = _build_execution_state()
+    with patch("alpha.core.checkpoint.time.monotonic", return_value=100.0):
+        resumed = load_pipeline_state(
+            str(idle),
+            runtime_state=runtime_state,
+            execution_state=execution_state,
+        )
+
+    assert resumed == 2
+    assert runtime_state.runtime_max_workers == 3
+    assert runtime_state.cooldown_until == 0
+    assert execution_state.last_submission_at >= 0
+
+
+def test_restore_pending_simulations_sanitizes_rows_and_derives_simulation_id() -> None:
+    restored, retry_from_start = checkpoint_module._restore_pending_simulations(
+        [
+            "invalid",
+            {"field_id": "missing-required"},
+            {
+                "field_id": "retry",
+                "template_name": "template",
+                "expression": "rank(retry)",
+                "settings_fingerprint": "settings",
+            },
+            {
+                "field_id": "f1",
+                "template_name": "template",
+                "expression": "rank(f1)",
+                "settings_fingerprint": "settings",
+                "simulation_location": "/simulations/sim-derived",
+                "settings": "invalid",
+            },
+        ]
+    )
+
+    assert retry_from_start == 1
+    assert len(restored) == 1
+    assert restored[0].field_name == "f1"
+    assert restored[0].field_type == "UNKNOWN"
+    assert restored[0].simulation_id == "sim-derived"
+    assert restored[0].settings == {}
+
+
+def test_save_pipeline_state_handles_empty_path_and_persists_cooldown(tmp_path) -> None:
+    execution_state = _build_execution_state()
+    execution_state.resumable_simulations = [
+        PendingFutureContext(
+            field_id="f1",
+            template_name="template",
+            expression="rank(f1)",
+            settings_fingerprint="settings",
+            simulation_location="/simulations/sim-1",
+        )
+    ]
+    runtime_state = RuntimeConcurrencyState(max_workers=4, runtime_max_workers=1)
+    runtime_state.cooldown_until = 130.0
+
+    assert not save_pipeline_state(
+        "",
+        completed_field_index=0,
+        execution_state=execution_state,
+        runtime_state=runtime_state,
+    )
+    state_file = tmp_path / "nested" / "state.json"
+    with patch("alpha.core.checkpoint.time.monotonic", return_value=100.0):
+        assert save_pipeline_state(
+            str(state_file),
+            completed_field_index=1,
+            execution_state=execution_state,
+            runtime_state=runtime_state,
+            field_id="f1",
+        )
+
+    payload = json.loads(state_file.read_text(encoding="utf-8"))
+    assert payload["remaining_cooldown_seconds"] == 30.0
+    assert payload["pending_simulations"][0]["simulation_location"] == "/simulations/sim-1"
+
+
+def test_interrupt_report_alias_and_delete_pipeline_state(tmp_path) -> None:
+    execution_state = _build_execution_state()
+    execution_state.resumable_simulations = [
+        PendingFutureContext(
+            field_id="f1",
+            template_name="template",
+            expression="rank(f1)",
+            settings_fingerprint="settings",
+            simulation_location="/simulations/sim-1",
+            simulation_id="sim-1",
+        )
+    ]
+    runtime_state = RuntimeConcurrencyState(max_workers=2, runtime_max_workers=1)
+    report = tmp_path / "interrupt.json"
+
+    assert not save_interrupt_report(
+        "",
+        execution_state=execution_state,
+        runtime_state=runtime_state,
+    )
+    assert save_checkpoint(
+        str(report),
+        execution_state=execution_state,
+        runtime_state=runtime_state,
+        field_id="f1",
+        remaining_fields=3,
+        reason="KeyboardInterrupt",
+    )
+    payload = json.loads(report.read_text(encoding="utf-8"))
+    assert payload["reason"] == "KeyboardInterrupt"
+    assert payload["pending_count"] == 1
+    assert payload["pending_summary"][0]["simulation_id"] == "sim-1"
+
+    delete_pipeline_state(str(report))
+    assert not report.exists()
+    delete_pipeline_state(str(report))
+
+
+def test_atomic_save_returns_false_when_directory_creation_fails(tmp_path) -> None:
+    with patch("alpha.core.checkpoint.os.makedirs", side_effect=OSError("read only")):
+        assert not checkpoint_module._atomic_save(
+            str(tmp_path / "state.json"),
+            {"version": 1},
+        )
