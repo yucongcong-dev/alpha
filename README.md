@@ -96,7 +96,9 @@ alpha/
 
 代码中的模板相关逻辑统一放在 `src/alpha/generators/templates/`：
 
-- `__init__.py`：加载、校验、补齐和生成 JSON 模板库
+- `__init__.py`：仅保留历史公开导入路径的兼容 facade
+- `library_loader.py`：加载并校验 JSON 模板库
+- `library_store.py`：检查数据集模板库并补齐内存态 priority
 - `candidates.py`：统一构造 `TemplateCandidate`
 - `classification.py`：识别模板 family / stage
 - `metadata.py`：构建模板 metadata 索引
@@ -206,16 +208,15 @@ python3.10 -m alpha
 - `near_pass_summary`：接近通过的候选（按 score 排序）
 - `failed_check_leaderboard`：主要失败原因分布
 - `optimization_hints`：自动生成的优化建议
-- `pending_self_correlation` 结果会保留在主结果文件 / journal 中，但默认不会被当作有效反馈去驱动下一轮模板统计和字段排序
+- `pending_check_count`：仍存在未决 submission check 的结果数量
 
 **预估时间**：30-70 分钟（默认先覆盖 200 字段，但每轮每字段只浅试少量高优模板）
 
 **关于 `SELF_CORRELATION=PENDING` 的当前流程**：
-- 阶段 2 主探索只做短轮询，不再默认在 `finalize` 阶段同步卡住等待所有 pending alpha
-- 若 `SELF_CORRELATION` 仍为 `PENDING`，结果会以 `pending_self_correlation` 状态落盘，并保留 `pending_since / last_recheck_at / recheck_count` 元数据
-- 这类结果默认不会参与模板统计、字段反馈画像、near-pass 排行和 failed-check 学习
-- 如需同步复查 pending 结果，可显式加 `--finalize-recheck-pending-self-correlation`
-- 更推荐把复查独立成后处理命令，见下方“Pending 复查”
+- `PENDING` 不等于通过；这类结果会以 `submittable=null` 落盘，并在 `failed_checks` 中保留原始未决检查
+- 未决结果仍算一次已经执行的组合，续跑时不会重复创建相同 simulation
+- 未决结果不会参与模板统计、字段反馈画像、near-pass 排行、failed-check 学习和策略效果评估
+- 当前 CLI 没有独立的 pending 重查命令；需要在平台确认终态，或使用新的 run 做后续验证
 
 #### 阶段 3：聚焦深挖（针对高反馈字段）
 
@@ -243,7 +244,7 @@ python3.10 -m alpha --top-fields-by-feedback 10 --max-templates-per-field 15
 - 默认读取当前 `--output / --feedback-output` 指向的同一结果文件；若未显式指定，则使用本次运行的默认结果路径
 - 阶段 2 的结果会自动用于字段优先级排序和 near-pass 候选筛选
 - 可多次运行，每次自动续跑（不重复已完成的组合）
-- 如果阶段 2 产生了较多 `pending_self_correlation` 结果，建议先单独复查，再决定是否继续 refine，而不是直接把这些 pending 结果当作普通 near-pass 历史
+- 如果阶段 2 产生较多未决检查，先在平台确认终态，再决定是否继续 refine；runner 不会把它们当作普通 near-pass 历史
 
 **当前实现状态**：
 - 阶段 1：环境验证
@@ -280,24 +281,6 @@ python3.10 -m alpha --full-run
 - 新结果追加到同一输出文件
 - 中断后再次运行自动继续
 - 如需重新开始，优先使用新的 `--run-name`；显式 `--output` 仍用于兼容自定义路径
-
-### Pending 复查
-
-当结果里出现较多 `pending_self_correlation` 时，推荐把复查与主探索拆开：
-
-```bash
-python3.10 -m alpha --dataset-id model51 \
-  --run-name stage2-explore-clean \
-  --recheck-pending-self-correlation-only \
-  --no-auto-update-blacklist
-```
-
-说明：
-- 该模式只会读取历史结果并复查 `SELF_CORRELATION=PENDING` 的 alpha
-- 不会发起新的字段探索
-- 若只是想在本次运行结束前顺手复查，可显式加 `--finalize-recheck-pending-self-correlation`
-
----
 
 ### 其他命令
 
@@ -421,7 +404,7 @@ YAML 分层优先级为：`config/settings.yaml` > `config/expression_policies.y
 | `field_performance_summary` | 字段表现 | 看哪些字段有潜力 |
 | `policy_evaluation` | 按策略版本和 adaptive/holdout 分组的通过率 | 判断自适应启发式是否真正优于对照组 |
 
-结果恢复以 JSONL journal 为唯一事实来源。`test_results.json`、analysis 和 template registry
+结果恢复以 JSONL journal 为唯一事实来源。`summary.json`、analysis 和 template registry
 都是派生视图；启动时缺失的分析边车只会被重建，不会反向改写 journal 或主 summary。
 
 ### 失败检查含义

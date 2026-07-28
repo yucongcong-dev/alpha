@@ -72,7 +72,6 @@
 今天最推荐的命令是：
 
 ```bash
-cd /Users/boyaa/Downloads/alpha
 PYTHONPATH=src python3.10 -m alpha \
   --dataset-id fundamental6 \
   --template-library-file datasets/fundamental6/presets/cashflow_submit_core/template.json \
@@ -421,8 +420,6 @@ PYTHONPATH=src python3.10 -m alpha \
 推荐直接使用下面这组等价命令：
 
 ```bash
-cd /Users/boyaa/Downloads/alpha
-
 PYTHONPATH=src python3.10 -m alpha --dry-run-plan \
   --dataset-id fundamental6 \
   --template-library-file datasets/fundamental6/presets/cashflow_submit_core/template.json \
@@ -450,12 +447,12 @@ PYTHONPATH=src python3.10 -m alpha \
   --run-name verify_cashflow_core_$(date +%F)
 ```
 
-这个脚本默认会带上：
+这组命令固定使用：
 
 - `--stop-after-submittable 1`
 - `--no-auto-update-blacklist`
 - `cashflow_submit_core preset`
-- `round6_submit preset fields.txt`
+- `cashflow_submit_core preset` 的 `fields.txt` 和 `templates.txt`
 
 这样它的目标很明确：
 
@@ -564,8 +561,8 @@ PYTHONPATH=src python3.10 -m alpha \
 因此从这一天开始，`fundamental6` 的最小复跑应该固定理解为：
 
 - 用 `cashflow_submit_core preset`
-- 用单字段白名单 `cashflow_submit_core_field.txt`
-- 用双模板白名单 `cashflow_submit_core_templates.txt`
+- 用单字段白名单 `presets/cashflow_submit_core/fields.txt`
+- 用双模板白名单 `presets/cashflow_submit_core/templates.txt`
 - 显式设置 `--stop-after-submittable 1`
 - 默认关闭 blacklist 自动更新
 
@@ -648,7 +645,7 @@ PYTHONPATH=src python3.10 -m alpha \
 
 这轮的额外价值不只是再次通过，而是顺手验证了一个流程修复：
 
-- 当显式指定 `refine/` 下的模板库时，执行器现在不会再偷偷混入自动生成的 `MATRIX` 模板
+- 当显式指定专项 preset 模板库时，执行器现在不会再偷偷混入自动生成的 `MATRIX` 模板
 - 也不会再混入 `iter_*` 反馈变异模板
 - 这意味着 `fundamental6` 的最小 `refine preset` 终于真正具备“闭集执行”语义
 

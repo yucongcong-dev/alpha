@@ -57,7 +57,7 @@
   - 因此当前默认计划看到的，就是仓库明确保留的 5 条主模板，而不是“文档很窄、运行时又变宽”
 - 在 `checksubmit` 流程改成等待 `SELF_CORRELATION` 终态之后，当前风险字段分支已不再像可直接生产的候选：
   - 近期对 `unsystematic_risk_last_*` 和 `systematic_risk_last_*` 的重查里，self-correlation 都没能在轮询预算内进入终态
-- 当前工作流会把这些结果保留为 `pending_self_correlation`，而不是伪装成普通 simulated failure，方便后续单独重查
+- 当前工作流会把这些结果保留为 `submittable=null` 的未决记录；它们不会被误算成可提交结果，也不会进入自适应反馈统计
 
 公开脚本启发：
 - bucket 分组值得吸收，因为它更适合做稳定的相对比较。
@@ -81,7 +81,7 @@
 已移除内容：
 - 只做 `stddev` 的默认模板已移出主模板库，因为它们没有新的 bucket/risk-aware 结构有针对性。
 - 大多数额外的 grouped/decay/window 邻居，现在应该被看作 refine 或诊断输入，而不是默认 broad-search 种子。
-- `IR` 也不再留在最小默认队列中，而是下沉到 `refine/` 的 ratio 分支之后。
+- `IR` 也不再留在最小默认队列中，而是下沉到专项 refine preset 的 ratio 分支之后。
 
 字段排序：
 - 拥挤的 risk 字段，现在通过 `alphaCount/userCount` 的 crowding penalty 被显式降权，而不是因为“历史常见”就自动排到前面。
@@ -98,7 +98,7 @@ Broad exploration：
 - `model51` 已经展示出足够的结构性，因此大范围模板扫库应继续保持窄而精。
 - 优先使用数据集专属模板库，而不是继续扩默认主库之外的历史旁支。
 - 在 self-correlation 行为没有理解清楚前，不要继续把 broad-search 预算浪费在当前风险字段家族上。
-- 如果还需要做 broad sweep，也应该把它视为生成 `pending_self_correlation` backlog 的诊断动作，而不是主要的 alpha 挖掘动作。
+- 如果还需要做 broad sweep，也应该把它视为确认 self-correlation 终态行为的诊断动作，而不是主要的 alpha 挖掘动作。
 
 Focused refine：
 - 历史上的 focused fixtures 并没有完整保留为现役文件集合；当前更适合作为“历史轮次说明”，而不是可直接点击复用的本地入口。

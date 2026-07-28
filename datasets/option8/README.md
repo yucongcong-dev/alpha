@@ -88,7 +88,6 @@
 首次真实运行命令：
 
 ```bash
-cd /Users/boyaa/Downloads/alpha
 PYTHONPATH=src python3.10 -m alpha \
   --dataset-id option8 \
   --neutralization MARKET \
@@ -140,7 +139,6 @@ PYTHONPATH=src python3.10 -m alpha \
 先做 dry-run：
 
 ```bash
-cd /Users/boyaa/Downloads/alpha
 PYTHONPATH=src python3.10 -m alpha \
   --dataset-id option8 \
   --neutralization MARKET \
@@ -153,7 +151,6 @@ PYTHONPATH=src python3.10 -m alpha \
 再做收窄后的真实小验证：
 
 ```bash
-cd /Users/boyaa/Downloads/alpha
 PYTHONPATH=src python3.10 -m alpha \
   --dataset-id option8 \
   --neutralization MARKET \
