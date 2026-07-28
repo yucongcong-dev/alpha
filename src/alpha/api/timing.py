@@ -8,6 +8,7 @@ import logging
 import time
 
 from ..config.runtime_values import get_runtime_config
+from .http_backend import response_header
 
 logger = logging.getLogger(__name__)
 
@@ -26,7 +27,7 @@ def wait_seconds(seconds: float, reason: str, verbose: bool = True) -> None:
 
 def extract_retry_after(headers: dict[str, str], default: float = 5.0) -> float:
     """将 Retry-After HTTP 头解析为秒数，失败时使用默认值。"""
-    value = headers.get("Retry-After")
+    value = response_header(headers, "Retry-After")
     if not value:
         return default
     try:

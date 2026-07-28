@@ -22,7 +22,7 @@ class FakeSimulationClient(BrainSimulationsMixin):
 
 
 def test_create_simulation_returns_location() -> None:
-    client = FakeSimulationClient([(201, {"Location": "/simulations/123"}, b"")])
+    client = FakeSimulationClient([(201, {"location": "/simulations/123"}, b"")])
 
     assert client.create_simulation({"regular": {}}) == "/simulations/123"
     assert client.requests[0][0] == "POST"
@@ -38,7 +38,7 @@ def test_create_simulation_requires_location_header() -> None:
 def test_poll_simulation_waits_for_pending_then_returns(monkeypatch) -> None:
     client = FakeSimulationClient(
         [
-            (200, {"Retry-After": "2"}, b'{"status": "PENDING", "progress": 10}'),
+            (200, {"retry-after": "2"}, b'{"status": "PENDING", "progress": 10}'),
             (200, {}, b'{"status": "COMPLETED", "alpha": "a1"}'),
         ]
     )

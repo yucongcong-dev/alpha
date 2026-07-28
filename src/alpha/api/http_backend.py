@@ -11,6 +11,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from http.cookiejar import Cookie, CookieJar
 import logging
 from typing import Any, Protocol
@@ -18,6 +19,15 @@ from urllib.request import HTTPCookieProcessor, ProxyHandler, build_opener
 from urllib.request import Request as UrllibRequest
 
 logger = logging.getLogger(__name__)
+
+
+def response_header(headers: Mapping[str, str], name: str) -> str | None:
+    """Return one HTTP response header using case-insensitive name matching."""
+    normalized_name = name.casefold()
+    return next(
+        (value for key, value in headers.items() if key.casefold() == normalized_name),
+        None,
+    )
 
 
 class HttpBackend(Protocol):

@@ -18,6 +18,7 @@ from ..error_handling import ErrorCategory, ErrorSeverity, error_handler
 from ..exceptions import BrainAPIError, BrainQueueBusyError
 from ..utils.helpers import first_non_empty
 from .api_types import SimulationPayload
+from .http_backend import response_header
 from .payloads import safe_json_bytes, simulation_payload_is_pending
 from .timing import polling_retry_after, wait_seconds
 
@@ -39,7 +40,7 @@ class BrainSimulationsMixin:
             headers=SIM_ACCEPT_HEADER,
             expected={201},
         )
-        location = cast(str, response_headers.get("Location"))
+        location = cast(str, response_header(response_headers, "Location"))
         if not location:
             raise BrainAPIError("Simulation created but Location header is missing.")
         return location
@@ -108,6 +109,7 @@ class BrainSimulationsMixin:
             )
             payload = safe_json_bytes(content)
             is_pending, status, progress = simulation_payload_is_pending(payload)
+            retry_after = response_header(response_headers, "Retry-After")
             if is_pending:
                 if pending_started_at is None:
                     pending_started_at = time.monotonic()
@@ -124,9 +126,9 @@ class BrainSimulationsMixin:
                     url,
                     status,
                     progress,
-                    response_headers.get("Retry-After"),
+                    retry_after,
                 )
-                if response_headers.get("Retry-After"):
+                if retry_after:
                     wait_seconds(
                         polling_retry_after(
                             response_headers, default=http_config.polling_default_wait
@@ -142,7 +144,7 @@ class BrainSimulationsMixin:
                     )
                 continue
 
-            if response_headers.get("Retry-After"):
+            if retry_after:
                 body_status = str(
                     first_non_empty(payload.get("status"), payload.get("state"), "")
                 ).upper()
@@ -172,7 +174,7 @@ class BrainSimulationsMixin:
                     "[simulation] pending location=%s body_status=%s retry_after=%s",
                     url,
                     body_status or "unknown",
-                    response_headers.get("Retry-After"),
+                    retry_after,
                 )
                 wait_seconds(
                     polling_retry_after(response_headers, default=http_config.polling_default_wait),

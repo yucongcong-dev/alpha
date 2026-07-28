@@ -12,7 +12,7 @@ import pytest
 
 from alpha.api.alphas import BrainAlphasMixin
 from alpha.api.fields import BrainFieldsMixin
-from alpha.api.http_backend import HttpxHttpBackend, UrllibHttpBackend
+from alpha.api.http_backend import HttpxHttpBackend, UrllibHttpBackend, response_header
 from alpha.api.timing import (
     doubled_retry_after,
     extract_retry_after,
@@ -113,10 +113,19 @@ def test_httpx_backend_wraps_client_errors() -> None:
         backend.request("POST", "https://example.test", data=b"{}")
 
 
+def test_response_header_matches_names_case_insensitively() -> None:
+    headers = {"location": "/simulations/123", "RETRY-after": "4"}
+
+    assert response_header(headers, "Location") == "/simulations/123"
+    assert response_header(headers, "Retry-After") == "4"
+    assert response_header(headers, "Missing") is None
+
+
 @pytest.mark.parametrize(
     ("headers", "default", "expected"),
     [
         ({"Retry-After": "2.5"}, 7.0, 2.5),
+        ({"retry-after": "3.5"}, 7.0, 3.5),
         ({"Retry-After": "invalid"}, 7.0, 7.0),
         ({}, 7.0, 7.0),
     ],

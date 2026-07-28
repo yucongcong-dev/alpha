@@ -16,7 +16,7 @@ from ..config.constants import (
 from ..config.runtime_values import get_runtime_config
 from ..exceptions import BrainAPIError, BrainRateLimitError
 from .api_types import ApiParams
-from .http_backend import HttpBackend
+from .http_backend import HttpBackend, response_header
 from .payloads import safe_json_bytes
 from .timing import doubled_retry_after, wait_seconds
 
@@ -73,13 +73,14 @@ class BrainSessionMixin:
             )
             last_response = (status, response_headers, content)
             if status == 429:
+                retry_after_header = response_header(response_headers, "Retry-After")
                 logger.warning(
                     "[rate-limit] %s %s attempt=%d/%d retry_after=%s",
                     method,
                     url,
                     attempt,
                     retries,
-                    response_headers.get("Retry-After"),
+                    retry_after_header,
                 )
                 wait_seconds(
                     doubled_retry_after(
@@ -109,14 +110,14 @@ class BrainSessionMixin:
             raise BrainAPIError(f"No response from {method} {url}")
         status, response_headers, content = last_response
         if status == 429:
-            retry_after = doubled_retry_after(
+            retry_after_seconds = doubled_retry_after(
                 response_headers, default=http_config.rate_limit_default_wait
             )
             detail = safe_json_bytes(content)
             raise BrainRateLimitError(
                 f"{method} {url} rate limited after {retries} attempts, "
                 f"skip current template: {detail}",
-                int(retry_after),
+                int(retry_after_seconds),
             )
         detail = safe_json_bytes(content)
         raise BrainAPIError(f"{method} {url} failed: {status} {detail}")

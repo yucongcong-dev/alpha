@@ -60,7 +60,7 @@ def test_request_raises_rate_limit_error_after_retry_budget(monkeypatch) -> None
     monkeypatch.setattr(
         client,
         "raw_request",
-        lambda *_args, **_kwargs: (429, {"Retry-After": "3"}, b'{"detail": "slow"}'),
+        lambda *_args, **_kwargs: (429, {"retry-after": "3"}, b'{"detail": "slow"}'),
     )
     monkeypatch.setattr(
         "alpha.api.session.wait_seconds", lambda seconds, *_args: waits.append(seconds)
