@@ -138,6 +138,7 @@ def schedule_field_round(
             field_resume_positions=context.field_resume_positions,
             execution_state=execution_state,
             runtime_state=runtime_state,
+            completed_field_index_override=(0 if context.field_template_batch_size > 0 else None),
         )
         return ScheduleRoundResult(progressed=False, stop_requested=False, last_field_id=field_id)
 
@@ -191,6 +192,7 @@ def schedule_field_round(
         field_resume_positions=context.field_resume_positions,
         execution_state=execution_state,
         runtime_state=runtime_state,
+        completed_field_index_override=(0 if context.field_template_batch_size > 0 else None),
     )
     return ScheduleRoundResult(
         progressed=progressed,

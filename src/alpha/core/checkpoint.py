@@ -165,7 +165,12 @@ def load_pipeline_state(
         logger.warning("[checkpoint] invalid state payload in %s: %s", state_file, exc)
         return 0
 
-    if completed_index <= 0:
+    if completed_index < 0:
+        logger.warning(
+            "[checkpoint] invalid negative completed index in %s: %d",
+            state_file,
+            completed_index,
+        )
         return 0
 
     # 恢复拥塞状态

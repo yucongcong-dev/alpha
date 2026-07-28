@@ -91,6 +91,23 @@ def test_persist_field_progress_keeps_terminal_index() -> None:
     assert mock_save.call_args.kwargs["completed_field_index"] == 3
 
 
+def test_persist_field_progress_allows_resuming_from_first_field() -> None:
+    """Breadth-first rounds must not mark partially processed fields complete."""
+    with patch("alpha.app.run_loop_resume.save_pipeline_state") as mock_save:
+        persist_field_progress(
+            state_file="/tmp/state.json",
+            field_id="f3",
+            field_index=3,
+            original_fields=[{"id": "f1"}, {"id": "f2"}, {"id": "f3"}],
+            field_resume_positions={"f1": 1, "f2": 2, "f3": 3},
+            execution_state=_build_execution_state(),
+            runtime_state=RuntimeConcurrencyState(max_workers=2, runtime_max_workers=2),
+            completed_field_index_override=0,
+        )
+
+    assert mock_save.call_args.kwargs["completed_field_index"] == 0
+
+
 def test_drain_remaining_futures_persists_total_field_count() -> None:
     future = object()
     execution_state = _build_execution_state()

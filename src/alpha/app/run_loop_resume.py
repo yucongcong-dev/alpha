@@ -77,11 +77,16 @@ def persist_field_progress(
     field_resume_positions: dict[str, int],
     execution_state: ExecutionState,
     runtime_state: RuntimeConcurrencyState,
+    completed_field_index_override: int | None = None,
 ) -> None:
     """Persist pipeline state after completing one field."""
     if not state_file:
         return
-    completed_index = field_resume_positions.get(field_id, field_index)
+    completed_index = (
+        field_resume_positions.get(field_id, field_index)
+        if completed_field_index_override is None
+        else completed_field_index_override
+    )
     completed_index = max(0, min(completed_index, len(original_fields)))
     save_pipeline_state(
         state_file,
