@@ -10,6 +10,11 @@ from ..config.constants import STATUS_SKIPPED
 from .domain import FieldTestResult
 
 
+def has_pending_checks(result: FieldTestResult) -> bool:
+    """Return whether any persisted submission check is still unresolved."""
+    return any(str(check.result or "").upper() == "PENDING" for check in result.failed_checks or [])
+
+
 def is_queue_timeout_result(result: FieldTestResult) -> bool:
     """判断结果是否只是平台队列超时，而非 Alpha 质量反馈。"""
     message = str(result.message or "").lower()
@@ -23,3 +28,8 @@ def is_queue_timeout_result(result: FieldTestResult) -> bool:
 def is_informative_result(result: FieldTestResult) -> bool:
     """判断结果是否应参与模板/字段质量学习。"""
     return not is_queue_timeout_result(result) and result.status != STATUS_SKIPPED
+
+
+def is_feedback_eligible_result(result: FieldTestResult) -> bool:
+    """Return whether a terminal result may influence adaptive research feedback."""
+    return is_informative_result(result) and not has_pending_checks(result)

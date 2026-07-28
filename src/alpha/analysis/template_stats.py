@@ -37,7 +37,7 @@ from ..config.constants import (
     TEMPLATE_HISTORY_SUBMITTABLE_BONUS,
 )
 from ..models.domain import FieldTestResult
-from .result_identity import is_queue_timeout_result
+from ..models.result_predicates import has_pending_checks, is_queue_timeout_result
 
 
 def compile_template_stats(results: Sequence[FieldTestResult]) -> dict[str, dict[str, Any]]:
@@ -53,6 +53,8 @@ def update_template_stats_with_result(
     result: FieldTestResult,
 ) -> dict[str, dict[str, Any]]:
     """将单条结果增量合并到模板统计中。"""
+    if has_pending_checks(result):
+        return stats
     stat = stats.setdefault(
         result.template_name,
         {
@@ -148,6 +150,8 @@ def compile_template_performance_summary(
     """构建适合写入 JSON 的模板层表现汇总。"""
     grouped: dict[str, dict[str, Any]] = {}
     for result in results:
+        if has_pending_checks(result):
+            continue
         summary = grouped.setdefault(
             result.template_name,
             {

@@ -8,6 +8,7 @@ import math
 from typing import Any
 
 from ..models.domain import FieldTestResult
+from ..models.result_predicates import is_feedback_eligible_result
 
 POLICY_ARM_ADAPTIVE = "adaptive"
 POLICY_ARM_HOLDOUT = "holdout"
@@ -95,6 +96,8 @@ def summarize_policy_evaluation(
     grouped: dict[tuple[str, str], dict[str, Any]] = {}
     field_outcomes: dict[tuple[str, str, str], dict[str, bool]] = {}
     for result in results:
+        if not is_feedback_eligible_result(result):
+            continue
         version = result.policy_version or "unversioned"
         arm = result.policy_arm or "unassigned"
         row = grouped.setdefault(

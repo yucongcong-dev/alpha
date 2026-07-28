@@ -138,7 +138,12 @@ def extract_pending_checks(alpha_payload: ApiPayload) -> list[FailedCheck]:
 def is_submittable_from_checks(checks: list[FailedCheck]) -> bool | None:
     if not checks:
         return None
-    return all(str(check.result or "").upper() != _RESULT_FAIL for check in checks)
+    results = {str(check.result or "").upper() for check in checks}
+    if _RESULT_FAIL in results:
+        return False
+    if _RESULT_PENDING in results:
+        return None
+    return True
 
 
 def summarize_failure(payload: ApiPayload | list[Any] | Any) -> str:

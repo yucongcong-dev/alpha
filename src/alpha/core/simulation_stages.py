@@ -33,6 +33,7 @@ from .simulation_parsing import (
     extract_alpha_id,
     extract_checks,
     extract_failed_checks,
+    extract_pending_checks,
     is_submittable_from_checks,
     summarize_failure,
 )
@@ -125,9 +126,11 @@ def checksubmit_with_retry(
     submittable = is_submittable_from_checks(
         [parse_failed_check(c) for c in checks if isinstance(c, dict)]
     )
-    failed_checks = extract_failed_checks(alpha_detail)
+    unresolved_checks = extract_failed_checks(alpha_detail) + extract_pending_checks(alpha_detail)
     message = (
         "checks unavailable"
+        if submittable is None and not unresolved_checks
+        else "checks pending"
         if submittable is None
         else "checks passed"
         if submittable
@@ -139,7 +142,7 @@ def checksubmit_with_retry(
         submittable,
         message,
     )
-    return submittable, message, failed_checks
+    return submittable, message, unresolved_checks
 
 
 def run_simulation_create_stage(

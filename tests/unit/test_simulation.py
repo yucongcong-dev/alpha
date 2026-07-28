@@ -227,6 +227,12 @@ class TestIsSubmittableFromChecks:
             is False
         )
 
+    def test_pending_is_unresolved(self) -> None:
+        assert (
+            is_submittable_from_checks([FailedCheck(name="SELF_CORRELATION", result="PENDING")])
+            is None
+        )
+
 
 class TestChecksubmitWithRetry:
     """checksubmit_with_retry 测试"""
@@ -621,9 +627,9 @@ def test_run_checksubmit_stage_with_self_correlation_pending(monkeypatch) -> Non
     )
 
     assert result == (
-        True,
-        "checks passed",
-        [],
+        None,
+        "checks pending",
+        [FailedCheck(name="SELF_CORRELATION", result="PENDING")],
     )
 
     def test_context_fields_independent(self) -> None:

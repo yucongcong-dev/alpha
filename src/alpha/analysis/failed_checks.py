@@ -21,7 +21,7 @@ from ..config.constants import (
     STATS_NEARPASS_SUMMARY_LIMIT,
 )
 from ..models.domain import FailedCheck, FieldTestResult, ResultRow
-from ..models.result_predicates import is_queue_timeout_result
+from ..models.result_predicates import is_feedback_eligible_result
 
 
 def score_failed_checks(failed_checks: Sequence[FailedCheck] | None) -> float:
@@ -83,7 +83,7 @@ def compile_failed_check_leaderboard(results: Sequence[FieldTestResult]) -> list
     """统计失败检查排行榜，帮助判断整体策略主要卡在哪里。"""
     grouped: dict[str, dict[str, Any]] = {}
     for result in results:
-        if is_queue_timeout_result(result):
+        if not is_feedback_eligible_result(result):
             continue
         for check in result.failed_checks or []:
             name = str(check.get("name", SENTINEL_UNKNOWN_CHECK))
@@ -150,7 +150,7 @@ def compile_near_pass_summary(
     for result in results:
         if result.status != "simulated" or result.submittable or not result.failed_checks:
             continue
-        if is_queue_timeout_result(result):
+        if not is_feedback_eligible_result(result):
             continue
         score = score_failed_checks(result.failed_checks)
         rows.append(

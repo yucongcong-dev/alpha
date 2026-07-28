@@ -27,13 +27,15 @@ from ..config.constants import (
     STATUS_SKIPPED,
 )
 from ..models.domain import FieldFeedbackMap, FieldTestResult
-from .result_identity import is_queue_timeout_result
+from ..models.result_predicates import has_pending_checks, is_queue_timeout_result
 
 
 def compile_field_performance_summary(results: Sequence[FieldTestResult]) -> list[dict[str, Any]]:
     """构建适合写入 JSON 的字段层表现汇总。"""
     grouped: dict[str, dict[str, Any]] = {}
     for result in results:
+        if has_pending_checks(result):
+            continue
         summary = grouped.setdefault(
             result.field_id,
             {

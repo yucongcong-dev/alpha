@@ -391,7 +391,7 @@ def test_load_existing_results_preserves_self_correlation_pending_metadata(tmp_p
         field_name="field_pending",
         template_name="tpl",
         status="simulated",
-        submittable=True,
+        submittable=None,
         expression="rank(field_pending)",
         failed_checks=[
             FailedCheck(name="SELF_CORRELATION", result="PENDING", value=None, limit=None)
@@ -411,10 +411,12 @@ def test_load_existing_results_preserves_self_correlation_pending_metadata(tmp_p
 
     assert len(loaded) == 1
     assert loaded[0].status == "simulated"
-    assert loaded[0].submittable is True
+    assert loaded[0].submittable is None
+    summary = json.loads(output_path.read_text(encoding="utf-8"))
+    assert summary["pending_checks"] == 1
 
 
-def test_compile_template_stats_includes_self_correlation_pending_results() -> None:
+def test_compile_template_stats_excludes_self_correlation_pending_results() -> None:
     stats = compile_template_stats(
         [
             FieldTestResult(
@@ -432,7 +434,7 @@ def test_compile_template_stats_includes_self_correlation_pending_results() -> N
         ]
     )
 
-    assert stats["tpl"]["attempted"] == 1
+    assert stats == {}
 
 
 def test_compile_template_registry_summary_recommends_demotion_for_weak_templates() -> None:
