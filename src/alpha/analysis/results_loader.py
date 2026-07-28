@@ -90,6 +90,15 @@ def _rows_to_results(rows: list[Any]) -> list[FieldTestResult]:
                     metrics=dict(row.get("metrics", {}))
                     if isinstance(row.get("metrics"), dict)
                     else {},
+                    region=str(row.get("region", "")),
+                    universe=str(row.get("universe", "")),
+                    instrument_type=str(row.get("instrument_type", "")),
+                    delay=int(row["delay"]) if row.get("delay") is not None else None,
+                    run_name=str(row.get("run_name", "")),
+                    source_summary=str(row.get("source_summary", "")),
+                    created_at=str(row.get("created_at", "")),
+                    updated_at=str(row.get("updated_at", "")),
+                    revision=max(1, int(row.get("revision", 1) or 1)),
                     failed_stage=row.get("failed_stage"),
                     failed_checks=[
                         parse_failed_check(check)

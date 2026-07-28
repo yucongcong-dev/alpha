@@ -74,6 +74,15 @@ def serialize_field_test_result(result: FieldTestResult) -> ResultRow:
         "template_library_fingerprint": result.template_library_fingerprint,
         "settings": dict(result.settings),
         "metrics": dict(result.metrics),
+        "region": result.region,
+        "universe": result.universe,
+        "instrument_type": result.instrument_type,
+        "delay": result.delay,
+        "run_name": result.run_name,
+        "source_summary": result.source_summary,
+        "created_at": result.created_at,
+        "updated_at": result.updated_at,
+        "revision": result.revision,
         "failed_stage": result.failed_stage,
         "failed_checks": [serialize_failed_check(check) for check in result.failed_checks]
         if result.failed_checks

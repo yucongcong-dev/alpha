@@ -26,23 +26,22 @@ SUPPORTED_JOURNAL_SCHEMA_VERSIONS = frozenset({1, JOURNAL_SCHEMA_VERSION})
 JOURNAL_SCHEMA_FIELD = "_journal_schema_version"
 JOURNAL_CHECKSUM_FIELD = "_journal_checksum"
 
-_JOURNAL_LOCKS_GUARD = threading.Lock()
-_JOURNAL_LOCKS: dict[str, threading.Lock] = {}
+_FILE_LOCKS_GUARD = threading.Lock()
+_FILE_LOCKS: dict[str, threading.RLock] = {}
 
 
-def _journal_thread_lock(journal_path: str) -> threading.Lock:
-    canonical_path = os.path.abspath(journal_path)
-    with _JOURNAL_LOCKS_GUARD:
-        return _JOURNAL_LOCKS.setdefault(canonical_path, threading.Lock())
+def _file_thread_lock(lock_path: str) -> threading.RLock:
+    canonical_path = os.path.abspath(lock_path)
+    with _FILE_LOCKS_GUARD:
+        return _FILE_LOCKS.setdefault(canonical_path, threading.RLock())
 
 
 @contextmanager
-def _exclusive_journal_lock(journal_path: str) -> Iterator[None]:
-    """Serialize journal replacement/appends across threads and POSIX processes."""
-    directory = os.path.dirname(os.path.abspath(journal_path)) or "."
+def _exclusive_file_lock(lock_path: str) -> Iterator[None]:
+    """Serialize a filesystem transaction across threads and POSIX processes."""
+    directory = os.path.dirname(os.path.abspath(lock_path)) or "."
     os.makedirs(directory, exist_ok=True)
-    lock_path = f"{journal_path}.lock"
-    thread_lock = _journal_thread_lock(journal_path)
+    thread_lock = _file_thread_lock(lock_path)
     with thread_lock, open(lock_path, "a+b") as lock_handle:
         try:
             import fcntl
@@ -54,6 +53,20 @@ def _exclusive_journal_lock(journal_path: str) -> Iterator[None]:
             yield
         finally:
             fcntl.flock(lock_handle.fileno(), fcntl.LOCK_UN)
+
+
+@contextmanager
+def _exclusive_journal_lock(journal_path: str) -> Iterator[None]:
+    """Serialize journal replacement/appends across threads and POSIX processes."""
+    with _exclusive_file_lock(f"{journal_path}.lock"):
+        yield
+
+
+@contextmanager
+def exclusive_results_transaction(output_path: str) -> Iterator[None]:
+    """Lock a complete read-merge-write transaction for one result snapshot."""
+    with _exclusive_file_lock(f"{output_path}.transaction.lock"):
+        yield
 
 
 def _journal_row_payload(result: FieldTestResult) -> dict[str, Any]:

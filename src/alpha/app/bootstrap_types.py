@@ -8,13 +8,14 @@ from threading import Semaphore
 from typing import Protocol
 
 from ..api.client import BrainClient
+from ..config.application import ApplicationConfig
 from ..config.models import DatasetExpressionPolicy
 from ..config.runtime_values import RuntimeConfig
 from ..generators.fields import DatasetFieldClient
 from ..models.domain import TemplateField, TemplateLibrary
 from ..models.io_types import RunFilters, RunPaths
 from ..models.runtime_options import FieldFetchOptions
-from ..models.runtime_protocols import BootstrapRuntimeArgs, CredentialsArgs, RunConfig
+from ..models.runtime_protocols import CredentialsArgs, RunConfig
 from ..policy.types import BlacklistPayload
 from ..runtime.contexts import HistoricalRunState
 from ..runtime.state import RuntimeConcurrencyState
@@ -74,7 +75,7 @@ class RuntimeOutputServices:
     setup_runtime_logging: Callable[[str], None]
     cleanup_legacy_sidecar_files: CleanupLegacySidecarFiles
     ensure_analysis_synced: Callable[[str], None]
-    build_run_config_snapshot: Callable[[BootstrapRuntimeArgs, RunPaths], RunConfig]
+    build_run_config_snapshot: Callable[[ApplicationConfig, RunPaths], RunConfig]
 
 
 @dataclass(frozen=True)
@@ -90,7 +91,7 @@ class SupportingResourceServices:
     load_run_filters_extended: Callable[[RunPaths], RunFilters]
     get_dataset_expression_policy: Callable[[str], DatasetExpressionPolicy]
     stable_fingerprint: Callable[[object], str]
-    build_settings_fingerprint: Callable[[BootstrapRuntimeArgs], str]
+    build_settings_fingerprint: Callable[[ApplicationConfig], str]
     build_historical_run_state: Callable[[str, str], HistoricalRunState]
 
 

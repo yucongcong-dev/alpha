@@ -60,7 +60,7 @@ alpha/
 哪些文件不进仓：
 
 - `datasets/<dataset_id>/runs/`：每次运行的结果、分析、日志、可恢复 state 和中断诊断报告。
-- `datasets/<dataset_id>/feedback/`：跨 run 自动合并的本地反馈仓；保存结果 journal、字段反馈和模板 registry，不进仓。
+- `datasets/<dataset_id>/feedback/<market_scope>/`：按 region、universe、instrument、delay 隔离的跨 run 本地反馈仓；保存结果 journal、字段反馈、run 索引和模板 registry，不进仓。
 - `datasets/<dataset_id>/cache/`：磁盘上的可重建缓存目录。当前主要承载字段缓存；内存态的 YAML / blacklist / runtime cache 不落在这里。
 - `tmp/`：一次性实验输入、临时 include/exclude 列表、临时模板库。
 - `scratch/`：外部脚本、对照材料、手工实验草稿。
@@ -77,7 +77,7 @@ alpha/
 - `20260727-compare-neutralization`：同一字段或同一家族的对照实验
 - `20260727-scratch-filter-probe`：短期排障或临时验证
 
-runner 会把每个完成 run 去重合并到 `datasets/<dataset_id>/feedback/`，供后续 run 自动跳过已尝试组合、继承模板 registry 和选择 near-pass 候选。它仍是可重建的本地研究状态；成熟结论应继续沉淀到 `template.json`、`presets/` 或 dataset README。
+runner 会把每个完成 run 去重合并到 `datasets/<dataset_id>/feedback/<market_scope>/`，供相同市场范围的后续 run 自动跳过已尝试组合、继承模板 registry 和选择 near-pass 候选。合并过程由事务锁保护，并按提交终态、revision 和时间解决重复记录冲突；`run_index.json` 让启动阶段只加载新增或变化的 run。它仍是可重建的本地研究状态；成熟结论应继续沉淀到 `template.json`、`presets/` 或 dataset README。
 
 ## 模板资产
 
@@ -258,7 +258,7 @@ python3.10 -m alpha --top-fields-by-feedback 10 --max-templates-per-field 15
   - 对换手问题尝试更快或更慢的 `decay`
 
 **反馈循环**：
-- `--output` 默认指向当前 run；`--feedback-output` 默认指向 `datasets/<dataset>/feedback/summary.json`
+- `--output` 默认指向当前 run；`--feedback-output` 默认指向 `datasets/<dataset>/feedback/<region>_<universe>_<instrument>_d<delay>/summary.json`
 - 新 run 只恢复自己的运行结果，但候选选择会读取 dataset 级反馈、模板 registry 和已尝试组合
 - run 正常收尾时会把新结果按字段、表达式和 settings 指纹去重合并回 dataset 反馈仓
 - 阶段 2 的结果会自动用于字段优先级排序和 near-pass 候选筛选
@@ -411,8 +411,9 @@ YAML 分层优先级为：`config/settings.yaml` > `config/expression_policies.y
 | `datasets/<dataset>/runs/<run_name>/summary.json` | 轻量运行 summary 与 journal 指针 |
 | `datasets/<dataset>/runs/<run_name>/results.jsonl` | 权威结果 journal；主 summary 和分析文件都可由它重建 |
 | `datasets/<dataset>/runs/<run_name>/analysis.json` | 分析汇总（用于决策下一步） |
-| `datasets/<dataset>/feedback/summary.json` | dataset 级跨 run 反馈 summary；journal 指针使用相对路径 |
-| `datasets/<dataset>/feedback/results.jsonl` | dataset 级去重结果历史，供后续 run 选择和剪枝 |
+| `datasets/<dataset>/feedback/<market_scope>/summary.json` | 同一市场范围的跨 run 反馈 summary；journal 指针使用相对路径 |
+| `datasets/<dataset>/feedback/<market_scope>/results.jsonl` | 带 run/source/time/revision 数据血缘的去重结果历史 |
+| `datasets/<dataset>/feedback/<market_scope>/run_index.json` | 已聚合 run 的轻量签名索引；只重新读取新增或变化的 summary |
 
 ### 关键分析字段
 

@@ -11,13 +11,16 @@ from __future__ import annotations
 
 import logging
 
+from ..analysis.feedback_run_index import persist_feedback_run_index
 from ..analysis.field_stats import current_submittable_count
-from ..analysis.result_identity import merge_results_by_identity
+from ..analysis.result_identity import merge_results_for_update
+from ..analysis.result_provenance import enrich_results_provenance
 from ..analysis.results_loader import load_existing_results
 from ..analysis.results_persistence import dump_results
 from ..config.application import ApplicationConfig
 from ..config.constants import STATUS_ERROR
 from ..core.checkpoint import delete_pipeline_state
+from ..io.results_store import exclusive_results_transaction
 from ..models.io_types import RunPaths
 from ..models.runtime_options import ResultWriteOptions
 from ..policy.blacklist_runtime_updates import auto_update_blacklist
@@ -45,6 +48,11 @@ def finalize_run(
     output_path = _run_path_value(run_paths, "output") or write_options.output_path
     feedback_output_path = _run_path_value(run_paths, "feedback_output")
     state_file = _run_path_value(run_paths, "state_file")
+    enrich_results_provenance(
+        execution_state.results,
+        output_path=output_path,
+        run_config=run_ctx.run_config,
+    )
     logger.info(
         "[done] 测试完成：tested=%d submittable=%d errors=%d",
         len(execution_state.results),
@@ -60,18 +68,24 @@ def finalize_run(
         run_config=run_ctx.run_config,
     )
     if feedback_output_path and feedback_output_path != output_path:
-        feedback_results = merge_results_by_identity(
-            load_existing_results(feedback_output_path),
-            execution_state.results,
-        )
-        dump_results(
-            feedback_output_path,
-            write_options.dataset_id,
-            feedback_results,
-            settings_fingerprint=run_ctx.settings_fingerprint,
-            template_library_fingerprint=run_ctx.template_library_fingerprint,
-            run_config=run_ctx.run_config,
-        )
+        with exclusive_results_transaction(feedback_output_path):
+            feedback_results = merge_results_for_update(
+                load_existing_results(feedback_output_path),
+                run_ctx.historical_state.feedback_results,
+            )
+            feedback_results = merge_results_for_update(
+                feedback_results,
+                execution_state.results,
+            )
+            dump_results(
+                feedback_output_path,
+                write_options.dataset_id,
+                feedback_results,
+                settings_fingerprint=run_ctx.settings_fingerprint,
+                template_library_fingerprint=run_ctx.template_library_fingerprint,
+                run_config=run_ctx.run_config,
+            )
+            persist_feedback_run_index(feedback_output_path)
         logger.info(
             "[feedback] updated dataset history: %s (results=%d)",
             feedback_output_path,

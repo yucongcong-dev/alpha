@@ -1,13 +1,13 @@
 """
 管道状态与检查点持久化模块
 
-本模块实现可恢复状态（state_file）和中断诊断报告（checkpoint_file 兼容参数），
+本模块实现可恢复状态（state_file）和中断诊断报告（interrupt_report_file），
 支持断点续传：重启时跳过已完成的字段、恢复拥塞控制状态和模板统计数据。
 
 模块内容：
     - save_pipeline_state: 在每个字段完成后保存运行进度
     - load_pipeline_state: 启动时加载上次进度
-    - save_checkpoint: 崩溃/中断时保存诊断报告（含待处理任务元数据）
+    - save_interrupt_report: 崩溃/中断时保存诊断报告（含待处理任务元数据）
 """
 
 from __future__ import annotations
@@ -365,8 +365,8 @@ def load_pipeline_state(
 # ============================================================================
 
 
-def save_checkpoint(
-    checkpoint_file: str,
+def save_interrupt_report(
+    interrupt_report_file: str,
     *,
     execution_state: ExecutionState,
     runtime_state: RuntimeConcurrencyState,
@@ -381,7 +381,7 @@ def save_checkpoint(
     任务信息，便于排查崩溃原因。
 
     Args:
-        checkpoint_file: 中断诊断报告的绝对路径（名称保留用于 API 兼容）。
+        interrupt_report_file: 中断诊断报告的绝对路径。
         execution_state: 当前 ExecutionState 实例。
         runtime_state: 当前 RuntimeConcurrencyState 实例。
         field_id: 当前字段 ID。
@@ -391,7 +391,7 @@ def save_checkpoint(
     Returns:
         bool: 保存成功返回 True，失败返回 False。
     """
-    if not checkpoint_file:
+    if not interrupt_report_file:
         return False
 
     # 收集待处理任务摘要
@@ -423,15 +423,35 @@ def save_checkpoint(
         "completed_at": datetime.now(timezone.utc).isoformat(),
     }
 
-    success = _atomic_save(checkpoint_file, payload)
+    success = _atomic_save(interrupt_report_file, payload)
     if success:
         logger.info(
             "[checkpoint] saved interrupt report to %s (pending=%d, reason=%s)",
-            checkpoint_file,
+            interrupt_report_file,
             len(pending_contexts),
             reason,
         )
     return success
+
+
+def save_checkpoint(
+    checkpoint_file: str,
+    *,
+    execution_state: ExecutionState,
+    runtime_state: RuntimeConcurrencyState,
+    field_id: str = "",
+    remaining_fields: int = 0,
+    reason: str = "",
+) -> bool:
+    """Deprecated compatibility alias for :func:`save_interrupt_report`."""
+    return save_interrupt_report(
+        checkpoint_file,
+        execution_state=execution_state,
+        runtime_state=runtime_state,
+        field_id=field_id,
+        remaining_fields=remaining_fields,
+        reason=reason,
+    )
 
 
 def delete_pipeline_state(state_file: str) -> None:

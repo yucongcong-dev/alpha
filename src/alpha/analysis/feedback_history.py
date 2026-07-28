@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 from dataclasses import replace
+from datetime import datetime, timezone
 from pathlib import Path
 
 from ..config.constants import (
@@ -25,9 +26,18 @@ from ..models.domain_types import FieldFeedbackSummary
 from ..policy.expression import get_dataset_expression_policy, resolve_feedback_stage
 from ..runtime.contexts import HistoricalRunState
 from .failed_checks import failed_check_gap, score_failed_checks
+from .feedback_run_index import (
+    is_indexed_run_current,
+    load_feedback_run_index,
+    load_summary_run_config,
+    resolve_feedback_layout,
+    run_config_scope_key,
+    run_summary_key,
+)
 from .feedback_stats import compile_field_feedback, compile_global_failed_check_counts
 from .field_stats import current_submittable_count
 from .result_identity import attempted_template_keys, merge_results_by_identity
+from .result_provenance import enrich_results_provenance
 from .results_loader import load_existing_results
 from .template_registry_rules import (
     compile_template_family_registry,
@@ -45,25 +55,51 @@ def _load_dataset_run_results(
     feedback_output_path: str,
     *,
     current_output_path: str,
+    use_run_index: bool = True,
 ) -> list[FieldTestResult]:
     """Discover existing sibling run summaries when initializing dataset feedback."""
-    feedback_path = Path(feedback_output_path)
-    if feedback_path.parent.name != "feedback":
+    layout = resolve_feedback_layout(feedback_output_path)
+    if layout is None:
         return []
-    runs_root = feedback_path.parent.parent / "runs"
+    _, scope_key, runs_root = layout
     if not runs_root.is_dir():
         return []
     current_path = Path(current_output_path).resolve()
+    processed_runs = (
+        load_feedback_run_index(feedback_output_path)
+        if use_run_index and Path(feedback_output_path).exists()
+        else {}
+    )
     discovered: list[FieldTestResult] = []
     for summary_path in sorted(runs_root.glob("*/summary.json")):
         if summary_path.resolve() == current_path:
             continue
-        discovered.extend(
-            load_existing_results(
-                str(summary_path),
-                repair_corrupt_summary=False,
-            )
+        run_key = run_summary_key(summary_path, runs_root)
+        if is_indexed_run_current(
+            processed_runs.get(run_key),
+            summary_path,
+            scope_key=scope_key,
+        ):
+            continue
+        run_config = load_summary_run_config(summary_path)
+        if scope_key and run_config_scope_key(run_config) != scope_key:
+            continue
+        results = load_existing_results(
+            str(summary_path),
+            repair_corrupt_summary=False,
         )
+        observed_at = (
+            datetime.fromtimestamp(summary_path.stat().st_mtime, timezone.utc)
+            .isoformat()
+            .replace("+00:00", "Z")
+        )
+        enrich_results_provenance(
+            results,
+            output_path=str(summary_path),
+            run_config=run_config,
+            observed_at=observed_at,
+        )
+        discovered.extend(results)
     return discovered
 
 
@@ -89,6 +125,7 @@ def build_historical_run_state(
     discovered_run_results = _load_dataset_run_results(
         feedback_output_path,
         current_output_path=output_path,
+        use_run_index=bool(feedback_results),
     )
     feedback_results = merge_results_by_identity(
         feedback_results,

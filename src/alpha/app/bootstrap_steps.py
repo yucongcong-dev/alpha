@@ -7,13 +7,13 @@ import logging
 
 from ..analysis.feedback_history import rebuild_historical_run_state
 from ..api.client import BrainClient, WorkerClientFactory
+from ..config.application import ApplicationConfig
 from ..io.common import resolve_datasets_root
 from ..models.domain import TemplateField
 from ..models.io_types import RunPaths
 from ..models.runtime_options import ApiClientOptions, FieldFetchOptions
 from ..models.runtime_protocols import (
     ApiClientArgs,
-    BootstrapRuntimeArgs,
     RunConfig,
 )
 from .bootstrap_fields import resolve_field_selection
@@ -45,7 +45,7 @@ def run_path_value(run_paths: RunPaths | None, attr: str) -> str:
 
 
 def resolve_bootstrap_paths(
-    args: BootstrapRuntimeArgs,
+    args: ApplicationConfig,
     run_paths: RunPaths | None,
 ) -> BootstrapPaths:
     """Resolve all runtime-sensitive paths up front."""
@@ -66,7 +66,7 @@ def resolve_bootstrap_paths(
 
 
 def build_effective_run_paths(
-    args: BootstrapRuntimeArgs,
+    args: ApplicationConfig,
     paths: BootstrapPaths,
     run_paths: RunPaths | None,
 ) -> RunPaths:
@@ -93,7 +93,7 @@ def build_effective_run_paths(
 
 
 def prepare_runtime_outputs(
-    args: BootstrapRuntimeArgs,
+    args: ApplicationConfig,
     run_paths: RunPaths | None,
     paths: BootstrapPaths,
     *,
@@ -111,7 +111,7 @@ def prepare_runtime_outputs(
 
 
 def resolve_credentials(
-    args: BootstrapRuntimeArgs,
+    args: ApplicationConfig,
     paths: BootstrapPaths,
     *,
     services: CredentialServices,
@@ -128,7 +128,7 @@ def resolve_credentials(
 
 
 def log_field_selection_stats(
-    args: BootstrapRuntimeArgs,
+    args: ApplicationConfig,
     field_stats: dict[str, int],
     fields: list[TemplateField],
 ) -> None:
@@ -176,7 +176,7 @@ def log_field_selection_stats(
 
 
 def prepare_bootstrap_resources(
-    args: BootstrapRuntimeArgs,
+    args: ApplicationConfig,
     paths: BootstrapPaths,
     bootstrap_client: BrainClient,
     *,

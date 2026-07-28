@@ -266,7 +266,8 @@ class RuntimeModeArgs(Protocol):
     def quiet(self) -> bool: ...
 
 
-class RunConfigArgs(
+class BootstrapRuntimeArgs(
+    CredentialsArgs,
     DatasetIdentityArgs,
     SimulationSettingsArgs,
     TemplateSelectionArgs,
@@ -276,14 +277,6 @@ class RunConfigArgs(
     SchedulerControlArgs,
     ApiClientArgs,
     RuntimeModeArgs,
-    Protocol,
-):
-    pass
-
-
-class BootstrapRuntimeArgs(
-    CredentialsArgs,
-    RunConfigArgs,
     Protocol,
 ):
     @property
@@ -303,6 +296,10 @@ class BootstrapRuntimeArgs(
 
     @property
     def exclude_templates_file(self) -> str: ...
+
+
+# Deprecated compatibility alias; active application code uses ApplicationConfig.
+RunConfigArgs = BootstrapRuntimeArgs
 
 
 class QualityThresholdArgs(Protocol):

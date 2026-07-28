@@ -9,10 +9,13 @@ import sys
 CRITICAL_COVERAGE_FLOORS = {
     "src/alpha/config/runtime_values.py": 90.0,
     "src/alpha/config/yaml.py": 65.0,
-    "src/alpha/core/executor.py": 50.0,
-    "src/alpha/core/simulation.py": 45.0,
-    "src/alpha/io/results_store.py": 80.0,
+    "src/alpha/core/executor.py": 65.0,
+    "src/alpha/core/simulation.py": 80.0,
+    "src/alpha/io/results_store.py": 85.0,
     "src/alpha/analysis/results_loader.py": 80.0,
+    "src/alpha/analysis/feedback_run_index.py": 80.0,
+    "src/alpha/analysis/result_identity.py": 75.0,
+    "src/alpha/app/finalize.py": 80.0,
 }
 
 

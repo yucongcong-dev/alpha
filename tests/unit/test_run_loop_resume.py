@@ -289,11 +289,11 @@ def test_save_runtime_checkpoint_updates_resumable_pipeline_state() -> None:
 
     with (
         patch("alpha.app.run_loop_resume.save_pipeline_state") as mock_state,
-        patch("alpha.app.run_loop_resume.save_checkpoint") as mock_checkpoint,
+        patch("alpha.app.run_loop_resume.save_interrupt_report") as mock_interrupt_report,
     ):
         save_runtime_checkpoint(
             state_file="/tmp/state.json",
-            checkpoint_file="/tmp/checkpoint.json",
+            interrupt_report_file="/tmp/checkpoint.json",
             completed_field_index=1,
             execution_state=execution_state,
             runtime_state=runtime_state,
@@ -304,4 +304,4 @@ def test_save_runtime_checkpoint_updates_resumable_pipeline_state() -> None:
 
     assert mock_state.call_args.kwargs["completed_field_index"] == 1
     assert mock_state.call_args.kwargs["field_id"] == "f1"
-    assert mock_checkpoint.call_args.kwargs["reason"] == "KeyboardInterrupt"
+    assert mock_interrupt_report.call_args.kwargs["reason"] == "KeyboardInterrupt"

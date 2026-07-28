@@ -6,13 +6,16 @@ from __future__ import annotations
 
 from typing import Any
 
+from ..config.application import ApplicationConfig
 from ..models.io_types import RunPaths
-from ..models.runtime_protocols import RunConfigArgs
 
 
-def build_run_config_snapshot(args: RunConfigArgs, run_paths: RunPaths) -> dict[str, Any]:
+def build_run_config_snapshot(args: ApplicationConfig, run_paths: RunPaths) -> dict[str, Any]:
     """构建用于结果落盘的运行配置快照。"""
     return {
+        "run": {
+            "name": str(getattr(args, "run_name", "default") or "default"),
+        },
         "dataset": {
             "dataset_id": args.dataset_id,
             "region": args.region,

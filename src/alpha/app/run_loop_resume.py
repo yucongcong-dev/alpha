@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 
 from ..config.constants import SENTINEL_UNKNOWN
-from ..core.checkpoint import load_pipeline_state, save_checkpoint, save_pipeline_state
+from ..core.checkpoint import load_pipeline_state, save_interrupt_report, save_pipeline_state
 from ..models.domain import TemplateField
 from ..runtime.state import ExecutionState, RuntimeConcurrencyState
 from ..utils.helpers import first_non_empty
@@ -100,7 +100,7 @@ def persist_field_progress(
 def save_runtime_checkpoint(
     *,
     state_file: str,
-    checkpoint_file: str,
+    interrupt_report_file: str,
     completed_field_index: int,
     execution_state: ExecutionState,
     runtime_state: RuntimeConcurrencyState,
@@ -108,7 +108,7 @@ def save_runtime_checkpoint(
     fields: list[TemplateField],
     reason: str,
 ) -> None:
-    """Persist resumable pipeline state and a diagnostic crash checkpoint."""
+    """Persist resumable pipeline state and a diagnostic interrupt report."""
     if state_file:
         save_pipeline_state(
             state_file,
@@ -117,9 +117,9 @@ def save_runtime_checkpoint(
             runtime_state=runtime_state,
             field_id=last_field_id or "",
         )
-    if checkpoint_file:
-        save_checkpoint(
-            checkpoint_file,
+    if interrupt_report_file:
+        save_interrupt_report(
+            interrupt_report_file,
             execution_state=execution_state,
             runtime_state=runtime_state,
             field_id=last_field_id or "",

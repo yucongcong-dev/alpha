@@ -58,6 +58,15 @@ def get_active_config_path() -> str | None:
         return _active_config_path
 
 
+def get_yaml_config_version(
+    config_path: str = "",
+) -> tuple[str, tuple[tuple[str, int, int], ...] | None]:
+    """Return a cache token that changes when any active YAML source changes."""
+    explicit_path = os.path.abspath(os.path.expanduser(config_path)) if config_path else None
+    settings_path = explicit_path or get_active_config_path() or _resolve_yaml_path()
+    return settings_path or "__missing__", _all_files_signature(settings_path)
+
+
 def activate_config_from_argv(argv: list[str] | None = None) -> str | None:
     """Bind ``--config`` before importing modules with YAML-backed constants.
 

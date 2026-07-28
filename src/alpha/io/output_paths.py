@@ -74,7 +74,7 @@ def build_dataset_scoped_paths(
         "template_library_file": str(dataset_root / "template.json"),
         "datasets_root": str(DATASETS_DIR),
         "fields_cache_file": str(fields_cache_path),
-        "feedback_output": str(dataset_root / "feedback" / "summary.json"),
+        "feedback_output": str(dataset_root / "feedback" / cache_scope_key / "summary.json"),
         "run_dir": str(run_dir),
         "output": str(run_dir / "summary.json"),
     }

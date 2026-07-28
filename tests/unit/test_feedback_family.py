@@ -329,6 +329,62 @@ def test_build_historical_run_state_discovers_existing_runs_before_feedback_exis
     assert state.feedback_results[0].template_name == "historical_template"
 
 
+def test_scoped_feedback_discovers_only_matching_market_runs(tmp_path) -> None:
+    matching_output = tmp_path / "runs" / "usa-top3000" / "summary.json"
+    other_output = tmp_path / "runs" / "usa-top1000" / "summary.json"
+    feedback_output = tmp_path / "feedback" / "usa_top3000_equity_d1" / "summary.json"
+    matching = FieldTestResult(
+        field_id="cashflow_op",
+        field_type="MATRIX",
+        field_name="cashflow_op",
+        template_name="matching",
+        status="simulated",
+        submittable=False,
+        expression="rank(cashflow_op)",
+        settings_fingerprint="top3000",
+    )
+    other = FieldTestResult(
+        field_id="assets",
+        field_type="MATRIX",
+        field_name="assets",
+        template_name="other",
+        status="simulated",
+        submittable=False,
+        expression="rank(assets)",
+        settings_fingerprint="top1000",
+    )
+    for output, result, universe in (
+        (matching_output, matching, "TOP3000"),
+        (other_output, other, "TOP1000"),
+    ):
+        dump_results(
+            str(output),
+            "fundamental6",
+            [result],
+            settings_fingerprint=result.settings_fingerprint,
+            template_library_fingerprint="templates",
+            run_config={
+                "run": {"name": output.parent.name},
+                "dataset": {
+                    "region": "USA",
+                    "universe": universe,
+                    "instrument_type": "EQUITY",
+                    "delay": 1,
+                },
+            },
+            include_analysis=False,
+        )
+
+    state = build_historical_run_state(
+        str(tmp_path / "runs" / "new-run" / "summary.json"),
+        str(feedback_output),
+    )
+
+    assert [result.template_name for result in state.feedback_results] == ["matching"]
+    assert state.feedback_results[0].universe == "TOP3000"
+    assert state.feedback_results[0].source_summary == "runs/usa-top3000/summary.json"
+
+
 def test_resimulate_stage_blocks_iter_templates_outside_preferred_stages() -> None:
     policy = get_dataset_expression_policy("fundamental6")
 

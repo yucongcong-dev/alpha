@@ -7,6 +7,8 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
+from dataclasses import replace
+from datetime import datetime
 
 from ..models.domain import FieldTestResult
 from ..models.result_predicates import (
@@ -35,9 +37,68 @@ def attempted_template_keys(results: Sequence[FieldTestResult]) -> set[tuple[str
 def merge_results_by_identity(
     *result_groups: Sequence[FieldTestResult],
 ) -> list[FieldTestResult]:
-    """Merge result histories deterministically, with later records winning."""
+    """Merge histories using terminal state, revision and timestamps."""
     merged: dict[tuple[str, str, str, str], FieldTestResult] = {}
     for group in result_groups:
         for result in group:
-            merged[result_identity(result)] = result
+            identity = result_identity(result)
+            existing = merged.get(identity)
+            if existing is None or _result_preference(result) >= _result_preference(existing):
+                merged[identity] = result
     return list(merged.values())
+
+
+def merge_results_for_update(
+    existing_results: Sequence[FieldTestResult],
+    updates: Sequence[FieldTestResult],
+) -> list[FieldTestResult]:
+    """Apply new records and advance revision only for persisted replacements."""
+    merged = {result_identity(result): result for result in existing_results}
+    for update in updates:
+        identity = result_identity(update)
+        existing = merged.get(identity)
+        if existing is None:
+            merged[identity] = update
+            continue
+        if _result_preference(update) >= _result_preference(existing):
+            merged[identity] = replace(
+                update,
+                revision=max(update.revision, existing.revision + 1),
+            )
+    return list(merged.values())
+
+
+def _parse_timestamp(value: str) -> float:
+    if not value:
+        return 0.0
+    try:
+        return datetime.fromisoformat(value.replace("Z", "+00:00")).timestamp()
+    except ValueError:
+        return 0.0
+
+
+def _terminal_rank(result: FieldTestResult) -> int:
+    """Rank durable outcomes above transient or incomplete observations."""
+    if result.submitted:
+        return 50
+    if result.submittable is True:
+        return 40
+    status = result.status.strip().lower()
+    if status == "simulated" and result.submittable is False:
+        return 30
+    if status == "simulated":
+        return 25
+    if status == "error":
+        return 20
+    if status == "skipped":
+        return 0
+    return 10
+
+
+def _result_preference(result: FieldTestResult) -> tuple[int, int, float, float]:
+    return (
+        _terminal_rank(result),
+        max(1, int(result.revision or 1)),
+        _parse_timestamp(result.updated_at),
+        _parse_timestamp(result.created_at),
+    )

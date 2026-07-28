@@ -9,39 +9,42 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-from .constants import (
-    BACKFILL_WINDOW,
-    DELTA_STD_PRIORITY_BOOST,
-    EXPR_ITER_BOOST_THRESHOLD,
-    EXPR_MUTATION_EXTEND_THRESHOLD,
-    EXPR_NEARPASS_BOOST_THRESHOLD,
-    EXPR_RATIO_PENALTY_THRESHOLD,
-    FEEDBACK_MUTATION_HIGHSCORE_THRESHOLD,
-    FEEDBACK_MUTATION_NEARPASS_THRESHOLD,
-    FEEDBACK_TEMPLATE_MIN_PRIORITY,
-    HTTP_REQUEST_TIMEOUT,
-    LOGIN_RETRY_WAIT,
-    POLLING_DEFAULT_WAIT,
-    POLLING_NO_RETRY_AFTER_WAIT,
-    POLLING_RETRY_BUFFER,
-    RATE_LIMIT_DEFAULT_WAIT,
-    RETRY_OPERATION_DEFAULT_WAIT,
-    SERVER_ERROR_BACKOFF_MAX,
-    SERVER_ERROR_BACKOFF_STEP,
-    SETTINGS_CLOSE_THRESHOLD,
-    SETTINGS_NEARPASS_THRESHOLD,
-    SETTINGS_VARIANT_BUDGET_HIGH,
-    SETTINGS_VARIANT_BUDGET_MID,
-    SIMULATION_DEFAULT_END_DATE,
-    SIMULATION_DEFAULT_START_DATE,
-    SIMULATION_RETRY_WAIT,
-    SUBMIT_MAX_TURNOVER,
-    SUBMIT_MAX_WEIGHT,
-    SUBMIT_MIN_FITNESS,
-    SUBMIT_MIN_SHARPE,
-    SUBMIT_MIN_TURNOVER,
-)
-from .yaml import get_active_config_path, get_yaml_config
+from .yaml import get_yaml_config, get_yaml_config_version
+
+_HTTP_DEFAULTS = {
+    "request_timeout": 90.0,
+    "rate_limit_default_wait": 10.0,
+    "polling_default_wait": 5.0,
+    "polling_no_retry_after_wait": 1.5,
+    "server_error_backoff_max": 30.0,
+    "server_error_backoff_step": 3.0,
+    "retry_operation_default_wait": 2.0,
+    "login_retry_wait": 3.0,
+    "simulation_retry_wait": 3.0,
+    "polling_retry_buffer": 0.5,
+    "backend": "urllib",
+}
+_FEEDBACK_DEFAULTS = {
+    "settings_variant_budget_high": 0.35,
+    "settings_variant_budget_mid": 0.10,
+    "feedback_mutation_nearpass_threshold": 0.08,
+    "feedback_mutation_highscore_threshold": 0.25,
+    "feedback_template_min_priority": 105,
+    "delta_std_priority_boost": 15,
+    "settings_nearpass_threshold": 0.45,
+    "settings_close_threshold": 0.65,
+    "expr_nearpass_boost_threshold": 0.50,
+    "expr_iter_boost_threshold": 0.20,
+    "expr_ratio_penalty_threshold": 0.30,
+    "expr_mutation_extend_threshold": 0.15,
+}
+_QUALITY_DEFAULTS = {
+    "min_sharpe": 1.25,
+    "min_fitness": 1.0,
+    "min_turnover": 0.01,
+    "max_turnover": 0.70,
+    "max_weight": 0.10,
+}
 
 
 def _get_yaml_global() -> dict[str, Any]:
@@ -123,27 +126,37 @@ def load_http_runtime_config() -> HttpRuntimeConfig:
     """
     section = yaml_global_section("http")
     return HttpRuntimeConfig(
-        request_timeout=float(section.get("request_timeout", HTTP_REQUEST_TIMEOUT)),
+        request_timeout=float(section.get("request_timeout", _HTTP_DEFAULTS["request_timeout"])),
         rate_limit_default_wait=float(
-            section.get("rate_limit_default_wait", RATE_LIMIT_DEFAULT_WAIT)
+            section.get("rate_limit_default_wait", _HTTP_DEFAULTS["rate_limit_default_wait"])
         ),
-        polling_default_wait=float(section.get("polling_default_wait", POLLING_DEFAULT_WAIT)),
+        polling_default_wait=float(
+            section.get("polling_default_wait", _HTTP_DEFAULTS["polling_default_wait"])
+        ),
         polling_no_retry_after_wait=float(
-            section.get("polling_no_retry_after_wait", POLLING_NO_RETRY_AFTER_WAIT)
+            section.get(
+                "polling_no_retry_after_wait", _HTTP_DEFAULTS["polling_no_retry_after_wait"]
+            )
         ),
         server_error_backoff_max=float(
-            section.get("server_error_backoff_max", SERVER_ERROR_BACKOFF_MAX)
+            section.get("server_error_backoff_max", _HTTP_DEFAULTS["server_error_backoff_max"])
         ),
         server_error_backoff_step=float(
-            section.get("server_error_backoff_step", SERVER_ERROR_BACKOFF_STEP)
+            section.get("server_error_backoff_step", _HTTP_DEFAULTS["server_error_backoff_step"])
         ),
         retry_operation_default_wait=float(
-            section.get("retry_operation_default_wait", RETRY_OPERATION_DEFAULT_WAIT)
+            section.get(
+                "retry_operation_default_wait", _HTTP_DEFAULTS["retry_operation_default_wait"]
+            )
         ),
-        login_retry_wait=float(section.get("login_retry_wait", LOGIN_RETRY_WAIT)),
-        simulation_retry_wait=float(section.get("simulation_retry_wait", SIMULATION_RETRY_WAIT)),
-        polling_retry_buffer=float(section.get("polling_retry_buffer", POLLING_RETRY_BUFFER)),
-        backend=str(section.get("backend", "")),
+        login_retry_wait=float(section.get("login_retry_wait", _HTTP_DEFAULTS["login_retry_wait"])),
+        simulation_retry_wait=float(
+            section.get("simulation_retry_wait", _HTTP_DEFAULTS["simulation_retry_wait"])
+        ),
+        polling_retry_buffer=float(
+            section.get("polling_retry_buffer", _HTTP_DEFAULTS["polling_retry_buffer"])
+        ),
+        backend=str(section.get("backend", _HTTP_DEFAULTS["backend"])),
     )
 
 
@@ -155,44 +168,65 @@ def load_feedback_runtime_config() -> FeedbackRuntimeConfig:
     section = yaml_global_section("feedback")
     return FeedbackRuntimeConfig(
         settings_variant_budget_high=float(
-            section.get("settings_variant_budget_high", SETTINGS_VARIANT_BUDGET_HIGH)
+            section.get(
+                "settings_variant_budget_high", _FEEDBACK_DEFAULTS["settings_variant_budget_high"]
+            )
         ),
         settings_variant_budget_mid=float(
-            section.get("settings_variant_budget_mid", SETTINGS_VARIANT_BUDGET_MID)
+            section.get(
+                "settings_variant_budget_mid", _FEEDBACK_DEFAULTS["settings_variant_budget_mid"]
+            )
         ),
         feedback_mutation_nearpass_threshold=float(
             section.get(
-                "feedback_mutation_nearpass_threshold", FEEDBACK_MUTATION_NEARPASS_THRESHOLD
+                "feedback_mutation_nearpass_threshold",
+                _FEEDBACK_DEFAULTS["feedback_mutation_nearpass_threshold"],
             )
         ),
         feedback_mutation_highscore_threshold=float(
             section.get(
-                "feedback_mutation_highscore_threshold", FEEDBACK_MUTATION_HIGHSCORE_THRESHOLD
+                "feedback_mutation_highscore_threshold",
+                _FEEDBACK_DEFAULTS["feedback_mutation_highscore_threshold"],
             )
         ),
         feedback_template_min_priority=int(
-            section.get("feedback_template_min_priority", FEEDBACK_TEMPLATE_MIN_PRIORITY)
+            section.get(
+                "feedback_template_min_priority",
+                _FEEDBACK_DEFAULTS["feedback_template_min_priority"],
+            )
         ),
         delta_std_priority_boost=int(
-            section.get("delta_std_priority_boost", DELTA_STD_PRIORITY_BOOST)
+            section.get("delta_std_priority_boost", _FEEDBACK_DEFAULTS["delta_std_priority_boost"])
         ),
         settings_nearpass_threshold=float(
-            section.get("settings_nearpass_threshold", SETTINGS_NEARPASS_THRESHOLD)
+            section.get(
+                "settings_nearpass_threshold", _FEEDBACK_DEFAULTS["settings_nearpass_threshold"]
+            )
         ),
         settings_close_threshold=float(
-            section.get("settings_close_threshold", SETTINGS_CLOSE_THRESHOLD)
+            section.get("settings_close_threshold", _FEEDBACK_DEFAULTS["settings_close_threshold"])
         ),
         expr_nearpass_boost_threshold=float(
-            section.get("expr_nearpass_boost_threshold", EXPR_NEARPASS_BOOST_THRESHOLD)
+            section.get(
+                "expr_nearpass_boost_threshold",
+                _FEEDBACK_DEFAULTS["expr_nearpass_boost_threshold"],
+            )
         ),
         expr_iter_boost_threshold=float(
-            section.get("expr_iter_boost_threshold", EXPR_ITER_BOOST_THRESHOLD)
+            section.get(
+                "expr_iter_boost_threshold", _FEEDBACK_DEFAULTS["expr_iter_boost_threshold"]
+            )
         ),
         expr_ratio_penalty_threshold=float(
-            section.get("expr_ratio_penalty_threshold", EXPR_RATIO_PENALTY_THRESHOLD)
+            section.get(
+                "expr_ratio_penalty_threshold", _FEEDBACK_DEFAULTS["expr_ratio_penalty_threshold"]
+            )
         ),
         expr_mutation_extend_threshold=float(
-            section.get("expr_mutation_extend_threshold", EXPR_MUTATION_EXTEND_THRESHOLD)
+            section.get(
+                "expr_mutation_extend_threshold",
+                _FEEDBACK_DEFAULTS["expr_mutation_extend_threshold"],
+            )
         ),
     )
 
@@ -200,17 +234,15 @@ def load_feedback_runtime_config() -> FeedbackRuntimeConfig:
 def load_expression_runtime_config() -> ExpressionRuntimeConfig:
     """Build the current expression-generation configuration snapshot."""
     section = yaml_global_section("expression")
-    return ExpressionRuntimeConfig(
-        backfill_window=int(section.get("backfill_window", BACKFILL_WINDOW))
-    )
+    return ExpressionRuntimeConfig(backfill_window=int(section.get("backfill_window", 504)))
 
 
 def load_simulation_runtime_config() -> SimulationRuntimeConfig:
     """Build the current simulation-date configuration snapshot."""
     section = yaml_global_section("simulation")
     return SimulationRuntimeConfig(
-        start_date=str(section.get("start_date", SIMULATION_DEFAULT_START_DATE)),
-        end_date=str(section.get("end_date", SIMULATION_DEFAULT_END_DATE)),
+        start_date=str(section.get("start_date", "2020-01-01")),
+        end_date=str(section.get("end_date", "2025-12-31")),
     )
 
 
@@ -218,11 +250,11 @@ def load_quality_runtime_config() -> QualityRuntimeConfig:
     """Build the single local quality gate used before platform checks."""
     section = yaml_global_section("quality")
     return QualityRuntimeConfig(
-        min_sharpe=float(section.get("min_sharpe", SUBMIT_MIN_SHARPE)),
-        min_fitness=float(section.get("min_fitness", SUBMIT_MIN_FITNESS)),
-        min_turnover=float(section.get("min_turnover", SUBMIT_MIN_TURNOVER)),
-        max_turnover=float(section.get("max_turnover", SUBMIT_MAX_TURNOVER)),
-        max_weight=float(section.get("max_weight", SUBMIT_MAX_WEIGHT)),
+        min_sharpe=float(section.get("min_sharpe", _QUALITY_DEFAULTS["min_sharpe"])),
+        min_fitness=float(section.get("min_fitness", _QUALITY_DEFAULTS["min_fitness"])),
+        min_turnover=float(section.get("min_turnover", _QUALITY_DEFAULTS["min_turnover"])),
+        max_turnover=float(section.get("max_turnover", _QUALITY_DEFAULTS["max_turnover"])),
+        max_weight=float(section.get("max_weight", _QUALITY_DEFAULTS["max_weight"])),
     )
 
 
@@ -263,7 +295,7 @@ class RuntimeConfig:
 
 
 _runtime_config_cache: RuntimeConfig | None = None
-_runtime_config_source: str | None = None
+_runtime_config_source: object | None = None
 
 
 def _build_runtime_config() -> RuntimeConfig:
@@ -283,7 +315,7 @@ def get_runtime_config() -> RuntimeConfig:
     取代原来 30 个独立的 get_*() 函数，消除 30→1 次 YAML 遍历的冗余。
     """
     global _runtime_config_cache, _runtime_config_source
-    active_source = get_active_config_path()
+    active_source = get_yaml_config_version()
     if _runtime_config_cache is None or _runtime_config_source != active_source:
         _runtime_config_cache = _build_runtime_config()
         _runtime_config_source = active_source

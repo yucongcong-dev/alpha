@@ -45,7 +45,9 @@ def run_field_test_loop(
 ) -> None:
     """线程池中遍历字段并提交模拟任务，实时消费结果。"""
     state_file = run_path_value(run_paths, "state_file")
-    checkpoint_file = run_path_value(run_paths, "checkpoint_file")
+    interrupt_report_file = run_path_value(run_paths, "interrupt_report_file") or run_path_value(
+        run_paths, "checkpoint_file"
+    )
     runtime_state = run_ctx.runtime_state
     execution_state = run_ctx.execution_state
     fields = list(run_ctx.fields)
@@ -149,7 +151,7 @@ def run_field_test_loop(
             )
             save_runtime_checkpoint(
                 state_file=state_file,
-                checkpoint_file=checkpoint_file,
+                interrupt_report_file=interrupt_report_file,
                 completed_field_index=completed_field_index,
                 execution_state=execution_state,
                 runtime_state=runtime_state,
@@ -164,7 +166,7 @@ def run_field_test_loop(
             )
             save_runtime_checkpoint(
                 state_file=state_file,
-                checkpoint_file=checkpoint_file,
+                interrupt_report_file=interrupt_report_file,
                 completed_field_index=completed_field_index,
                 execution_state=execution_state,
                 runtime_state=runtime_state,

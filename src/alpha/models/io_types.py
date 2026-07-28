@@ -29,6 +29,11 @@ class RunPaths:
     include_templates_file: str = ""
     exclude_templates_file: str = ""
 
+    @property
+    def interrupt_report_file(self) -> str:
+        """Preferred semantic name for the legacy checkpoint_file field."""
+        return self.checkpoint_file
+
 
 @dataclass(frozen=True)
 class RunFilters:

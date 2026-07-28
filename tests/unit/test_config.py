@@ -20,7 +20,16 @@ from alpha.config import (
     FieldTransformStage,
     get_yaml_config,
 )
-from alpha.config.runtime_values import load_submit_quality_runtime_config
+from alpha.config.runtime_values import (
+    clear_runtime_config_cache,
+    get_runtime_config,
+    load_submit_quality_runtime_config,
+)
+from alpha.config.yaml import (
+    clear_yaml_caches,
+    get_active_config_path,
+    set_active_config_path,
+)
 from alpha.policy.expression import (
     get_dataset_expression_policy,
     use_fundamental6_heuristics,
@@ -242,6 +251,33 @@ def test_get_yaml_config_reloads_when_file_changes(tmp_path) -> None:
 
     assert first["global"]["limits"]["limit"] == 10
     assert second["global"]["limits"]["limit"] == 25
+
+
+def test_runtime_config_reloads_when_active_yaml_changes(tmp_path) -> None:
+    original_path = get_active_config_path()
+    config_path = tmp_path / "settings.yaml"
+    config_path.write_text(
+        "global:\n  http:\n    request_timeout: 11.0\n",
+        encoding="utf-8",
+    )
+    try:
+        set_active_config_path(str(config_path))
+        clear_yaml_caches()
+        clear_runtime_config_cache()
+        assert get_runtime_config().http.request_timeout == 11.0
+
+        time.sleep(0.01)
+        config_path.write_text(
+            "global:\n  http:\n    request_timeout: 22.0\n",
+            encoding="utf-8",
+        )
+        os.utime(config_path, None)
+
+        assert get_runtime_config().http.request_timeout == 22.0
+    finally:
+        set_active_config_path(original_path or "")
+        clear_yaml_caches()
+        clear_runtime_config_cache()
 
 
 def test_cli_config_is_bound_before_yaml_backed_constants_import(tmp_path) -> None:

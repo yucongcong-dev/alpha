@@ -11,6 +11,8 @@ from threading import Event
 from types import SimpleNamespace
 from unittest.mock import patch
 
+import pytest
+
 from alpha.config.constants import STATUS_SKIPPED
 from alpha.core.simulation import (
     PrecheckConfig,
@@ -23,13 +25,22 @@ from alpha.core.simulation import (
     is_submittable_from_checks,
     precheck_simulation_metrics,
     resume_field_test,
+    resume_field_test_in_worker,
     run_checksubmit_stage,
+    run_field_test,
+    run_field_test_in_worker,
     run_simulation_create_stage,
     run_simulation_poll_stage,
     summarize_failure,
 )
 from alpha.exceptions import BrainStopRequested
-from alpha.models.domain import FailedCheck, FieldTestContext, FieldTestResult, SettingsVariant
+from alpha.models.domain import (
+    FailedCheck,
+    FieldTestContext,
+    FieldTestResult,
+    SettingsVariant,
+    TemplateField,
+)
 from alpha.models.runtime import PendingFutureContext
 from tests.conftest import MockArgs
 
@@ -941,3 +952,163 @@ def test_resume_field_test_skips_create_and_completes_existing_simulation() -> N
     assert result.simulation_id == "sim-1"
     assert result.alpha_id == "alpha-1"
     assert result.submittable is True
+
+
+def _orchestration_field() -> TemplateField:
+    return TemplateField(
+        field_id="cashflow_op",
+        field_name="Cashflow",
+        field_type="MATRIX",
+        metadata={
+            "id": "cashflow_op",
+            "name": "Cashflow",
+            "type": "MATRIX",
+            "template_family": "rank",
+            "template_stage": "first_order",
+        },
+    )
+
+
+@pytest.mark.parametrize(
+    ("overrides", "message"),
+    [
+        ({"expression": ""}, "expression cannot be empty"),
+        ({"template_name": ""}, "template_name cannot be empty"),
+        ({"settings_fingerprint": ""}, "settings_fingerprint cannot be empty"),
+        ({"template_library_fingerprint": ""}, "template_library_fingerprint cannot be empty"),
+    ],
+)
+def test_run_field_test_validates_required_inputs(overrides, message) -> None:
+    kwargs = {
+        "client": object(),
+        "args": MockArgs(),
+        "field": _orchestration_field(),
+        "template_name": "rank",
+        "expression": "rank(cashflow_op)",
+        "settings_fingerprint": "settings",
+        "template_library_fingerprint": "templates",
+    }
+    kwargs.update(overrides)
+
+    with pytest.raises(ValueError, match=message):
+        run_field_test(**kwargs)  # type: ignore[arg-type]
+
+
+def test_run_field_test_rejects_field_without_id() -> None:
+    field = TemplateField("field", "Field", "MATRIX", metadata={"name": "Field"})
+
+    with pytest.raises(ValueError, match="field must contain 'id' key"):
+        run_field_test(
+            object(),  # type: ignore[arg-type]
+            MockArgs(),
+            field,
+            "rank",
+            "rank(field)",
+            "settings",
+            "templates",
+        )
+
+
+def test_run_field_test_calls_create_callback_and_completion() -> None:
+    completed = FieldTestResult(
+        field_id="cashflow_op",
+        field_type="MATRIX",
+        field_name="Cashflow",
+        template_name="rank",
+        status="simulated",
+        submittable=True,
+        expression="rank(cashflow_op)",
+    )
+    callback_calls: list[tuple[str, str]] = []
+    with (
+        patch(
+            "alpha.core.simulation.run_simulation_create_stage",
+            return_value=("/simulations/sim-7", "sim-7"),
+        ),
+        patch(
+            "alpha.core.simulation._complete_field_test_from_simulation",
+            return_value=completed,
+        ) as mock_complete,
+    ):
+        result = run_field_test(
+            object(),  # type: ignore[arg-type]
+            MockArgs(),
+            _orchestration_field(),
+            "rank",
+            "rank(cashflow_op)",
+            "settings",
+            "templates",
+            simulation_settings=SettingsVariant(decay=4),
+            on_simulation_created=lambda location, simulation_id: callback_calls.append(
+                (location, simulation_id)
+            ),
+        )
+
+    assert result is completed
+    assert callback_calls == [("/simulations/sim-7", "sim-7")]
+    assert mock_complete.call_args.kwargs["simulation_id"] == "sim-7"
+
+
+def test_run_field_test_returns_create_stage_failure() -> None:
+    failure = FieldTestContext(
+        field_id="cashflow_op",
+        field_type="MATRIX",
+        field_name="Cashflow",
+        template_name="rank",
+        expression="rank(cashflow_op)",
+    ).failure(failed_stage="create", message="queue busy")
+    with patch("alpha.core.simulation.run_simulation_create_stage", return_value=failure):
+        result = run_field_test(
+            object(),  # type: ignore[arg-type]
+            MockArgs(),
+            _orchestration_field(),
+            "rank",
+            "rank(cashflow_op)",
+            "settings",
+            "templates",
+        )
+
+    assert result is failure
+
+
+def test_resume_field_test_requires_location() -> None:
+    with pytest.raises(ValueError, match="must contain simulation_location"):
+        resume_field_test(
+            object(),  # type: ignore[arg-type]
+            MockArgs(),
+            PendingFutureContext(),
+            "templates",
+        )
+
+
+def test_worker_entrypoints_resolve_thread_client() -> None:
+    client = object()
+    factory = SimpleNamespace(get_client=lambda: client)
+    completed = FieldTestResult(
+        field_id="f",
+        field_type="MATRIX",
+        field_name="f",
+        template_name="rank",
+        expression="rank(f)",
+    )
+    pending = PendingFutureContext(simulation_location="/simulations/s1")
+    with (
+        patch("alpha.core.simulation.run_field_test", return_value=completed) as mock_run,
+        patch("alpha.core.simulation.resume_field_test", return_value=completed) as mock_resume,
+    ):
+        assert (
+            run_field_test_in_worker(
+                factory,
+                MockArgs(),
+                _orchestration_field(),
+                "rank",
+                "rank(cashflow_op)",
+                "settings",
+                "templates",
+            )
+            is completed
+        )
+        assert resume_field_test_in_worker(factory, MockArgs(), pending, "templates") is completed
+
+    assert mock_run.call_args.args[0] is client
+    assert mock_resume.call_args.args[0] is client

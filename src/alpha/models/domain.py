@@ -191,6 +191,15 @@ class FieldTestResult:
     template_library_fingerprint: str = ""
     settings: dict[str, Any] = field(default_factory=dict)
     metrics: dict[str, Any] = field(default_factory=dict)
+    region: str = ""
+    universe: str = ""
+    instrument_type: str = ""
+    delay: int | None = None
+    run_name: str = ""
+    source_summary: str = ""
+    created_at: str = ""
+    updated_at: str = ""
+    revision: int = 1
     failed_stage: str | None = None
     failed_checks: list[FailedCheck] | None = None
 
