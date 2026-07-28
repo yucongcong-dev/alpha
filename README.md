@@ -144,6 +144,9 @@ alpha/
 # 开发模式安装（推荐）
 python3.10 -m pip install -e .
 
+# 如果在 config/settings.yaml 启用 httpx 后端，同时安装 HTTP/2 可选依赖
+python3.10 -m pip install -e ".[httpx]"
+
 # 安装后可直接运行
 alpha --smoke-test
 
