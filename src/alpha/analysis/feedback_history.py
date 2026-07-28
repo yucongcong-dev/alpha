@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
+from dataclasses import replace
 
 from ..config.constants import (
     CHECK_CONCENTRATED_WEIGHT,
@@ -79,6 +80,37 @@ def build_historical_run_state(
         template_registry_overrides=registry_overrides,
         field_feedback=field_feedback,
         global_failed_check_counts=global_failed_check_counts,
+    )
+
+
+def rebuild_historical_run_state(
+    state: HistoricalRunState,
+    existing_results: list[FieldTestResult],
+    *,
+    refresh_feedback: bool,
+) -> HistoricalRunState:
+    """Recompute derived history after in-memory result reconciliation."""
+    template_stats = compile_template_stats(existing_results)
+    template_stats = merge_registry_recommendations_into_template_stats(
+        template_stats,
+        list(state.template_registry.values()),
+    )
+    feedback = (
+        compile_field_feedback(existing_results) if refresh_feedback else state.field_feedback
+    )
+    failed_counts = (
+        compile_global_failed_check_counts(existing_results)
+        if refresh_feedback
+        else state.global_failed_check_counts
+    )
+    return replace(
+        state,
+        existing_results=existing_results,
+        attempted_keys=attempted_template_keys(existing_results),
+        template_stats=template_stats,
+        template_family_registry=compile_template_family_registry(template_stats),
+        field_feedback=feedback,
+        global_failed_check_counts=failed_counts,
     )
 
 

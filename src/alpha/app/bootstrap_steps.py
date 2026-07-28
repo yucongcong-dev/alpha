@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
 import logging
 
+from ..analysis.feedback_history import rebuild_historical_run_state
 from ..api.client import BrainClient, WorkerClientFactory
 from ..io.common import resolve_datasets_root
 from ..models.domain import TemplateField
@@ -15,6 +17,7 @@ from ..models.runtime_protocols import (
     RunConfig,
 )
 from .bootstrap_fields import resolve_field_selection
+from .bootstrap_pending_checks import refresh_pending_check_results
 from .bootstrap_resource_loading import (
     load_bootstrap_fields,
     load_bootstrap_supporting_resources,
@@ -191,6 +194,24 @@ def prepare_bootstrap_resources(
         effective_run_paths=effective_run_paths,
         services=supporting_services,
     )
+    refreshed_results, refreshed_count = refresh_pending_check_results(
+        bootstrap_client,
+        supporting_resources.historical_state.existing_results,
+        retries=int(getattr(args, "check_submit_retries", 1) or 1),
+    )
+    if refreshed_count:
+        supporting_resources = replace(
+            supporting_resources,
+            historical_state=rebuild_historical_run_state(
+                supporting_resources.historical_state,
+                refreshed_results,
+                refresh_feedback=paths.feedback_output == paths.output_file,
+            ),
+        )
+        logger.info(
+            "[checksubmit-resume] refreshed %d historical pending results",
+            refreshed_count,
+        )
     field_fetch_options = FieldFetchOptions.from_args(args)
     fields = load_bootstrap_fields(
         dataset_id=dataset_id,

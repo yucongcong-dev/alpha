@@ -10,6 +10,7 @@ from typing import Any
 
 from ..api.api_types import SimulationPayload
 from ..api.client import BrainClient, retry_operation
+from ..api.timing import wait_seconds
 from ..config.constants import (
     API_KEY_PROGRESS,
     API_KEY_STATE,
@@ -116,33 +117,53 @@ def checksubmit_with_retry(
     alpha_id: str,
     retries: int,
 ) -> tuple[bool | None, str, list[FailedCheck]]:
-    alpha_detail = retry_operation(
-        "checksubmit",
-        retries,
-        lambda: client.get_alpha_detail(alpha_id),
-        retry_wait_seconds=SIMULATION_RETRY_WAIT,
+    attempts = max(1, int(retries or 0))
+    last_result: tuple[bool | None, str, list[FailedCheck]] = (
+        None,
+        "checks unavailable",
+        [],
     )
-    checks = extract_checks(alpha_detail)
-    submittable = is_submittable_from_checks(
-        [parse_failed_check(c) for c in checks if isinstance(c, dict)]
-    )
-    unresolved_checks = extract_failed_checks(alpha_detail) + extract_pending_checks(alpha_detail)
-    message = (
-        "checks unavailable"
-        if submittable is None and not unresolved_checks
-        else "checks pending"
-        if submittable is None
-        else "checks passed"
-        if submittable
-        else "checks failed"
-    )
-    logger.debug(
-        "[checksubmit] alpha_id=%s submittable=%s message=%s",
-        alpha_id,
-        submittable,
-        message,
-    )
-    return submittable, message, unresolved_checks
+    for attempt in range(1, attempts + 1):
+        alpha_detail = retry_operation(
+            "checksubmit",
+            attempts,
+            lambda: client.get_alpha_detail(alpha_id),
+            retry_wait_seconds=SIMULATION_RETRY_WAIT,
+        )
+        checks = extract_checks(alpha_detail)
+        submittable = is_submittable_from_checks(
+            [parse_failed_check(c) for c in checks if isinstance(c, dict)]
+        )
+        unresolved_checks = extract_failed_checks(alpha_detail) + extract_pending_checks(
+            alpha_detail
+        )
+        message = (
+            "checks unavailable"
+            if submittable is None and not unresolved_checks
+            else "checks pending"
+            if submittable is None
+            else "checks passed"
+            if submittable
+            else "checks failed"
+        )
+        last_result = submittable, message, unresolved_checks
+        logger.debug(
+            "[checksubmit] alpha_id=%s attempt=%d/%d submittable=%s message=%s",
+            alpha_id,
+            attempt,
+            attempts,
+            submittable,
+            message,
+        )
+        if submittable is not None or message != "checks pending":
+            return last_result
+        if attempt < attempts:
+            wait_seconds(
+                SIMULATION_RETRY_WAIT,
+                f"pending submission checks for alpha {alpha_id}",
+                verbose=False,
+            )
+    return last_result
 
 
 def run_simulation_create_stage(

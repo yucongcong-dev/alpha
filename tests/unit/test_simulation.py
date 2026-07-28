@@ -285,6 +285,51 @@ class TestChecksubmitWithRetry:
             [FailedCheck(name="SELF_CORRELATION", result="FAIL", value=0.91, limit=0.7)],
         )
 
+    def test_pending_checks_are_polled_until_terminal(self, monkeypatch) -> None:
+        responses = iter(
+            [
+                {"is": {"checks": [{"name": "SELF_CORRELATION", "result": "PENDING"}]}},
+                {"is": {"checks": [{"name": "SELF_CORRELATION", "result": "PASS"}]}},
+            ]
+        )
+        waits: list[str] = []
+
+        class DummyClient:
+            def get_alpha_detail(self, _alpha_id: str) -> dict[str, object]:
+                return next(responses)
+
+        monkeypatch.setattr("alpha.core.simulation_stages.retry_operation", lambda *a, **k: a[2]())
+        monkeypatch.setattr(
+            "alpha.core.simulation_stages.wait_seconds",
+            lambda _seconds, reason, **_kwargs: waits.append(reason),
+        )
+
+        result = checksubmit_with_retry(DummyClient(), "alpha_1", retries=3)
+
+        assert result == (True, "checks passed", [])
+        assert waits == ["pending submission checks for alpha alpha_1"]
+
+    def test_pending_checks_stop_after_retry_budget(self, monkeypatch) -> None:
+        calls = 0
+
+        class DummyClient:
+            def get_alpha_detail(self, _alpha_id: str) -> dict[str, object]:
+                nonlocal calls
+                calls += 1
+                return {"is": {"checks": [{"name": "SELF_CORRELATION", "result": "PENDING"}]}}
+
+        monkeypatch.setattr("alpha.core.simulation_stages.retry_operation", lambda *a, **k: a[2]())
+        monkeypatch.setattr("alpha.core.simulation_stages.wait_seconds", lambda *_a, **_k: None)
+
+        result = checksubmit_with_retry(DummyClient(), "alpha_1", retries=2)
+
+        assert calls == 2
+        assert result == (
+            None,
+            "checks pending",
+            [FailedCheck(name="SELF_CORRELATION", result="PENDING")],
+        )
+
     def test_empty_list(self) -> None:
         assert is_submittable_from_checks([]) is None
 
