@@ -6,14 +6,13 @@ import calendar
 from datetime import date
 from typing import Any
 
-from ..config.constants import (
-    MONTHS_PER_YEAR,
-    NEUTRALIZATION_SUBINDUSTRY,
-)
 from ..config.runtime_values import get_runtime_config
 from ..config.yaml import get_yaml_config
 from ..models.runtime_protocols import SimulationSettingsArgs
 from .fingerprint import stable_fingerprint
+
+MONTHS_PER_YEAR = 12
+DEFAULT_NEUTRALIZATION = "SUBINDUSTRY"
 
 WEBSITE_DEFAULTS: dict[str, Any] = {
     "language": "FASTEXPR",
@@ -21,7 +20,7 @@ WEBSITE_DEFAULTS: dict[str, Any] = {
     "region": "USA",
     "universe": "TOP3000",
     "delay": 1,
-    "neutralization": NEUTRALIZATION_SUBINDUSTRY,
+    "neutralization": DEFAULT_NEUTRALIZATION,
     "decay": 4,
     "truncation": 0.08,
     "pasteurization": "ON",
@@ -48,7 +47,7 @@ CLI_DEFAULTS: dict[str, Any] = {
     "universe": "TOP3000",
     "delay": 1,
     "decay": 4,
-    "neutralization": NEUTRALIZATION_SUBINDUSTRY,
+    "neutralization": DEFAULT_NEUTRALIZATION,
     "truncation": 0.08,
     "pasteurization": "ON",
     "unit_handling": "VERIFY",
@@ -105,9 +104,13 @@ def resolve_test_period_dates(
         end_date = cli_end
 
     if (start_date is None or end_date is None) and yaml_sim:
-        years = yaml_sim.get("testPeriodYears") or TEST_PERIOD_DEFAULTS["testPeriodYears"]
-        months = yaml_sim.get("testPeriodMonths") or TEST_PERIOD_DEFAULTS["testPeriodMonths"]
-        total_months = (years or 0) * MONTHS_PER_YEAR + (months or 0)
+        years = yaml_sim.get("testPeriodYears")
+        months = yaml_sim.get("testPeriodMonths")
+        if years is None:
+            years = TEST_PERIOD_DEFAULTS["testPeriodYears"]
+        if months is None:
+            months = TEST_PERIOD_DEFAULTS["testPeriodMonths"]
+        total_months = years * MONTHS_PER_YEAR + months
         if total_months > 0:
             today = date.today()
             comp_months = today.year * MONTHS_PER_YEAR + today.month - 1

@@ -10,13 +10,13 @@ from ..config.constants import (
     CHECK_LOW_TURNOVER,
     FEEDBACK_STAGE_PRUNE,
     FEEDBACK_STAGE_RESIMULATE,
-    FEEDBACK_TEMPLATE_MIN_PRIORITY,
     TEMPLATE_DISABLE_MIN_CONCENTRATED_WEIGHT,
     TEMPLATE_DISABLE_MIN_LOW_FITNESS,
     TEMPLATE_DISABLE_MIN_LOW_SHARPE,
     TEMPLATE_DISABLE_MIN_SIMULATED,
 )
 from ..config.models import DatasetExpressionPolicy
+from ..config.runtime_values import get_runtime_config
 from ..generators.templates.classification import (
     classify_expression_family,
     classify_template_stage,
@@ -56,7 +56,7 @@ def is_template_disabled(
         )
     ):
         return True
-    return stat["attempted"] >= disable_after and stat["submittable"] == 0
+    return stat.get("attempted", 0) >= disable_after and stat.get("submittable", 0) == 0
 
 
 def is_legacy_family_disabled(
@@ -86,7 +86,7 @@ def is_legacy_family_disabled(
 
 def _is_high_conviction_ratio(expression: str, policy: DatasetExpressionPolicy) -> bool:
     """识别策略中值得继续探索的高经济含义比值方向。"""
-    lower_expr = expression.lower()
+    lower_expr = "".join(expression.lower().split())
     return any(
         f"{left}/{right}" in lower_expr for left, right in policy.high_conviction_ratio_pairs
     )
@@ -187,7 +187,7 @@ def should_keep_template_for_feedback(
     ):
         return False
 
-    return priority >= FEEDBACK_TEMPLATE_MIN_PRIORITY
+    return priority >= get_runtime_config().feedback.feedback_template_min_priority
 
 
 def should_skip_field_template_family(

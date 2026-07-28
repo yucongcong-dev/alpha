@@ -10,23 +10,25 @@ from unittest.mock import MagicMock, patch
 from alpha.app.run_loop_rounds import (
     ScheduleRoundContext,
     ScheduleRoundResult,
+    _dispatch_templates_for_field,
     execute_schedule_round,
     schedule_field_round,
 )
-from alpha.models.domain import FieldTestResult
+from alpha.models.domain import FieldTestResult, SettingsVariant, TemplateField
 from alpha.models.io_types import RunFilters
 from alpha.models.runtime import (
     ExecutionState,
     FutureCompletionContext,
     HistoricalRunState,
     InitializedRunContext,
+    PendingTemplateEntry,
     RuntimeConcurrencyState,
     TemplateBuildContext,
 )
 
 
 def _build_context(*, field_template_batch_size: int) -> ScheduleRoundContext:
-    field = {"id": "f1", "name": "f1", "type": "MATRIX"}
+    field = TemplateField("f1", "f1", "MATRIX")
     execution_state = ExecutionState(
         results=[],
         attempted_keys=set(),
@@ -177,3 +179,148 @@ def test_historical_submittable_result_does_not_stop_new_round() -> None:
 
     assert result.stop_requested is False
     mock_schedule.assert_called_once()
+
+
+def test_preexisting_stop_signal_skips_round_without_building_fields() -> None:
+    context = _build_context(field_template_batch_size=1)
+    context.run_ctx.execution_state.stop_signal.set()
+
+    with patch("alpha.app.run_loop_rounds.schedule_field_round") as mock_schedule:
+        result = execute_schedule_round(context, round_index=1)
+
+    assert result == ScheduleRoundResult(False, True, "")
+    mock_schedule.assert_not_called()
+
+
+def test_stop_after_submittable_stops_before_next_field() -> None:
+    context = _build_context(field_template_batch_size=1)
+    context.args.stop_after_submittable = 1
+    context.run_ctx.execution_state.results.append(
+        FieldTestResult(
+            field_id="new",
+            field_type="MATRIX",
+            field_name="new",
+            template_name="template",
+            status="simulated",
+            submittable=True,
+        )
+    )
+
+    with patch("alpha.app.run_loop_rounds.schedule_field_round") as mock_schedule:
+        result = execute_schedule_round(context, round_index=1)
+
+    assert result.stop_requested is True
+    assert context.run_ctx.execution_state.stop_signal.is_set()
+    mock_schedule.assert_not_called()
+
+
+def test_skipped_field_persists_progress_without_building_templates() -> None:
+    context = _build_context(field_template_batch_size=1)
+
+    with (
+        context.executor,
+        patch("alpha.app.run_loop_rounds.refresh_runtime_feedback"),
+        patch("alpha.app.run_loop_rounds.should_skip_field", return_value=True),
+        patch("alpha.app.run_loop_rounds.build_pending_templates_for_field") as mock_build,
+        patch("alpha.app.run_loop_rounds.persist_field_progress") as mock_persist,
+    ):
+        result = schedule_field_round(
+            context=context,
+            field=context.fields[0],
+            field_index=1,
+            total_fields=1,
+            round_index=1,
+        )
+
+    assert result == ScheduleRoundResult(False, False, "f1")
+    mock_build.assert_not_called()
+    assert mock_persist.call_args.kwargs["completed_field_index_override"] == 0
+
+
+def test_breadth_first_round_dispatches_only_configured_batch() -> None:
+    context = _build_context(field_template_batch_size=1)
+    entries = [
+        PendingTemplateEntry(
+            template_name=f"template-{index}",
+            template_family="rank",
+            template_stage="first_order",
+            template_role="signal",
+            template_activation_scope="broad",
+            expression=f"rank(f1) + {index}",
+            priority=100 - index,
+            settings_variant=SettingsVariant(),
+            variant_fingerprint=f"settings-{index}",
+        )
+        for index in range(2)
+    ]
+
+    with (
+        context.executor,
+        patch("alpha.app.run_loop_rounds.refresh_runtime_feedback"),
+        patch("alpha.app.run_loop_rounds.should_skip_field", return_value=False),
+        patch(
+            "alpha.app.run_loop_rounds.build_pending_templates_for_field",
+            return_value=(entries, 0, 2),
+        ),
+        patch(
+            "alpha.app.run_loop_rounds._dispatch_templates_for_field", return_value=False
+        ) as dispatch,
+        patch("alpha.app.run_loop_rounds.persist_field_progress"),
+    ):
+        result = schedule_field_round(
+            context=context,
+            field=context.fields[0],
+            field_index=1,
+            total_fields=1,
+            round_index=1,
+        )
+
+    assert result == ScheduleRoundResult(True, False, "f1")
+    assert dispatch.call_args.kwargs["scheduled_templates"] == entries[:1]
+
+
+def test_dispatch_honors_stop_capacity_and_success_paths() -> None:
+    context = _build_context(field_template_batch_size=1)
+    entry = PendingTemplateEntry(
+        template_name="template",
+        template_family="rank",
+        template_stage="first_order",
+        template_role="signal",
+        template_activation_scope="broad",
+        expression="rank(f1)",
+        priority=100,
+        settings_variant=SettingsVariant(),
+        variant_fingerprint="settings",
+    )
+    kwargs = {
+        "context": context,
+        "field": context.fields[0],
+        "field_id": "f1",
+        "field_name": "f1",
+        "field_type": "MATRIX",
+        "scheduled_templates": [entry],
+    }
+
+    with patch("alpha.app.run_loop_rounds.should_stop_after_submittable", return_value=True):
+        assert _dispatch_templates_for_field(**kwargs) is True
+    assert context.run_ctx.execution_state.stop_signal.is_set()
+
+    context.run_ctx.execution_state.stop_signal.clear()
+    with (
+        patch("alpha.app.run_loop_rounds.should_stop_after_submittable", return_value=False),
+        patch("alpha.app.run_loop_rounds.maybe_restore_runtime_concurrency"),
+        patch("alpha.app.run_loop_rounds.drain_until_capacity", return_value=False),
+        patch("alpha.app.run_loop_rounds.submit_template_future") as mock_submit,
+    ):
+        assert _dispatch_templates_for_field(**kwargs) is False
+    mock_submit.assert_not_called()
+
+    with (
+        patch("alpha.app.run_loop_rounds.should_stop_after_submittable", return_value=False),
+        patch("alpha.app.run_loop_rounds.maybe_restore_runtime_concurrency"),
+        patch("alpha.app.run_loop_rounds.drain_until_capacity", return_value=True),
+        patch("alpha.app.run_loop_rounds.throttle_before_submission"),
+        patch("alpha.app.run_loop_rounds.submit_template_future") as mock_submit,
+    ):
+        assert _dispatch_templates_for_field(**kwargs) is False
+    mock_submit.assert_called_once()

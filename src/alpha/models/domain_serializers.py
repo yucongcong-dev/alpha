@@ -46,8 +46,12 @@ def serialize_settings_variant(settings: SettingsVariant) -> dict[str, object]:
 
 
 def serialize_template_field(field: TemplateField) -> dict[str, object]:
-    """Serialize a template field while preserving the original metadata payload."""
-    return dict(field.metadata)
+    """Serialize a template field without losing its canonical identity attributes."""
+    serialized: dict[str, object] = dict(field.metadata)
+    serialized["id"] = field.field_id
+    serialized["name"] = field.field_name
+    serialized["type"] = field.field_type
+    return serialized
 
 
 def serialize_field_test_result(result: FieldTestResult) -> ResultRow:

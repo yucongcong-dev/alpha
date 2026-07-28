@@ -59,6 +59,39 @@ def test_cache_round_trip_returns_domain_fields(tmp_path) -> None:
     assert _load(cache) == [field]
 
 
+def test_cache_round_trip_preserves_canonical_identity_without_duplicate_metadata(tmp_path) -> None:
+    cache = tmp_path / "cache.json"
+    field = TemplateField(
+        field_id="f1",
+        field_name="Field 1",
+        field_type="MATRIX",
+        metadata={"coverage": 0.95},
+    )
+
+    save_fields_cache(
+        str(cache),
+        dataset_id="model16",
+        region="USA",
+        universe="TOP3000",
+        instrument_type="EQUITY",
+        delay=1,
+        fields=[field],
+    )
+
+    loaded = _load(cache)
+    assert loaded == [
+        TemplateField(
+            field_id="f1",
+            field_name="Field 1",
+            field_type="MATRIX",
+            metadata={"coverage": 0.95, "id": "f1", "name": "Field 1", "type": "MATRIX"},
+        )
+    ]
+    assert loaded[0].get("id") == "f1"
+    assert loaded[0].get("name") == "Field 1"
+    assert loaded[0].get("type") == "MATRIX"
+
+
 def test_cache_rejects_expired_or_mismatched_scope(tmp_path) -> None:
     cache = tmp_path / "cache.json"
     cache.write_text(

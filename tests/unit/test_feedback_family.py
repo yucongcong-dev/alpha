@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 import json
+from types import SimpleNamespace
 
 from alpha.analysis.feedback_filters import (
     is_legacy_family_disabled,
+    is_template_disabled,
     should_keep_template_for_feedback,
     should_skip_field_template_family,
 )
@@ -25,6 +27,7 @@ from alpha.generators.templates.refine import build_refine_templates
 from alpha.generators.variants import build_setting_variants
 from alpha.models.domain import FieldTestResult, NearPassCandidate
 from alpha.policy.expression import get_dataset_expression_policy, resolve_feedback_stage
+from alpha.selection import feedback_filters as feedback_filters_module
 
 
 def test_should_skip_field_template_family_prefers_metadata_family() -> None:
@@ -61,6 +64,54 @@ def test_is_legacy_family_disabled_uses_historical_template_family() -> None:
     )
 
     assert disabled is True
+
+
+def test_is_template_disabled_accepts_partial_historical_stats() -> None:
+    assert is_template_disabled("partial", {"partial": {"attempted": 4}}, disable_after=3)
+    assert not is_template_disabled("partial", {"partial": {"submittable": 0}}, disable_after=3)
+
+
+def test_high_conviction_ratio_recognizes_optional_whitespace() -> None:
+    policy = get_dataset_expression_policy("fundamental6")
+
+    keep = should_keep_template_for_feedback(
+        "custom_ratio",
+        "rank(cashflow_op / assets)",
+        200,
+        {
+            "best_score": 0.1,
+            "attempted_templates": 2,
+            "failed_check_counts": {"LOW_SHARPE": 4},
+        },
+        expression_policy=policy,
+        template_metadata={"family": "legacy_ratio"},
+    )
+
+    assert keep is True
+
+
+def test_feedback_priority_threshold_uses_current_runtime_config(monkeypatch) -> None:
+    policy = get_dataset_expression_policy("fundamental6")
+    monkeypatch.setattr(
+        feedback_filters_module,
+        "get_runtime_config",
+        lambda: SimpleNamespace(feedback=SimpleNamespace(feedback_template_min_priority=175)),
+    )
+
+    keep = should_keep_template_for_feedback(
+        "custom_template",
+        "rank(custom_field)",
+        174,
+        {
+            "best_score": 0.1,
+            "attempted_templates": 2,
+            "failed_check_counts": {},
+        },
+        expression_policy=policy,
+        template_metadata={"family": "custom"},
+    )
+
+    assert keep is False
 
 
 def test_load_existing_results_reads_template_family(tmp_path) -> None:

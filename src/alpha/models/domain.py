@@ -158,7 +158,13 @@ class TemplateField:
         return parse_template_field(field)
 
     def get(self, key: str, default: Any = None) -> Any:
-        """兼容 dict 风格的 get 方法。"""
+        """兼容 dict 风格读取，同时以规范化字段属性作为身份真值。"""
+        if key in {"id", "field_id"}:
+            return self.field_id
+        if key in {"name", "field_name"}:
+            return self.field_name
+        if key in {"type", "fieldType", "field_type"}:
+            return self.field_type
         return self.metadata.get(key, default)
 
     def to_dict(self) -> dict[str, Any]:

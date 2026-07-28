@@ -66,6 +66,12 @@ def execute_schedule_round(
     execution_state = context.run_ctx.execution_state
     progressed_this_round = False
     last_field_id = ""
+    if execution_state.stop_signal.is_set():
+        return ScheduleRoundResult(
+            progressed=False,
+            stop_requested=True,
+            last_field_id="",
+        )
     if context.field_template_batch_size > 0:
         logger.info(
             "[schedule] round=%d breadth-first batch_size=%d fields=%d",

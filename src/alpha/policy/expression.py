@@ -187,7 +187,8 @@ def resolve_feedback_stage(
         return FEEDBACK_STAGE_GENERATE
     feedback: dict[str, Any] = dict(field_feedback)
     attempted = int(feedback.get(STAT_FIELD_ATTEMPTED_TEMPLATES, 0) or 0)
-    best_score = float(feedback.get("best_score", STATS_DEFAULT_SCORE) or STATS_DEFAULT_SCORE)
+    raw_best_score = feedback.get("best_score", STATS_DEFAULT_SCORE)
+    best_score = float(STATS_DEFAULT_SCORE if raw_best_score is None else raw_best_score)
     if (
         attempted >= loop_policy.resimulate.min_attempted_templates
         and best_score >= loop_policy.resimulate.min_best_score

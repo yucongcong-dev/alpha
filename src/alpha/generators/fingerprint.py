@@ -6,7 +6,6 @@ import hashlib
 import json
 from typing import Any
 
-from ..config.constants import STABLE_FINGERPRINT_HEX_LEN
 from ..models.domain import FieldTestResult, SettingsVariant, TemplateField, TemplateLibraryItem
 from ..models.domain_serializers import (
     serialize_field_test_result,
@@ -14,6 +13,9 @@ from ..models.domain_serializers import (
     serialize_template_field,
     serialize_template_library_item,
 )
+
+FINGERPRINT_HEX_LENGTH = 16
+"""Persisted identity width; changing it would invalidate historical deduplication keys."""
 
 
 def _json_default(obj: Any) -> Any:
@@ -43,4 +45,4 @@ def stable_fingerprint(payload: Any) -> str:
     text = json.dumps(
         payload, ensure_ascii=False, sort_keys=True, separators=(",", ":"), default=_json_default
     )
-    return hashlib.sha256(text.encode("utf-8")).hexdigest()[:STABLE_FINGERPRINT_HEX_LEN]
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()[:FINGERPRINT_HEX_LENGTH]

@@ -426,7 +426,6 @@ default_profile:
 misc:
   months_per_year: 12
   payload_text_truncation_limit: 500
-  stable_fingerprint_hex_len: 16
   blacklist_schema_version: "v2"
   date_format_iso: "%Y-%m-%d"
   date_format_iso_minutes: "%Y-%m-%d %H:%M"

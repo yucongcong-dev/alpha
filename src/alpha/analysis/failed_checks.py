@@ -53,7 +53,7 @@ def failed_check_closeness(check: FailedCheck) -> float | None:
     scale = max(abs(limit), FAILED_CHECK_EPSILON)
     if gap is None:
         return None
-    return max(0.0, 1.0 - (gap / scale))
+    return min(1.0, max(0.0, 1.0 - (gap / scale)))
 
 
 def failed_check_gap(check: FailedCheck) -> float | None:
@@ -136,7 +136,7 @@ def compile_failed_check_leaderboard(results: Sequence[FieldTestResult]) -> list
         leaderboard,
         key=lambda row: (
             -row["count"],
-            -(row["avg_closeness"] or STATS_DEFAULT_SCORE),
+            -(row["avg_closeness"] if row["avg_closeness"] is not None else STATS_DEFAULT_SCORE),
             row["name"],
         ),
     )
@@ -146,6 +146,8 @@ def compile_near_pass_summary(
     results: Sequence[FieldTestResult], limit: int = STATS_NEARPASS_SUMMARY_LIMIT
 ) -> list[dict[str, Any]]:
     """列出最接近通过检查的 Alpha，用于指导下一轮变体搜索。"""
+    if limit <= 0:
+        return []
     rows: list[dict[str, Any]] = []
     for result in results:
         if result.status != "simulated" or result.submittable or not result.failed_checks:
@@ -201,4 +203,6 @@ def compile_optimization_hints(
         hints.append(
             f"最佳接近通过候选：字段={best['field_id']} 模板={best['template_name']} 分数={best['score']:.3f}；优先对此表达式进行局部变体。"
         )
+    if not hints:
+        hints.append("失败检查暂未匹配到专项建议；先扩大样本并按最高频失败项做局部变体。")
     return hints

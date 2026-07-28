@@ -17,7 +17,6 @@ DATE_FORMAT_ISO_MINUTES: str = _yaml_str(
 BLACKLIST_SCHEMA_VERSION: str = _yaml_str("misc", "blacklist_schema_version", default="v2")
 MONTHS_PER_YEAR: int = _yaml_int("misc", "months_per_year", default=12)
 PAYLOAD_TEXT_TRUNCATION_LIMIT: int = _yaml_int("misc", "payload_text_truncation_limit", default=500)
-STABLE_FINGERPRINT_HEX_LEN: int = _yaml_int("misc", "stable_fingerprint_hex_len", default=16)
 
 # ---- API key 字符串 ----
 API_KEY_DETAIL: str = _yaml_str("strings", "api_keys", "detail", default="detail")

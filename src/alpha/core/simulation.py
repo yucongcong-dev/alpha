@@ -129,8 +129,8 @@ def run_field_test(
         raise ValueError("expression cannot be empty")
     if not template_name or not template_name.strip():
         raise ValueError("template_name cannot be empty")
-    if "id" not in field.metadata:
-        raise ValueError("field must contain 'id' key")
+    if not field.field_id.strip():
+        raise ValueError("field_id cannot be empty")
     if not settings_fingerprint:
         raise ValueError("settings_fingerprint cannot be empty")
     if not template_library_fingerprint:

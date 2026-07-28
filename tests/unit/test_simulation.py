@@ -995,9 +995,9 @@ def test_run_field_test_validates_required_inputs(overrides, message) -> None:
 
 
 def test_run_field_test_rejects_field_without_id() -> None:
-    field = TemplateField("field", "Field", "MATRIX", metadata={"name": "Field"})
+    field = TemplateField("", "Field", "MATRIX", metadata={"name": "Field"})
 
-    with pytest.raises(ValueError, match="field must contain 'id' key"):
+    with pytest.raises(ValueError, match="field_id cannot be empty"):
         run_field_test(
             object(),  # type: ignore[arg-type]
             MockArgs(),
