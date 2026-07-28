@@ -19,7 +19,7 @@ from alpha.api.timing import (
     polling_retry_after,
     wait_seconds,
 )
-from alpha.exceptions import BrainAPIError
+from alpha.exceptions import BrainAPIError, BrainStopRequested
 
 
 class _Response:
@@ -150,6 +150,11 @@ def test_wait_seconds_skips_non_positive_values(monkeypatch) -> None:
     wait_seconds(0.2, "positive", verbose=False)
 
     assert sleeps == [0.2]
+
+
+def test_wait_seconds_aborts_before_sleep() -> None:
+    with pytest.raises(BrainStopRequested, match="stop was requested"):
+        wait_seconds(30, "simulation pending", should_abort=lambda: True)
 
 
 class _FieldClient(BrainFieldsMixin):

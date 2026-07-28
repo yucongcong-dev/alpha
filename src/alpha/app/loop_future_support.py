@@ -21,6 +21,16 @@ from .run_loop_resume import save_terminal_pipeline_state
 logger = logging.getLogger(__name__)
 
 
+def cancel_unstarted_futures(execution_state: ExecutionState) -> int:
+    """Cancel futures that have not started and remove their non-resumable metadata."""
+    cancelled = 0
+    for future in list(execution_state.pending_futures):
+        if future.cancel():
+            execution_state.pending_futures.pop(future, None)
+            cancelled += 1
+    return cancelled
+
+
 def _drain_completed_cycle(
     *,
     pending_futures: dict[Future[FieldTestResult], PendingFutureContext],
@@ -156,6 +166,7 @@ def submit_resumable_futures(
                 args,
                 pending_context,
                 run_ctx.template_library_fingerprint,
+                execution_state.stop_signal.is_set,
             )
             typed_future: Future[FieldTestResult] = future
             execution_state.pending_futures[typed_future] = pending_context

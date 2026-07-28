@@ -3,10 +3,13 @@
 from __future__ import annotations
 
 import argparse
+from concurrent.futures import Future
 import json
 from threading import Semaphore
 from types import SimpleNamespace
 from unittest.mock import patch
+
+import pytest
 
 from alpha.app.run_loop import (
     ScheduleRoundResult,
@@ -186,6 +189,74 @@ def test_run_field_test_loop_persists_progress_for_skipped_fields(tmp_path) -> N
 
     assert mock_resume.call_count == 1
     assert mock_round.call_count == 1
+
+
+def test_run_field_test_loop_interrupts_workers_without_waiting(tmp_path) -> None:
+    fields = [{"id": "f1", "type": "MATRIX", "name": "f1"}]
+    run_ctx = _build_run_ctx(fields)
+    args = argparse.Namespace(
+        dry_run_plan=False,
+        field_template_batch_size=0,
+        stop_after_submittable=0,
+        dataset_id="fundamental6",
+        output=str(tmp_path / "results.json"),
+        auto_update_blacklist=False,
+    )
+    running: Future[object] = Future()
+    queued: Future[object] = Future()
+    assert running.set_running_or_notify_cancel() is True
+    running_context = SimpleNamespace(simulation_location="/simulations/sim-1")
+    queued_context = SimpleNamespace(simulation_location="")
+
+    class FakeExecutor:
+        def __init__(self) -> None:
+            self.shutdown_calls: list[tuple[bool, bool]] = []
+
+        def shutdown(self, *, wait: bool, cancel_futures: bool = False) -> None:
+            self.shutdown_calls.append((wait, cancel_futures))
+
+    executor = FakeExecutor()
+
+    def _interrupt(*_args, **_kwargs):
+        run_ctx.execution_state.pending_futures = {
+            running: running_context,
+            queued: queued_context,
+        }
+        raise KeyboardInterrupt
+
+    with (
+        patch("alpha.app.run_loop.ThreadPoolExecutor", return_value=executor),
+        patch("alpha.app.run_loop.restore_fields_from_state", return_value=(fields, 0)),
+        patch(
+            "alpha.app.run_loop.create_template_build_context",
+            return_value=SimpleNamespace(
+                field_feedback={},
+                global_failed_check_counts={},
+                feedback_result_count=0,
+            ),
+        ),
+        patch("alpha.app.run_loop.submit_resumable_futures"),
+        patch("alpha.app.run_loop.execute_schedule_round", side_effect=_interrupt),
+        patch("alpha.app.run_loop.save_runtime_checkpoint") as mock_checkpoint,
+        pytest.raises(KeyboardInterrupt),
+    ):
+        run_field_test_loop(
+            args,
+            run_ctx,
+            run_paths=argparse.Namespace(
+                state_file=str(tmp_path / "state.json"),
+                checkpoint_file=str(tmp_path / "checkpoint.json"),
+            ),
+        )
+
+    assert run_ctx.execution_state.stop_signal.is_set() is True
+    assert executor.shutdown_calls == [(False, True)]
+    assert queued.cancelled() is True
+    assert list(run_ctx.execution_state.pending_futures.values()) == [running_context]
+    saved_state = mock_checkpoint.call_args.kwargs["execution_state"]
+    assert next(iter(saved_state.pending_futures.values())).simulation_location == (
+        "/simulations/sim-1"
+    )
 
 
 def test_resolve_result_write_options_prefers_run_paths_output() -> None:

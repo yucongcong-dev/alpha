@@ -33,9 +33,11 @@ def retry_operation(
 
     for attempt in range(1, retries + 1):
         if should_abort is not None and should_abort():
-            raise BrainStopRequested(f"{name} aborted after stop-after-submittable triggered")
+            raise BrainStopRequested(f"{name} aborted because stop was requested")
         try:
             return func()
+        except BrainStopRequested:
+            raise
         except BrainRateLimitError as exc:
             last_error = exc
             logger.warning(
@@ -77,10 +79,15 @@ def retry_operation(
             )
             if attempt < retries:
                 if should_abort is not None and should_abort():
-                    raise BrainStopRequested(
-                        f"{name} aborted after stop-after-submittable triggered"
-                    ) from exc
-                wait_seconds(retry_wait_seconds, f"retry {name}")
+                    raise BrainStopRequested(f"{name} aborted because stop was requested") from exc
+                if should_abort is None:
+                    wait_seconds(retry_wait_seconds, f"retry {name}")
+                else:
+                    wait_seconds(
+                        retry_wait_seconds,
+                        f"retry {name}",
+                        should_abort=should_abort,
+                    )
 
     raise BrainAPIError(f"{name} failed after {retries} attempts: {last_error}")
 

@@ -7,7 +7,11 @@ from threading import Semaphore
 from types import SimpleNamespace
 from unittest.mock import patch
 
-from alpha.app.loop_future_support import submit_resumable_futures, submit_template_future
+from alpha.app.loop_future_support import (
+    cancel_unstarted_futures,
+    submit_resumable_futures,
+    submit_template_future,
+)
 from alpha.models.domain import FieldTestResult, SettingsVariant, TemplateField
 from alpha.models.runtime import ExecutionState, PendingFutureContext
 
@@ -44,6 +48,28 @@ class _FailingExecutor(_RecordingExecutor):
         if self.calls:
             raise RuntimeError("executor unavailable")
         return super().submit(function, *args)
+
+
+def test_cancel_unstarted_futures_preserves_running_simulations() -> None:
+    execution_state = _execution_state()
+    queued: Future[FieldTestResult] = Future()
+    running: Future[FieldTestResult] = Future()
+    assert running.set_running_or_notify_cancel() is True
+    queued_context = PendingFutureContext(field_id="queued")
+    running_context = PendingFutureContext(
+        field_id="running",
+        simulation_location="/simulations/sim-1",
+    )
+    execution_state.pending_futures = {
+        queued: queued_context,
+        running: running_context,
+    }
+
+    cancelled = cancel_unstarted_futures(execution_state)
+
+    assert cancelled == 1
+    assert queued.cancelled() is True
+    assert execution_state.pending_futures == {running: running_context}
 
 
 def test_submit_template_future_records_created_simulation_location() -> None:
@@ -126,6 +152,7 @@ def test_submit_resumable_futures_registers_restored_contexts() -> None:
     assert execution_state.resumable_simulations == []
     assert list(execution_state.pending_futures.values()) == [pending]
     assert len(executor.calls) == 1
+    assert executor.calls[0][1][-1]() is False
 
 
 def test_submit_resumable_futures_restores_unsubmitted_contexts_on_failure() -> None:

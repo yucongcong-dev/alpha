@@ -9,6 +9,7 @@ from ..core.executor import print_dry_run_plan
 from ..models.io_types import RunPaths
 from ..models.runtime_protocols import RunLoopArgs
 from ..runtime.state import InitializedRunContext
+from .loop_future_support import cancel_unstarted_futures as cancel_unstarted_futures
 from .loop_future_support import drain_remaining_futures as drain_remaining_futures
 from .loop_future_support import submit_resumable_futures as submit_resumable_futures
 from .run_loop_feedback import refresh_runtime_feedback as refresh_runtime_feedback
@@ -81,7 +82,9 @@ def run_field_test_loop(
         existing_results_count=len(execution_state.results),
     )
 
-    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+    executor = ThreadPoolExecutor(max_workers=max_workers)
+    executor_shutdown = False
+    try:
         schedule_context = ScheduleRoundContext(
             args=args,
             run_ctx=run_ctx,
@@ -128,6 +131,19 @@ def run_field_test_loop(
                 completion_ctx=completion_ctx,
             )
         except KeyboardInterrupt:
+            execution_state.stop_signal.set()
+            cancelled = cancel_unstarted_futures(execution_state)
+            executor.shutdown(wait=False, cancel_futures=True)
+            executor_shutdown = True
+            logger.warning(
+                "[abort] stopping workers cancelled=%d resumable=%d",
+                cancelled,
+                sum(
+                    1
+                    for pending in execution_state.pending_futures.values()
+                    if pending.simulation_location
+                ),
+            )
             completed_field_index = (
                 0 if field_template_batch_size > 0 else field_resume_positions.get(last_field_id, 0)
             )
@@ -157,3 +173,6 @@ def run_field_test_loop(
                 reason="Exception",
             )
             raise
+    finally:
+        if not executor_shutdown:
+            executor.shutdown(wait=True)

@@ -8,6 +8,7 @@
 from __future__ import annotations
 
 from threading import Event
+from types import SimpleNamespace
 from unittest.mock import patch
 
 from alpha.config.constants import STATUS_SKIPPED
@@ -24,8 +25,10 @@ from alpha.core.simulation import (
     resume_field_test,
     run_checksubmit_stage,
     run_simulation_create_stage,
+    run_simulation_poll_stage,
     summarize_failure,
 )
+from alpha.exceptions import BrainStopRequested
 from alpha.models.domain import FailedCheck, FieldTestContext, FieldTestResult, SettingsVariant
 from alpha.models.runtime import PendingFutureContext
 from tests.conftest import MockArgs
@@ -859,6 +862,48 @@ def test_run_simulation_create_stage_skips_when_stop_signal_is_set() -> None:
     assert isinstance(result, FieldTestResult)
     assert result.status == STATUS_SKIPPED
     assert result.failed_stage == "stopped"
+
+
+def test_run_simulation_poll_stage_skips_when_stop_is_requested() -> None:
+    ctx = FieldTestContext(
+        field_id="cashflow_op",
+        field_type="MATRIX",
+        field_name="cashflow_op",
+        template_name="group_ratio",
+        expression="rank(cashflow_op)",
+        settings_fingerprint="fp-stop",
+        template_library_fingerprint="lib-stop",
+    )
+
+    with (
+        patch(
+            "alpha.core.simulation_stages.SimulationStageConfig.from_stage_args",
+            return_value=SimpleNamespace(
+                simulation_poll_retries=3,
+                simulation_max_polls=10,
+                simulation_max_wait_seconds=60,
+                simulation_max_pending_cycles=10,
+                simulation_max_queue_seconds=30,
+            ),
+        ),
+        patch(
+            "alpha.core.simulation_stages.poll_simulation_with_retry",
+            side_effect=BrainStopRequested("polling stopped"),
+        ),
+    ):
+        result = run_simulation_poll_stage(
+            ctx,
+            client=object(),  # type: ignore[arg-type]
+            args=MockArgs(),
+            simulation_location="/simulations/sim-1",
+            simulation_id="sim-1",
+            should_abort=lambda: True,
+        )
+
+    assert isinstance(result, FieldTestResult)
+    assert result.status == STATUS_SKIPPED
+    assert result.failed_stage == "stopped"
+    assert result.simulation_id == "sim-1"
 
 
 def test_resume_field_test_skips_create_and_completes_existing_simulation() -> None:

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 import json
 import logging
 import time
@@ -15,7 +16,7 @@ from ..config.constants import (
 )
 from ..config.runtime_values import get_runtime_config
 from ..error_handling import ErrorCategory, ErrorSeverity, error_handler
-from ..exceptions import BrainAPIError, BrainQueueBusyError
+from ..exceptions import BrainAPIError, BrainQueueBusyError, BrainStopRequested
 from ..utils.helpers import first_non_empty
 from .api_types import SimulationPayload
 from .http_backend import response_header
@@ -81,6 +82,7 @@ class BrainSimulationsMixin:
         max_wait_seconds: float,
         max_pending_cycles: int,
         max_queue_seconds: float,
+        should_abort: Callable[[], bool] | None = None,
     ) -> SimulationPayload:
         """轮询单个模拟任务，直到完成或超出排队/等待预算。"""
         url = location if location.startswith("http") else f"{API_BASE}{location}"
@@ -90,6 +92,10 @@ class BrainSimulationsMixin:
         started_at = time.monotonic()
         pending_started_at: float | None = None
         while True:
+            if should_abort is not None and should_abort():
+                raise BrainStopRequested(
+                    f"simulation polling aborted because stop was requested for {url}"
+                )
             poll_count += 1
             if poll_count > max_polls:
                 raise BrainAPIError(
@@ -135,12 +141,14 @@ class BrainSimulationsMixin:
                         ),
                         "simulation pending",
                         verbose=False,
+                        should_abort=should_abort,
                     )
                 else:
                     wait_seconds(
                         http_config.polling_no_retry_after_wait,
                         f"simulation {status.lower()}",
                         verbose=False,
+                        should_abort=should_abort,
                     )
                 continue
 
@@ -180,6 +188,7 @@ class BrainSimulationsMixin:
                     polling_retry_after(response_headers, default=http_config.polling_default_wait),
                     "simulation pending",
                     verbose=False,
+                    should_abort=should_abort,
                 )
                 continue
             return payload

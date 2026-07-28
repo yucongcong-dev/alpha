@@ -8,7 +8,7 @@ from typing import Any
 import pytest
 
 from alpha.api.simulations import BrainSimulationsMixin
-from alpha.exceptions import BrainAPIError, BrainQueueBusyError
+from alpha.exceptions import BrainAPIError, BrainQueueBusyError, BrainStopRequested
 
 
 class FakeSimulationClient(BrainSimulationsMixin):
@@ -119,3 +119,19 @@ def test_poll_simulation_enforces_max_polls(monkeypatch) -> None:
             max_pending_cycles=2,
             max_queue_seconds=60,
         )
+
+
+def test_poll_simulation_aborts_before_request() -> None:
+    client = FakeSimulationClient([])
+
+    with pytest.raises(BrainStopRequested, match="stop was requested"):
+        client.poll_simulation(
+            "/simulations/123",
+            max_polls=3,
+            max_wait_seconds=60,
+            max_pending_cycles=2,
+            max_queue_seconds=60,
+            should_abort=lambda: True,
+        )
+
+    assert client.requests == []

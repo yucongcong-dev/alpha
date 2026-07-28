@@ -4,6 +4,7 @@ simulation 阶段函数与本地预检辅助模块。
 
 from __future__ import annotations
 
+from collections.abc import Callable
 import logging
 import re
 from typing import Any
@@ -97,6 +98,7 @@ def poll_simulation_with_retry(
     max_wait_seconds: float,
     max_pending_cycles: int,
     max_queue_seconds: float,
+    should_abort: Callable[[], bool] | None = None,
 ) -> SimulationPayload:
     return retry_operation(
         "poll simulation",
@@ -107,8 +109,10 @@ def poll_simulation_with_retry(
             max_wait_seconds=max_wait_seconds,
             max_pending_cycles=max_pending_cycles,
             max_queue_seconds=max_queue_seconds,
+            should_abort=should_abort,
         ),
         retry_wait_seconds=SIMULATION_RETRY_WAIT,
+        should_abort=should_abort,
     )
 
 
@@ -177,9 +181,7 @@ def run_simulation_create_stage(
 ) -> FieldTestResult | tuple[str, str]:
     try:
         if should_abort is not None and should_abort():
-            raise BrainStopRequested(
-                "simulation create aborted after stop-after-submittable triggered"
-            )
+            raise BrainStopRequested("simulation create aborted because stop was requested")
         config = SimulationStageConfig.from_stage_args(args)
         payload = build_simulation_payload(args, ctx.expression)
         if simulation_settings is not None:
@@ -195,9 +197,7 @@ def run_simulation_create_stage(
             _ = create_semaphore.acquire()
         try:
             if should_abort is not None and should_abort():
-                raise BrainStopRequested(
-                    "simulation create aborted after stop-after-submittable triggered"
-                )
+                raise BrainStopRequested("simulation create aborted because stop was requested")
             simulation_location, simulation_id = create_simulation_with_retry(
                 client,
                 payload,
@@ -225,6 +225,7 @@ def run_simulation_poll_stage(
     *,
     simulation_location: str,
     simulation_id: str,
+    should_abort: Callable[[], bool] | None = None,
 ) -> FieldTestResult | tuple[str, SimulationPayload]:
     try:
         config = SimulationStageConfig.from_stage_args(args)
@@ -236,6 +237,7 @@ def run_simulation_poll_stage(
             max_wait_seconds=float(config.simulation_max_wait_seconds),
             max_pending_cycles=config.simulation_max_pending_cycles,
             max_queue_seconds=float(config.simulation_max_queue_seconds),
+            should_abort=should_abort,
         )
         progress = first_non_empty(
             simulation_result.get(API_KEY_PROGRESS),
@@ -257,6 +259,13 @@ def run_simulation_poll_stage(
                 status="simulation_failed",
             )
         return alpha_id, simulation_result
+    except BrainStopRequested as exc:
+        return ctx.failure(
+            failed_stage="stopped",
+            message=str(exc),
+            simulation_id=simulation_id,
+            status=STATUS_SKIPPED,
+        )
     except Exception as exc:
         return handle_stage_error(
             ctx,

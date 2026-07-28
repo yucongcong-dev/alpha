@@ -4,16 +4,24 @@ Brain API 等待与 Retry-After 解析工具。
 
 from __future__ import annotations
 
+from collections.abc import Callable
 import logging
 import time
 
 from ..config.runtime_values import get_runtime_config
+from ..exceptions import BrainStopRequested
 from .http_backend import response_header
 
 logger = logging.getLogger(__name__)
 
 
-def wait_seconds(seconds: float, reason: str, verbose: bool = True) -> None:
+def wait_seconds(
+    seconds: float,
+    reason: str,
+    verbose: bool = True,
+    *,
+    should_abort: Callable[[], bool] | None = None,
+) -> None:
     """带日志地休眠，使退避与等待行为在输出中可见。"""
     seconds = max(seconds, 0.0)
     if seconds <= 0:
@@ -22,7 +30,18 @@ def wait_seconds(seconds: float, reason: str, verbose: bool = True) -> None:
         logger.info("[wait] %s: sleeping %.1fs", reason, seconds)
     else:
         logger.debug("[wait] %s: sleeping %.1fs", reason, seconds)
-    time.sleep(seconds)
+    if should_abort is None:
+        time.sleep(seconds)
+        return
+
+    deadline = time.monotonic() + seconds
+    while True:
+        if should_abort():
+            raise BrainStopRequested(f"{reason} aborted because stop was requested")
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            return
+        time.sleep(min(remaining, 0.1))
 
 
 def extract_retry_after(headers: dict[str, str], default: float = 5.0) -> float:

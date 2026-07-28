@@ -11,7 +11,7 @@ from collections.abc import Callable
 import logging
 
 from ..api.client import BrainClient
-from ..config.constants import SENTINEL_UNKNOWN
+from ..config.constants import SENTINEL_UNKNOWN, STATUS_SKIPPED
 from ..generators.fields import choose_field_type
 from ..models.domain import (
     FieldTestContext,
@@ -54,6 +54,7 @@ def _complete_field_test_from_simulation(
     *,
     simulation_location: str,
     simulation_id: str,
+    should_abort: Callable[[], bool] | None = None,
 ) -> FieldTestResult:
     """Poll an existing simulation and execute the remaining check stage."""
     poll_result = run_simulation_poll_stage(
@@ -62,10 +63,19 @@ def _complete_field_test_from_simulation(
         args,
         simulation_location=simulation_location,
         simulation_id=simulation_id,
+        should_abort=should_abort,
     )
     if isinstance(poll_result, FieldTestResult):
         return poll_result
     alpha_id, simulation_result = poll_result
+    if should_abort is not None and should_abort():
+        return ctx.failure(
+            failed_stage="stopped",
+            message="submission checks aborted because stop was requested",
+            simulation_id=simulation_id,
+            alpha_id=alpha_id,
+            status=STATUS_SKIPPED,
+        )
 
     check_result = run_checksubmit_stage(
         ctx,
@@ -167,6 +177,7 @@ def run_field_test(
         args,
         simulation_location=simulation_location,
         simulation_id=simulation_id,
+        should_abort=should_abort,
     )
 
 
@@ -175,6 +186,7 @@ def resume_field_test(
     args: SimulationStageArgs,
     pending: PendingFutureContext,
     template_library_fingerprint: str,
+    should_abort: Callable[[], bool] | None = None,
 ) -> FieldTestResult:
     """Resume polling a previously created remote simulation."""
     if not pending.simulation_location:
@@ -210,6 +222,7 @@ def resume_field_test(
         args,
         simulation_location=pending.simulation_location,
         simulation_id=simulation_id,
+        should_abort=should_abort,
     )
 
 
@@ -248,6 +261,7 @@ def resume_field_test_in_worker(
     args: SimulationStageArgs,
     pending: PendingFutureContext,
     template_library_fingerprint: str,
+    should_abort: Callable[[], bool] | None = None,
 ) -> FieldTestResult:
     """Worker entrypoint for resuming an existing remote simulation."""
     client = client_factory.get_client()
@@ -256,6 +270,7 @@ def resume_field_test_in_worker(
         args,
         pending,
         template_library_fingerprint,
+        should_abort,
     )
 
 

@@ -157,6 +157,14 @@ def test_retry_operation_honors_abort_before_first_attempt() -> None:
         retry_operation("operation", 2, lambda: None, should_abort=lambda: True)
 
 
+def test_retry_operation_preserves_stop_requested_from_operation() -> None:
+    def operation() -> None:
+        raise BrainStopRequested("polling stopped")
+
+    with pytest.raises(BrainStopRequested, match="polling stopped"):
+        retry_operation("operation", 2, operation)
+
+
 def test_login_with_retry_distinguishes_invalid_credentials(monkeypatch) -> None:
     class FakeClient:
         def login(self) -> None:

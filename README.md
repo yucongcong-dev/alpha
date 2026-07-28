@@ -288,6 +288,7 @@ python3.10 -m alpha --full-run
 每次运行默认是**增量模式**：
 - 已完成的字段+模板组合不会重复
 - 新结果追加到同一输出文件
+- 按 `Ctrl+C` 时会通知轮询 worker 停止、取消尚未启动的任务并立即保存 checkpoint；已经拿到 Location 的远端 simulation 会在下次运行继续轮询
 - 中断后再次运行自动继续
 - 如需重新开始，优先使用新的 `--run-name`；显式 `--output` 仍用于兼容自定义路径
 

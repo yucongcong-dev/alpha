@@ -71,4 +71,4 @@ class BrainQueueBusyError(BrainAPIError):
 
 
 class BrainStopRequested(BrainAPIError):
-    """运行时主动停止错误。"""
+    """运行时主动停止错误，例如达到停止阈值或收到用户中断。"""
