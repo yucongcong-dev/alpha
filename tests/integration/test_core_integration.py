@@ -112,7 +112,7 @@ class TestCongestionSignalPropagation:
         )
 
         with (
-            patch("alpha.io.results_store.dump_results_incremental"),
+            patch("alpha.analysis.results_persistence.dump_results_incremental"),
         ):
             _stats, congestion_detected, queue_busy_field_id = handle_completed_future(
                 future,
@@ -172,7 +172,7 @@ class TestCongestionSignalPropagation:
         )
 
         with (
-            patch("alpha.io.results_store.dump_results_incremental"),
+            patch("alpha.analysis.results_persistence.dump_results_incremental"),
         ):
             _stats, congestion_detected, _queue_busy_field_id = handle_completed_future(
                 future,
@@ -394,7 +394,7 @@ class TestDrainCompletedFuturesFlow:
         }
 
         with (
-            patch("alpha.io.results_store.dump_results_incremental"),
+            patch("alpha.analysis.results_persistence.dump_results_incremental"),
             patch("alpha.core.result_processing.is_informative_result", return_value=True),
             patch(
                 "alpha.core.result_processing.result_identity",
@@ -448,7 +448,7 @@ class TestDrainCompletedFuturesFlow:
         }
 
         with (
-            patch("alpha.io.results_store.dump_results_incremental"),
+            patch("alpha.analysis.results_persistence.dump_results_incremental"),
             patch("alpha.core.result_processing.is_informative_result", return_value=False),
         ):
             drain_completed_futures(
@@ -486,7 +486,7 @@ class TestDrainCompletedFuturesFlow:
         }
 
         with (
-            patch("alpha.io.results_store.dump_results_incremental"),
+            patch("alpha.analysis.results_persistence.dump_results_incremental"),
             patch("alpha.core.result_processing.is_informative_result", return_value=False),
         ):
             drain_completed_futures(

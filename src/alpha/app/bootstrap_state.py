@@ -4,7 +4,8 @@ bootstrap 执行态与历史结果装配辅助模块。
 
 from __future__ import annotations
 
-from ..io.results_store import dump_results_incremental, initialize_results_journal
+from ..analysis.results_persistence import dump_results_incremental
+from ..io.results_store import initialize_results_journal
 from ..models.runtime_protocols import RunConfig
 from ..policy.blacklist_context import set_active_datasets_root
 from ..policy.blacklist_runtime_stats import build_blacklist_runtime_stats
@@ -67,6 +68,7 @@ def build_execution_state(
         submitted_count=metrics.submitted_count,
         error_count=metrics.error_count,
         queue_timeout_count=metrics.queue_timeout_count,
+        pending_check_count=metrics.pending_check_count,
         settings_fingerprint=settings_fingerprint,
         template_library_fingerprint=template_library_fingerprint,
         run_config=run_config,

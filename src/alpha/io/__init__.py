@@ -29,11 +29,10 @@ if TYPE_CHECKING:
         resolve_cli_path,
     )
     from .results_store import (
-        dump_results,
-        dump_results_incremental,
         initialize_results_journal,
         load_results_rows_from_journal,
     )
+    from ..analysis.results_persistence import dump_results, dump_results_incremental
 
 _EXPORT_MAP: ExportMap = {
     "DATASETS_DIR": (".common", "DATASETS_DIR"),
@@ -42,8 +41,8 @@ _EXPORT_MAP: ExportMap = {
     "build_output_sidecar_paths": (".output_paths", "build_output_sidecar_paths"),
     "cleanup_legacy_sidecar_files": (".output_paths", "cleanup_legacy_sidecar_files"),
     "resolve_cli_path": (".output_paths", "resolve_cli_path"),
-    "dump_results": (".results_store", "dump_results"),
-    "dump_results_incremental": (".results_store", "dump_results_incremental"),
+    "dump_results": ("..analysis.results_persistence", "dump_results"),
+    "dump_results_incremental": ("..analysis.results_persistence", "dump_results_incremental"),
     "initialize_results_journal": (".results_store", "initialize_results_journal"),
     "load_results_rows_from_journal": (".results_store", "load_results_rows_from_journal"),
 }

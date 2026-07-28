@@ -11,6 +11,7 @@ import pytest
 
 from alpha.analysis.analysis_sync import ensure_analysis_synced
 from alpha.analysis.results_loader import load_existing_results
+from alpha.analysis.results_persistence import dump_results, dump_results_incremental
 from alpha.analysis.template_registry_rules import compile_template_registry_summary
 from alpha.analysis.template_stats import compile_template_stats
 from alpha.io.output_paths import (
@@ -22,8 +23,6 @@ from alpha.io.results_store import (
     JOURNAL_CHECKSUM_FIELD,
     JOURNAL_SCHEMA_FIELD,
     _append_results_journal,
-    dump_results,
-    dump_results_incremental,
     initialize_results_journal,
     load_results_rows_from_journal,
 )

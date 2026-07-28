@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
+import alpha.analysis.results_persistence as results_persistence
 import alpha.core.result_processing as result_processing
-import alpha.io.results_store as results_store
 
 
 def test_build_result_processing_services_reads_current_dependencies(monkeypatch) -> None:
@@ -16,7 +16,7 @@ def test_build_result_processing_services_reads_current_dependencies(monkeypatch
         return 7
 
     monkeypatch.setattr(result_processing, "is_informative_result", informative)
-    monkeypatch.setattr(results_store, "dump_results_incremental", writer)
+    monkeypatch.setattr(results_persistence, "dump_results_incremental", writer)
 
     services = result_processing.build_result_processing_services()
 

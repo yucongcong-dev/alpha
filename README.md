@@ -26,7 +26,7 @@ alpha/
 │   ├── app/               # 应用编排：bootstrap / run_loop / finalize / clean
 │   ├── core/              # 调度、simulation、checkpoint、template planning
 │   ├── generators/        # 字段变换、表达式候选、模板变体、payload
-│   ├── analysis/          # 反馈、统计、report、template-registry sidecars
+│   ├── analysis/          # 反馈、统计、report 与派生结果视图持久化
 │   ├── api/               # Brain API 客户端、session、retry、fields、alphas
 │   ├── io/                # 凭证、输出路径、results journal、原子写入
 │   ├── cli/               # 参数解析、路径归一化、run config、filters
@@ -121,9 +121,9 @@ alpha/
 - `app/`：应用编排层，负责初始化、执行主循环、最终收尾和 `clean`
 - `core/`：核心执行层，负责 scheduler、simulation、checkpoint、template planning
 - `generators/`：字段预处理、表达式候选构造、settings 变体、模板细分策略
-- `analysis/`：反馈画像、失败检查、字段/模板统计、report 和 template-registry sidecars
+- `analysis/`：反馈画像、失败检查、字段/模板统计、report 和派生结果视图持久化
 - `api/`：Brain API 会话、重试、fields、simulations、alphas
-- `io/`：凭证、results journal、输出 sidecar、原子写入
+- `io/`：凭证、results journal、输出路径和原子文件写入
 - `cli/`：参数解析、路径归一化、run config、filters
 - `models/` + `runtime/`：领域模型、运行配置对象、运行期上下文和可变状态
 - `policy/`：expression policy 与 blacklist 相关运行策略

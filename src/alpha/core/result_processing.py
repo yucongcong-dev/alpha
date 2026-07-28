@@ -51,6 +51,7 @@ class IncrementalResultsWriter(Protocol):
         template_registry_summary: list[dict[str, Any]] | None = None,
         template_stats: TemplateStats | None = None,
         policy_evaluation: dict[str, Any] | None = None,
+        pending_check_count: int = 0,
     ) -> int: ...
 
 
@@ -71,7 +72,7 @@ class ResultProcessingServices:
 
 def build_result_processing_services() -> ResultProcessingServices:
     """Resolve current module/I/O dependencies so runtime overrides remain effective."""
-    from ..io.results_store import dump_results_incremental
+    from ..analysis.results_persistence import dump_results_incremental
 
     return ResultProcessingServices(
         is_informative_result=is_informative_result,
@@ -206,6 +207,7 @@ def persist_incremental_result(
         submitted_count=metrics.submitted_count,
         error_count=metrics.error_count,
         queue_timeout_count=metrics.queue_timeout_count,
+        pending_check_count=metrics.pending_check_count,
         settings_fingerprint=completion_ctx.settings_fingerprint,
         template_library_fingerprint=completion_ctx.template_library_fingerprint,
         run_config=completion_ctx.run_config,

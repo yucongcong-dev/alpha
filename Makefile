@@ -73,6 +73,11 @@ compat-import-check:
 	fi
 
 arch-boundary-check:
+	@if rg -n "from \.\.analysis|from alpha\.analysis|import alpha\.analysis" src/alpha/io \
+		--glob '!__init__.py'; then \
+		echo "[check] alpha.io must remain below analysis and cannot import analysis modules" >&2; \
+		exit 1; \
+	fi
 	@if rg -n "(from alpha\.app(\.| import)|import alpha\.app(\.|$$)|from \.\.app(\.| import)|from \.app(\.| import))" src/alpha \
 		--glob '!app/**' \
 		--glob '!main.py' \

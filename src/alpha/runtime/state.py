@@ -11,7 +11,7 @@ from ..config.constants import STATUS_ERROR
 from ..config.models import DatasetExpressionPolicy
 from ..models.domain import FieldTestResult, TemplateField, TemplateLibrary
 from ..models.io_types import RunFilters
-from ..models.result_predicates import is_queue_timeout_result
+from ..models.result_predicates import has_pending_checks, is_queue_timeout_result
 from ..models.runtime_protocols import (
     ClientFactoryLike,
     RunConfig,
@@ -50,6 +50,7 @@ class ExecutionMetrics:
     submitted_count: int
     error_count: int
     queue_timeout_count: int
+    pending_check_count: int
 
     @classmethod
     def from_results(cls, results: list[FieldTestResult]) -> ExecutionMetrics:
@@ -59,6 +60,7 @@ class ExecutionMetrics:
             submitted_count=sum(1 for result in results if result.submitted),
             error_count=sum(1 for result in results if result.status == STATUS_ERROR),
             queue_timeout_count=sum(1 for result in results if is_queue_timeout_result(result)),
+            pending_check_count=sum(1 for result in results if has_pending_checks(result)),
         )
 
 
@@ -102,6 +104,10 @@ class ExecutionState:
     @property
     def queue_timeout_count(self) -> int:
         return self.metrics.queue_timeout_count
+
+    @property
+    def pending_check_count(self) -> int:
+        return self.metrics.pending_check_count
 
     def refresh_metrics(self) -> ExecutionMetrics:
         """Compatibility method returning the current derived snapshot."""

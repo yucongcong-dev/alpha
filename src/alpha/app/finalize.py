@@ -12,9 +12,9 @@ from __future__ import annotations
 import logging
 
 from ..analysis.field_stats import current_submittable_count
+from ..analysis.results_persistence import dump_results
 from ..config.constants import STATUS_ERROR
 from ..core.checkpoint import delete_pipeline_state
-from ..io.results_store import dump_results
 from ..models.io_types import RunPaths
 from ..models.runtime_options import ResultWriteOptions
 from ..models.runtime_protocols import ResultWriteArgs
