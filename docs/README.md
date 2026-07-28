@@ -81,6 +81,7 @@ Reference 主要回答“这个词是什么意思”；具体怎么优化，回�
 - 根 [README.md](../README.md)：安装、项目结构和运行方式
 - `datasets/<dataset_id>/README.md`：具体数据集策略与本地经验
 - `datasets/<dataset_id>/runs/`：运行产物，不作为长期知识库
+- `datasets/<dataset_id>/feedback/`：跨 run 自动积累的本地反馈状态，可由运行结果重建，不进仓
 
 新增知识前先判断归属：
 

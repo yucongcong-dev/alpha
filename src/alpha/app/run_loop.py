@@ -5,9 +5,9 @@ from __future__ import annotations
 from concurrent.futures import ThreadPoolExecutor
 import logging
 
+from ..config.application import ApplicationConfig
 from ..core.executor import print_dry_run_plan
 from ..models.io_types import RunPaths
-from ..models.runtime_protocols import RunLoopArgs
 from ..runtime.state import InitializedRunContext
 from .loop_future_support import cancel_unstarted_futures as cancel_unstarted_futures
 from .loop_future_support import drain_remaining_futures as drain_remaining_futures
@@ -39,7 +39,7 @@ logger = logging.getLogger(__name__)
 
 
 def run_field_test_loop(
-    args: RunLoopArgs,
+    args: ApplicationConfig,
     run_ctx: InitializedRunContext,
     run_paths: RunPaths | None = None,
 ) -> None:

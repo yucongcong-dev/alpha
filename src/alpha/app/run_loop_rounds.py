@@ -151,7 +151,10 @@ def schedule_field_round(
         field,
         template_stats=execution_state.template_stats,
         attempted_keys=execution_state.attempted_keys | execution_state.queue_exhausted_keys,
-        prior_results=execution_state.results,
+        prior_results=[
+            *run_ctx.historical_state.feedback_results,
+            *execution_state.results,
+        ],
         reserved_keys=inflight_template_keys(execution_state.pending_futures),
     )
     logger.debug(

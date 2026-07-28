@@ -72,6 +72,8 @@ def serialize_field_test_result(result: FieldTestResult) -> ResultRow:
         "expression": result.expression,
         "settings_fingerprint": result.settings_fingerprint,
         "template_library_fingerprint": result.template_library_fingerprint,
+        "settings": dict(result.settings),
+        "metrics": dict(result.metrics),
         "failed_stage": result.failed_stage,
         "failed_checks": [serialize_failed_check(check) for check in result.failed_checks]
         if result.failed_checks

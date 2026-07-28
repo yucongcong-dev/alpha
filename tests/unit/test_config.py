@@ -7,6 +7,8 @@
 from __future__ import annotations
 
 import os
+import subprocess
+import sys
 import time
 
 from alpha.config import (
@@ -240,6 +242,33 @@ def test_get_yaml_config_reloads_when_file_changes(tmp_path) -> None:
 
     assert first["global"]["limits"]["limit"] == 10
     assert second["global"]["limits"]["limit"] == 25
+
+
+def test_cli_config_is_bound_before_yaml_backed_constants_import(tmp_path) -> None:
+    """The CLI settings file must govern both constants and runtime snapshots."""
+    config_path = tmp_path / "settings.yaml"
+    config_path.write_text(
+        "global:\n  http:\n    request_timeout: 12.5\n",
+        encoding="utf-8",
+    )
+    script = """
+import sys
+sys.argv = ["alpha", "--config", sys.argv[1]]
+import alpha.main
+from alpha.config.constants import HTTP_REQUEST_TIMEOUT
+from alpha.config.runtime_values import get_runtime_config
+assert HTTP_REQUEST_TIMEOUT == 12.5
+assert get_runtime_config().http.request_timeout == 12.5
+"""
+
+    completed = subprocess.run(
+        [sys.executable, "-c", script, str(config_path)],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+
+    assert completed.returncode == 0, completed.stderr
 
 
 def test_expression_policy_default_section_applies_to_non_curated_dataset(monkeypatch) -> None:

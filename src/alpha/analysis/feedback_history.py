@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 from dataclasses import replace
+from pathlib import Path
 
 from ..config.constants import (
     CHECK_CONCENTRATED_WEIGHT,
@@ -26,7 +27,7 @@ from ..runtime.contexts import HistoricalRunState
 from .failed_checks import failed_check_gap, score_failed_checks
 from .feedback_stats import compile_field_feedback, compile_global_failed_check_counts
 from .field_stats import current_submittable_count
-from .result_identity import attempted_template_keys
+from .result_identity import attempted_template_keys, merge_results_by_identity
 from .results_loader import load_existing_results
 from .template_registry_rules import (
     compile_template_family_registry,
@@ -40,6 +41,32 @@ from .template_registry_store import (
 from .template_stats import compile_template_stats
 
 
+def _load_dataset_run_results(
+    feedback_output_path: str,
+    *,
+    current_output_path: str,
+) -> list[FieldTestResult]:
+    """Discover existing sibling run summaries when initializing dataset feedback."""
+    feedback_path = Path(feedback_output_path)
+    if feedback_path.parent.name != "feedback":
+        return []
+    runs_root = feedback_path.parent.parent / "runs"
+    if not runs_root.is_dir():
+        return []
+    current_path = Path(current_output_path).resolve()
+    discovered: list[FieldTestResult] = []
+    for summary_path in sorted(runs_root.glob("*/summary.json")):
+        if summary_path.resolve() == current_path:
+            continue
+        discovered.extend(
+            load_existing_results(
+                str(summary_path),
+                repair_corrupt_summary=False,
+            )
+        )
+    return discovered
+
+
 def build_historical_run_state(
     output_path: str,
     feedback_output_path: str,
@@ -51,16 +78,6 @@ def build_historical_run_state(
         output_path,
         repair_corrupt_summary=repair_corrupt_summary,
     )
-    attempted_keys = attempted_template_keys(existing_results)
-    template_stats = compile_template_stats(existing_results)
-    persisted_template_registry_rows = load_persisted_template_registry(output_path)
-    registry_overrides = load_registry_overrides(output_path)
-    template_stats = merge_registry_recommendations_into_template_stats(
-        template_stats,
-        persisted_template_registry_rows,
-    )
-    template_registry = build_template_registry_index(persisted_template_registry_rows)
-    template_family_registry = compile_template_family_registry(template_stats)
     feedback_results = (
         existing_results
         if feedback_output_path == output_path
@@ -69,10 +86,31 @@ def build_historical_run_state(
             repair_corrupt_summary=repair_corrupt_summary,
         )
     )
+    discovered_run_results = _load_dataset_run_results(
+        feedback_output_path,
+        current_output_path=output_path,
+    )
+    feedback_results = merge_results_by_identity(
+        feedback_results,
+        discovered_run_results,
+        existing_results,
+    )
+    attempted_keys = attempted_template_keys(feedback_results)
+    template_stats = compile_template_stats(feedback_results)
+    registry_path = feedback_output_path or output_path
+    persisted_template_registry_rows = load_persisted_template_registry(registry_path)
+    registry_overrides = load_registry_overrides(registry_path)
+    template_stats = merge_registry_recommendations_into_template_stats(
+        template_stats,
+        persisted_template_registry_rows,
+    )
+    template_registry = build_template_registry_index(persisted_template_registry_rows)
+    template_family_registry = compile_template_family_registry(template_stats)
     field_feedback = compile_field_feedback(feedback_results)
     global_failed_check_counts = compile_global_failed_check_counts(feedback_results)
     return HistoricalRunState(
         existing_results=existing_results,
+        feedback_results=feedback_results,
         attempted_keys=attempted_keys,
         template_stats=template_stats,
         template_registry=template_registry,
@@ -90,23 +128,25 @@ def rebuild_historical_run_state(
     refresh_feedback: bool,
 ) -> HistoricalRunState:
     """Recompute derived history after in-memory result reconciliation."""
-    template_stats = compile_template_stats(existing_results)
+    feedback_results = merge_results_by_identity(state.feedback_results, existing_results)
+    template_stats = compile_template_stats(feedback_results)
     template_stats = merge_registry_recommendations_into_template_stats(
         template_stats,
         list(state.template_registry.values()),
     )
     feedback = (
-        compile_field_feedback(existing_results) if refresh_feedback else state.field_feedback
+        compile_field_feedback(feedback_results) if refresh_feedback else state.field_feedback
     )
     failed_counts = (
-        compile_global_failed_check_counts(existing_results)
+        compile_global_failed_check_counts(feedback_results)
         if refresh_feedback
         else state.global_failed_check_counts
     )
     return replace(
         state,
         existing_results=existing_results,
-        attempted_keys=attempted_template_keys(existing_results),
+        feedback_results=feedback_results,
+        attempted_keys=attempted_template_keys(feedback_results),
         template_stats=template_stats,
         template_family_registry=compile_template_family_registry(template_stats),
         field_feedback=feedback,

@@ -12,12 +12,14 @@ from __future__ import annotations
 import logging
 
 from ..analysis.field_stats import current_submittable_count
+from ..analysis.result_identity import merge_results_by_identity
+from ..analysis.results_loader import load_existing_results
 from ..analysis.results_persistence import dump_results
+from ..config.application import ApplicationConfig
 from ..config.constants import STATUS_ERROR
 from ..core.checkpoint import delete_pipeline_state
 from ..models.io_types import RunPaths
 from ..models.runtime_options import ResultWriteOptions
-from ..models.runtime_protocols import ResultWriteArgs
 from ..policy.blacklist_runtime_updates import auto_update_blacklist
 from ..runtime.state import InitializedRunContext
 
@@ -33,7 +35,7 @@ def _run_path_value(run_paths: RunPaths | None, attr: str) -> str:
 
 
 def finalize_run(
-    args: ResultWriteArgs,
+    args: ApplicationConfig,
     run_ctx: InitializedRunContext,
     run_paths: RunPaths | None = None,
 ) -> None:
@@ -41,6 +43,7 @@ def finalize_run(
     execution_state = run_ctx.execution_state
     write_options = ResultWriteOptions.from_args(args)
     output_path = _run_path_value(run_paths, "output") or write_options.output_path
+    feedback_output_path = _run_path_value(run_paths, "feedback_output")
     state_file = _run_path_value(run_paths, "state_file")
     logger.info(
         "[done] 测试完成：tested=%d submittable=%d errors=%d",
@@ -56,6 +59,24 @@ def finalize_run(
         template_library_fingerprint=run_ctx.template_library_fingerprint,
         run_config=run_ctx.run_config,
     )
+    if feedback_output_path and feedback_output_path != output_path:
+        feedback_results = merge_results_by_identity(
+            load_existing_results(feedback_output_path),
+            execution_state.results,
+        )
+        dump_results(
+            feedback_output_path,
+            write_options.dataset_id,
+            feedback_results,
+            settings_fingerprint=run_ctx.settings_fingerprint,
+            template_library_fingerprint=run_ctx.template_library_fingerprint,
+            run_config=run_ctx.run_config,
+        )
+        logger.info(
+            "[feedback] updated dataset history: %s (results=%d)",
+            feedback_output_path,
+            len(feedback_results),
+        )
     if write_options.auto_update_blacklist:
         auto_update_blacklist(execution_state.results, write_options.dataset_id)
     delete_pipeline_state(state_file)

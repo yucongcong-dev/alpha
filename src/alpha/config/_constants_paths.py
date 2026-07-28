@@ -18,4 +18,3 @@ CREDENTIALS_KEY_FILENAME: str = _yaml_str(
 ANALYSIS_SUFFIX: str = _yaml_str("paths", "analysis_suffix", default="_analysis.json")
 RESULTS_JOURNAL_SUFFIX: str = _yaml_str("paths", "results_journal_suffix", default="_results.jsonl")
 STATE_SUFFIX: str = _yaml_str("paths", "state_suffix", default="_state.json")
-CHECKPOINT_SUFFIX: str = _yaml_str("paths", "checkpoint_suffix", default="_checkpoint.json")

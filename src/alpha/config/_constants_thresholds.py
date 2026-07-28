@@ -18,18 +18,6 @@ SUBMIT_MIN_TURNOVER: float = _yaml_float("quality", "submit", "min_turnover", de
 SUBMIT_MAX_TURNOVER: float = _yaml_float("quality", "submit", "max_turnover", default=0.70)
 SUBMIT_MAX_WEIGHT: float = _yaml_float("quality", "submit", "max_weight", default=0.10)
 
-# ---- 预检回退质量阈值 ----
-PRECHECK_FALLBACK_MIN_SHARPE: float = _yaml_float("quality", "precheck", "min_sharpe", default=1.15)
-PRECHECK_FALLBACK_MIN_FITNESS: float = _yaml_float(
-    "quality", "precheck", "min_fitness", default=0.90
-)
-PRECHECK_FALLBACK_MIN_TURNOVER: float = _yaml_float(
-    "quality", "precheck", "min_turnover", default=0.01
-)
-PRECHECK_FALLBACK_MAX_TURNOVER: float = _yaml_float(
-    "quality", "precheck", "max_turnover", default=0.70
-)
-PRECHECK_FALLBACK_MAX_WEIGHT: float = _yaml_float("quality", "precheck", "max_weight", default=0.10)
 MAX_FAILED_CHECK_NAMES: int = _yaml_int("failed_check", "max_failed_check_names", default=5)
 FAILURE_SUMMARY_MAX_LEN: int = _yaml_int("failed_check", "failure_summary_max_len", default=300)
 

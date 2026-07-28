@@ -96,7 +96,7 @@ def test_build_pending_templates_skips_inflight_duplicate(monkeypatch) -> None:
     assert pending == []
 
 
-def test_build_pending_templates_promotes_core_templates_with_extra_variant_budget(
+def test_build_pending_templates_keeps_generate_stage_structure_first(
     monkeypatch,
 ) -> None:
     monkeypatch.setattr(
@@ -173,7 +173,7 @@ def test_build_pending_templates_promotes_core_templates_with_extra_variant_budg
 
     assert total == 1
     assert disabled == 0
-    assert len(pending) == 2
+    assert len(pending) == 1
     assert all(item.template_role == "promoted_core" for item in pending)
 
 

@@ -10,12 +10,6 @@ from __future__ import annotations
 from collections.abc import Sequence
 import logging
 
-from ..analysis.feedback_filters import (
-    is_legacy_family_disabled,
-    is_template_disabled,
-    should_keep_template_for_feedback,
-    should_skip_field_template_family,
-)
 from ..config.constants import (
     CHECK_CONCENTRATED_WEIGHT,
     CHECK_LOW_FITNESS,
@@ -27,6 +21,12 @@ from ..models.domain import FieldTestResult, TemplateCandidate
 from ..models.io_types import RunFilters
 from ..models.runtime_protocols import TemplateFeedback
 from ..runtime.contexts import TemplateBuildContext
+from ..selection.feedback_filters import (
+    is_legacy_family_disabled,
+    is_template_disabled,
+    should_keep_template_for_feedback,
+    should_skip_field_template_family,
+)
 
 logger = logging.getLogger(__name__)
 

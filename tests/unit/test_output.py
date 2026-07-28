@@ -6,6 +6,7 @@ from concurrent.futures import ThreadPoolExecutor
 import json
 import multiprocessing
 from pathlib import Path
+import shutil
 
 import pytest
 
@@ -137,7 +138,7 @@ def test_journal_rows_are_versioned_and_checksums_are_validated(tmp_path) -> Non
 
     rows = load_results_rows_from_journal(str(journal_path))
 
-    assert rows[0][JOURNAL_SCHEMA_FIELD] == 1
+    assert rows[0][JOURNAL_SCHEMA_FIELD] == 2
     assert rows[0][JOURNAL_CHECKSUM_FIELD]
     rows[0]["field_id"] = "tampered"
     journal_path.write_text(json.dumps(rows[0]) + "\n", encoding="utf-8")
@@ -289,6 +290,70 @@ def test_load_existing_results_preserves_template_role_metadata(tmp_path) -> Non
 
     assert loaded[0].template_role == "promoted_core"
     assert loaded[0].template_activation_scope == "broad"
+
+
+def test_dump_results_persists_metrics_settings_and_portable_journal_reference(tmp_path) -> None:
+    run_dir = tmp_path / "run-a"
+    output_path = run_dir / "summary.json"
+    result = FieldTestResult(
+        field_id="cashflow_op",
+        field_type="MATRIX",
+        field_name="cashflow_op",
+        template_name="group_rank",
+        status="simulated",
+        submittable=True,
+        expression="group_rank(cashflow_op, subindustry)",
+        settings={"decay": 4, "neutralization": "SUBINDUSTRY"},
+        metrics={"sharpe": 1.42, "fitness": 1.11, "turnover": 0.18},
+    )
+    dump_results(
+        str(output_path),
+        "fundamental6",
+        [result],
+        settings_fingerprint="settings",
+        template_library_fingerprint="templates",
+        include_analysis=False,
+    )
+
+    summary = json.loads(output_path.read_text(encoding="utf-8"))
+    assert summary["results_journal"] == "results.jsonl"
+
+    moved_dir = tmp_path / "run-moved"
+    shutil.move(str(run_dir), str(moved_dir))
+    loaded = load_existing_results(str(moved_dir / "summary.json"))
+
+    assert loaded[0].settings["neutralization"] == "SUBINDUSTRY"
+    assert loaded[0].metrics["sharpe"] == 1.42
+
+
+def test_load_existing_results_recovers_moved_legacy_absolute_journal(tmp_path) -> None:
+    run_dir = tmp_path / "legacy-run"
+    output_path = run_dir / "summary.json"
+    dump_results(
+        str(output_path),
+        "fundamental6",
+        [
+            FieldTestResult(
+                field_id="field_legacy",
+                field_type="MATRIX",
+                field_name="field_legacy",
+                template_name="tpl",
+                status="simulated",
+                expression="rank(field_legacy)",
+            )
+        ],
+        settings_fingerprint="settings",
+        template_library_fingerprint="templates",
+        include_analysis=False,
+    )
+    summary = json.loads(output_path.read_text(encoding="utf-8"))
+    summary["results_journal"] = str(run_dir / "results.jsonl")
+    output_path.write_text(json.dumps(summary), encoding="utf-8")
+
+    moved_dir = tmp_path / "legacy-moved"
+    shutil.move(str(run_dir), str(moved_dir))
+
+    assert load_existing_results(str(moved_dir / "summary.json"))[0].field_id == "field_legacy"
 
 
 def test_dump_results_incremental_writes_lightweight_summary(tmp_path) -> None:

@@ -172,43 +172,43 @@ def get_simulation_default_end_date() -> str:
 
 
 def get_precheck_fallback_min_sharpe() -> float:
-    return _rc().precheck_quality.min_sharpe
+    return _rc().quality.min_sharpe
 
 
 def get_precheck_fallback_min_fitness() -> float:
-    return _rc().precheck_quality.min_fitness
+    return _rc().quality.min_fitness
 
 
 def get_precheck_fallback_min_turnover() -> float:
-    return _rc().precheck_quality.min_turnover
+    return _rc().quality.min_turnover
 
 
 def get_precheck_fallback_max_turnover() -> float:
-    return _rc().precheck_quality.max_turnover
+    return _rc().quality.max_turnover
 
 
 def get_precheck_fallback_max_weight() -> float:
-    return _rc().precheck_quality.max_weight
+    return _rc().quality.max_weight
 
 
 # ---- Submit Quality ----
 
 
 def get_submit_min_sharpe() -> float:
-    return _rc().submit_quality.min_sharpe
+    return _rc().quality.min_sharpe
 
 
 def get_submit_min_fitness() -> float:
-    return _rc().submit_quality.min_fitness
+    return _rc().quality.min_fitness
 
 
 def get_submit_min_turnover() -> float:
-    return _rc().submit_quality.min_turnover
+    return _rc().quality.min_turnover
 
 
 def get_submit_max_turnover() -> float:
-    return _rc().submit_quality.max_turnover
+    return _rc().quality.max_turnover
 
 
 def get_submit_max_weight() -> float:
-    return _rc().submit_quality.max_weight
+    return _rc().quality.max_weight

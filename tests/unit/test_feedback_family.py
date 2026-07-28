@@ -15,6 +15,7 @@ from alpha.analysis.feedback_history import (
     select_nearpass_candidates,
 )
 from alpha.analysis.results_loader import load_existing_results
+from alpha.analysis.results_persistence import dump_results
 from alpha.analysis.template_registry_budget import (
     choose_family_settings_budget,
     choose_field_cluster_settings_budget,
@@ -131,7 +132,7 @@ def test_registry_settings_budget_respects_recommended_scope() -> None:
             1,
             {"recommended_scope": "broad", "recommended_role": "promoted_core"},
         )
-        == 2
+        == 1
     )
     assert (
         choose_registry_settings_budget(
@@ -147,6 +148,14 @@ def test_registry_settings_budget_respects_recommended_scope() -> None:
         )
         == 0
     )
+    assert (
+        choose_registry_settings_budget(
+            1,
+            {"recommended_scope": "broad", "recommended_role": "promoted_core"},
+            feedback_stage="resimulate",
+        )
+        == 2
+    )
 
 
 def test_family_settings_budget_respects_family_registry() -> None:
@@ -156,7 +165,7 @@ def test_family_settings_budget_respects_family_registry() -> None:
             "ts_rank",
             {"ts_rank": {"recommended_scope": "broad", "budget_adjustment": 1}},
         )
-        == 2
+        == 1
     )
     assert (
         choose_family_settings_budget(
@@ -169,7 +178,7 @@ def test_family_settings_budget_respects_family_registry() -> None:
 
 
 def test_field_cluster_settings_budget_respects_runtime_tags_and_overrides() -> None:
-    assert choose_field_cluster_settings_budget(1, ["high_coverage"], {}) == 2
+    assert choose_field_cluster_settings_budget(1, ["high_coverage"], {}) == 1
     assert (
         choose_field_cluster_settings_budget(
             2,
@@ -254,6 +263,70 @@ def test_build_historical_run_state_loads_persisted_template_registry(tmp_path) 
         state.template_registry_overrides["template_overrides"]["core_template"]["recommended_role"]
         == "promoted_core"
     )
+
+
+def test_build_historical_run_state_uses_dataset_feedback_across_runs(tmp_path) -> None:
+    run_output = tmp_path / "runs" / "new-run" / "summary.json"
+    feedback_output = tmp_path / "feedback" / "summary.json"
+    historical = FieldTestResult(
+        field_id="cash_st",
+        field_type="MATRIX",
+        field_name="cash_st",
+        template_name="weak_template",
+        status="simulated",
+        submittable=False,
+        expression="rank(cash_st)",
+        settings_fingerprint="settings-v1",
+        failed_checks=[{"name": "LOW_SHARPE", "value": 0.2}],
+    )
+    dump_results(
+        str(feedback_output),
+        "fundamental6",
+        [historical],
+        settings_fingerprint="settings",
+        template_library_fingerprint="templates",
+        include_analysis=False,
+    )
+
+    state = build_historical_run_state(str(run_output), str(feedback_output))
+
+    assert state.existing_results == []
+    assert state.feedback_results == [historical]
+    assert ("cash_st", "weak_template", "rank(cash_st)", "settings-v1") in state.attempted_keys
+    assert state.template_stats["weak_template"]["attempted"] == 1
+
+
+def test_build_historical_run_state_discovers_existing_runs_before_feedback_exists(
+    tmp_path,
+) -> None:
+    old_run_output = tmp_path / "runs" / "old-run" / "summary.json"
+    new_run_output = tmp_path / "runs" / "new-run" / "summary.json"
+    feedback_output = tmp_path / "feedback" / "summary.json"
+    dump_results(
+        str(old_run_output),
+        "fundamental6",
+        [
+            FieldTestResult(
+                field_id="cashflow_op",
+                field_type="MATRIX",
+                field_name="cashflow_op",
+                template_name="historical_template",
+                status="simulated",
+                submittable=False,
+                expression="rank(cashflow_op)",
+                settings_fingerprint="settings-v1",
+            )
+        ],
+        settings_fingerprint="settings",
+        template_library_fingerprint="templates",
+        include_analysis=False,
+    )
+
+    state = build_historical_run_state(str(new_run_output), str(feedback_output))
+
+    assert state.existing_results == []
+    assert len(state.feedback_results) == 1
+    assert state.feedback_results[0].template_name == "historical_template"
 
 
 def test_resimulate_stage_blocks_iter_templates_outside_preferred_stages() -> None:

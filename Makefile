@@ -10,7 +10,8 @@ test:
 	PYTHONPATH=$(PYTHONPATH) $(PYTHON) -m pytest -q
 
 coverage-check:
-	PYTHONPATH=$(PYTHONPATH) $(PYTHON) -m pytest --cov=alpha --cov-report=term:skip-covered -q
+	PYTHONPATH=$(PYTHONPATH) $(PYTHON) -m pytest --cov=alpha --cov-report=term:skip-covered --cov-report=json:.coverage.json -q
+	$(PYTHON) scripts/check_critical_coverage.py .coverage.json
 
 help-check:
 	PYTHONPATH=$(PYTHONPATH) $(PYTHON) -m alpha --help >/dev/null
@@ -132,7 +133,7 @@ clean-runtime:
 
 clean-dev:
 	@find src tests scripts -type d -name '__pycache__' -prune -exec rm -rf {} +
-	@rm -rf __pycache__ .pycache .mypy_cache .pytest_cache .ruff_cache .coverage htmlcov tmp/pycache
+	@rm -rf __pycache__ .pycache .mypy_cache .pytest_cache .ruff_cache .coverage .coverage.json htmlcov tmp/pycache
 	@find src -maxdepth 2 -type d -name '*.egg-info' -prune -exec rm -rf {} +
 	@echo "[clean-dev] removed Python bytecode, tool caches, coverage, and package metadata"
 

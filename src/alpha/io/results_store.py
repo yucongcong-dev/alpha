@@ -21,7 +21,8 @@ from .output_paths import build_output_sidecar_paths
 
 logger = logging.getLogger(__name__)
 
-JOURNAL_SCHEMA_VERSION = 1
+JOURNAL_SCHEMA_VERSION = 2
+SUPPORTED_JOURNAL_SCHEMA_VERSIONS = frozenset({1, JOURNAL_SCHEMA_VERSION})
 JOURNAL_SCHEMA_FIELD = "_journal_schema_version"
 JOURNAL_CHECKSUM_FIELD = "_journal_checksum"
 
@@ -70,7 +71,7 @@ def _journal_row_payload(result: FieldTestResult) -> dict[str, Any]:
 
 def _validate_journal_row(row: dict[str, Any], journal_path: str, line_number: int) -> None:
     version = row.get(JOURNAL_SCHEMA_FIELD)
-    if version is not None and version != JOURNAL_SCHEMA_VERSION:
+    if version is not None and version not in SUPPORTED_JOURNAL_SCHEMA_VERSIONS:
         raise ValueError(
             f"unsupported results journal schema version {version!r} "
             f"at {journal_path}:{line_number}"

@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import logging
 import os
+import sys
 import threading
 from typing import cast
 
@@ -32,6 +33,44 @@ _log = logging.getLogger("alpha.config.yaml")
 _config_lock = threading.RLock()
 _config_cache: dict[str, YamlConfigCacheEntry] = {}
 _config_validated: bool = False
+_active_config_path: str | None = None
+
+
+def set_active_config_path(config_path: str = "") -> str | None:
+    """Bind the process-wide settings file used by no-argument config reads.
+
+    CLI parsing resolves ``--config`` once at the application boundary.  All
+    lower-level modules then call :func:`get_yaml_config` without needing to
+    carry the path independently.
+    """
+    global _active_config_path, _config_validated
+    resolved = os.path.abspath(os.path.expanduser(config_path)) if config_path else None
+    with _config_lock:
+        if resolved != _active_config_path:
+            _active_config_path = resolved
+            _config_validated = False
+    return resolved
+
+
+def get_active_config_path() -> str | None:
+    """Return the explicitly bound settings path, if any."""
+    with _config_lock:
+        return _active_config_path
+
+
+def activate_config_from_argv(argv: list[str] | None = None) -> str | None:
+    """Bind ``--config`` before importing modules with YAML-backed constants.
+
+    This intentionally performs only minimal option discovery; argparse remains
+    the authoritative CLI validator later in startup.
+    """
+    tokens = list(sys.argv[1:] if argv is None else argv)
+    for index, token in enumerate(tokens):
+        if token == "--config" and index + 1 < len(tokens):
+            return set_active_config_path(tokens[index + 1])
+        if token.startswith("--config="):
+            return set_active_config_path(token.split("=", 1)[1])
+    return get_active_config_path()
 
 
 def clear_yaml_caches() -> None:
@@ -64,7 +103,8 @@ def get_yaml_config(config_path: str = "") -> YamlConfig:
     """Return cached merged YAML config, reloading when any source file changes."""
     global _config_validated
 
-    settings_path = os.path.abspath(config_path) if config_path else _resolve_yaml_path()
+    explicit_path = os.path.abspath(os.path.expanduser(config_path)) if config_path else None
+    settings_path = explicit_path or get_active_config_path() or _resolve_yaml_path()
     cache_key = settings_path or "__missing__"
     signature = _all_files_signature(settings_path)
 

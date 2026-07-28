@@ -479,12 +479,13 @@ ts_zscore(group_rank(x, industry), 252)
 ### 11.5 仓库知识边界
 
 - `datasets/<dataset_id>/runs/`：运行产物，不承担长期知识库职责
+- `datasets/<dataset_id>/feedback/`：跨 run 的自动反馈仓，保存已尝试组合、near-pass 历史和模板 registry
 - `datasets/<dataset_id>/template.json`：默认模板库
 - `datasets/<dataset_id>/presets/`：按研究目的组织的专项模板、字段与模板筛选清单
 - `docs/`：跨数据集的方法论和平台知识
 - 根 `README.md`：工程结构、安装与运行入口
 
-成熟结论应从结果文件沉淀回模板或文档，避免决策长期藏在 JSON 和文件名中。
+feedback 目录用于机器自动复用历史，但仍属于可重建运行状态。成熟结论应从结果文件沉淀回模板或文档，避免人工决策长期藏在 JSON 和文件名中。
 
 ### 11.6 候选池视角
 
@@ -497,6 +498,7 @@ ts_zscore(group_rank(x, industry), 252)
 - 平均 Turnover 与组合相关性
 
 模板库应优先保证结构和假设差异，不应依靠大量相邻窗口制造表面多样性。
+仓库的 generate 阶段因此只保留基准 settings 预算；额外 settings 变体集中到 refine / resimulate 阶段。
 
 ---
 

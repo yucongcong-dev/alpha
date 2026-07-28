@@ -15,7 +15,6 @@ from ..analysis.feedback_history import (
     choose_settings_variant_budget,
     select_nearpass_candidates,
 )
-from ..analysis.template_execution_policy import build_template_execution_decision
 from ..config.constants import (
     FEEDBACK_STAGE_RESIMULATE,
     SENTINEL_UNKNOWN,
@@ -45,6 +44,7 @@ from ..models.domain import (
 from ..models.runtime_protocols import SimulationSettingsArgs, TemplateFeedback
 from ..policy.expression import get_dataset_expression_policy, resolve_feedback_stage
 from ..runtime.contexts import PendingTemplateEntry, TemplateBuildContext
+from ..selection.template_execution_policy import build_template_execution_decision
 from ..utils.helpers import first_non_empty, is_event_field_name
 
 

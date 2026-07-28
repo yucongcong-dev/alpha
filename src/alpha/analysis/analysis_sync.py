@@ -10,6 +10,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+from pathlib import Path
 
 from ..config.constants import DEFAULT_DATASET_ID
 from ..io.common import atomic_write_json
@@ -68,7 +69,9 @@ def ensure_analysis_synced(output_path: str) -> None:
         settings_fingerprint=str(summary.get("settings_fingerprint", "")),
         template_library_fingerprint=str(summary.get("template_library_fingerprint", "")),
         run_config=summary.get("run_config") if isinstance(summary.get("run_config"), dict) else {},
-        results_journal_path=sidecar_paths["results_journal"],
+        results_journal_path=os.path.relpath(
+            sidecar_paths["results_journal"], start=Path(output_path).parent
+        ),
     )
     analysis = build_analysis_payload(results, derived_summary, analysis_inputs)
     atomic_write_json(sidecar_paths["analysis"], analysis)

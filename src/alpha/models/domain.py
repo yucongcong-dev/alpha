@@ -189,6 +189,8 @@ class FieldTestResult:
     expression: str = ""
     settings_fingerprint: str = ""
     template_library_fingerprint: str = ""
+    settings: dict[str, Any] = field(default_factory=dict)
+    metrics: dict[str, Any] = field(default_factory=dict)
     failed_stage: str | None = None
     failed_checks: list[FailedCheck] | None = None
 
@@ -272,6 +274,8 @@ class FieldTestContext:
     policy_arm: str = ""
     settings_fingerprint: str = ""
     template_library_fingerprint: str = ""
+    settings: dict[str, Any] = field(default_factory=dict)
+    metrics: dict[str, Any] = field(default_factory=dict)
 
     def failure(
         self,
@@ -282,6 +286,7 @@ class FieldTestContext:
         alpha_id: str | None = None,
         status: str = STATUS_ERROR,
         failed_checks: Sequence[FailedCheck | dict[str, Any]] | None = None,
+        metrics: dict[str, Any] | None = None,
     ) -> FieldTestResult:
         return FieldTestResult(
             field_id=self.field_id,
@@ -303,6 +308,8 @@ class FieldTestContext:
             expression=self.expression,
             settings_fingerprint=self.settings_fingerprint,
             template_library_fingerprint=self.template_library_fingerprint,
+            settings=dict(self.settings),
+            metrics=dict(self.metrics if metrics is None else metrics),
             failed_stage=failed_stage,
             failed_checks=coerce_failed_checks(failed_checks),
         )
@@ -317,6 +324,7 @@ class FieldTestContext:
         message: str,
         status: str = "simulated",
         failed_checks: list[FailedCheck] | None = None,
+        metrics: dict[str, Any] | None = None,
     ) -> FieldTestResult:
         return FieldTestResult(
             field_id=self.field_id,
@@ -338,5 +346,7 @@ class FieldTestContext:
             expression=self.expression,
             settings_fingerprint=self.settings_fingerprint,
             template_library_fingerprint=self.template_library_fingerprint,
+            settings=dict(self.settings),
+            metrics=dict(self.metrics if metrics is None else metrics),
             failed_checks=failed_checks,
         )

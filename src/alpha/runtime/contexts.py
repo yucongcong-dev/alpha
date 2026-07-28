@@ -33,6 +33,7 @@ class PendingFutureContext:
     policy_arm: str = ""
     expression: str = ""
     settings_fingerprint: str = ""
+    settings: dict[str, object] = field(default_factory=dict)
     simulation_location: str = ""
     simulation_id: str = ""
 
@@ -90,6 +91,7 @@ class HistoricalRunState:
     """历史运行状态数据类。"""
 
     existing_results: list[FieldTestResult] = field(default_factory=list)
+    feedback_results: list[FieldTestResult] = field(default_factory=list)
     attempted_keys: set[tuple[str, str, str, str]] = field(default_factory=set)
     template_stats: TemplateStats = field(default_factory=dict)
     template_registry: dict[str, dict[str, object]] = field(default_factory=dict)

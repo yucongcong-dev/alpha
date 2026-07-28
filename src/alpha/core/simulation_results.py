@@ -32,6 +32,8 @@ def build_failure_result(
     policy_arm: str = "",
     status: str = STATUS_ERROR,
     failed_checks: Sequence[FailedCheck | dict[str, Any]] | None = None,
+    settings: dict[str, Any] | None = None,
+    metrics: dict[str, Any] | None = None,
 ) -> FieldTestResult:
     return FieldTestResult(
         field_id=field_id,
@@ -53,6 +55,8 @@ def build_failure_result(
         expression=expression,
         settings_fingerprint=settings_fingerprint,
         template_library_fingerprint=template_library_fingerprint,
+        settings=dict(settings or {}),
+        metrics=dict(metrics or {}),
         failed_stage=failed_stage,
         failed_checks=coerce_failed_checks(failed_checks),
     )

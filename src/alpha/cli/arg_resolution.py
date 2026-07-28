@@ -8,7 +8,7 @@ from typing import cast
 from ..config.constants import SMOKE_TEST_MAX_PENDING_CYCLES, SMOKE_TEST_MAX_QUEUE_SECONDS
 from ..config.defaults import apply_yaml_global_defaults
 from ..config.profiles import get_dataset_profile
-from ..config.yaml import get_yaml_config
+from ..config.yaml import get_yaml_config, set_active_config_path
 
 DATASET_PROFILE_KEYS = (
     "min_request_interval",
@@ -31,7 +31,8 @@ def resolve_cli_args(
     explicit_cli_keys: set[str],
 ) -> argparse.Namespace:
     """Apply YAML defaults, dataset profile overrides, and run-mode rewrites."""
-    yaml_config = get_yaml_config(args.config if args.config else "")
+    set_active_config_path(args.config if args.config else "")
+    yaml_config = get_yaml_config()
     apply_yaml_global_defaults(args, yaml_config, explicit_cli_keys)
     apply_dataset_profile_defaults(
         args,

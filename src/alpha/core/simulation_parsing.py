@@ -119,6 +119,32 @@ def extract_failed_checks(alpha_payload: ApiPayload) -> list[FailedCheck]:
     return failed_checks
 
 
+def extract_simulation_metrics(payload: ApiPayload) -> dict[str, Any]:
+    """Extract the complete JSON-compatible performance section from a simulation."""
+
+    def _find_is_section(node: object) -> dict[str, Any] | None:
+        if isinstance(node, dict):
+            section = node.get(_KEY_IS)
+            if isinstance(section, dict):
+                return section
+            for key in ("result", "alpha", _KEY_CHILDREN):
+                nested = node.get(key)
+                found = _find_is_section(nested)
+                if found is not None:
+                    return found
+        elif isinstance(node, list):
+            for item in node:
+                found = _find_is_section(item)
+                if found is not None:
+                    return found
+        return None
+
+    section = _find_is_section(payload)
+    if section is None:
+        return {}
+    return {str(key): value for key, value in section.items() if key != _KEY_CHECKS}
+
+
 def extract_pending_checks(alpha_payload: ApiPayload) -> list[FailedCheck]:
     pending_checks: list[FailedCheck] = []
     for check in extract_checks(alpha_payload):
@@ -177,6 +203,7 @@ __all__ = [
     "extract_checks",
     "extract_failed_checks",
     "extract_pending_checks",
+    "extract_simulation_metrics",
     "is_submittable_from_checks",
     "summarize_failure",
 ]

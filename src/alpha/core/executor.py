@@ -274,7 +274,7 @@ def print_dry_run_plan(
             field,
             template_stats=execution_state.template_stats,
             attempted_keys=execution_state.attempted_keys,
-            prior_results=execution_state.results,
+            prior_results=[*historical_state.feedback_results, *execution_state.results],
         )
         if not pending_templates and template_count == 0:
             continue

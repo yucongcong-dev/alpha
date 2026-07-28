@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import logging
+import os
+from pathlib import Path
 from typing import Any
 
 from ..io.common import atomic_write_json
@@ -18,6 +20,11 @@ from .template_registry_sidecars import (
 from .template_stats import compile_template_stats
 
 logger = logging.getLogger(__name__)
+
+
+def _portable_journal_reference(output_path: str, journal_path: str) -> str:
+    """Store sidecar references relative to their owning summary directory."""
+    return os.path.relpath(journal_path, start=Path(output_path).parent)
 
 
 def dump_results(
@@ -38,7 +45,7 @@ def dump_results(
         settings_fingerprint=settings_fingerprint,
         template_library_fingerprint=template_library_fingerprint,
         run_config=run_config,
-        results_journal_path=sidecar_paths["results_journal"],
+        results_journal_path=_portable_journal_reference(path, sidecar_paths["results_journal"]),
     )
     summary["results_embedded"] = False
     summary.pop("results", None)
@@ -105,7 +112,7 @@ def dump_results_incremental(
             "comparisons": [],
         },
         "results_embedded": False,
-        "results_journal": sidecar_paths["results_journal"],
+        "results_journal": _portable_journal_reference(path, sidecar_paths["results_journal"]),
     }
     atomic_write_json(path, summary)
     if template_registry_summary is not None or template_stats is not None:

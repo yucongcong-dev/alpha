@@ -245,6 +245,7 @@ def test_normalize_args_paths_uses_dataset_scoped_defaults(monkeypatch, tmp_path
     )
     assert paths.template_library_file.replace("\\", "/").endswith("/datasets/pv1/template.json")
     assert paths.output.replace("\\", "/").endswith("/datasets/pv1/runs/default/summary.json")
+    assert paths.feedback_output.replace("\\", "/").endswith("/datasets/pv1/feedback/summary.json")
     assert paths.log_file.replace("\\", "/").endswith("/datasets/pv1/runs/default/run.log")
 
 
@@ -286,6 +287,9 @@ def test_normalize_args_paths_uses_named_run_directory(monkeypatch, tmp_path) ->
     )
     assert paths.state_file.replace("\\", "/").endswith(
         "/datasets/pv1/runs/20260727-entry-validation/state.json"
+    )
+    assert paths.checkpoint_file.replace("\\", "/").endswith(
+        "/datasets/pv1/runs/20260727-entry-validation/interrupt_report.json"
     )
 
 

@@ -65,13 +65,6 @@ quality:
     min_turnover: 0.01
     max_turnover: 0.70
     max_weight: 0.10
-  precheck:
-    min_sharpe: 1.15
-    min_fitness: 0.90
-    min_turnover: 0.01
-    max_turnover: 0.70
-    max_weight: 0.10
-
 # ---------------------------------------------------------------------------
 # expression — 表达式生成默认值
 # ---------------------------------------------------------------------------
@@ -449,7 +442,6 @@ paths:
   analysis_suffix: "_analysis.json"
   results_journal_suffix: "_results.jsonl"
   state_suffix: "_state.json"
-  checkpoint_suffix: "_checkpoint.json"
   log_suffix: ".log"
 
 # ---------------------------------------------------------------------------

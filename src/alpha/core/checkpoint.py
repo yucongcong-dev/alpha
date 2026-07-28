@@ -1,13 +1,13 @@
 """
 管道状态与检查点持久化模块
 
-本模块实现中间状态缓存（state_file）和崩溃检查点（checkpoint_file），
+本模块实现可恢复状态（state_file）和中断诊断报告（checkpoint_file 兼容参数），
 支持断点续传：重启时跳过已完成的字段、恢复拥塞控制状态和模板统计数据。
 
 模块内容：
     - save_pipeline_state: 在每个字段完成后保存运行进度
     - load_pipeline_state: 启动时加载上次进度
-    - save_checkpoint: 崩溃/中断时保存详细检查点（含待处理任务元数据）
+    - save_checkpoint: 崩溃/中断时保存诊断报告（含待处理任务元数据）
 """
 
 from __future__ import annotations
@@ -101,7 +101,7 @@ def _all_pending_contexts(execution_state: ExecutionState) -> list[PendingFuture
 
 def _serialize_pending_simulations(
     execution_state: ExecutionState,
-) -> list[dict[str, str]]:
+) -> list[dict[str, Any]]:
     """Serialize inflight metadata required to resume remote simulation polling."""
     return [
         {
@@ -117,6 +117,7 @@ def _serialize_pending_simulations(
             "policy_arm": str(getattr(meta, "policy_arm", "") or ""),
             "expression": str(getattr(meta, "expression", "") or ""),
             "settings_fingerprint": str(getattr(meta, "settings_fingerprint", "") or ""),
+            "settings": dict(getattr(meta, "settings", {}) or {}),
             "simulation_location": str(getattr(meta, "simulation_location", "") or ""),
             "simulation_id": str(getattr(meta, "simulation_id", "") or ""),
         }
@@ -162,6 +163,9 @@ def _restore_pending_simulations(
                 policy_arm=str(item.get("policy_arm", "") or ""),
                 expression=expression,
                 settings_fingerprint=settings_fingerprint,
+                settings=dict(item.get("settings", {}))
+                if isinstance(item.get("settings"), dict)
+                else {},
                 simulation_location=simulation_location,
                 simulation_id=simulation_id,
             )
@@ -373,11 +377,11 @@ def save_checkpoint(
     """
     崩溃/中断时保存详细检查点，包含待处理任务元数据。
 
-    与 state_file 不同，checkpoint_file 还会记录当前正在执行的
+    与 state_file 不同，该文件只用于诊断中断现场，不参与恢复；它会记录当前正在执行的
     任务信息，便于排查崩溃原因。
 
     Args:
-        checkpoint_file: 检查点文件的绝对路径。
+        checkpoint_file: 中断诊断报告的绝对路径（名称保留用于 API 兼容）。
         execution_state: 当前 ExecutionState 实例。
         runtime_state: 当前 RuntimeConcurrencyState 实例。
         field_id: 当前字段 ID。
@@ -422,7 +426,7 @@ def save_checkpoint(
     success = _atomic_save(checkpoint_file, payload)
     if success:
         logger.info(
-            "[checkpoint] saved crash checkpoint to %s (pending=%d, reason=%s)",
+            "[checkpoint] saved interrupt report to %s (pending=%d, reason=%s)",
             checkpoint_file,
             len(pending_contexts),
             reason,

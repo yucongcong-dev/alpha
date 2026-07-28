@@ -30,3 +30,14 @@ def result_identity(result: FieldTestResult) -> tuple[str, str, str, str]:
 def attempted_template_keys(results: Sequence[FieldTestResult]) -> set[tuple[str, str, str, str]]:
     """收集已经持久化记录过的模板尝试键集合。"""
     return {result_identity(result) for result in results if is_informative_result(result)}
+
+
+def merge_results_by_identity(
+    *result_groups: Sequence[FieldTestResult],
+) -> list[FieldTestResult]:
+    """Merge result histories deterministically, with later records winning."""
+    merged: dict[tuple[str, str, str, str], FieldTestResult] = {}
+    for group in result_groups:
+        for result in group:
+            merged[result_identity(result)] = result
+    return list(merged.values())

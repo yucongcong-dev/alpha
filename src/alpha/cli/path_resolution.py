@@ -38,7 +38,10 @@ def normalize_args_paths(args: argparse.Namespace) -> RunPaths:
         or scoped_paths["fields_cache_file"]
     )
     output_file = resolve_cli_path(args.output, base_dir=os.getcwd()) or scoped_paths["output"]
-    feedback_output = resolve_cli_path(args.feedback_output, base_dir=os.getcwd()) or output_file
+    feedback_output = (
+        resolve_cli_path(args.feedback_output, base_dir=os.getcwd())
+        or scoped_paths["feedback_output"]
+    )
     creds_file = resolve_cli_path(args.creds_file, base_dir=os.getcwd()) or DEFAULT_CREDS_FILE
     creds_key_file = (
         resolve_cli_path(args.creds_key_file, base_dir=os.getcwd()) or DEFAULT_CREDS_KEY_FILE
@@ -55,11 +58,11 @@ def normalize_args_paths(args: argparse.Namespace) -> RunPaths:
     output_dir = Path(output_file).parent
     if Path(output_file).name.lower() == "summary.json":
         state_file = str(output_dir / "state.json")
-        checkpoint_file = str(output_dir / "checkpoint.json")
+        checkpoint_file = str(output_dir / "interrupt_report.json")
     else:
         output_stem = Path(output_file).stem
         state_file = str(output_dir / f"{output_stem}_state.json")
-        checkpoint_file = str(output_dir / f"{output_stem}_checkpoint.json")
+        checkpoint_file = str(output_dir / f"{output_stem}_interrupt_report.json")
 
     return RunPaths(
         results_dir=results_dir,

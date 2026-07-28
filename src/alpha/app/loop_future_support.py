@@ -9,6 +9,7 @@ import time
 
 from ..core.scheduler import drain_completed_futures_with_context
 from ..core.simulation import resume_field_test_in_worker, run_field_test_in_worker
+from ..generators.payload import build_simulation_payload
 from ..models.domain import FieldTestResult, SettingsVariant, TemplateField
 from ..models.runtime_protocols import SchedulerRuntimeArgs, SimulationStageArgs
 from ..runtime.contexts import (
@@ -109,6 +110,8 @@ def submit_template_future(
             "policy_arm": policy_arm,
         },
     )
+    effective_payload = build_simulation_payload(args, expression)
+    effective_payload["settings"].update(settings_variant.to_dict())
     pending_context = PendingFutureContext(
         field_id=field_id,
         field_name=field_name,
@@ -122,6 +125,7 @@ def submit_template_future(
         policy_arm=policy_arm,
         expression=expression,
         settings_fingerprint=variant_fingerprint,
+        settings=dict(effective_payload["settings"]),
     )
 
     def _record_simulation_created(simulation_location: str, simulation_id: str) -> None:

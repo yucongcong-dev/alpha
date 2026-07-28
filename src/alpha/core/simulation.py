@@ -27,6 +27,7 @@ from .simulation_parsing import (
     extract_checks,
     extract_failed_checks,
     extract_pending_checks,
+    extract_simulation_metrics,
     is_submittable_from_checks,
     summarize_failure,
 )
@@ -68,6 +69,7 @@ def _complete_field_test_from_simulation(
     if isinstance(poll_result, FieldTestResult):
         return poll_result
     alpha_id, simulation_result = poll_result
+    ctx.metrics = extract_simulation_metrics(simulation_result)
     if should_abort is not None and should_abort():
         return ctx.failure(
             failed_stage="stopped",
@@ -105,6 +107,7 @@ def _complete_field_test_from_simulation(
         message=message,
         status="simulated",
         failed_checks=failed_checks,
+        metrics=ctx.metrics,
     )
 
 
@@ -147,6 +150,7 @@ def run_field_test(
         expression=expression,
         settings_fingerprint=settings_fingerprint,
         template_library_fingerprint=template_library_fingerprint,
+        settings=simulation_settings.to_dict() if simulation_settings is not None else {},
     )
 
     logger.info(
@@ -208,6 +212,7 @@ def resume_field_test(
         expression=pending.expression,
         settings_fingerprint=pending.settings_fingerprint,
         template_library_fingerprint=template_library_fingerprint,
+        settings=dict(pending.settings),
     )
     logger.info(
         "[resume] continuing simulation_id=%s location=%s field=%s template=%s",
@@ -283,6 +288,7 @@ __all__ = [
     "extract_checks",
     "extract_failed_checks",
     "extract_pending_checks",
+    "extract_simulation_metrics",
     "is_submittable_from_checks",
     "poll_simulation_with_retry",
     "precheck_simulation_metrics",

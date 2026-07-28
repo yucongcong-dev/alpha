@@ -15,14 +15,66 @@
 from __future__ import annotations
 
 import logging
+import os
+import sys
+from typing import Any
 
-from .app.bootstrap import clean_runtime_artifacts, initialize_run_context
-from .app.finalize import finalize_run
-from .app.planning import run_dry_run_plan
-from .app.run_loop import run_field_test_loop
-from .cli.parser import parse_application_config
+
+def _bootstrap_config_environment() -> None:
+    """Expose --config before importing the config package and app graph."""
+    tokens = sys.argv[1:]
+    for index, token in enumerate(tokens):
+        value = ""
+        if token == "--config" and index + 1 < len(tokens):
+            value = tokens[index + 1]
+        elif token.startswith("--config="):
+            value = token.split("=", 1)[1]
+        if value:
+            os.environ["ALPHA_CONFIG_FILE"] = os.path.abspath(os.path.expanduser(value))
+            return
+
+
+_bootstrap_config_environment()
 
 logger = logging.getLogger(__name__)
+
+
+def parse_application_config() -> Any:
+    """Lazy compatibility export for the CLI boundary parser."""
+    from .cli.parser import parse_application_config as parse
+
+    return parse()
+
+
+def clean_runtime_artifacts(config: Any, **kwargs: Any) -> int:
+    """Compatibility export that preserves lazy application imports."""
+    from .app.bootstrap import clean_runtime_artifacts as clean
+
+    return clean(config, **kwargs)
+
+
+def initialize_run_context(config: Any, paths: Any) -> Any:
+    from .app.bootstrap import initialize_run_context as initialize
+
+    return initialize(config, paths)
+
+
+def run_dry_run_plan(config: Any, paths: Any) -> bool:
+    from .app.planning import run_dry_run_plan as plan
+
+    return plan(config, paths)
+
+
+def run_field_test_loop(config: Any, run_ctx: Any, paths: Any) -> None:
+    from .app.run_loop import run_field_test_loop as run
+
+    run(args=config, run_ctx=run_ctx, run_paths=paths)
+
+
+def finalize_run(config: Any, run_ctx: Any, paths: Any) -> None:
+    from .app.finalize import finalize_run as finalize
+
+    finalize(args=config, run_ctx=run_ctx, run_paths=paths)
 
 
 def main() -> int:
@@ -49,16 +101,8 @@ def main() -> int:
     if init_result is None:
         return 1
 
-    run_field_test_loop(
-        args=config,
-        run_ctx=init_result,
-        run_paths=config.paths,
-    )
-    finalize_run(
-        args=config,
-        run_ctx=init_result,
-        run_paths=config.paths,
-    )
+    run_field_test_loop(config, init_result, config.paths)
+    finalize_run(config, init_result, config.paths)
     return 0
 
 

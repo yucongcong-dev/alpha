@@ -19,6 +19,7 @@ dist/
 cache/
 results/
 datasets/*/cache/
+datasets/*/feedback/
 datasets/*/runs/
 tmp/
 scratch/

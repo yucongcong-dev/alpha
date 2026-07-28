@@ -24,9 +24,10 @@ alpha/
 │   ├── main.py            # 精简 CLI 主入口
 │   ├── workspace.py       # 可写工作区与只读资源根目录
 │   ├── app/               # 应用编排：bootstrap / run_loop / finalize / clean
-│   ├── core/              # 调度、simulation、checkpoint、template planning
+│   ├── core/              # 调度、simulation、恢复状态、template planning
 │   ├── generators/        # 字段变换、表达式候选、模板变体、payload
-│   ├── analysis/          # 反馈、统计、report 与派生结果视图持久化
+│   ├── selection/         # 在线候选剪枝、模板角色与 settings 预算决策
+│   ├── analysis/          # 历史聚合、统计、report 与派生结果视图持久化
 │   ├── api/               # Brain API 客户端、session、retry、fields、alphas
 │   ├── io/                # 凭证、输出路径、results journal、原子写入
 │   ├── cli/               # 参数解析、路径归一化、run config、filters
@@ -58,7 +59,8 @@ alpha/
 
 哪些文件不进仓：
 
-- `datasets/<dataset_id>/runs/`：每次运行的结果、分析、日志、checkpoint 和 state。
+- `datasets/<dataset_id>/runs/`：每次运行的结果、分析、日志、可恢复 state 和中断诊断报告。
+- `datasets/<dataset_id>/feedback/`：跨 run 自动合并的本地反馈仓；保存结果 journal、字段反馈和模板 registry，不进仓。
 - `datasets/<dataset_id>/cache/`：磁盘上的可重建缓存目录。当前主要承载字段缓存；内存态的 YAML / blacklist / runtime cache 不落在这里。
 - `tmp/`：一次性实验输入、临时 include/exclude 列表、临时模板库。
 - `scratch/`：外部脚本、对照材料、手工实验草稿。
@@ -75,7 +77,7 @@ alpha/
 - `20260727-compare-neutralization`：同一字段或同一家族的对照实验
 - `20260727-scratch-filter-probe`：短期排障或临时验证
 
-一旦某轮结果成为长期参考，把对应模板/字段知识沉淀回同一数据集的 `template.json`、`presets/` 或 `README.md`，不要让 `runs/` 承担知识库角色。
+runner 会把每个完成 run 去重合并到 `datasets/<dataset_id>/feedback/`，供后续 run 自动跳过已尝试组合、继承模板 registry 和选择 near-pass 候选。它仍是可重建的本地研究状态；成熟结论应继续沉淀到 `template.json`、`presets/` 或 dataset README。
 
 ## 模板资产
 
@@ -119,9 +121,10 @@ alpha/
 - `ApplicationConfig`：CLI/YAML 合并完成后的不可变运行配置；`argparse.Namespace` 不进入主运行链路
 - `WorkspacePaths`：统一管理可写工作区和只读配置资源；可用 `ALPHA_WORKSPACE_ROOT` 显式指定工作区
 - `app/`：应用编排层，负责初始化、执行主循环、最终收尾和 `clean`
-- `core/`：核心执行层，负责 scheduler、simulation、checkpoint、template planning
+- `core/`：核心执行层，负责 scheduler、simulation、恢复状态和 template planning
 - `generators/`：字段预处理、表达式候选构造、settings 变体、模板细分策略
-- `analysis/`：反馈画像、失败检查、字段/模板统计、report 和派生结果视图持久化
+- `selection/`：在线候选剪枝、模板执行角色、activation scope 和 settings 预算
+- `analysis/`：历史反馈聚合、失败检查、字段/模板统计、report 和派生结果视图持久化
 - `api/`：Brain API 会话、重试、fields、simulations、alphas
 - `io/`：凭证、results journal、输出路径和原子文件写入
 - `cli/`：参数解析、路径归一化、run config、filters
@@ -227,7 +230,7 @@ python3.10 -m alpha
 **关于平台队列拥塞的当前流程**：
 - 全局并发冷却仍然生效，避免平台繁忙时持续创建新 simulation
 - `--field-queue-busy-skip-after` 保留旧参数名，但现在按“字段 + 模板 + 表达式 + settings”候选分别计数，不会因为一个候选排队超时而跳过整个字段
-- 候选达到阈值后只在当前进程中停止重试；队列计数不写入 checkpoint，重启后可重新尝试
+- 候选达到阈值后只在当前进程中停止重试；队列计数不写入 state，重启后可重新尝试
 
 `--stop-after-submittable N` 只统计本次启动后新增的可提交 Alpha；输出文件中的历史可提交结果仍用于续跑和分析，但不会让新进程一启动就提前停止。
 
@@ -240,6 +243,7 @@ python3.10 -m alpha --top-fields-by-feedback 10 --max-templates-per-field 15
 **目标**：对接近通过的候选进行精修，而不是继续做一轮广泛模板扩张。
 
 **机制**：
+- `generate` 阶段固定结构优先：promoted、broad 和 high-coverage 标签不会自动增加 settings 变体预算
 - 当字段进入 `resimulate` 阶段后，执行器会优先从历史结果中选择近门槛候选，而不是回退到整套 broad template 枚举
 - 当前 refine 候选按历史 `failed_checks` 的接近度排序，同时会对明显不适合继续追的 `CONCENTRATED_WEIGHT` 候选降权
 - refine 只做局部、可解释的表达式变异，例如：
@@ -254,7 +258,9 @@ python3.10 -m alpha --top-fields-by-feedback 10 --max-templates-per-field 15
   - 对换手问题尝试更快或更慢的 `decay`
 
 **反馈循环**：
-- 默认读取当前 `--output / --feedback-output` 指向的同一结果文件；若未显式指定，则使用本次运行的默认结果路径
+- `--output` 默认指向当前 run；`--feedback-output` 默认指向 `datasets/<dataset>/feedback/summary.json`
+- 新 run 只恢复自己的运行结果，但候选选择会读取 dataset 级反馈、模板 registry 和已尝试组合
+- run 正常收尾时会把新结果按字段、表达式和 settings 指纹去重合并回 dataset 反馈仓
 - 阶段 2 的结果会自动用于字段优先级排序和 near-pass 候选筛选
 - 可多次运行，每次自动续跑（不重复已完成的组合）
 - 如果阶段 2 产生较多未决检查，先在平台确认终态，再决定是否继续 refine；runner 不会把它们当作普通 near-pass 历史
@@ -292,7 +298,7 @@ python3.10 -m alpha --full-run
 每次运行默认是**增量模式**：
 - 已完成的字段+模板组合不会重复
 - 新结果追加到同一输出文件
-- 按 `Ctrl+C` 时会通知轮询 worker 停止、取消尚未启动的任务并立即保存 checkpoint；已经拿到 Location 的远端 simulation 会在下次运行继续轮询
+- 按 `Ctrl+C` 时会通知轮询 worker 停止、取消尚未启动的任务并立即保存 `state.json` 与 `interrupt_report.json`；恢复只读取 state，已经拿到 Location 的远端 simulation 会在下次运行继续轮询
 - 中断后再次运行自动继续
 - 如需重新开始，优先使用新的 `--run-name`；显式 `--output` 仍用于兼容自定义路径
 
@@ -305,7 +311,7 @@ python3.10 -m alpha --dry-run-plan
 ```
 
 该命令是只读离线预览：不会读取登录凭证、连接 Brain、创建 simulation，
-也不会初始化或重写结果、journal、checkpoint 和日志文件。它会复用当前数据集上下文的
+也不会初始化或重写结果、journal、state、中断诊断报告和日志文件。它会复用当前数据集上下文的
 本地字段缓存（即使缓存已超过在线刷新 TTL）；若没有匹配缓存，会提示先执行一次正常认证运行。
 
 首次生成或复用本地字段缓存：
@@ -405,6 +411,8 @@ YAML 分层优先级为：`config/settings.yaml` > `config/expression_policies.y
 | `datasets/<dataset>/runs/<run_name>/summary.json` | 轻量运行 summary 与 journal 指针 |
 | `datasets/<dataset>/runs/<run_name>/results.jsonl` | 权威结果 journal；主 summary 和分析文件都可由它重建 |
 | `datasets/<dataset>/runs/<run_name>/analysis.json` | 分析汇总（用于决策下一步） |
+| `datasets/<dataset>/feedback/summary.json` | dataset 级跨 run 反馈 summary；journal 指针使用相对路径 |
+| `datasets/<dataset>/feedback/results.jsonl` | dataset 级去重结果历史，供后续 run 选择和剪枝 |
 
 ### 关键分析字段
 
@@ -420,6 +428,8 @@ YAML 分层优先级为：`config/settings.yaml` > `config/expression_policies.y
 
 结果恢复以 JSONL journal 为唯一事实来源。`summary.json`、analysis 和 template registry
 都是派生视图；启动时缺失的分析边车只会被重建，不会反向改写 journal 或主 summary。
+每条结果同时保存实际 simulation `settings` 和平台返回的完整 `is` 指标字典 `metrics`，
+因此通过检查的 Alpha 也可以在本地按 Sharpe、Fitness、Turnover 等指标继续比较。
 
 ### 失败检查含义
 

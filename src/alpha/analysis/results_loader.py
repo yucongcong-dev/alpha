@@ -21,6 +21,7 @@ from ..config.constants import (
     STAT_FIELD_SUBMITTED,
     STAT_FIELD_TEMPLATE_NAME,
 )
+from ..io.output_paths import build_output_sidecar_paths
 from ..io.results_store import load_results_rows_from_journal
 from ..models.domain import FieldTestResult, ResultRow
 from ..models.domain_parsers import parse_failed_check
@@ -30,9 +31,24 @@ logger = logging.getLogger(__name__)
 
 def _default_results_journal_path(path: str) -> str:
     """为主结果文件派生默认 journal 路径。"""
-    output = Path(path)
-    base_name = output.stem or output.name or "results"
-    return str(output.parent / f"{base_name}_results.jsonl")
+    return build_output_sidecar_paths(path)["results_journal"]
+
+
+def _resolve_results_journal_path(summary_path: str, reference: object) -> str:
+    """Resolve portable references and recover legacy absolute paths after moves."""
+    summary = Path(summary_path)
+    candidates: list[Path] = []
+    if isinstance(reference, str) and reference:
+        referenced = Path(reference).expanduser()
+        if referenced.is_absolute():
+            candidates.extend((referenced, summary.parent / referenced.name))
+        else:
+            candidates.append(summary.parent / referenced)
+    candidates.append(Path(_default_results_journal_path(summary_path)))
+    for candidate in candidates:
+        if candidate.exists():
+            return str(candidate)
+    return str(candidates[0])
 
 
 def _load_results_rows_from_journal(journal_path: str) -> list[ResultRow]:
@@ -68,6 +84,12 @@ def _rows_to_results(rows: list[Any]) -> list[FieldTestResult]:
                     expression=str(row.get("expression", "")),
                     settings_fingerprint=str(row.get("settings_fingerprint", "")),
                     template_library_fingerprint=str(row.get("template_library_fingerprint", "")),
+                    settings=dict(row.get("settings", {}))
+                    if isinstance(row.get("settings"), dict)
+                    else {},
+                    metrics=dict(row.get("metrics", {}))
+                    if isinstance(row.get("metrics"), dict)
+                    else {},
                     failed_stage=row.get("failed_stage"),
                     failed_checks=[
                         parse_failed_check(check)
@@ -168,12 +190,7 @@ def load_existing_results(
         return _recover_results_from_journal(path)
 
     rows: list[Any] | None = None
-    journal_path_value = payload.get("results_journal")
-    journal_path = (
-        str(journal_path_value)
-        if isinstance(journal_path_value, str) and journal_path_value
-        else _default_results_journal_path(path)
-    )
+    journal_path = _resolve_results_journal_path(path, payload.get("results_journal"))
     if os.path.exists(journal_path):
         try:
             rows = _load_results_rows_from_journal(journal_path)

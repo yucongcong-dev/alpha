@@ -188,6 +188,7 @@ def run_simulation_create_stage(
             # Merge partial variant overrides into the baseline website/default payload
             # instead of replacing it outright, so required API fields remain intact.
             payload["settings"].update(_serialize_settings_overrides(simulation_settings))
+        ctx.settings = dict(payload["settings"])
         if create_semaphore is not None:
             logger.info(
                 "[simulation] waiting for create slot field=%s template=%s",

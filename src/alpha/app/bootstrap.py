@@ -18,6 +18,7 @@ from ..analysis.feedback_history import build_historical_run_state
 from ..api.client import BrainClient, WorkerClientFactory, login_with_retry
 from ..cli.filters import load_run_filters_extended, setup_runtime_logging
 from ..cli.run_config import build_run_config_snapshot
+from ..config.application import ApplicationConfig
 from ..config.runtime_values import get_runtime_config
 from ..generators.fields import fetch_fields_with_cache, load_fields_cache
 from ..generators.fingerprint import stable_fingerprint
@@ -29,7 +30,6 @@ from ..io.output_paths import cleanup_legacy_sidecar_files
 from ..models.io_types import RunPaths
 from ..models.runtime_protocols import (
     ApiClientArgs,
-    BootstrapRuntimeArgs,
     ClientFactoryLike,
     RuntimeConcurrencyArgs,
 )
@@ -175,7 +175,7 @@ def assemble_initialized_run_context(
 
 
 def initialize_run_context(
-    args: BootstrapRuntimeArgs,
+    args: ApplicationConfig,
     run_paths: RunPaths | None,
 ) -> InitializedRunContext | None:
     """执行主流程的初始化阶段，返回结构化运行上下文。"""

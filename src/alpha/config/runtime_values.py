@@ -24,11 +24,6 @@ from .constants import (
     POLLING_DEFAULT_WAIT,
     POLLING_NO_RETRY_AFTER_WAIT,
     POLLING_RETRY_BUFFER,
-    PRECHECK_FALLBACK_MAX_TURNOVER,
-    PRECHECK_FALLBACK_MAX_WEIGHT,
-    PRECHECK_FALLBACK_MIN_FITNESS,
-    PRECHECK_FALLBACK_MIN_SHARPE,
-    PRECHECK_FALLBACK_MIN_TURNOVER,
     RATE_LIMIT_DEFAULT_WAIT,
     RETRY_OPERATION_DEFAULT_WAIT,
     SERVER_ERROR_BACKOFF_MAX,
@@ -46,7 +41,7 @@ from .constants import (
     SUBMIT_MIN_SHARPE,
     SUBMIT_MIN_TURNOVER,
 )
-from .yaml import get_yaml_config
+from .yaml import get_active_config_path, get_yaml_config
 
 
 def _get_yaml_global() -> dict[str, Any]:
@@ -219,20 +214,8 @@ def load_simulation_runtime_config() -> SimulationRuntimeConfig:
     )
 
 
-def load_precheck_quality_runtime_config() -> QualityRuntimeConfig:
-    """Build the current quality thresholds used by local precheck fallbacks."""
-    section = yaml_global_section("quality")
-    return QualityRuntimeConfig(
-        min_sharpe=float(section.get("min_sharpe", PRECHECK_FALLBACK_MIN_SHARPE)),
-        min_fitness=float(section.get("min_fitness", PRECHECK_FALLBACK_MIN_FITNESS)),
-        min_turnover=float(section.get("min_turnover", PRECHECK_FALLBACK_MIN_TURNOVER)),
-        max_turnover=float(section.get("max_turnover", PRECHECK_FALLBACK_MAX_TURNOVER)),
-        max_weight=float(section.get("max_weight", PRECHECK_FALLBACK_MAX_WEIGHT)),
-    )
-
-
-def load_submit_quality_runtime_config() -> QualityRuntimeConfig:
-    """Build the current quality thresholds used for submit-grade checks."""
+def load_quality_runtime_config() -> QualityRuntimeConfig:
+    """Build the single local quality gate used before platform checks."""
     section = yaml_global_section("quality")
     return QualityRuntimeConfig(
         min_sharpe=float(section.get("min_sharpe", SUBMIT_MIN_SHARPE)),
@@ -241,6 +224,16 @@ def load_submit_quality_runtime_config() -> QualityRuntimeConfig:
         max_turnover=float(section.get("max_turnover", SUBMIT_MAX_TURNOVER)),
         max_weight=float(section.get("max_weight", SUBMIT_MAX_WEIGHT)),
     )
+
+
+def load_submit_quality_runtime_config() -> QualityRuntimeConfig:
+    """Compatibility alias for the unified quality runtime configuration."""
+    return load_quality_runtime_config()
+
+
+def load_precheck_quality_runtime_config() -> QualityRuntimeConfig:
+    """Compatibility alias retained for callers of the former dual-quality model."""
+    return load_quality_runtime_config()
 
 
 # ---------------------------------------------------------------------------
@@ -256,11 +249,21 @@ class RuntimeConfig:
     feedback: FeedbackRuntimeConfig
     expression: ExpressionRuntimeConfig
     simulation: SimulationRuntimeConfig
-    precheck_quality: QualityRuntimeConfig
-    submit_quality: QualityRuntimeConfig
+    quality: QualityRuntimeConfig
+
+    @property
+    def precheck_quality(self) -> QualityRuntimeConfig:
+        """Compatibility alias for the unified quality gate."""
+        return self.quality
+
+    @property
+    def submit_quality(self) -> QualityRuntimeConfig:
+        """Compatibility alias for the unified quality gate."""
+        return self.quality
 
 
 _runtime_config_cache: RuntimeConfig | None = None
+_runtime_config_source: str | None = None
 
 
 def _build_runtime_config() -> RuntimeConfig:
@@ -270,8 +273,7 @@ def _build_runtime_config() -> RuntimeConfig:
         feedback=load_feedback_runtime_config(),
         expression=load_expression_runtime_config(),
         simulation=load_simulation_runtime_config(),
-        precheck_quality=load_precheck_quality_runtime_config(),
-        submit_quality=load_submit_quality_runtime_config(),
+        quality=load_quality_runtime_config(),
     )
 
 
@@ -280,13 +282,16 @@ def get_runtime_config() -> RuntimeConfig:
 
     取代原来 30 个独立的 get_*() 函数，消除 30→1 次 YAML 遍历的冗余。
     """
-    global _runtime_config_cache
-    if _runtime_config_cache is None:
+    global _runtime_config_cache, _runtime_config_source
+    active_source = get_active_config_path()
+    if _runtime_config_cache is None or _runtime_config_source != active_source:
         _runtime_config_cache = _build_runtime_config()
+        _runtime_config_source = active_source
     return _runtime_config_cache
 
 
 def clear_runtime_config_cache() -> None:
     """清除运行时配置缓存，强制下次访问重新加载。"""
-    global _runtime_config_cache
+    global _runtime_config_cache, _runtime_config_source
     _runtime_config_cache = None
+    _runtime_config_source = None

@@ -11,11 +11,11 @@ from ..config.constants import (
     CHECK_LOW_FITNESS,
     CHECK_LOW_SHARPE,
     CHECK_LOW_TURNOVER,
-    PRECHECK_FALLBACK_MAX_TURNOVER,
-    PRECHECK_FALLBACK_MAX_WEIGHT,
-    PRECHECK_FALLBACK_MIN_FITNESS,
-    PRECHECK_FALLBACK_MIN_SHARPE,
-    PRECHECK_FALLBACK_MIN_TURNOVER,
+    SUBMIT_MAX_TURNOVER,
+    SUBMIT_MAX_WEIGHT,
+    SUBMIT_MIN_FITNESS,
+    SUBMIT_MIN_SHARPE,
+    SUBMIT_MIN_TURNOVER,
 )
 from ..config.runtime_values import get_runtime_config
 from ..models.runtime_protocols import SimulationStageArgs
@@ -36,11 +36,11 @@ _KEY_VALUE: str = "value"
 
 @dataclass
 class PrecheckConfig:
-    min_sharpe: float = PRECHECK_FALLBACK_MIN_SHARPE
-    min_fitness: float = PRECHECK_FALLBACK_MIN_FITNESS
-    min_turnover: float = PRECHECK_FALLBACK_MIN_TURNOVER
-    max_turnover: float = PRECHECK_FALLBACK_MAX_TURNOVER
-    max_weight: float = PRECHECK_FALLBACK_MAX_WEIGHT
+    min_sharpe: float = SUBMIT_MIN_SHARPE
+    min_fitness: float = SUBMIT_MIN_FITNESS
+    min_turnover: float = SUBMIT_MIN_TURNOVER
+    max_turnover: float = SUBMIT_MAX_TURNOVER
+    max_weight: float = SUBMIT_MAX_WEIGHT
 
     @classmethod
     def from_args(cls, args: SimulationStageArgs) -> PrecheckConfig:
@@ -61,7 +61,7 @@ class PrecheckConfig:
 
 def build_default_submit_precheck_config() -> PrecheckConfig:
     """Load submit-grade precheck defaults from the current runtime config."""
-    quality = get_runtime_config().submit_quality
+    quality = get_runtime_config().quality
     return PrecheckConfig(
         min_sharpe=quality.min_sharpe,
         min_fitness=quality.min_fitness,

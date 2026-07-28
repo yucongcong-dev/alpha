@@ -50,6 +50,8 @@ def resolve_completed_future_result(
     try:
         return future.result()
     except Exception as exc:
+        settings_value = _context_value(context, "settings", {})
+        settings = dict(settings_value) if isinstance(settings_value, dict) else {}
         return build_failure_result(
             field_id=str(_context_value(context, "field_id")),
             field_type=str(_context_value(context, "field_type")),
@@ -66,6 +68,7 @@ def resolve_completed_future_result(
             expression=str(_context_value(context, "expression")),
             settings_fingerprint=str(_context_value(context, "settings_fingerprint")),
             template_library_fingerprint=template_library_fingerprint,
+            settings=settings,
             failed_stage="worker",
             message=str(exc),
         )
