@@ -1,175 +1,55 @@
-# model51 说明
+# model51
 
-## 定位
-`model51` 当前更适合被当作风险/系统性度量风格的数据集。
+## 当前状态
 
-模板库主方向故意围绕以下特征展开：
-- 持续性
-- 长窗口归一化
-- 市场/行业中性化
-- 波动率/市值 bucket 分组
-- 避免短窗方向性算子
+`model51` 已暂停新增研究预算。默认 [template.json](template.json) 仅作为数据集基线，
+当前没有现役专项 preset。
 
-## 官方口径
-- 和 `model16` 一样，当前本地没有拿到 `model51` 的专属官方模板手册。
-- 可直接依赖的官方信息，仍然是 BRAIN 通用文档里对 grouped、neutralized、structured expressions 的支持。
+该数据集主要描述系统性和非系统性风险。历史结果已经表明，继续围绕相同字段做窗口、
+Decay、bucket 或分组邻居，无法稳定提高 Fitness。
 
-## 风险因子假设地图
+## 关键历史证据
 
-这类字段更适合按风险来源组织，而不是按窗口组织：
+`unsystematic_risk_last_60_days` 曾是最接近门槛的字段：
 
-- 市场：整体 beta 与共同市场波动
-- 规模：大盘/小盘暴露
-- 价值：估值差异
-- 盈利与投资：公司质量、资本扩张和资产增长
-- 动量：趋势与反转暴露
-- 应计：会计利润与现金利润差异
-- 流动性：成交能力和交易成本暴露
+- `model51_ts_zscore_120`：Fitness 约 `0.85`
+- `model51_bucket_cap_zscore_120`：Fitness 约 `0.83`
+- `model51_ts_rank_120`：Fitness 约 `0.78`
 
-风险因子之间并不独立，一个字段可能同时携带 size、industry 或 liquidity 暴露；因子有效性也可能随市场 regime 改变。研究目标应是识别并隔离增量暴露，而不是把“风险描述子长期稳定”误当作“Alpha 永久稳定”。
+后续 refine 没有突破该天花板。
 
-存在明确的第二风险向量时，可在专项 refine 中用 `vector_neut(alpha, risk_vector)` 检查正交后的增量信号。`STATISTICAL` 以及 Consultant 账号可能出现的 Slow/Fast Factor neutralization 只作为账号能力确认后的实验设置，不进入默认库，也不自动写入通用运行配置。
+`systematic_risk_last_30_days` 的专项验证同样较弱：
 
-## Neutralization 与流动性建议
+- bucket-cap ratio：Sharpe 约 `0.79`，Fitness 约 `0.37`
+- cap ratio：Sharpe 约 `0.60–0.72`，Fitness 约 `0.35–0.37`
+- 最好的相邻 bucket 结构也只有 Sharpe 约 `0.84`、Fitness 约 `0.37`
 
-`model51` 属于 Model Dataset，官网建议根据子类别比较多种 Neutralization。结合其风险字段语义：
+## 字段关系约束
 
-- `Market` 用来先移除全市场共同风险
-- `Industry / Subindustry` 用来判断风险描述子是否只是行业结构
-- `bucket(rank(cap), ...)` 可以构造 size 分层，bucket 使用前应 `densify()`
-- 若最不流动 50% after-cost Sharpe 较弱，可按 `cap` 或平均成交量划分流动性组，并给低流动性组更长 Decay
-- 有明确 size / liquidity 风险向量时，可在专项 refine 中尝试 `vector_neut()`
+同窗口的：
 
-模板内中性化和 settings 层中性化不能无意识叠加。默认库应让每个候选明确属于
-“表达式中性化”或“设置中性化”中的一种。
+- `systematic_risk_last_*` 是对 SPY 回归的 R²
+- `unsystematic_risk_last_*` 是 `1 - R²`
 
-## 本地证据
+因此二者的同窗口 spread、ratio 或 rank 只是同一信息的单调变换，不应当作新的
+relation 方向。
 
-结构性判断：
-- 从字段命名和行为看，它更像风险或系统性描述子，而不是经典反应型 alpha 输入。
-- 因此，短窗 `delta`、`mean_diff`、大范围 momentum 扫描，都不适合作为默认模板。
+2026-07-29 测试了真正跨周期的 30 日–360 日 systematic risk 缺口：
 
-运行证据：
-- 短窗和泛化 `delta` 家族已经弱到在策略中被显式禁用。
-- 整理后的长窗口、带 market/industry neutralization 的模板，更符合这类数据的预期用法。
-- 从 `2026-07-24` 起，默认 `template.json` 也已经被收成真正的闭合候选集：
-  - 默认 broad run 不再自动混入 `hc_ratio_*`、`group_ratio_delta_over_std_*` 等额外外扩模板
-  - 因此当前默认计划看到的，就是仓库明确保留的 5 条主模板，而不是“文档很窄、运行时又变宽”
-- 在 `checksubmit` 流程改成等待 `SELF_CORRELATION` 终态之后，当前风险字段分支已不再像可直接生产的候选：
-  - 近期对 `unsystematic_risk_last_*` 和 `systematic_risk_last_*` 的重查里，self-correlation 都没能在轮询预算内进入终态
-- 当前工作流会把这些结果保留为 `submittable=null` 的未决记录；它们不会被误算成可提交结果，也不会进入自适应反馈统计
+- 当前缺口：Alpha `bldn38mp`，Sharpe `-0.53`，Fitness `-0.26`
+- 缺口的 `ts_zscore(..., 120)`：Alpha `1YzP5NJk`，Sharpe `-0.20`，Fitness `-0.05`
 
-公开脚本启发：
-- bucket 分组值得吸收，因为它更适合做稳定的相对比较。
-- 共享的预处理风格也说明：长 backfill 后再做 winsorize 是合理的。
+两条结果均为负，临时 preset 已删除。
 
-## 当前模板方向
+## 已停止方向
 
-预处理：
-- `504` 天 backfill，加 `winsorize(std=4)`。
+- beta/correlation SPY 分支
+- unsystematic 60 日窗口微调
+- systematic 30 日 ratio/bucket 微调
+- 同窗口 systematic/unsystematic 配对
+- 只依赖同一风险字段的短长窗口 sweep
 
-当前默认库目标：
-- 只保留少量、结构上真正不同的生产候选
-- 避免把围绕同一条拥挤 risk 分支的近邻窗口变体塞满默认队列
+## 重新开启探索的条件
 
-默认主干形态：
-- 一条一阶长窗口 `ts_zscore`
-- 一条 `subindustry` 分组 zscore
-- 一条 `cap-ratio` 模板，加一条 `bucket-cap-ratio` 模板
-- 一条 mean-reversion spread，避免队列过度集中在纯 zscore/risk 变换上
-
-已移除内容：
-- 只做 `stddev` 的默认模板已移出主模板库，因为它们没有新的 bucket/risk-aware 结构有针对性。
-- 大多数额外的 grouped/decay/window 邻居，现在应该被看作 refine 或诊断输入，而不是默认 broad-search 种子。
-- `IR` 也不再留在最小默认队列中，而是下沉到专项 refine preset 的 ratio 分支之后。
-
-字段排序：
-- 拥挤的 risk 字段，现在通过 `alphaCount/userCount` 的 crowding penalty 被显式降权，而不是因为“历史常见”就自动排到前面。
-
-## 不建议做的事
-
-- 不要因为风险字段“历史上常见”，就继续把 broad-search 预算砸在当前偏弱的 risk-field 家族上。
-- 不要把额外 grouped/decay/window 邻居重新塞回默认队列，制造“伪多样性”。
-- 不要因为过去相邻分支曾有 `submittable=true`，就在当前更严格的 self-correlation 门槛下继续高估它们。
-
-## 推荐流程
-
-Broad exploration：
-- `model51` 已经展示出足够的结构性，因此大范围模板扫库应继续保持窄而精。
-- 优先使用数据集专属模板库，而不是继续扩默认主库之外的历史旁支。
-- 在 self-correlation 行为没有理解清楚前，不要继续把 broad-search 预算浪费在当前风险字段家族上。
-- 如果还需要做 broad sweep，也应该把它视为确认 self-correlation 终态行为的诊断动作，而不是主要的 alpha 挖掘动作。
-
-Focused refine：
-- 历史上的 focused fixtures 并没有完整保留为现役文件集合；当前更适合作为“历史轮次说明”，而不是可直接点击复用的本地入口。
-- 当前仓库里仍然存在、可直接复用的 refine 资产主要是：
-  - [presets/broad_search_neighbors/template.json](presets/broad_search_neighbors/template.json)
-  - [presets/unsystematic60_refine_round14/template.json](presets/unsystematic60_refine_round14/template.json)
-  - [presets/unsystematic60_refine_round15/template.json](presets/unsystematic60_refine_round15/template.json)
-  - [presets/systematic30_refine_round16/template.json](presets/systematic30_refine_round16/template.json)
-  - [presets/unsystematic60_refine_round14/fields.txt](presets/unsystematic60_refine_round14/fields.txt)
-  - [presets/systematic30_refine_round16/fields.txt](presets/systematic30_refine_round16/fields.txt)
-
-Preset 约定：
-- `template.json` 保持为默认、窄化后的生产模板库。
-- 定向本地 sweep 保留在对应的 `presets/<name>/` 下。
-- 需要使用专项预设时，从 `datasets/model51/presets/<name>/` 显式加载所需文件。
-- 当前 broadening pack 是 `datasets/model51/presets/broad_search_neighbors/template.json`
-- 如果某个 focused experiment 需要稳定的手工字段清单，把它放在对应 preset 的 `fields.txt`，而不是 `cache/`
-- grouped `market` zscore 家族、额外 decay-window 家族，以及 bucket-volatility 变体，在失去默认队列资格后，都应放在这里
-- 专项 preset 现在应该优先围绕新的默认主干展开：
-  - `ts_zscore_120`
-  - `group_zscore_subindustry_120`
-  - `ratio_cap_zscore_60/120`
-  - `bucket_cap_ratio_zscore_60/120`
-  - `mean_reversion_60/120_252`
-
-当前这轮更窄聚焦背后的证据：
-- 历史运行中，某些风险字段分支曾经出现过 `submittable=true` 或 near-pass，但在 self-correlation 门槛收紧后，这些信号本身已不足以支撑继续扩预算。
-- `beta_last_*_spy` 和 `correlation_last_*_spy` 在 broad 与 focused 运行里都持续偏弱，因此已移出默认 refine 白名单。
-- 当前 `focused` preset 的 `fields.txt` / `templates.txt` 只保留仍值得试探的 `systematic/unsystematic risk` 主分支，并把更弱的 `beta/correlation` spy 分支剔除。
-- `window_sweep_round11_selfcorr_recheck` 重新验证了 `unsystematic_risk_last_360_days` 的 decay-window 分支（`market/industry`，窗口 `56/63/70`），全部 6 条候选都因 `SELF_CORRELATION` 一直 `PENDING` 被排除。
-- `group_branch_round12_recheck` 随后在 `unsystematic_risk_last_60/90/360_days` 上使用非 decay 的 group/bucket/time-series 模板重试，前 9 条候选仍然因为同样原因被排除。
-- `systematic_branch_round13_recheck` 又在 `systematic_risk_last_30/60/90_days` 上重复这些非 decay 模板家族，全部 9 条候选同样因为 `SELF_CORRELATION` 未终态而被排除。
-- `focused_validation` 则重新以更窄的 `5 fields x 4 templates = 20` 验证集运行，所有候选都拿到了终态结果。这样之前的模糊点被去掉了：当前主阻塞已经不再是 `SELF_CORRELATION`，而是普通质量门槛，尤其是 `LOW_FITNESS`。
-- 在更早一轮 focused validation 中，`unsystematic_risk_last_60_days` 一度是最接近的 near-pass 分支，本地前三条最好结果分别是：
-  - `model51_ts_zscore_120`：`fitness=0.85`
-  - `model51_bucket_cap_zscore_120`：`fitness=0.83`
-  - `model51_ts_rank_120`：`fitness=0.78`
-- 但后续 `2026-07-08 round15` 已经证明，这条 `unsystematic60` 分支没有继续抬升：
-  - `tested=16`
-  - `submittable=0`
-  - 没有突破 `round14` 的 near-pass 天花板
-- 因此它已从 active refine branch 降级为 archived near-pass branch；当前文档直接保留这个结论，不再引用未进仓的结果复盘文件。
-
-随后仓库把 active branch 切到了 `systematic_risk_last_30_days`，并准备了：
-
-- [presets/systematic30_refine_round16/fields.txt](presets/systematic30_refine_round16/fields.txt)
-- [presets/systematic30_refine_round16/template.json](presets/systematic30_refine_round16/template.json)
-
-但 `2026-07-17 round16` 的最新结果同样没有形成新增价值：
-
-- `tested=24`
-- `submittable=0`
-- `error_count=1`
-- `queue_timeout_count=1`
-
-本轮最核心的几个模板结果：
-
-- `bucket_cap_ratio_zscore_60` 大多停在 `Sharpe ~= 0.79`、`Fitness ~= 0.37`
-- `ratio_cap_zscore_60` 大多停在 `Sharpe ~= 0.60 ~ 0.72`、`Fitness ~= 0.35 ~ 0.37`
-- `bucket_cap_ratio_zscore_42` 也只有大约 `Sharpe ~= 0.84`、`Fitness ~= 0.37`
-- `zscore_126` 邻居更差，还出现了 `LOW_SUB_UNIVERSE_SHARPE`
-
-到当前阶段，`model51` 的判断应更新为：
-
-- `beta/correlation` 家族依旧偏弱，不需要回头恢复
-- `unsystematic_risk_last_60_days` 保留为已知 near-pass 参考，但不再继续加预算
-- `systematic_risk_last_30_days` 这轮也没能证明自己值得继续 refine
-- 因此 `model51` 当前更适合整体暂停新增本地 refine 预算，而不是继续 broad sweep 或局部微调
-
-## 待确认问题
-
-- 只有未来又出现 `PENDING` 卡死时，才再开一轮以 self-correlation 为中心的诊断；它不再是当前 round14 路径的默认下一步。
-- 只有后续结果表明风险字段对高波动/低波动 regime 有明显分裂时，才值得补 regime-aware 变体。
-- 继续复查，是否能把某个一阶 rank/zscore 模板下沉到 grouped bucket 变体之后。
+只有获得独立的市场 regime 条件、第二风险向量，或数据集新增不同语义字段时才重开。
+届时优先验证正交增量信息，不恢复旧 preset。

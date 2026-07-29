@@ -1,6 +1,0 @@
-implied_volatility_mean_skew_20
-implied_volatility_mean_skew_30
-implied_volatility_mean_skew_60
-implied_volatility_mean_skew_90
-implied_volatility_mean_20
-implied_volatility_mean_60

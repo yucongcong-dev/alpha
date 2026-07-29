@@ -1,4 +1,0 @@
-debt
-debt_lt
-debt_st
-fnd6_cptnewqeventv110_apq

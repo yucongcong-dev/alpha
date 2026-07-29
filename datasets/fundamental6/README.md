@@ -1,75 +1,52 @@
-# fundamental6 说明
+# fundamental6
 
-## 执行摘要
+## 当前状态
 
-如果只看一页，当前 `fundamental6` 可以直接理解成下面这张状态卡：
+`fundamental6` 是维护池，不再承担 broad-search 预算。现阶段只保留已经重复验证过的
+`cashflow_op / cap` 双主线，用于低频健康检查和提交前复跑。
 
-- 正式主干：
-  - `cashflow_op`
-  - 主表达式分成两条已验证主线：
-    - `group_rank(ts_zscore(winsorize(ts_backfill(cashflow_op, 120), std=4)/cap, 252), subindustry/industry)`
-    - `group_rank(ts_delta(winsorize(ts_backfill(cashflow_op, 120), std=4)/cap, 63) / ts_std_dev(winsorize(ts_backfill(cashflow_op, 120), std=4)/cap, 126), subindustry)`
-- 已验证通过：
-  - `cashflow_op / cap / grouped zscore_252`
-  - `cashflow_op / cap / group delta-over-std 63/126`
-- 近通过但未过线：
-  - `ts_decay_linear(group_rank(ts_zscore(winsorize(ts_backfill(cashflow_op, 120), std=4)/cap, 252), subindustry), 20)`
-  - 常见卡点：`LOW_SHARPE ~= 1.20~1.21`、`LOW_FITNESS ~= 0.78~0.79`
-- 事件型备选：
-  - `cogs`
-  - 最强也只到大约 `Sharpe ~= 0.89`、`Fitness ~= 0.79`
-- 向量观察线：
-  - `fnd6_cptnewqeventv110_lctq`
-  - 当前只保留 `vec_avg_decay_120`
-- 已降级字段：
-  - `fnd6_cptnewqeventv110_dpq`
+现役策略资产：
 
-当前阶段结论：
+- [cashflow_submit_core/template.json](presets/cashflow_submit_core/template.json)
+- [cashflow_submit_core/fields.txt](presets/cashflow_submit_core/fields.txt)
+- [cashflow_submit_core/templates.txt](presets/cashflow_submit_core/templates.txt)
 
-- `fundamental6` 已经不是“继续找方向”的阶段，而是“接受单主线现实，并控制备选线预算”的阶段
-- 最值得投入的仍然是 `cashflow_op` submit-oriented 微调
-- `cogs` 和 `lctq` 都保留研究价值，但都不应继续拿主预算大规模扩张
-- `dpq` 当前可以视为低优先级暂停线
+其余历史、观察和单模板 preset 已删除；关键结论已经收录在本文，不再维护可执行副本。
 
-当前推荐动作：
+## 已验证双主线
 
-1. 把 `cashflow_op` 视为唯一正式主干。
-2. 把 `cogs` 作为已验证但不过线的事件备选保留。
-3. 把 `lctq` 作为长期观察哨兵，仅保留最小观察包。
-4. 暂停继续追“第二主线”，除非后续平台或字段状态发生明显变化。
+字段：`cashflow_op`
 
-补充：
+1. 现金流相对市值的长期分组异常度
 
-- 截至 `2026-07-16 round14`，`cashflow_op` 已经不再只是“一条 grouped zscore 主干”
-- 它已经确认长出了第二条可提交分支：`group delta-over-std 63/126 over cap`
-- 因此当前最稳的理解应是：
-  - 数据集层面仍然是“单字段主干”
-  - 但字段层面已经是“单字段双结构主线”
+```text
+group_rank(
+  ts_zscore(winsorize(ts_backfill(cashflow_op, 120), std=4) / cap, 252),
+  subindustry
+)
+```
 
-## 当前执行入口
+- 模板：`hc_ratio_group_zscore_252_over_cap`
+- Alpha ID：`3qe7krMQ`
+- 2026-07-24 真实复跑：`submittable=true`
 
-如果只想按当前仓库现役方案执行，直接按下面理解：
+2. 现金流相对市值的变化强度
 
-- 数据集定位：
-  - `fundamental6` 现在是“维护池 / 低频复跑池”
-  - 不是当前主探索入口
-- 当前唯一正式主干：
-  - `cashflow_op`
-- 当前现役资产：
-  - 模板包：[cashflow_submit_core preset](presets/cashflow_submit_core/template.json)
-  - 字段白名单：[fields.txt](presets/cashflow_submit_core/fields.txt)
-  - 模板白名单：[templates.txt](presets/cashflow_submit_core/templates.txt)
-- 当前次主线验证资产：
-  - 模板包：[cashflow_submit_zscore_core preset](presets/cashflow_submit_zscore_core/template.json)
-- 当前观察线：
-  - [lctq_watch preset](presets/lctq_watch/template.json)
-- 当前不建议做的事：
-  - 不恢复 broad-search
-  - 不继续扩 `cogs`
-  - 不把 `lctq` 重新扩成第二主线
-  - 不再围绕 `dpq` 单独加预算
+```text
+group_rank(
+  ts_delta(winsorize(ts_backfill(cashflow_op, 120), std=4) / cap, 63)
+  / ts_std_dev(winsorize(ts_backfill(cashflow_op, 120), std=4) / cap, 126),
+  subindustry
+)
+```
 
-当前最推荐的命令是：
+- 模板：`group_ratio_delta_over_std_63_126_over_cap`
+- Alpha ID：`A17weAVw`
+- 2026-07-24 真实复跑：`submittable=true`
+
+两条主线曾在同一次最小 core pack 复跑中同时通过，当前不需要再拆分成独立 preset。
+
+## 推荐命令
 
 ```bash
 PYTHONPATH=src python3.10 -m alpha \
@@ -78,349 +55,33 @@ PYTHONPATH=src python3.10 -m alpha \
   --include-fields-file datasets/fundamental6/presets/cashflow_submit_core/fields.txt \
   --include-templates-file datasets/fundamental6/presets/cashflow_submit_core/templates.txt \
   --no-auto-update-blacklist \
-  --run-name verify_cashflow_core_$(date +%F)
+  --limit 1 \
+  --max-templates-per-field 2 \
+  --run-name verify-cashflow-core
 ```
 
-如果只是想快速判断“这条线还活不活着”，优先跑上面这条，不要先去翻历史归档包。
+先使用 `--dry-run-plan` 确认只出现两个现役模板名。已有 feedback 可能为每个模板展开
+少量 settings 变体，因此 simulation 数可以大于 2。程序只做 simulation/check，不自动提交 Alpha。
 
-## 定位
-`fundamental6` 当前应被视为一个慢频基本面数据集。
+## 已停止方向
 
-当前模板库故意偏向以下方向：
-- 长窗口稳定化（`60/120/252/504`）
-- 多种预处理变体（`backfill+winsorize`、`longfill`、`rawfill`）
-- 用 ratio/pair 模板降低 self-correlation
-- 用 `densify` 支持 bucket 分组
-- 给向量字段使用字段自身变化触发
+- `cogs`、`dpq`、`lctq` 第二主线扩张
+- `industry decay`、`backfill 504`、`trade_when(volume)`
+- 普通短窗口和与双主线高度相似的密集邻居
+- 恢复大字段池和大模板池
 
-## 官方口径
-- WorldQuant BRAIN 的 alpha examples 明确支持 neutralization、grouped ranking、以及结构化表达式。
-- 官网按数据类别给出的通用建议是：Fundamental Dataset 优先以 `Industry` Neutralization
-  作为基线，因为同一基本面指标对不同行业的含义通常不同。
+2026-07-29 还验证了应计/现金质量关系：
 
-官方字段元信息层面：
-- 字段筛选和排序会使用 `coverage`、`dateCoverage`、`alphaCount`、`userCount`
-- 事件前缀字段通常需要更严格的阈值处理
-- 当目标 Region 的 Fundamental 使用占比过高时，平台可能暂时禁用相关字段的模拟和提交；需要在 [Alpha distribution](https://platform.worldquantbrain.com/alphas/distribution) 降到 `15%` 以下后恢复访问
+```text
+(cashflow_op - income) / assets
+```
 
-## 基本面假设地图
+- 长期异常度：Alpha `MPLZmvna`，Sharpe `-0.04`，Fitness 约 `0`
+- 变化强度：Alpha `6XeJOkmG`，Sharpe `0.11`，Fitness `0.02`
 
-默认模板不应只按字段名扫库，而应先归入可解释的财务假设：
+该关系明显弱于现有双主线，不再继续调窗口、Decay 或 Neutralization。
 
-- 盈利能力：利润、毛利、经营利润相对资产、收入或资本的效率
-- 流动性：现金、短期资产和短期负债之间的偿付能力
-- 偿债能力：债务、利息负担与资产或现金流之间的关系
-- 现金流质量：经营现金流相对利润、资产、收入或市值的质量
-- 成长：收入、利润、资产和现金流的中长期变化
-- 估值：企业价值或市值相对利润、现金流、资产的定价
+## 重新开启探索的条件
 
-优先构造有财务恒等式或关系约束支撑的表达式，例如资产与负债/权益、收入与费用、现金流利润与应计利润的差异。现金流显著强于会计利润时可能代表更高盈利质量；利润增长但经营现金流没有同步时，应警惕应计项驱动。
-
-行业口径不一致时，可以围绕资产规模、流动性或自定义财务分类构造 `bucket + densify` 分组，但要控制组数并验证每组样本量。
-
-## Neutralization 建议
-
-官方类别级建议和本地运行证据需要同时保留：
-
-- 官方基线：`Industry`
-- 本地已验证挑战版本：`Subindustry`
-- `cashflow_op / cap` 这类 grouped relation，应同时保留 Industry 和 Subindustry 对照
-- 模板内使用 `group_rank / group_zscore` 不等于已经中性化；仍需明确 settings 层策略
-- 模板内使用 `group_neutralize` 时，settings 层设为 `None`，避免双重中性化
-- 市值或流动性 bucket 统一先经过 `densify()`，并控制 bucket 数量，避免小组样本过少
-
-选择最终 Neutralization 时，不只比较最高 Sharpe，还要同时看 Sub-Universe、
-权重集中度和相邻设置的稳定性。
-
-## 官方数据画像
-
-基于 `2026-07-10` 对 `api.worldquantbrain.com/data-fields` 的官方接口查询：
-- 字段总数：`886`
-- 字段类型：
-  - `MATRIX = 574`
-  - `VECTOR = 312`
-- 类别分布：
-  - `Fundamental = 886`
-- 元信息形态：
-  - 全部字段 `coverage = 0.5`
-  - 全部字段 `dateCoverage = 1.0`
-  - 全部字段 `name = null`，实际可用标识就是字段 `id`
-
-数据结构上的明显分层：
-- 一层是传统慢频基本面/会计字段，类型为 `MATRIX`
-  - 例如：`assets`、`cash_st`、`cashflow_op`、`cogs`、`debt`、`debt_lt`
-- 另一层是大量前缀化的事件/派生字段
-  - `fnd6_newqeventv110_* = 217`
-  - `fnd6_eventv110_* = 35`
-  - `fnd6_cptnewqeventv110_* = 19`
-
-拥挤度画像：
-- 全体字段中位数：
-  - `alphaCount ~= 487`
-  - `userCount ~= 246`
-- `MATRIX` 字段明显更拥挤：
-  - 中位数 `alphaCount ~= 737.5`
-  - 中位数 `userCount ~= 346`
-- `VECTOR` 字段明显更不拥挤：
-  - 中位数 `alphaCount ~= 70`
-  - 中位数 `userCount ~= 49.5`
-
-最拥挤的经典字段示例：
-- `assets`: `alphaCount=168132`, `userCount=52788`
-- `enterprise_value`: `alphaCount=45876`, `userCount=11908`
-- `debt`: `alphaCount=31574`, `userCount=12052`
-- `capex`: `alphaCount=30914`, `userCount=13471`
-- `cashflow_op`: `alphaCount=22809`, `userCount=9407`
-
-相对不拥挤的字段，多数集中在事件/向量支路，而不是经典会计核心字段。
-
-## 对模板设计的直接启示
-
-- `fundamental6` 不是一个“小而纯”的会计数据集，它本质上是“基本面主库 + 大量事件/向量支路”的混合数据集。
-- broad-search 默认主干应先围绕拥挤的 `MATRIX` 核心设计，因为大众表达式最容易在那里发生碰撞。
-- `VECTOR` 和带 event 前缀的字段应继续独立成分支，因为它们的拥挤度画像和表达式形态，都和普通标量基本面不同。
-- 由于官方元信息里统一是 `coverage=0.5`，所以 `backfill/stabilization` 不是偶发修补，而是基础动作。
-- 由于官方元信息里统一是 `dateCoverage=1.0`，当前主要问题并不是历史跨度不够，而是更新慢、有效变化稀疏。
-- 对高 `alphaCount` 的核心字段，优先考虑 relation-based、grouped、specialty refine 分支，而不是继续堆单字段窗口邻居。
-
-## 本地证据
-
-公开脚本启发：
-- 本地 public script 明显强调 `winsorize(ts_backfill(...), std=4)`
-- 也使用了 `bucket(...)` 分组和 `trade_when(...)` 触发
-- xiegengcai factory 使用 `vec_avg` + `vec_sum` 双通道、`densify()` bucket 分组，以及字段自身变化触发的事件逻辑
-
-本地运行证据：
-- 短窗 `delta/group_delta/vol_scaled_delta` 家族在该数据集上持续偏弱
-- 更接近阈值的字段与模板家族，多出现在 `cash_st`、`debt`、`debt_lt`、`cogs`、`cashflow_op` 及其相关 ratio 周围
-- 事件/向量字段在单独的 `event_conditioned` 支路里表现更合理；混进通用模板池时，表现明显变差
-- 模板内 `group_neutralize` 与 settings 层 `neutralization=SUBINDUSTRY` 叠加，会形成双重中性化，压缩信号
-- 短窗模板（`20/5`）在季度更新字段上几乎没有有效信号
-- v3 模板的 53 条结果全部 `submittable=0`，主因是 self-correlation
-
-## 当前阶段结论
-
-基于 `2026-07-10` 到 `2026-07-13` 的 `round3 -> round6` 本地运行结果，`fundamental6` 当前已经不再处于“找方向”阶段，而是进入“围绕已验证主线做 submit-oriented 深挖”阶段。
-
-阶段性结论：
-- 当前最强、最稳定的主线是：
-  - `cashflow_op`
-  - `field / cap`
-  - `ts_zscore(..., 252)`
-  - `group_rank(..., subindustry/industry)`
-- 已经稳定打出 `submittable` 的表达式包括：
-  - `group_rank(ts_zscore(winsorize(ts_backfill(cashflow_op, 120), std=4)/cap, 252), subindustry)`
-  - `group_rank(ts_zscore(winsorize(ts_backfill(cashflow_op, 120), std=4)/cap, 252), industry)`
-  - `group_rank(ts_delta(winsorize(ts_backfill(cashflow_op, 120), std=4)/cap, 63) / ts_std_dev(winsorize(ts_backfill(cashflow_op, 120), std=4)/cap, 126), subindustry)`
-- 最接近门槛、但还未正式过线的 near-pass 主线是：
-  - `ts_decay_linear(group_rank(ts_zscore(winsorize(ts_backfill(cashflow_op, 120), std=4)/cap, 252), subindustry), 20)`
-  - 它通常卡在：
-    - `LOW_SHARPE ~= 1.20~1.21`
-    - `LOW_FITNESS ~= 0.78~0.79`
-
-这说明：
-- `cashflow_op + cap + grouped zscore_252` 不是偶然结果，而是当前数据集里已经被重复验证的 submit 主干
-- `cashflow_op + cap + grouped delta-over-std 63/126` 也已经被验证成第二条可提交结构
-- `subindustry` 与 `industry` 两个 grouped 版本都值得保留
-- 相比之下，普通单字段 `decay/zscore` 模板大多只是“能跑”，不是“能交”
-
-## 历史验证记录
-
-逐轮实验过程、旧候选分支和 2026-07-16～2026-07-24 的复盘证据已经迁入
-[presets/archive/README.md](presets/archive/README.md)。本文件只维护当前仍有效的结论、
-现役资产和执行规则，避免历史过程覆盖当前决策。
-## 模板包阶段角色
-
-到当前阶段，`fundamental6` 的本地资产应按“现役 / 观察 / 归档”理解：
-
-现役：
-- `datasets/fundamental6/template.json`
-  - 第一阶段 broad 主干探索
-- `datasets/fundamental6/presets/default_neighbors/template.json`
-  - 第二阶段现役 refine 扩展带
-  - 只保留仍有增量价值的 `cashflow_op` 主线近邻，以及最小 `VECTOR` 哨兵
-- `datasets/fundamental6/presets/cashflow_submit_core/template.json`
-  - 最小复跑、主干健康检查、提交前低成本稳定性确认
-
-观察：
-- `datasets/fundamental6/presets/lctq_watch/template.json`
-  - 长期观察 `VECTOR` 支路是否自然改善
-  - 不是 submit 主包
-
-归档：
-- `datasets/fundamental6/presets/archive/*/template.json`
-  - 保存 round5~round9 这类历史轮次包
-  - 用途是回看结论，不再作为现役执行入口
-- `datasets/fundamental6/presets/archive/*/fields.txt`
-  - 保存历史字段白名单 fixture
-  - 当前只保留观察线所需的最小字段文件在现役目录
-
-## v4 模板调整
-
-1. 去掉模板内中性化：所有模板移除 `group_neutralize`，只依赖 settings 里的 `neutralization=SUBINDUSTRY`
-2. 删除短窗模板：去掉 `ts_rank_20`、`ts_zscore_20`、`decay_5`、`stddev_20`、`ir_20`，因为季度字段在 20 天窗口基本无意义
-3. 增加预处理变体：
-   - `{field_longfill}` = `winsorize(ts_backfill(field, 252), std=3)`
-   - `{field_rawfill}` = `ts_backfill(field, 120)`
-4. 增加 ratio/pair 模板：补充 `ratio_cap`、`ratio_assets`、`bucket_ratio` 家族，以降低和现有 alpha 的同质化
-5. bucket 分组统一加 `densify()`：避免稀疏组问题
-6. 事件字段改用自身变化触发：
-   - `ts_delta({field}) != 0`
-   - `days_from_last_change({field}) <= 5`
-   用来替代泛化的 volume/returns 触发
-7. 增加 `vec_sum` 变体：和 `vec_avg` 一起形成双通道
-8. 增加 hump 参数扫描：`0.2/0.3/0.4/0.5`
-9. 增加长窗口变体：`ts_rank_504`、`ts_zscore_126`、`decay_120`
-
-## 默认模板库边界
-
-当前默认库应理解为：给 broad exploration 用的、进一步窄化后的生产主队列。
-
-核心原则：
-- `default` 里只保留 4 个慢频核心种子
-- vector / event-conditioned 家族是专项分支，不是通用 broad-search 默认种子
-- 对 `VECTOR`，broad 中只保留单通道最小代表主干；`GROUP / SET` 在 `fundamental6` 当前不作为现役分支维护
-- cross-field ratio/pair 探索集中在 account/matrix 专用支路，不要把 scalar `default` 撑得过宽
-- 额外长窗口邻居、`rawfill/longfill` 近邻、旧式横截面包装器，如果没有反复证明有效，就都作为 refine 候选
-- 单独的 decay 邻居、liquidity-bucket 变体，也都更适合作为 refine 候选，而不是 broad-search 默认
-- 当前这些仍值得保留的恢复分支，收敛在 `datasets/fundamental6/presets/default_neighbors/template.json`
-
-Refine pack 约定：
-- `default_neighbors preset` 现在应被理解为新默认主干外侧的一圈“现役扩展带”，而不是旧 scalar 剩余物的堆放地
-- 它主要负责扩以下内容：
-  - `cashflow_op` 当前两条正式主线附近的低预算验证邻居
-  - 仍接近门槛的 `subindustry decay near-pass`
-  - 一个最小 `VECTOR` 观察哨兵
-- 已被证伪或只剩历史价值的 `industry` 弱版本、`backfill 504`、`trade_when(volume)`、大批普通时间窗邻居，都下沉到 `archive/`
-
-## 不建议做的事
-
-- 不要把短窗模板当作季度更新字段的一线默认模板。
-- 不要把 event/vector 专用家族重新混回通用 scalar broad-search 池。
-- 不要重新引入模板内 `group_neutralize`，再和 settings 层 `neutralization=SUBINDUSTRY` 叠加。
-
-## 哪些方向更适合 fundamental6
-
-- 慢频单字段稳定器，例如 `ts_rank_120`，以及 `zscore + decay` 复合主干
-- 排序前做较重的预处理，尤其是 `ts_backfill + winsorize`
-- relation-based 模板，例如 `ratio_cap`、`ratio_assets`、`bucket_ratio` 等跨字段比较
-- 带 `densify(...)` 的 bucket/group 结构，尤其是围绕 `cap` 和流动性分层
-- 用字段自身变化触发的 VECTOR/event 模板，而不是泛化市场活跃度触发
-- 默认 broad-search 先窄，再接 refine preset，而不是第一轮就压入大量近似模板
-- 对高拥挤经典字段，先用 relation/grouped 主干，再把额外单字段邻居留到 refine
-
-## 哪些方向通常表现较差
-
-- 在慢更新基本面字段上使用 `5/20` 这类短窗 rank、zscore、decay 家族
-- 一大批只在邻近窗口上微调的单字段模板
-- 把 scalar、vector、event-conditioned 结构混进同一个通用 broad-search 池
-- 双重中性化：模板内 `group_neutralize` + settings 层 `neutralization=SUBINDUSTRY`
-- 在主要失败模式已经明确后，仍然用 broad search 单纯放大数量
-- 把 `vec_sum` 双通道邻居和更长窗口邻居，当作第一轮默认模板，而不是第二轮 refine 分支
-
-## 推荐流程
-
-Broad exploration：
-- 默认主干保持窄，并且显式适配慢频数据
-- vector/event-conditioned 支路保持专项化，不和通用 broad-search 默认种子混用
-- 让 field-relation 模板逐步替代单字段变换的堆叠
-
-Focused refine：
-- 现役 `default_neighbors preset` 只负责主线近邻与最小观察哨兵
-- 只有在主 scalar 主干被验证后，再扩少量 submit-oriented 邻居
-- 如果只是回看历史结论，去 `presets/archive/`，不要直接把历史 preset 当现役入口
-
-## blacklist 的当前作用
-
-- `datasets/fundamental6/blacklist.json` 仍然有保留必要
-- 原因不是它现在内容丰富，而是运行时策略仍会读写这个文件；它是统一 blacklist 机制的一部分，不是纯文档摆设
-- 当前它为空，意味着：
-  - 现阶段 `fundamental6` 的主问题已经主要通过模板收窄和流程收口解决
-  - 还没有新的稳定弱模板需要沉淀成 dataset 级 blacklist 规则
-- 因此现在更合理的做法是“保留空文件作为运行时边界”，而不是删除该文件
-
-## 第一轮研究流程
-
-1. 从窄化后的 `default` 主干开始，而不是从专项 preset 开始
-2. 第一轮 broad search 只跑一个小批次，回答三个问题：
-   - 是否出现 `near_pass`
-   - 是否仍由 `self-correlation` 主导失败
-   - 哪些字段家族反复接近阈值
-3. 优先阅读这些已知更有希望的字段家族：
-   - `cash_st`
-   - `debt`
-   - `debt_lt`
-   - `cogs`
-   - `cashflow_op`
-   - 相关 ratio 字段
-4. 如果结果反复显示 near-threshold，就切换到 `default_neighbors preset`，而不是继续拓宽 `default`
-5. 如果结果仍然是高度同质化失败，就增加 field-relation 结构，而不是增加更多 scalar 邻居
-6. 只有在主 scalar 主干基本看清后，再打开专项支路：
-   - vector/event-conditioned 分支
-   - grouped bucket 分支
-   - 长窗口 relation 邻居
-
-第一轮的实际目标：
-- 判断窄化后的 broad 主干，是否已经产生更有区分度的失败，而不是旧的 self-correlation 重复模式
-- 找出 1 到 3 个值得单独 refine 的字段家族
-
-## 待确认问题
-
-- 继续推动从单字段变换，转向 field-relation 模板。
-- 继续评估剩余的通用 `ts_rank/ts_zscore/stddev` 默认模板，是否还能进一步收窄。
-- 持续把“官网直接支持的结论”和“本地运行推导出来的结论”分开记录。
-
-## 当前阶段作战规则
-
-截至 `2026-07-24`，`fundamental6` 不应再被当作主探索数据集，而应被当作
-“现役主线运营池 + 低频复核池”。
-
-### 继续做
-
-- 继续做 `cashflow_op` 双主线的低频健康检查
-  - 目标是确认已知主线是否仍然稳定 `submittable`
-  - 它是运营型复核，不是新方向 broad search
-- 继续做 `cashflow_op` 同结构小扰动验证
-  - 只允许极小范围的 `neutralization / truncation / decay` 对照
-  - 目标是看稳健性，不是扩大家族
-- 继续保留 `lctq` 这类最小观察哨兵
-  - 只看是否自然改善
-  - 不把它重新扩成第二主线候选包
-- 继续允许极少量“同结构异字段簇”验证
-  - 一次只看 `1-2` 个最像 `cashflow_op` 逻辑的候选
-  - 目的只是判断是否存在第二主线苗头
-
-### 停止做
-
-- 停止新的 broad search
-  - 不再做大字段池 + 大模板池扩张
-- 停止围绕已知弱线反复重跑
-  - `cogs`
-  - `dpq`
-  - 弱 `industry decay`
-  - `backfill 504`
-  - `trade_when(volume)` 这类已判弱包装
-- 停止短窗微调刷数量
-  - 对慢频基本面字段，短窗邻居大多只会制造噪音
-- 停止把主要预算花在与 `cashflow_op` 高相似的小变体上
-  - 这类结果通常“能跑但没有新增价值”
-
-### 正式切库条件
-
-满足下面任意 `2` 条，就应把 `fundamental6` 正式降级为“维护池”，并把主预算切去下一个数据集：
-
-- 连续 `2-3` 轮低频复跑，都只是重复命中旧主线，没有新结构增量
-- 新尝试的近邻变化，始终不能超过已有 `cashflow_op` 双主线
-- 观察线如 `lctq`、第二字段簇验证，连续多轮都没有抬头
-- 大部分新结果都只是“老结论再确认一次”，没有新增研究价值
-
-### 当前结论
-
-以 `2026-07-24` 为时点，当前更合适的定位是：
-
-- `fundamental6` 不彻底放弃
-- 但也不再占用主探索预算
-- 它应保留为：
-  - 低频复跑池
-  - 文档沉淀池
-  - 提交前健康检查池
+只有出现新的基本面字段、独立经济关系或平台字段状态明显变化时，才重新建立专项 preset。
+日常只做双主线低频复跑；没有新增信息时，不恢复 broad-search。

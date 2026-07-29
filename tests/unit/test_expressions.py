@@ -264,16 +264,39 @@ def test_build_expression_candidates_narrows_event_field_template_pool() -> None
     assert all("vec_avg(vec_avg(" not in item.expression for item in candidates)
 
 
-def test_fundamental6_refine_vector_templates_do_not_double_wrap_vec_avg() -> None:
+def test_fundamental6_refine_vector_templates_do_not_double_wrap_vec_avg(
+    tmp_path: Path,
+) -> None:
     policy = get_dataset_expression_policy("fundamental6")
     field = {"id": "fnd6_cptnewqeventv110_apq", "type": "VECTOR"}
     template_file = (
-        Path(__file__).resolve().parents[2]
+        tmp_path
         / "datasets"
         / "fundamental6"
         / "presets"
-        / "default_neighbors"
+        / "vector_refine_fixture"
         / "template.json"
+    )
+    template_file.parent.mkdir(parents=True)
+    template_file.write_text(
+        """{
+  "default": [],
+  "VECTOR": [
+    {
+      "name": "vec_avg_decay_120",
+      "expression": "rank(ts_decay_linear(ts_backfill({field}, {backfill_window}), 120))",
+      "priority": 1000,
+      "family": "decay_level",
+      "layer": "vector",
+      "role": "refine_neighbor",
+      "activation_scope": "refine"
+    }
+  ],
+  "GROUP": [],
+  "SET": []
+}
+""",
+        encoding="utf-8",
     )
     template_library = load_template_library(str(template_file))
 

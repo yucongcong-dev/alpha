@@ -77,7 +77,7 @@ alpha/
 - `20260727-compare-neutralization`：同一字段或同一家族的对照实验
 - `20260727-scratch-filter-probe`：短期排障或临时验证
 
-runner 会把每个完成 run 去重合并到 `datasets/<dataset_id>/feedback/<market_scope>/`，供相同市场范围的后续 run 自动跳过已尝试组合、继承模板 registry 和选择 near-pass 候选。合并过程由事务锁保护，并按提交终态、revision 和时间解决重复记录冲突；`run_index.json` 让启动阶段只加载新增或变化的 run。它仍是可重建的本地研究状态；成熟结论应继续沉淀到 `template.json`、`presets/` 或 dataset README。
+runner 会把每个完成 run 去重合并到 `datasets/<dataset_id>/feedback/<market_scope>/`，供相同市场范围的后续 run 自动跳过已尝试组合、继承模板 registry 和选择 near-pass 候选。合并过程由事务锁保护，并按提交终态、revision 和时间解决重复记录冲突；`run_index.json` 让启动阶段只加载新增或变化的 run。它仍是可重建的本地研究状态；成熟结论应继续沉淀到 `template.json`、现役 `presets/` 或 dataset README。结论完成沉淀后，可删除对应 `runs/`。
 
 ## 模板资产
 
@@ -87,7 +87,7 @@ runner 会把每个完成 run 去重合并到 `datasets/<dataset_id>/feedback/<m
 - 数据集专属模板说明：`datasets/<dataset_id>/README.md`
 - 专项运行预设：`datasets/<dataset_id>/presets/<name>/`
 - 预设内可按需提供 `template.json`、`fields.txt` 和 `templates.txt`
-- 历史预设：放在 `datasets/<dataset_id>/presets/archive/`
+- 历史或失败预设不长期保留；把关键结论写入 dataset README 后删除可执行副本
 
 当前实现采用“数据集专属模板库”模式：
 
