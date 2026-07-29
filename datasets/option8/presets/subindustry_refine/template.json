@@ -1,0 +1,19 @@
+{
+  "_comment": "option8 active refine preset — 2026-07-29 真实回测确认 mean_60 + subindustry + ts_zscore(60) 是当前最佳结构。",
+  "_comment_placeholders": "{field}=字段名, {field_preprocessed}=winsorize(ts_backfill({field}, {backfill_window}), std=4), {backfill_window}=settings.yaml expression.backfill_window",
+  "_dataset_id": "option8",
+  "default": [
+    {
+      "name": "option8_subindustry_zscore_60",
+      "expression": "group_rank(ts_zscore({field_preprocessed}, 60), subindustry)",
+      "priority": 1000,
+      "family": "group_zscore",
+      "layer": "group",
+      "stage": "group_second_order",
+      "dataset_tags": ["option8", "implied_volatility", "subindustry_refine"],
+      "role": "refine_neighbor",
+      "activation_scope": "refine"
+    }
+  ],
+  "VECTOR": []
+}

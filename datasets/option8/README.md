@@ -57,31 +57,35 @@
 
 这套默认库不是最终答案，而是第一轮“研究入口”。
 
-结合 `2026-07-24` 的第一轮真实运行，当前默认入口又收窄了一次：
+结合 `2026-07-24` 和 `2026-07-29` 的真实运行，当前策略已经从入口探索收敛为：
 
-- 默认首发模板先不再把 `group/sector zscore` 当主入口
-- 首轮字段白名单先聚焦 `mean_skew / mean`
-- `historical / parkinson` 暂时降级到第二轮验证
+- 字段：`implied_volatility_mean_60`
+- 结构：`group_rank(..., subindustry)`
+- 时间窗口：`ts_zscore(..., 60)`
+- 平台设置：继续使用 `Decay = 4`、`Neutralization = MARKET`
 
-## 第一轮优先字段
+现役资产统一收口在 `presets/subindustry_refine/`，不再保留每轮实验的临时 preset。
+弱实验结论写入本文，真实运行明细保留在本地 run/feedback 产物中。
 
-当前最建议先从以下家族开小样本，而不是全库混扫：
+## 当前优先字段
 
-- `implied_volatility_mean_skew_*`
-- `implied_volatility_mean_*`
+当前只保留一个主字段：
+
+- `implied_volatility_mean_60`
+
+`implied_volatility_mean_20` 降级为诊断对照，不再与主字段平分预算。
 
 当前不建议第一轮就把预算主力放到：
 
 - `implied_volatility_call_*`
 - `implied_volatility_put_*`
-- `historical_volatility_*`
-- `parkinson_volatility_*`
+- `implied_volatility_mean_skew_*`
 
 原因：
 
 - call/put level 本身更拥挤
-- `historical / parkinson` 首轮实盘验证里先暴露出弱信号和拥堵问题
-- 先用 `mean` / `mean_skew` 家族，更容易看出结构差异
+- `mean_skew_*` 的 plain `ts_zscore` 多数为负 Sharpe，spread 虽能转正但仍远离门槛
+- `mean_60` 在 subindustry + 60 日窗口下形成了当前唯一连续抬升的路径
 
 ## 2026-07-24 首轮真实验证
 
@@ -99,88 +103,145 @@ PYTHONPATH=src python3.10 -m alpha \
   --no-auto-update-blacklist
 ```
 
-当前已落地结果摘要：
+当前完整结果摘要：
 
-- 运行产物不作为长期知识资产；本轮关键结果已记录在本节
-- 已落地总数：`3`
+- 已落地总数：`38`
 - `submittable = 0`
-- 当前通过率：`0%`
-- `simulated but failed checks = 2 / 3 = 66.7%`
-- `runtime error = 1 / 3 = 33.3%`
+- `LOW_SHARPE + LOW_FITNESS = 36`
+- 并发配额错误：`2`
 
 当前暴露出的失败模式非常集中：
 
 - 质量失败：
-  - `LOW_SHARPE = 2`
-  - `LOW_FITNESS = 2`
+  - `LOW_SHARPE = 36`
+  - `LOW_FITNESS = 36`
 - 流程失败：
-  - `CONCURRENT_SIMULATION_LIMIT_EXCEEDED = 1`
+  - `CONCURRENT_SIMULATION_LIMIT_EXCEEDED = 2`
 
-已确认的弱组合：
+首轮最好组合：
 
-- `parkinson_volatility_30 + option8_sector_zscore_20`
-  - 两次都失败
-  - `Sharpe = 0.22`
-  - `Fitness = 0.05`
+- `parkinson_volatility_20 + option8_sector_zscore_20`
+  - `Sharpe = 0.76`
+  - `Fitness = 0.32`
+- `parkinson_volatility_90 + option8_ts_zscore_20`
+  - `Sharpe = 0.62`
+  - `Fitness = 0.30`
 
-这说明首轮主要不是“差一点点”，而是：
+这轮说明整体仍远离提交门槛，但不能根据 `parkinson_volatility_30` 的单点弱结果，
+把整个 sector 分组结构判定为无效。对 `parkinson_volatility_20`，sector 版本反而是首轮最好结果。
 
-- `parkinson_* + sector_zscore` 这条默认入口明显偏弱
-- 平台并发配额对 `option8` 首发也比较敏感
+## 2026-07-24 第二轮 mean focus 验证
 
-所以当前动作已经同步收口为：
+`phase2_mean_focus` 共落地 `34` 条结果：
 
-- 从默认模板库移除 `option8_sector_zscore_20`
-- 第一轮白名单字段回收到 `mean_skew / mean`
-- 后续若继续跑真实验证，优先先看 `mean_skew_*` 是否能出现 near-pass
+- `submittable = 0`
+- `LOW_SHARPE = 34`
+- `LOW_FITNESS = 34`
+- `LOW_SUB_UNIVERSE_SHARPE = 26`
+
+当前最好基线：
+
+- `implied_volatility_mean_60 + option8_ts_zscore_20`
+  - `Sharpe = 0.77`
+  - `Fitness = 0.30`
+- `implied_volatility_mean_20 + option8_ts_zscore_20`
+  - `Sharpe = 0.74`
+  - `Fitness = 0.27`
+
+已经可以暂停的分支：
+
+- `decay_zscore_20_5`：持续弱于 plain `ts_zscore_20`
+- `zscore_spread_20_120`：在 mean level 上明显退化
+- `mean_skew_*`：plain 版本多数为负 Sharpe，spread 版本虽转正但仍没有 near-pass
+
+这轮结果随后触发了受控的分组层级验证，完整结论见下一节。
+
+## 2026-07-29 subindustry 收敛验证
+
+本轮通过 VSCode 的 `alpha` 项目终端完成了五组真实实验，共 `20` 条 simulation，
+全部正常返回，`errors = 0`，但仍然 `submittable = 0`。
+
+### 分组层级比较
+
+固定 `ts_zscore(..., 20)` 后，分组越细，结果越强：
+
+| 字段 | plain Sharpe/Fitness | sector | industry | subindustry |
+| --- | --- | --- | --- | --- |
+| `mean_20` | `0.74 / 0.27` | `1.04 / 0.40` | `1.19 / 0.45` | `1.39 / 0.51` |
+| `mean_60` | `0.77 / 0.30` | `1.03 / 0.42` | `1.21 / 0.48` | `1.34 / 0.49` |
+
+结论：subindustry 是有效结构，不再回退到 plain/sector/industry。
+
+### 已否定的降换手方案
+
+- 平台 `Decay 4 -> 10`
+  - mean20：Sharpe `1.39 -> 0.98`，Fitness `0.51 -> 0.39`
+  - mean60：Sharpe `1.34 -> 1.06`，Fitness `0.49 -> 0.44`
+  - 换手虽从约 `0.41` 降到约 `0.26`，但收益和 Sharpe 同时下降
+- `trade_when(abs(zscore) > 0.5/1.0, ...)`
+  - 四条全部弱于无门控基线
+  - 最好只有 Sharpe `1.23`、Fitness `0.47`
+
+结论：当前信号依赖连续更新，不能靠全局平滑或事件门控直接解决 Fitness。
+
+### zscore 窗口比较
+
+延长时间窗口是本轮唯一持续有效的杠杆：
+
+| 字段 | 窗口 | Sharpe | Fitness | Returns | Turnover |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| `mean_60` | 20 | `1.34` | `0.49` | `5.39%` | `40.46%` |
+| `mean_60` | 40 | `1.55` | `0.71` | `6.87%` | `32.81%` |
+| `mean_60` | 60 | `1.58` | `0.78` | `7.46%` | `30.33%` |
+| `mean_60` | 90 | 通过 `1.25` | `0.68` | - | - |
+| `mean_60` | 120 | `1.07` | `0.50` | - | - |
+
+当前最佳 Alpha：
+
+- Alpha ID：`2rNW02YN`
+- expression：`group_rank(ts_zscore(winsorize(ts_backfill(implied_volatility_mean_60, 5), std=4), 60), subindustry)`
+- Sharpe：`1.58`
+- Fitness：`0.78`
+- Returns：`7.46%`
+- Turnover：`30.33%`
+- Sub-universe Sharpe：`0.91`，检查通过
+- concentrated weight：检查通过
+
+90/120 日结果已经回落，因此当前局部最优窗口固定为 `60`，不再继续向更长窗口外扩。
 
 ## 推荐命令
 
-先做 dry-run：
+复查当前最佳策略资产：
 
 ```bash
 PYTHONPATH=src python3.10 -m alpha \
   --dataset-id option8 \
   --neutralization MARKET \
-  --limit 8 \
-  --include-fields-file datasets/option8/presets/phase1_core/fields.txt \
-  --dry-run-plan \
-  --no-auto-update-blacklist
-```
-
-再做收窄后的真实小验证：
-
-```bash
-PYTHONPATH=src python3.10 -m alpha \
-  --dataset-id option8 \
-  --neutralization MARKET \
-  --limit 8 \
-  --max-templates-per-field 3 \
+  --template-library-file datasets/option8/presets/subindustry_refine/template.json \
+  --include-fields-file datasets/option8/presets/subindustry_refine/fields.txt \
+  --max-templates-per-field 1 \
   --max-templates-per-family 1 \
-  --include-fields-file datasets/option8/presets/phase1_core/fields.txt \
-  --run-name phase1entryvalidation \
+  --dry-run-plan \
+  --run-name option8_subindustry_refine \
   --no-auto-update-blacklist
 ```
+
+该表达式已经完成真实验证，不应仅改名后重复消耗 simulation 配额。
 
 ## 当前结论
 
-`option8` 现在最适合作为：
+`option8` 已从 broad-search 候选收敛为一条明确的观察线，但还没有完成“主线晋级”。
 
-- 新主线候选
-- 新模板入口
-- 新文档/流程验证对象
+截至 `2026-07-29`，它更准确的状态是：
 
-但它当前还没有完成“主线晋级”。
-
-截至 `2026-07-24`，它更准确的状态是：
-
-- 值得继续探索
-- 但必须在更窄字段、更窄模板下继续
+- 当前最佳结构已确定为 `mean_60 + subindustry + zscore(60)`
+- Sharpe、子市场 Sharpe 和权重检查已通过
+- 唯一主要失败项仍是 `LOW_FITNESS = 0.78 < 1.0`
 - 不适合立刻做大规模 full-run
 
 正确顺序应该是：
 
-1. 先用 `mean_skew / mean` 白名单继续跑小样本
-2. 看哪一支先出 near-pass
-3. 再决定是否把 `historical / parkinson` 放回第二轮
-4. 最后再考虑是否扩到 call/put level 或更长 tenor
+1. 保留当前最佳 Alpha 和 `subindustry_refine` 作为基线
+2. 停止 decay、trade_when、90/120 日长窗口和 broad-search
+3. 下一轮只有引入新的经济信息时才继续，例如 term-structure/相对价值组合
+4. 不再靠 50/70 等密集窗口微调追逐 Fitness，避免围绕单个样本过拟合
