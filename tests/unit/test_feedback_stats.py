@@ -73,6 +73,23 @@ def test_compile_field_feedback_tracks_best_score_and_template_info() -> None:
     assert summary["failed_check_counts"]["LOW_SHARPE"] == 2
 
 
+def test_compile_field_feedback_promotes_submittable_result() -> None:
+    passed = _make_result(
+        template_name="group_zscore_60",
+        template_family="group_zscore",
+        expression="group_rank(ts_zscore(cash_st, 60), subindustry)",
+        submittable=True,
+        failed_checks=[],
+    )
+
+    feedback = compile_field_feedback([passed])
+
+    summary = feedback["cash_st"]
+    assert summary["submittable_templates"] == 1
+    assert summary["best_score"] == 1.0
+    assert summary["best_template_name"] == "group_zscore_60"
+
+
 def test_compile_field_feedback_tracks_latest_result_timestamp() -> None:
     older = _make_result(failed_checks=[{"name": "LOW_SHARPE", "value": 0.9}])
     older.created_at = "2024-01-01T00:00:00Z"

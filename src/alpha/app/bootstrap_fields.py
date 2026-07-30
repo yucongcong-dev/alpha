@@ -187,7 +187,11 @@ def _is_promising_feedback(
 ) -> bool:
     """Require both score and a minimum sample count for strong pinning."""
     feedback = historical_state.field_feedback.get(field_id)
-    if feedback is None or priority < expression_policy.promising_field_min_priority:
+    if feedback is None:
+        return False
+    if _safe_int(feedback.get("submittable_templates")) > 0:
+        return priority > STATS_DEFAULT_SCORE
+    if priority < expression_policy.promising_field_min_priority:
         return False
     attempted = _safe_int(feedback.get("attempted_templates"))
     minimum = expression_policy.field_feedback_min_attempts_for_promising
@@ -324,6 +328,7 @@ def _select_diverse_fields(
     max_per_family: int,
     exploration_ratio: float,
     historical_state: HistoricalRunState,
+    expression_policy: DatasetExpressionPolicy,
 ) -> list[TemplateField | dict[str, Any]]:
     """Select a bounded exploit/explore mix while avoiding tenor-family monopolies."""
     if target <= 0 or len(fields) <= target:
@@ -333,13 +338,19 @@ def _select_diverse_fields(
     if target >= 2 and exploration_ratio > 0 and exploration_target == 0:
         exploration_target = 1
     exploitation_target = target - exploration_target
-    explored = [
+    promising = [
         field
         for field in fields
-        if historical_state.field_feedback.get(
-            str(first_non_empty(field.get("id"), SENTINEL_UNKNOWN))
+        if _is_promising_feedback(
+            str(first_non_empty(field.get("id"), SENTINEL_UNKNOWN)),
+            priority=_feedback_priority(
+                str(first_non_empty(field.get("id"), SENTINEL_UNKNOWN)),
+                historical_state=historical_state,
+                expression_policy=expression_policy,
+            ),
+            historical_state=historical_state,
+            expression_policy=expression_policy,
         )
-        is not None
     ]
     unexplored = [
         field
@@ -354,7 +365,7 @@ def _select_diverse_fields(
     selected_ids: set[str] = set()
     family_counts: dict[str, int] = {}
     _append_with_family_cap(
-        explored,
+        promising,
         selected,
         selected_ids,
         family_counts,
@@ -699,6 +710,7 @@ def prepare_fields_for_execution(
                 max_per_family=expression_policy.field_max_per_family,
                 exploration_ratio=expression_policy.field_exploration_ratio,
                 historical_state=historical_state,
+                expression_policy=expression_policy,
             ),
         )
     if offset > 0:

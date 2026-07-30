@@ -349,6 +349,64 @@ def test_limit_reserves_capacity_for_unexplored_fields() -> None:
     assert stats["selected_unexplored_count"] == 1
 
 
+def test_failed_feedback_does_not_consume_exploitation_budget() -> None:
+    fields = [
+        {
+            "id": field_id,
+            "coverage": 1.0,
+            "dateCoverage": 1.0,
+            "alphaCount": 100,
+            "userCount": 20,
+            "themes": [],
+            "dateCreated": "2025-01-01",
+        }
+        for field_id in ("failed_signal", "new_signal_a", "new_signal_b")
+    ]
+    selected, stats = prepare_fields_for_execution(
+        fields,
+        filters_dict=RunFilters(),
+        expression_policy=get_dataset_expression_policy("new_dataset"),
+        historical_state=HistoricalRunState(
+            field_feedback={"failed_signal": {"best_score": 0.1, "attempted_templates": 4}}
+        ),
+        args=Namespace(limit=2, offset=0, top_fields_by_feedback=0),
+    )
+
+    assert [row["id"] for row in selected] == ["new_signal_a", "new_signal_b"]
+    assert stats["selected_unexplored_count"] == 2
+
+
+def test_submittable_feedback_is_promising_even_after_single_attempt() -> None:
+    fields = [
+        {
+            "id": "passed_signal",
+            "coverage": 0.5,
+            "dateCoverage": 1.0,
+            "alphaCount": 100,
+            "userCount": 20,
+            "themes": [],
+            "dateCreated": "2025-01-01",
+        }
+    ]
+    selected, _ = prepare_fields_for_execution(
+        fields,
+        filters_dict=RunFilters(),
+        expression_policy=get_dataset_expression_policy("fundamental6"),
+        historical_state=HistoricalRunState(
+            field_feedback={
+                "passed_signal": {
+                    "best_score": 1.0,
+                    "attempted_templates": 1,
+                    "submittable_templates": 1,
+                }
+            }
+        ),
+        args=Namespace(limit=0, offset=0, top_fields_by_feedback=0),
+    )
+
+    assert selected[0]["selection_reason"] == "historical_promising"
+
+
 def test_unknown_field_metadata_is_retained_with_penalty() -> None:
     fields = [
         {

@@ -18,6 +18,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
 from concurrent.futures import Future
+from dataclasses import replace
 import logging
 
 from ..config.constants import DRY_RUN_SAMPLE_LIMIT, SENTINEL_UNKNOWN
@@ -171,6 +172,7 @@ def build_pending_templates_for_field(
     )
     enabled_templates: list[TemplateCandidate] = []
     disabled_templates = 0
+    uses_fallback_seed = False
     for template in templates:
         if not is_template_selected_by_filters(build_ctx, template.name):
             continue
@@ -187,6 +189,30 @@ def build_pending_templates_for_field(
             enabled_templates.append(template)
         else:
             disabled_templates += 1
+    # Global template pruning is learned from earlier fields.  Do not let it
+    # make a locally untested field permanently un-runnable: keep one
+    # structurally valid seed template as a controlled fallback.
+    if not enabled_templates and not field_feedback:
+        for template in templates:
+            if not is_template_selected_by_filters(build_ctx, template.name):
+                continue
+            if is_template_actionable(
+                template=template,
+                build_ctx=build_ctx,
+                field_id=field_id,
+                field_name=field_name,
+                field_feedback=None,
+                expression_policy=expression_policy,
+                template_stats={},
+                prior_results=prior_results,
+            ):
+                enabled_templates.append(template)
+                uses_fallback_seed = True
+                logger.info(
+                    "[template] field=%s uses one fallback seed after global template pruning",
+                    field_name,
+                )
+                break
     pending_templates = build_pending_template_variants(
         build_ctx,
         field,
@@ -197,6 +223,27 @@ def build_pending_templates_for_field(
         field_feedback=field_feedback,
         services=active_services,
     )
+    # A persisted registry may independently demote a template to diagnostic
+    # scope.  The fallback is explicitly for a field without local feedback,
+    # so it must also bypass that *global* demotion; otherwise it still yields
+    # no runnable variant.  Manual template filters and all field-level safety
+    # checks above remain in force.
+    if not pending_templates and uses_fallback_seed:
+        fallback_ctx = replace(
+            build_ctx,
+            template_registry={},
+            template_family_registry={},
+        )
+        pending_templates = build_pending_template_variants(
+            fallback_ctx,
+            field,
+            templates=enabled_templates[:1],
+            template_stats={},
+            attempted_keys=attempted_keys,
+            reserved_keys=reserved_keys or set(),
+            field_feedback=None,
+            services=active_services,
+        )
     return pending_templates, disabled_templates, len(templates)
 
 
@@ -251,6 +298,7 @@ def print_dry_run_plan(
     planned_fields = 0
     planned_templates = 0
     disabled_templates = 0
+    unactionable_fields = 0
     samples: list[dict[str, object]] = []
     build_ctx = build_template_build_context(
         args=args,
@@ -269,14 +317,15 @@ def print_dry_run_plan(
             field_id, field_name, filters, execution_state.skipped_fields_due_to_queue
         ):
             continue
-        pending_templates, disabled_count, template_count = build_pending_templates_for_field(
+        pending_templates, disabled_count, _template_count = build_pending_templates_for_field(
             build_ctx,
             field,
             template_stats=execution_state.template_stats,
             attempted_keys=execution_state.attempted_keys,
             prior_results=[*historical_state.feedback_results, *execution_state.results],
         )
-        if not pending_templates and template_count == 0:
+        if not pending_templates:
+            unactionable_fields += 1
             continue
         planned_fields += 1
         planned_templates += len(pending_templates)
@@ -299,6 +348,7 @@ def print_dry_run_plan(
     logger.info("[dry-run] planned_fields=%d", planned_fields)
     logger.info("[dry-run] planned_simulations=%d", planned_templates)
     logger.info("[dry-run] disabled_templates=%d", disabled_templates)
+    logger.info("[dry-run] unactionable_fields=%d", unactionable_fields)
     logger.info("[dry-run] existing_results=%d", len(execution_state.results))
     logger.info("[dry-run] attempted_keys=%d", len(execution_state.attempted_keys))
     for index, field in enumerate(fields[:sample_limit], start=1):

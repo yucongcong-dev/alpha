@@ -6,10 +6,21 @@ import logging
 from types import SimpleNamespace
 from unittest.mock import patch
 
-from alpha.core.executor import build_template_build_context, print_dry_run_plan
-from alpha.models.domain import SettingsVariant, TemplateField
+from alpha.core.executor import (
+    build_pending_templates_for_field,
+    build_template_build_context,
+    print_dry_run_plan,
+)
+from alpha.models.domain import SettingsVariant, TemplateCandidate, TemplateField
 from alpha.models.io_types import RunFilters
-from alpha.models.runtime import ExecutionState, HistoricalRunState, PendingTemplateEntry
+from alpha.models.runtime import (
+    ExecutionState,
+    HistoricalRunState,
+    PendingTemplateEntry,
+    TemplateBuildContext,
+    TemplateBuildOptions,
+)
+from alpha.policy.expression import get_dataset_expression_policy
 
 
 def _args() -> SimpleNamespace:
@@ -84,6 +95,44 @@ def test_build_template_context_copies_narrow_options_and_feedback() -> None:
     assert context.include_templates == {"rank"}
     assert context.exclude_templates == {"raw"}
     assert context.feedback_result_count == 7
+
+
+def test_unexplored_field_gets_seed_when_registry_demotes_template(monkeypatch) -> None:
+    field = _field("new_signal")
+    candidate = TemplateCandidate(
+        name="seed",
+        expression="rank(new_signal)",
+        priority=1000,
+        metadata={"family": "rank", "activation_scope": "broad"},
+    )
+    args = _args()
+    args.template_disable_after = 10
+    context = TemplateBuildContext(
+        options=TemplateBuildOptions.from_args(args),
+        all_fields=[field],
+        template_registry={
+            "seed": {
+                "recommended_role": "diagnostic_probe",
+                "recommended_scope": "diagnostic",
+            }
+        },
+        expression_policy=get_dataset_expression_policy("model16"),
+    )
+    monkeypatch.setattr(
+        "alpha.core.executor.resolve_field_template_candidates",
+        lambda *_args, **_kwargs: ([candidate], {}, get_dataset_expression_policy("model16")),
+    )
+
+    pending, _, _ = build_pending_templates_for_field(
+        context,
+        field,
+        template_stats={"seed": {"attempted": 10, "submittable": 0, "simulated": 10}},
+        attempted_keys=set(),
+        prior_results=[],
+    )
+
+    assert len(pending) == 1
+    assert pending[0].template_name == "seed"
 
 
 def test_print_dry_run_plan_counts_only_actionable_fields(caplog) -> None:

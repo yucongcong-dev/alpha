@@ -19,6 +19,9 @@ from ..models.result_predicates import is_feedback_eligible_result
 from .failed_checks import score_failed_checks
 
 
+_PASSED_FEEDBACK_SCORE = 1.0
+
+
 def _result_timestamp(result: FieldTestResult) -> tuple[float, str] | None:
     """Return a comparable timestamp and its original ISO representation."""
     for value in (result.updated_at, result.created_at):
@@ -59,6 +62,7 @@ def update_field_feedback_with_result(
             "best_template_family": "",
             "best_template_stage": "",
             STAT_FIELD_ATTEMPTED_TEMPLATES: 0,
+            "submittable_templates": 0,
             STAT_FIELD_FAILED_CHECK_COUNTS: {},
         },
     )
@@ -82,6 +86,15 @@ def update_field_feedback_with_result(
         name = str(check.get("name", SENTINEL_UNKNOWN_CHECK))
         current_count = summary[STAT_FIELD_FAILED_CHECK_COUNTS].get(name, 0)
         summary[STAT_FIELD_FAILED_CHECK_COUNTS][name] = int(current_count or 0) + 1
+    if result.submittable is True:
+        summary["submittable_templates"] = int(summary.get("submittable_templates", 0) or 0) + 1
+        if _PASSED_FEEDBACK_SCORE >= summary["best_score"]:
+            summary["best_score"] = _PASSED_FEEDBACK_SCORE
+            summary["best_expression"] = result.expression
+            summary["best_template_name"] = result.template_name
+            summary["best_template_family"] = result.template_family
+            summary["best_template_stage"] = result.template_stage
+        return feedback
     if result.status != STATUS_SIMULATED or not result.failed_checks:
         return feedback
     score = score_failed_checks(result.failed_checks)
