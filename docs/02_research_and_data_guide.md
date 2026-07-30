@@ -514,7 +514,114 @@ feedback 目录用于机器自动复用历史，但仍属于可重建运行状�
 
 ---
 
-## 12. 最后压成一句话
+## 12. 运行器操作与本地资产
+
+这一节说明仓库如何把研究计划变成可恢复的本地运行。默认流程只执行
+`simulation + check-submit`，不会自动执行平台的正式 `submit`。
+
+### 12.1 最小运行路径
+
+```bash
+# 需要登录：验证凭证、API 连通性和模拟创建
+PYTHONPATH=src python3.10 -m alpha --smoke-test
+
+# 离线只读：检查字段、模板和候选计划，不创建 simulation
+PYTHONPATH=src python3.10 -m alpha --dry-run-plan
+
+# 广泛探索：首次会拉取当前市场范围的字段并写入缓存
+PYTHONPATH=src python3.10 -m alpha --dataset-id fundamental6
+
+# 聚焦历史上更有希望的字段
+PYTHONPATH=src python3.10 -m alpha --top-fields-by-feedback 10 --max-templates-per-field 15
+```
+
+不传参数时，运行器采用内置默认搜索预算。`--full-run` 会枚举更大的字段和模板空间，
+只适合有足够时间、且明确希望从零开始验证时使用。日常研究应从 `--dry-run-plan` 开始。
+
+### 12.2 字段选择如何落地
+
+首次真实运行会按 `dataset + region + universe + instrument_type + delay` 拉取字段，
+并缓存到：
+
+```text
+datasets/<dataset>/cache/<region>_<universe>_<instrument>_d<delay>.json
+```
+
+例如 `usa_top3000_equity_d1.json`。同一市场范围会复用缓存；缓存缺失或结构失效时，
+正常运行会重新拉取。`--dry-run-plan` 只使用本地缓存，不登录、不联网；没有匹配缓存时应先做一次正常运行。
+
+有限 `--limit` 下的候选保护机制：
+
+- 先按 `coverage`、`dateCoverage`、`alphaCount`、`userCount` 做质量与拥挤度筛选；字段指标缺失会降分并单独记录，不会误删。
+- 数字窗口字段会归并成字段族，避免同一信号的 20/30/60 天版本占满预算。
+- 默认约 40% 名额保留给未探索字段；其余名额只给历史优质字段，普通失败记录不会挤占探索预算。
+- 任一通过 submission check 的 Alpha 会立即成为强正反馈；其他反馈还需满足最小样本量和时间衰减条件。
+- 全局模板历史剪枝不会让未探索字段变成“已选中但零模拟”：满足结构和人工过滤条件时，最多留下一个种子模板验证。
+
+`--include-fields-file` 是人工明确指定的研究范围，因此跳过字段族配额和探索比例，但仍执行基础质量检查。
+
+### 12.3 数据集资产与仓库边界
+
+每个数据集的长期、可审阅资产：
+
+| 路径 | 用途 | 是否提交 |
+|---|---|---|
+| `datasets/<id>/template.json` | 默认模板库 | 是 |
+| `datasets/<id>/presets/` | 专项模板、字段或模板筛选清单 | 是 |
+| `datasets/<id>/blacklist.json` | 自动或人工维护的排除规则 | 是 |
+| `datasets/<id>/README.md` | 当前策略、验证结论与下一步 | 是 |
+| `datasets/<id>/cache/` | 可重拉的字段缓存 | 否 |
+| `datasets/<id>/runs/` | 单次运行 journal、state、分析与日志 | 否 |
+| `datasets/<id>/feedback/<scope>/` | 跨 run 反馈、模板 registry 和去重索引 | 否 |
+
+成熟结论必须从 `runs/` 或 `feedback/` 中沉淀到 `template.json`、`presets/` 或数据集 README；
+不要把长期人工决策留在临时文件名或 JSON 结果里。一次性实验输入放 `tmp/`，外部对照材料或手工草稿放 `scratch/`。
+
+### 12.4 续跑、反馈与结果
+
+每次运行默认是增量模式：已完成的“字段 + 模板 + 表达式 + settings”组合不会重复创建；
+中断时会保存 `state.json` 与 `interrupt_report.json`，再次运行自动恢复可轮询的远端 simulation。
+如需独立实验，优先使用新的 `--run-name`。
+
+运行结果目录：
+
+| 文件 | 含义 |
+|---|---|
+| `runs/<run>/results.jsonl` | 权威结果 journal；其他分析视图可由它重建 |
+| `runs/<run>/summary.json` | 当前 run 的轻量 summary 与 journal 指针 |
+| `runs/<run>/analysis.json` | near-pass、失败分布、模板和字段表现 |
+| `feedback/<scope>/results.jsonl` | 带来源和 revision 的跨 run 去重结果历史 |
+| `feedback/<scope>/run_index.json` | 已聚合 run 的轻量索引 |
+
+`submittable=true` 表示该 Alpha 通过本轮 submission check、具备人工提交价值；
+`submitted=false` 表示运行器没有替你正式提交。`PENDING` 结果以 `submittable=null` 保存，
+不会被当作通过、失败反馈或 near-pass，但会在后续启动时重新查询终态。
+
+### 12.5 路径、配置与清理
+
+工作区按以下优先级选择：`ALPHA_WORKSPACE_ROOT`、源码仓库（或当前含 `datasets/` 与 `config/` 的目录）、`~/.alpha/`。
+相对路径参数按命令执行目录解析；`--output`、`--fields-cache-file`、`--include-fields-file` 和模板库路径都可显式覆盖默认值。
+
+可编辑配置的唯一来源是根目录 `config/*.yaml`。日常运行参数主要在 `settings.yaml`，
+数据集 profile、表达式策略、质量反馈和模板默认值分别按各自 YAML 维护；
+`src/alpha/resources/config/*.yaml` 是安装包镜像，不应直接修改。
+
+```bash
+# YAML 改动后同步并检查
+make sync-config
+make check
+
+# 仅预览 / 执行可重建运行产物清理（默认保留 .credentials）
+PYTHONPATH=src python3.10 -m alpha clean --dry-run-clean
+PYTHONPATH=src python3.10 -m alpha clean
+```
+
+`alpha clean` 处理数据集的 `cache/`、`runs/` 和遗留运行产物；`make clean-dev` 处理 Python
+字节码、测试缓存、coverage 与开发安装元数据。只有明确传入 `--include-credentials` 才会清理本地加密凭证。
+
+---
+
+## 13. 最后压成一句话
 
 官网这些 examples 和 understanding-data 文档合在一起，其实是在教同一件事：
 
@@ -525,7 +632,7 @@ feedback 目录用于机器自动复用历史，但仍属于可重建运行状�
 
 ---
 
-## 13. 官方入口
+## 14. 官方入口
 
 - [Alpha Examples for Beginners](https://platform.worldquantbrain.com/learn/documentation/create-alphas/19-alpha-examples)
 - [Alpha Examples for Bronze Users](https://platform.worldquantbrain.com/learn/documentation/examples/sample-alpha-concepts)

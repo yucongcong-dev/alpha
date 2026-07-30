@@ -1,6 +1,6 @@
 # Docs Index
 
-`docs/` 现在收敛为四篇主文档。每个主题只保留一个主要解释位置，其他文档只做简短引用。
+`docs/` 收敛为四篇主文档。每个主题只保留一个主要解释位置，其他文档只做简短引用。
 
 ## 推荐阅读顺序
 
@@ -35,6 +35,7 @@
 - Data Explorer 和字段体检
 - 专题数据集研究方法
 - Broad search、Local refine、模板库设计
+- 本地运行、缓存、反馈、结果与配置资产管理
 - 仓库知识边界和候选池视角
 
 ### 03 优化与提交
@@ -68,6 +69,7 @@ Reference 主要回答“这个词是什么意思”；具体怎么优化，回�
 | MATRIX、VECTOR、GROUP 如何分流？ | [02](02_research_and_data_guide.md) |
 | Data Explorer 怎么搜，字段怎么体检？ | [02](02_research_and_data_guide.md) |
 | 仓库里 Broad search 和 Local refine 怎么安排？ | [02](02_research_and_data_guide.md) |
+| 如何运行、续跑、清理缓存或理解本地结果？ | [02](02_research_and_data_guide.md) |
 | LOW_SHARPE、LOW_FITNESS 怎么处理？ | [03](03_optimization_and_submission.md) |
 | Turnover、Sub-Universe、相关性怎么优化？ | [03](03_optimization_and_submission.md) |
 | D0、Neutralization、提交前检查怎么串起来？ | [03](03_optimization_and_submission.md) |
@@ -78,7 +80,7 @@ Reference 主要回答“这个词是什么意思”；具体怎么优化，回�
 ## 仓库文档分层
 
 - `docs/`：通用学习路径、研究方法、优化流程和平台查表
-- 根 [README.md](../README.md)：安装、项目结构和运行方式
+- 根 [README.md](../README.md)：快速启动、项目入口和文档导航
 - `datasets/<dataset_id>/README.md`：具体数据集策略与本地经验
 - `datasets/<dataset_id>/runs/`：运行产物，不作为长期知识库
 - `datasets/<dataset_id>/feedback/<market_scope>/`：按市场范围隔离、跨 run 自动积累的本地反馈状态，可由运行结果重建，不进仓
