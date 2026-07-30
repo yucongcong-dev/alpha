@@ -159,6 +159,23 @@ def test_expression_policy_can_be_overridden_from_yaml(monkeypatch) -> None:
     assert policy.template_prefix_penalties == {("delta_", "group_delta_"): -500}
 
 
+def test_unknown_expression_policy_key_is_reported(caplog, monkeypatch) -> None:
+    monkeypatch.setattr(
+        "alpha.config.policy_overrides.get_yaml_config",
+        lambda config_path="": {
+            "expression_policies": {
+                "new_dataset": {"unknown_selector": 1},
+            }
+        },
+    )
+
+    with caplog.at_level("WARNING", logger="alpha.config.policy_overrides"):
+        policy = get_dataset_expression_policy("new_dataset")
+
+    assert not hasattr(policy, "unknown_selector")
+    assert "unknown expression policy key 'unknown_selector'" in caplog.text
+
+
 def test_fundamental6_default_policy_is_loaded_from_settings_yaml() -> None:
     policy = get_dataset_expression_policy("fundamental6")
 
@@ -220,6 +237,9 @@ def test_unknown_dataset_uses_nonzero_default_field_selection_policy() -> None:
     assert policy.field_alpha_crowding_penalty_weight > 0
     assert policy.field_max_per_family == 2
     assert policy.field_exploration_ratio == 0.40
+    assert policy.field_feedback_half_life_days == 365
+    assert policy.field_feedback_min_attempts_for_promising == 2
+    assert policy.field_unknown_metadata_penalty_weight == 0.08
     assert policy.preferred_field_type_order == {
         "MATRIX": 0,
         "VECTOR": 1,

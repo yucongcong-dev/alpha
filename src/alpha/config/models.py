@@ -112,8 +112,11 @@ class DatasetExpressionPolicy:
     field_recency_weight: float = 0.0
     field_theme_bonus_weight: float = 0.0
     field_preferred_unexplored_bonus: float = 0.0
+    field_unknown_metadata_penalty_weight: float = 0.0
     field_max_per_family: int = 0
     field_exploration_ratio: float = 0.0
+    field_feedback_half_life_days: int = 0
+    field_feedback_min_attempts_for_promising: int = 0
     event_field_prefixes: tuple[str, ...] = ()
     event_field_min_coverage: float = 0.0
     event_field_min_date_coverage: float = 0.0

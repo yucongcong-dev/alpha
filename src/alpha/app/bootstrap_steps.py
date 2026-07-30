@@ -158,6 +158,22 @@ def log_field_selection_stats(
             field_stats.get("high_alpha_count", 0),
             field_stats.get("high_user_count", 0),
         )
+    metadata_unknown_count = (
+        field_stats.get("unknown_coverage_count", 0)
+        + field_stats.get("unknown_date_coverage_count", 0)
+        + field_stats.get("unknown_alpha_count", 0)
+        + field_stats.get("unknown_user_count", 0)
+    )
+    if metadata_unknown_count > 0:
+        logger.warning(
+            "[filter] 官网字段指标缺失 %d 项，将保留字段但降低排序分数 "
+            "(coverage=%d, dateCoverage=%d, alphaCount=%d, userCount=%d)",
+            metadata_unknown_count,
+            field_stats.get("unknown_coverage_count", 0),
+            field_stats.get("unknown_date_coverage_count", 0),
+            field_stats.get("unknown_alpha_count", 0),
+            field_stats.get("unknown_user_count", 0),
+        )
     if not fields:
         logger.error("[error] 数据集 %s 在字段过滤后没有可运行字段", args.dataset_id)
         return

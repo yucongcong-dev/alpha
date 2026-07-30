@@ -15,6 +15,7 @@ from ..analysis.feedback_history import (
     choose_settings_variant_budget,
     select_nearpass_candidates,
 )
+from ..analysis.field_stats import decay_field_feedback
 from ..config.constants import (
     FEEDBACK_STAGE_RESIMULATE,
     SENTINEL_UNKNOWN,
@@ -133,9 +134,12 @@ def _resolve_field_planning_policy(
     options = build_ctx.options
     field_id = str(first_non_empty(field.get("id"), SENTINEL_UNKNOWN))
     field_name = choose_field_name(field)
-    field_feedback = build_ctx.field_feedback.get(field_id)
     expression_policy = build_ctx.expression_policy or get_dataset_expression_policy(
         options.dataset_id
+    )
+    field_feedback = decay_field_feedback(
+        build_ctx.field_feedback.get(field_id),
+        half_life_days=expression_policy.field_feedback_half_life_days,
     )
     return field_id, field_name, field_feedback, expression_policy
 

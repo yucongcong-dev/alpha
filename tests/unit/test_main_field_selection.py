@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from argparse import Namespace
 
-from alpha.app.bootstrap_fields import prepare_fields_for_execution
+from alpha.app.bootstrap_fields import infer_field_family, prepare_fields_for_execution
 from alpha.app.run_loop_feedback import refresh_runtime_feedback
 from alpha.app.run_loop_resume import build_field_resume_positions, normalize_resume_index
 from alpha.models.domain import FieldTestResult
@@ -181,6 +181,17 @@ def test_prepare_fields_for_execution_tags_model16_field_lanes() -> None:
     tags_by_id = {row["id"]: tuple(row.get("runtime_field_tags", [])) for row in selected}
     assert "model16_sparse_fscore" in tags_by_id["fscore_quality"]
     assert "model16_dense_derivative" in tags_by_id["analyst_revision_rank_derivative"]
+    assert [row["id"] for row in selected] == [
+        "fscore_quality",
+        "analyst_revision_rank_derivative",
+    ]
+
+
+def test_infer_field_family_removes_windows_before_instrument_suffix() -> None:
+    assert infer_field_family("correlation_last_30_days_spy") == "correlation_spy"
+    assert infer_field_family("correlation_last_360_days_spy") == "correlation_spy"
+    assert infer_field_family("option_breakeven_30") == "option_breakeven"
+    assert infer_field_family("pcr_vol_all") == "pcr_vol"
 
 
 def test_prepare_fields_for_execution_hard_filters_crowded_model51_fields() -> None:
@@ -336,6 +347,102 @@ def test_limit_reserves_capacity_for_unexplored_fields() -> None:
 
     assert [row["id"] for row in selected] == ["known_signal_a", "new_signal"]
     assert stats["selected_unexplored_count"] == 1
+
+
+def test_unknown_field_metadata_is_retained_with_penalty() -> None:
+    fields = [
+        {
+            "id": "complete_signal",
+            "coverage": 1.0,
+            "dateCoverage": 1.0,
+            "alphaCount": 100,
+            "userCount": 20,
+            "themes": [],
+            "dateCreated": "2025-01-01",
+        },
+        {"id": "metadata_missing"},
+    ]
+    selected, stats = prepare_fields_for_execution(
+        fields,
+        filters_dict=RunFilters(),
+        expression_policy=get_dataset_expression_policy("new_dataset"),
+        historical_state=HistoricalRunState(field_feedback={}),
+        args=Namespace(limit=0, offset=0, top_fields_by_feedback=0),
+    )
+
+    assert {row["id"] for row in selected} == {"complete_signal", "metadata_missing"}
+    assert stats["unknown_coverage_count"] == 1
+    assert stats["unknown_date_coverage_count"] == 1
+    assert stats["unknown_alpha_count"] == 1
+    assert stats["unknown_user_count"] == 1
+    scores = {row["id"]: row["selection_score"] for row in selected}
+    assert scores["metadata_missing"] < scores["complete_signal"]
+
+
+def test_single_attempt_feedback_is_not_pinned_as_promising() -> None:
+    fields = [
+        {
+            "id": "one_attempt",
+            "coverage": 0.5,
+            "dateCoverage": 1.0,
+            "alphaCount": 100,
+            "userCount": 20,
+            "themes": [],
+            "dateCreated": "2025-01-01",
+        },
+        {
+            "id": "unexplored",
+            "coverage": 0.5,
+            "dateCoverage": 1.0,
+            "alphaCount": 100,
+            "userCount": 20,
+            "themes": [],
+            "dateCreated": "2025-01-01",
+        },
+    ]
+    selected, _ = prepare_fields_for_execution(
+        fields,
+        filters_dict=RunFilters(),
+        expression_policy=get_dataset_expression_policy("fundamental6"),
+        historical_state=HistoricalRunState(
+            field_feedback={"one_attempt": {"best_score": 0.95, "attempted_templates": 1}}
+        ),
+        args=Namespace(limit=0, offset=0, top_fields_by_feedback=0),
+    )
+
+    reasons = {row["id"]: row["selection_reason"] for row in selected}
+    assert reasons["one_attempt"] == "historical_feedback"
+
+
+def test_stale_feedback_is_decayed_before_promising_classification() -> None:
+    fields = [
+        {
+            "id": "stale_signal",
+            "coverage": 0.5,
+            "dateCoverage": 1.0,
+            "alphaCount": 100,
+            "userCount": 20,
+            "themes": [],
+            "dateCreated": "2025-01-01",
+        }
+    ]
+    selected, _ = prepare_fields_for_execution(
+        fields,
+        filters_dict=RunFilters(),
+        expression_policy=get_dataset_expression_policy("fundamental6"),
+        historical_state=HistoricalRunState(
+            field_feedback={
+                "stale_signal": {
+                    "best_score": 0.95,
+                    "attempted_templates": 2,
+                    "latest_result_at": "2020-01-01T00:00:00Z",
+                }
+            }
+        ),
+        args=Namespace(limit=0, offset=0, top_fields_by_feedback=0),
+    )
+
+    assert selected[0]["selection_reason"] == "historical_feedback"
 
 
 def test_unknown_dataset_prefers_matrix_over_equivalent_vector() -> None:

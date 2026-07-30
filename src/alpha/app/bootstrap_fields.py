@@ -6,11 +6,11 @@ from __future__ import annotations
 
 import re
 from collections.abc import Sequence
-from datetime import date
+from datetime import date, datetime, timezone
 from math import log1p
 from typing import Any, cast
 
-from ..analysis.field_stats import field_priority
+from ..analysis.field_stats import decay_field_feedback, field_priority
 from ..config.constants import PREFERRED_FIELD_RANK_SENTINEL, SENTINEL_UNKNOWN, STATS_DEFAULT_SCORE
 from ..config.models import DatasetExpressionPolicy
 from ..generators.fields import choose_field_name
@@ -32,6 +32,24 @@ def _safe_float(value: Any) -> float:
         return float(value)
     except (TypeError, ValueError):
         return 0.0
+
+
+def _optional_int(value: Any) -> int | None:
+    if value is None or value == "":
+        return None
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _optional_float(value: Any) -> float | None:
+    if value is None or value == "":
+        return None
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
 
 
 def _is_explicitly_included(field_id: str, field_name: str, filters_dict: RunFilters) -> bool:
@@ -89,9 +107,9 @@ _USER_CROWDING_START = 500
 _ALPHA_CROWDING_SCALE = 10_000
 _USER_CROWDING_SCALE = 5_000
 _RECENCY_SCORE_HORIZON_DAYS = 3650
-_FIELD_WINDOW_SUFFIX = re.compile(r"(?:_last)?_\d+(?:_days?)?$")
 _FIELD_ALL_SUFFIX = re.compile(r"_all$")
-_FIELD_TRAILING_WINDOW = re.compile(r"(?:_last)?_(\d+)(?:_days?)?$")
+_FIELD_WINDOW_TOKEN = re.compile(r"_(?:last_)?\d+(?:_days?)?(?=_|$)")
+_FIELD_TRAILING_WINDOW = re.compile(r"(?:_last)?_(\d+)(?:_days?)?(?:_|$)")
 _PREFERRED_FIELD_WINDOWS = (30, 60, 90, 20, 120, 180, 10, 150, 270, 360, 720, 1080)
 
 
@@ -126,16 +144,87 @@ def _absolute_recency_score(value: Any) -> float:
     return _clamp_unit(1.0 - age_days / _RECENCY_SCORE_HORIZON_DAYS)
 
 
+def _feedback_recency_multiplier(value: Any, half_life_days: int) -> float:
+    """Decay historical feedback as it becomes stale.
+
+    Missing or malformed timestamps retain the legacy neutral multiplier so
+    older result files remain usable while newly enriched results decay.
+    """
+    if not value or half_life_days <= 0:
+        return 1.0
+    try:
+        observed = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+    except (TypeError, ValueError):
+        return 1.0
+    if observed.tzinfo is None:
+        observed = observed.replace(tzinfo=timezone.utc)
+    age_days = max((datetime.now(timezone.utc) - observed).total_seconds() / 86400.0, 0.0)
+    return 0.5 ** (age_days / half_life_days)
+
+
+def _feedback_priority(
+    field_id: str,
+    *,
+    historical_state: HistoricalRunState,
+    expression_policy: DatasetExpressionPolicy,
+) -> float:
+    """Return feedback priority after optional age decay."""
+    feedback = decay_field_feedback(
+        historical_state.field_feedback.get(field_id),
+        half_life_days=expression_policy.field_feedback_half_life_days,
+    )
+    if feedback is None:
+        return field_priority(field_id, historical_state.field_feedback)
+    return float(feedback.get("best_score", STATS_DEFAULT_SCORE) or STATS_DEFAULT_SCORE)
+
+
+def _is_promising_feedback(
+    field_id: str,
+    *,
+    priority: float,
+    historical_state: HistoricalRunState,
+    expression_policy: DatasetExpressionPolicy,
+) -> bool:
+    """Require both score and a minimum sample count for strong pinning."""
+    feedback = historical_state.field_feedback.get(field_id)
+    if feedback is None or priority < expression_policy.promising_field_min_priority:
+        return False
+    attempted = _safe_int(feedback.get("attempted_templates"))
+    minimum = expression_policy.field_feedback_min_attempts_for_promising
+    return minimum <= 0 or attempted >= minimum
+
+
 def infer_field_family(field_name: str) -> str:
-    """Collapse repeated tenor/window variants into a stable semantic family."""
+    """Collapse repeated tenor/window variants into a stable semantic family.
+
+    Window tokens may appear before an instrument suffix (for example
+    ``correlation_last_30_days_spy``), not only at the end of a field name.
+    Removing the token while retaining the suffix groups all tenor variants
+    without merging unrelated fields such as ``*_fast_d1``.
+    """
     normalized = field_name.strip().lower()
     family = _FIELD_ALL_SUFFIX.sub("", normalized)
-    for _ in range(3):
-        stripped = _FIELD_WINDOW_SUFFIX.sub("", family)
-        if stripped == family:
-            break
-        family = stripped
+    family = _FIELD_WINDOW_TOKEN.sub("", family)
     return family or normalized
+
+
+def _preferred_field_rank(field_name: str, preferred_order: dict[str, int]) -> int:
+    """Resolve exact and semantic aliases in preferred field ordering.
+
+    Dataset policies historically used both concrete IDs (``cash_st``) and
+    semantic labels (``value``, ``quality``).  Exact IDs win; otherwise a
+    semantic label matching a field token is used as a fallback.
+    """
+    normalized = field_name.strip().lower()
+    exact = preferred_order.get(normalized)
+    if exact is not None:
+        return exact
+    semantic_matches = [
+        rank
+        for label, rank in preferred_order.items()
+        if str(label).strip().lower() in normalized.split("_")
+    ]
+    return min(semantic_matches) if semantic_matches else PREFERRED_FIELD_RANK_SENTINEL
 
 
 def _field_window_rank(field_name: str) -> int:
@@ -158,8 +247,16 @@ def _selection_reason(
     field_id = str(first_non_empty(field.get("id"), SENTINEL_UNKNOWN))
     feedback = historical_state.field_feedback.get(field_id)
     if feedback is not None:
-        if field_priority(field_id, historical_state.field_feedback) >= (
-            expression_policy.promising_field_min_priority
+        priority = _feedback_priority(
+            field_id,
+            historical_state=historical_state,
+            expression_policy=expression_policy,
+        )
+        if _is_promising_feedback(
+            field_id,
+            priority=priority,
+            historical_state=historical_state,
+            expression_policy=expression_policy,
         ):
             return "historical_promising"
         return "historical_feedback"
@@ -323,6 +420,10 @@ def prepare_fields_for_execution(
     low_user_count = 0
     high_alpha_count = 0
     high_user_count = 0
+    unknown_coverage_count = 0
+    unknown_date_coverage_count = 0
+    unknown_alpha_count = 0
+    unknown_user_count = 0
 
     for field in fields:
         field_id = str(first_non_empty(field.get("id"), SENTINEL_UNKNOWN))
@@ -349,6 +450,10 @@ def prepare_fields_for_execution(
             if is_event_field and expression_policy.event_field_min_user_count > 0
             else expression_policy.field_min_user_count
         )
+        coverage_value = _optional_float(field.get("coverage"))
+        date_coverage_value = _optional_float(field.get("dateCoverage"))
+        alpha_count_value = _optional_int(field.get("alphaCount"))
+        user_count_value = _optional_int(field.get("userCount"))
         if (
             filters_dict.include_fields
             and field_id not in filters_dict.include_fields
@@ -359,36 +464,46 @@ def prepare_fields_for_execution(
         if field_id in filters_dict.exclude_fields or field_name in filters_dict.exclude_fields:
             prefiltered_count += 1
             continue
-        if _safe_float(field.get("coverage")) < min_coverage:
+        if coverage_value is None:
+            unknown_coverage_count += 1
+        elif coverage_value < min_coverage:
             low_coverage_count += 1
             continue
-        if _safe_float(field.get("dateCoverage")) < min_date_coverage:
+        if date_coverage_value is None:
+            unknown_date_coverage_count += 1
+        elif date_coverage_value < min_date_coverage:
             low_date_coverage_count += 1
             continue
-        if _safe_int(field.get("alphaCount")) < min_alpha_count:
+        if alpha_count_value is None:
+            unknown_alpha_count += 1
+        elif alpha_count_value < min_alpha_count:
             low_alpha_count += 1
             continue
-        if _safe_int(field.get("userCount")) < min_user_count:
+        if user_count_value is None:
+            unknown_user_count += 1
+        elif user_count_value < min_user_count:
             low_user_count += 1
             continue
         if (
             not explicitly_included
             and expression_policy.field_max_alpha_count > 0
-            and _safe_int(field.get("alphaCount")) > expression_policy.field_max_alpha_count
+            and alpha_count_value is not None
+            and alpha_count_value > expression_policy.field_max_alpha_count
         ):
             high_alpha_count += 1
             continue
         if (
             not explicitly_included
             and expression_policy.field_max_user_count > 0
-            and _safe_int(field.get("userCount")) > expression_policy.field_max_user_count
+            and user_count_value is not None
+            and user_count_value > expression_policy.field_max_user_count
         ):
             high_user_count += 1
             continue
         runtime_field_tags = _infer_runtime_field_tags(
             field_name,
             dataset_id=expression_policy.dataset_id,
-            coverage=_safe_float(field.get("coverage")),
+            coverage=coverage_value or 0.0,
         )
         if isinstance(field, TemplateField):
             filtered_fields.append(
@@ -415,6 +530,10 @@ def prepare_fields_for_execution(
             "low_user_count": low_user_count,
             "high_alpha_count": high_alpha_count,
             "high_user_count": high_user_count,
+            "unknown_coverage_count": unknown_coverage_count,
+            "unknown_date_coverage_count": unknown_date_coverage_count,
+            "unknown_alpha_count": unknown_alpha_count,
+            "unknown_user_count": unknown_user_count,
         }
 
     norm_coverage_values = [_clamp_unit(_safe_float(field.get("coverage"))) for field in fields]
@@ -453,6 +572,18 @@ def prepare_fields_for_execution(
     norm_theme_values = [
         _clamp_unit(float(len(field.get("themes") or [])) / 3.0) for field in fields
     ]
+    unknown_metadata_counts = [
+        sum(
+            value is None
+            for value in (
+                _optional_float(field.get("coverage")),
+                _optional_float(field.get("dateCoverage")),
+                _optional_int(field.get("alphaCount")),
+                _optional_int(field.get("userCount")),
+            )
+        )
+        for field in fields
+    ]
 
     field_metadata_scores: dict[str, float] = {}
     for idx, field in enumerate(fields):
@@ -471,20 +602,32 @@ def prepare_fields_for_execution(
             + expression_policy.field_user_crowding_penalty_weight
             * norm_user_crowding_values[idx]
         )
-        field_metadata_scores[field_id] = validation_score - crowding_penalty
+        unknown_metadata_penalty = expression_policy.field_unknown_metadata_penalty_weight * (
+            unknown_metadata_counts[idx] / 4.0
+        )
+        field_metadata_scores[field_id] = (
+            validation_score - crowding_penalty - unknown_metadata_penalty
+        )
 
     def field_sort_key(item: TemplateField) -> FieldSortKey:
         field_id = str(first_non_empty(item.get("id"), SENTINEL_UNKNOWN))
         field_name = choose_field_name(item)
         field_type = str(item.get("type", "UNKNOWN")).upper()
         feedback = historical_state.field_feedback.get(field_id)
-        priority = field_priority(field_id, historical_state.field_feedback)
-        is_promising_seen = (
-            feedback is not None and priority >= expression_policy.promising_field_min_priority
+        priority = _feedback_priority(
+            field_id,
+            historical_state=historical_state,
+            expression_policy=expression_policy,
+        )
+        is_promising_seen = _is_promising_feedback(
+            field_id,
+            priority=priority,
+            historical_state=historical_state,
+            expression_policy=expression_policy,
         )
         is_unexplored = feedback is None
-        preferred_rank = expression_policy.preferred_field_order.get(
-            field_name, PREFERRED_FIELD_RANK_SENTINEL
+        preferred_rank = _preferred_field_rank(
+            field_name, expression_policy.preferred_field_order
         )
         preferred_type_rank = expression_policy.preferred_field_type_order.get(
             field_type, PREFERRED_FIELD_RANK_SENTINEL
@@ -536,9 +679,10 @@ def prepare_fields_for_execution(
         focused_fields = [
             field
             for field in fields
-            if field_priority(
+            if _feedback_priority(
                 str(first_non_empty(field.get("id"), SENTINEL_UNKNOWN)),
-                historical_state.field_feedback,
+                historical_state=historical_state,
+                expression_policy=expression_policy,
             )
             > -999.0
         ]
@@ -591,6 +735,10 @@ def prepare_fields_for_execution(
         "low_user_count": low_user_count,
         "high_alpha_count": high_alpha_count,
         "high_user_count": high_user_count,
+        "unknown_coverage_count": unknown_coverage_count,
+        "unknown_date_coverage_count": unknown_date_coverage_count,
+        "unknown_alpha_count": unknown_alpha_count,
+        "unknown_user_count": unknown_user_count,
         "selected_family_count": len(
             {str(field.get("selection_family", "")) for field in fields}
         ),

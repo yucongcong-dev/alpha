@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
+from datetime import datetime, timezone
 from typing import Any
 
 from ..config.constants import (
@@ -16,6 +17,21 @@ from ..config.constants import (
 from ..models.domain import FieldFeedbackMap, FieldTestResult
 from ..models.result_predicates import is_feedback_eligible_result
 from .failed_checks import score_failed_checks
+
+
+def _result_timestamp(result: FieldTestResult) -> tuple[float, str] | None:
+    """Return a comparable timestamp and its original ISO representation."""
+    for value in (result.updated_at, result.created_at):
+        if not value:
+            continue
+        try:
+            parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+        except (TypeError, ValueError):
+            continue
+        if parsed.tzinfo is None:
+            parsed = parsed.replace(tzinfo=timezone.utc)
+        return parsed.timestamp(), value
+    return None
 
 
 def compile_field_feedback(results: Sequence[FieldTestResult]) -> FieldFeedbackMap:
@@ -48,6 +64,20 @@ def update_field_feedback_with_result(
     )
     current_attempted = summary.get(STAT_FIELD_ATTEMPTED_TEMPLATES, 0)
     summary[STAT_FIELD_ATTEMPTED_TEMPLATES] = int(current_attempted or 0) + 1
+    observed = _result_timestamp(result)
+    if observed is not None:
+        current_latest = summary.get("latest_result_at", "")
+        current_observed: tuple[float, str] | None = None
+        if current_latest:
+            try:
+                parsed = datetime.fromisoformat(str(current_latest).replace("Z", "+00:00"))
+                if parsed.tzinfo is None:
+                    parsed = parsed.replace(tzinfo=timezone.utc)
+                current_observed = (parsed.timestamp(), str(current_latest))
+            except (TypeError, ValueError):
+                current_observed = None
+        if current_observed is None or observed[0] >= current_observed[0]:
+            summary["latest_result_at"] = observed[1]
     for check in result.failed_checks or []:
         name = str(check.get("name", SENTINEL_UNKNOWN_CHECK))
         current_count = summary[STAT_FIELD_FAILED_CHECK_COUNTS].get(name, 0)

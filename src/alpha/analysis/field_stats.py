@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
+from datetime import datetime, timezone
+from math import pow
 from typing import Any
 
 from ..config.constants import (
@@ -104,6 +106,42 @@ def field_priority(field_id: str, field_feedback: FieldFeedbackMap) -> float:
     ):
         return STATS_DEFAULT_SCORE - float(attempted_templates)
     return best_score
+
+
+def decay_field_feedback(
+    summary: dict[str, Any] | None,
+    *,
+    half_life_days: int,
+) -> dict[str, Any] | None:
+    """Return a copy of feedback with stale best scores attenuated.
+
+    The original summary remains unchanged so persisted history is lossless;
+    callers can pass the returned view into template-stage decisions.
+    """
+    if summary is None:
+        return None
+    result = dict(summary)
+    raw_score = float(result.get("best_score", STATS_DEFAULT_SCORE) or STATS_DEFAULT_SCORE)
+    latest = result.get("latest_result_at")
+    if half_life_days <= 0 or not latest:
+        result["effective_best_score"] = raw_score
+        return result
+    try:
+        observed = datetime.fromisoformat(str(latest).replace("Z", "+00:00"))
+    except (TypeError, ValueError):
+        result["effective_best_score"] = raw_score
+        return result
+    if observed.tzinfo is None:
+        observed = observed.replace(tzinfo=timezone.utc)
+    age_days = max(
+        (datetime.now(timezone.utc) - observed).total_seconds() / 86400.0,
+        0.0,
+    )
+    multiplier = pow(0.5, age_days / half_life_days)
+    result["feedback_recency_multiplier"] = multiplier
+    result["effective_best_score"] = raw_score * multiplier
+    result["best_score"] = result["effective_best_score"]
+    return result
 
 
 def current_submittable_count(results: Sequence[FieldTestResult]) -> int:

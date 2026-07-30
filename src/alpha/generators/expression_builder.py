@@ -16,6 +16,7 @@ from collections.abc import Sequence
 from dataclasses import replace
 from pathlib import Path
 
+from ..analysis.field_stats import decay_field_feedback
 from ..config.constants import FEEDBACK_STAGE_GENERATE, FEEDBACK_STAGE_RESIMULATE
 from ..config.models import DatasetExpressionPolicy
 from ..config.runtime_values import get_runtime_config
@@ -210,6 +211,10 @@ def build_expression_candidates(
     policy = expression_policy or get_dataset_expression_policy(
         options.dataset_id,
         use_curated_heuristics=build_ctx.use_dataset_heuristics,
+    )
+    field_feedback = decay_field_feedback(
+        field_feedback,
+        half_life_days=policy.field_feedback_half_life_days,
     )
     if policy.feedback_scope == "field_type":
         global_failed_check_counts = dict(

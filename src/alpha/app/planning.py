@@ -85,6 +85,25 @@ def run_dry_run_plan(args: ApplicationConfig, run_paths: RunPaths | None) -> boo
         field_stats.get("high_alpha_count", 0),
         field_stats.get("high_user_count", 0),
     )
+    unknown_metadata_count = sum(
+        field_stats.get(key, 0)
+        for key in (
+            "unknown_coverage_count",
+            "unknown_date_coverage_count",
+            "unknown_alpha_count",
+            "unknown_user_count",
+        )
+    )
+    if unknown_metadata_count:
+        logger.info(
+            "[dry-run] unknown_field_metadata=%d coverage=%d dateCoverage=%d "
+            "alphaCount=%d userCount=%d",
+            unknown_metadata_count,
+            field_stats.get("unknown_coverage_count", 0),
+            field_stats.get("unknown_date_coverage_count", 0),
+            field_stats.get("unknown_alpha_count", 0),
+            field_stats.get("unknown_user_count", 0),
+        )
 
     execution_state = create_execution_state(
         dataset_id=dataset_id,

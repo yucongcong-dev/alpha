@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from dataclasses import replace
 from typing import Any, cast
 
@@ -17,6 +18,9 @@ from .policy_coercers import (
 )
 from .types import ExpressionPolicyOverrides, YamlConfig
 from .yaml import get_yaml_config
+
+
+logger = logging.getLogger(__name__)
 
 
 def _merge_policy_values(base: Any, override: Any, *, key: str = "") -> Any:
@@ -129,6 +133,8 @@ def apply_yaml_expression_policy_overrides(
         "evaluation_holdout_percent",
         "high_conviction_ratio_priority_boost",
         "partner_limit",
+        "field_feedback_half_life_days",
+        "field_feedback_min_attempts_for_promising",
     }
     tuple_pair_fields = {"high_conviction_ratio_pairs"}
     tuple_window3_fields = {"matrix_delta_over_std_windows", "ratio_delta_over_std_windows"}
@@ -150,6 +156,11 @@ def apply_yaml_expression_policy_overrides(
         if key == "priority_tiers":
             continue  # meta 字段，不映射到 DatasetExpressionPolicy
         if not hasattr(policy, key):
+            logger.warning(
+                "[config] ignoring unknown expression policy key '%s' for dataset=%s",
+                key,
+                dataset_id,
+            )
             continue
         if key in set_fields and isinstance(value, (list, tuple, set)):
             update_map[key] = {str(item) for item in value}

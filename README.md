@@ -197,8 +197,9 @@ python3.10 -m alpha
 - 官网指标使用固定尺度评分，不会因为临时 include 列表变化而整体改写相对分数
 - `alphaCount / userCount` 先提供适度验证奖励，超过拥挤起点后才逐步扣分
 - 未探索字段默认保留 40% 的有限预算；历史优质字段使用其余 exploitation 预算
+- 历史反馈需要达到最小尝试次数才会被标记为强反馈，并按最近结果时间做半衰期衰减
 - 未探索字段默认优先 `MATRIX`，但已有可靠历史反馈的字段仍按历史表现排序
-- 数字期限后缀会折叠为字段族，每个家族默认最多先取 2 个代表字段，优先 30/60/90 等常用窗口
+- 数字期限片段（包括 `*_last_30_days_spy` 这类带标的后缀的字段）会折叠为字段族，每个家族默认最多先取 2 个代表字段，优先 30/60/90 等常用窗口
 - 最后才应用 `offset` / `limit`
 - 默认启用 breadth-first 调度：前 200 个字段先各试 2 个高优模板，再在后续轮次逐步补深
 
@@ -211,9 +212,11 @@ python3.10 -m alpha
 - `userCount`：历史用户使用量；采用同样的“验证区间 + 拥挤区间”逻辑
 - `dateCreated`：较新的字段有轻微加分
 - `themes`：主题标签数量仅作很弱的辅助加分
+- 字段指标缺失时不会直接误删字段，而是记录缺失计数并降低排序分数
 
 **表达式策略配置**：
 - 数据集级表达式搜索策略可在 `config/expression_policies.yaml` 或 `config/settings.yaml` 的 `expression_policies.<dataset_id>` 下覆盖
+- 字段优先级既支持完整字段 ID，也支持 `value`、`quality` 等语义 token；未知配置键会记录告警并忽略，避免配置看似生效但实际未加载
 - 适合放这里的参数包括：`partner_limit`、字段质量阈值、反馈阶段设置、少量运行期策略开关
 - `policy_version` 标识启发式版本，失败反馈默认按 `field_type` 隔离
 - `evaluation_holdout_percent` 会按 dataset/field/version 稳定分配对照组；holdout 不应用自适应优先级

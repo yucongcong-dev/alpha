@@ -33,8 +33,11 @@ expression_policies:
     field_recency_weight: 0.05
     field_theme_bonus_weight: 0.02
     field_preferred_unexplored_bonus: 0.05
+    field_unknown_metadata_penalty_weight: 0.08
     field_max_per_family: 2
     field_exploration_ratio: 0.40
+    field_feedback_half_life_days: 365
+    field_feedback_min_attempts_for_promising: 2
     preferred_field_type_order:
       MATRIX: 0
       VECTOR: 1
@@ -532,18 +535,6 @@ expression_policies:
     field_min_date_coverage: 0.90
     field_min_alpha_count: 10
     field_min_user_count: 3
-    field_priority_weights:
-      field_count_weight: 0.0
-      user_count_weight: 0.10
-      alpha_count_weight: 0.10
-      coverage_weight: 0.35
-      value_score_weight: 0.20
-      score_weight: 0.10
-      coverage_floor_bonus_weight: 0.05
-      priority_weight: 0.10
-      search_count_penalty_weight: 0.10
-      search_count_penalty_cap: 0.40
-
   # --------------------------------------------------------------------------
   # model51 — 16 日频系统性风险指标
   # --------------------------------------------------------------------------

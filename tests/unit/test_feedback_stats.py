@@ -10,7 +10,7 @@ from alpha.analysis.feedback_stats import (
     update_field_feedback_with_result,
     update_global_failed_check_counts_with_result,
 )
-from alpha.analysis.field_stats import field_priority
+from alpha.analysis.field_stats import decay_field_feedback, field_priority
 from alpha.config.constants import (
     FEEDBACK_STAGE_RESIMULATE,
     STATS_DEFAULT_SCORE,
@@ -71,6 +71,30 @@ def test_compile_field_feedback_tracks_best_score_and_template_info() -> None:
     assert summary["best_template_family"] == "group_zscore"
     assert summary["best_expression"] == "group_rank(ts_zscore(cash_st, 60), subindustry)"
     assert summary["failed_check_counts"]["LOW_SHARPE"] == 2
+
+
+def test_compile_field_feedback_tracks_latest_result_timestamp() -> None:
+    older = _make_result(failed_checks=[{"name": "LOW_SHARPE", "value": 0.9}])
+    older.created_at = "2024-01-01T00:00:00Z"
+    newer = _make_result(failed_checks=[{"name": "LOW_SHARPE", "value": 0.9}])
+    newer.created_at = "2025-01-01T00:00:00Z"
+
+    feedback = compile_field_feedback([newer, older])
+
+    assert feedback["cash_st"]["latest_result_at"] == "2025-01-01T00:00:00Z"
+
+
+def test_decay_field_feedback_exposes_effective_score_without_mutating_history() -> None:
+    summary = {
+        "best_score": 0.8,
+        "latest_result_at": "2024-01-01T00:00:00Z",
+    }
+
+    decayed = decay_field_feedback(summary, half_life_days=365)
+
+    assert decayed is not None
+    assert 0.0 < decayed["effective_best_score"] < summary["best_score"]
+    assert summary["best_score"] == 0.8
 
 
 def test_update_field_feedback_excludes_self_correlation_pending() -> None:
