@@ -57,7 +57,7 @@ def run_dry_run_plan(args: ApplicationConfig, run_paths: RunPaths | None) -> boo
         )
         return False
 
-    prepared_fields, _field_stats = prepare_fields_for_execution(
+    prepared_fields, field_stats = prepare_fields_for_execution(
         list(fields),
         filters_dict=filters,
         expression_policy=expression_policy,
@@ -67,6 +67,24 @@ def run_dry_run_plan(args: ApplicationConfig, run_paths: RunPaths | None) -> boo
     if not prepared_fields:
         logger.error("[dry-run] no fields remain after local filtering")
         return False
+    logger.info(
+        "[dry-run] field_filter cached=%d filtered=%d ranked=%d selected=%d "
+        "families=%d unexplored=%d excluded_rule=%d low_coverage=%d "
+        "low_date_coverage=%d low_alpha=%d low_user=%d high_alpha=%d high_user=%d",
+        field_stats.get("cached_field_count", len(fields)),
+        field_stats.get("filtered_field_count", len(prepared_fields)),
+        field_stats.get("ranked_field_count", len(prepared_fields)),
+        len(prepared_fields),
+        field_stats.get("selected_family_count", 0),
+        field_stats.get("selected_unexplored_count", 0),
+        field_stats.get("prefiltered_count", 0),
+        field_stats.get("low_coverage_count", 0),
+        field_stats.get("low_date_coverage_count", 0),
+        field_stats.get("low_alpha_count", 0),
+        field_stats.get("low_user_count", 0),
+        field_stats.get("high_alpha_count", 0),
+        field_stats.get("high_user_count", 0),
+    )
 
     execution_state = create_execution_state(
         dataset_id=dataset_id,

@@ -162,7 +162,7 @@ def test_expression_policy_can_be_overridden_from_yaml(monkeypatch) -> None:
 def test_fundamental6_default_policy_is_loaded_from_settings_yaml() -> None:
     policy = get_dataset_expression_policy("fundamental6")
 
-    assert policy.policy_version == "2026-07-27.1"
+    assert policy.policy_version == "2026-07-30.1"
     assert policy.feedback_scope == "field_type"
     assert policy.evaluation_holdout_percent == 10
     assert policy.partner_limit == 6
@@ -205,6 +205,27 @@ def test_fundamental6_default_policy_is_loaded_from_settings_yaml() -> None:
         "group_second_order",
         "event_conditioned",
     )
+
+
+def test_unknown_dataset_uses_nonzero_default_field_selection_policy() -> None:
+    policy = get_dataset_expression_policy("new_dataset")
+
+    assert policy.field_min_coverage == 0.20
+    assert policy.field_min_date_coverage == 0.90
+    assert policy.field_min_alpha_count == 10
+    assert policy.field_min_user_count == 3
+    assert policy.field_max_alpha_count == 10000
+    assert policy.field_max_user_count == 5000
+    assert policy.field_coverage_weight > 0
+    assert policy.field_alpha_crowding_penalty_weight > 0
+    assert policy.field_max_per_family == 2
+    assert policy.field_exploration_ratio == 0.40
+    assert policy.preferred_field_type_order == {
+        "MATRIX": 0,
+        "VECTOR": 1,
+        "GROUP": 2,
+        "SET": 3,
+    }
 
 
 def test_model16_policy_uses_long_backfill_with_winsorize() -> None:

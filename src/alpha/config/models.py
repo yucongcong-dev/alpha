@@ -79,6 +79,7 @@ class DatasetExpressionPolicy:
     ratio_keywords: dict[str, tuple[str, ...]] = field(default_factory=dict)
     preferred_partner_score_bonuses: dict[str, int] = field(default_factory=dict)
     preferred_field_order: dict[str, int] = field(default_factory=dict)
+    preferred_field_type_order: dict[str, int] = field(default_factory=dict)
     overtested_weak_fields: set[str] = field(default_factory=set)
     promising_field_min_priority: float = 0.65
     always_keep_families: set[str] = field(default_factory=set)
@@ -111,6 +112,8 @@ class DatasetExpressionPolicy:
     field_recency_weight: float = 0.0
     field_theme_bonus_weight: float = 0.0
     field_preferred_unexplored_bonus: float = 0.0
+    field_max_per_family: int = 0
+    field_exploration_ratio: float = 0.0
     event_field_prefixes: tuple[str, ...] = ()
     event_field_min_coverage: float = 0.0
     event_field_min_date_coverage: float = 0.0

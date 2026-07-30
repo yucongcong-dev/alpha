@@ -220,6 +220,187 @@ def test_prepare_fields_for_execution_hard_filters_crowded_model51_fields() -> N
     assert stats["high_alpha_count"] == 1
 
 
+def test_unknown_dataset_filters_unvalidated_and_overcrowded_fields() -> None:
+    fields = [
+        {
+            "id": "valid_signal",
+            "coverage": 0.80,
+            "dateCoverage": 1.0,
+            "alphaCount": 100,
+            "userCount": 20,
+            "themes": [],
+            "dateCreated": "2025-01-01",
+        },
+        {
+            "id": "too_sparse",
+            "coverage": 0.10,
+            "dateCoverage": 1.0,
+            "alphaCount": 100,
+            "userCount": 20,
+            "themes": [],
+            "dateCreated": "2025-01-01",
+        },
+        {
+            "id": "too_crowded",
+            "coverage": 1.0,
+            "dateCoverage": 1.0,
+            "alphaCount": 20000,
+            "userCount": 100,
+            "themes": [],
+            "dateCreated": "2025-01-01",
+        },
+    ]
+    args = Namespace(limit=0, offset=0, top_fields_by_feedback=0)
+
+    selected, stats = prepare_fields_for_execution(
+        fields,
+        filters_dict=RunFilters(),
+        expression_policy=get_dataset_expression_policy("new_dataset"),
+        historical_state=HistoricalRunState(field_feedback={}),
+        args=args,
+    )
+
+    assert [row["id"] for row in selected] == ["valid_signal"]
+    assert stats["low_coverage_count"] == 1
+    assert stats["high_alpha_count"] == 1
+
+
+def test_limit_diversifies_numeric_tenor_families() -> None:
+    fields = [
+        {
+            "id": field_id,
+            "coverage": coverage,
+            "dateCoverage": 1.0,
+            "alphaCount": 100,
+            "userCount": 20,
+            "themes": [],
+            "dateCreated": "2025-01-01",
+        }
+        for field_id, coverage in [
+            ("call_breakeven_10", 1.00),
+            ("call_breakeven_20", 0.99),
+            ("call_breakeven_30", 0.98),
+            ("forward_price_10", 0.97),
+        ]
+    ]
+    args = Namespace(limit=3, offset=0, top_fields_by_feedback=0)
+
+    selected, stats = prepare_fields_for_execution(
+        fields,
+        filters_dict=RunFilters(),
+        expression_policy=get_dataset_expression_policy("new_dataset"),
+        historical_state=HistoricalRunState(field_feedback={}),
+        args=args,
+    )
+
+    assert [row["id"] for row in selected] == [
+        "call_breakeven_10",
+        "call_breakeven_20",
+        "forward_price_10",
+    ]
+    assert stats["selected_family_count"] == 2
+
+
+def test_limit_reserves_capacity_for_unexplored_fields() -> None:
+    fields = [
+        {
+            "id": field_id,
+            "coverage": coverage,
+            "dateCoverage": 1.0,
+            "alphaCount": 100,
+            "userCount": 20,
+            "themes": [],
+            "dateCreated": "2025-01-01",
+        }
+        for field_id, coverage in [
+            ("known_signal_a", 1.00),
+            ("known_signal_b", 0.99),
+            ("new_signal", 0.98),
+        ]
+    ]
+    history = HistoricalRunState(
+        field_feedback={
+            "known_signal_a": {"best_score": 0.90, "attempted_templates": 2},
+            "known_signal_b": {"best_score": 0.80, "attempted_templates": 2},
+        }
+    )
+    args = Namespace(limit=2, offset=0, top_fields_by_feedback=0)
+
+    selected, stats = prepare_fields_for_execution(
+        fields,
+        filters_dict=RunFilters(),
+        expression_policy=get_dataset_expression_policy("new_dataset"),
+        historical_state=history,
+        args=args,
+    )
+
+    assert [row["id"] for row in selected] == ["known_signal_a", "new_signal"]
+    assert stats["selected_unexplored_count"] == 1
+
+
+def test_unknown_dataset_prefers_matrix_over_equivalent_vector() -> None:
+    fields = [
+        {
+            "id": "vector_signal",
+            "type": "VECTOR",
+            "coverage": 1.0,
+            "dateCoverage": 1.0,
+            "alphaCount": 100,
+            "userCount": 20,
+            "themes": [],
+            "dateCreated": "2025-01-01",
+        },
+        {
+            "id": "matrix_signal",
+            "type": "MATRIX",
+            "coverage": 1.0,
+            "dateCoverage": 1.0,
+            "alphaCount": 100,
+            "userCount": 20,
+            "themes": [],
+            "dateCreated": "2025-01-01",
+        },
+    ]
+    args = Namespace(limit=1, offset=0, top_fields_by_feedback=0)
+
+    selected, _ = prepare_fields_for_execution(
+        fields,
+        filters_dict=RunFilters(),
+        expression_policy=get_dataset_expression_policy("new_dataset"),
+        historical_state=HistoricalRunState(field_feedback={}),
+        args=args,
+    )
+
+    assert [row["id"] for row in selected] == ["matrix_signal"]
+
+
+def test_family_selection_prefers_representative_windows_on_ties() -> None:
+    fields = [
+        {
+            "id": f"pcr_vol_{window}",
+            "type": "MATRIX",
+            "coverage": 1.0,
+            "dateCoverage": 1.0,
+            "alphaCount": 100,
+            "userCount": 20,
+            "themes": [],
+            "dateCreated": "2025-01-01",
+        }
+        for window in (10, 30, 60, 1080)
+    ]
+    args = Namespace(limit=2, offset=0, top_fields_by_feedback=0)
+
+    selected, _ = prepare_fields_for_execution(
+        fields,
+        filters_dict=RunFilters(),
+        expression_policy=get_dataset_expression_policy("new_dataset"),
+        historical_state=HistoricalRunState(field_feedback={}),
+        args=args,
+    )
+
+    assert [row["id"] for row in selected] == ["pcr_vol_30", "pcr_vol_60"]
+
+
 def test_refresh_runtime_feedback_rebuilds_feedback_from_current_results() -> None:
     """Same-process results should be converted into fresh field/global feedback."""
     build_ctx = TemplateBuildContext(options=TemplateBuildOptions(**_DEFAULT_SIM_SETTINGS))

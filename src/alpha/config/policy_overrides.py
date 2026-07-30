@@ -121,6 +121,7 @@ def apply_yaml_expression_policy_overrides(
         "template_priority_penalties",
         "preferred_partner_score_bonuses",
         "preferred_field_order",
+        "preferred_field_type_order",
     }
     # 单一 int 字段，支持 @tier 引用
     int_fields = {

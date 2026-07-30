@@ -33,3 +33,7 @@ datasets/<dataset_id>/
 | `option8` | 基线保留 | `subindustry_refine` |
 | `model16` | 暂停 | 无 |
 | `model51` | 暂停 | 无 |
+| `socialmedia12` | 暂停 | 无 |
+| `option9` | 暂停 | 无 |
+
+下一候选优先级：`news18`（低拥挤的新闻影响、事件新颖度与专项情绪 MATRIX 字段），其次 `fundamental2`。新一轮仍应先做 1 个字段、2 条经济结构的最小验证。
