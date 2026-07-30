@@ -18,7 +18,7 @@ def portable_source_summary(output_path: str) -> str:
     """Prefer a dataset-relative run reference over a machine-specific path."""
     output = Path(output_path)
     if output.parent.parent.name == "runs":
-        return str(Path("runs") / output.parent.name / output.name)
+        return (Path("runs") / output.parent.name / output.name).as_posix()
     return output.name
 
 

@@ -4,10 +4,10 @@ bootstrap 字段准备辅助模块。
 
 from __future__ import annotations
 
-import re
 from collections.abc import Sequence
 from datetime import date, datetime, timezone
 from math import log1p
+import re
 from typing import Any, cast
 
 from ..analysis.field_stats import decay_field_feedback, field_priority
@@ -159,7 +159,7 @@ def _feedback_recency_multiplier(value: Any, half_life_days: int) -> float:
     if observed.tzinfo is None:
         observed = observed.replace(tzinfo=timezone.utc)
     age_days = max((datetime.now(timezone.utc) - observed).total_seconds() / 86400.0, 0.0)
-    return 0.5 ** (age_days / half_life_days)
+    return float(0.5 ** (age_days / half_life_days))
 
 
 def _feedback_priority(

@@ -7,7 +7,13 @@ import logging
 from typing import TYPE_CHECKING, TypeVar
 
 from ..config.runtime_values import get_runtime_config
-from ..exceptions import BrainAPIError, BrainQueueBusyError, BrainRateLimitError, BrainStopRequested
+from ..exceptions import (
+    BrainAPIError,
+    BrainQueueBusyError,
+    BrainRateLimitError,
+    BrainStopRequested,
+    BrainTransientError,
+)
 from .timing import wait_seconds
 
 if TYPE_CHECKING:
@@ -29,9 +35,12 @@ def retry_operation(
     """以有限重试执行单个阶段，并特殊处理限流与排队拥塞。"""
     if retry_wait_seconds is None:
         retry_wait_seconds = get_runtime_config().http.retry_operation_default_wait
+    attempts = max(retries, 1)
     last_error: Exception | None = None
+    last_attempt = 0
 
-    for attempt in range(1, retries + 1):
+    for attempt in range(1, attempts + 1):
+        last_attempt = attempt
         if should_abort is not None and should_abort():
             raise BrainStopRequested(f"{name} aborted because stop was requested")
         try:
@@ -44,7 +53,7 @@ def retry_operation(
                 "[retry] %s rate limited on attempt %d/%d: %s",
                 name,
                 attempt,
-                retries,
+                attempts,
                 exc,
             )
             break
@@ -54,17 +63,37 @@ def retry_operation(
                 "[retry] %s queue busy on attempt %d/%d: %s",
                 name,
                 attempt,
-                retries,
+                attempts,
                 exc,
             )
             break
+        except BrainTransientError as exc:
+            last_error = exc
+            logger.warning(
+                "[retry] %s transport failure on attempt %d/%d: %s",
+                name,
+                attempt,
+                attempts,
+                exc,
+            )
+            if attempt < attempts:
+                if should_abort is not None and should_abort():
+                    raise BrainStopRequested(f"{name} aborted because stop was requested") from exc
+                if should_abort is None:
+                    wait_seconds(retry_wait_seconds, f"retry {name}")
+                else:
+                    wait_seconds(
+                        retry_wait_seconds,
+                        f"retry {name}",
+                        should_abort=should_abort,
+                    )
         except BrainAPIError as exc:
             last_error = exc
             logger.warning(
-                "[retry] %s exhausted on attempt %d/%d: %s",
+                "[retry] %s terminal API error on attempt %d/%d: %s",
                 name,
                 attempt,
-                retries,
+                attempts,
                 exc,
             )
             break
@@ -74,10 +103,10 @@ def retry_operation(
                 "[retry] %s failed on attempt %d/%d: %s",
                 name,
                 attempt,
-                retries,
+                attempts,
                 exc,
             )
-            if attempt < retries:
+            if attempt < attempts:
                 if should_abort is not None and should_abort():
                     raise BrainStopRequested(f"{name} aborted because stop was requested") from exc
                 if should_abort is None:
@@ -89,7 +118,7 @@ def retry_operation(
                         should_abort=should_abort,
                     )
 
-    raise BrainAPIError(f"{name} failed after {retries} attempts: {last_error}")
+    raise BrainAPIError(f"{name} failed after {last_attempt} attempts: {last_error}")
 
 
 def is_invalid_credentials_error(error: Exception) -> bool:

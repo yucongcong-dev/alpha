@@ -55,6 +55,9 @@ class DatasetExpressionPolicy:
     dataset_id: str = ""
     policy_version: str = "unversioned"
     feedback_scope: str = "field_type"
+    supported_grouping_fields: set[str] = field(
+        default_factory=lambda: {"subindustry", "industry", "sector"}
+    )
     evaluation_holdout_percent: int = 0
     use_curated_heuristics: bool = False
     closed_default_template_library: bool = False

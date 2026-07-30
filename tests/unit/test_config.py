@@ -370,6 +370,12 @@ def test_expression_policy_default_section_applies_to_non_curated_dataset(monkey
     assert policy.preferred_partner_score_bonuses["assets"] == 33
     assert "curated_only" not in policy.disabled_templates
 
+def test_model51_policy_disables_undersized_holdout_experiment() -> None:
+    """The small closed library cannot produce a statistically useful A/B holdout."""
+    policy = get_dataset_expression_policy("model51")
+
+    assert policy.closed_default_template_library is True
+    assert policy.evaluation_holdout_percent == 0
 
 def test_load_submit_quality_runtime_config_reads_yaml_globals(monkeypatch) -> None:
     monkeypatch.setattr(

@@ -66,6 +66,16 @@ class BrainClient(BrainSessionMixin, BrainFieldsMixin, BrainSimulationsMixin, Br
         self._http_backend = create_http_backend(http_backend)
 
 
+    def close(self) -> None:
+        """Release resources held by the selected HTTP backend."""
+        self._http_backend.close()
+
+    def __enter__(self) -> BrainClient:
+        return self
+
+    def __exit__(self, *_args: object) -> None:
+        self.close()
+
 class WorkerClientFactory:
     """为每个工作线程提供独立且已认证的 BrainClient。"""
 
@@ -78,6 +88,9 @@ class WorkerClientFactory:
         self.password = password
         self._http_backend = http_backend
         self._local = threading.local()
+        self._clients: list[BrainClient] = []
+        self._clients_lock = threading.Lock()
+        self._closed: bool = False
 
     def get_client(self) -> BrainClient:
         """获取当前线程专属客户端，不存在时懒加载并登录。"""
@@ -93,5 +106,23 @@ class WorkerClientFactory:
             http_backend=self._http_backend,
         )
         login_with_retry(client, self.options.login_retries)
+        with self._clients_lock:
+            if self._closed:
+                client.close()
+                raise BrainAPIError("Worker client factory is closed")
+            self._clients.append(client)
         self._local.client = client
         return client
+
+    def close(self) -> None:
+        """Close all worker clients after their executor has stopped."""
+        with self._clients_lock:
+            if self._closed:
+                return
+            self._closed = True
+            clients = tuple(self._clients)
+            self._clients.clear()
+        for client in clients:
+            client.close()
+        if hasattr(self._local, "client"):
+            del self._local.client

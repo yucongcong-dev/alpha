@@ -101,8 +101,13 @@ def main() -> int:
     if init_result is None:
         return 1
 
-    run_field_test_loop(config, init_result, config.paths)
-    finalize_run(config, init_result, config.paths)
+    try:
+        run_field_test_loop(config, init_result, config.paths)
+        finalize_run(config, init_result, config.paths)
+    finally:
+        close = getattr(init_result.client_factory, "close", None)
+        if callable(close):
+            close()
     return 0
 
 

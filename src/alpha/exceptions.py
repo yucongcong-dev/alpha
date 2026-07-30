@@ -32,6 +32,10 @@ class BrainAPIError(RuntimeError):
         return f"{self.__class__.__name__}({self.message!r})"
 
 
+class BrainTransientError(BrainAPIError):
+    """Temporary transport failure that is safe for the caller to retry."""
+
+
 class BrainRateLimitError(BrainAPIError):
     """API 速率限制错误。携带建议的重试等待时间。
 

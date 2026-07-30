@@ -13,6 +13,7 @@ from alpha.exceptions import (
     BrainQueueBusyError,
     BrainRateLimitError,
     BrainStopRequested,
+    BrainTransientError,
 )
 
 
@@ -146,10 +147,30 @@ def test_retry_operation_does_not_repeat_terminal_api_errors(error: BrainAPIErro
         attempts += 1
         raise error
 
-    with pytest.raises(BrainAPIError, match="failed after 4 attempts"):
+    with pytest.raises(BrainAPIError, match="failed after 1 attempts"):
         retry_operation("operation", 4, operation, retry_wait_seconds=0)
 
     assert attempts == 1
+
+
+def test_retry_operation_retries_transient_api_errors(monkeypatch) -> None:
+    attempts = 0
+    waits: list[float] = []
+
+    def operation() -> str:
+        nonlocal attempts
+        attempts += 1
+        if attempts < 3:
+            raise BrainTransientError("network unavailable")
+        return "ok"
+
+    monkeypatch.setattr(
+        "alpha.api.retry.wait_seconds", lambda seconds, *_args: waits.append(seconds)
+    )
+
+    assert retry_operation("operation", 3, operation, retry_wait_seconds=0.25) == "ok"
+    assert attempts == 3
+    assert waits == [0.25, 0.25]
 
 
 def test_retry_operation_honors_abort_before_first_attempt() -> None:

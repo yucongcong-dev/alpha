@@ -14,7 +14,9 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 from dataclasses import replace
+import logging
 from pathlib import Path
+import re
 
 from ..analysis.field_stats import decay_field_feedback
 from ..config.constants import FEEDBACK_STAGE_GENERATE, FEEDBACK_STAGE_RESIMULATE
@@ -42,6 +44,9 @@ from .templates.priority import (
 )
 from .templates.variation_common import is_blacklisted_template as _is_blacklisted_template
 from .templates.variations import build_feedback_mutations
+
+logger = logging.getLogger(__name__)
+_KNOWN_GROUPING_FIELDS = frozenset({"subindustry", "industry", "sector"})
 
 
 def _policy_template_priority_adjustment(
@@ -105,6 +110,34 @@ def _template_supports_field_tags(
     allowed_tags = {str(tag) for tag in raw_tags}
     current_tags = {str(tag) for tag in field_tags}
     return bool(allowed_tags & current_tags)
+
+
+def _template_supports_grouping_fields(
+    candidate: TemplateCandidate,
+    policy: DatasetExpressionPolicy,
+) -> bool:
+    """Reject templates that require a grouping field unavailable in this market."""
+    raw_required = candidate.metadata.get("required_grouping_fields")
+    if isinstance(raw_required, str) and raw_required.strip():
+        required = {raw_required.casefold()}
+    elif isinstance(raw_required, (list, tuple, set)) and raw_required:
+        required = {str(item).casefold() for item in raw_required}
+    else:
+        required = {
+            grouping
+            for grouping in _KNOWN_GROUPING_FIELDS
+            if re.search(rf"\b{re.escape(grouping)}\b", candidate.expression, flags=re.IGNORECASE)
+        }
+    unavailable = required - {name.casefold() for name in policy.supported_grouping_fields}
+    if not unavailable:
+        return True
+    logger.info(
+        "[templates] skipping %s: unsupported grouping fields %s for dataset=%s",
+        candidate.name,
+        sorted(unavailable),
+        policy.dataset_id,
+    )
+    return False
 
 
 def _is_explicit_template_preset(template_library_file: str) -> bool:
@@ -298,6 +331,7 @@ def build_expression_candidates(
         )
     ]
     templates = [item for item in templates if _template_supports_field_tags(item, field_view)]
+    templates = [item for item in templates if _template_supports_grouping_fields(item, policy)]
 
     templates = apply_similarity_penalty(templates, options.legacy_similarity_penalty)
     if policy_arm == POLICY_ARM_ADAPTIVE:

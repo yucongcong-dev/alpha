@@ -18,7 +18,6 @@ from ..models.domain import FieldFeedbackMap, FieldTestResult
 from ..models.result_predicates import is_feedback_eligible_result
 from .failed_checks import score_failed_checks
 
-
 _PASSED_FEEDBACK_SCORE = 1.0
 
 
@@ -88,7 +87,7 @@ def update_field_feedback_with_result(
         summary[STAT_FIELD_FAILED_CHECK_COUNTS][name] = int(current_count or 0) + 1
     if result.submittable is True:
         summary["submittable_templates"] = int(summary.get("submittable_templates", 0) or 0) + 1
-        if _PASSED_FEEDBACK_SCORE >= summary["best_score"]:
+        if summary["best_score"] <= _PASSED_FEEDBACK_SCORE:
             summary["best_score"] = _PASSED_FEEDBACK_SCORE
             summary["best_expression"] = result.expression
             summary["best_template_name"] = result.template_name

@@ -204,7 +204,8 @@ def test_concurrent_processes_share_the_journal_lock(tmp_path) -> None:
     output_path = tmp_path / "results.json"
     initialize_results_journal(str(output_path), [])
     journal_path = tmp_path / "results_results.jsonl"
-    context = multiprocessing.get_context("fork")
+    start_method = "fork" if "fork" in multiprocessing.get_all_start_methods() else "spawn"
+    context = multiprocessing.get_context(start_method)
     processes = [
         context.Process(target=_append_process_batch, args=(str(journal_path), batch_index))
         for batch_index in range(4)

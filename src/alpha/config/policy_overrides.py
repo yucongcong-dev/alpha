@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-import logging
 from dataclasses import replace
+import logging
 from typing import Any, cast
 
 from .models import DatasetExpressionPolicy
@@ -18,7 +18,6 @@ from .policy_coercers import (
 )
 from .types import ExpressionPolicyOverrides, YamlConfig
 from .yaml import get_yaml_config
-
 
 logger = logging.getLogger(__name__)
 
@@ -98,6 +97,7 @@ def apply_yaml_expression_policy_overrides(
     set_fields = {
         "disabled_templates",
         "protected_templates",
+        "supported_grouping_fields",
         "positive_raw_fields",
         "negative_raw_fields",
         "overtested_weak_fields",

@@ -541,6 +541,10 @@ expression_policies:
   model51:
     use_curated_heuristics: true
     closed_default_template_library: true
+    # model51 has only 16 fields. A 10% holdout cannot satisfy the evaluator's
+    # 20-fields-per-arm minimum, so it only weakens a small random subset of
+    # the default five-template search without producing an actionable result.
+    evaluation_holdout_percent: 0
     ratio_partner_candidates:
       beta_last_30_days_spy: ["correlation_last_30_days_spy", "systematic_risk_last_30_days"]
       beta_last_60_days_spy: ["correlation_last_60_days_spy", "systematic_risk_last_60_days"]

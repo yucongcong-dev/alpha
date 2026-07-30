@@ -7,6 +7,7 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
 from pathlib import Path
 
 import pytest
@@ -24,6 +25,7 @@ from alpha.generators.templates.variations import (
     build_historical_reuse_templates,
     build_trade_when_templates,
 )
+from alpha.models.domain import TemplateLibraryItem
 from alpha.models.runtime import TemplateBuildContext, TemplateBuildOptions
 from alpha.policy.expression import get_dataset_expression_policy
 
@@ -157,6 +159,38 @@ def test_build_expression_candidates_preserve_generated_metadata() -> None:
     assert candidate.metadata["family"] == "legacy_level"
     assert candidate.metadata["stage"] == "first_order"
 
+
+def test_build_expression_candidates_skip_unsupported_grouping_fields() -> None:
+    policy = replace(
+        get_dataset_expression_policy("fundamental6"),
+        closed_default_template_library=True,
+        supported_grouping_fields={"industry"},
+    )
+    field = {"id": "cash_st", "type": "MATRIX"}
+    build_ctx = TemplateBuildContext(
+        options=TemplateBuildOptions(**_DEFAULT_SIM_SETTINGS, legacy_similarity_penalty=0),
+        all_fields=[field],
+        template_library={
+            "default": [
+                TemplateLibraryItem(
+                    name="requires_subindustry",
+                    expression="group_rank({field}, subindustry)",
+                    priority=100,
+                )
+            ]
+        },
+        template_library_file="datasets/fundamental6/template.json",
+    )
+
+    candidates = build_expression_candidates(
+        field,
+        build_ctx,
+        max_templates_per_field=0,
+        max_templates_per_family=0,
+        expression_policy=policy,
+    )
+
+    assert candidates == []
 
 def test_bucket_group_templates_add_four_controlled_groups() -> None:
     templates = build_bucket_group_templates("rank(cash_st)", name_prefix="bucket")

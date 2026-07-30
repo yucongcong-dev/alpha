@@ -202,15 +202,20 @@ def initialize_run_context(
         args,
         services=services.api_client,
     )
-    prepared = _prepare_bootstrap_resources(
-        args,
-        paths,
-        bootstrap_client,
-        run_config=run_config,
-        run_paths=run_paths,
-        supporting_services=services.supporting_resources,
-        field_services=services.field_loading,
-    )
+    try:
+        prepared = _prepare_bootstrap_resources(
+            args,
+            paths,
+            bootstrap_client,
+            run_config=run_config,
+            run_paths=run_paths,
+            supporting_services=services.supporting_resources,
+            field_services=services.field_loading,
+        )
+    finally:
+        close = getattr(bootstrap_client, "close", None)
+        if callable(close):
+            close()
     if prepared is None:
         return None
 

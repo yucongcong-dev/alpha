@@ -54,6 +54,10 @@ class HttpBackend(Protocol):
         ...
 
 
+    def close(self) -> None:
+        """Release resources owned by the HTTP backend."""
+        ...
+
 class UrllibHttpBackend:
     """基于 urllib.request 的 HTTP 后端（默认兼容实现）。"""
 
@@ -78,10 +82,10 @@ class UrllibHttpBackend:
                 return response.getcode(), dict(response.headers.items()), response.read()
         except HTTPError as exc:
             return exc.code, dict(exc.headers.items()), exc.read()
-        except URLError as exc:
-            from ..exceptions import BrainAPIError
+        except (URLError, TimeoutError) as exc:
+            from ..exceptions import BrainTransientError
 
-            raise BrainAPIError(f"{method} {url} failed: {exc}") from exc
+            raise BrainTransientError(f"{method} {url} failed: {exc}") from exc
 
     def set_cookie(self, cookie: Cookie) -> None:
         self._cookies.set_cookie(cookie)
@@ -90,6 +94,9 @@ class UrllibHttpBackend:
         for cookie in cookies:
             self._cookies.set_cookie(cookie)
 
+
+    def close(self) -> None:
+        """urllib keeps no explicit connection pool to close."""
 
 class HttpxHttpBackend:
     """基于 httpx 的现代 HTTP 后端（连接池、Keep-Alive、HTTP/2 支持）。"""
@@ -110,6 +117,7 @@ class HttpxHttpBackend:
                 limits=httpx.Limits(max_keepalive_connections=10, max_connections=20),
                 follow_redirects=True,
                 http2=True,
+                trust_env=False,
             )
             return self._client
         except ImportError as exc:
@@ -165,8 +173,15 @@ class HttpxHttpBackend:
             self._sync_cookies_from_client()
             return response.status_code, response_headers, response.content
         except Exception as exc:
-            from ..exceptions import BrainAPIError
+            from ..exceptions import BrainAPIError, BrainTransientError
 
+            try:
+                import httpx
+            except ImportError:
+                pass
+            else:
+                if isinstance(exc, httpx.TransportError):
+                    raise BrainTransientError(f"{method} {url} failed: {exc}") from exc
             raise BrainAPIError(f"{method} {url} failed: {exc}") from exc
 
     def set_cookie(self, cookie: Cookie) -> None:
@@ -178,6 +193,13 @@ class HttpxHttpBackend:
             self._cookies.set_cookie(cookie)
         self._sync_cookies_to_client()
 
+
+    def close(self) -> None:
+        """Close the optional httpx connection pool and allow later recreation."""
+        client = self._client
+        self._client = None
+        if client is not None:
+            client.close()
 
 def create_http_backend(backend_name: str = "") -> HttpBackend:
     """根据配置名称创建 HTTP 后端实例。
