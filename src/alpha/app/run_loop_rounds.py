@@ -162,7 +162,9 @@ def schedule_field_round(
     pending_templates, filtered_templates, template_count = build_pending_templates_for_field(
         context.template_build_ctx,
         field,
-        attempted_keys=execution_state.attempted_keys | execution_state.queue_exhausted_keys,
+        attempted_keys=(
+            execution_state.attempted_keys | execution_state.queue_retry_state.exhausted_keys
+        ),
         prior_results=[
             *run_ctx.historical_state.feedback_results,
             *result_ledger.results,

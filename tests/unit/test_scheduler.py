@@ -292,8 +292,9 @@ class TestRegisterQueueBusyTemplate:
         register_queue_busy_template(first_key, scheduler_args, empty_execution_state)
         register_queue_busy_template(first_key, scheduler_args, empty_execution_state)
 
-        assert first_key in empty_execution_state.queue_exhausted_keys
-        assert second_key not in empty_execution_state.queue_exhausted_keys
+        retry_state = empty_execution_state.queue_retry_state
+        assert first_key in retry_state.exhausted_keys
+        assert second_key not in retry_state.exhausted_keys
         assert empty_execution_state.skipped_fields_due_to_queue == set()
 
     def test_zero_retry_limit_keeps_candidate_retryable(
@@ -307,8 +308,9 @@ class TestRegisterQueueBusyTemplate:
         for _ in range(3):
             register_queue_busy_template(key, scheduler_args, empty_execution_state)
 
-        assert empty_execution_state.queue_retry_counts[key] == 3
-        assert empty_execution_state.queue_exhausted_keys == set()
+        retry_state = empty_execution_state.queue_retry_state
+        assert retry_state.retry_counts[key] == 3
+        assert retry_state.exhausted_keys == set()
 
 
 # ============================================================================

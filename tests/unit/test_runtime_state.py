@@ -42,24 +42,24 @@ def test_execution_metrics_follow_results_without_manual_refresh() -> None:
     assert ledger.submittable_count == 0
 
 
-def test_queue_retry_state_updates_legacy_views() -> None:
+def test_queue_retry_state_owns_retry_budget() -> None:
     state = _state()
     key = ("field_1", "template_1", "rank(field_1)", "settings")
 
     update = state.queue_retry_state.register_busy(key, retry_limit=2)
     assert update.next_count == 1
     assert update.exhausted is False
-    assert state.queue_retry_counts[key] == 1
-    assert state.queue_exhausted_keys == set()
+    assert state.queue_retry_state.retry_counts[key] == 1
+    assert state.queue_retry_state.exhausted_keys == set()
 
     update = state.queue_retry_state.register_busy(key, retry_limit=2)
     assert update.next_count == 2
     assert update.exhausted is True
-    assert key in state.queue_exhausted_keys
+    assert key in state.queue_retry_state.exhausted_keys
 
     state.reset_transient_queue_state()
-    assert state.queue_retry_counts == {}
-    assert state.queue_exhausted_keys == set()
+    assert state.queue_retry_state.retry_counts == {}
+    assert state.queue_retry_state.exhausted_keys == set()
 
 
 def test_result_ledger_owns_results_and_stop_threshold() -> None:

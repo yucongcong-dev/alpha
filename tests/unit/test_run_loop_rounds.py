@@ -116,7 +116,7 @@ def test_unbatched_field_progress_keeps_linear_resume_cursor() -> None:
 def test_queue_exhausted_candidate_is_excluded_from_next_round() -> None:
     context = _build_context(field_template_batch_size=1)
     exhausted_key = ("f1", "t1", "rank(f1)", "settings")
-    context.run_ctx.execution_state.queue_exhausted_keys.add(exhausted_key)
+    context.run_ctx.execution_state.queue_retry_state.exhausted_keys.add(exhausted_key)
     captured_attempted: list[set[tuple[str, str, str, str]]] = []
 
     def _capture_pending(*_args, attempted_keys, **_kwargs):

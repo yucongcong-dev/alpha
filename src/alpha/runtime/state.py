@@ -87,9 +87,7 @@ class ExecutionState:
     future_queue_state: FutureQueueState = field(default_factory=FutureQueueState.create)
     field_queue_busy_counts: dict[str, int] = field(default_factory=dict)
     skipped_fields_due_to_queue: set[str] = field(default_factory=set)
-    queue_retry_counts: dict[QueueRetryKey, int] = field(default_factory=dict)
-    queue_exhausted_keys: set[QueueRetryKey] = field(default_factory=set)
-    queue_retry_state: QueueRetryState = field(init=False)
+    queue_retry_state: QueueRetryState = field(default_factory=QueueRetryState)
     result_ledger_state: ResultLedgerState = field(
         default_factory=lambda: ResultLedgerState(results=[])
     )
@@ -122,12 +120,6 @@ class ExecutionState:
             ),
             result_ledger_state=ResultLedgerState(results=list(initial_results or [])),
             last_submission_at=last_submission_at,
-        )
-
-    def __post_init__(self) -> None:
-        self.queue_retry_state = QueueRetryState(
-            retry_counts=self.queue_retry_counts,
-            exhausted_keys=self.queue_exhausted_keys,
         )
 
     @property
