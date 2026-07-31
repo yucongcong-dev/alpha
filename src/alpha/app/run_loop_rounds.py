@@ -135,10 +135,11 @@ def schedule_field_round(
     run_ctx = context.run_ctx
     execution_state = run_ctx.execution_state
     runtime_state = run_ctx.runtime_state
+    result_ledger = execution_state.result_ledger
     field_id = str(first_non_empty(field.get("id"), SENTINEL_UNKNOWN))
     field_name = choose_field_name(field)
     field_type = choose_field_type(field)
-    refresh_runtime_feedback(context.template_build_ctx, execution_state.results)
+    refresh_runtime_feedback(context.template_build_ctx, result_ledger.results)
 
     if should_skip_field(
         field_id,
@@ -164,7 +165,7 @@ def schedule_field_round(
         attempted_keys=execution_state.attempted_keys | execution_state.queue_exhausted_keys,
         prior_results=[
             *run_ctx.historical_state.feedback_results,
-            *execution_state.results,
+            *result_ledger.results,
         ],
         reserved_keys=inflight_template_keys(execution_state.pending_futures),
     )

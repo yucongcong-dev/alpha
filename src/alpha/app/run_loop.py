@@ -70,7 +70,7 @@ def run_field_test_loop(
         args=args,
         run_ctx=run_ctx,
         fields=fields,
-        existing_results_count=len(execution_state.results),
+        existing_results_count=len(execution_state.result_ledger.results),
     )
 
     executor = ThreadPoolExecutor(max_workers=max_workers)

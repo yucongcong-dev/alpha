@@ -268,7 +268,7 @@ def print_dry_run_plan(
         historical_state=historical_state,
         filters=filters,
         use_dataset_heuristics=use_dataset_heuristics,
-        existing_results_count=len(execution_state.results),
+        existing_results_count=len(execution_state.result_ledger.results),
     )
 
     for field in fields:
@@ -282,7 +282,10 @@ def print_dry_run_plan(
             build_ctx,
             field,
             attempted_keys=execution_state.attempted_keys,
-            prior_results=[*historical_state.feedback_results, *execution_state.results],
+            prior_results=[
+                *historical_state.feedback_results,
+                *execution_state.result_ledger.results,
+            ],
         )
         if not pending_templates:
             unactionable_fields += 1
@@ -309,7 +312,7 @@ def print_dry_run_plan(
     logger.info("[dry-run] planned_simulations=%d", planned_templates)
     logger.info("[dry-run] filtered_templates=%d", filtered_templates)
     logger.info("[dry-run] unactionable_fields=%d", unactionable_fields)
-    logger.info("[dry-run] existing_results=%d", len(execution_state.results))
+    logger.info("[dry-run] existing_results=%d", len(execution_state.result_ledger.results))
     logger.info("[dry-run] attempted_keys=%d", len(execution_state.attempted_keys))
     for index, field in enumerate(fields[:sample_limit], start=1):
         logger.info(
