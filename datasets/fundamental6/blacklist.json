@@ -2,7 +2,7 @@
   "_version": "v2",
   "_comment": "Template blacklist for fundamental6. learned_templates stores dataset-specific learned exclusions; expression_rules stores explicit expression pattern blocks.",
   "_created": "2026-07-13",
-  "_updated": "2026-07-31 20:18",
+  "_updated": "2026-07-31 20:25",
   "dataset_id": "fundamental6",
   "learned_templates": [
     {
@@ -323,6 +323,44 @@
       "avg_sharpe": -0.387,
       "avg_fitness": -0.253,
       "concentrated_weight": 2
+    },
+    {
+      "name": "account_bucket_liquidity_ts_rank_120",
+      "dataset_id": "fundamental6",
+      "source": "auto_detected",
+      "field_type": "MATRIX",
+      "template_family": "bucket_group_rank",
+      "template_stage": "group_second_order",
+      "reason": "3个字段测试均不通过。平均 Sharpe -0.583。平均 Fitness -0.247。",
+      "fields_tested": [
+        "fnd6_mfma1_apalch",
+        "fnd6_mfma1_at",
+        "fnd6_mfma1_capx"
+      ],
+      "low_sharpe": 3,
+      "low_fitness": 3,
+      "date_blacklisted": "2026-07-31",
+      "avg_sharpe": -0.583,
+      "avg_fitness": -0.247
+    },
+    {
+      "name": "account_bucket_volatility_zscore_60",
+      "dataset_id": "fundamental6",
+      "source": "auto_detected",
+      "field_type": "MATRIX",
+      "template_family": "bucket_group_rank",
+      "template_stage": "group_second_order",
+      "reason": "3个字段测试均不通过。平均 Sharpe -0.170。平均 Fitness -0.080。",
+      "fields_tested": [
+        "fnd6_mfma1_invch",
+        "fnd6_mfma2_oancf",
+        "fnd6_mfma2_opeps"
+      ],
+      "low_sharpe": 3,
+      "low_fitness": 3,
+      "date_blacklisted": "2026-07-31",
+      "avg_sharpe": -0.17,
+      "avg_fitness": -0.08
     }
   ],
   "expression_rules": [
