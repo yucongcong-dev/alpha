@@ -2,7 +2,7 @@
   "_version": "v2",
   "_comment": "Template blacklist for fundamental6. learned_templates stores dataset-specific learned exclusions; expression_rules stores explicit expression pattern blocks.",
   "_created": "2026-07-13",
-  "_updated": "2026-07-31 21:30",
+  "_updated": "2026-07-31 21:39",
   "dataset_id": "fundamental6",
   "learned_templates": [
     {
@@ -543,6 +543,48 @@
       "avg_sharpe": -0.347,
       "avg_fitness": -0.613,
       "concentrated_weight": 3
+    },
+    {
+      "name": "account_days_from_change_decay_20",
+      "dataset_id": "fundamental6",
+      "source": "auto_detected",
+      "field_type": "MATRIX",
+      "template_family": "event_decay",
+      "template_stage": "group_second_order",
+      "reason": "7个字段测试均不通过。平均 Sharpe 0.586。平均 Fitness 0.313。",
+      "fields_tested": [
+        "fnd6_invfg",
+        "fnd6_invrm",
+        "fnd6_invwip",
+        "fnd6_itcb",
+        "fnd6_invo",
+        "fnd6_itci",
+        "fnd6_ivaco"
+      ],
+      "low_sharpe": 7,
+      "low_fitness": 7,
+      "date_blacklisted": "2026-07-31",
+      "avg_sharpe": 0.586,
+      "avg_fitness": 0.313
+    },
+    {
+      "name": "account_rank_backfill_504",
+      "dataset_id": "fundamental6",
+      "source": "auto_detected",
+      "field_type": "MATRIX",
+      "template_family": "legacy_level",
+      "template_stage": "group_second_order",
+      "reason": "3个字段测试均不通过。平均 Sharpe 0.437。平均 Fitness 0.227。",
+      "fields_tested": [
+        "fnd6_ivst",
+        "fnd6_ivstch",
+        "fnd6_lcox"
+      ],
+      "low_sharpe": 3,
+      "low_fitness": 3,
+      "date_blacklisted": "2026-07-31",
+      "avg_sharpe": 0.437,
+      "avg_fitness": 0.227
     }
   ],
   "expression_rules": [
