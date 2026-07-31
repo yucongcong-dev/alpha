@@ -123,7 +123,7 @@ class TestCongestionSignalPropagation:
 
         assert congestion_detected is False
         assert queue_busy_key == ("test_field", "test_tpl", "rank(test)", "")
-        assert len(execution_state.results) == 1
+        assert len(execution_state.result_ledger.results) == 1
 
     @pytest.mark.parametrize("congestion_msg", CONGESTION_MESSAGES)
     def test_congestion_detected_from_failure_message(
@@ -182,7 +182,7 @@ class TestCongestionSignalPropagation:
             )
 
         assert congestion_detected is True
-        assert len(execution_state.results) == 1
+        assert len(execution_state.result_ledger.results) == 1
 
 
 class TestQueueBusyFieldRegistration:
@@ -412,8 +412,8 @@ class TestDrainCompletedFuturesFlow:
                 runtime_state=runtime_state_max_workers_5,
             )
 
-        assert len(empty_execution_state.results) == 1
-        assert empty_execution_state.results[0].submittable is True
+        assert len(empty_execution_state.result_ledger.results) == 1
+        assert empty_execution_state.result_ledger.results[0].submittable is True
         assert not runtime_state_max_workers_5.is_cooling_down()
 
     def test_drain_congestion_future_triggers_cooldown(
@@ -500,9 +500,9 @@ class TestDrainCompletedFuturesFlow:
                 runtime_state=runtime_state_max_workers_5,
             )
 
-        assert len(empty_execution_state.results) == 1
-        assert empty_execution_state.results[0].status == "error"
-        assert empty_execution_state.results[0].failed_stage == "worker"
+        assert len(empty_execution_state.result_ledger.results) == 1
+        assert empty_execution_state.result_ledger.results[0].status == "error"
+        assert empty_execution_state.result_ledger.results[0].failed_stage == "worker"
         assert not runtime_state_max_workers_5.is_cooling_down()
 
 

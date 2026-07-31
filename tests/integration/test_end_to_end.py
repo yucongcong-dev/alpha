@@ -158,10 +158,10 @@ class TestExecutionStateManagement:
             status="error",
         )
 
-        state.results.append(result1)
-        state.results.append(result2)
+        state.result_ledger.append(result1)
+        state.result_ledger.append(result2)
 
-        assert len(state.results) == 2
+        assert len(state.result_ledger.results) == 2
 
     def test_execution_state_pending_futures(self):
         """测试执行状态的pending futures管理"""
@@ -249,7 +249,7 @@ class TestResultProcessingFlow:
             execution_state=state,
         )
 
-        assert len(state.results) == 1
+        assert len(state.result_ledger.results) == 1
         assert state.submittable_count == 1
 
 
