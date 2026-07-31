@@ -18,7 +18,7 @@ from ..core.scheduler import maybe_restore_runtime_concurrency, throttle_before_
 from ..generators.fields import choose_field_name, choose_field_type
 from ..models.domain import TemplateField
 from ..models.runtime_options import SchedulerControlOptions
-from ..models.runtime_protocols import RunLoopArgs
+from ..models.runtime_protocols import SimulationStageArgs
 from ..runtime.contexts import (
     FutureCompletionContext,
     PendingTemplateEntry,
@@ -46,7 +46,7 @@ class ScheduleRoundResult:
 class ScheduleRoundContext:
     """Stable dependencies shared by every breadth-first scheduling round."""
 
-    args: RunLoopArgs
+    args: SimulationStageArgs
     run_ctx: InitializedRunContext
     executor: ThreadPoolExecutor
     template_build_ctx: TemplateBuildContext
