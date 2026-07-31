@@ -79,6 +79,42 @@ class QueueRetryState:
         self.exhausted_keys.clear()
 
 
+@dataclass
+class FutureQueueState:
+    """Pending worker futures plus resumable remote simulations."""
+
+    pending_futures: dict[Future[FieldTestResult], PendingFutureContext]
+    resumable_simulations: list[PendingFutureContext]
+    stop_signal: Event
+
+    def cancel_unstarted(self) -> int:
+        """Cancel futures that have not started and remove their pending metadata."""
+        cancelled = 0
+        for future in list(self.pending_futures):
+            if future.cancel():
+                self.pending_futures.pop(future, None)
+                cancelled += 1
+        return cancelled
+
+    def register(
+        self,
+        future: Future[FieldTestResult],
+        context: PendingFutureContext,
+    ) -> None:
+        self.pending_futures[future] = context
+
+    def pop_completed(self, future: Future[FieldTestResult]) -> PendingFutureContext:
+        return self.pending_futures.pop(future)
+
+    def take_resumable_batch(self) -> list[PendingFutureContext]:
+        pending_contexts = list(self.resumable_simulations)
+        self.resumable_simulations.clear()
+        return pending_contexts
+
+    def restore_resumable_batch(self, pending_contexts: list[PendingFutureContext]) -> None:
+        self.resumable_simulations.extend(pending_contexts)
+
+
 @dataclass(frozen=True, slots=True)
 class ExecutionMetrics:
     """Counts derived from the authoritative in-memory result sequence."""
@@ -116,6 +152,7 @@ class ExecutionState:
     queue_retry_counts: dict[QueueRetryKey, int] = field(default_factory=dict)
     queue_exhausted_keys: set[QueueRetryKey] = field(default_factory=set)
     queue_retry_state: QueueRetryState = field(init=False)
+    future_queue_state: FutureQueueState = field(init=False)
     submittable_baseline_count: int = 0
     persisted_result_count: int = 0
     blacklist_runtime_stats: BlacklistRuntimeStats = field(default_factory=dict)
@@ -128,6 +165,19 @@ class ExecutionState:
             retry_counts=self.queue_retry_counts,
             exhausted_keys=self.queue_exhausted_keys,
         )
+        self.future_queue_state = FutureQueueState(
+            pending_futures=self.pending_futures,
+            resumable_simulations=self.resumable_simulations,
+            stop_signal=self.stop_signal,
+        )
+
+    @property
+    def future_queue(self) -> FutureQueueState:
+        """Return a future-state view that tracks legacy mutable attributes."""
+        self.future_queue_state.pending_futures = self.pending_futures
+        self.future_queue_state.resumable_simulations = self.resumable_simulations
+        self.future_queue_state.stop_signal = self.stop_signal
+        return self.future_queue_state
 
     def reset_transient_queue_state(self) -> None:
         """Reset queue state that should not survive process restarts."""

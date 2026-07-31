@@ -24,12 +24,7 @@ logger = logging.getLogger(__name__)
 
 def cancel_unstarted_futures(execution_state: ExecutionState) -> int:
     """Cancel futures that have not started and remove their non-resumable metadata."""
-    cancelled = 0
-    for future in list(execution_state.pending_futures):
-        if future.cancel():
-            execution_state.pending_futures.pop(future, None)
-            cancelled += 1
-    return cancelled
+    return execution_state.future_queue.cancel_unstarted()
 
 
 def _drain_completed_cycle(
@@ -145,7 +140,7 @@ def submit_template_future(
     )
     execution_state.last_submission_at = time.monotonic()
     typed_future: Future[FieldTestResult] = future
-    execution_state.pending_futures[typed_future] = pending_context
+    execution_state.future_queue.register(typed_future, pending_context)
 
 
 def submit_resumable_futures(
@@ -156,8 +151,7 @@ def submit_resumable_futures(
     args: SimulationStageArgs,
 ) -> int:
     """Submit restored remote simulations for polling before scheduling new work."""
-    pending_contexts = list(execution_state.resumable_simulations)
-    execution_state.resumable_simulations.clear()
+    pending_contexts = execution_state.future_queue.take_resumable_batch()
     submitted_count = 0
     try:
         for pending_context in pending_contexts:
@@ -170,10 +164,10 @@ def submit_resumable_futures(
                 execution_state.stop_signal.is_set,
             )
             typed_future: Future[FieldTestResult] = future
-            execution_state.pending_futures[typed_future] = pending_context
+            execution_state.future_queue.register(typed_future, pending_context)
             submitted_count += 1
     except Exception:
-        execution_state.resumable_simulations.extend(pending_contexts[submitted_count:])
+        execution_state.future_queue.restore_resumable_batch(pending_contexts[submitted_count:])
         raise
     if pending_contexts:
         logger.info(

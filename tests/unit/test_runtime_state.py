@@ -2,13 +2,14 @@
 
 from __future__ import annotations
 
+from concurrent.futures import Future
 from unittest.mock import patch
 
 from alpha.analysis.feedback_history import should_stop_after_submittable
 from alpha.app.bootstrap_state import create_execution_state
 from alpha.config.application_sections import QualityConfig
 from alpha.models.domain import FieldTestResult
-from alpha.runtime.contexts import HistoricalRunState
+from alpha.runtime.contexts import HistoricalRunState, PendingFutureContext
 from alpha.runtime.state import ExecutionState
 
 
@@ -66,6 +67,25 @@ def test_queue_retry_state_updates_legacy_views() -> None:
     state.reset_transient_queue_state()
     assert state.queue_retry_counts == {}
     assert state.queue_exhausted_keys == set()
+
+
+def test_future_queue_state_updates_legacy_views() -> None:
+    state = _state()
+    future: Future[FieldTestResult] = Future()
+    context = PendingFutureContext(field_id="field_1", template_name="template_1")
+
+    state.future_queue.register(future, context)
+    assert state.pending_futures == {future: context}
+    assert state.future_queue.pop_completed(future) == context
+    assert state.pending_futures == {}
+
+    state.resumable_simulations = [context]
+    pending_contexts = state.future_queue.take_resumable_batch()
+    assert pending_contexts == [context]
+    assert state.resumable_simulations == []
+
+    state.future_queue.restore_resumable_batch(pending_contexts)
+    assert state.resumable_simulations == [context]
 
 
 def test_bootstrap_baseline_excludes_historical_submittable_results() -> None:

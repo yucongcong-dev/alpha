@@ -52,9 +52,9 @@ def _stop_after_submittable_threshold(args: SchedulerRuntimeArgs) -> int:
 
 
 def _cancel_unstarted_pending_futures(execution_state: ExecutionState) -> None:
-    for future, context in list(execution_state.pending_futures.items()):
+    for future, context in list(execution_state.future_queue.pending_futures.items()):
         if future.cancel():
-            execution_state.pending_futures.pop(future, None)
+            execution_state.future_queue.pending_futures.pop(future, None)
             logger.info(
                 "[stop] cancelled queued future field=%s template=%s after stop-after-submittable",
                 context.field_id,
@@ -242,7 +242,7 @@ def handle_completed_future(
         - 结果立即落盘以防止中断丢失
         - 检测拥塞信号并返回给调用方
     """
-    context = execution_state.pending_futures.pop(future)
+    context = execution_state.future_queue.pop_completed(future)
     result = resolve_completed_future_result(
         future,
         context=context,
