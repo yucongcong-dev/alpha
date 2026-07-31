@@ -242,10 +242,7 @@ class ExecutionState:
 
     @property
     def result_ledger(self) -> ResultLedgerState:
-        """Return a result-state view that tracks legacy mutable attributes."""
-        self.result_ledger_state.results = self.results
-        self.result_ledger_state.submittable_baseline_count = self.submittable_baseline_count
-        self.result_ledger_state.persisted_result_count = self.persisted_result_count
+        """Return the authoritative result-state view."""
         return self.result_ledger_state
 
     def sync_result_ledger(self) -> None:

@@ -108,6 +108,18 @@ def test_result_ledger_state_updates_legacy_views() -> None:
     assert ledger.reached_submittable_stop_threshold(1) is True
 
 
+def test_result_ledger_read_does_not_restore_legacy_counters() -> None:
+    state = _state()
+    ledger = state.result_ledger
+    ledger.submittable_baseline_count = 2
+    ledger.persisted_result_count = 3
+
+    assert state.result_ledger.submittable_baseline_count == 2
+    assert state.result_ledger.persisted_result_count == 3
+    assert state.submittable_baseline_count == 0
+    assert state.persisted_result_count == 0
+
+
 def test_future_queue_state_updates_legacy_views() -> None:
     state = _state()
     future: Future[FieldTestResult] = Future()
