@@ -97,6 +97,54 @@ def _attach_runtime_metadata(
     )
 
 
+def _field_identity(field: TemplateField | dict[str, Any]) -> tuple[str, str]:
+    return (
+        str(first_non_empty(field.get("id"), SENTINEL_UNKNOWN)),
+        choose_field_name(field),
+    )
+
+
+def _field_with_runtime_metadata(
+    field: TemplateField | dict[str, Any],
+    *,
+    expression_policy: DatasetExpressionPolicy,
+    coverage: float,
+) -> TemplateField | dict[str, Any]:
+    field_name = choose_field_name(field)
+    runtime_field_tags = _infer_runtime_field_tags(
+        field_name,
+        dataset_id=expression_policy.dataset_id,
+        coverage=coverage,
+    )
+    if isinstance(field, TemplateField):
+        return _attach_runtime_metadata(field, runtime_field_tags=runtime_field_tags)
+    field_copy = dict(field)
+    if runtime_field_tags:
+        field_copy["runtime_field_tags"] = list(runtime_field_tags)
+    return field_copy
+
+
+def _base_field_stats(cached_field_count: int) -> dict[str, int]:
+    return {
+        "cached_field_count": cached_field_count,
+        "filtered_field_count": 0,
+        "ranked_field_count": 0,
+        "prefiltered_count": 0,
+        "low_coverage_count": 0,
+        "low_date_coverage_count": 0,
+        "low_alpha_count": 0,
+        "low_user_count": 0,
+        "high_alpha_count": 0,
+        "high_user_count": 0,
+        "unknown_coverage_count": 0,
+        "unknown_date_coverage_count": 0,
+        "unknown_alpha_count": 0,
+        "unknown_user_count": 0,
+        "selected_family_count": 0,
+        "selected_unexplored_count": 0,
+    }
+
+
 FieldSortKey = tuple[int, int, int, int, int, float, int, str]
 _FIELD_ALL_SUFFIX = re.compile(r"_all$")
 _FIELD_WINDOW_TOKEN = re.compile(r"_(?:last_)?\d+(?:_days?)?(?=_|$)")
@@ -379,6 +427,124 @@ def resolve_field_selection(args: object) -> tuple[int, int, int]:
     )
 
 
+def _rank_by_id(fields: Sequence[TemplateField | dict[str, Any]]) -> dict[str, int]:
+    return {
+        str(first_non_empty(field.get("id"), SENTINEL_UNKNOWN)): index
+        for index, field in enumerate(fields, start=1)
+    }
+
+
+def _apply_offset_limit(
+    fields: list[TemplateField | dict[str, Any]],
+    *,
+    offset: int,
+    limit: int,
+) -> list[TemplateField | dict[str, Any]]:
+    if offset > 0:
+        fields = fields[offset:]
+    if limit > 0:
+        fields = fields[:limit]
+    return fields
+
+
+def _attach_selection_to_fields(
+    fields: Sequence[TemplateField | dict[str, Any]],
+    *,
+    rank_by_id: dict[str, int],
+    field_selection_scores: dict[str, float],
+    historical_state: HistoricalRunState,
+    expression_policy: DatasetExpressionPolicy,
+    explicit: bool,
+) -> list[TemplateField]:
+    selected_fields: list[TemplateField | dict[str, Any]] = []
+    for field in fields:
+        field_id = str(first_non_empty(field.get("id"), SENTINEL_UNKNOWN))
+        selected_fields.append(
+            _attach_selection_metadata(
+                field,
+                rank=rank_by_id.get(field_id, 0),
+                score=field_selection_scores.get(field_id, 0.0),
+                family=infer_field_family(choose_field_name(field)),
+                reason=_selection_reason(
+                    field,
+                    historical_state=historical_state,
+                    expression_policy=expression_policy,
+                    explicit=explicit,
+                ),
+            )
+        )
+    return cast(list[TemplateField], selected_fields)
+
+
+def _finish_field_stats(
+    stats: dict[str, int],
+    *,
+    filtered_fields: Sequence[TemplateField | dict[str, Any]],
+    ranked_field_count: int,
+    selected_fields: Sequence[TemplateField | dict[str, Any]],
+) -> dict[str, int]:
+    stats["filtered_field_count"] = len(filtered_fields)
+    stats["ranked_field_count"] = ranked_field_count
+    stats["selected_family_count"] = len(
+        {str(field.get("selection_family", "")) for field in selected_fields}
+    )
+    stats["selected_unexplored_count"] = sum(
+        1
+        for field in selected_fields
+        if str(field.get("selection_reason", "")).endswith("unexplored")
+    )
+    return stats
+
+
+def _prepare_explicit_fields_for_execution(
+    fields: list[TemplateField],
+    *,
+    filters_dict: RunFilters,
+    expression_policy: DatasetExpressionPolicy,
+    historical_state: HistoricalRunState,
+    offset: int,
+    limit: int,
+) -> tuple[list[TemplateField], dict[str, int]]:
+    """Prepare an explicit include-fields run without metadata or feedback ranking."""
+    stats = _base_field_stats(len(fields))
+    filtered_fields: list[TemplateField | dict[str, Any]] = []
+    for field in fields:
+        field_id, field_name = _field_identity(field)
+        if not _is_explicitly_included(field_id, field_name, filters_dict):
+            stats["prefiltered_count"] += 1
+            continue
+        if field_id in filters_dict.exclude_fields or field_name in filters_dict.exclude_fields:
+            stats["prefiltered_count"] += 1
+            continue
+        filtered_fields.append(
+            _field_with_runtime_metadata(
+                field,
+                expression_policy=expression_policy,
+                coverage=_optional_float(field.get("coverage")) or 0.0,
+            )
+        )
+
+    if not filtered_fields:
+        return [], stats
+
+    rank_by_id = _rank_by_id(filtered_fields)
+    fields_window = _apply_offset_limit(list(filtered_fields), offset=offset, limit=limit)
+    selected_fields = _attach_selection_to_fields(
+        fields_window,
+        rank_by_id=rank_by_id,
+        field_selection_scores={},
+        historical_state=historical_state,
+        expression_policy=expression_policy,
+        explicit=True,
+    )
+    return selected_fields, _finish_field_stats(
+        stats,
+        filtered_fields=filtered_fields,
+        ranked_field_count=len(filtered_fields),
+        selected_fields=selected_fields,
+    )
+
+
 def prepare_fields_for_execution(
     fields: list[TemplateField],
     *,
@@ -390,23 +556,21 @@ def prepare_fields_for_execution(
     """对字段做过滤、排序并最终应用 offset/limit。"""
     top_fields_by_feedback, offset, limit = resolve_field_selection(args)
     cached_field_count = len(fields)
+    if filters_dict.include_fields:
+        return _prepare_explicit_fields_for_execution(
+            fields,
+            filters_dict=filters_dict,
+            expression_policy=expression_policy,
+            historical_state=historical_state,
+            offset=offset,
+            limit=limit,
+        )
+
     filtered_fields: list[TemplateField] = []
-    prefiltered_count = 0
-    low_coverage_count = 0
-    low_date_coverage_count = 0
-    low_alpha_count = 0
-    low_user_count = 0
-    high_alpha_count = 0
-    high_user_count = 0
-    unknown_coverage_count = 0
-    unknown_date_coverage_count = 0
-    unknown_alpha_count = 0
-    unknown_user_count = 0
+    stats = _base_field_stats(cached_field_count)
 
     for field in fields:
-        field_id = str(first_non_empty(field.get("id"), SENTINEL_UNKNOWN))
-        field_name = choose_field_name(field)
-        explicitly_included = _is_explicitly_included(field_id, field_name, filters_dict)
+        field_id, field_name = _field_identity(field)
         is_event_field = is_event_field_name(field_name, expression_policy.event_field_prefixes)
         min_coverage = (
             expression_policy.event_field_min_coverage
@@ -432,103 +596,57 @@ def prepare_fields_for_execution(
         date_coverage_value = _optional_float(field.get("dateCoverage"))
         alpha_count_value = _optional_int(field.get("alphaCount"))
         user_count_value = _optional_int(field.get("userCount"))
-        if (
-            filters_dict.include_fields
-            and field_id not in filters_dict.include_fields
-            and field_name not in filters_dict.include_fields
-        ):
-            prefiltered_count += 1
-            continue
         if field_id in filters_dict.exclude_fields or field_name in filters_dict.exclude_fields:
-            prefiltered_count += 1
-            continue
-        if explicitly_included:
-            runtime_field_tags = _infer_runtime_field_tags(
-                field_name,
-                dataset_id=expression_policy.dataset_id,
-                coverage=coverage_value or 0.0,
-            )
-            if isinstance(field, TemplateField):
-                filtered_fields.append(
-                    _attach_runtime_metadata(field, runtime_field_tags=runtime_field_tags)
-                )
-                continue
-            field_copy = dict(field)  # type: ignore[unreachable]
-            if runtime_field_tags:
-                field_copy["runtime_field_tags"] = list(runtime_field_tags)
-            filtered_fields.append(field_copy)
+            stats["prefiltered_count"] += 1
             continue
         if coverage_value is None:
-            unknown_coverage_count += 1
+            stats["unknown_coverage_count"] += 1
         elif coverage_value < min_coverage:
-            low_coverage_count += 1
+            stats["low_coverage_count"] += 1
             continue
         if date_coverage_value is None:
-            unknown_date_coverage_count += 1
+            stats["unknown_date_coverage_count"] += 1
         elif date_coverage_value < min_date_coverage:
-            low_date_coverage_count += 1
+            stats["low_date_coverage_count"] += 1
             continue
         if alpha_count_value is None:
-            unknown_alpha_count += 1
+            stats["unknown_alpha_count"] += 1
         elif alpha_count_value < min_alpha_count:
-            low_alpha_count += 1
+            stats["low_alpha_count"] += 1
             continue
         if user_count_value is None:
-            unknown_user_count += 1
+            stats["unknown_user_count"] += 1
         elif user_count_value < min_user_count:
-            low_user_count += 1
+            stats["low_user_count"] += 1
             continue
         if (
-            not explicitly_included
-            and expression_policy.field_max_alpha_count > 0
+            expression_policy.field_max_alpha_count > 0
             and alpha_count_value is not None
             and alpha_count_value > expression_policy.field_max_alpha_count
         ):
-            high_alpha_count += 1
+            stats["high_alpha_count"] += 1
             continue
         if (
-            not explicitly_included
-            and expression_policy.field_max_user_count > 0
+            expression_policy.field_max_user_count > 0
             and user_count_value is not None
             and user_count_value > expression_policy.field_max_user_count
         ):
-            high_user_count += 1
+            stats["high_user_count"] += 1
             continue
-        runtime_field_tags = _infer_runtime_field_tags(
-            field_name,
-            dataset_id=expression_policy.dataset_id,
-            coverage=coverage_value or 0.0,
-        )
-        if isinstance(field, TemplateField):
-            filtered_fields.append(
-                _attach_runtime_metadata(field, runtime_field_tags=runtime_field_tags)
+        filtered_fields.append(
+            cast(
+                TemplateField,
+                _field_with_runtime_metadata(
+                    field,
+                    expression_policy=expression_policy,
+                    coverage=coverage_value or 0.0,
+                ),
             )
-            continue
-        # Compatibility for legacy dict-shaped test/plugin inputs; production
-        # field loaders normalize rows to TemplateField before this boundary.
-        field_copy = dict(field)  # type: ignore[unreachable]
-        if runtime_field_tags:
-            field_copy["runtime_field_tags"] = list(runtime_field_tags)
-        filtered_fields.append(field_copy)
+        )
 
     fields = filtered_fields
     if not fields:
-        return [], {
-            "cached_field_count": cached_field_count,
-            "filtered_field_count": 0,
-            "ranked_field_count": 0,
-            "prefiltered_count": prefiltered_count,
-            "low_coverage_count": low_coverage_count,
-            "low_date_coverage_count": low_date_coverage_count,
-            "low_alpha_count": low_alpha_count,
-            "low_user_count": low_user_count,
-            "high_alpha_count": high_alpha_count,
-            "high_user_count": high_user_count,
-            "unknown_coverage_count": unknown_coverage_count,
-            "unknown_date_coverage_count": unknown_date_coverage_count,
-            "unknown_alpha_count": unknown_alpha_count,
-            "unknown_user_count": unknown_user_count,
-        }
+        return [], stats
 
     field_selection_scores: dict[str, float] = {}
     for field in fields:
@@ -586,14 +704,9 @@ def prepare_fields_for_execution(
             field_name,
         )
 
-    explicit_field_selection = bool(filters_dict.include_fields)
-    if not explicit_field_selection:
-        fields.sort(key=field_sort_key)
+    fields.sort(key=field_sort_key)
     ranked_fields = list(fields)
-    rank_by_id = {
-        str(first_non_empty(field.get("id"), SENTINEL_UNKNOWN)): index
-        for index, field in enumerate(ranked_fields, start=1)
-    }
+    rank_by_id = _rank_by_id(ranked_fields)
     if top_fields_by_feedback > 0:
         focused_fields = [
             field
@@ -608,7 +721,7 @@ def prepare_fields_for_execution(
         fields = focused_fields[:top_fields_by_feedback]
 
     ranked_field_count = len(fields)
-    if limit > 0 and not explicit_field_selection and top_fields_by_feedback <= 0:
+    if limit > 0 and top_fields_by_feedback <= 0:
         fields = cast(
             list[TemplateField],
             _select_diverse_fields(
@@ -620,49 +733,18 @@ def prepare_fields_for_execution(
                 expression_policy=expression_policy,
             ),
         )
-    if offset > 0:
-        fields = fields[offset:]
-    if limit > 0:
-        fields = fields[:limit]
-
-    selected_fields: list[TemplateField | dict[str, Any]] = []
-    for field in fields:
-        field_id = str(first_non_empty(field.get("id"), SENTINEL_UNKNOWN))
-        selected_fields.append(
-            _attach_selection_metadata(
-                field,
-                rank=rank_by_id.get(field_id, 0),
-                score=field_selection_scores.get(field_id, 0.0),
-                family=infer_field_family(choose_field_name(field)),
-                reason=_selection_reason(
-                    field,
-                    historical_state=historical_state,
-                    expression_policy=expression_policy,
-                    explicit=explicit_field_selection,
-                ),
-            )
-        )
-    fields = cast(list[TemplateField], selected_fields)
-
-    return fields, {
-        "cached_field_count": cached_field_count,
-        "filtered_field_count": len(filtered_fields),
-        "ranked_field_count": ranked_field_count,
-        "prefiltered_count": prefiltered_count,
-        "low_coverage_count": low_coverage_count,
-        "low_date_coverage_count": low_date_coverage_count,
-        "low_alpha_count": low_alpha_count,
-        "low_user_count": low_user_count,
-        "high_alpha_count": high_alpha_count,
-        "high_user_count": high_user_count,
-        "unknown_coverage_count": unknown_coverage_count,
-        "unknown_date_coverage_count": unknown_date_coverage_count,
-        "unknown_alpha_count": unknown_alpha_count,
-        "unknown_user_count": unknown_user_count,
-        "selected_family_count": len(
-            {str(field.get("selection_family", "")) for field in fields}
-        ),
-        "selected_unexplored_count": sum(
-            1 for field in fields if str(field.get("selection_reason", "")).endswith("unexplored")
-        ),
-    }
+    fields = cast(list[TemplateField], _apply_offset_limit(fields, offset=offset, limit=limit))
+    selected_fields = _attach_selection_to_fields(
+        fields,
+        rank_by_id=rank_by_id,
+        field_selection_scores=field_selection_scores,
+        historical_state=historical_state,
+        expression_policy=expression_policy,
+        explicit=False,
+    )
+    return selected_fields, _finish_field_stats(
+        stats,
+        filtered_fields=filtered_fields,
+        ranked_field_count=ranked_field_count,
+        selected_fields=selected_fields,
+    )
