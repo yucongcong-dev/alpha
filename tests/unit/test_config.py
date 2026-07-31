@@ -224,13 +224,10 @@ def test_unknown_dataset_uses_nonzero_default_field_selection_policy() -> None:
     assert policy.field_min_user_count == 3
     assert policy.field_max_alpha_count == 10000
     assert policy.field_max_user_count == 5000
-    assert policy.field_coverage_weight > 0
-    assert policy.field_alpha_crowding_penalty_weight > 0
     assert policy.field_max_per_family == 2
     assert policy.field_exploration_ratio == 0.40
     assert policy.field_feedback_half_life_days == 365
     assert policy.field_feedback_min_attempts_for_promising == 2
-    assert policy.field_unknown_metadata_penalty_weight == 0.08
     assert policy.preferred_field_type_order == {
         "MATRIX": 0,
         "VECTOR": 1,

@@ -257,20 +257,6 @@ class TemplateCandidate:
         return (self.name, self.expression, self.priority)[index]
 
 
-@dataclass(frozen=True)
-class NearPassCandidate:
-    """阶段 3 refine 使用的近门槛候选。"""
-
-    field_id: str
-    field_name: str
-    template_name: str
-    expression: str
-    template_family: str = ""
-    template_stage: str = ""
-    score: float = 0.0
-    failed_checks: list[FailedCheck] = field(default_factory=list)
-
-
 @dataclass
 class FieldTestContext:
     """字段测试运行上下文数据类。"""

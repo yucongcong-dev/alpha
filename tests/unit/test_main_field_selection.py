@@ -106,6 +106,45 @@ def test_prepare_fields_for_execution_applies_metadata_filters() -> None:
     assert stats["filtered_field_count"] == 1
 
 
+def test_explicit_include_fields_bypass_metadata_filters_and_feedback_ranking() -> None:
+    """Preset field lists are closed sets and should not be rewritten by strategy ranking."""
+    fields = [
+        {
+            "id": "strong_feedback",
+            "coverage": 1.0,
+            "dateCoverage": 1.0,
+            "alphaCount": 100,
+            "userCount": 20,
+            "themes": [],
+            "dateCreated": "2025-01-01",
+        },
+        {
+            "id": "manual_field",
+            "coverage": 0.01,
+            "dateCoverage": 0.10,
+            "alphaCount": 0,
+            "userCount": 0,
+            "themes": [],
+            "dateCreated": "2025-01-01",
+        },
+    ]
+    selected, stats = prepare_fields_for_execution(
+        fields,
+        filters_dict=RunFilters(include_fields={"manual_field"}),
+        expression_policy=get_dataset_expression_policy("fundamental6"),
+        historical_state=HistoricalRunState(
+            field_feedback={"strong_feedback": {"best_score": 1.0, "attempted_templates": 3}}
+        ),
+        args=Namespace(limit=0, offset=0, top_fields_by_feedback=0),
+    )
+
+    assert [row["id"] for row in selected] == ["manual_field"]
+    assert selected[0]["selection_reason"] == "explicit"
+    assert stats["prefiltered_count"] == 1
+    assert stats["low_coverage_count"] == 0
+    assert stats["low_date_coverage_count"] == 0
+
+
 def test_prepare_fields_for_execution_applies_stricter_event_field_filters() -> None:
     fields = [
         {
@@ -305,7 +344,7 @@ def test_limit_diversifies_numeric_tenor_families() -> None:
     )
 
     assert [row["id"] for row in selected] == [
-        "call_breakeven_10",
+        "call_breakeven_30",
         "call_breakeven_20",
         "forward_price_10",
     ]
@@ -407,7 +446,7 @@ def test_submittable_feedback_is_promising_even_after_single_attempt() -> None:
     assert selected[0]["selection_reason"] == "historical_promising"
 
 
-def test_unknown_field_metadata_is_retained_with_penalty() -> None:
+def test_unknown_field_metadata_is_retained_without_affecting_rank_score() -> None:
     fields = [
         {
             "id": "complete_signal",
@@ -434,7 +473,7 @@ def test_unknown_field_metadata_is_retained_with_penalty() -> None:
     assert stats["unknown_alpha_count"] == 1
     assert stats["unknown_user_count"] == 1
     scores = {row["id"]: row["selection_score"] for row in selected}
-    assert scores["metadata_missing"] < scores["complete_signal"]
+    assert scores["metadata_missing"] == scores["complete_signal"] == 0.0
 
 
 def test_single_attempt_feedback_is_not_pinned_as_promising() -> None:

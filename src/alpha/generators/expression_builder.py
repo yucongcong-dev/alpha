@@ -26,6 +26,10 @@ from ..generators.field_transforms import build_field_view
 from ..models.domain import FieldView, TemplateCandidate, TemplateField, TemplateLibraryItem
 from ..models.runtime_protocols import TemplateFeedback
 from ..policy.expression import get_dataset_expression_policy, resolve_feedback_stage
+from ..runtime.preset_mode import (
+    is_explicit_template_preset,
+    resolve_preset_mode,
+)
 from ..runtime.contexts import TemplateBuildContext
 from ..utils.helpers import is_event_field_name
 from .fields import choose_field_name, choose_field_type
@@ -37,12 +41,10 @@ from .templates.candidates import (
 from .templates.classification import classify_expression_family, classify_template_stage
 from .templates.metadata import _runtime_template_metadata, _select_template_items
 from .templates.priority import (
-    apply_adaptive_priority,
     apply_similarity_penalty,
     cap_templates_per_family,
 )
 from .templates.variation_common import is_blacklisted_template as _is_blacklisted_template
-from .templates.variations import build_feedback_mutations
 
 logger = logging.getLogger(__name__)
 _KNOWN_GROUPING_FIELDS = frozenset({"subindustry", "industry", "sector"})
@@ -141,10 +143,7 @@ def _template_supports_grouping_fields(
 
 def _is_explicit_template_preset(template_library_file: str) -> bool:
     """显式专项模板库使用 dataset 的 presets/ 子目录路径。"""
-    if not template_library_file:
-        return False
-    parts = {part.strip().lower() for part in Path(template_library_file).parts}
-    return "presets" in parts
+    return is_explicit_template_preset(template_library_file)
 
 
 def _is_dataset_default_library(template_library_file: str, dataset_id: str) -> bool:
@@ -248,22 +247,19 @@ def build_expression_candidates(
         field_feedback,
         half_life_days=policy.field_feedback_half_life_days,
     )
-    if policy.feedback_scope == "field_type":
-        global_failed_check_counts = dict(
-            build_ctx.failed_check_counts_by_field_type.get(field_type.upper(), {})
-        )
-    else:
-        global_failed_check_counts = dict(build_ctx.global_failed_check_counts)
     feedback_stage = resolve_feedback_stage(field_feedback, policy.feedback_loop_policy)
     field_view = build_field_view(field, policy)
     is_event_field = _is_event_field(field_name, policy)
     backfill_window = get_runtime_config().expression.backfill_window
+    preset_mode = bool(options.preset_mode) or resolve_preset_mode(
+        template_library_file=build_ctx.template_library_file,
+    )
 
     closed_candidate_library = _is_closed_candidate_library(
         build_ctx.template_library_file,
         dataset_id=policy.dataset_id,
         policy=policy,
-    )
+    ) or preset_mode
     raw_templates = _select_template_items(
         build_ctx.template_library, field_type, policy.dataset_id
     )
@@ -290,16 +286,6 @@ def build_expression_candidates(
             policy=policy,
         )
     ]
-    if not closed_candidate_library:
-        templates.extend(
-            build_feedback_mutations(
-                field_name,
-                field_feedback,
-                expression_policy=policy,
-                feedback_stage=feedback_stage,
-            )
-        )
-
     # Closed candidate libraries are expected to remain compact and explicit.
     # Do not silently re-expand them with auto-generated MATRIX neighbors.
     if field_type == "MATRIX" and not closed_candidate_library:
@@ -326,11 +312,6 @@ def build_expression_candidates(
     templates = [item for item in templates if _template_supports_grouping_fields(item, policy)]
 
     templates = apply_similarity_penalty(templates, options.legacy_similarity_penalty)
-    templates = apply_adaptive_priority(
-        templates,
-        field_feedback=field_feedback,
-        global_failed_check_counts=global_failed_check_counts,
-    )
     templates = [
         replace(
             template,

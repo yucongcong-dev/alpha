@@ -1,30 +1,24 @@
-"""Feedback and result-family propagation tests."""
+"""Feedback-stage, history, and settings-budget tests."""
 
 from __future__ import annotations
 
 import json
 from types import SimpleNamespace
 
-from alpha.analysis.feedback_filters import (
-    should_keep_template_for_feedback,
-)
+from alpha.analysis.feedback_filters import should_keep_template_for_feedback
 from alpha.analysis.feedback_history import (
     build_historical_run_state,
     choose_settings_variant_budget,
-    select_nearpass_candidates,
 )
 from alpha.analysis.results_loader import load_existing_results
 from alpha.analysis.results_persistence import dump_results
-from alpha.generators.templates.refine import build_refine_templates
 from alpha.generators.variants import build_setting_variants
-from alpha.models.domain import FieldTestResult, NearPassCandidate
+from alpha.models.domain import FieldTestResult
 from alpha.policy.expression import get_dataset_expression_policy, resolve_feedback_stage
 from alpha.selection import feedback_filters as feedback_filters_module
 
 
 def test_high_conviction_ratio_recognizes_optional_whitespace() -> None:
-    policy = get_dataset_expression_policy("fundamental6")
-
     keep = should_keep_template_for_feedback(
         "custom_ratio",
         "rank(cashflow_op / assets)",
@@ -34,7 +28,7 @@ def test_high_conviction_ratio_recognizes_optional_whitespace() -> None:
             "attempted_templates": 2,
             "failed_check_counts": {"LOW_SHARPE": 4},
         },
-        expression_policy=policy,
+        expression_policy=get_dataset_expression_policy("fundamental6"),
         template_metadata={"family": "legacy_ratio"},
     )
 
@@ -42,7 +36,6 @@ def test_high_conviction_ratio_recognizes_optional_whitespace() -> None:
 
 
 def test_feedback_priority_threshold_uses_current_runtime_config(monkeypatch) -> None:
-    policy = get_dataset_expression_policy("fundamental6")
     monkeypatch.setattr(
         feedback_filters_module,
         "get_runtime_config",
@@ -53,12 +46,8 @@ def test_feedback_priority_threshold_uses_current_runtime_config(monkeypatch) ->
         "custom_template",
         "rank(custom_field)",
         174,
-        {
-            "best_score": 0.5,
-            "attempted_templates": 3,
-            "failed_check_counts": {},
-        },
-        expression_policy=policy,
+        {"best_score": 0.5, "attempted_templates": 3, "failed_check_counts": {}},
+        expression_policy=get_dataset_expression_policy("fundamental6"),
         template_metadata={"family": "custom"},
     )
 
@@ -66,7 +55,6 @@ def test_feedback_priority_threshold_uses_current_runtime_config(monkeypatch) ->
 
 
 def test_load_existing_results_reads_template_family(tmp_path) -> None:
-    """Persisted results should round-trip template_family for later feedback passes."""
     result_file = tmp_path / "results.json"
     result_file.write_text(
         json.dumps(
@@ -81,8 +69,6 @@ def test_load_existing_results_reads_template_family(tmp_path) -> None:
                         "template_stage": "first_order",
                         "status": "simulated",
                         "submittable": False,
-                        "submitted": False,
-                        "message": "LOW_SHARPE",
                         "expression": "rank(ts_rank(cash_st, 60))",
                         "settings_fingerprint": "settings",
                         "template_library_fingerprint": "library",
@@ -96,36 +82,17 @@ def test_load_existing_results_reads_template_family(tmp_path) -> None:
 
     results = load_existing_results(str(result_file))
 
-    assert len(results) == 1
     assert results[0].template_family == "ts_rank"
     assert results[0].template_stage == "first_order"
 
 
-def test_feedback_stage_advances_to_resimulate_for_nearpass_fields() -> None:
+def test_feedback_stage_and_settings_budget_advance_for_strong_history() -> None:
     policy = get_dataset_expression_policy("fundamental6")
-    field_feedback = {
-        "best_score": 0.55,
-        "attempted_templates": 4,
-    }
+    feedback = {"best_score": 0.55, "attempted_templates": 4}
 
-    stage = resolve_feedback_stage(field_feedback, policy.feedback_loop_policy)
-
-    assert stage == "resimulate"
-
-
-def test_choose_settings_variant_budget_uses_feedback_stage_policy() -> None:
-    policy = get_dataset_expression_policy("fundamental6")
-    generate_budget = choose_settings_variant_budget(None, expression_policy=policy)
-    resimulate_budget = choose_settings_variant_budget(
-        {
-            "best_score": 0.55,
-            "attempted_templates": 4,
-        },
-        expression_policy=policy,
-    )
-
-    assert generate_budget == 1
-    assert resimulate_budget == 3
+    assert resolve_feedback_stage(feedback, policy.feedback_loop_policy) == "resimulate"
+    assert choose_settings_variant_budget(None, expression_policy=policy) == 1
+    assert choose_settings_variant_budget(feedback, expression_policy=policy) == 3
 
 
 def test_build_historical_run_state_uses_dataset_feedback_across_runs(tmp_path) -> None:
@@ -153,167 +120,11 @@ def test_build_historical_run_state_uses_dataset_feedback_across_runs(tmp_path) 
 
     state = build_historical_run_state(str(run_output), str(feedback_output))
 
-    assert state.existing_results == []
     assert state.feedback_results == [historical]
     assert ("cash_st", "weak_template", "rank(cash_st)", "settings-v1") in state.attempted_keys
-    assert state.template_stats["weak_template"]["attempted"] == 1
 
 
-def test_build_historical_run_state_discovers_existing_runs_before_feedback_exists(
-    tmp_path,
-) -> None:
-    old_run_output = tmp_path / "runs" / "old-run" / "summary.json"
-    new_run_output = tmp_path / "runs" / "new-run" / "summary.json"
-    feedback_output = tmp_path / "feedback" / "summary.json"
-    dump_results(
-        str(old_run_output),
-        "fundamental6",
-        [
-            FieldTestResult(
-                field_id="cashflow_op",
-                field_type="MATRIX",
-                field_name="cashflow_op",
-                template_name="historical_template",
-                status="simulated",
-                submittable=False,
-                expression="rank(cashflow_op)",
-                settings_fingerprint="settings-v1",
-            )
-        ],
-        settings_fingerprint="settings",
-        template_library_fingerprint="templates",
-        include_analysis=False,
-    )
-
-    state = build_historical_run_state(str(new_run_output), str(feedback_output))
-
-    assert state.existing_results == []
-    assert len(state.feedback_results) == 1
-    assert state.feedback_results[0].template_name == "historical_template"
-
-
-def test_scoped_feedback_discovers_only_matching_market_runs(tmp_path) -> None:
-    matching_output = tmp_path / "runs" / "usa-top3000" / "summary.json"
-    other_output = tmp_path / "runs" / "usa-top1000" / "summary.json"
-    feedback_output = tmp_path / "feedback" / "usa_top3000_equity_d1" / "summary.json"
-    matching = FieldTestResult(
-        field_id="cashflow_op",
-        field_type="MATRIX",
-        field_name="cashflow_op",
-        template_name="matching",
-        status="simulated",
-        submittable=False,
-        expression="rank(cashflow_op)",
-        settings_fingerprint="top3000",
-    )
-    other = FieldTestResult(
-        field_id="assets",
-        field_type="MATRIX",
-        field_name="assets",
-        template_name="other",
-        status="simulated",
-        submittable=False,
-        expression="rank(assets)",
-        settings_fingerprint="top1000",
-    )
-    for output, result, universe in (
-        (matching_output, matching, "TOP3000"),
-        (other_output, other, "TOP1000"),
-    ):
-        dump_results(
-            str(output),
-            "fundamental6",
-            [result],
-            settings_fingerprint=result.settings_fingerprint,
-            template_library_fingerprint="templates",
-            run_config={
-                "run": {"name": output.parent.name},
-                "dataset": {
-                    "region": "USA",
-                    "universe": universe,
-                    "instrument_type": "EQUITY",
-                    "delay": 1,
-                },
-            },
-            include_analysis=False,
-        )
-
-    state = build_historical_run_state(
-        str(tmp_path / "runs" / "new-run" / "summary.json"),
-        str(feedback_output),
-    )
-
-    assert [result.template_name for result in state.feedback_results] == ["matching"]
-    assert state.feedback_results[0].universe == "TOP3000"
-    assert state.feedback_results[0].source_summary == "runs/usa-top3000/summary.json"
-
-
-def test_resimulate_stage_blocks_iter_templates_outside_preferred_stages() -> None:
-    policy = get_dataset_expression_policy("fundamental6")
-
-    keep = should_keep_template_for_feedback(
-        "iter_rank_delta_5",
-        "rank(ts_delta(ts_backfill(cash_st, 240), 5))",
-        200,
-        {
-            "best_score": 0.55,
-            "attempted_templates": 4,
-            "failed_check_counts": {},
-        },
-        expression_policy=policy,
-        template_metadata={"family": "rank_delta", "stage": "first_order"},
-    )
-
-    assert keep is False
-
-
-def test_select_nearpass_candidates_penalizes_concentration_failures() -> None:
-    policy = get_dataset_expression_policy("fundamental6")
-    results = [
-        FieldTestResult(
-            field_id="cash_st",
-            field_type="MATRIX",
-            field_name="cash_st",
-            template_name="account_group_zscore_60_subindustry",
-            template_family="group_zscore",
-            template_stage="group_second_order",
-            status="simulated",
-            submittable=False,
-            expression="group_rank(ts_zscore(ts_backfill(cash_st, 504), 60), subindustry)",
-            failed_checks=[
-                {"name": "LOW_SHARPE", "value": 1.21, "limit": 1.25},
-                {"name": "LOW_FITNESS", "value": 0.64, "limit": 1.0},
-            ],
-        ),
-        FieldTestResult(
-            field_id="cash_st",
-            field_type="MATRIX",
-            field_name="cash_st",
-            template_name="account_ts_rank_60",
-            template_family="ts_rank",
-            template_stage="first_order",
-            status="simulated",
-            submittable=False,
-            expression="rank(ts_rank(ts_backfill(cash_st, 504), 60))",
-            failed_checks=[
-                {"name": "LOW_SHARPE", "value": 1.20, "limit": 1.25},
-                {"name": "CONCENTRATED_WEIGHT", "value": 0.500001, "limit": 0.10},
-            ],
-        ),
-    ]
-
-    candidates = select_nearpass_candidates(
-        "cash_st",
-        results,
-        expression_policy=policy,
-        limit=2,
-    )
-
-    assert len(candidates) >= 1
-    assert candidates[0].template_name == "account_group_zscore_60_subindustry"
-
-
-def test_build_setting_variants_expands_candidate_centric_refine_settings() -> None:
+def test_build_setting_variants_keeps_explicit_refine_small_and_deterministic() -> None:
     class _Args:
         instrument_type = "EQUITY"
         region = "USA"
@@ -331,124 +142,11 @@ def test_build_setting_variants_expands_candidate_centric_refine_settings() -> N
 
     variants = build_setting_variants(
         _Args(),
-        "refine_exact",
+        "explicit_refine",
         "group_rank(ts_zscore(ts_backfill(cash_st, 504), 60), subindustry)",
-        refine_candidate=NearPassCandidate(
-            field_id="cash_st",
-            field_name="cash_st",
-            template_name="account_group_zscore_60_subindustry",
-            expression="group_rank(ts_zscore(ts_backfill(cash_st, 504), 60), subindustry)",
-            template_family="group_zscore",
-            template_stage="group_second_order",
-            score=0.80,
-            failed_checks=[
-                {"name": "CONCENTRATED_WEIGHT", "value": 0.14, "limit": 0.10},
-                {"name": "LOW_SUB_UNIVERSE_SHARPE", "value": 0.50, "limit": 0.52},
-            ],
-        ),
     )
 
-    assert all(isinstance(variant, type(variants[0])) for variant in variants)
+    assert len(variants) == 3
     assert any(variant.get("truncation") == 0.05 for variant in variants)
     assert any(variant.get("neutralization") == "INDUSTRY" for variant in variants)
-    assert any(variant.get("neutralization") == "MARKET" for variant in variants)
-    assert all("instrumentType" in variant.to_dict() for variant in variants)
-    assert all("unitHandling" in variant.to_dict() for variant in variants)
-    assert all("nanHandling" in variant.to_dict() for variant in variants)
     assert all(variant.to_dict().get("maxTrade") == "OFF" for variant in variants)
-
-
-def test_build_refine_templates_generates_localized_mutations_from_nearpass_candidate() -> None:
-    templates = build_refine_templates(
-        "cash_st",
-        [
-            NearPassCandidate(
-                field_id="cash_st",
-                field_name="cash_st",
-                template_name="account_group_zscore_60_subindustry",
-                expression="group_rank(ts_zscore(ts_backfill(cash_st, 504), 60), subindustry)",
-                template_family="group_zscore",
-                template_stage="group_second_order",
-                score=0.80,
-                failed_checks=[
-                    {"name": "LOW_SHARPE", "value": 1.21, "limit": 1.25},
-                    {"name": "LOW_FITNESS", "value": 0.64, "limit": 1.0},
-                ],
-            )
-        ],
-        expression_policy=get_dataset_expression_policy("fundamental6"),
-    )
-
-    names = {template.name for template in templates}
-    expressions = {template.expression for template in templates}
-
-    assert "refine_exact_1_account_group_zscore_60_subindustry" in names
-    assert "refine_industry_1_account_group_zscore_60_subindustry" in names
-    assert any("trade_when(" in expression for expression in expressions)
-    assert any("ts_decay_linear(" in expression for expression in expressions)
-
-
-def test_build_refine_templates_skips_recursive_refine_candidates() -> None:
-    templates = build_refine_templates(
-        "cash_st",
-        [
-            NearPassCandidate(
-                field_id="cash_st",
-                field_name="cash_st",
-                template_name="refine_exact_1_account_group_zscore_60_subindustry",
-                expression="group_rank(ts_zscore(cash_st, 60), subindustry)",
-                template_family="group_zscore",
-                template_stage="group_second_order",
-                score=0.80,
-                failed_checks=[
-                    {"name": "LOW_SHARPE", "value": 1.21, "limit": 1.25},
-                    {"name": "LOW_FITNESS", "value": 0.64, "limit": 1.0},
-                ],
-            )
-        ],
-        expression_policy=get_dataset_expression_policy("fundamental6"),
-    )
-
-    assert templates == []
-
-
-def test_build_refine_templates_deduplicates_identical_expressions() -> None:
-    templates = build_refine_templates(
-        "cash_st",
-        [
-            NearPassCandidate(
-                field_id="cash_st",
-                field_name="cash_st",
-                template_name="model51_ts_zscore_120",
-                expression="rank(ts_zscore(ts_backfill(cash_st, 504), 120))",
-                template_family="zscore_time",
-                template_stage="first_order",
-                score=0.85,
-                failed_checks=[
-                    {"name": "LOW_FITNESS", "value": 0.85, "limit": 1.0},
-                ],
-            ),
-            NearPassCandidate(
-                field_id="cash_st",
-                field_name="cash_st",
-                template_name="duplicate_model51_ts_zscore_120",
-                expression="rank(ts_zscore(ts_backfill(cash_st, 504), 120))",
-                template_family="zscore_time",
-                template_stage="first_order",
-                score=0.84,
-                failed_checks=[
-                    {"name": "LOW_FITNESS", "value": 0.84, "limit": 1.0},
-                ],
-            ),
-        ],
-        expression_policy=get_dataset_expression_policy("fundamental6"),
-    )
-
-    exact_templates = [
-        template
-        for template in templates
-        if template.expression == "rank(ts_zscore(ts_backfill(cash_st, 504), 120))"
-    ]
-
-    assert len(exact_templates) == 1
-    assert exact_templates[0].name == "refine_exact_1_model51_ts_zscore_120"

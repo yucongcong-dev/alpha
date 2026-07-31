@@ -14,9 +14,7 @@ from ..generators.templates.classification import (
     classify_expression_family,
     classify_template_stage,
 )
-from ..generators.templates.priority import (
-    dominant_failed_check_names,
-)
+from ..analysis.feedback_stats import dominant_failed_check_names
 from ..generators.templates.variation_common import (
     is_blacklisted_template as _is_blacklisted_template,
 )

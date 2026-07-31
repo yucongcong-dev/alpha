@@ -18,19 +18,20 @@ from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
 from concurrent.futures import Future
+from dataclasses import replace
 import logging
 
 from ..config.constants import DRY_RUN_SAMPLE_LIMIT, SENTINEL_UNKNOWN
 from ..generators.expression_builder import build_expression_candidates
 from ..generators.fields import choose_field_name
 from ..generators.payload import build_settings_fingerprint_from_payload
-from ..generators.templates.refine import build_refine_templates
 from ..generators.variants import build_setting_variants
 from ..models.domain import FieldTestResult, TemplateCandidate, TemplateField, TemplateLibrary
 from ..models.io_types import RunFilters
 from ..models.runtime_options import TemplateBuildOptions
 from ..models.runtime_protocols import TemplateBuildArgs
 from ..policy.expression import get_dataset_expression_policy
+from ..runtime.preset_mode import resolve_preset_mode
 from ..runtime.contexts import (
     HistoricalRunState,
     PendingFutureContext,
@@ -59,7 +60,6 @@ logger = logging.getLogger(__name__)
 def build_executor_template_planning_services() -> TemplatePlanningServices:
     """Build planning dependencies from current executor module overrides."""
     return TemplatePlanningServices(
-        build_refine_templates=build_refine_templates,
         build_expression_candidates=build_expression_candidates,
         build_setting_variants=build_setting_variants,
         build_settings_fingerprint=build_settings_fingerprint_from_payload,
@@ -83,6 +83,14 @@ def build_template_build_context(
 ) -> TemplateBuildContext:
     """Construct the shared template build context for dry-run and live execution."""
     options = TemplateBuildOptions.from_args(args)
+    options = replace(
+        options,
+        preset_mode=options.preset_mode
+        or resolve_preset_mode(
+            template_library_file=str(args.template_library_file or ""),
+            include_fields=filters.include_fields,
+        ),
+    )
     template_build_ctx = TemplateBuildContext(
         options=options,
         template_library_file=str(args.template_library_file or ""),
@@ -168,8 +176,8 @@ def build_pending_templates_for_field(
     # a new field gets one seed template, while exact historical combinations
     # remain deduplicated below.  This avoids a separate fallback path when
     # global template history has demoted every candidate.
-    is_exploration = not field_feedback
     planning_ctx = build_ctx
+    is_exploration = not field_feedback and not planning_ctx.options.preset_mode
     planning_templates = templates[:1] if is_exploration else templates
     enabled_templates: list[TemplateCandidate] = []
     filtered_templates = 0

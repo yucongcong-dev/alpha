@@ -4,6 +4,23 @@ from __future__ import annotations
 
 import alpha.core.executor as executor
 import alpha.core.template_planning as template_planning
+from alpha.core.template_planning import build_pending_template_variants
+from alpha.models.domain import TemplateCandidate
+from alpha.models.runtime import TemplateBuildContext, TemplateBuildOptions
+
+_DEFAULT_SIM_SETTINGS = {
+    "region": "USA",
+    "universe": "TOP3000",
+    "instrument_type": "EQUITY",
+    "delay": 1,
+    "decay": 4,
+    "neutralization": "SUBINDUSTRY",
+    "truncation": 0.08,
+    "pasteurization": "ON",
+    "unit_handling": "VERIFY",
+    "nan_handling": "OFF",
+    "language": "FASTEXPR",
+}
 
 
 def test_executor_planning_services_read_current_module_dependencies(monkeypatch) -> None:
@@ -23,15 +40,38 @@ def test_executor_planning_services_read_current_module_dependencies(monkeypatch
 def test_low_level_planning_services_read_current_module_dependencies(monkeypatch) -> None:
     """Direct low-level callers should receive the same late-binding behavior."""
 
-    def refine(*_args, **_kwargs):
+    def candidates(*_args, **_kwargs):
         return []
 
-    monkeypatch.setattr(template_planning, "build_refine_templates", refine)
+    monkeypatch.setattr(template_planning, "build_expression_candidates", candidates)
 
     services = template_planning.build_template_planning_services()
 
-    assert services.build_refine_templates is refine
+    assert services.build_expression_candidates is candidates
     assert (
         services.build_settings_fingerprint
         is template_planning.build_settings_fingerprint_from_payload
     )
+
+
+def test_preset_mode_limits_settings_variants_to_baseline() -> None:
+    build_ctx = TemplateBuildContext(
+        options=TemplateBuildOptions(**_DEFAULT_SIM_SETTINGS, preset_mode=True)
+    )
+    pending = build_pending_template_variants(
+        build_ctx,
+        {"id": "cash_st", "type": "MATRIX"},
+        templates=[
+            TemplateCandidate(
+                name="manual_group_rank",
+                expression="group_rank(cash_st, subindustry)",
+                priority=100,
+                metadata={},
+            )
+        ],
+        attempted_keys=set(),
+        reserved_keys=set(),
+        field_feedback={"best_score": 1.0, "attempted_templates": 3},
+    )
+
+    assert len(pending) == 1

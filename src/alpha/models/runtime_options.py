@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from ..runtime.preset_mode import resolve_preset_mode
 from .runtime_protocols import (
     ApiClientArgs,
     FieldFetchArgs,
@@ -51,9 +52,11 @@ class TemplateBuildOptions:
     legacy_similarity_penalty: int = 0
     start_date: str | None = None
     end_date: str | None = None
+    preset_mode: bool = False
 
     @classmethod
     def from_args(cls, args: TemplateBuildArgs) -> TemplateBuildOptions:
+        template_library_file = str(getattr(args, "template_library_file", "") or "")
         return cls(
             region=args.region,
             universe=args.universe,
@@ -73,6 +76,12 @@ class TemplateBuildOptions:
             legacy_similarity_penalty=int(args.legacy_similarity_penalty or 0),
             start_date=getattr(args, "start_date", None),
             end_date=getattr(args, "end_date", None),
+            preset_mode=bool(getattr(args, "preset_mode", False))
+            or resolve_preset_mode(
+                template_library_file=template_library_file,
+                include_fields_file=str(getattr(args, "include_fields_file", "") or ""),
+                include_templates_file=str(getattr(args, "include_templates_file", "") or ""),
+            ),
         )
 
 

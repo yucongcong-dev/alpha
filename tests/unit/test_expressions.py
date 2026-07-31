@@ -21,8 +21,6 @@ from alpha.generators.templates.classification import (
 )
 from alpha.generators.templates.variations import (
     build_bucket_group_templates,
-    build_feedback_mutations,
-    build_historical_reuse_templates,
     build_trade_when_templates,
 )
 from alpha.models.domain import TemplateLibraryItem
@@ -129,14 +127,6 @@ class TestIsLegacyFamily:
         assert is_legacy_family("ratio_profit_margin", "profit/cost") is True
 
 
-def test_build_feedback_mutations_attach_runtime_metadata() -> None:
-    mutations = build_feedback_mutations("cash_st", None)
-
-    candidate = next(item for item in mutations if item.name == "iter_group_rank_delta_of_rank_63")
-    assert candidate.metadata["family"] == "group_rank_delta"
-    assert candidate.metadata["stage"] == "group_second_order"
-
-
 def test_build_expression_candidates_preserve_generated_metadata() -> None:
     policy = get_dataset_expression_policy("fundamental6")
     field = {"id": "cash_st", "type": "MATRIX"}
@@ -158,6 +148,42 @@ def test_build_expression_candidates_preserve_generated_metadata() -> None:
     candidate = next(item for item in candidates if item.name == "raw_field")
     assert candidate.metadata["family"] == "legacy_level"
     assert candidate.metadata["stage"] == "first_order"
+
+
+def test_preset_mode_uses_template_library_as_closed_candidate_set() -> None:
+    policy = get_dataset_expression_policy("fundamental6")
+    field = {"id": "cashflow_op", "type": "MATRIX"}
+    all_fields = [field, {"id": "assets", "type": "MATRIX"}]
+    template_library = {
+        "default": [
+            TemplateLibraryItem(
+                name="manual_cashflow_rank",
+                expression="rank({field_preprocessed} / cap)",
+                priority=1000,
+            )
+        ]
+    }
+
+    build_ctx = TemplateBuildContext(
+        options=TemplateBuildOptions(
+            **_DEFAULT_SIM_SETTINGS,
+            dataset_id="fundamental6",
+            legacy_similarity_penalty=0,
+            preset_mode=True,
+        ),
+        all_fields=all_fields,
+        template_library=template_library,
+    )
+    candidates = build_expression_candidates(
+        field,
+        build_ctx,
+        max_templates_per_field=0,
+        max_templates_per_family=0,
+        expression_policy=policy,
+    )
+
+    assert [item.name for item in candidates] == ["manual_cashflow_rank"]
+    assert "raw_field" not in {item.name for item in candidates}
 
 
 def test_build_expression_candidates_skip_unsupported_grouping_fields() -> None:
@@ -209,23 +235,6 @@ def test_trade_when_templates_wrap_expression_with_event_switches() -> None:
     assert all(item.expression.startswith("trade_when(") for item in templates)
     assert all(item.expression.endswith(", -1)") for item in templates)
     assert all(item.metadata["stage"] == "event_conditioned" for item in templates)
-
-
-def test_historical_reuse_templates_require_good_feedback() -> None:
-    weak = build_historical_reuse_templates(
-        "cash_st",
-        {"best_score": 0.1, "best_expression": "rank(cash_st)"},
-        feedback_stage="resimulate",
-    )
-    strong = build_historical_reuse_templates(
-        "cash_st",
-        {"best_score": 0.7, "best_expression": "rank(cash_st)"},
-        feedback_stage="resimulate",
-    )
-
-    assert weak == []
-    assert any(item.name.startswith("iter_reuse_best_bucket_group_rank_") for item in strong)
-    assert any(item.name.startswith("iter_reuse_best_trade_when_") for item in strong)
 
 
 def test_high_conviction_ratio_templates_are_group_second_order() -> None:

@@ -10,7 +10,7 @@
     - field_stats: 字段统计与字段优先级
     - failed_checks: 失败检查评分、near-pass 与优化建议
     - feedback_stats: 字段反馈画像与全局失败检查计数
-    - feedback_history: 历史反馈状态与 near-pass 选择
+    - feedback_history: 历史反馈状态与 settings 预算
     - feedback_filters: 模板剪枝策略
     - report_builder: 结果分析报告构建
     - analysis_sync: 分析边车文件同步
@@ -40,7 +40,6 @@ if TYPE_CHECKING:
     from .feedback_history import (
         build_historical_run_state,
         choose_settings_variant_budget,
-        select_nearpass_candidates,
         should_stop_after_submittable,
     )
     from .feedback_stats import (
@@ -78,7 +77,6 @@ _EXPORT_MAP: ExportMap = {
     "should_skip_field_template_family": (".feedback_filters", "should_skip_field_template_family"),
     "build_historical_run_state": (".feedback_history", "build_historical_run_state"),
     "choose_settings_variant_budget": (".feedback_history", "choose_settings_variant_budget"),
-    "select_nearpass_candidates": (".feedback_history", "select_nearpass_candidates"),
     "should_stop_after_submittable": (".feedback_history", "should_stop_after_submittable"),
     "compile_field_feedback": (".feedback_stats", "compile_field_feedback"),
     "compile_global_failed_check_counts": (".feedback_stats", "compile_global_failed_check_counts"),

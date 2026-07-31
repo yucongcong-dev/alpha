@@ -88,16 +88,6 @@ class DatasetExpressionPolicy:
     field_min_user_count: int = 0
     field_max_alpha_count: int = 0
     field_max_user_count: int = 0
-    field_coverage_weight: float = 0.0
-    field_date_coverage_weight: float = 0.0
-    field_alpha_validation_weight: float = 0.0
-    field_user_validation_weight: float = 0.0
-    field_alpha_crowding_penalty_weight: float = 0.0
-    field_user_crowding_penalty_weight: float = 0.0
-    field_recency_weight: float = 0.0
-    field_theme_bonus_weight: float = 0.0
-    field_preferred_unexplored_bonus: float = 0.0
-    field_unknown_metadata_penalty_weight: float = 0.0
     field_max_per_family: int = 0
     field_exploration_ratio: float = 0.0
     field_feedback_half_life_days: int = 0

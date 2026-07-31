@@ -39,6 +39,25 @@ def score_failed_checks(failed_checks: Sequence[FailedCheck] | None) -> float:
         counted += 1
         score += closeness
     if counted == 0:
+        return _score_failed_checks_without_limits(checks)
+    return score / counted
+
+
+def _score_failed_checks_without_limits(checks: Sequence[FailedCheck]) -> float:
+    """Best-effort score for legacy result rows that only recorded check values."""
+    score = 0.0
+    counted = 0
+    for check in checks:
+        value = check.get("value")
+        if not isinstance(value, (int, float)):
+            continue
+        name = str(check.get("name", SENTINEL_UNKNOWN_CHECK))
+        counted += 1
+        if name.startswith("LOW_"):
+            score += max(float(value), 0.0)
+        else:
+            score += 1.0 / (1.0 + max(float(value), 0.0))
+    if counted == 0:
         return STATS_FAILED_CHECK_DEFAULT_SCORE
     return score / counted
 

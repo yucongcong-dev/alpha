@@ -5,8 +5,7 @@ bootstrap 字段准备辅助模块。
 from __future__ import annotations
 
 from collections.abc import Sequence
-from datetime import date, datetime, timezone
-from math import log1p
+from datetime import datetime, timezone
 import re
 from typing import Any, cast
 
@@ -98,15 +97,7 @@ def _attach_runtime_metadata(
     )
 
 
-FieldSortKey = tuple[int, int, int, int, int, float, int, float, float, float, int, str]
-
-_ALPHA_VALIDATION_TARGET = 100
-_USER_VALIDATION_TARGET = 20
-_ALPHA_CROWDING_START = 1000
-_USER_CROWDING_START = 500
-_ALPHA_CROWDING_SCALE = 10_000
-_USER_CROWDING_SCALE = 5_000
-_RECENCY_SCORE_HORIZON_DAYS = 3650
+FieldSortKey = tuple[int, int, int, int, int, float, int, str]
 _FIELD_ALL_SUFFIX = re.compile(r"_all$")
 _FIELD_WINDOW_TOKEN = re.compile(r"_(?:last_)?\d+(?:_days?)?(?=_|$)")
 _FIELD_TRAILING_WINDOW = re.compile(r"(?:_last)?_(\d+)(?:_days?)?(?:_|$)")
@@ -115,33 +106,6 @@ _PREFERRED_FIELD_WINDOWS = (30, 60, 90, 20, 120, 180, 10, 150, 270, 360, 720, 10
 
 def _clamp_unit(value: float) -> float:
     return min(max(value, 0.0), 1.0)
-
-
-def _absolute_validation_score(value: int, target: int) -> float:
-    """Reward external validation until a moderate target, then saturate."""
-    if value <= 0 or target <= 0:
-        return 0.0
-    return _clamp_unit(log1p(value) / log1p(target))
-
-
-def _absolute_crowding_score(value: int, start: int, scale: int) -> float:
-    """Apply no crowding penalty below start and increase smoothly afterwards."""
-    if value <= start or scale <= start:
-        return 0.0
-    numerator = log1p(value) - log1p(start)
-    denominator = log1p(scale) - log1p(start)
-    return _clamp_unit(numerator / denominator)
-
-
-def _absolute_recency_score(value: Any) -> float:
-    if not value:
-        return 0.0
-    try:
-        created = date.fromisoformat(str(value))
-    except (TypeError, ValueError):
-        return 0.0
-    age_days = max((date.today() - created).days, 0)
-    return _clamp_unit(1.0 - age_days / _RECENCY_SCORE_HORIZON_DAYS)
 
 
 def _feedback_recency_multiplier(value: Any, half_life_days: int) -> float:
@@ -247,7 +211,10 @@ def _selection_reason(
     *,
     historical_state: HistoricalRunState,
     expression_policy: DatasetExpressionPolicy,
+    explicit: bool = False,
 ) -> str:
+    if explicit:
+        return "explicit"
     field_id = str(first_non_empty(field.get("id"), SENTINEL_UNKNOWN))
     feedback = historical_state.field_feedback.get(field_id)
     if feedback is not None:
@@ -475,6 +442,22 @@ def prepare_fields_for_execution(
         if field_id in filters_dict.exclude_fields or field_name in filters_dict.exclude_fields:
             prefiltered_count += 1
             continue
+        if explicitly_included:
+            runtime_field_tags = _infer_runtime_field_tags(
+                field_name,
+                dataset_id=expression_policy.dataset_id,
+                coverage=coverage_value or 0.0,
+            )
+            if isinstance(field, TemplateField):
+                filtered_fields.append(
+                    _attach_runtime_metadata(field, runtime_field_tags=runtime_field_tags)
+                )
+                continue
+            field_copy = dict(field)  # type: ignore[unreachable]
+            if runtime_field_tags:
+                field_copy["runtime_field_tags"] = list(runtime_field_tags)
+            filtered_fields.append(field_copy)
+            continue
         if coverage_value is None:
             unknown_coverage_count += 1
         elif coverage_value < min_coverage:
@@ -547,78 +530,17 @@ def prepare_fields_for_execution(
             "unknown_user_count": unknown_user_count,
         }
 
-    norm_coverage_values = [_clamp_unit(_safe_float(field.get("coverage"))) for field in fields]
-    norm_date_coverage_values = [
-        _clamp_unit(_safe_float(field.get("dateCoverage"))) for field in fields
-    ]
-    norm_alpha_validation_values = [
-        _absolute_validation_score(
-            _safe_int(field.get("alphaCount")), _ALPHA_VALIDATION_TARGET
-        )
-        for field in fields
-    ]
-    norm_user_validation_values = [
-        _absolute_validation_score(_safe_int(field.get("userCount")), _USER_VALIDATION_TARGET)
-        for field in fields
-    ]
-    norm_alpha_crowding_values = [
-        _absolute_crowding_score(
-            _safe_int(field.get("alphaCount")),
-            _ALPHA_CROWDING_START,
-            _ALPHA_CROWDING_SCALE,
-        )
-        for field in fields
-    ]
-    norm_user_crowding_values = [
-        _absolute_crowding_score(
-            _safe_int(field.get("userCount")),
-            _USER_CROWDING_START,
-            _USER_CROWDING_SCALE,
-        )
-        for field in fields
-    ]
-    norm_recency_values = [
-        _absolute_recency_score(field.get("dateCreated")) for field in fields
-    ]
-    norm_theme_values = [
-        _clamp_unit(float(len(field.get("themes") or [])) / 3.0) for field in fields
-    ]
-    unknown_metadata_counts = [
-        sum(
-            value is None
-            for value in (
-                _optional_float(field.get("coverage")),
-                _optional_float(field.get("dateCoverage")),
-                _optional_int(field.get("alphaCount")),
-                _optional_int(field.get("userCount")),
-            )
-        )
-        for field in fields
-    ]
-
-    field_metadata_scores: dict[str, float] = {}
-    for idx, field in enumerate(fields):
+    field_selection_scores: dict[str, float] = {}
+    for field in fields:
         field_id = str(first_non_empty(field.get("id"), SENTINEL_UNKNOWN))
-        validation_score = (
-            expression_policy.field_coverage_weight * norm_coverage_values[idx]
-            + expression_policy.field_date_coverage_weight * norm_date_coverage_values[idx]
-            + expression_policy.field_alpha_validation_weight * norm_alpha_validation_values[idx]
-            + expression_policy.field_user_validation_weight * norm_user_validation_values[idx]
-            + expression_policy.field_recency_weight * norm_recency_values[idx]
-            + expression_policy.field_theme_bonus_weight * norm_theme_values[idx]
-        )
-        crowding_penalty = (
-            expression_policy.field_alpha_crowding_penalty_weight
-            * norm_alpha_crowding_values[idx]
-            + expression_policy.field_user_crowding_penalty_weight
-            * norm_user_crowding_values[idx]
-        )
-        unknown_metadata_penalty = expression_policy.field_unknown_metadata_penalty_weight * (
-            unknown_metadata_counts[idx] / 4.0
-        )
-        field_metadata_scores[field_id] = (
-            validation_score - crowding_penalty - unknown_metadata_penalty
-        )
+        if historical_state.field_feedback.get(field_id) is None:
+            field_selection_scores[field_id] = 0.0
+        else:
+            field_selection_scores[field_id] = _feedback_priority(
+                field_id,
+                historical_state=historical_state,
+                expression_policy=expression_policy,
+            )
 
     def field_sort_key(item: TemplateField) -> FieldSortKey:
         field_id = str(first_non_empty(item.get("id"), SENTINEL_UNKNOWN))
@@ -644,39 +566,29 @@ def prepare_fields_for_execution(
             field_type, PREFERRED_FIELD_RANK_SENTINEL
         )
         is_preferred_direction = preferred_rank < PREFERRED_FIELD_RANK_SENTINEL
-        metadata_score = field_metadata_scores.get(field_id, 0.0)
-        effective_priority = priority
-        if is_unexplored:
-            effective_priority = min(
-                expression_policy.promising_field_min_priority - 0.01,
-                max(
-                    metadata_score
-                    + (
-                        expression_policy.field_preferred_unexplored_bonus
-                        if is_preferred_direction
-                        else 0.0
-                    ),
-                    STATS_DEFAULT_SCORE,
-                ),
-            )
-        elif priority > STATS_DEFAULT_SCORE:
-            effective_priority = priority + metadata_score
-        unexplored_type_rank = preferred_type_rank if is_unexplored else 0
+        feedback_rank = (
+            0
+            if is_promising_seen
+            else 1
+            if feedback is not None and priority > STATS_DEFAULT_SCORE
+            else 2
+            if is_unexplored
+            else 3
+        )
         return (
             -int(is_promising_seen),
             -int(is_preferred_direction),
             preferred_rank,
-            unexplored_type_rank,
-            -effective_priority,
-            -int(is_unexplored),
-            -metadata_score,
-            -_safe_float(item.get("coverage")),
-            -_safe_float(item.get("dateCoverage")),
+            feedback_rank,
+            preferred_type_rank,
+            -priority if feedback is not None else 0.0,
             _field_window_rank(field_name),
             field_name,
         )
 
-    fields.sort(key=field_sort_key)
+    explicit_field_selection = bool(filters_dict.include_fields)
+    if not explicit_field_selection:
+        fields.sort(key=field_sort_key)
     ranked_fields = list(fields)
     rank_by_id = {
         str(first_non_empty(field.get("id"), SENTINEL_UNKNOWN)): index
@@ -696,7 +608,6 @@ def prepare_fields_for_execution(
         fields = focused_fields[:top_fields_by_feedback]
 
     ranked_field_count = len(fields)
-    explicit_field_selection = bool(filters_dict.include_fields)
     if limit > 0 and not explicit_field_selection and top_fields_by_feedback <= 0:
         fields = cast(
             list[TemplateField],
@@ -721,12 +632,13 @@ def prepare_fields_for_execution(
             _attach_selection_metadata(
                 field,
                 rank=rank_by_id.get(field_id, 0),
-                score=field_metadata_scores.get(field_id, 0.0),
+                score=field_selection_scores.get(field_id, 0.0),
                 family=infer_field_family(choose_field_name(field)),
                 reason=_selection_reason(
                     field,
                     historical_state=historical_state,
                     expression_policy=expression_policy,
+                    explicit=explicit_field_selection,
                 ),
             )
         )

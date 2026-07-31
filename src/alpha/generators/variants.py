@@ -1,4 +1,4 @@
-"""Settings variant generation for near-pass alpha refinement."""
+"""Small, deterministic settings variant generation."""
 
 from __future__ import annotations
 
@@ -16,7 +16,7 @@ from ..config.constants import (
     TRUNCATION_TIGHTER_MIN,
     TRUNCATION_WEB_DEFAULT,
 )
-from ..models.domain import NearPassCandidate, SettingsVariant
+from ..models.domain import SettingsVariant
 from ..models.runtime_protocols import SimulationSettingsArgs
 from .payload import build_simulation_payload
 
@@ -27,13 +27,12 @@ def build_setting_variants(
     expression: str,
     *,
     field_feedback: dict[str, Any] | None = None,
-    refine_candidate: NearPassCandidate | None = None,
 ) -> list[SettingsVariant]:
     """
     基于统一基准配置生成少量高信号 settings 变体。
 
     Generate a small set of high-signal settings variants around the baseline
-    payload, especially for near-pass candidates.
+    payload.
     """
     _ = template_name, field_feedback
     base_settings = build_simulation_payload(args, expression)["settings"]
@@ -47,10 +46,6 @@ def build_setting_variants(
         if casted not in variants:
             variants.append(casted)
 
-    nearpass_failed_names = {
-        str(check.get("name", "")).strip()
-        for check in (refine_candidate.failed_checks if refine_candidate else [])
-    }
     tighter_truncation = min(
         float(base_settings.get("truncation", TRUNCATION_WEB_DEFAULT)), TRUNCATION_TIGHTER_MAX
     )
@@ -63,24 +58,5 @@ def build_setting_variants(
         add_variant(neutralization=NEUTRALIZATION_INDUSTRY, truncation=tighter_truncation)
     else:
         add_variant(neutralization=NEUTRALIZATION_MARKET)
-
-    if refine_candidate is not None:
-        if {"CONCENTRATED_WEIGHT", "LOW_SUB_UNIVERSE_SHARPE"} & nearpass_failed_names:
-            add_variant(neutralization=NEUTRALIZATION_INDUSTRY, truncation=tighter_truncation)
-            add_variant(neutralization=NEUTRALIZATION_MARKET, truncation=tighter_truncation)
-            add_variant(truncation=TRUNCATION_TIGHTER_MIN)
-        if "LOW_TURNOVER" in nearpass_failed_names:
-            add_variant(decay=SETTINGS_VARIANT_DECAY_FAST, truncation=tighter_truncation)
-            add_variant(delay=0, decay=SETTINGS_VARIANT_DECAY_FAST)
-        elif "HIGH_TURNOVER" in nearpass_failed_names:
-            add_variant(decay=SETTINGS_VARIANT_DECAY_SLOW, truncation=tighter_truncation)
-            add_variant(delay=2, truncation=tighter_truncation)
-        elif {"LOW_SHARPE", "LOW_FITNESS"} & nearpass_failed_names:
-            add_variant(decay=0, truncation=tighter_truncation)
-            add_variant(delay=0)
-            add_variant(truncation=TRUNCATION_LOOSE)
-        else:
-            add_variant(decay=SETTINGS_VARIANT_DECAY_FAST)
-            add_variant(decay=SETTINGS_VARIANT_DECAY_SLOW, truncation=tighter_truncation)
 
     return variants

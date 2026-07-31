@@ -11,10 +11,7 @@ from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from typing import Protocol
 
-from ..analysis.feedback_history import (
-    choose_settings_variant_budget,
-    select_nearpass_candidates,
-)
+from ..analysis.feedback_history import choose_settings_variant_budget
 from ..analysis.field_stats import decay_field_feedback
 from ..config.constants import (
     FEEDBACK_STAGE_RESIMULATE,
@@ -37,32 +34,17 @@ from ..generators.templates.metadata import (
     normalize_template_role,
 )
 from ..generators.templates.priority import cap_templates_per_family
-from ..generators.templates.refine import build_refine_templates
 from ..generators.variants import build_setting_variants
 from ..models.domain import (
     FieldTestResult,
-    NearPassCandidate,
     SettingsVariant,
     TemplateCandidate,
     TemplateField,
 )
-from ..models.domain_parsers import parse_failed_check
 from ..models.runtime_protocols import SimulationSettingsArgs, TemplateFeedback
 from ..policy.expression import get_dataset_expression_policy, resolve_feedback_stage
 from ..runtime.contexts import PendingTemplateEntry, TemplateBuildContext
 from ..utils.helpers import first_non_empty, is_event_field_name
-
-
-class RefineTemplateBuilder(Protocol):
-    """Near-pass refinement template generation port."""
-
-    def __call__(
-        self,
-        field_name: str,
-        nearpass_candidates: Sequence[NearPassCandidate],
-        *,
-        expression_policy: DatasetExpressionPolicy | None = None,
-    ) -> list[TemplateCandidate]: ...
 
 
 class ExpressionCandidateBuilder(Protocol):
@@ -90,7 +72,6 @@ class SettingVariantsBuilder(Protocol):
         expression: str,
         *,
         field_feedback: TemplateFeedback | None = None,
-        refine_candidate: NearPassCandidate | None = None,
     ) -> list[SettingsVariant]: ...
 
 
@@ -98,7 +79,6 @@ class SettingVariantsBuilder(Protocol):
 class TemplatePlanningServices:
     """Typed dependencies used while planning templates and settings variants."""
 
-    build_refine_templates: RefineTemplateBuilder
     build_expression_candidates: ExpressionCandidateBuilder
     build_setting_variants: SettingVariantsBuilder
     build_settings_fingerprint: Callable[[object], str]
@@ -107,7 +87,6 @@ class TemplatePlanningServices:
 def build_template_planning_services() -> TemplatePlanningServices:
     """Resolve current planning dependencies so runtime overrides remain effective."""
     return TemplatePlanningServices(
-        build_refine_templates=build_refine_templates,
         build_expression_candidates=build_expression_candidates,
         build_setting_variants=build_setting_variants,
         build_settings_fingerprint=build_settings_fingerprint_from_payload,
@@ -180,32 +159,6 @@ def _resolve_feedback_stage(
     )
 
 
-def _refine_candidate_from_metadata(
-    *,
-    field_id: str,
-    field_name: str,
-    template_name: str,
-    expression: str,
-    template_family: str,
-    template_stage: str,
-    template_metadata: dict[str, object],
-) -> NearPassCandidate | None:
-    """Rebuild settings-refinement context embedded by near-pass templates."""
-    failed_checks = template_metadata.get("refine_failed_checks")
-    if not isinstance(failed_checks, list):
-        return None
-    return NearPassCandidate(
-        field_id=field_id,
-        field_name=field_name,
-        template_name=template_name,
-        expression=expression,
-        template_family=template_family,
-        template_stage=template_stage,
-        score=float(template_metadata.get("refine_score", 0.0) or 0.0),
-        failed_checks=[parse_failed_check(check) for check in failed_checks],
-    )
-
-
 def resolve_field_template_candidates(
     build_ctx: TemplateBuildContext,
     field: TemplateField,
@@ -225,36 +178,15 @@ def resolve_field_template_candidates(
         options=options,
         expression_policy=expression_policy,
     )
-    feedback_stage = _resolve_feedback_stage(field_feedback, expression_policy)
-    nearpass_candidates = (
-        select_nearpass_candidates(
-            field_id,
-            prior_results,
-            expression_policy=expression_policy,
-        )
-        if feedback_stage == FEEDBACK_STAGE_RESIMULATE
-        else []
+    del prior_results
+    templates = active_services.build_expression_candidates(
+        field,
+        build_ctx,
+        max_templates_per_field=max_templates_per_field,
+        max_templates_per_family=max_templates_per_family,
+        field_feedback=field_feedback,
+        expression_policy=expression_policy,
     )
-    if nearpass_candidates:
-        templates = active_services.build_refine_templates(
-            field_name,
-            nearpass_candidates,
-            expression_policy=expression_policy,
-        )
-        templates = _limit_template_candidates(
-            templates,
-            max_templates_per_family=max_templates_per_family,
-            max_templates_per_field=max_templates_per_field,
-        )
-    else:
-        templates = active_services.build_expression_candidates(
-            field,
-            build_ctx,
-            max_templates_per_field=max_templates_per_field,
-            max_templates_per_family=max_templates_per_family,
-            field_feedback=field_feedback,
-            expression_policy=expression_policy,
-        )
     templates = _limit_template_candidates(
         templates,
         max_templates_per_family=max_templates_per_family,
@@ -288,9 +220,13 @@ def build_pending_template_variants(
     }
     seen_expression_variant_keys: set[tuple[str, str, str]] = set()
     seen_resimulate_expressions: set[tuple[str, str]] = set()
-    max_setting_variants = choose_settings_variant_budget(
-        field_feedback,
-        expression_policy=expression_policy,
+    max_setting_variants = (
+        1
+        if build_ctx.options.preset_mode
+        else choose_settings_variant_budget(
+            field_feedback,
+            expression_policy=expression_policy,
+        )
     )
     feedback_stage = _resolve_feedback_stage(field_feedback, expression_policy)
     for template in templates:
@@ -318,21 +254,11 @@ def build_pending_template_variants(
         template_activation_scope = normalize_activation_scope(
             template_metadata.get("activation_scope")
         )
-        refine_candidate = _refine_candidate_from_metadata(
-            template_name=template_name,
-            expression=expression,
-            template_family=template_family,
-            template_stage=template_stage,
-            template_metadata=template_metadata,
-            field_id=field_id,
-            field_name=field_name,
-        )
         for settings_variant in active_services.build_setting_variants(
             options,
             template_name,
             expression,
             field_feedback=field_feedback,
-            refine_candidate=refine_candidate,
         )[: max(1, int(max_setting_variants or 1))]:
             variant_fingerprint = active_services.build_settings_fingerprint(settings_variant)
             expression_variant_key = (field_id, expression, variant_fingerprint)

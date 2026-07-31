@@ -113,6 +113,13 @@ def is_template_actionable(
     template_metadata = template.metadata
     if not is_template_selected_by_filters(build_ctx, template_name):
         return False
+    if build_ctx.options.preset_mode:
+        return not should_skip_expression_by_history(
+            field_id,
+            template_name,
+            expression,
+            prior_results,
+        )
     if not should_keep_template_for_feedback(
         template_name,
         expression,
