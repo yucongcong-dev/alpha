@@ -170,10 +170,10 @@ class TestExecutionStateManagement:
         )
 
         mock_future = MagicMock()
-        state.pending_futures[mock_future] = ctx
+        state.future_queue.register(mock_future, ctx)
 
-        assert len(state.pending_futures) == 1
-        assert "test_field" in str(next(iter(state.pending_futures.values())).field_id)
+        assert len(state.future_queue.pending_futures) == 1
+        assert "test_field" in str(next(iter(state.future_queue.pending_futures.values())).field_id)
 
     def test_runtime_concurrency_state(self):
         """测试运行时并发状态管理"""

@@ -103,8 +103,8 @@ def test_load_pipeline_state_restores_runtime_data_with_zero_cursor(tmp_path) ->
     assert execution_state.template_stats["base"]["attempted"] == 3
     assert execution_state.template_stats["base"]["submittable"] == 0
     assert execution_state.attempted_keys == set()
-    assert len(execution_state.resumable_simulations) == 1
-    restored = execution_state.resumable_simulations[0]
+    assert len(execution_state.future_queue.resumable_simulations) == 1
+    restored = execution_state.future_queue.resumable_simulations[0]
     assert restored.field_name == "Field 1"
     assert restored.simulation_location == "/simulations/sim-1"
     assert restored.simulation_id == "sim-1"
@@ -243,7 +243,7 @@ def test_load_pipeline_state_retries_legacy_pending_entries_without_location(tmp
 
     assert resumed == 0
     assert execution_state.attempted_keys == set()
-    assert execution_state.resumable_simulations == []
+    assert execution_state.future_queue.resumable_simulations == []
 
 
 def test_save_pipeline_state_persists_remote_simulation_location(tmp_path) -> None:
@@ -251,7 +251,7 @@ def test_save_pipeline_state_persists_remote_simulation_location(tmp_path) -> No
     state_file = tmp_path / "state.json"
     execution_state = _build_execution_state()
     future = object()
-    execution_state.pending_futures[future] = PendingFutureContext(  # type: ignore[index]
+    execution_state.future_queue.pending_futures[future] = PendingFutureContext(  # type: ignore[index]
         field_id="f1",
         field_name="Field 1",
         field_type="MATRIX",
@@ -261,6 +261,7 @@ def test_save_pipeline_state_persists_remote_simulation_location(tmp_path) -> No
         simulation_location="/simulations/sim-1",
         simulation_id="sim-1",
     )
+    execution_state.sync_future_queue()
 
     saved = save_pipeline_state(
         str(state_file),
@@ -306,7 +307,7 @@ def test_load_pipeline_state_skips_resumable_simulation_already_in_results(tmp_p
     )
 
     assert resumed == 1
-    assert execution_state.resumable_simulations == []
+    assert execution_state.future_queue.resumable_simulations == []
 
 
 def test_non_negative_int_rejects_untrusted_values() -> None:
@@ -425,7 +426,7 @@ def test_restore_pending_simulations_sanitizes_rows_and_derives_simulation_id() 
 
 def test_save_pipeline_state_handles_empty_path_and_persists_cooldown(tmp_path) -> None:
     execution_state = _build_execution_state()
-    execution_state.resumable_simulations = [
+    execution_state.future_queue.resumable_simulations = [
         PendingFutureContext(
             field_id="f1",
             template_name="template",
@@ -434,6 +435,7 @@ def test_save_pipeline_state_handles_empty_path_and_persists_cooldown(tmp_path) 
             simulation_location="/simulations/sim-1",
         )
     ]
+    execution_state.sync_future_queue()
     runtime_state = RuntimeConcurrencyState(max_workers=4, runtime_max_workers=1)
     runtime_state.cooldown_until = 130.0
 
@@ -460,7 +462,7 @@ def test_save_pipeline_state_handles_empty_path_and_persists_cooldown(tmp_path) 
 
 def test_interrupt_report_and_delete_pipeline_state(tmp_path) -> None:
     execution_state = _build_execution_state()
-    execution_state.resumable_simulations = [
+    execution_state.future_queue.resumable_simulations = [
         PendingFutureContext(
             field_id="f1",
             template_name="template",
@@ -470,6 +472,7 @@ def test_interrupt_report_and_delete_pipeline_state(tmp_path) -> None:
             simulation_id="sim-1",
         )
     ]
+    execution_state.sync_future_queue()
     runtime_state = RuntimeConcurrencyState(max_workers=2, runtime_max_workers=1)
     report = tmp_path / "interrupt.json"
 

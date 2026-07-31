@@ -259,11 +259,14 @@ class ExecutionState:
 
     @property
     def future_queue(self) -> FutureQueueState:
-        """Return a future-state view that tracks legacy mutable attributes."""
-        self.future_queue_state.pending_futures = self.pending_futures
-        self.future_queue_state.resumable_simulations = self.resumable_simulations
-        self.future_queue_state.stop_signal = self.stop_signal
+        """Return the authoritative future-state view."""
         return self.future_queue_state
+
+    def sync_future_queue(self) -> None:
+        """Copy future-queue-owned containers back to legacy execution-state attributes."""
+        self.pending_futures = self.future_queue_state.pending_futures
+        self.resumable_simulations = self.future_queue_state.resumable_simulations
+        self.stop_signal = self.future_queue_state.stop_signal
 
     @property
     def result_ledger(self) -> ResultLedgerState:

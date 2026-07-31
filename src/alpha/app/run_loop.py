@@ -133,7 +133,7 @@ def run_field_test_loop(
                 cancelled,
                 sum(
                     1
-                    for pending in execution_state.pending_futures.values()
+                    for pending in execution_state.future_queue.pending_futures.values()
                     if pending.simulation_location
                 ),
             )

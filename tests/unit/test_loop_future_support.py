@@ -53,16 +53,17 @@ def test_cancel_unstarted_futures_preserves_running_simulations() -> None:
         field_id="running",
         simulation_location="/simulations/sim-1",
     )
-    execution_state.pending_futures = {
+    execution_state.future_queue.pending_futures = {
         queued: queued_context,
         running: running_context,
     }
+    execution_state.sync_future_queue()
 
     cancelled = cancel_unstarted_futures(execution_state)
 
     assert cancelled == 1
     assert queued.cancelled() is True
-    assert execution_state.pending_futures == {running: running_context}
+    assert execution_state.future_queue.pending_futures == {running: running_context}
 
 
 def test_submit_template_future_records_created_simulation_location() -> None:
@@ -110,7 +111,7 @@ def test_submit_template_future_records_created_simulation_location() -> None:
             variant_fingerprint="settings-v1",
         )
 
-    pending = next(iter(execution_state.pending_futures.values()))
+    pending = next(iter(execution_state.future_queue.pending_futures.values()))
     assert pending.simulation_location == "/simulations/sim-1"
     assert pending.simulation_id == "sim-1"
 
@@ -127,7 +128,8 @@ def test_submit_resumable_futures_registers_restored_contexts() -> None:
         simulation_location="/simulations/sim-1",
         simulation_id="sim-1",
     )
-    execution_state.resumable_simulations = [pending]
+    execution_state.future_queue.resumable_simulations = [pending]
+    execution_state.sync_future_queue()
     executor = _RecordingExecutor()
     run_ctx = SimpleNamespace(
         client_factory=object(),
@@ -142,8 +144,8 @@ def test_submit_resumable_futures_registers_restored_contexts() -> None:
     )
 
     assert submitted == 1
-    assert execution_state.resumable_simulations == []
-    assert list(execution_state.pending_futures.values()) == [pending]
+    assert execution_state.future_queue.resumable_simulations == []
+    assert list(execution_state.future_queue.pending_futures.values()) == [pending]
     assert len(executor.calls) == 1
     assert executor.calls[0][1][-1]() is False
 
@@ -164,7 +166,8 @@ def test_submit_resumable_futures_restores_unsubmitted_contexts_on_failure() -> 
         settings_fingerprint="settings-v1",
         simulation_location="/simulations/sim-2",
     )
-    execution_state.resumable_simulations = [first, second]
+    execution_state.future_queue.resumable_simulations = [first, second]
+    execution_state.sync_future_queue()
     executor = _FailingExecutor()
     run_ctx = SimpleNamespace(
         client_factory=object(),
@@ -183,5 +186,5 @@ def test_submit_resumable_futures_restores_unsubmitted_contexts_on_failure() -> 
     else:
         raise AssertionError("executor failure should propagate")
 
-    assert list(execution_state.pending_futures.values()) == [first]
-    assert execution_state.resumable_simulations == [second]
+    assert list(execution_state.future_queue.pending_futures.values()) == [first]
+    assert execution_state.future_queue.resumable_simulations == [second]

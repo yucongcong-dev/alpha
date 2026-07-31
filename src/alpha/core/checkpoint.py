@@ -73,9 +73,10 @@ def _restore_template_stats(payload: object) -> dict[str, dict[str, Any]]:
 
 def _all_pending_contexts(execution_state: ExecutionState) -> list[PendingFutureContext]:
     """Return submitted and not-yet-resubmitted simulation contexts."""
+    future_queue = execution_state.future_queue
     return [
-        *execution_state.pending_futures.values(),
-        *execution_state.resumable_simulations,
+        *future_queue.pending_futures.values(),
+        *future_queue.resumable_simulations,
     ]
 
 
@@ -290,7 +291,8 @@ def load_pipeline_state(
         not in execution_state.attempted_keys
     ]
     already_completed = restored_before_dedup - len(resumable_simulations)
-    execution_state.resumable_simulations = resumable_simulations
+    execution_state.future_queue.resumable_simulations = resumable_simulations
+    execution_state.sync_future_queue()
     if retry_from_start:
         completed_index = 0
         logger.warning(

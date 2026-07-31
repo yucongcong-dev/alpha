@@ -108,10 +108,12 @@ def test_persist_field_progress_allows_resuming_from_first_field() -> None:
 def test_drain_remaining_futures_persists_total_field_count() -> None:
     future = object()
     execution_state = _build_execution_state()
-    execution_state.pending_futures = {future: {"field_id": "f1"}}
+    execution_state.future_queue.pending_futures = {future: {"field_id": "f1"}}
+    execution_state.sync_future_queue()
 
     def _drain(*, execution_state, **_kwargs):
-        execution_state.pending_futures.clear()
+        execution_state.future_queue.pending_futures.clear()
+        execution_state.sync_future_queue()
 
     with (
         patch("alpha.app.loop_future_support.wait", return_value=({future}, set())),
@@ -209,10 +211,11 @@ def test_run_field_test_loop_interrupts_workers_without_waiting(tmp_path) -> Non
     executor = FakeExecutor()
 
     def _interrupt(*_args, **_kwargs):
-        run_ctx.execution_state.pending_futures = {
+        run_ctx.execution_state.future_queue.pending_futures = {
             running: running_context,
             queued: queued_context,
         }
+        run_ctx.execution_state.sync_future_queue()
         raise KeyboardInterrupt
 
     with (
@@ -243,10 +246,11 @@ def test_run_field_test_loop_interrupts_workers_without_waiting(tmp_path) -> Non
     assert run_ctx.execution_state.stop_signal.is_set() is True
     assert executor.shutdown_calls == [(False, True)]
     assert queued.cancelled() is True
-    assert list(run_ctx.execution_state.pending_futures.values()) == [running_context]
+    assert list(run_ctx.execution_state.future_queue.pending_futures.values()) == [running_context]
     saved_state = mock_checkpoint.call_args.kwargs["execution_state"]
-    assert next(iter(saved_state.pending_futures.values())).simulation_location == (
-        "/simulations/sim-1"
+    assert (
+        next(iter(saved_state.future_queue.pending_futures.values())).simulation_location
+        == "/simulations/sim-1"
     )
 
 

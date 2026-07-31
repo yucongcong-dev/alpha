@@ -167,7 +167,7 @@ def schedule_field_round(
             *run_ctx.historical_state.feedback_results,
             *result_ledger.results,
         ],
-        reserved_keys=inflight_template_keys(execution_state.pending_futures),
+        reserved_keys=inflight_template_keys(execution_state.future_queue.pending_futures),
     )
     logger.debug(
         "[progress] 字段 %d/%d field_id=%s templates=%d pending=%d filtered=%d",
@@ -269,7 +269,7 @@ def _dispatch_templates_for_field(
             len(scheduled_templates),
             entry.template_name,
             entry.priority,
-            len(execution_state.pending_futures) + 1,
+            len(execution_state.future_queue.pending_futures) + 1,
             runtime_state.runtime_max_workers,
             entry.variant_fingerprint,
         )

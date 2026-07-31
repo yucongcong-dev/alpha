@@ -170,7 +170,7 @@ class TestExecutionState:
         assert state.result_ledger.results == []
         assert state.attempted_keys == set()
         assert state.template_stats == {}
-        assert state.pending_futures == {}
+        assert state.future_queue.pending_futures == {}
         assert state.field_queue_busy_counts == {}
         assert state.skipped_fields_due_to_queue == set()
         assert state.last_submission_at == 0.0

@@ -373,7 +373,7 @@ class TestDrainCompletedFuturesFlow:
         )
         future.result.return_value = result
 
-        empty_execution_state.pending_futures = {
+        empty_execution_state.future_queue.pending_futures = {
             future: PendingFutureContext(
                 field_id="f1",
                 field_type="MATRIX",
@@ -383,6 +383,7 @@ class TestDrainCompletedFuturesFlow:
                 settings_fingerprint="abc",
             )
         }
+        empty_execution_state.sync_future_queue()
 
         with (
             patch("alpha.analysis.results_persistence.dump_results_incremental"),
@@ -427,7 +428,7 @@ class TestDrainCompletedFuturesFlow:
         )
         future.result.return_value = result
 
-        empty_execution_state.pending_futures = {
+        empty_execution_state.future_queue.pending_futures = {
             future: PendingFutureContext(
                 field_id="f1",
                 field_type="MATRIX",
@@ -437,6 +438,7 @@ class TestDrainCompletedFuturesFlow:
                 settings_fingerprint="abc",
             )
         }
+        empty_execution_state.sync_future_queue()
 
         with (
             patch("alpha.analysis.results_persistence.dump_results_incremental"),
@@ -465,7 +467,7 @@ class TestDrainCompletedFuturesFlow:
         future = MagicMock()
         future.result.side_effect = RuntimeError("worker crash")
 
-        empty_execution_state.pending_futures = {
+        empty_execution_state.future_queue.pending_futures = {
             future: {
                 "field_id": "f1",
                 "field_type": "MATRIX",
@@ -475,6 +477,7 @@ class TestDrainCompletedFuturesFlow:
                 "settings_fingerprint": "abc",
             }
         }
+        empty_execution_state.sync_future_queue()
 
         with (
             patch("alpha.analysis.results_persistence.dump_results_incremental"),

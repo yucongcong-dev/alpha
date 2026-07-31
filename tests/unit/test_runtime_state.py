@@ -149,7 +149,8 @@ def test_future_queue_state_updates_legacy_views() -> None:
     assert state.future_queue.pop_completed(future) == context
     assert state.pending_futures == {}
 
-    state.resumable_simulations = [context]
+    state.future_queue.resumable_simulations = [context]
+    state.sync_future_queue()
     pending_contexts = state.future_queue.take_resumable_batch()
     assert pending_contexts == [context]
     assert state.resumable_simulations == []

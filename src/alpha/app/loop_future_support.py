@@ -59,9 +59,10 @@ def drain_until_capacity(
     field_id: str,
 ) -> bool:
     """Drain completed futures until runtime concurrency has available capacity."""
-    while len(executor_state.pending_futures) >= runtime_state.runtime_max_workers:
+    future_queue = executor_state.future_queue
+    while len(future_queue.pending_futures) >= runtime_state.runtime_max_workers:
         _drain_completed_cycle(
-            pending_futures=executor_state.pending_futures,
+            pending_futures=future_queue.pending_futures,
             execution_state=executor_state,
             scheduler_options=scheduler_options,
             completion_ctx=completion_ctx,
@@ -190,9 +191,10 @@ def drain_remaining_futures(
 ) -> None:
     """Drain all remaining futures and persist terminal pipeline state when needed."""
     scheduler_options = scheduler_options or SchedulerControlOptions.from_args(args)
-    while execution_state.pending_futures:
+    future_queue = execution_state.future_queue
+    while future_queue.pending_futures:
         _drain_completed_cycle(
-            pending_futures=execution_state.pending_futures,
+            pending_futures=future_queue.pending_futures,
             execution_state=execution_state,
             scheduler_options=scheduler_options,
             completion_ctx=completion_ctx,
