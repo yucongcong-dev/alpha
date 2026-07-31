@@ -11,6 +11,7 @@ from ..core.scheduler import drain_completed_futures_with_context
 from ..core.simulation import resume_field_test_in_worker, run_field_test_in_worker
 from ..generators.payload import build_simulation_payload
 from ..models.domain import FieldTestResult, SettingsVariant, TemplateField
+from ..models.runtime_options import SchedulerControlOptions
 from ..models.runtime_protocols import SchedulerRuntimeArgs, SimulationStageArgs
 from ..runtime.contexts import (
     FutureCompletionContext,
@@ -31,7 +32,7 @@ def _drain_completed_cycle(
     *,
     pending_futures: dict[Future[FieldTestResult], PendingFutureContext],
     execution_state: ExecutionState,
-    args: SchedulerRuntimeArgs,
+    scheduler_options: SchedulerControlOptions,
     completion_ctx: FutureCompletionContext,
     runtime_state: RuntimeConcurrencyState,
 ) -> None:
@@ -43,7 +44,7 @@ def _drain_completed_cycle(
     drain_completed_futures_with_context(
         completed_futures=list(done),
         execution_state=execution_state,
-        args=args,
+        args=scheduler_options,
         completion_ctx=completion_ctx,
         runtime_state=runtime_state,
     )
@@ -53,7 +54,7 @@ def drain_until_capacity(
     *,
     executor_state: ExecutionState,
     runtime_state: RuntimeConcurrencyState,
-    args: SchedulerRuntimeArgs,
+    scheduler_options: SchedulerControlOptions,
     completion_ctx: FutureCompletionContext,
     field_id: str,
 ) -> bool:
@@ -62,7 +63,7 @@ def drain_until_capacity(
         _drain_completed_cycle(
             pending_futures=executor_state.pending_futures,
             execution_state=executor_state,
-            args=args,
+            scheduler_options=scheduler_options,
             completion_ctx=completion_ctx,
             runtime_state=runtime_state,
         )
@@ -187,11 +188,12 @@ def drain_remaining_futures(
     completion_ctx: FutureCompletionContext,
 ) -> None:
     """Drain all remaining futures and persist terminal pipeline state when needed."""
+    scheduler_options = SchedulerControlOptions.from_args(args)
     while execution_state.pending_futures:
         _drain_completed_cycle(
             pending_futures=execution_state.pending_futures,
             execution_state=execution_state,
-            args=args,
+            scheduler_options=scheduler_options,
             completion_ctx=completion_ctx,
             runtime_state=runtime_state,
         )

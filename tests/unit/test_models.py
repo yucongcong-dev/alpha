@@ -15,6 +15,7 @@ from alpha.models.runtime_options import (
     ApiClientOptions,
     FieldFetchOptions,
     ResultWriteOptions,
+    SchedulerControlOptions,
     TemplateBuildOptions,
 )
 
@@ -133,6 +134,20 @@ class TestRuntimeOptionBuilders:
             universe="TOP1000",
             instrument_type="EQUITY",
             delay=2,
+        )
+
+    def test_scheduler_control_options_from_args(self) -> None:
+        class _Args:
+            queue_busy_cooldown_seconds = "5.5"
+            field_queue_busy_skip_after = "3"
+            sleep_between_fields = "0.25"
+            stop_after_submittable = "2"
+
+        assert SchedulerControlOptions.from_args(_Args()) == SchedulerControlOptions(
+            queue_busy_cooldown_seconds=5.5,
+            field_queue_busy_skip_after=3,
+            sleep_between_fields=0.25,
+            stop_after_submittable=2,
         )
 
 

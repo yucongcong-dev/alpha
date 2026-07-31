@@ -22,7 +22,7 @@ from typing import NamedTuple
 
 from ..api.timing import wait_seconds
 from ..models.domain import FieldTestResult
-from ..models.runtime_options import ResultWriteOptions
+from ..models.runtime_options import ResultWriteOptions, SchedulerControlOptions
 from ..models.runtime_protocols import RunConfig, SchedulerRuntimeArgs, TemplateStats
 from ..runtime.contexts import FutureCompletionContext
 from ..runtime.state import ExecutionState, QueueRetryKey, RuntimeConcurrencyState
@@ -44,9 +44,17 @@ from .scheduler_decisions import (
 logger = logging.getLogger(__name__)
 
 
-def _stop_after_submittable_threshold(args: SchedulerRuntimeArgs) -> int:
+def _scheduler_control_options(
+    args: SchedulerRuntimeArgs | SchedulerControlOptions,
+) -> SchedulerControlOptions:
+    if isinstance(args, SchedulerControlOptions):
+        return args
+    return SchedulerControlOptions.from_args(args)
+
+
+def _stop_after_submittable_threshold(options: SchedulerControlOptions) -> int:
     try:
-        return int(getattr(args, "stop_after_submittable", 0) or 0)
+        return int(options.stop_after_submittable or 0)
     except (TypeError, ValueError):
         return 0
 
@@ -112,34 +120,39 @@ def maybe_restore_runtime_concurrency(state: RuntimeConcurrencyState) -> None:
         )
 
 
-def apply_congestion_cooldown(args: SchedulerRuntimeArgs, state: RuntimeConcurrencyState) -> None:
+def apply_congestion_cooldown(
+    args: SchedulerRuntimeArgs | SchedulerControlOptions,
+    state: RuntimeConcurrencyState,
+) -> None:
     """检测到拥塞后，临时切换到单 worker 运行模式。"""
+    options = _scheduler_control_options(args)
     state.runtime_max_workers = 1
     state.cooldown_until = resolve_congestion_cooldown_until(
         now=time.monotonic(),
-        cooldown_seconds=args.queue_busy_cooldown_seconds,
+        cooldown_seconds=options.queue_busy_cooldown_seconds,
     )
     logger.info(
         "[cooldown] detected queue congestion, runtime concurrency -> 1 for %.0fs",
-        args.queue_busy_cooldown_seconds,
+        options.queue_busy_cooldown_seconds,
     )
 
 
 def register_queue_busy_field(
     field_id: str | None,
-    args: SchedulerRuntimeArgs,
+    args: SchedulerRuntimeArgs | SchedulerControlOptions,
     field_queue_busy_counts: dict[str, int],
     skipped_fields_due_to_queue: set[str],
 ) -> None:
     """记录重复的排队拥塞字段，并在达到阈值后跳过该字段。"""
+    options = _scheduler_control_options(args)
     decision = decide_queue_busy_update(
         field_id,
         current_count=field_queue_busy_counts.get(field_id or "", 0),
-        skip_after=args.field_queue_busy_skip_after,
+        skip_after=options.field_queue_busy_skip_after,
     )
     _apply_queue_busy_decision(
         decision,
-        skip_after=args.field_queue_busy_skip_after,
+        skip_after=options.field_queue_busy_skip_after,
         field_queue_busy_counts=field_queue_busy_counts,
         skipped_fields_due_to_queue=skipped_fields_due_to_queue,
     )
@@ -147,15 +160,16 @@ def register_queue_busy_field(
 
 def register_queue_busy_template(
     key: QueueRetryKey | None,
-    args: SchedulerRuntimeArgs,
+    args: SchedulerRuntimeArgs | SchedulerControlOptions,
     execution_state: ExecutionState,
 ) -> None:
     """Bound retries for one candidate without blacklisting its whole field."""
     if key is None:
         return
+    options = _scheduler_control_options(args)
     update = execution_state.queue_retry_state.register_busy(
         key,
-        retry_limit=args.field_queue_busy_skip_after,
+        retry_limit=options.field_queue_busy_skip_after,
     )
     if update.exhausted:
         logger.info(
@@ -176,10 +190,14 @@ def register_queue_busy_template(
         )
 
 
-def throttle_before_submission(args: SchedulerRuntimeArgs, execution_state: ExecutionState) -> None:
+def throttle_before_submission(
+    args: SchedulerRuntimeArgs | SchedulerControlOptions,
+    execution_state: ExecutionState,
+) -> None:
     """在提交新任务前控制节奏，避免阻塞已完成任务处理。"""
+    options = _scheduler_control_options(args)
     remaining = submission_throttle_delay(
-        interval_seconds=args.sleep_between_fields,
+        interval_seconds=options.sleep_between_fields,
         last_submission_at=execution_state.last_submission_at,
         now=time.monotonic(),
     )
@@ -190,7 +208,7 @@ def throttle_before_submission(args: SchedulerRuntimeArgs, execution_state: Exec
 def _apply_drain_state_decision(
     decision: DrainStateDecision,
     *,
-    args: SchedulerRuntimeArgs,
+    scheduler_options: SchedulerControlOptions,
     execution_state: ExecutionState,
     runtime_state: RuntimeConcurrencyState,
 ) -> None:
@@ -201,13 +219,13 @@ def _apply_drain_state_decision(
 
     _apply_queue_busy_decision(
         decision.queue_busy,
-        skip_after=args.field_queue_busy_skip_after,
+        skip_after=scheduler_options.field_queue_busy_skip_after,
         field_queue_busy_counts=execution_state.field_queue_busy_counts,
         skipped_fields_due_to_queue=execution_state.skipped_fields_due_to_queue,
     )
 
     if decision.apply_congestion_cooldown:
-        apply_congestion_cooldown(args, runtime_state)
+        apply_congestion_cooldown(scheduler_options, runtime_state)
 
 
 # ============================================================================
@@ -302,10 +320,11 @@ def drain_completed_futures(
         template_library_fingerprint=template_library_fingerprint,
         run_config=run_config,
     )
+    scheduler_options = SchedulerControlOptions.from_args(args)
     return drain_completed_futures_with_context(
         completed_futures=completed_futures,
         execution_state=execution_state,
-        args=args,
+        args=scheduler_options,
         completion_ctx=completion_ctx,
         runtime_state=runtime_state,
     )
@@ -315,11 +334,12 @@ def drain_completed_futures_with_context(
     *,
     completed_futures: Sequence[Future[FieldTestResult]],
     execution_state: ExecutionState,
-    args: SchedulerRuntimeArgs,
+    args: SchedulerRuntimeArgs | SchedulerControlOptions,
     completion_ctx: FutureCompletionContext,
     runtime_state: RuntimeConcurrencyState,
 ) -> TemplateStats:
     """Consume completed futures using a prebuilt immutable completion context."""
+    scheduler_options = _scheduler_control_options(args)
     for done_future in completed_futures:
         drain_result = handle_completed_future(
             done_future,
@@ -331,18 +351,20 @@ def drain_completed_futures_with_context(
         # Queue timeouts are tracked per candidate below. Keep the shared
         # decision helper focused here on stop/cooldown state only.
         decision = decide_drain_state_updates(
-            stop_threshold=_stop_after_submittable_threshold(args),
+            stop_threshold=_stop_after_submittable_threshold(scheduler_options),
             current_submittable_count=current_submittable_count,
             congestion_detected=drain_result.congestion_detected,
             queue_busy_field_id=None,
             current_queue_busy_count=0,
-            queue_busy_skip_after=args.field_queue_busy_skip_after,
+            queue_busy_skip_after=scheduler_options.field_queue_busy_skip_after,
         )
         _apply_drain_state_decision(
             decision,
-            args=args,
+            scheduler_options=scheduler_options,
             execution_state=execution_state,
             runtime_state=runtime_state,
         )
-        register_queue_busy_template(drain_result.queue_busy_key, args, execution_state)
+        register_queue_busy_template(
+            drain_result.queue_busy_key, scheduler_options, execution_state
+        )
     return execution_state.template_stats

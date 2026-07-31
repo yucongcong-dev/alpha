@@ -16,6 +16,7 @@ from ..core.executor import (
 from ..core.scheduler import maybe_restore_runtime_concurrency, throttle_before_submission
 from ..generators.fields import choose_field_name, choose_field_type
 from ..models.domain import TemplateField
+from ..models.runtime_options import SchedulerControlOptions
 from ..models.runtime_protocols import RunLoopArgs
 from ..runtime.contexts import (
     FutureCompletionContext,
@@ -244,7 +245,7 @@ def _dispatch_templates_for_field(
         if not drain_until_capacity(
             executor_state=execution_state,
             runtime_state=runtime_state,
-            args=args,
+            scheduler_options=SchedulerControlOptions.from_args(args),
             completion_ctx=context.completion_ctx,
             field_id=field_id,
         ):
@@ -263,7 +264,7 @@ def _dispatch_templates_for_field(
             runtime_state.runtime_max_workers,
             entry.variant_fingerprint,
         )
-        throttle_before_submission(args, execution_state)
+        throttle_before_submission(SchedulerControlOptions.from_args(args), execution_state)
         submit_template_future(
             executor=context.executor,
             run_ctx=run_ctx,

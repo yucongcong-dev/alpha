@@ -10,6 +10,7 @@ from .runtime_protocols import (
     FieldFetchArgs,
     FieldSelectionArgs,
     ResultWriteArgs,
+    SchedulerControlArgs,
     TemplateBuildArgs,
 )
 
@@ -140,4 +141,25 @@ class FieldSelectionOptions:
             top_fields_by_feedback=int(getattr(args, "top_fields_by_feedback", 0) or 0),
             offset=int(getattr(args, "offset", 0) or 0),
             limit=int(getattr(args, "limit", 0) or 0),
+        )
+
+
+@dataclass(frozen=True)
+class SchedulerControlOptions:
+    """Queue cooldown, throttling, and stop-condition knobs for scheduling."""
+
+    queue_busy_cooldown_seconds: float = 0.0
+    field_queue_busy_skip_after: int = 0
+    sleep_between_fields: float = 0.0
+    stop_after_submittable: int = 0
+
+    @classmethod
+    def from_args(cls, args: SchedulerControlArgs) -> SchedulerControlOptions:
+        return cls(
+            queue_busy_cooldown_seconds=float(
+                getattr(args, "queue_busy_cooldown_seconds", 0.0) or 0.0
+            ),
+            field_queue_busy_skip_after=int(getattr(args, "field_queue_busy_skip_after", 0) or 0),
+            sleep_between_fields=float(getattr(args, "sleep_between_fields", 0.0) or 0.0),
+            stop_after_submittable=int(getattr(args, "stop_after_submittable", 0) or 0),
         )
