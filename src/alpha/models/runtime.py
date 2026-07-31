@@ -57,15 +57,14 @@ if TYPE_CHECKING:
         TemplateBuildContext,
     )
     from ..runtime.future_queue import FutureQueueState
+    from ..runtime.result_ledger import ExecutionMetrics, ResultLedgerState
     from ..runtime.state import (
-        ExecutionMetrics,
         ExecutionState,
         InitializedRunContext,
         PendingFutureLike,
         QueueRetryKey,
         QueueRetryState,
         QueueRetryUpdate,
-        ResultLedgerState,
         RuntimeConcurrencyState,
     )
 
@@ -101,7 +100,7 @@ _EXPORT_MAP: ExportMap = {
     "TemplateFeedback": (".runtime_protocols", "TemplateFeedback"),
     "TemplateSequence": (".runtime_protocols", "TemplateSequence"),
     "TemplateStats": (".runtime_protocols", "TemplateStats"),
-    "ExecutionMetrics": ("..runtime.state", "ExecutionMetrics"),
+    "ExecutionMetrics": ("..runtime.result_ledger", "ExecutionMetrics"),
     "ExecutionState": ("..runtime.state", "ExecutionState"),
     "FutureQueueState": ("..runtime.future_queue", "FutureQueueState"),
     "FutureCompletionContext": ("..runtime.contexts", "FutureCompletionContext"),
@@ -113,7 +112,7 @@ _EXPORT_MAP: ExportMap = {
     "QueueRetryKey": ("..runtime.state", "QueueRetryKey"),
     "QueueRetryState": ("..runtime.state", "QueueRetryState"),
     "QueueRetryUpdate": ("..runtime.state", "QueueRetryUpdate"),
-    "ResultLedgerState": ("..runtime.state", "ResultLedgerState"),
+    "ResultLedgerState": ("..runtime.result_ledger", "ResultLedgerState"),
     "RuntimeConcurrencyState": ("..runtime.state", "RuntimeConcurrencyState"),
     "TemplateBuildContext": ("..runtime.contexts", "TemplateBuildContext"),
 }
