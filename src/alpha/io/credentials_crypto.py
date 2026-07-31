@@ -2,19 +2,25 @@
 
 from __future__ import annotations
 
+import base64
+import binascii
 from contextlib import suppress
 import json
 import logging
 import os
 from pathlib import Path
+import tempfile
 from typing import Any
 
 from ..exceptions import BrainAPIError
 from .file_lock import exclusive_file_lock
+from .windows_dpapi import protect_for_current_user, unprotect_for_current_user
 
 logger = logging.getLogger(__name__)
 
 CREDENTIALS_STORAGE_VERSION: int = 4
+WINDOWS_DPAPI_KEY_VERSION: int = 1
+WINDOWS_DPAPI_KEY_STORAGE: str = "windows-dpapi-current-user"
 
 
 def ensure_parent_dir(path: str) -> None:
@@ -34,36 +40,106 @@ def load_crypto_dependencies() -> tuple[Any, Any]:
 
 
 def restrict_file_to_owner(path: str) -> None:
-    """尽量将敏感本地文件权限收紧为仅当前用户可读写。"""
+    """On POSIX, restrict a sensitive local file to the current user."""
+    if os.name == "nt":
+        return
     with suppress(OSError):
         os.chmod(path, 0o600)
 
 
+def _atomic_write_key_file(path: str, payload: bytes) -> None:
+    """Atomically replace a credentials key file without exposing partial content."""
+    ensure_parent_dir(path)
+    directory = os.path.dirname(os.path.abspath(path)) or "."
+    fd, temp_path = tempfile.mkstemp(prefix=".tmp_credentials_", suffix=".key", dir=directory)
+    try:
+        with os.fdopen(fd, "wb") as handle:
+            handle.write(payload)
+            handle.flush()
+            os.fsync(handle.fileno())
+        restrict_file_to_owner(temp_path)
+        os.replace(temp_path, path)
+        restrict_file_to_owner(path)
+    finally:
+        if os.path.exists(temp_path):
+            with suppress(OSError):
+                os.remove(temp_path)
+
+
+def _serialize_windows_dpapi_key(key: bytes) -> bytes:
+    protected_key = protect_for_current_user(key)
+    payload = {
+        "version": WINDOWS_DPAPI_KEY_VERSION,
+        "storage": WINDOWS_DPAPI_KEY_STORAGE,
+        "protected_key": base64.b64encode(protected_key).decode("ascii"),
+    }
+    return (json.dumps(payload, ensure_ascii=True, separators=(",", ":")) + "\n").encode("utf-8")
+
+
+def _deserialize_windows_dpapi_key(raw: bytes, key_path: str) -> bytes:
+    try:
+        payload = json.loads(raw.decode("utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise BrainAPIError(f"Credentials key file is invalid: {key_path}") from exc
+    if not isinstance(payload, dict):
+        raise BrainAPIError(f"Credentials key file is invalid: {key_path}")
+    if payload.get("storage") != WINDOWS_DPAPI_KEY_STORAGE:
+        raise BrainAPIError(f"Credentials key file uses an unsupported storage format: {key_path}")
+    if payload.get("version") != WINDOWS_DPAPI_KEY_VERSION:
+        raise BrainAPIError(f"Credentials key file uses an unsupported DPAPI version: {key_path}")
+    encoded_key = payload.get("protected_key")
+    if not isinstance(encoded_key, str) or not encoded_key.strip():
+        raise BrainAPIError(f"Credentials DPAPI key payload is missing protected_key: {key_path}")
+    try:
+        protected_key = base64.b64decode(encoded_key, validate=True)
+    except (ValueError, binascii.Error) as exc:
+        raise BrainAPIError(f"Credentials DPAPI key payload is invalid: {key_path}") from exc
+    if os.name != "nt":
+        raise BrainAPIError(
+            "Windows DPAPI credentials keys can only be read by the original Windows user."
+        )
+    return unprotect_for_current_user(protected_key)
+
+
+def _validate_fernet_key(key: bytes, key_path: str, fernet_cls: Any) -> bytes:
+    try:
+        fernet_cls(key)
+    except (TypeError, ValueError) as exc:
+        raise BrainAPIError(f"Credentials key file is invalid: {key_path}") from exc
+    return bytes(key)
+
+
+def _read_existing_credentials_key(key_path: str, fernet_cls: Any) -> bytes:
+    restrict_file_to_owner(key_path)
+    with open(key_path, "rb") as handle:
+        raw = handle.read()
+    if not raw.strip():
+        raise BrainAPIError(f"Credentials key file is empty: {key_path}")
+
+    if raw.lstrip().startswith(b"{"):
+        key = _deserialize_windows_dpapi_key(raw, key_path)
+        return _validate_fernet_key(key, key_path, fernet_cls)
+
+    key = _validate_fernet_key(raw.strip(), key_path, fernet_cls)
+    if os.name == "nt":
+        _atomic_write_key_file(key_path, _serialize_windows_dpapi_key(key))
+        logger.info("[creds] migrated local credentials key to Windows DPAPI: %s", key_path)
+    return key
+
+
 def read_or_create_credentials_key(key_path: str) -> bytes:
-    """读取本地凭证加密密钥；不存在时生成并保存。"""
+    """Read or create a Fernet key, using current-user DPAPI storage on Windows."""
     fernet_cls, _ = load_crypto_dependencies()
     ensure_parent_dir(key_path)
     with exclusive_file_lock(f"{key_path}.lock"):
         if os.path.exists(key_path):
-            restrict_file_to_owner(key_path)
-            with open(key_path, "rb") as handle:
-                key = handle.read().strip()
-            if key:
-                try:
-                    fernet_cls(key)
-                except (TypeError, ValueError) as exc:
-                    raise BrainAPIError(f"Credentials key file is invalid: {key_path}") from exc
-                return key
-            raise BrainAPIError(f"Credentials key file is empty: {key_path}")
+            return _read_existing_credentials_key(key_path, fernet_cls)
 
-        key = fernet_cls.generate_key()
-        with open(key_path, "wb") as handle:
-            handle.write(key + b"\n")
-            handle.flush()
-            os.fsync(handle.fileno())
-        restrict_file_to_owner(key_path)
+        key = bytes(fernet_cls.generate_key())
+        serialized_key = _serialize_windows_dpapi_key(key) if os.name == "nt" else key + b"\n"
+        _atomic_write_key_file(key_path, serialized_key)
         logger.info("[creds] generated local credentials key file: %s", key_path)
-        return bytes(key)
+        return key
 
 
 def encrypt_credentials_payload(email: str, password: str, key_path: str) -> dict[str, Any]:

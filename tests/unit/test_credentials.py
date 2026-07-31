@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 from concurrent.futures import ThreadPoolExecutor
 import json
+import os
 import stat
 from unittest.mock import patch
 
@@ -18,6 +19,8 @@ from alpha.io.credentials import (
     write_credentials_file,
 )
 from alpha.io.credentials_crypto import (
+    WINDOWS_DPAPI_KEY_STORAGE,
+    WINDOWS_DPAPI_KEY_VERSION,
     decrypt_credentials_payload,
     encrypt_credentials_payload,
     read_or_create_credentials_key,
@@ -31,6 +34,20 @@ def _args(creds_file, key_file, *, email=None, password=None):
         creds_file=str(creds_file),
         creds_key_file=str(key_file),
     )
+
+
+def _assert_credentials_storage_is_protected(creds_file, key_file) -> None:
+    if os.name == "nt":
+        key = read_or_create_credentials_key(str(key_file))
+        key_text = key_file.read_text(encoding="utf-8")
+        key_payload = json.loads(key_text)
+        assert key_payload["version"] == WINDOWS_DPAPI_KEY_VERSION
+        assert key_payload["storage"] == WINDOWS_DPAPI_KEY_STORAGE
+        assert key_payload["protected_key"]
+        assert key.decode("ascii") not in key_text
+    else:
+        assert stat.S_IMODE(creds_file.stat().st_mode) == 0o600
+        assert stat.S_IMODE(key_file.stat().st_mode) == 0o600
 
 
 def test_load_credentials_rejects_invalid_json_shape(tmp_path) -> None:
@@ -53,8 +70,7 @@ def test_encrypted_credentials_round_trip_and_permissions(tmp_path) -> None:
     assert payload["version"] == CREDENTIALS_STORAGE_VERSION
     assert "user@example.com" not in creds_file.read_text(encoding="utf-8")
     assert "secret" not in creds_file.read_text(encoding="utf-8")
-    assert stat.S_IMODE(creds_file.stat().st_mode) == 0o600
-    assert stat.S_IMODE(key_file.stat().st_mode) == 0o600
+    _assert_credentials_storage_is_protected(creds_file, key_file)
     assert load_credentials(_args(creds_file, key_file)) == ("user@example.com", "secret")
 
 
@@ -73,7 +89,7 @@ def test_plaintext_credentials_are_migrated_to_encrypted_storage(tmp_path) -> No
     migrated = json.loads(creds_file.read_text(encoding="utf-8"))
     assert migrated["version"] == CREDENTIALS_STORAGE_VERSION
     assert "email" not in migrated
-    assert stat.S_IMODE(creds_file.stat().st_mode) == 0o600
+    _assert_credentials_storage_is_protected(creds_file, key_file)
 
 
 def test_explicit_credentials_do_not_touch_local_files(tmp_path) -> None:
@@ -127,6 +143,42 @@ def test_invalid_or_empty_key_file_has_clear_error(tmp_path) -> None:
     empty_key.write_text("", encoding="utf-8")
     with pytest.raises(BrainAPIError, match="key file is empty"):
         read_or_create_credentials_key(str(empty_key))
+
+
+@pytest.mark.skipif(os.name != "nt", reason="Windows DPAPI migration")
+def test_windows_raw_fernet_key_is_migrated_to_dpapi(tmp_path) -> None:
+    from cryptography.fernet import Fernet
+
+    key_file = tmp_path / "credentials.key"
+    raw_key = Fernet.generate_key()
+    key_file.write_bytes(raw_key + b"\n")
+
+    assert read_or_create_credentials_key(str(key_file)) == raw_key
+
+    migrated_text = key_file.read_text(encoding="utf-8")
+    migrated = json.loads(migrated_text)
+    assert migrated["version"] == WINDOWS_DPAPI_KEY_VERSION
+    assert migrated["storage"] == WINDOWS_DPAPI_KEY_STORAGE
+    assert migrated["protected_key"]
+    assert raw_key.decode("ascii") not in migrated_text
+    assert read_or_create_credentials_key(str(key_file)) == raw_key
+
+
+def test_invalid_windows_dpapi_key_payload_has_clear_error(tmp_path) -> None:
+    key_file = tmp_path / "invalid-dpapi.key"
+    key_file.write_text(
+        json.dumps(
+            {
+                "version": WINDOWS_DPAPI_KEY_VERSION,
+                "storage": WINDOWS_DPAPI_KEY_STORAGE,
+                "protected_key": "not valid base64!",
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(BrainAPIError, match="DPAPI key payload is invalid"):
+        read_or_create_credentials_key(str(key_file))
 
 
 def test_decrypt_rejects_missing_ciphertext_or_key(tmp_path) -> None:

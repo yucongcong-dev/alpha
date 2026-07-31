@@ -17,6 +17,7 @@ def test_thread_lock_reuses_canonical_lock_object(tmp_path) -> None:
 
 
 def test_exclusive_file_lock_uses_posix_flock_and_unlocks(monkeypatch, tmp_path) -> None:
+    monkeypatch.setattr(file_lock.os, "name", "posix")
     calls: list[tuple[int, int]] = []
     fake_fcntl = SimpleNamespace(
         LOCK_EX=1,
@@ -34,6 +35,7 @@ def test_exclusive_file_lock_uses_posix_flock_and_unlocks(monkeypatch, tmp_path)
 
 
 def test_exclusive_file_lock_unlocks_after_body_error(monkeypatch, tmp_path) -> None:
+    monkeypatch.setattr(file_lock.os, "name", "posix")
     calls: list[int] = []
     fake_fcntl = SimpleNamespace(
         LOCK_EX=1,
