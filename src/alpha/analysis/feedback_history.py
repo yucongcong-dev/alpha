@@ -38,15 +38,6 @@ from .field_stats import current_submittable_count
 from .result_identity import attempted_template_keys, merge_results_by_identity
 from .result_provenance import enrich_results_provenance
 from .results_loader import load_existing_results
-from .template_registry_rules import (
-    compile_template_family_registry,
-    merge_registry_recommendations_into_template_stats,
-)
-from .template_registry_store import (
-    build_template_registry_index,
-    load_persisted_template_registry,
-    load_registry_overrides,
-)
 from .template_stats import compile_template_stats
 
 
@@ -133,15 +124,6 @@ def build_historical_run_state(
     )
     attempted_keys = attempted_template_keys(feedback_results)
     template_stats = compile_template_stats(feedback_results)
-    registry_path = feedback_output_path or output_path
-    persisted_template_registry_rows = load_persisted_template_registry(registry_path)
-    registry_overrides = load_registry_overrides(registry_path)
-    template_stats = merge_registry_recommendations_into_template_stats(
-        template_stats,
-        persisted_template_registry_rows,
-    )
-    template_registry = build_template_registry_index(persisted_template_registry_rows)
-    template_family_registry = compile_template_family_registry(template_stats)
     field_feedback = compile_field_feedback(feedback_results)
     global_failed_check_counts = compile_global_failed_check_counts(feedback_results)
     return HistoricalRunState(
@@ -149,9 +131,6 @@ def build_historical_run_state(
         feedback_results=feedback_results,
         attempted_keys=attempted_keys,
         template_stats=template_stats,
-        template_registry=template_registry,
-        template_family_registry=template_family_registry,
-        template_registry_overrides=registry_overrides,
         field_feedback=field_feedback,
         global_failed_check_counts=global_failed_check_counts,
     )
@@ -166,10 +145,6 @@ def rebuild_historical_run_state(
     """Recompute derived history after in-memory result reconciliation."""
     feedback_results = merge_results_by_identity(state.feedback_results, existing_results)
     template_stats = compile_template_stats(feedback_results)
-    template_stats = merge_registry_recommendations_into_template_stats(
-        template_stats,
-        list(state.template_registry.values()),
-    )
     feedback = (
         compile_field_feedback(feedback_results) if refresh_feedback else state.field_feedback
     )
@@ -184,7 +159,6 @@ def rebuild_historical_run_state(
         feedback_results=feedback_results,
         attempted_keys=attempted_template_keys(feedback_results),
         template_stats=template_stats,
-        template_family_registry=compile_template_family_registry(template_stats),
         field_feedback=feedback,
         global_failed_check_counts=failed_counts,
     )

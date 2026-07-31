@@ -49,8 +49,6 @@ class TemplateBuildOptions:
     max_templates_per_field: int = 0
     max_templates_per_family: int = 0
     legacy_similarity_penalty: int = 0
-    template_disable_after: int = 0
-    disable_legacy_after: int = 0
     start_date: str | None = None
     end_date: str | None = None
 
@@ -73,8 +71,6 @@ class TemplateBuildOptions:
             max_templates_per_field=int(args.max_templates_per_field or 0),
             max_templates_per_family=int(args.max_templates_per_family or 0),
             legacy_similarity_penalty=int(args.legacy_similarity_penalty or 0),
-            template_disable_after=int(args.template_disable_after or 0),
-            disable_legacy_after=int(args.disable_legacy_after or 0),
             start_date=getattr(args, "start_date", None),
             end_date=getattr(args, "end_date", None),
         )

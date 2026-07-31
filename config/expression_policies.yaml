@@ -17,7 +17,7 @@ expression_policies:
   __default__:
     policy_version: "2026-07-30.1"
     feedback_scope: "field_type"
-    evaluation_holdout_percent: 10
+    evaluation_holdout_percent: 0
     field_min_coverage: 0.20
     field_min_date_coverage: 0.90
     field_min_alpha_count: 10
@@ -219,74 +219,7 @@ expression_policies:
       fnd6_cptnewqeventv110_apq: 12
       fnd6_cptnewqeventv110_lctq: 13
       fnd6_cptnewqeventv110_dpq: 14
-    overtested_weak_fields:
-      - "assets"
-      - "assets_curr"
-      - "bookvalue_ps"
-      - "capex"
     promising_field_min_priority: 0.65
-    always_keep_families:
-      - "group_rank_delta"
-      - "group_vol_scaled_delta"
-      - "group_mean_spread"
-      - "group_zscore"
-      - "vol_scaled_delta"
-      - "mean_spread"
-      - "zscore_time"
-      - "rank_delta"
-      - "decayed_delta"
-      - "rank_spread"
-      - "group_ratio_delta_over_std"
-      - "group_ratio_delta"
-    slow_template_prefixes:
-      - "ts_mean_"
-      - "backfill_"
-      - "sum_"
-      - "stddev_"
-    slow_template_names:
-      - "zscore"
-      - "scale"
-      - "rank_raw"
-      - "raw_field"
-      - "rank_raw_field"
-    concentrated_weak_families:
-      - "legacy_level"
-      - "legacy_group_level"
-      - "legacy_ratio"
-      - "legacy_neg_ratio"
-      - "group_ratio_level"
-    concentrated_weak_prefixes:
-      - "raw_ratio_"
-      - "ratio_"
-      - "rank_ratio_"
-      - "group_rank_ratio_"
-    concentrated_weak_names:
-      - "argmax_60"
-      - "argmin_60"
-    low_sharpe_weak_ratio_families:
-      - "legacy_ratio"
-      - "legacy_neg_ratio"
-      - "group_ratio_level"
-    low_sharpe_weak_ratio_prefixes:
-      - "raw_ratio_"
-      - "ratio_"
-      - "rank_ratio_"
-      - "group_rank_ratio_"
-    weak_mean_spread_fields:
-      - "assets"
-      - "assets_curr"
-    broken_zscore_spread_fields:
-      - "assets"
-      - "assets_curr"
-      - "cash"
-      - "capex"
-      - "bookvalue_ps"
-      - "cashflow"
-    weak_ratio_standalone_fields:
-      - "assets"
-      - "assets_curr"
-      - "bookvalue_ps"
-    low_sharpe_ratio_fail_threshold: 4
     blacklist_min_fields_for_nearpass: 4
     blacklist_protected_min_avg_sharpe: 0.70
     blacklist_protected_min_avg_fitness: 0.35
@@ -446,14 +379,6 @@ expression_policies:
       - "model16_groupfill_ts_rank_120"
       - "model16_ratio_cap_zscore_120"
       - "model16_mean_spread_over_std_120_252"
-    concentrated_weak_families:
-      - "group_vol_scaled_delta"
-    low_sharpe_weak_ratio_families:
-      - "group_vol_scaled_delta"
-      - "group_ratio_level"
-    low_sharpe_weak_ratio_prefixes:
-      - "group_ratio_zscore_"
-    low_sharpe_ratio_fail_threshold: 2
     preferred_field_order:
       value: 0
       quality: 1
@@ -477,7 +402,6 @@ expression_policies:
     # model51 has only 16 fields. A 10% holdout cannot satisfy the evaluator's
     # 20-fields-per-arm minimum, so it only weakens a small random subset of
     # the default five-template search without producing an actionable result.
-    evaluation_holdout_percent: 0
     ratio_partner_candidates:
       beta_last_30_days_spy: ["correlation_last_30_days_spy", "systematic_risk_last_30_days"]
       beta_last_60_days_spy: ["correlation_last_60_days_spy", "systematic_risk_last_60_days"]
@@ -627,13 +551,6 @@ expression_policies:
     field_recency_weight: 0.04
     field_theme_bonus_weight: 0.0
     field_preferred_unexplored_bonus: 0.0
-    overtested_weak_fields:
-      - "unsystematic_risk_last_360_days"
-      - "unsystematic_risk_last_180_days"
-      - "unsystematic_risk_last_90_days"
-      - "systematic_risk_last_360_days"
-      - "systematic_risk_last_180_days"
-      - "systematic_risk_last_90_days"
     preferred_field_order:
       unsystematic_risk_last_30_days: 0
       unsystematic_risk_last_60_days: 1

@@ -39,7 +39,6 @@ def build_run_config_snapshot(args: ApplicationConfig, run_paths: RunPaths) -> d
             "max_templates_per_family": args.max_templates_per_family,
             "field_template_batch_size": args.field_template_batch_size,
             "legacy_similarity_penalty": args.legacy_similarity_penalty,
-            "disable_legacy_after": args.disable_legacy_after,
         },
         "concurrency": {
             "max_concurrent_simulations": args.max_concurrent_simulations,
@@ -60,7 +59,6 @@ def build_run_config_snapshot(args: ApplicationConfig, run_paths: RunPaths) -> d
             "min_request_interval": args.min_request_interval,
         },
         "filters": {
-            "template_disable_after": args.template_disable_after,
             "top_fields_by_feedback": args.top_fields_by_feedback,
             "stop_after_submittable": args.stop_after_submittable,
         },

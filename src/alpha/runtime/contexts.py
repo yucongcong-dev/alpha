@@ -63,9 +63,6 @@ class TemplateBuildContext:
     template_library_file: str = ""
     all_fields: Sequence[TemplateField] = field(default_factory=list)
     template_library: TemplateLibrary = field(default_factory=dict)
-    template_registry: dict[str, dict[str, object]] = field(default_factory=dict)
-    template_family_registry: dict[str, dict[str, object]] = field(default_factory=dict)
-    template_registry_overrides: dict[str, object] = field(default_factory=dict)
     field_feedback: FieldFeedbackMap = field(default_factory=dict)
     global_failed_check_counts: dict[str, int] = field(default_factory=dict)
     failed_check_counts_by_field_type: dict[str, dict[str, int]] = field(default_factory=dict)
@@ -94,8 +91,5 @@ class HistoricalRunState:
     feedback_results: list[FieldTestResult] = field(default_factory=list)
     attempted_keys: set[tuple[str, str, str, str]] = field(default_factory=set)
     template_stats: TemplateStats = field(default_factory=dict)
-    template_registry: dict[str, dict[str, object]] = field(default_factory=dict)
-    template_family_registry: dict[str, dict[str, object]] = field(default_factory=dict)
-    template_registry_overrides: dict[str, object] = field(default_factory=dict)
     field_feedback: FieldFeedbackMap = field(default_factory=dict)
     global_failed_check_counts: dict[str, int] = field(default_factory=dict)

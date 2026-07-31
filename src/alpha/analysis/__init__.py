@@ -6,7 +6,7 @@
 子模块：
     - results_loader: 历史结果加载与 journal 恢复
     - result_identity: 结果身份、续跑去重与有效反馈判断
-    - template_stats: 模板统计与历史优先级
+    - template_stats: 模板统计与表现汇总
     - field_stats: 字段统计与字段优先级
     - failed_checks: 失败检查评分、near-pass 与优化建议
     - feedback_stats: 字段反馈画像与全局失败检查计数
@@ -34,8 +34,6 @@ if TYPE_CHECKING:
         summarize_failed_check,
     )
     from .feedback_filters import (
-        is_legacy_family_disabled,
-        is_template_disabled,
         should_keep_template_for_feedback,
         should_skip_field_template_family,
     )
@@ -70,7 +68,6 @@ if TYPE_CHECKING:
     from .template_stats import (
         compile_template_performance_summary,
         compile_template_stats,
-        historical_template_priority_bonus,
         update_template_stats_with_result,
     )
 
@@ -83,8 +80,6 @@ _EXPORT_MAP: ExportMap = {
     "failed_check_gap": (".failed_checks", "failed_check_gap"),
     "score_failed_checks": (".failed_checks", "score_failed_checks"),
     "summarize_failed_check": (".failed_checks", "summarize_failed_check"),
-    "is_legacy_family_disabled": (".feedback_filters", "is_legacy_family_disabled"),
-    "is_template_disabled": (".feedback_filters", "is_template_disabled"),
     "should_keep_template_for_feedback": (".feedback_filters", "should_keep_template_for_feedback"),
     "should_skip_field_template_family": (".feedback_filters", "should_skip_field_template_family"),
     "build_historical_run_state": (".feedback_history", "build_historical_run_state"),
@@ -126,7 +121,6 @@ _EXPORT_MAP: ExportMap = {
         "compile_template_performance_summary",
     ),
     "compile_template_stats": (".template_stats", "compile_template_stats"),
-    "historical_template_priority_bonus": (".template_stats", "historical_template_priority_bonus"),
     "update_template_stats_with_result": (".template_stats", "update_template_stats_with_result"),
 }
 

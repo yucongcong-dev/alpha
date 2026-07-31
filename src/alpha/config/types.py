@@ -86,7 +86,6 @@ class DatasetProfile(TypedDict, total=False):
     simulation_max_wait_seconds: int
     simulation_max_queue_seconds: int
     queue_busy_cooldown_seconds: int
-    template_disable_after: int
 
 
 class ExpressionPolicyOverrides(TypedDict, total=False):

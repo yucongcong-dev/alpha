@@ -165,9 +165,6 @@ DEFAULT_SIMULATION_MAX_QUEUE_SECONDS: int = _yaml_int(
 DEFAULT_QUEUE_BUSY_COOLDOWN_SECONDS: int = _yaml_int(
     "default_profile", "queue_busy_cooldown_seconds", default=120
 )
-DEFAULT_TEMPLATE_DISABLE_AFTER: int = _yaml_int(
-    "default_profile", "template_disable_after", default=12
-)
 
 # ---- 默认数据集 ID ----
 DEFAULT_DATASET_ID: str = _yaml_str("simulation", "default_dataset_id", default="model51")

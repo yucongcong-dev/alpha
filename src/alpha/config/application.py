@@ -71,8 +71,6 @@ class ApplicationConfig:
     max_templates_per_family = SectionField[int]("planning")
     field_template_batch_size = SectionField[int]("planning")
     legacy_similarity_penalty = SectionField[int]("planning")
-    disable_legacy_after = SectionField[int]("planning")
-    template_disable_after = SectionField[int]("planning")
     top_fields_by_feedback = SectionField[int]("planning")
     stop_after_submittable = SectionField[int]("planning")
 

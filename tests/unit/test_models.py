@@ -87,8 +87,6 @@ class TestRuntimeOptionBuilders:
             max_templates_per_field = "8"
             max_templates_per_family = 2
             legacy_similarity_penalty = "4"
-            template_disable_after = 5
-            disable_legacy_after = 6
             region = "USA"
             universe = "TOP3000"
             instrument_type = "EQUITY"

@@ -34,8 +34,6 @@ def test_build_pending_templates_skips_inflight_duplicate(monkeypatch) -> None:
     )
     args = Namespace(
         dataset_id="model51",
-        template_disable_after=0,
-        disable_legacy_after=0,
         max_templates_per_field=3,
         max_templates_per_family=1,
         legacy_similarity_penalty=0,
@@ -85,7 +83,6 @@ def test_build_pending_templates_skips_inflight_duplicate(monkeypatch) -> None:
             "type": "MATRIX",
             "name": "unsystematic_risk_last_360_days",
         },
-        template_stats={},
         attempted_keys=set(),
         prior_results=[],
         reserved_keys=inflight_template_keys(pending_futures),
@@ -96,7 +93,7 @@ def test_build_pending_templates_skips_inflight_duplicate(monkeypatch) -> None:
     assert pending == []
 
 
-def test_build_pending_templates_keeps_generate_stage_structure_first(
+def test_build_pending_templates_uses_explicit_template_role(
     monkeypatch,
 ) -> None:
     monkeypatch.setattr(
@@ -124,8 +121,6 @@ def test_build_pending_templates_keeps_generate_stage_structure_first(
     )
     args = Namespace(
         dataset_id="fundamental6",
-        template_disable_after=0,
-        disable_legacy_after=0,
         max_templates_per_field=6,
         max_templates_per_family=3,
         legacy_similarity_penalty=0,
@@ -153,21 +148,6 @@ def test_build_pending_templates_keeps_generate_stage_structure_first(
     pending, disabled, total = build_pending_templates_for_field(
         build_ctx,
         {"id": "cash_st", "type": "VECTOR", "name": "cash_st"},
-        template_stats={
-            "strong_template": {
-                "attempted": 3,
-                "submittable": 1,
-                "simulated": 3,
-                "errors": 0,
-                "low_sharpe": 0,
-                "low_fitness": 0,
-                "concentrated_weight": 0,
-                "template_family": "ts_rank",
-                "template_stage": "first_order",
-                "template_role": "default_seed",
-                "template_activation_scope": "broad",
-            }
-        },
         attempted_keys=set(),
         prior_results=[],
     )
@@ -175,10 +155,10 @@ def test_build_pending_templates_keeps_generate_stage_structure_first(
     assert total == 1
     assert disabled == 0
     assert len(pending) == 1
-    assert all(item.template_role == "promoted_core" for item in pending)
+    assert all(item.template_role == "default_seed" for item in pending)
 
 
-def test_build_pending_templates_uses_persisted_registry_recommendation(monkeypatch) -> None:
+def test_build_pending_templates_ignores_persisted_registry_recommendation(monkeypatch) -> None:
     monkeypatch.setattr(
         "alpha.core.executor.build_setting_variants",
         lambda *args, **kwargs: [{"neutralization": "SUBINDUSTRY", "truncation": 0.08}],
@@ -201,8 +181,6 @@ def test_build_pending_templates_uses_persisted_registry_recommendation(monkeypa
     )
     args = Namespace(
         dataset_id="fundamental6",
-        template_disable_after=0,
-        disable_legacy_after=0,
         max_templates_per_field=6,
         max_templates_per_family=3,
         legacy_similarity_penalty=0,
@@ -223,12 +201,6 @@ def test_build_pending_templates_uses_persisted_registry_recommendation(monkeypa
         all_fields=[{"id": "cash_st", "type": "VECTOR", "name": "cash_st"}],
         field_feedback={"cash_st": {"attempted_templates": 1, "best_score": 0.0}},
         template_library={},
-        template_registry={
-            "persisted_core_template": {
-                "recommended_role": "promoted_core",
-                "recommended_scope": "broad",
-            }
-        },
         use_dataset_heuristics=False,
         expression_policy=get_dataset_expression_policy("fundamental6"),
     )
@@ -236,7 +208,6 @@ def test_build_pending_templates_uses_persisted_registry_recommendation(monkeypa
     pending, disabled, total = build_pending_templates_for_field(
         build_ctx,
         {"id": "cash_st", "type": "VECTOR", "name": "cash_st"},
-        template_stats={},
         attempted_keys=set(),
         prior_results=[],
     )
@@ -244,7 +215,7 @@ def test_build_pending_templates_uses_persisted_registry_recommendation(monkeypa
     assert total == 1
     assert disabled == 0
     assert len(pending) == 1
-    assert pending[0].template_role == "promoted_core"
+    assert pending[0].template_role == "default_seed"
 
 
 def test_build_pending_templates_dedupes_same_expression_variant_across_template_names(
@@ -283,8 +254,6 @@ def test_build_pending_templates_dedupes_same_expression_variant_across_template
     )
     args = Namespace(
         dataset_id="fundamental6",
-        template_disable_after=0,
-        disable_legacy_after=0,
         max_templates_per_field=6,
         max_templates_per_family=6,
         legacy_similarity_penalty=0,
@@ -311,7 +280,6 @@ def test_build_pending_templates_dedupes_same_expression_variant_across_template
     pending, disabled, total = build_pending_templates_for_field(
         build_ctx,
         {"id": "cash_st", "type": "VECTOR", "name": "cash_st"},
-        template_stats={},
         attempted_keys=set(),
         prior_results=[],
     )
@@ -348,8 +316,6 @@ def test_build_pending_templates_skips_attempted_expression_variant_across_templ
     )
     args = Namespace(
         dataset_id="fundamental6",
-        template_disable_after=0,
-        disable_legacy_after=0,
         max_templates_per_field=6,
         max_templates_per_family=6,
         legacy_similarity_penalty=0,
@@ -386,7 +352,6 @@ def test_build_pending_templates_skips_attempted_expression_variant_across_templ
     pending, disabled, total = build_pending_templates_for_field(
         build_ctx,
         {"id": "cash_st", "type": "VECTOR", "name": "cash_st"},
-        template_stats={},
         attempted_keys=attempted_keys,
         prior_results=[],
     )
@@ -396,7 +361,9 @@ def test_build_pending_templates_skips_attempted_expression_variant_across_templ
     assert pending == []
 
 
-def test_build_pending_templates_respects_manual_registry_override(monkeypatch) -> None:
+def test_build_pending_templates_uses_template_metadata_without_registry_override(
+    monkeypatch,
+) -> None:
     monkeypatch.setattr(
         "alpha.core.executor.build_setting_variants",
         lambda *args, **kwargs: [{"neutralization": "SUBINDUSTRY", "truncation": 0.08}],
@@ -419,8 +386,6 @@ def test_build_pending_templates_respects_manual_registry_override(monkeypatch) 
     )
     args = Namespace(
         dataset_id="fundamental6",
-        template_disable_after=0,
-        disable_legacy_after=0,
         max_templates_per_field=6,
         max_templates_per_family=3,
         legacy_similarity_penalty=0,
@@ -447,18 +412,6 @@ def test_build_pending_templates_respects_manual_registry_override(monkeypatch) 
             }
         ],
         template_library={},
-        template_registry_overrides={
-            "template_overrides": {
-                "manual_override_template": {
-                    "recommended_role": "diagnostic_probe",
-                    "recommended_scope": "diagnostic",
-                    "should_suppress": True,
-                    "reason": "manual_pause",
-                }
-            },
-            "family_overrides": {},
-            "field_cluster_overrides": {},
-        },
         use_dataset_heuristics=False,
         expression_policy=get_dataset_expression_policy("fundamental6"),
     )
@@ -471,14 +424,14 @@ def test_build_pending_templates_respects_manual_registry_override(monkeypatch) 
             "name": "cash_st",
             "runtime_field_tags": ["high_coverage"],
         },
-        template_stats={},
         attempted_keys=set(),
         prior_results=[],
     )
 
     assert total == 1
     assert disabled == 0
-    assert pending == []
+    assert len(pending) == 1
+    assert pending[0].template_role == "default_seed"
 
 
 def test_event_field_exploration_uses_one_seed_template(monkeypatch) -> None:
@@ -517,8 +470,6 @@ def test_event_field_exploration_uses_one_seed_template(monkeypatch) -> None:
     )
     args = Namespace(
         dataset_id="fundamental6",
-        template_disable_after=0,
-        disable_legacy_after=0,
         max_templates_per_field=10,
         max_templates_per_family=3,
         legacy_similarity_penalty=0,
@@ -551,7 +502,6 @@ def test_event_field_exploration_uses_one_seed_template(monkeypatch) -> None:
     pending, _disabled, total = build_pending_templates_for_field(
         build_ctx,
         {"id": "fnd6_cptnewqeventv110_apq", "type": "VECTOR", "name": "fnd6_cptnewqeventv110_apq"},
-        template_stats={},
         attempted_keys=set(),
         prior_results=[],
     )
@@ -560,7 +510,7 @@ def test_event_field_exploration_uses_one_seed_template(monkeypatch) -> None:
     assert len(pending) == 1
 
 
-def test_build_pending_templates_demotes_persistently_weak_broad_templates(monkeypatch) -> None:
+def test_build_pending_templates_does_not_hard_demote_from_global_stats(monkeypatch) -> None:
     monkeypatch.setattr(
         "alpha.core.executor.build_setting_variants",
         lambda *args, **kwargs: [{"neutralization": "SUBINDUSTRY", "truncation": 0.08}],
@@ -583,8 +533,6 @@ def test_build_pending_templates_demotes_persistently_weak_broad_templates(monke
     )
     args = Namespace(
         dataset_id="fundamental6",
-        template_disable_after=0,
-        disable_legacy_after=0,
         max_templates_per_field=6,
         max_templates_per_family=3,
         legacy_similarity_penalty=0,
@@ -623,25 +571,10 @@ def test_build_pending_templates_demotes_persistently_weak_broad_templates(monke
     pending, disabled, total = build_pending_templates_for_field(
         build_ctx,
         {"id": "cash_st", "type": "VECTOR", "name": "cash_st"},
-        template_stats={
-            "weak_template": {
-                "attempted": 6,
-                "submittable": 0,
-                "simulated": 6,
-                "errors": 0,
-                "low_sharpe": 4,
-                "low_fitness": 4,
-                "concentrated_weight": 0,
-                "template_family": "mean_spread",
-                "template_stage": "first_order",
-                "template_role": "default_seed",
-                "template_activation_scope": "broad",
-            }
-        },
         attempted_keys=set(),
         prior_results=[],
     )
 
     assert total >= 1
     assert disabled == 0
-    assert pending == []
+    assert len(pending) == 1

@@ -41,8 +41,6 @@ def _args() -> SimpleNamespace:
         max_templates_per_field=6,
         max_templates_per_family=2,
         legacy_similarity_penalty=42,
-        template_disable_after=0,
-        disable_legacy_after=8,
         start_date=None,
         end_date=None,
         template_library_file="datasets/model16/template.json",
@@ -71,9 +69,6 @@ def _execution_state() -> ExecutionState:
 
 def test_build_template_context_copies_narrow_options_and_feedback() -> None:
     history = HistoricalRunState(
-        template_registry={"rank": {"recommended_role": "core"}},
-        template_family_registry={"rank": {"recommended_scope": "broad"}},
-        template_registry_overrides={"template_overrides": {}},
         field_feedback={"f1": {"best_score": 0.5}},
         global_failed_check_counts={"LOW_SHARPE": 3},
     )
@@ -90,14 +85,13 @@ def test_build_template_context_copies_narrow_options_and_feedback() -> None:
 
     assert context.options.dataset_id == "model16"
     assert context.template_library_file.endswith("model16/template.json")
-    assert context.template_registry == history.template_registry
     assert context.field_feedback == history.field_feedback
     assert context.include_templates == {"rank"}
     assert context.exclude_templates == {"raw"}
     assert context.feedback_result_count == 7
 
 
-def test_unexplored_field_gets_seed_when_registry_demotes_template(monkeypatch) -> None:
+def test_unexplored_field_gets_one_seed(monkeypatch) -> None:
     field = _field("new_signal")
     candidate = TemplateCandidate(
         name="seed",
@@ -106,16 +100,9 @@ def test_unexplored_field_gets_seed_when_registry_demotes_template(monkeypatch) 
         metadata={"family": "rank", "activation_scope": "broad"},
     )
     args = _args()
-    args.template_disable_after = 10
     context = TemplateBuildContext(
         options=TemplateBuildOptions.from_args(args),
         all_fields=[field],
-        template_registry={
-            "seed": {
-                "recommended_role": "diagnostic_probe",
-                "recommended_scope": "diagnostic",
-            }
-        },
         expression_policy=get_dataset_expression_policy("model16"),
     )
     monkeypatch.setattr(
@@ -126,7 +113,6 @@ def test_unexplored_field_gets_seed_when_registry_demotes_template(monkeypatch) 
     pending, _, _ = build_pending_templates_for_field(
         context,
         field,
-        template_stats={"seed": {"attempted": 10, "submittable": 0, "simulated": 10}},
         attempted_keys=set(),
         prior_results=[],
     )
@@ -180,5 +166,5 @@ def test_print_dry_run_plan_counts_only_actionable_fields(caplog) -> None:
     messages = [record.getMessage() for record in caplog.records]
     assert "[dry-run] planned_fields=1" in messages
     assert "[dry-run] planned_simulations=2" in messages
-    assert "[dry-run] disabled_templates=1" in messages
+    assert "[dry-run] filtered_templates=1" in messages
     assert any("sample 1/1 field=active template=rank" in message for message in messages)

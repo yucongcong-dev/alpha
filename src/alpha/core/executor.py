@@ -18,7 +18,6 @@ from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
 from concurrent.futures import Future
-from dataclasses import replace
 import logging
 
 from ..config.constants import DRY_RUN_SAMPLE_LIMIT, SENTINEL_UNKNOWN
@@ -89,9 +88,6 @@ def build_template_build_context(
         template_library_file=str(args.template_library_file or ""),
         all_fields=fields,
         template_library=template_library,
-        template_registry=historical_state.template_registry,
-        template_family_registry=historical_state.template_family_registry,
-        template_registry_overrides=historical_state.template_registry_overrides,
         field_feedback=historical_state.field_feedback,
         global_failed_check_counts=historical_state.global_failed_check_counts,
         include_templates=filters.include_templates,
@@ -130,7 +126,6 @@ def build_pending_templates_for_field(
     build_ctx: TemplateBuildContext,
     field: TemplateField,
     *,
-    template_stats: dict[str, dict[str, int]],
     attempted_keys: set[tuple[str, str, str, str]],
     prior_results: Sequence[FieldTestResult],
     reserved_keys: set[tuple[str, str, str, str]] | None = None,
@@ -146,7 +141,6 @@ def build_pending_templates_for_field(
     Args:
         build_ctx: 包含模板构建配置、字段集合和历史反馈等只读上下文对象。
         field: 字段元数据字典。
-        template_stats: 模板统计数据。
         attempted_keys: 已尝试的模板键集合。
         prior_results: 历史测试结果列表。
         reserved_keys: 当前运行中已提交但尚未完成的组合键集合。
@@ -154,7 +148,7 @@ def build_pending_templates_for_field(
     Returns:
         tuple[list[tuple[str, str, int, SettingsVariant, str]], int, int]: 返回一个元组，包含：
             - pending_templates: 待执行模板列表
-            - disabled_templates: 禁用模板数量
+            - filtered_templates: 被显式规则或字段反馈过滤的模板数量
             - template_count: 原始模板总数
 
     Note:
@@ -175,15 +169,10 @@ def build_pending_templates_for_field(
     # remain deduplicated below.  This avoids a separate fallback path when
     # global template history has demoted every candidate.
     is_exploration = not field_feedback
-    planning_ctx = (
-        replace(build_ctx, template_registry={}, template_family_registry={})
-        if is_exploration
-        else build_ctx
-    )
+    planning_ctx = build_ctx
     planning_templates = templates[:1] if is_exploration else templates
-    planning_template_stats = {} if is_exploration else template_stats
     enabled_templates: list[TemplateCandidate] = []
-    disabled_templates = 0
+    filtered_templates = 0
     for template in planning_templates:
         if not is_template_selected_by_filters(planning_ctx, template.name):
             continue
@@ -194,23 +183,21 @@ def build_pending_templates_for_field(
             field_name=field_name,
             field_feedback=field_feedback,
             expression_policy=expression_policy,
-            template_stats=planning_template_stats,
             prior_results=prior_results,
         ):
             enabled_templates.append(template)
         else:
-            disabled_templates += 1
+            filtered_templates += 1
     pending_templates = build_pending_template_variants(
         planning_ctx,
         field,
         templates=enabled_templates,
-        template_stats=planning_template_stats,
         attempted_keys=attempted_keys,
         reserved_keys=reserved_keys or set(),
         field_feedback=field_feedback,
         services=active_services,
     )
-    return pending_templates, disabled_templates, len(templates)
+    return pending_templates, filtered_templates, len(templates)
 
 
 # ============================================================================
@@ -263,7 +250,7 @@ def print_dry_run_plan(
     """
     planned_fields = 0
     planned_templates = 0
-    disabled_templates = 0
+    filtered_templates = 0
     unactionable_fields = 0
     samples: list[dict[str, object]] = []
     build_ctx = build_template_build_context(
@@ -283,10 +270,9 @@ def print_dry_run_plan(
             field_id, field_name, filters, execution_state.skipped_fields_due_to_queue
         ):
             continue
-        pending_templates, disabled_count, _template_count = build_pending_templates_for_field(
+        pending_templates, filtered_count, _template_count = build_pending_templates_for_field(
             build_ctx,
             field,
-            template_stats=execution_state.template_stats,
             attempted_keys=execution_state.attempted_keys,
             prior_results=[*historical_state.feedback_results, *execution_state.results],
         )
@@ -295,7 +281,7 @@ def print_dry_run_plan(
             continue
         planned_fields += 1
         planned_templates += len(pending_templates)
-        disabled_templates += disabled_count
+        filtered_templates += filtered_count
         for entry in pending_templates:
             if len(samples) >= sample_limit:
                 break
@@ -313,7 +299,7 @@ def print_dry_run_plan(
     logger.info("[dry-run] simulation creation is disabled; this is a plan only")
     logger.info("[dry-run] planned_fields=%d", planned_fields)
     logger.info("[dry-run] planned_simulations=%d", planned_templates)
-    logger.info("[dry-run] disabled_templates=%d", disabled_templates)
+    logger.info("[dry-run] filtered_templates=%d", filtered_templates)
     logger.info("[dry-run] unactionable_fields=%d", unactionable_fields)
     logger.info("[dry-run] existing_results=%d", len(execution_state.results))
     logger.info("[dry-run] attempted_keys=%d", len(execution_state.attempted_keys))

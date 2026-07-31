@@ -491,7 +491,7 @@ ts_zscore(group_rank(x, industry), 252)
 ### 11.5 仓库知识边界
 
 - `datasets/<dataset_id>/runs/`：运行产物，不承担长期知识库职责
-- `datasets/<dataset_id>/feedback/<market_scope>/`：按 region、universe、instrument、delay 隔离的自动反馈仓，保存已尝试组合、near-pass 历史、增量 run 索引和模板 registry
+- `datasets/<dataset_id>/feedback/<market_scope>/`：按 region、universe、instrument、delay 隔离的自动反馈仓，保存已尝试组合、near-pass 历史、增量 run 索引和只读模板统计
 - `datasets/<dataset_id>/template.json`：默认模板库
 - `datasets/<dataset_id>/presets/`：按研究目的组织的专项模板、字段与模板筛选清单
 - `docs/`：跨数据集的方法论和平台知识
@@ -572,7 +572,7 @@ datasets/<dataset>/cache/<region>_<universe>_<instrument>_d<delay>.json
 | `datasets/<id>/README.md` | 当前策略、验证结论与下一步 | 是 |
 | `datasets/<id>/cache/` | 可重拉的字段缓存 | 否 |
 | `datasets/<id>/runs/` | 单次运行 journal、state、分析与日志 | 否 |
-| `datasets/<id>/feedback/<scope>/` | 跨 run 反馈、模板 registry 和去重索引 | 否 |
+| `datasets/<id>/feedback/<scope>/` | 跨 run 反馈、只读模板统计和去重索引 | 否 |
 
 成熟结论必须从 `runs/` 或 `feedback/` 中沉淀到 `template.json`、`presets/` 或数据集 README；
 不要把长期人工决策留在临时文件名或 JSON 结果里。一次性实验输入放 `tmp/`，外部对照材料或手工草稿放 `scratch/`。

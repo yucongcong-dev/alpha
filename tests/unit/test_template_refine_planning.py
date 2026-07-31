@@ -22,8 +22,6 @@ def test_resimulate_stage_prefers_refine_templates_over_broad_generation(monkeyp
     )
     args = Namespace(
         dataset_id="fundamental6",
-        template_disable_after=0,
-        disable_legacy_after=0,
         max_templates_per_field=6,
         max_templates_per_family=3,
         legacy_similarity_penalty=0,
@@ -87,7 +85,6 @@ def test_resimulate_stage_prefers_refine_templates_over_broad_generation(monkeyp
     pending, disabled, total = build_pending_templates_for_field(
         build_ctx,
         {"id": "cash_st", "type": "MATRIX", "name": "cash_st"},
-        template_stats={},
         attempted_keys=set(),
         prior_results=prior_results,
     )
@@ -137,8 +134,6 @@ def test_resimulate_stage_limits_duplicate_expression_to_one_settings_variant(mo
     )
     args = Namespace(
         dataset_id="fundamental6",
-        template_disable_after=0,
-        disable_legacy_after=0,
         max_templates_per_field=6,
         max_templates_per_family=3,
         legacy_similarity_penalty=0,
@@ -193,7 +188,6 @@ def test_resimulate_stage_limits_duplicate_expression_to_one_settings_variant(mo
     pending, disabled, total = build_pending_templates_for_field(
         build_ctx,
         {"id": "cash_st", "type": "MATRIX", "name": "cash_st"},
-        template_stats={},
         attempted_keys=set(),
         prior_results=prior_results,
     )

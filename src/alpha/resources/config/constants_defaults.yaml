@@ -116,23 +116,6 @@ templates:
     neg_positive_raw: 132
     neg_negative_raw: 144
     neg_default: 128
-  # ---- 模板禁用阈值 ----
-  disable:
-    min_simulated: 3
-    min_low_sharpe: 3
-    min_low_fitness: 3
-    min_concentrated_weight: 2
-
-  # ---- 模板历史评分奖励/惩罚 ----
-  history:
-    submittable_bonus: 200
-    simulated_base: 40
-    simulated_cap: 5
-    simulated_step: 8
-    low_perf_penalty: -90
-    concentrated_penalty: -60
-    error_penalty: -20
-
   # ---- 失败检查触发的优先级调整 ----
   priority_adj:
     group_low_sharpe: 28
@@ -418,7 +401,6 @@ default_profile:
   simulation_max_wait_seconds: 900
   simulation_max_queue_seconds: 600
   queue_busy_cooldown_seconds: 120
-  template_disable_after: 12
 
 # ---------------------------------------------------------------------------
 # misc — 杂项常量

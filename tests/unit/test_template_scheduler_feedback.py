@@ -39,8 +39,6 @@ def test_scheduler_dump_results_shrinks_next_template_queue(monkeypatch, tmp_pat
         output=str(results_path),
         dataset_id="custom_ds",
         auto_update_blacklist=True,
-        template_disable_after=0,
-        disable_legacy_after=0,
         max_templates_per_field=1000,
         max_templates_per_family=1000,
         legacy_similarity_penalty=0,
@@ -89,7 +87,6 @@ def test_scheduler_dump_results_shrinks_next_template_queue(monkeypatch, tmp_pat
     before_pending, before_disabled, before_count = build_pending_templates_for_field(
         build_ctx,
         {"id": "sales", "type": "MATRIX"},
-        template_stats={},
         attempted_keys=set(),
         prior_results=[],
     )
@@ -177,7 +174,6 @@ def test_scheduler_dump_results_shrinks_next_template_queue(monkeypatch, tmp_pat
     after_pending, after_disabled, after_count = build_pending_templates_for_field(
         build_ctx,
         {"id": "sales", "type": "MATRIX"},
-        template_stats={},
         attempted_keys=set(),
         prior_results=[],
     )

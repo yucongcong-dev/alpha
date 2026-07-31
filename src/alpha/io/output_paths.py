@@ -88,7 +88,6 @@ def build_output_sidecar_paths(output_path: str) -> dict[str, str]:
         return {
             "analysis": str(base_dir / "analysis.json"),
             "template_registry": str(base_dir / "template_registry.json"),
-            "template_registry_overrides": str(base_dir / "template_registry_overrides.json"),
             "results_journal": str(base_dir / "results.jsonl"),
             "run_log": str(base_dir / "run.log"),
         }
@@ -99,9 +98,6 @@ def build_output_sidecar_paths(output_path: str) -> dict[str, str]:
     return {
         "analysis": str(base_dir / f"{base_name}_analysis.json"),
         "template_registry": str(base_dir / f"{base_name}_template_registry.json"),
-        "template_registry_overrides": str(
-            base_dir / f"{base_name}_template_registry_overrides.json"
-        ),
         "results_journal": str(base_dir / f"{base_name}_results.jsonl"),
         "run_log": str(base_dir / f"{base_name}_{log_date}.log"),
     }

@@ -13,7 +13,6 @@ from ..io.results_store import _append_results_journal, initialize_results_journ
 from ..models.domain import FieldTestResult
 from .report_builder import build_analysis_payload, build_results_summary_payload
 from .template_registry_sidecars import (
-    ensure_template_registry_overrides_sidecar,
     persist_template_registry_summary,
     sync_template_registry_sidecars,
 )
@@ -121,7 +120,6 @@ def dump_results_incremental(
             summary_rows=template_registry_summary,
             template_stats=template_stats,
         )
-    ensure_template_registry_overrides_sidecar(path)
     cleanup_legacy_sidecar_files(path)
     logger.info(
         "[done] wrote incremental results to %s (tested=%d, submittable=%d, appended=%d)",

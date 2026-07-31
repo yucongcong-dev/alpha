@@ -22,8 +22,6 @@ from ..models.io_types import RunFilters
 from ..models.runtime_protocols import TemplateFeedback
 from ..runtime.contexts import TemplateBuildContext
 from ..selection.feedback_filters import (
-    is_legacy_family_disabled,
-    is_template_disabled,
     should_keep_template_for_feedback,
     should_skip_field_template_family,
 )
@@ -106,11 +104,9 @@ def is_template_actionable(
     field_name: str,
     field_feedback: TemplateFeedback | None,
     expression_policy: DatasetExpressionPolicy | None,
-    template_stats: dict[str, dict[str, int]],
     prior_results: Sequence[FieldTestResult],
 ) -> bool:
     """判断模板在当前字段上下文中是否应继续展开 settings 变体。"""
-    options = build_ctx.options
     template_name = template.name
     expression = template.expression
     priority = template.priority
@@ -132,16 +128,6 @@ def is_template_actionable(
         expression,
         template_metadata=template_metadata,
         expression_policy=expression_policy,
-    ):
-        return False
-    if is_template_disabled(template_name, template_stats, options.template_disable_after):
-        return False
-    if is_legacy_family_disabled(
-        template_name,
-        expression,
-        template_stats,
-        options.disable_legacy_after,
-        template_metadata=template_metadata,
     ):
         return False
     return not should_skip_expression_by_history(field_id, template_name, expression, prior_results)

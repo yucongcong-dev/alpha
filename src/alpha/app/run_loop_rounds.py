@@ -152,10 +152,9 @@ def schedule_field_round(
         )
         return ScheduleRoundResult(progressed=False, stop_requested=False, last_field_id=field_id)
 
-    pending_templates, disabled_templates, template_count = build_pending_templates_for_field(
+    pending_templates, filtered_templates, template_count = build_pending_templates_for_field(
         context.template_build_ctx,
         field,
-        template_stats=execution_state.template_stats,
         attempted_keys=execution_state.attempted_keys | execution_state.queue_exhausted_keys,
         prior_results=[
             *run_ctx.historical_state.feedback_results,
@@ -164,13 +163,13 @@ def schedule_field_round(
         reserved_keys=inflight_template_keys(execution_state.pending_futures),
     )
     logger.debug(
-        "[progress] 字段 %d/%d field_id=%s templates=%d pending=%d disabled=%d",
+        "[progress] 字段 %d/%d field_id=%s templates=%d pending=%d filtered=%d",
         field_index,
         total_fields,
         field_id,
         template_count,
         len(pending_templates),
-        disabled_templates,
+        filtered_templates,
     )
 
     if context.field_template_batch_size > 0:

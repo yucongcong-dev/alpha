@@ -15,19 +15,6 @@ from ._constants_core import (
     _yaml_tuple_str_int,
 )
 
-# ---- 模板禁用阈值 ----
-TEMPLATE_DISABLE_MIN_SIMULATED: int = _yaml_int("templates", "disable", "min_simulated", default=3)
-TEMPLATE_DISABLE_MIN_LOW_SHARPE: int = _yaml_int(
-    "templates", "disable", "min_low_sharpe", default=3
-)
-TEMPLATE_DISABLE_MIN_LOW_FITNESS: int = _yaml_int(
-    "templates", "disable", "min_low_fitness", default=3
-)
-TEMPLATE_DISABLE_MIN_CONCENTRATED_WEIGHT: int = _yaml_int(
-    "templates", "disable", "min_concentrated_weight", default=2
-)
-
-
 # ---- 模板优先级调整辅助 ----
 def _pa(key: str, default: int) -> int:
     return _yaml_int("templates", "priority_adj", key, default=default)
@@ -78,27 +65,6 @@ PRIORITY_ADJ_VOL_SCALED_DELTA_BASE: int = _pa("vol_scaled_delta_base", -28)
 PRIORITY_ADJ_VOL_SCALED_DELTA_CONCENTRATED: int = _pa("vol_scaled_delta_concentrated", -18)
 PRIORITY_ADJ_VOL_SCALED_DELTA_NEARPASS: int = _pa("vol_scaled_delta_nearpass", -8)
 PRIORITY_ADJ_ACCOUNT_TEMPLATES: int = _pa("account_templates", 22)
-
-# ---- 模板历史评分 ----
-TEMPLATE_HISTORY_SUBMITTABLE_BONUS: int = _yaml_int(
-    "templates", "history", "submittable_bonus", default=200
-)
-TEMPLATE_HISTORY_SIMULATED_BASE: int = _yaml_int(
-    "templates", "history", "simulated_base", default=40
-)
-TEMPLATE_HISTORY_SIMULATED_CAP: int = _yaml_int("templates", "history", "simulated_cap", default=5)
-TEMPLATE_HISTORY_SIMULATED_STEP: int = _yaml_int(
-    "templates", "history", "simulated_step", default=8
-)
-TEMPLATE_HISTORY_LOW_PERF_PENALTY: int = _yaml_int(
-    "templates", "history", "low_perf_penalty", default=-90
-)
-TEMPLATE_HISTORY_CONCENTRATED_PENALTY: int = _yaml_int(
-    "templates", "history", "concentrated_penalty", default=-60
-)
-TEMPLATE_HISTORY_ERROR_PENALTY: int = _yaml_int(
-    "templates", "history", "error_penalty", default=-20
-)
 
 # ---- Near-pass 精修优先级 ----
 REFINE_PRIORITY_BASE: int = _yaml_int("templates", "refine_priority", "base", default=260)

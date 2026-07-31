@@ -85,7 +85,6 @@ def apply_yaml_global_defaults(
             "max_templates_per_family",
             "field_template_batch_size",
             "legacy_similarity_penalty",
-            "disable_legacy_after",
         },
         explicit_cli_keys,
     )
@@ -124,7 +123,6 @@ def apply_yaml_global_defaults(
         args,
         global_cfg.get("filters", {}),
         {
-            "template_disable_after",
             "top_fields_by_feedback",
             "stop_after_submittable",
         },

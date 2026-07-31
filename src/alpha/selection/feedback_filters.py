@@ -5,21 +5,14 @@ from __future__ import annotations
 from ..config.constants import (
     CHECK_CONCENTRATED_WEIGHT,
     CHECK_HIGH_TURNOVER,
-    CHECK_LOW_SHARPE,
-    CHECK_LOW_SUB_UNIVERSE_SHARPE,
     CHECK_LOW_TURNOVER,
     FEEDBACK_STAGE_RESIMULATE,
-    TEMPLATE_DISABLE_MIN_CONCENTRATED_WEIGHT,
-    TEMPLATE_DISABLE_MIN_LOW_FITNESS,
-    TEMPLATE_DISABLE_MIN_LOW_SHARPE,
-    TEMPLATE_DISABLE_MIN_SIMULATED,
 )
 from ..config.models import DatasetExpressionPolicy
 from ..config.runtime_values import get_runtime_config
 from ..generators.templates.classification import (
     classify_expression_family,
     classify_template_stage,
-    is_legacy_family,
 )
 from ..generators.templates.priority import (
     dominant_failed_check_names,
@@ -29,66 +22,6 @@ from ..generators.templates.variation_common import (
 )
 from ..models.domain_types import FieldFeedbackSummary, TemplateMetadata
 from ..policy.expression import get_dataset_expression_policy, resolve_feedback_stage
-
-
-def is_template_disabled(
-    template_name: str,
-    template_stats: dict[str, dict[str, int]],
-    disable_after: int,
-) -> bool:
-    """禁用历史尝试足够多但从未产生可提交结果的模板。"""
-    if disable_after <= 0:
-        return False
-    stat = template_stats.get(template_name)
-    if not stat:
-        return False
-    if (
-        stat.get("simulated", 0) >= TEMPLATE_DISABLE_MIN_SIMULATED
-        and stat.get("submittable", 0) == 0
-        and (
-            (
-                "mean_spread" in template_name
-                and stat.get("low_sharpe", 0) >= TEMPLATE_DISABLE_MIN_LOW_SHARPE
-                and stat.get("low_fitness", 0) >= TEMPLATE_DISABLE_MIN_LOW_FITNESS
-            )
-            or stat.get("concentrated_weight", 0) >= TEMPLATE_DISABLE_MIN_CONCENTRATED_WEIGHT
-        )
-    ):
-        return True
-    return stat.get("attempted", 0) >= disable_after and stat.get("submittable", 0) == 0
-
-
-def is_legacy_family_disabled(
-    template_name: str,
-    expression: str,
-    template_stats: dict[str, dict[str, int]],
-    disable_after: int,
-    *,
-    template_metadata: TemplateMetadata | None = None,
-) -> bool:
-    """当整个 legacy 家族消耗过多预算却没有收益时进行禁用。"""
-    if disable_after <= 0 or not is_legacy_family(template_name, expression, template_metadata):
-        return False
-    attempted = 0
-    submittable = 0
-    for prior_template_name, stat in template_stats.items():
-        prior_metadata: dict[str, object] = {}
-        family = stat.get("template_family")
-        if family:
-            prior_metadata = {"family": family}
-        if not is_legacy_family(prior_template_name, "", prior_metadata):
-            continue
-        attempted += int(stat.get("attempted", 0))
-        submittable += int(stat.get("submittable", 0))
-    return attempted >= disable_after and submittable == 0
-
-
-def _is_high_conviction_ratio(expression: str, policy: DatasetExpressionPolicy) -> bool:
-    """识别策略中值得继续探索的高经济含义比值方向。"""
-    lower_expr = "".join(expression.lower().split())
-    return any(
-        f"{left}/{right}" in lower_expr for left, right in policy.high_conviction_ratio_pairs
-    )
 
 
 def should_keep_template_for_feedback(
@@ -128,19 +61,12 @@ def should_keep_template_for_feedback(
         and template_name not in policy.protected_templates
     ):
         return False
-    if family in policy.always_keep_families:
-        return True
     if lower_name.startswith("iter_"):
         return True
     if template_name in policy.protected_templates:
         return True
-    protected_ratio = _is_high_conviction_ratio(expression, policy)
 
     if CHECK_LOW_TURNOVER in dominant_names:
-        if lower_name.startswith(policy.slow_template_prefixes):
-            return False
-        if lower_name in policy.slow_template_names:
-            return False
         if "ts_mean(" in lower_expr and "-" not in lower_expr and "/" not in lower_expr:
             return False
         if (
@@ -149,31 +75,6 @@ def should_keep_template_for_feedback(
             and "ts_zscore" not in lower_expr
         ):
             return False
-
-    if (
-        CHECK_LOW_SUB_UNIVERSE_SHARPE in dominant_names
-        or CHECK_CONCENTRATED_WEIGHT in dominant_names
-    ):
-        if family in policy.concentrated_weak_families and not protected_ratio:
-            return False
-        if lower_name.startswith(policy.concentrated_weak_prefixes) and not protected_ratio:
-            return False
-        if lower_name in policy.concentrated_weak_names:
-            return False
-
-    field_low_sharpe = int(dominant_counts.get(CHECK_LOW_SHARPE, 0))
-    if (
-        field_low_sharpe >= policy.low_sharpe_ratio_fail_threshold
-        and family in policy.low_sharpe_weak_ratio_families
-        and not protected_ratio
-    ):
-        return False
-    if (
-        lower_name.startswith(policy.low_sharpe_weak_ratio_prefixes)
-        and field_low_sharpe >= policy.low_sharpe_ratio_fail_threshold
-        and not protected_ratio
-    ):
-        return False
 
     if (
         CHECK_HIGH_TURNOVER in dominant_names
@@ -213,19 +114,4 @@ def should_skip_field_template_family(
     ):
         return True
 
-    family = classify_expression_family(template_name, expression, template_metadata)
-
-    if field_name in policy.weak_mean_spread_fields and family in {
-        "group_mean_spread",
-        "mean_spread",
-        "rank_spread",
-    }:
-        return True
-    return (
-        field_name in policy.broken_zscore_spread_fields
-        and "zscore" in template_name.lower()
-        and "spread" in template_name.lower()
-    ) or (
-        field_name in policy.weak_ratio_standalone_fields
-        and family in {"legacy_ratio", "legacy_neg_ratio", "group_ratio_level"}
-    )
+    return False

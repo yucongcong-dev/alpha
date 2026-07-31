@@ -92,8 +92,6 @@ class PlanningConfig:
     max_templates_per_family: int
     field_template_batch_size: int
     legacy_similarity_penalty: int
-    disable_legacy_after: int
-    template_disable_after: int
     top_fields_by_feedback: int
     stop_after_submittable: int
 
@@ -111,8 +109,6 @@ class PlanningConfig:
             max_templates_per_family=int(_value(args, "max_templates_per_family", 0) or 0),
             field_template_batch_size=int(_value(args, "field_template_batch_size", 0) or 0),
             legacy_similarity_penalty=int(_value(args, "legacy_similarity_penalty", 0) or 0),
-            disable_legacy_after=int(_value(args, "disable_legacy_after", 0) or 0),
-            template_disable_after=int(_value(args, "template_disable_after", 0) or 0),
             top_fields_by_feedback=int(_value(args, "top_fields_by_feedback", 0) or 0),
             stop_after_submittable=int(_value(args, "stop_after_submittable", 0) or 0),
         )

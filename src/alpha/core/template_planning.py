@@ -238,7 +238,6 @@ def build_pending_template_variants(
     field: TemplateField,
     *,
     templates: Sequence[TemplateCandidate],
-    template_stats: dict[str, dict[str, int]],
     attempted_keys: set[tuple[str, str, str, str]],
     reserved_keys: set[tuple[str, str, str, str]],
     field_feedback: TemplateFeedback | None,
@@ -292,18 +291,10 @@ def build_pending_template_variants(
             template_family=template_family,
             template_stage=template_stage,
             template_metadata=template_metadata,
-            template_stats=template_stats,
-            template_registry=build_ctx.template_registry,
-            template_family_registry=build_ctx.template_family_registry,
-            template_registry_overrides=build_ctx.template_registry_overrides,
             field_id=field_id,
             field_name=field_name,
-            field_tags=field.get("runtime_field_tags", []),
             base_variant_budget=max_setting_variants,
-            feedback_stage=feedback_stage,
         )
-        if execution_decision is None:
-            continue
         for settings_variant in active_services.build_setting_variants(
             options,
             template_name,

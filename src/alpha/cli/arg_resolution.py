@@ -20,7 +20,6 @@ DATASET_PROFILE_KEYS = (
     "simulation_max_wait_seconds",
     "simulation_max_queue_seconds",
     "queue_busy_cooldown_seconds",
-    "template_disable_after",
 )
 
 

@@ -82,4 +82,3 @@ default_profile:
   simulation_max_wait_seconds: 900
   simulation_max_queue_seconds: 600
   queue_busy_cooldown_seconds: 120
-  template_disable_after: 12

@@ -19,7 +19,6 @@ from .constants import (
     DEFAULT_SIMULATION_MAX_QUEUE_SECONDS,
     DEFAULT_SIMULATION_MAX_WAIT_SECONDS,
     DEFAULT_SLEEP_BETWEEN_FIELDS,
-    DEFAULT_TEMPLATE_DISABLE_AFTER,
 )
 from .types import DatasetProfile, YamlConfig
 
@@ -36,7 +35,6 @@ DEFAULT_PROFILE: DatasetProfile = {
     "simulation_max_wait_seconds": DEFAULT_SIMULATION_MAX_WAIT_SECONDS,
     "simulation_max_queue_seconds": DEFAULT_SIMULATION_MAX_QUEUE_SECONDS,
     "queue_busy_cooldown_seconds": DEFAULT_QUEUE_BUSY_COOLDOWN_SECONDS,
-    "template_disable_after": DEFAULT_TEMPLATE_DISABLE_AFTER,
 }
 """未在 YAML dataset_profiles 中匹配时使用的默认运行参数。"""
 

@@ -154,12 +154,6 @@ def add_search_arguments(parser: argparse.ArgumentParser) -> None:
         default=42,
         help="应用于 raw/group-rank/simple-ratio 等模板的优先级惩罚",
     )
-    parser.add_argument(
-        "--disable-legacy-after",
-        type=int,
-        default=8,
-        help="在多少次零可提交尝试后全局禁用 legacy 家族；0 表示不启用",
-    )
 
 
 def add_file_filter_arguments(parser: argparse.ArgumentParser) -> None:
@@ -195,12 +189,6 @@ def add_file_filter_arguments(parser: argparse.ArgumentParser) -> None:
     )
     parser.add_argument(
         "--exclude-templates-file", default="", help="排除模板名称的文本文件，每行一个"
-    )
-    parser.add_argument(
-        "--template-disable-after",
-        type=int,
-        default=12,
-        help="在多少次尝试后禁用模板；0 表示不自动剪枝",
     )
     parser.add_argument(
         "--top-fields-by-feedback",

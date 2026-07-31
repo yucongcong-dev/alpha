@@ -644,9 +644,6 @@ def prepare_fields_for_execution(
             field_type, PREFERRED_FIELD_RANK_SENTINEL
         )
         is_preferred_direction = preferred_rank < PREFERRED_FIELD_RANK_SENTINEL
-        is_overtested_weak = (
-            field_name in expression_policy.overtested_weak_fields and feedback is not None
-        )
         metadata_score = field_metadata_scores.get(field_id, 0.0)
         effective_priority = priority
         if is_unexplored:
@@ -667,7 +664,6 @@ def prepare_fields_for_execution(
         unexplored_type_rank = preferred_type_rank if is_unexplored else 0
         return (
             -int(is_promising_seen),
-            int(is_overtested_weak),
             -int(is_preferred_direction),
             preferred_rank,
             unexplored_type_rank,

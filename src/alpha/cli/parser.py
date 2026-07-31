@@ -81,7 +81,6 @@ def parse_args() -> argparse.Namespace:
             --max-templates-per-field: 每字段最大模板数
             --max-templates-per-family: 每家族最大模板数
             --legacy-similarity-penalty: legacy 相似度惩罚
-            --disable-legacy-after: 禁用 legacy 的阈值
 
         模板参数：
             --template-library-file: 模板库文件路径
@@ -92,7 +91,6 @@ def parse_args() -> argparse.Namespace:
             --exclude-fields-file: 排除字段文件
             --include-templates-file: 包含模板文件
             --exclude-templates-file: 排除模板文件
-            --template-disable-after: 模板禁用阈值
             --top-fields-by-feedback: 按反馈排序的字段数
 
         重试参数：

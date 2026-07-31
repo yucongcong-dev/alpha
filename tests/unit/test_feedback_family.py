@@ -6,10 +6,7 @@ import json
 from types import SimpleNamespace
 
 from alpha.analysis.feedback_filters import (
-    is_legacy_family_disabled,
-    is_template_disabled,
     should_keep_template_for_feedback,
-    should_skip_field_template_family,
 )
 from alpha.analysis.feedback_history import (
     build_historical_run_state,
@@ -18,57 +15,11 @@ from alpha.analysis.feedback_history import (
 )
 from alpha.analysis.results_loader import load_existing_results
 from alpha.analysis.results_persistence import dump_results
-from alpha.analysis.template_registry_budget import (
-    choose_family_settings_budget,
-    choose_field_cluster_settings_budget,
-    choose_registry_settings_budget,
-)
 from alpha.generators.templates.refine import build_refine_templates
 from alpha.generators.variants import build_setting_variants
 from alpha.models.domain import FieldTestResult, NearPassCandidate
 from alpha.policy.expression import get_dataset_expression_policy, resolve_feedback_stage
 from alpha.selection import feedback_filters as feedback_filters_module
-
-
-def test_should_skip_field_template_family_prefers_metadata_family() -> None:
-    """Field-family pruning should honor explicit template metadata."""
-    policy = get_dataset_expression_policy("fundamental6")
-
-    should_skip = should_skip_field_template_family(
-        "assets",
-        "custom_template",
-        "rank(custom_field)",
-        expression_policy=policy,
-        template_metadata={"family": "mean_spread"},
-    )
-
-    assert should_skip is True
-
-
-def test_is_legacy_family_disabled_uses_historical_template_family() -> None:
-    """Legacy-family disable should reuse explicit family stored in template stats."""
-    template_stats = {
-        "custom_template": {
-            "attempted": 3,
-            "submittable": 0,
-            "template_family": "legacy_ratio",
-        }
-    }
-
-    disabled = is_legacy_family_disabled(
-        "next_template",
-        "rank(custom_field)",
-        template_stats,
-        disable_after=3,
-        template_metadata={"family": "legacy_ratio"},
-    )
-
-    assert disabled is True
-
-
-def test_is_template_disabled_accepts_partial_historical_stats() -> None:
-    assert is_template_disabled("partial", {"partial": {"attempted": 4}}, disable_after=3)
-    assert not is_template_disabled("partial", {"partial": {"submittable": 0}}, disable_after=3)
 
 
 def test_high_conviction_ratio_recognizes_optional_whitespace() -> None:
@@ -175,145 +126,6 @@ def test_choose_settings_variant_budget_uses_feedback_stage_policy() -> None:
 
     assert generate_budget == 1
     assert resimulate_budget == 3
-
-
-def test_registry_settings_budget_respects_recommended_scope() -> None:
-    assert (
-        choose_registry_settings_budget(
-            1,
-            {"recommended_scope": "broad", "recommended_role": "promoted_core"},
-        )
-        == 1
-    )
-    assert (
-        choose_registry_settings_budget(
-            3,
-            {"recommended_scope": "refine", "recommended_role": "refine_neighbor"},
-        )
-        == 1
-    )
-    assert (
-        choose_registry_settings_budget(
-            3,
-            {"recommended_scope": "diagnostic", "recommended_role": "diagnostic_probe"},
-        )
-        == 0
-    )
-    assert (
-        choose_registry_settings_budget(
-            1,
-            {"recommended_scope": "broad", "recommended_role": "promoted_core"},
-            feedback_stage="resimulate",
-        )
-        == 2
-    )
-
-
-def test_family_settings_budget_respects_family_registry() -> None:
-    assert (
-        choose_family_settings_budget(
-            1,
-            "ts_rank",
-            {"ts_rank": {"recommended_scope": "broad", "budget_adjustment": 1}},
-        )
-        == 1
-    )
-    assert (
-        choose_family_settings_budget(
-            2,
-            "mean_spread",
-            {"mean_spread": {"recommended_scope": "diagnostic", "budget_adjustment": -1}},
-        )
-        == 0
-    )
-
-
-def test_field_cluster_settings_budget_respects_runtime_tags_and_overrides() -> None:
-    assert choose_field_cluster_settings_budget(1, ["high_coverage"], {}) == 1
-    assert (
-        choose_field_cluster_settings_budget(
-            2,
-            ["sparse_coverage"],
-            {
-                "field_cluster_overrides": {
-                    "sparse_coverage": {
-                        "recommended_scope": "diagnostic",
-                        "budget_adjustment": -1,
-                    }
-                }
-            },
-        )
-        == 0
-    )
-
-
-def test_build_historical_run_state_loads_persisted_template_registry(tmp_path) -> None:
-    output_path = tmp_path / "results.json"
-    output_path.write_text(
-        json.dumps(
-            {
-                "dataset_id": "fundamental6",
-                "results": [
-                    {
-                        "field_id": "cash_st",
-                        "field_type": "MATRIX",
-                        "field_name": "cash_st",
-                        "template_name": "core_template",
-                        "template_family": "ts_rank",
-                        "template_stage": "first_order",
-                        "status": "simulated",
-                        "submittable": True,
-                        "submitted": False,
-                        "message": "",
-                        "expression": "rank(ts_rank(cash_st, 60))",
-                        "settings_fingerprint": "settings",
-                        "template_library_fingerprint": "library",
-                    }
-                ],
-            }
-        ),
-        encoding="utf-8",
-    )
-    (tmp_path / "results_template_registry.json").write_text(
-        json.dumps(
-            [
-                {
-                    "template_name": "core_template",
-                    "template_family": "ts_rank",
-                    "recommended_role": "promoted_core",
-                    "recommended_scope": "broad",
-                    "priority_adjustment": 120,
-                    "reason": "submittable_history",
-                }
-            ]
-        ),
-        encoding="utf-8",
-    )
-    (tmp_path / "results_template_registry_overrides.json").write_text(
-        json.dumps(
-            {
-                "template_overrides": {
-                    "core_template": {
-                        "recommended_role": "promoted_core",
-                        "recommended_scope": "broad",
-                    }
-                },
-                "family_overrides": {},
-                "field_cluster_overrides": {},
-            }
-        ),
-        encoding="utf-8",
-    )
-
-    state = build_historical_run_state(str(output_path), str(output_path))
-
-    assert state.template_registry["core_template"]["recommended_role"] == "promoted_core"
-    assert state.template_stats["core_template"]["registry_recommended_role"] == "promoted_core"
-    assert state.template_family_registry["ts_rank"]["recommended_scope"] == "broad"
-    assert (
-        state.template_registry_overrides["template_overrides"]["core_template"]["recommended_role"]
-        == "promoted_core"
-    )
 
 
 def test_build_historical_run_state_uses_dataset_feedback_across_runs(tmp_path) -> None:

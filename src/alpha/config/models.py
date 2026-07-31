@@ -82,20 +82,7 @@ class DatasetExpressionPolicy:
     preferred_partner_score_bonuses: dict[str, int] = field(default_factory=dict)
     preferred_field_order: dict[str, int] = field(default_factory=dict)
     preferred_field_type_order: dict[str, int] = field(default_factory=dict)
-    overtested_weak_fields: set[str] = field(default_factory=set)
     promising_field_min_priority: float = 0.65
-    always_keep_families: set[str] = field(default_factory=set)
-    slow_template_prefixes: tuple[str, ...] = ()
-    slow_template_names: set[str] = field(default_factory=set)
-    concentrated_weak_families: set[str] = field(default_factory=set)
-    concentrated_weak_prefixes: tuple[str, ...] = ()
-    concentrated_weak_names: set[str] = field(default_factory=set)
-    low_sharpe_weak_ratio_families: set[str] = field(default_factory=set)
-    low_sharpe_weak_ratio_prefixes: tuple[str, ...] = ()
-    weak_mean_spread_fields: set[str] = field(default_factory=set)
-    broken_zscore_spread_fields: set[str] = field(default_factory=set)
-    weak_ratio_standalone_fields: set[str] = field(default_factory=set)
-    low_sharpe_ratio_fail_threshold: int = 0
     blacklist_min_fields_for_nearpass: int = 0
     blacklist_protected_min_avg_sharpe: float = 0.0
     blacklist_protected_min_avg_fitness: float = 0.0

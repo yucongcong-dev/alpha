@@ -13,19 +13,6 @@ templates:
     neg_positive_raw: 132
     neg_negative_raw: 144
     neg_default: 128
-  disable:
-    min_simulated: 3
-    min_low_sharpe: 3
-    min_low_fitness: 3
-    min_concentrated_weight: 2
-  history:
-    submittable_bonus: 200
-    simulated_base: 40
-    simulated_cap: 5
-    simulated_step: 8
-    low_perf_penalty: -90
-    concentrated_penalty: -60
-    error_penalty: -20
   priority_adj:
     group_low_sharpe: 28
     signal_low_sharpe: 18

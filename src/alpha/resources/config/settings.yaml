@@ -107,7 +107,6 @@ global:
     max_templates_per_family: 2    # 每表达式家族保留的最大候选数
     field_template_batch_size: 2   # 默认开启 breadth-first：每轮每字段仅发出少量模板
     legacy_similarity_penalty: 42  # legacy 模板族优先级惩罚值
-    disable_legacy_after: 8        # N 次零可提交后禁用 legacy，0=不启用
 
   # --------------------------------------------------------------------------
   # 并发控制 —— 对应 CLI --max-concurrent-simulations / --max-concurrent-creates
@@ -134,10 +133,9 @@ global:
     login_retries: 3                     # 登录失败重试次数
 
   # --------------------------------------------------------------------------
-  # 过滤器 —— 对应 CLI --template-disable-after / --top-fields-by-feedback / --stop-after-submittable
+  # 过滤器 —— 对应 CLI --top-fields-by-feedback / --stop-after-submittable
   # --------------------------------------------------------------------------
   filters:
-    template_disable_after: 0       # 模板自动禁用阈值 (N 次失败后禁用)，0=不剪枝
     top_fields_by_feedback: 0       # 仅测试反馈排序前 N 个字段，0=不限制
     stop_after_submittable: 0       # 本次启动新增 N 个可提交 Alpha 后停止，0=不停止
 
