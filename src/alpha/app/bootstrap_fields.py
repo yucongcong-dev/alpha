@@ -568,6 +568,121 @@ def _attach_selection_to_fields(
     return cast(list[TemplateField], selected_fields)
 
 
+def _field_selection_scores(
+    fields: Sequence[TemplateField | dict[str, Any]],
+    *,
+    historical_state: HistoricalRunState,
+    expression_policy: DatasetExpressionPolicy,
+) -> dict[str, float]:
+    scores: dict[str, float] = {}
+    for field in fields:
+        field_id = str(first_non_empty(field.get("id"), SENTINEL_UNKNOWN))
+        if historical_state.field_feedback.get(field_id) is None:
+            scores[field_id] = 0.0
+        else:
+            scores[field_id] = _feedback_priority(
+                field_id,
+                historical_state=historical_state,
+                expression_policy=expression_policy,
+            )
+    return scores
+
+
+def _field_sort_key(
+    item: TemplateField,
+    *,
+    historical_state: HistoricalRunState,
+    expression_policy: DatasetExpressionPolicy,
+) -> FieldSortKey:
+    field_id = str(first_non_empty(item.get("id"), SENTINEL_UNKNOWN))
+    field_name = choose_field_name(item)
+    field_type = str(item.get("type", "UNKNOWN")).upper()
+    feedback = historical_state.field_feedback.get(field_id)
+    priority = _feedback_priority(
+        field_id,
+        historical_state=historical_state,
+        expression_policy=expression_policy,
+    )
+    is_promising_seen = _is_promising_feedback(
+        field_id,
+        priority=priority,
+        historical_state=historical_state,
+        expression_policy=expression_policy,
+    )
+    is_unexplored = feedback is None
+    preferred_rank = _preferred_field_rank(field_name, expression_policy.preferred_field_order)
+    preferred_type_rank = expression_policy.preferred_field_type_order.get(
+        field_type, PREFERRED_FIELD_RANK_SENTINEL
+    )
+    is_preferred_direction = preferred_rank < PREFERRED_FIELD_RANK_SENTINEL
+    feedback_rank = (
+        0
+        if is_promising_seen
+        else 1
+        if feedback is not None and priority > STATS_DEFAULT_SCORE
+        else 2
+        if is_unexplored
+        else 3
+    )
+    return (
+        -int(is_promising_seen),
+        -int(is_preferred_direction),
+        preferred_rank,
+        feedback_rank,
+        preferred_type_rank,
+        -priority if feedback is not None else 0.0,
+        _field_window_rank(field_name),
+        field_name,
+    )
+
+
+def _rank_and_select_exploration_fields(
+    fields: list[TemplateField],
+    *,
+    top_fields_by_feedback: int,
+    offset: int,
+    limit: int,
+    historical_state: HistoricalRunState,
+    expression_policy: DatasetExpressionPolicy,
+) -> tuple[list[TemplateField], dict[str, int], int]:
+    fields.sort(
+        key=lambda item: _field_sort_key(
+            item,
+            historical_state=historical_state,
+            expression_policy=expression_policy,
+        )
+    )
+    ranked_fields = list(fields)
+    rank_by_id = _rank_by_id(ranked_fields)
+    if top_fields_by_feedback > 0:
+        fields = [
+            field
+            for field in fields
+            if _feedback_priority(
+                str(first_non_empty(field.get("id"), SENTINEL_UNKNOWN)),
+                historical_state=historical_state,
+                expression_policy=expression_policy,
+            )
+            > -999.0
+        ][:top_fields_by_feedback]
+
+    ranked_field_count = len(fields)
+    if limit > 0 and top_fields_by_feedback <= 0:
+        fields = cast(
+            list[TemplateField],
+            _select_diverse_fields(
+                fields,
+                target=offset + limit,
+                max_per_family=expression_policy.field_max_per_family,
+                exploration_ratio=expression_policy.field_exploration_ratio,
+                historical_state=historical_state,
+                expression_policy=expression_policy,
+            ),
+        )
+    fields = cast(list[TemplateField], _apply_offset_limit(fields, offset=offset, limit=limit))
+    return fields, rank_by_id, ranked_field_count
+
+
 def _finish_field_stats(
     stats: dict[str, int],
     *,
@@ -689,92 +804,19 @@ def prepare_fields_for_execution(
     if not fields:
         return [], stats
 
-    field_selection_scores: dict[str, float] = {}
-    for field in fields:
-        field_id = str(first_non_empty(field.get("id"), SENTINEL_UNKNOWN))
-        if historical_state.field_feedback.get(field_id) is None:
-            field_selection_scores[field_id] = 0.0
-        else:
-            field_selection_scores[field_id] = _feedback_priority(
-                field_id,
-                historical_state=historical_state,
-                expression_policy=expression_policy,
-            )
-
-    def field_sort_key(item: TemplateField) -> FieldSortKey:
-        field_id = str(first_non_empty(item.get("id"), SENTINEL_UNKNOWN))
-        field_name = choose_field_name(item)
-        field_type = str(item.get("type", "UNKNOWN")).upper()
-        feedback = historical_state.field_feedback.get(field_id)
-        priority = _feedback_priority(
-            field_id,
-            historical_state=historical_state,
-            expression_policy=expression_policy,
-        )
-        is_promising_seen = _is_promising_feedback(
-            field_id,
-            priority=priority,
-            historical_state=historical_state,
-            expression_policy=expression_policy,
-        )
-        is_unexplored = feedback is None
-        preferred_rank = _preferred_field_rank(
-            field_name, expression_policy.preferred_field_order
-        )
-        preferred_type_rank = expression_policy.preferred_field_type_order.get(
-            field_type, PREFERRED_FIELD_RANK_SENTINEL
-        )
-        is_preferred_direction = preferred_rank < PREFERRED_FIELD_RANK_SENTINEL
-        feedback_rank = (
-            0
-            if is_promising_seen
-            else 1
-            if feedback is not None and priority > STATS_DEFAULT_SCORE
-            else 2
-            if is_unexplored
-            else 3
-        )
-        return (
-            -int(is_promising_seen),
-            -int(is_preferred_direction),
-            preferred_rank,
-            feedback_rank,
-            preferred_type_rank,
-            -priority if feedback is not None else 0.0,
-            _field_window_rank(field_name),
-            field_name,
-        )
-
-    fields.sort(key=field_sort_key)
-    ranked_fields = list(fields)
-    rank_by_id = _rank_by_id(ranked_fields)
-    if top_fields_by_feedback > 0:
-        focused_fields = [
-            field
-            for field in fields
-            if _feedback_priority(
-                str(first_non_empty(field.get("id"), SENTINEL_UNKNOWN)),
-                historical_state=historical_state,
-                expression_policy=expression_policy,
-            )
-            > -999.0
-        ]
-        fields = focused_fields[:top_fields_by_feedback]
-
-    ranked_field_count = len(fields)
-    if limit > 0 and top_fields_by_feedback <= 0:
-        fields = cast(
-            list[TemplateField],
-            _select_diverse_fields(
-                fields,
-                target=offset + limit,
-                max_per_family=expression_policy.field_max_per_family,
-                exploration_ratio=expression_policy.field_exploration_ratio,
-                historical_state=historical_state,
-                expression_policy=expression_policy,
-            ),
-        )
-    fields = cast(list[TemplateField], _apply_offset_limit(fields, offset=offset, limit=limit))
+    field_selection_scores = _field_selection_scores(
+        fields,
+        historical_state=historical_state,
+        expression_policy=expression_policy,
+    )
+    fields, rank_by_id, ranked_field_count = _rank_and_select_exploration_fields(
+        fields,
+        top_fields_by_feedback=top_fields_by_feedback,
+        offset=offset,
+        limit=limit,
+        historical_state=historical_state,
+        expression_policy=expression_policy,
+    )
     selected_fields = _attach_selection_to_fields(
         fields,
         rank_by_id=rank_by_id,
