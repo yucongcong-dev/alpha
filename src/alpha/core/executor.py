@@ -170,80 +170,46 @@ def build_pending_templates_for_field(
         prior_results=prior_results,
         services=active_services,
     )
+    # Exploration is intentionally cheap and independent of global failures:
+    # a new field gets one seed template, while exact historical combinations
+    # remain deduplicated below.  This avoids a separate fallback path when
+    # global template history has demoted every candidate.
+    is_exploration = not field_feedback
+    planning_ctx = (
+        replace(build_ctx, template_registry={}, template_family_registry={})
+        if is_exploration
+        else build_ctx
+    )
+    planning_templates = templates[:1] if is_exploration else templates
+    planning_template_stats = {} if is_exploration else template_stats
     enabled_templates: list[TemplateCandidate] = []
     disabled_templates = 0
-    uses_fallback_seed = False
-    for template in templates:
-        if not is_template_selected_by_filters(build_ctx, template.name):
+    for template in planning_templates:
+        if not is_template_selected_by_filters(planning_ctx, template.name):
             continue
         if is_template_actionable(
             template=template,
-            build_ctx=build_ctx,
+            build_ctx=planning_ctx,
             field_id=field_id,
             field_name=field_name,
             field_feedback=field_feedback,
             expression_policy=expression_policy,
-            template_stats=template_stats,
+            template_stats=planning_template_stats,
             prior_results=prior_results,
         ):
             enabled_templates.append(template)
         else:
             disabled_templates += 1
-    # Global template pruning is learned from earlier fields.  Do not let it
-    # make a locally untested field permanently un-runnable: keep one
-    # structurally valid seed template as a controlled fallback.
-    if not enabled_templates and not field_feedback:
-        for template in templates:
-            if not is_template_selected_by_filters(build_ctx, template.name):
-                continue
-            if is_template_actionable(
-                template=template,
-                build_ctx=build_ctx,
-                field_id=field_id,
-                field_name=field_name,
-                field_feedback=None,
-                expression_policy=expression_policy,
-                template_stats={},
-                prior_results=prior_results,
-            ):
-                enabled_templates.append(template)
-                uses_fallback_seed = True
-                logger.info(
-                    "[template] field=%s uses one fallback seed after global template pruning",
-                    field_name,
-                )
-                break
     pending_templates = build_pending_template_variants(
-        build_ctx,
+        planning_ctx,
         field,
         templates=enabled_templates,
-        template_stats=template_stats,
+        template_stats=planning_template_stats,
         attempted_keys=attempted_keys,
         reserved_keys=reserved_keys or set(),
         field_feedback=field_feedback,
         services=active_services,
     )
-    # A persisted registry may independently demote a template to diagnostic
-    # scope.  The fallback is explicitly for a field without local feedback,
-    # so it must also bypass that *global* demotion; otherwise it still yields
-    # no runnable variant.  Manual template filters and all field-level safety
-    # checks above remain in force.
-    if not pending_templates and uses_fallback_seed:
-        fallback_ctx = replace(
-            build_ctx,
-            template_registry={},
-            template_family_registry={},
-        )
-        pending_templates = build_pending_template_variants(
-            fallback_ctx,
-            field,
-            templates=enabled_templates[:1],
-            template_stats={},
-            attempted_keys=attempted_keys,
-            reserved_keys=reserved_keys or set(),
-            field_feedback=None,
-            services=active_services,
-        )
     return pending_templates, disabled_templates, len(templates)
 
 

@@ -125,13 +125,11 @@ def coerce_feedback_loop_policy(value: Any) -> FeedbackLoopPolicy | None:
     if not isinstance(value, dict):
         return None
     generate = coerce_feedback_phase_policy(value.get("generate"))
-    prune = coerce_feedback_phase_policy(value.get("prune"))
     resimulate = coerce_feedback_phase_policy(value.get("resimulate"))
-    if generate is None and prune is None and resimulate is None:
+    if generate is None and resimulate is None:
         return None
     return FeedbackLoopPolicy(
         generate=generate or FeedbackPhasePolicy(),
-        prune=prune or FeedbackPhasePolicy(),
         resimulate=resimulate or FeedbackPhasePolicy(),
     )
 

@@ -85,7 +85,6 @@ TEMPLATE_STAGE_EVENT_CONDITIONED: str = _yaml_str(
 FEEDBACK_STAGE_GENERATE: str = _yaml_str(
     "strings", "feedback_stages", "generate", default="generate"
 )
-FEEDBACK_STAGE_PRUNE: str = _yaml_str("strings", "feedback_stages", "prune", default="prune")
 FEEDBACK_STAGE_RESIMULATE: str = _yaml_str(
     "strings", "feedback_stages", "resimulate", default="resimulate"
 )

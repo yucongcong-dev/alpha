@@ -144,6 +144,7 @@ def test_build_pending_templates_keeps_generate_stage_structure_first(
     build_ctx = TemplateBuildContext(
         options=TemplateBuildOptions.from_args(args),
         all_fields=[{"id": "cash_st", "type": "VECTOR", "name": "cash_st"}],
+        field_feedback={"cash_st": {"attempted_templates": 1, "best_score": 0.0}},
         template_library={},
         use_dataset_heuristics=False,
         expression_policy=get_dataset_expression_policy("fundamental6"),
@@ -220,6 +221,7 @@ def test_build_pending_templates_uses_persisted_registry_recommendation(monkeypa
     build_ctx = TemplateBuildContext(
         options=TemplateBuildOptions.from_args(args),
         all_fields=[{"id": "cash_st", "type": "VECTOR", "name": "cash_st"}],
+        field_feedback={"cash_st": {"attempted_templates": 1, "best_score": 0.0}},
         template_library={},
         template_registry={
             "persisted_core_template": {
@@ -479,7 +481,7 @@ def test_build_pending_templates_respects_manual_registry_override(monkeypatch) 
     assert pending == []
 
 
-def test_event_field_uses_narrower_template_budget(monkeypatch) -> None:
+def test_event_field_exploration_uses_one_seed_template(monkeypatch) -> None:
     monkeypatch.setattr(
         "alpha.core.executor.build_setting_variants",
         lambda *args, **kwargs: [{"neutralization": "SUBINDUSTRY", "truncation": 0.08}],
@@ -555,7 +557,7 @@ def test_event_field_uses_narrower_template_budget(monkeypatch) -> None:
     )
 
     assert total == 3
-    assert len(pending) == 3
+    assert len(pending) == 1
 
 
 def test_build_pending_templates_demotes_persistently_weak_broad_templates(monkeypatch) -> None:
@@ -601,6 +603,7 @@ def test_build_pending_templates_demotes_persistently_weak_broad_templates(monke
     build_ctx = TemplateBuildContext(
         options=TemplateBuildOptions.from_args(args),
         all_fields=[{"id": "cash_st", "type": "VECTOR", "name": "cash_st"}],
+        field_feedback={"cash_st": {"attempted_templates": 1, "best_score": -999.0}},
         template_library={
             "default": [
                 TemplateLibraryItem(

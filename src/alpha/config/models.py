@@ -41,10 +41,9 @@ class FeedbackPhasePolicy:
 
 @dataclass(frozen=True)
 class FeedbackLoopPolicy:
-    """表达式搜索反馈闭环：generate -> prune -> resimulate。"""
+    """表达式搜索反馈闭环：generate -> resimulate。"""
 
     generate: FeedbackPhasePolicy = field(default_factory=FeedbackPhasePolicy)
-    prune: FeedbackPhasePolicy = field(default_factory=FeedbackPhasePolicy)
     resimulate: FeedbackPhasePolicy = field(default_factory=FeedbackPhasePolicy)
 
 

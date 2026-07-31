@@ -17,14 +17,9 @@ def _policy(**overrides: object) -> DatasetExpressionPolicy:
         "use_curated_heuristics": True,
         "feedback_loop_policy": FeedbackLoopPolicy(
             generate=FeedbackPhasePolicy(),
-            prune=FeedbackPhasePolicy(
+            resimulate=FeedbackPhasePolicy(
                 min_attempted_templates=1,
                 min_best_score=0.0,
-                enable_template_pruning=True,
-            ),
-            resimulate=FeedbackPhasePolicy(
-                min_attempted_templates=999,
-                min_best_score=999.0,
                 enable_template_pruning=True,
             ),
         ),
@@ -41,8 +36,21 @@ def _feedback(**failed_counts: int) -> dict[str, object]:
     }
 
 
-def test_feedback_stage_preserves_valid_zero_best_score() -> None:
-    assert resolve_feedback_stage(_feedback(), _policy().feedback_loop_policy) == "prune"
+def test_feedback_stage_preserves_valid_zero_best_score_for_refine() -> None:
+    assert resolve_feedback_stage(_feedback(), _policy().feedback_loop_policy) == "resimulate"
+
+
+def test_feedback_stage_stays_generate_before_refine_threshold() -> None:
+    policy = _policy(
+        feedback_loop_policy=FeedbackLoopPolicy(
+            generate=FeedbackPhasePolicy(),
+            resimulate=FeedbackPhasePolicy(
+                min_attempted_templates=2,
+                min_best_score=0.5,
+            ),
+        )
+    )
+    assert resolve_feedback_stage(_feedback(), policy.feedback_loop_policy) == "generate"
 
 
 def test_template_disable_guards_and_quality_shortcuts() -> None:

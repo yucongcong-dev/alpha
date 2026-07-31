@@ -491,5 +491,4 @@ strings:
     event_conditioned: "event_conditioned"
   feedback_stages:
     generate: "generate"
-    prune: "prune"
     resimulate: "resimulate"

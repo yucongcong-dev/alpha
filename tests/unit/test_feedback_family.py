@@ -79,7 +79,7 @@ def test_high_conviction_ratio_recognizes_optional_whitespace() -> None:
         "rank(cashflow_op / assets)",
         200,
         {
-            "best_score": 0.1,
+            "best_score": 0.5,
             "attempted_templates": 2,
             "failed_check_counts": {"LOW_SHARPE": 4},
         },
@@ -103,8 +103,8 @@ def test_feedback_priority_threshold_uses_current_runtime_config(monkeypatch) ->
         "rank(custom_field)",
         174,
         {
-            "best_score": 0.1,
-            "attempted_templates": 2,
+            "best_score": 0.5,
+            "attempted_templates": 3,
             "failed_check_counts": {},
         },
         expression_policy=policy,

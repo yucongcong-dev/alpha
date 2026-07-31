@@ -8,7 +8,6 @@ from ..config.constants import (
     CHECK_LOW_SHARPE,
     CHECK_LOW_SUB_UNIVERSE_SHARPE,
     CHECK_LOW_TURNOVER,
-    FEEDBACK_STAGE_PRUNE,
     FEEDBACK_STAGE_RESIMULATE,
     TEMPLATE_DISABLE_MIN_CONCENTRATED_WEIGHT,
     TEMPLATE_DISABLE_MIN_LOW_FITNESS,
@@ -110,8 +109,6 @@ def should_keep_template_for_feedback(
     stage_policy = (
         policy.feedback_loop_policy.resimulate
         if feedback_stage == FEEDBACK_STAGE_RESIMULATE
-        else policy.feedback_loop_policy.prune
-        if feedback_stage == FEEDBACK_STAGE_PRUNE
         else policy.feedback_loop_policy.generate
     )
     if not stage_policy.enable_template_pruning:

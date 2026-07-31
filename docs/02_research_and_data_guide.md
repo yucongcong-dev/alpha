@@ -556,7 +556,7 @@ datasets/<dataset>/cache/<region>_<universe>_<instrument>_d<delay>.json
 - 数字窗口字段会归并成字段族，避免同一信号的 20/30/60 天版本占满预算。
 - 默认约 40% 名额保留给未探索字段；其余名额只给历史优质字段，普通失败记录不会挤占探索预算。
 - 任一通过 submission check 的 Alpha 会立即成为强正反馈；其他反馈还需满足最小样本量和时间衰减条件。
-- 全局模板历史剪枝不会让未探索字段变成“已选中但零模拟”：满足结构和人工过滤条件时，最多留下一个种子模板验证。
+- 反馈只分为两段：新字段以一个低成本种子模板探索；达到明确门槛后才进入 resimulate/refine。全局模板历史不会硬性阻止新字段探索。
 
 `--include-fields-file` 是人工明确指定的研究范围，因此跳过字段族配额和探索比例，但仍执行基础质量检查。
 
@@ -576,6 +576,7 @@ datasets/<dataset>/cache/<region>_<universe>_<instrument>_d<delay>.json
 
 成熟结论必须从 `runs/` 或 `feedback/` 中沉淀到 `template.json`、`presets/` 或数据集 README；
 不要把长期人工决策留在临时文件名或 JSON 结果里。一次性实验输入放 `tmp/`，外部对照材料或手工草稿放 `scratch/`。
+模板的默认排序直接维护在 `template.json` 的 `priority`；不要再为单个历史模板名叠加 YAML 优先级惩罚。
 
 ### 12.4 续跑、反馈与结果
 

@@ -212,12 +212,8 @@ def test_fundamental6_default_policy_is_loaded_from_settings_yaml() -> None:
         FieldTransformStage(kind="backfill", window=120, std=None),
         FieldTransformStage(kind="winsorize", window=0, std=4.0),
     )
-    assert (
-        policy.template_prefix_penalties[
-            ("vec_avg_delta_", "vec_avg_rank_delta_", "vec_avg_vol_scaled_delta_")
-        ]
-        == -820
-    )
+    assert policy.template_priority_penalties == {}
+    assert policy.template_prefix_penalties == {}
     assert policy.feedback_loop_policy.resimulate.preferred_template_stages == (
         "group_second_order",
         "event_conditioned",

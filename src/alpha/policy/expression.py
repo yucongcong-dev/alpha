@@ -14,7 +14,6 @@ from ..config.constants import (
     DEFAULT_RATIO_DIVERSIFIED_TEMPLATE_SPECS,
     FEEDBACK_MUTATION_HIGHSCORE_THRESHOLD,
     FEEDBACK_STAGE_GENERATE,
-    FEEDBACK_STAGE_PRUNE,
     FEEDBACK_STAGE_RESIMULATE,
     NEGATIVE_RAW_FIELDS,
     POSITIVE_RAW_FIELDS,
@@ -61,18 +60,12 @@ def _default_transform_specs() -> tuple[
 
 
 def _default_feedback_loop_policy() -> FeedbackLoopPolicy:
-    """Build the default generate/prune/resimulate feedback policy."""
+    """Build the default generate/resimulate feedback policy."""
     return FeedbackLoopPolicy(
         generate=FeedbackPhasePolicy(
             min_attempted_templates=0,
             min_best_score=STATS_DEFAULT_SCORE,
             settings_variant_budget=1,
-        ),
-        prune=FeedbackPhasePolicy(
-            min_attempted_templates=2,
-            min_best_score=STATS_DEFAULT_SCORE,
-            settings_variant_budget=2,
-            enable_template_pruning=True,
         ),
         resimulate=FeedbackPhasePolicy(
             min_attempted_templates=3,
@@ -182,7 +175,7 @@ def resolve_feedback_stage(
     field_feedback: FieldFeedbackSummary | None,
     loop_policy: FeedbackLoopPolicy,
 ) -> str:
-    """Resolve whether a field should generate, prune, or resimulate templates."""
+    """Resolve whether a field should generate or resimulate templates."""
     if not field_feedback:
         return FEEDBACK_STAGE_GENERATE
     feedback: dict[str, Any] = dict(field_feedback)
@@ -194,11 +187,6 @@ def resolve_feedback_stage(
         and best_score >= loop_policy.resimulate.min_best_score
     ):
         return FEEDBACK_STAGE_RESIMULATE
-    if (
-        attempted >= loop_policy.prune.min_attempted_templates
-        and best_score >= loop_policy.prune.min_best_score
-    ):
-        return FEEDBACK_STAGE_PRUNE
     return FEEDBACK_STAGE_GENERATE
 
 

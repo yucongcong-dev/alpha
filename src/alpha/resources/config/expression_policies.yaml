@@ -96,11 +96,6 @@ expression_policies:
         min_attempted_templates: 0
         min_best_score: -999.0
         settings_variant_budget: 1
-      prune:
-        min_attempted_templates: 2
-        min_best_score: -999.0
-        settings_variant_budget: 2
-        enable_template_pruning: true
       resimulate:
         min_attempted_templates: 3
         min_best_score: 0.50
@@ -142,59 +137,6 @@ expression_policies:
       - ["income", "assets"]
       - ["sales", "assets"]
       - ["revenue", "assets"]
-    template_priority_penalties:
-      account_neutralize_zscore_decay_60_industry: "@mild_penalty"
-      vol_scaled_delta_20_60: "@heavy_penalty"
-      vol_scaled_delta_20_60_market: "@heavy_penalty"
-      vol_scaled_delta_20_60_industry: "@heavy_penalty"
-      vec_avg_ts_corr_self_60: "@heavy_penalty"
-      vec_avg_3layer_zs_sector_decay: "@heavy_penalty"
-      3layer_zscore_sector_decay: "@heavy_penalty"
-      3layer_zscore_market_decay: "@heavy_penalty"
-      3layer_rank_sector_decay: "@heavy_penalty"
-      3layer_zscore_subind_decay: "@heavy_penalty"
-      ts_corr_self_rank_60: "@heavy_penalty"
-      ts_corr_self_60: "@heavy_penalty"
-      ts_corr_self_rank_252: "@heavy_penalty"
-      ts_corr_self_120: "@heavy_penalty"
-      ts_corr_self_252: "@heavy_penalty"
-      ts_rank_after_group_63: "@heavy_penalty"
-      ts_zscore_after_group_63: "@heavy_penalty"
-      ts_rank_60: "@moderate_penalty"
-      ts_rank_63: "@light_penalty"
-      group_ts_rank_60: "@light_penalty"
-      ts_zscore_backfill: "@light_penalty"
-      ts_zscore_60: "@mild_penalty"
-      ts_zscore_63: "@light_penalty"
-      ts_zscore_66: "@mild_penalty"
-      group_zscore_60: "@mild_penalty"
-      group_zscore_63_sector: "@mild_penalty"
-      group_zscore_63_market: "@mild_penalty"
-      decay_20: "@mild_penalty"
-      decay_10: "@mild_penalty"
-      decay_22: "@minor_penalty"
-      group_decay_20: "@minor_penalty"
-      resid_group_mean_decay_20: "@mild_penalty"
-      mean_diff_22_66: "@light_penalty"
-      mean_diff_20_60: "@light_penalty"
-      mean_diff_21_63: "@mild_penalty"
-      stddev_60: "@light_penalty"
-      stddev_63: "@light_penalty"
-      stddev_22: "@mild_penalty"
-      ir_60: "@mild_penalty"
-      vec_avg_ts_rank_60: "@moderate_penalty"
-      vec_avg_ts_rank_63: "@light_penalty"
-      vec_avg_ts_zscore_60: "@mild_penalty"
-      vec_avg_ts_zscore_63: "@light_penalty"
-      vec_avg_decay_20: "@mild_penalty"
-      vec_avg_decay_10: "@mild_penalty"
-      vec_avg_mean_diff_22_66: "@light_penalty"
-      vec_avg_mean_diff_21_63: "@mild_penalty"
-    template_prefix_penalties:
-      "delta_|group_delta_|rank_delta_": "@deep_penalty"
-      "vec_avg_delta_|vec_avg_rank_delta_|vec_avg_vol_scaled_delta_": "@heavy_penalty"
-      "mean_diff_|vec_avg_mean_diff_": "@small_penalty"
-      "stddev_": "@small_penalty"
     matrix_delta_over_std_windows:
       - [63, 126, 144]
     matrix_diversified_template_specs:
@@ -435,11 +377,6 @@ expression_policies:
         min_attempted_templates: 0
         min_best_score: -999.0
         settings_variant_budget: 1
-      prune:
-        min_attempted_templates: 2
-        min_best_score: -999.0
-        settings_variant_budget: 2
-        enable_template_pruning: true
       resimulate:
         min_attempted_templates: 3
         min_best_score: 0.50
@@ -517,10 +454,6 @@ expression_policies:
     low_sharpe_weak_ratio_prefixes:
       - "group_ratio_zscore_"
     low_sharpe_ratio_fail_threshold: 2
-    template_prefix_penalties:
-      "delta_|group_delta_|rank_delta_|vol_scaled_delta_": "@heavy_penalty"
-      "mean_reversion_|mean_diff_": "@mild_penalty"
-      "ts_corr_self_": -320
     preferred_field_order:
       value: 0
       quality: 1
@@ -657,11 +590,6 @@ expression_policies:
         min_attempted_templates: 0
         min_best_score: -999.0
         settings_variant_budget: 1
-      prune:
-        min_attempted_templates: 2
-        min_best_score: -999.0
-        settings_variant_budget: 1
-        enable_template_pruning: true
       resimulate:
         min_attempted_templates: 3
         min_best_score: 0.50
@@ -754,11 +682,6 @@ expression_policies:
         min_attempted_templates: 0
         min_best_score: -999.0
         settings_variant_budget: 1
-      prune:
-        min_attempted_templates: 2
-        min_best_score: -999.0
-        settings_variant_budget: 2
-        enable_template_pruning: true
       resimulate:
         min_attempted_templates: 3
         min_best_score: 0.50

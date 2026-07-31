@@ -11,7 +11,6 @@ from ..config.constants import (
     CHECK_CONCENTRATED_WEIGHT,
     CHECK_LOW_SUB_UNIVERSE_SHARPE,
     CHECK_LOW_TURNOVER,
-    FEEDBACK_STAGE_PRUNE,
     FEEDBACK_STAGE_RESIMULATE,
     NEARPASS_DEFAULT_LIMIT,
     NEARPASS_PENALTY_CONCENTRATED_WEIGHT,
@@ -202,8 +201,6 @@ def choose_settings_variant_budget(
     stage = resolve_feedback_stage(field_feedback, policy.feedback_loop_policy)
     if stage == FEEDBACK_STAGE_RESIMULATE:
         return policy.feedback_loop_policy.resimulate.settings_variant_budget
-    if stage == FEEDBACK_STAGE_PRUNE:
-        return policy.feedback_loop_policy.prune.settings_variant_budget
     return policy.feedback_loop_policy.generate.settings_variant_budget
 
 
