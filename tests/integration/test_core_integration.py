@@ -22,7 +22,8 @@ from alpha.core.scheduler import (
     handle_completed_future,
     register_queue_busy_field,
 )
-from alpha.core.simulation import build_failure_result, summarize_failure
+from alpha.core.simulation_parsing import summarize_failure
+from alpha.core.simulation_results import build_failure_result
 from alpha.models.domain import FieldTestContext, FieldTestResult
 from alpha.models.io_types import RunFilters
 from alpha.models.runtime import (
