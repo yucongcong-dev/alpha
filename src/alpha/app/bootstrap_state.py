@@ -30,7 +30,9 @@ def create_execution_state(
         field_queue_busy_counts={},
         skipped_fields_due_to_queue=set(),
     )
-    execution_state.submittable_baseline_count = execution_state.metrics.submittable_count
+    result_ledger = execution_state.result_ledger
+    result_ledger.submittable_baseline_count = result_ledger.metrics.submittable_count
+    execution_state.sync_result_ledger()
     execution_state.blacklist_runtime_stats = build_blacklist_runtime_stats(execution_state.results)
     execution_state.blacklisted_template_keys = load_blacklisted_template_keys(dataset_id)
     return execution_state
@@ -52,17 +54,18 @@ def build_execution_state(
         historical_state=historical_state,
         datasets_root=datasets_root,
     )
-    execution_state.persisted_result_count = initialize_results_journal(
+    result_ledger = execution_state.result_ledger
+    result_ledger.persisted_result_count = initialize_results_journal(
         output_file,
-        execution_state.results,
+        result_ledger.results,
     )
-    metrics = execution_state.metrics
-    execution_state.persisted_result_count = dump_results_incremental(
+    metrics = result_ledger.metrics
+    result_ledger.persisted_result_count = dump_results_incremental(
         output_file,
         dataset_id,
         [],
-        persisted_result_count=execution_state.persisted_result_count,
-        tested=len(execution_state.results),
+        persisted_result_count=result_ledger.persisted_result_count,
+        tested=len(result_ledger.results),
         unique_fields_tested=len(metrics.unique_field_ids),
         submittable_count=metrics.submittable_count,
         submitted_count=metrics.submitted_count,
@@ -74,4 +77,5 @@ def build_execution_state(
         run_config=run_config,
         template_stats=execution_state.template_stats,
     )
+    execution_state.sync_result_ledger()
     return execution_state
