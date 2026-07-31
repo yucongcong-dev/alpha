@@ -116,6 +116,12 @@ FAQ 里大多数优化建议可以归成下面这张表。它比逐篇记 FAQ �
 - `Sharpe` 太差时，`Returns` 再高也很难稳
 - `Turnover` 太高时，`Fitness` 会受到公式分母惩罚，实际交易成本压力也更大
 
+还要区分“显示值”和“严格检查值”：
+
+- 当前 D1 submission check 要求 `Fitness > 1`，不是 `Fitness >= 1`
+- 页面显示通常经过四舍五入；显示为 `1.00` 不代表底层未舍入值一定严格大于 `1`
+- 实际研究可把 `1.05+` 当作留有舍入和波动余量的目标，但它不是平台公布的新硬门槛
+
 ---
 
 ## 5. 当 `HIGH_TURNOVER` 出现时
@@ -501,6 +507,24 @@ Test Period 可以更具体地按下面方式使用：
 - `rank(ts_rank(field, 60))`：先看每只股票自身历史位置，再做当日截面排序
 - `ts_rank(rank(field), 60)`：先做每日截面排序，再看该截面名次的历史位置
 
+比率的稳健化顺序也会改变处理对象：
+
+```text
+winsorize(x, std=4) / y
+winsorize(x / y, std=4)
+```
+
+第一条只处理分子异常值，第二条处理最终 ratio 异常值。“ratio 后 winsorize”只是一个有明确语义的候选实验，
+不是官方保证提高 Fitness 的万能规则。类似地，`ts_backfill(cap, 504)` 改成 `252` 只会缩短缺失值搜索窗口；
+如果 `cap` 没有缺失，两条表达式可能完全相同。
+
+设置层 `Decay` 与表达式层 `ts_decay_linear(...)` 会叠加。为了让结果可解释，推荐按下面顺序做干净 A/B：
+
+1. 原始版本
+2. 只改成 ratio 后 winsorize
+3. 回到原始或当前最佳版本，只实验 simulation setting 的 `Decay`
+4. 有字段缺失或明确平滑假设时，再分别实验 backfill 窗口或表达式层 decay
+
 官网社区更建议保持外层算子简单，让原始研究假设仍然可辨认。不要通过不断套
 `rank / quantile / zscore` 来追逐单次 IS 提升。
 
@@ -652,6 +676,10 @@ Rank/Binary、Train/Test、参数扰动、Sub/Super Universe 和 Max Trade 挑�
 - [Neutralization](https://platform.worldquantbrain.com/learn/documentation/advanced-topics/neut-cons)
 - [D0](https://platform.worldquantbrain.com/learn/documentation/advanced-topics/getting-started-d0)
 - [How can you avoid overfitting?](https://support.worldquantbrain.com/hc/en-us/community/posts/8209806533015-How-can-you-avoid-overfitting-)
+- [How do you get a higher Sharpe?](https://support.worldquantbrain.com/hc/en-us/community/posts/8123350778391-How-do-you-get-a-higher-Sharpe-)
+- [5 ways to potentially increase returns](https://support.worldquantbrain.com/hc/en-us/community/posts/8833033953559--BRAIN-TIPS-5-ways-to-potentially-increase-returns-of-an-alpha)
+- [How do you reduce correlation of a good Alpha?](https://support.worldquantbrain.com/hc/en-us/community/posts/8046468280727--BRAIN-TIPS-How-do-you-reduce-correlation-of-a-good-alpha-)
+- [Using trade_when for Event Alphas and Low Turnover Alphas](https://support.worldquantbrain.com/hc/en-us/community/posts/8360363631127--BRAIN-TIPS-Using-trade-when-for-Event-Alphas-and-Low-Turnover-Alphas)
 - [Most illiquid 50% instruments after-cost test](https://support.worldquantbrain.com/hc/en-us/articles/19083525654551-Error-message-Most-illiquid-50-instruments-after-cost-Sharpe-is-above-cutoff-of-original-universe)
 - [Alpha better suited for Delay 1](https://support.worldquantbrain.com/hc/en-us/articles/19083452017559-Error-Message-Alpha-better-suited-for-Delay-1)
 - [Sub-universe Sharpe cutoff and calculation](https://support.worldquantbrain.com/hc/en-us/articles/6568644868375-How-do-I-resolve-this-error-Sub-universe-Sharpe-NaN-is-not-above-cutoff)

@@ -99,6 +99,13 @@ Learn 页课程主要适合作为研究地图，不适合直接转成模板全�
 | `Implementing Advanced Ideas on Brain` | 了解更高级数据和深度学习方向 |
 | `International Quant Championship 2026` | 竞赛规则与赛程，和普通研究方法保持边界 |
 
+截至 `2026-07-31`，当前官网课程目录共 `10` 门课程、`46` 个视频课时。本次审阅覆盖课程页和课时主题，
+但没有把未播放、未转录的视频内容写成“官方逐字知识”。课程数量和赛季课程会变化，引用时应保留日期。
+
+Operators 页当前账号可见 `7` 类算子：Arithmetic、Logical、Time Series、Cross Sectional、Vector、
+Transformational、Group，共解析到 `66` 个 `base` 算子。平台说明更高等级可能解锁更多算子，
+因此本地知识库记录的是带日期的账号可见快照，不把 `66` 当成全平台永久总数。
+
 本仓库吸收课程内容时只保留两类东西：
 
 - 能改变研究流程的概念，例如多样性、风险管理、data category、Delay 匹配
@@ -569,16 +576,16 @@ feedback 目录用于机器自动复用历史，但仍属于可重建运行状�
 
 ```bash
 # 需要登录：验证凭证、API 连通性和模拟创建
-PYTHONPATH=src python3.10 -m alpha --smoke-test
+python -m alpha --smoke-test
 
 # 离线只读：检查字段、模板和候选计划，不创建 simulation
-PYTHONPATH=src python3.10 -m alpha --dry-run-plan
+python -m alpha --dry-run-plan
 
 # 广泛探索：首次会拉取当前市场范围的字段并写入缓存
-PYTHONPATH=src python3.10 -m alpha --dataset-id fundamental6
+python -m alpha --dataset-id fundamental6
 
 # 聚焦历史上更有希望的字段
-PYTHONPATH=src python3.10 -m alpha --top-fields-by-feedback 10 --max-templates-per-field 15
+python -m alpha --top-fields-by-feedback 10 --max-templates-per-field 15
 ```
 
 不传参数时，运行器采用内置默认搜索预算。`--full-run` 会枚举更大的字段和模板空间，
@@ -664,8 +671,8 @@ make sync-config
 make check
 
 # 仅预览 / 执行可重建运行产物清理（默认保留 .credentials）
-PYTHONPATH=src python3.10 -m alpha clean --dry-run-clean
-PYTHONPATH=src python3.10 -m alpha clean
+python -m alpha clean --dry-run-clean
+python -m alpha clean
 ```
 
 `alpha clean` 处理数据集的 `cache/`、`runs/` 和遗留运行产物；`make clean-dev` 处理 Python
@@ -686,10 +693,11 @@ PYTHONPATH=src python3.10 -m alpha clean
 
 ## 14. 官方入口
 
-- [Alpha Examples for Beginners](https://platform.worldquantbrain.com/learn/documentation/create-alphas/19-alpha-examples)
+- [Alpha Examples for Beginners](https://platform.worldquantbrain.com/learn/documentation/examples/19-alpha-examples)
 - [Alpha Examples for Bronze Users](https://platform.worldquantbrain.com/learn/documentation/examples/sample-alpha-concepts)
 - [Alpha Examples for Silver Users](https://platform.worldquantbrain.com/learn/documentation/examples/example-expression-alphas)
 - [Courses](https://platform.worldquantbrain.com/learn/courses)
+- [Operators](https://platform.worldquantbrain.com/learn/operators)
 - [Understanding Data in BRAIN: Key Concepts and Tips](https://platform.worldquantbrain.com/learn/documentation/understanding-data/data)
 - [How to use the Data Explorer](https://platform.worldquantbrain.com/learn/documentation/understanding-data/how-use-data-explorer)
 - [Vector Data Fields](https://platform.worldquantbrain.com/learn/documentation/understanding-data/vector-datafields)

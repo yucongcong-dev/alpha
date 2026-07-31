@@ -4,6 +4,22 @@
 官网 Documentation、Courses、FAQ 和 Community 内容按主题吸收：研究相关内容进入 01-04，
 平台运营内容进入 05；不做官网全文镜像，也不为每个 FAQ 分类新增平行摘录页。
 
+## 官网知识审阅快照（2026-07-31）
+
+本次使用已登录的 WorldQuant BRAIN 官网会话，完成了当前账号可见 Learn 目录的系统审阅：
+
+- Documentation：`24` 篇，覆盖 Discover BRAIN、Create Alphas、Examples、Interpret Results、Understanding Data、Advanced Topics
+- Courses：`10` 门课程、`46` 个视频课时；已审阅课程目录和课时主题，没有复制或伪造视频逐字稿
+- Operators：`7` 个分类、当前账号可见 `66` 个 `base` 算子
+- Must-read：重点核对 Sharpe、Returns、Correlation、`trade_when`、PnL 平滑、抗过拟合 `6` 个主题
+
+知识库采用“按主题吸收”而不是“逐页镜像”：
+
+- 官方 Documentation 和 Help Center 主文用于确认定义、流程和检查语义
+- Community 评论只作为次级经验，不覆盖官方正文和平台实际检查结果
+- 不复制官网全文，也不把课程视频目录冒充完整视频内容
+- 课程、算子和门槛可能随账号等级与平台版本变化；动态数量和阈值必须附核对日期
+
 ## 推荐阅读顺序
 
 1. [01_beginner_guide.md](01_beginner_guide.md)
