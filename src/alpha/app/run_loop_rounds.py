@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
+from dataclasses import field as dataclass_field
 import logging
 
 from ..analysis.feedback_history import should_stop_after_submittable
@@ -55,6 +56,9 @@ class ScheduleRoundContext:
     completion_ctx: FutureCompletionContext
     state_file: str
     field_template_batch_size: int
+    scheduler_options: SchedulerControlOptions = dataclass_field(
+        default_factory=SchedulerControlOptions
+    )
 
 
 def execute_schedule_round(
@@ -63,7 +67,7 @@ def execute_schedule_round(
     round_index: int,
 ) -> ScheduleRoundResult:
     """Execute one scheduling round across every remaining field."""
-    args = context.args
+    scheduler_options = context.scheduler_options
     execution_state = context.run_ctx.execution_state
     progressed_this_round = False
     last_field_id = ""
@@ -83,12 +87,15 @@ def execute_schedule_round(
 
     for field_index, field in enumerate(context.fields, start=1):
         if should_stop_after_submittable(
-            args.stop_after_submittable,
+            scheduler_options.stop_after_submittable,
             execution_state.results,
             baseline_count=execution_state.submittable_baseline_count,
         ):
             execution_state.stop_signal.set()
-            logger.info("[stop] 达到 stop-after-submittable=%d", args.stop_after_submittable)
+            logger.info(
+                "[stop] 达到 stop-after-submittable=%d",
+                scheduler_options.stop_after_submittable,
+            )
             return ScheduleRoundResult(
                 progressed=progressed_this_round,
                 stop_requested=True,
@@ -225,17 +232,21 @@ def _dispatch_templates_for_field(
 ) -> bool:
     """Dispatch scheduled templates for a single field; return whether a stop was requested."""
     args = context.args
+    scheduler_options = context.scheduler_options
     run_ctx = context.run_ctx
     execution_state = run_ctx.execution_state
     runtime_state = run_ctx.runtime_state
     for template_index, entry in enumerate(scheduled_templates, start=1):
         if should_stop_after_submittable(
-            args.stop_after_submittable,
+            scheduler_options.stop_after_submittable,
             execution_state.results,
             baseline_count=execution_state.submittable_baseline_count,
         ):
             execution_state.stop_signal.set()
-            logger.info("[stop] 达到 stop-after-submittable=%d", args.stop_after_submittable)
+            logger.info(
+                "[stop] 达到 stop-after-submittable=%d",
+                scheduler_options.stop_after_submittable,
+            )
             return True
 
         if execution_state.stop_signal.is_set():
@@ -245,7 +256,7 @@ def _dispatch_templates_for_field(
         if not drain_until_capacity(
             executor_state=execution_state,
             runtime_state=runtime_state,
-            scheduler_options=SchedulerControlOptions.from_args(args),
+            scheduler_options=scheduler_options,
             completion_ctx=context.completion_ctx,
             field_id=field_id,
         ):
@@ -264,7 +275,7 @@ def _dispatch_templates_for_field(
             runtime_state.runtime_max_workers,
             entry.variant_fingerprint,
         )
-        throttle_before_submission(SchedulerControlOptions.from_args(args), execution_state)
+        throttle_before_submission(scheduler_options, execution_state)
         submit_template_future(
             executor=context.executor,
             run_ctx=run_ctx,

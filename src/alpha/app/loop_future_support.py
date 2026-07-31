@@ -185,10 +185,11 @@ def drain_remaining_futures(
     execution_state: ExecutionState,
     runtime_state: RuntimeConcurrencyState,
     args: SchedulerRuntimeArgs,
+    scheduler_options: SchedulerControlOptions | None = None,
     completion_ctx: FutureCompletionContext,
 ) -> None:
     """Drain all remaining futures and persist terminal pipeline state when needed."""
-    scheduler_options = SchedulerControlOptions.from_args(args)
+    scheduler_options = scheduler_options or SchedulerControlOptions.from_args(args)
     while execution_state.pending_futures:
         _drain_completed_cycle(
             pending_futures=execution_state.pending_futures,

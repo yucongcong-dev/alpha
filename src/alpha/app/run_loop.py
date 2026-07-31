@@ -7,6 +7,7 @@ import logging
 
 from ..config.application import ApplicationConfig
 from ..models.io_types import RunPaths
+from ..models.runtime_options import SchedulerControlOptions
 from ..runtime.state import InitializedRunContext
 from .loop_future_support import cancel_unstarted_futures as cancel_unstarted_futures
 from .loop_future_support import drain_remaining_futures as drain_remaining_futures
@@ -53,6 +54,7 @@ def run_field_test_loop(
     original_fields = list(run_ctx.fields)
     max_workers = runtime_state.max_workers
     field_template_batch_size = max(0, int(getattr(args, "field_template_batch_size", 0) or 0))
+    scheduler_options = SchedulerControlOptions.from_args(args)
     field_resume_positions = build_field_resume_positions(original_fields)
     result_write_options = resolve_result_write_options(args, run_paths)
     completion_ctx = resolve_future_completion_context(args, run_ctx, result_write_options)
@@ -85,6 +87,7 @@ def run_field_test_loop(
             completion_ctx=completion_ctx,
             state_file=state_file,
             field_template_batch_size=field_template_batch_size,
+            scheduler_options=scheduler_options,
         )
         last_field_id = ""
         try:
@@ -117,6 +120,7 @@ def run_field_test_loop(
                 execution_state=execution_state,
                 runtime_state=runtime_state,
                 args=args,
+                scheduler_options=scheduler_options,
                 completion_ctx=completion_ctx,
             )
         except KeyboardInterrupt:
