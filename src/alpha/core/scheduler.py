@@ -24,9 +24,10 @@ from ..api.timing import wait_seconds
 from ..models.domain import FieldTestResult
 from ..models.runtime_options import ResultWriteOptions, SchedulerControlOptions
 from ..models.runtime_protocols import RunConfig, SchedulerRuntimeArgs, TemplateStats
+from ..runtime.concurrency import RuntimeConcurrencyState
 from ..runtime.contexts import FutureCompletionContext
 from ..runtime.queue_retry import QueueRetryKey
-from ..runtime.state import ExecutionState, RuntimeConcurrencyState
+from ..runtime.state import ExecutionState
 from .result_processing import apply_completed_result
 from .scheduler_completion import (
     build_completion_context,

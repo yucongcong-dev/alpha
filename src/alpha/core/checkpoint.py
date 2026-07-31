@@ -22,8 +22,9 @@ import time
 from typing import Any
 
 from ..config.constants import CHECKPOINT_PENDING_FUTURES_LIMIT, CHECKPOINT_RESUME_SAFETY_SECONDS
+from ..runtime.concurrency import RuntimeConcurrencyState
 from ..runtime.contexts import PendingFutureContext
-from ..runtime.state import ExecutionState, RuntimeConcurrencyState
+from ..runtime.state import ExecutionState
 
 logger = logging.getLogger(__name__)
 

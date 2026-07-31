@@ -20,8 +20,8 @@ from ..models.runtime_options import (
 )
 from ..models.runtime_protocols import CredentialsArgs, RunConfig, SimulationSettingsArgs
 from ..policy.types import BlacklistPayload
+from ..runtime.concurrency import RuntimeConcurrencyState
 from ..runtime.contexts import HistoricalRunState
-from ..runtime.state import RuntimeConcurrencyState
 
 
 class CleanupLegacySidecarFiles(Protocol):

@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING
 from .._facade import ExportMap, facade_dir, resolve_export
 
 if TYPE_CHECKING:
+    from .concurrency import RuntimeConcurrencyState
     from .contexts import (
         FutureCompletionContext,
         HistoricalRunState,
@@ -18,7 +19,6 @@ if TYPE_CHECKING:
         ExecutionState,
         InitializedRunContext,
         PendingFutureLike,
-        RuntimeConcurrencyState,
     )
 
 _EXPORT_MAP: ExportMap = {
@@ -30,7 +30,7 @@ _EXPORT_MAP: ExportMap = {
     "ExecutionState": (".state", "ExecutionState"),
     "InitializedRunContext": (".state", "InitializedRunContext"),
     "PendingFutureLike": (".state", "PendingFutureLike"),
-    "RuntimeConcurrencyState": (".state", "RuntimeConcurrencyState"),
+    "RuntimeConcurrencyState": (".concurrency", "RuntimeConcurrencyState"),
 }
 
 __all__ = list(_EXPORT_MAP)

@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from concurrent.futures import Future
 from dataclasses import dataclass, field
-import time
 
 from ..config.models import DatasetExpressionPolicy
 from ..models.domain import FieldTestResult, TemplateField, TemplateLibrary
@@ -16,30 +15,12 @@ from ..models.runtime_protocols import (
     TemplateStats,
 )
 from ..policy.types import BlacklistRuntimeStats
+from .concurrency import RuntimeConcurrencyState
 from .contexts import HistoricalRunState, PendingFutureContext
 from .field_queue import FieldQueueState
 from .future_queue import FutureQueueState
 from .queue_retry import QueueRetryState
 from .result_ledger import ResultLedgerState
-
-
-@dataclass
-class RuntimeConcurrencyState:
-    """并发调度状态数据类。"""
-
-    max_workers: int = 2
-    runtime_max_workers: int = 2
-    cooldown_until: float = 0.0
-
-    def is_cooling_down(self) -> bool:
-        return self.cooldown_until > 0 and time.monotonic() < self.cooldown_until
-
-    def can_restore_concurrency(self) -> bool:
-        return (
-            self.cooldown_until > 0
-            and time.monotonic() >= self.cooldown_until
-            and self.runtime_max_workers != self.max_workers
-        )
 
 
 @dataclass

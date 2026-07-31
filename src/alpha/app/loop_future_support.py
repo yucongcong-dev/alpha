@@ -13,11 +13,12 @@ from ..generators.payload import build_simulation_payload
 from ..models.domain import FieldTestResult, SettingsVariant, TemplateField
 from ..models.runtime_options import SchedulerControlOptions
 from ..models.runtime_protocols import SchedulerRuntimeArgs, SimulationStageArgs
+from ..runtime.concurrency import RuntimeConcurrencyState
 from ..runtime.contexts import (
     FutureCompletionContext,
     PendingFutureContext,
 )
-from ..runtime.state import ExecutionState, InitializedRunContext, RuntimeConcurrencyState
+from ..runtime.state import ExecutionState, InitializedRunContext
 from .run_loop_resume import save_terminal_pipeline_state
 
 logger = logging.getLogger(__name__)

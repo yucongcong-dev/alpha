@@ -49,6 +49,7 @@ if TYPE_CHECKING:
         TemplateSequence,
         TemplateStats,
     )
+    from ..runtime.concurrency import RuntimeConcurrencyState
     from ..runtime.contexts import (
         FutureCompletionContext,
         HistoricalRunState,
@@ -63,7 +64,6 @@ if TYPE_CHECKING:
         ExecutionState,
         InitializedRunContext,
         PendingFutureLike,
-        RuntimeConcurrencyState,
     )
 
 _EXPORT_MAP: ExportMap = {
@@ -111,7 +111,7 @@ _EXPORT_MAP: ExportMap = {
     "QueueRetryState": ("..runtime.queue_retry", "QueueRetryState"),
     "QueueRetryUpdate": ("..runtime.queue_retry", "QueueRetryUpdate"),
     "ResultLedgerState": ("..runtime.result_ledger", "ResultLedgerState"),
-    "RuntimeConcurrencyState": ("..runtime.state", "RuntimeConcurrencyState"),
+    "RuntimeConcurrencyState": ("..runtime.concurrency", "RuntimeConcurrencyState"),
     "TemplateBuildContext": ("..runtime.contexts", "TemplateBuildContext"),
 }
 

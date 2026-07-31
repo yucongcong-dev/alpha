@@ -46,7 +46,8 @@ from ..policy.blacklist_store import (
     summarize_blacklist_payload,
 )
 from ..policy.expression import get_dataset_expression_policy
-from ..runtime.state import InitializedRunContext, RuntimeConcurrencyState
+from ..runtime.concurrency import RuntimeConcurrencyState
+from ..runtime.state import InitializedRunContext
 from .bootstrap_cleanup import clean_runtime_artifacts as clean_runtime_artifacts
 from .bootstrap_field_selection import prepare_fields_for_execution
 from .bootstrap_state import build_execution_state
