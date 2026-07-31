@@ -8,6 +8,7 @@ from ..runtime.preset_mode import resolve_preset_mode
 from .runtime_protocols import (
     ApiClientArgs,
     FieldFetchArgs,
+    FieldSelectionArgs,
     ResultWriteArgs,
     TemplateBuildArgs,
 )
@@ -122,4 +123,21 @@ class FieldFetchOptions:
             delay=args.delay,
             dataset_id=args.dataset_id,
             page_size=int(args.page_size or 0),
+        )
+
+
+@dataclass(frozen=True)
+class FieldSelectionOptions:
+    """Field ranking and slicing knobs used during bootstrap planning."""
+
+    top_fields_by_feedback: int = 0
+    offset: int = 0
+    limit: int = 0
+
+    @classmethod
+    def from_args(cls, args: FieldSelectionArgs) -> FieldSelectionOptions:
+        return cls(
+            top_fields_by_feedback=int(getattr(args, "top_fields_by_feedback", 0) or 0),
+            offset=int(getattr(args, "offset", 0) or 0),
+            limit=int(getattr(args, "limit", 0) or 0),
         )

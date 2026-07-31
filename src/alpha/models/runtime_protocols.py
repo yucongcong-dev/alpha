@@ -189,6 +189,17 @@ class PlanningRuntimeArgs(Protocol):
     def stop_after_submittable(self) -> int: ...
 
 
+class FieldSelectionArgs(Protocol):
+    @property
+    def top_fields_by_feedback(self) -> int: ...
+
+    @property
+    def offset(self) -> int: ...
+
+    @property
+    def limit(self) -> int: ...
+
+
 class RuntimeConcurrencyArgs(Protocol):
     @property
     def max_concurrent_simulations(self) -> int: ...
@@ -334,9 +345,6 @@ class RunLoopArgs(
     SchedulerRuntimeArgs,
     Protocol,
 ):
-    @property
-    def dry_run_plan(self) -> bool: ...
-
     @property
     def field_template_batch_size(self) -> int: ...
 

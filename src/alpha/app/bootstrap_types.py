@@ -14,7 +14,7 @@ from ..config.runtime_values import RuntimeConfig
 from ..generators.fields import DatasetFieldClient
 from ..models.domain import TemplateField, TemplateLibrary
 from ..models.io_types import RunFilters, RunPaths
-from ..models.runtime_options import FieldFetchOptions
+from ..models.runtime_options import FieldFetchOptions, FieldSelectionOptions
 from ..models.runtime_protocols import CredentialsArgs, RunConfig
 from ..policy.types import BlacklistPayload
 from ..runtime.contexts import HistoricalRunState
@@ -64,8 +64,20 @@ class PrepareFieldsForExecution(Protocol):
         filters_dict: RunFilters,
         expression_policy: DatasetExpressionPolicy,
         historical_state: HistoricalRunState,
-        args: object,
+        selection_options: FieldSelectionOptions,
     ) -> tuple[list[TemplateField], dict[str, int]]: ...
+
+
+class BuildHistoricalRunState(Protocol):
+    """Historical-result loader with optional repair side effects."""
+
+    def __call__(
+        self,
+        output_path: str,
+        feedback_output_path: str,
+        *,
+        repair_corrupt_summary: bool = True,
+    ) -> HistoricalRunState: ...
 
 
 @dataclass(frozen=True)
@@ -92,7 +104,7 @@ class SupportingResourceServices:
     get_dataset_expression_policy: Callable[[str], DatasetExpressionPolicy]
     stable_fingerprint: Callable[[object], str]
     build_settings_fingerprint: Callable[[ApplicationConfig], str]
-    build_historical_run_state: Callable[[str, str], HistoricalRunState]
+    build_historical_run_state: BuildHistoricalRunState
 
 
 @dataclass(frozen=True)

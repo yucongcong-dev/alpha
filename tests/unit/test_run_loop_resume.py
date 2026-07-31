@@ -149,7 +149,6 @@ def test_run_field_test_loop_persists_progress_for_skipped_fields(tmp_path) -> N
     ]
     run_ctx = _build_run_ctx(fields)
     args = argparse.Namespace(
-        dry_run_plan=False,
         field_template_batch_size=0,
         stop_after_submittable=0,
         dataset_id="fundamental6",
@@ -195,7 +194,6 @@ def test_run_field_test_loop_interrupts_workers_without_waiting(tmp_path) -> Non
     fields = [{"id": "f1", "type": "MATRIX", "name": "f1"}]
     run_ctx = _build_run_ctx(fields)
     args = argparse.Namespace(
-        dry_run_plan=False,
         field_template_batch_size=0,
         stop_after_submittable=0,
         dataset_id="fundamental6",

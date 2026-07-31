@@ -9,17 +9,43 @@ from ..cli.filters import load_run_filters_extended
 from ..config.application import ApplicationConfig
 from ..core.executor import print_dry_run_plan
 from ..generators.fields import load_fields_cache
+from ..generators.fingerprint import stable_fingerprint
+from ..generators.payload import build_settings_fingerprint
 from ..generators.templates.library_loader import load_template_library
 from ..generators.templates.library_store import ensure_dataset_template_library
 from ..models.io_types import RunPaths
-from ..models.runtime_options import FieldFetchOptions
+from ..models.runtime_options import FieldFetchOptions, FieldSelectionOptions
 from ..policy.blacklist_context import set_active_datasets_root
+from ..policy.blacklist_store import (
+    ensure_template_blacklist_file,
+    read_blacklist_payload,
+    summarize_blacklist_payload,
+)
 from ..policy.expression import get_dataset_expression_policy
 from .bootstrap_fields import prepare_fields_for_execution
+from .bootstrap_resource_loading import load_supporting_resources
 from .bootstrap_state import create_execution_state
 from .bootstrap_steps import build_effective_run_paths, resolve_bootstrap_paths
+from .bootstrap_types import SupportingResourceServices
 
 logger = logging.getLogger(__name__)
+
+
+def build_planning_supporting_services() -> SupportingResourceServices:
+    """Build local-resource dependencies so tests/runtime overrides stay effective."""
+    return SupportingResourceServices(
+        set_active_datasets_root=set_active_datasets_root,
+        ensure_dataset_template_library=ensure_dataset_template_library,
+        ensure_template_blacklist_file=ensure_template_blacklist_file,
+        load_template_library=load_template_library,
+        read_blacklist_payload=read_blacklist_payload,
+        summarize_blacklist_payload=summarize_blacklist_payload,
+        load_run_filters_extended=load_run_filters_extended,
+        get_dataset_expression_policy=get_dataset_expression_policy,
+        stable_fingerprint=stable_fingerprint,
+        build_settings_fingerprint=build_settings_fingerprint,
+        build_historical_run_state=build_historical_run_state,
+    )
 
 
 def run_dry_run_plan(args: ApplicationConfig, run_paths: RunPaths | None) -> bool:
@@ -28,15 +54,13 @@ def run_dry_run_plan(args: ApplicationConfig, run_paths: RunPaths | None) -> boo
     effective_run_paths = build_effective_run_paths(args, paths, run_paths)
     dataset_id = str(args.dataset_id)
 
-    set_active_datasets_root(paths.datasets_root)
-    template_library_file = ensure_dataset_template_library(paths.template_library_file, dataset_id)
-    template_library = load_template_library(template_library_file)
-    filters = load_run_filters_extended(effective_run_paths)
-    expression_policy = get_dataset_expression_policy(dataset_id)
-    historical_state = build_historical_run_state(
-        paths.output_file,
-        paths.feedback_output,
+    supporting_resources = load_supporting_resources(
+        dataset_id=dataset_id,
+        paths=paths,
+        effective_run_paths=effective_run_paths,
+        services=build_planning_supporting_services(),
         repair_corrupt_summary=False,
+        log_blacklist=False,
     )
 
     field_options = FieldFetchOptions.from_args(args)
@@ -59,10 +83,10 @@ def run_dry_run_plan(args: ApplicationConfig, run_paths: RunPaths | None) -> boo
 
     prepared_fields, field_stats = prepare_fields_for_execution(
         list(fields),
-        filters_dict=filters,
-        expression_policy=expression_policy,
-        historical_state=historical_state,
-        args=args,
+        filters_dict=supporting_resources.filters,
+        expression_policy=supporting_resources.expression_policy,
+        historical_state=supporting_resources.historical_state,
+        selection_options=FieldSelectionOptions.from_args(args),
     )
     if not prepared_fields:
         logger.error("[dry-run] no fields remain after local filtering")
@@ -107,16 +131,16 @@ def run_dry_run_plan(args: ApplicationConfig, run_paths: RunPaths | None) -> boo
 
     execution_state = create_execution_state(
         dataset_id=dataset_id,
-        historical_state=historical_state,
+        historical_state=supporting_resources.historical_state,
         datasets_root=paths.datasets_root,
     )
     print_dry_run_plan(
         args=args,
         fields=prepared_fields,
-        filters=filters,
-        template_library=template_library,
-        historical_state=historical_state,
+        filters=supporting_resources.filters,
+        template_library=supporting_resources.template_library,
+        historical_state=supporting_resources.historical_state,
         execution_state=execution_state,
-        use_dataset_heuristics=expression_policy.use_curated_heuristics,
+        use_dataset_heuristics=supporting_resources.expression_policy.use_curated_heuristics,
     )
     return True

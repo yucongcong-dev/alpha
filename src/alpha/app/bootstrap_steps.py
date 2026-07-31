@@ -11,7 +11,7 @@ from ..config.application import ApplicationConfig
 from ..io.common import resolve_datasets_root
 from ..models.domain import TemplateField
 from ..models.io_types import RunPaths
-from ..models.runtime_options import ApiClientOptions, FieldFetchOptions
+from ..models.runtime_options import ApiClientOptions, FieldFetchOptions, FieldSelectionOptions
 from ..models.runtime_protocols import (
     ApiClientArgs,
     RunConfig,
@@ -128,12 +128,14 @@ def resolve_credentials(
 
 
 def log_field_selection_stats(
-    args: ApplicationConfig,
+    *,
+    dataset_id: str,
+    selection_options: FieldSelectionOptions,
     field_stats: dict[str, int],
     fields: list[TemplateField],
 ) -> None:
     """Emit field-filtering and ranking diagnostics."""
-    top_fields_by_feedback, offset, limit = resolve_field_selection(args)
+    top_fields_by_feedback, offset, limit = resolve_field_selection(selection_options)
     if field_stats["prefiltered_count"] > 0:
         logger.info(
             "[filter] 排序前因 include/exclude 规则过滤 %d 个字段",
@@ -175,7 +177,7 @@ def log_field_selection_stats(
             field_stats.get("unknown_user_count", 0),
         )
     if not fields:
-        logger.error("[error] 数据集 %s 在字段过滤后没有可运行字段", args.dataset_id)
+        logger.error("[error] 数据集 %s 在字段过滤后没有可运行字段", dataset_id)
         return
     if top_fields_by_feedback > 0:
         logger.info("[focus] 限制运行到按反馈排序的前 %d 个字段", len(fields))
@@ -188,7 +190,7 @@ def log_field_selection_stats(
         limit,
         len(fields),
     )
-    logger.info("[data] 从数据集 %s 获取 %d 个字段", args.dataset_id, len(fields))
+    logger.info("[data] 从数据集 %s 获取 %d 个字段", dataset_id, len(fields))
 
 
 def prepare_bootstrap_resources(
@@ -240,14 +242,20 @@ def prepare_bootstrap_resources(
         logger.error("[error] 数据集 %s 未返回任何字段", args.dataset_id)
         return None
 
+    field_selection_options = FieldSelectionOptions.from_args(args)
     prepared_fields, field_stats = field_services.prepare_fields_for_execution(
         list(fields),
         filters_dict=supporting_resources.filters,
         expression_policy=supporting_resources.expression_policy,
         historical_state=supporting_resources.historical_state,
-        args=args,
+        selection_options=field_selection_options,
     )
-    log_field_selection_stats(args, field_stats, prepared_fields)
+    log_field_selection_stats(
+        dataset_id=dataset_id,
+        selection_options=field_selection_options,
+        field_stats=field_stats,
+        fields=prepared_fields,
+    )
     if not prepared_fields:
         return None
     if supporting_resources.historical_state.existing_results:

@@ -16,6 +16,7 @@ from ..config.models import DatasetExpressionPolicy
 from ..generators.fields import choose_field_name
 from ..models.domain import TemplateField
 from ..models.io_types import RunFilters
+from ..models.runtime_options import FieldSelectionOptions
 from ..runtime.contexts import HistoricalRunState
 from ..utils.helpers import first_non_empty, is_event_field_name
 
@@ -226,14 +227,20 @@ def _passes_quality_filters(
     elif values.user_count < thresholds.min_user_count:
         stats["low_user_count"] += 1
         return False
-    if thresholds.max_alpha_count > 0 and values.alpha_count is not None:
-        if values.alpha_count > thresholds.max_alpha_count:
-            stats["high_alpha_count"] += 1
-            return False
-    if thresholds.max_user_count > 0 and values.user_count is not None:
-        if values.user_count > thresholds.max_user_count:
-            stats["high_user_count"] += 1
-            return False
+    if (
+        thresholds.max_alpha_count > 0
+        and values.alpha_count is not None
+        and values.alpha_count > thresholds.max_alpha_count
+    ):
+        stats["high_alpha_count"] += 1
+        return False
+    if (
+        thresholds.max_user_count > 0
+        and values.user_count is not None
+        and values.user_count > thresholds.max_user_count
+    ):
+        stats["high_user_count"] += 1
+        return False
     return True
 
 
@@ -510,12 +517,12 @@ def _select_diverse_fields(
     return selected
 
 
-def resolve_field_selection(args: object) -> tuple[int, int, int]:
-    """Extract top-N/offset/limit knobs from an args-like object."""
+def resolve_field_selection(selection_options: FieldSelectionOptions) -> tuple[int, int, int]:
+    """Extract top-N/offset/limit knobs from field selection options."""
     return (
-        _safe_int(getattr(args, "top_fields_by_feedback", 0)),
-        _safe_int(getattr(args, "offset", 0)),
-        _safe_int(getattr(args, "limit", 0)),
+        _safe_int(selection_options.top_fields_by_feedback),
+        _safe_int(selection_options.offset),
+        _safe_int(selection_options.limit),
     )
 
 
@@ -759,10 +766,10 @@ def prepare_fields_for_execution(
     filters_dict: RunFilters,
     expression_policy: DatasetExpressionPolicy,
     historical_state: HistoricalRunState,
-    args: object,
+    selection_options: FieldSelectionOptions,
 ) -> tuple[list[TemplateField], dict[str, int]]:
     """对字段做过滤、排序并最终应用 offset/limit。"""
-    top_fields_by_feedback, offset, limit = resolve_field_selection(args)
+    top_fields_by_feedback, offset, limit = resolve_field_selection(selection_options)
     cached_field_count = len(fields)
     if filters_dict.include_fields:
         return _prepare_explicit_fields_for_execution(

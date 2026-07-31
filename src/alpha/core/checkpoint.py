@@ -270,10 +270,7 @@ def load_pipeline_state(
         return 0
 
     # 平台拥塞是瞬时全局状态，不从 checkpoint 恢复字段级跳过信息。
-    execution_state.field_queue_busy_counts = {}
-    execution_state.skipped_fields_due_to_queue = set()
-    execution_state.queue_retry_counts = {}
-    execution_state.queue_exhausted_keys = set()
+    execution_state.reset_transient_queue_state()
 
     pending_payload = payload.get("pending_simulations")
     if pending_payload is None:

@@ -25,7 +25,7 @@ from ..models.domain import FieldTestResult
 from ..models.runtime_options import ResultWriteOptions
 from ..models.runtime_protocols import RunConfig, SchedulerRuntimeArgs, TemplateStats
 from ..runtime.contexts import FutureCompletionContext
-from ..runtime.state import ExecutionState, RuntimeConcurrencyState
+from ..runtime.state import ExecutionState, QueueRetryKey, RuntimeConcurrencyState
 from .result_processing import apply_completed_result
 from .scheduler_completion import (
     build_completion_context,
@@ -42,9 +42,6 @@ from .scheduler_decisions import (
 )
 
 logger = logging.getLogger(__name__)
-
-QueueRetryKey = tuple[str, str, str, str]
-
 
 def _stop_after_submittable_threshold(args: SchedulerRuntimeArgs) -> int:
     try:
@@ -155,15 +152,15 @@ def register_queue_busy_template(
     """Bound retries for one candidate without blacklisting its whole field."""
     if key is None:
         return
-    retry_limit = max(0, int(args.field_queue_busy_skip_after or 0))
-    next_count = execution_state.queue_retry_counts.get(key, 0) + 1
-    execution_state.queue_retry_counts[key] = next_count
-    if retry_limit > 0 and next_count >= retry_limit:
-        execution_state.queue_exhausted_keys.add(key)
+    update = execution_state.queue_retry_state.register_busy(
+        key,
+        retry_limit=args.field_queue_busy_skip_after,
+    )
+    if update.exhausted:
         logger.info(
             "[queue] exhausted retry budget %d/%d field=%s template=%s settings=%s",
-            next_count,
-            retry_limit,
+            update.next_count,
+            update.retry_limit,
             key[0],
             key[1],
             key[3],
@@ -171,8 +168,8 @@ def register_queue_busy_template(
     else:
         logger.info(
             "[queue] candidate remains retryable attempt=%d%s field=%s template=%s",
-            next_count,
-            f"/{retry_limit}" if retry_limit > 0 else "",
+            update.next_count,
+            f"/{update.retry_limit}" if update.retry_limit > 0 else "",
             key[0],
             key[1],
         )

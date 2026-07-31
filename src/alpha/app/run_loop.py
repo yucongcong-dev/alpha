@@ -6,7 +6,6 @@ from concurrent.futures import ThreadPoolExecutor
 import logging
 
 from ..config.application import ApplicationConfig
-from ..core.executor import print_dry_run_plan
 from ..models.io_types import RunPaths
 from ..runtime.state import InitializedRunContext
 from .loop_future_support import cancel_unstarted_futures as cancel_unstarted_futures
@@ -64,18 +63,6 @@ def run_field_test_loop(
         runtime_state=runtime_state,
         execution_state=execution_state,
     )
-
-    if args.dry_run_plan:
-        print_dry_run_plan(
-            args=args,
-            fields=fields,
-            filters=run_ctx.filters,
-            template_library=run_ctx.template_library,
-            historical_state=run_ctx.historical_state,
-            execution_state=execution_state,
-            use_dataset_heuristics=run_ctx.use_dataset_heuristics,
-        )
-        return
 
     template_build_ctx = create_template_build_context(
         args=args,

@@ -2,14 +2,13 @@
 
 from __future__ import annotations
 
-from argparse import Namespace
-
 from alpha.app.bootstrap_fields import infer_field_family, prepare_fields_for_execution
 from alpha.app.run_loop_feedback import refresh_runtime_feedback
 from alpha.app.run_loop_resume import build_field_resume_positions, normalize_resume_index
 from alpha.models.domain import FieldTestResult
 from alpha.models.io_types import RunFilters
 from alpha.models.runtime import HistoricalRunState, TemplateBuildContext, TemplateBuildOptions
+from alpha.models.runtime_options import FieldSelectionOptions
 from alpha.policy.expression import get_dataset_expression_policy
 
 _DEFAULT_SIM_SETTINGS = {
@@ -49,7 +48,7 @@ def test_prepare_fields_for_execution_filters_before_limit() -> None:
             "dateCreated": "2022-05-01",
         },
     ]
-    args = Namespace(limit=1, offset=0, top_fields_by_feedback=0)
+    args = FieldSelectionOptions(limit=1, offset=0, top_fields_by_feedback=0)
     filters = RunFilters(include_fields={"cash_st"})
     historical_state = HistoricalRunState(field_feedback={})
 
@@ -58,7 +57,7 @@ def test_prepare_fields_for_execution_filters_before_limit() -> None:
         filters_dict=filters,
         expression_policy=get_dataset_expression_policy("fundamental6"),
         historical_state=historical_state,
-        args=args,
+        selection_options=args,
     )
 
     assert [row["id"] for row in selected] == ["cash_st"]
@@ -89,7 +88,7 @@ def test_prepare_fields_for_execution_applies_metadata_filters() -> None:
             "dateCreated": "2022-05-01",
         },
     ]
-    args = Namespace(limit=0, offset=0, top_fields_by_feedback=0)
+    args = FieldSelectionOptions(limit=0, offset=0, top_fields_by_feedback=0)
     filters = RunFilters()
     historical_state = HistoricalRunState(field_feedback={})
 
@@ -98,7 +97,7 @@ def test_prepare_fields_for_execution_applies_metadata_filters() -> None:
         filters_dict=filters,
         expression_policy=get_dataset_expression_policy("fundamental6"),
         historical_state=historical_state,
-        args=args,
+        selection_options=args,
     )
 
     assert [row["id"] for row in selected] == ["cash_st"]
@@ -135,7 +134,7 @@ def test_explicit_include_fields_bypass_metadata_filters_and_feedback_ranking() 
         historical_state=HistoricalRunState(
             field_feedback={"strong_feedback": {"best_score": 1.0, "attempted_templates": 3}}
         ),
-        args=Namespace(limit=0, offset=0, top_fields_by_feedback=0),
+        selection_options=FieldSelectionOptions(limit=0, offset=0, top_fields_by_feedback=0),
     )
 
     assert [row["id"] for row in selected] == ["manual_field"]
@@ -166,7 +165,7 @@ def test_fundamental6_no_longer_applies_stricter_event_field_filters() -> None:
             "dateCreated": "2022-05-01",
         },
     ]
-    args = Namespace(limit=0, offset=0, top_fields_by_feedback=0)
+    args = FieldSelectionOptions(limit=0, offset=0, top_fields_by_feedback=0)
     filters = RunFilters()
     historical_state = HistoricalRunState(field_feedback={})
 
@@ -175,7 +174,7 @@ def test_fundamental6_no_longer_applies_stricter_event_field_filters() -> None:
         filters_dict=filters,
         expression_policy=get_dataset_expression_policy("fundamental6"),
         historical_state=historical_state,
-        args=args,
+        selection_options=args,
     )
 
     assert {row["id"] for row in selected} == {"cash_st", "fnd6_cptnewqeventv110_apq"}
@@ -205,7 +204,7 @@ def test_prepare_fields_for_execution_tags_model16_field_lanes() -> None:
             "type": "MATRIX",
         },
     ]
-    args = Namespace(limit=0, offset=0, top_fields_by_feedback=0)
+    args = FieldSelectionOptions(limit=0, offset=0, top_fields_by_feedback=0)
     filters = RunFilters()
     historical_state = HistoricalRunState(field_feedback={})
 
@@ -214,7 +213,7 @@ def test_prepare_fields_for_execution_tags_model16_field_lanes() -> None:
         filters_dict=filters,
         expression_policy=get_dataset_expression_policy("model16"),
         historical_state=historical_state,
-        args=args,
+        selection_options=args,
     )
 
     tags_by_id = {row["id"]: tuple(row.get("runtime_field_tags", [])) for row in selected}
@@ -254,7 +253,7 @@ def test_prepare_fields_for_execution_hard_filters_crowded_model51_fields() -> N
             "dateCreated": "2022-05-01",
         },
     ]
-    args = Namespace(limit=0, offset=0, top_fields_by_feedback=0)
+    args = FieldSelectionOptions(limit=0, offset=0, top_fields_by_feedback=0)
     filters = RunFilters()
     historical_state = HistoricalRunState(field_feedback={})
 
@@ -263,7 +262,7 @@ def test_prepare_fields_for_execution_hard_filters_crowded_model51_fields() -> N
         filters_dict=filters,
         expression_policy=get_dataset_expression_policy("model51"),
         historical_state=historical_state,
-        args=args,
+        selection_options=args,
     )
 
     assert [row["id"] for row in selected] == ["unsystematic_risk_last_60_days"]
@@ -300,14 +299,14 @@ def test_unknown_dataset_filters_unvalidated_and_overcrowded_fields() -> None:
             "dateCreated": "2025-01-01",
         },
     ]
-    args = Namespace(limit=0, offset=0, top_fields_by_feedback=0)
+    args = FieldSelectionOptions(limit=0, offset=0, top_fields_by_feedback=0)
 
     selected, stats = prepare_fields_for_execution(
         fields,
         filters_dict=RunFilters(),
         expression_policy=get_dataset_expression_policy("new_dataset"),
         historical_state=HistoricalRunState(field_feedback={}),
-        args=args,
+        selection_options=args,
     )
 
     assert [row["id"] for row in selected] == ["valid_signal"]
@@ -333,14 +332,14 @@ def test_limit_diversifies_numeric_tenor_families() -> None:
             ("forward_price_10", 0.97),
         ]
     ]
-    args = Namespace(limit=3, offset=0, top_fields_by_feedback=0)
+    args = FieldSelectionOptions(limit=3, offset=0, top_fields_by_feedback=0)
 
     selected, stats = prepare_fields_for_execution(
         fields,
         filters_dict=RunFilters(),
         expression_policy=get_dataset_expression_policy("new_dataset"),
         historical_state=HistoricalRunState(field_feedback={}),
-        args=args,
+        selection_options=args,
     )
 
     assert [row["id"] for row in selected] == [
@@ -374,14 +373,14 @@ def test_limit_reserves_capacity_for_unexplored_fields() -> None:
             "known_signal_b": {"best_score": 0.80, "attempted_templates": 2},
         }
     )
-    args = Namespace(limit=2, offset=0, top_fields_by_feedback=0)
+    args = FieldSelectionOptions(limit=2, offset=0, top_fields_by_feedback=0)
 
     selected, stats = prepare_fields_for_execution(
         fields,
         filters_dict=RunFilters(),
         expression_policy=get_dataset_expression_policy("new_dataset"),
         historical_state=history,
-        args=args,
+        selection_options=args,
     )
 
     assert [row["id"] for row in selected] == ["known_signal_a", "new_signal"]
@@ -408,7 +407,7 @@ def test_failed_feedback_does_not_consume_exploitation_budget() -> None:
         historical_state=HistoricalRunState(
             field_feedback={"failed_signal": {"best_score": 0.1, "attempted_templates": 4}}
         ),
-        args=Namespace(limit=2, offset=0, top_fields_by_feedback=0),
+        selection_options=FieldSelectionOptions(limit=2, offset=0, top_fields_by_feedback=0),
     )
 
     assert [row["id"] for row in selected] == ["new_signal_a", "new_signal_b"]
@@ -440,7 +439,7 @@ def test_submittable_feedback_is_promising_even_after_single_attempt() -> None:
                 }
             }
         ),
-        args=Namespace(limit=0, offset=0, top_fields_by_feedback=0),
+        selection_options=FieldSelectionOptions(limit=0, offset=0, top_fields_by_feedback=0),
     )
 
     assert selected[0]["selection_reason"] == "historical_promising"
@@ -464,7 +463,7 @@ def test_unknown_field_metadata_is_retained_without_affecting_rank_score() -> No
         filters_dict=RunFilters(),
         expression_policy=get_dataset_expression_policy("new_dataset"),
         historical_state=HistoricalRunState(field_feedback={}),
-        args=Namespace(limit=0, offset=0, top_fields_by_feedback=0),
+        selection_options=FieldSelectionOptions(limit=0, offset=0, top_fields_by_feedback=0),
     )
 
     assert {row["id"] for row in selected} == {"complete_signal", "metadata_missing"}
@@ -504,7 +503,7 @@ def test_single_attempt_feedback_is_not_pinned_as_promising() -> None:
         historical_state=HistoricalRunState(
             field_feedback={"one_attempt": {"best_score": 0.95, "attempted_templates": 1}}
         ),
-        args=Namespace(limit=0, offset=0, top_fields_by_feedback=0),
+        selection_options=FieldSelectionOptions(limit=0, offset=0, top_fields_by_feedback=0),
     )
 
     reasons = {row["id"]: row["selection_reason"] for row in selected}
@@ -536,7 +535,7 @@ def test_stale_feedback_is_decayed_before_promising_classification() -> None:
                 }
             }
         ),
-        args=Namespace(limit=0, offset=0, top_fields_by_feedback=0),
+        selection_options=FieldSelectionOptions(limit=0, offset=0, top_fields_by_feedback=0),
     )
 
     assert selected[0]["selection_reason"] == "historical_feedback"
@@ -565,14 +564,14 @@ def test_unknown_dataset_prefers_matrix_over_equivalent_vector() -> None:
             "dateCreated": "2025-01-01",
         },
     ]
-    args = Namespace(limit=1, offset=0, top_fields_by_feedback=0)
+    args = FieldSelectionOptions(limit=1, offset=0, top_fields_by_feedback=0)
 
     selected, _ = prepare_fields_for_execution(
         fields,
         filters_dict=RunFilters(),
         expression_policy=get_dataset_expression_policy("new_dataset"),
         historical_state=HistoricalRunState(field_feedback={}),
-        args=args,
+        selection_options=args,
     )
 
     assert [row["id"] for row in selected] == ["matrix_signal"]
@@ -592,14 +591,14 @@ def test_family_selection_prefers_representative_windows_on_ties() -> None:
         }
         for window in (10, 30, 60, 1080)
     ]
-    args = Namespace(limit=2, offset=0, top_fields_by_feedback=0)
+    args = FieldSelectionOptions(limit=2, offset=0, top_fields_by_feedback=0)
 
     selected, _ = prepare_fields_for_execution(
         fields,
         filters_dict=RunFilters(),
         expression_policy=get_dataset_expression_policy("new_dataset"),
         historical_state=HistoricalRunState(field_feedback={}),
-        args=args,
+        selection_options=args,
     )
 
     assert [row["id"] for row in selected] == ["pcr_vol_30", "pcr_vol_60"]

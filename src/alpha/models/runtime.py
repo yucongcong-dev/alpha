@@ -20,6 +20,7 @@ if TYPE_CHECKING:
     from .runtime_options import (
         ApiClientOptions,
         FieldFetchOptions,
+        FieldSelectionOptions,
         ResultWriteOptions,
         TemplateBuildOptions,
     )
@@ -31,6 +32,7 @@ if TYPE_CHECKING:
         ClientFactoryLike,
         CredentialsArgs,
         FieldFetchArgs,
+        FieldSelectionArgs,
         ResultWriteArgs,
         RuntimeConcurrencyArgs,
         RunConfig,
@@ -56,6 +58,9 @@ if TYPE_CHECKING:
         ExecutionState,
         InitializedRunContext,
         PendingFutureLike,
+        QueueRetryKey,
+        QueueRetryState,
+        QueueRetryUpdate,
         RuntimeConcurrencyState,
     )
 
@@ -65,6 +70,7 @@ _EXPORT_MAP: ExportMap = {
     "SimulationStageConfig": (".runtime_config", "SimulationStageConfig"),
     "ApiClientOptions": (".runtime_options", "ApiClientOptions"),
     "FieldFetchOptions": (".runtime_options", "FieldFetchOptions"),
+    "FieldSelectionOptions": (".runtime_options", "FieldSelectionOptions"),
     "ResultWriteOptions": (".runtime_options", "ResultWriteOptions"),
     "TemplateBuildOptions": (".runtime_options", "TemplateBuildOptions"),
     "ApiClientArgs": (".runtime_protocols", "ApiClientArgs"),
@@ -74,6 +80,7 @@ _EXPORT_MAP: ExportMap = {
     "ClientFactoryLike": (".runtime_protocols", "ClientFactoryLike"),
     "CredentialsArgs": (".runtime_protocols", "CredentialsArgs"),
     "FieldFetchArgs": (".runtime_protocols", "FieldFetchArgs"),
+    "FieldSelectionArgs": (".runtime_protocols", "FieldSelectionArgs"),
     "ResultWriteArgs": (".runtime_protocols", "ResultWriteArgs"),
     "RuntimeConcurrencyArgs": (".runtime_protocols", "RuntimeConcurrencyArgs"),
     "RunConfig": (".runtime_protocols", "RunConfig"),
@@ -94,6 +101,9 @@ _EXPORT_MAP: ExportMap = {
     "PendingFutureContext": ("..runtime.contexts", "PendingFutureContext"),
     "PendingFutureLike": ("..runtime.state", "PendingFutureLike"),
     "PendingTemplateEntry": ("..runtime.contexts", "PendingTemplateEntry"),
+    "QueueRetryKey": ("..runtime.state", "QueueRetryKey"),
+    "QueueRetryState": ("..runtime.state", "QueueRetryState"),
+    "QueueRetryUpdate": ("..runtime.state", "QueueRetryUpdate"),
     "RuntimeConcurrencyState": ("..runtime.state", "RuntimeConcurrencyState"),
     "TemplateBuildContext": ("..runtime.contexts", "TemplateBuildContext"),
 }
