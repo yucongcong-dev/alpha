@@ -97,7 +97,3 @@ class ExpressionPolicyOverrides(TypedDict, total=False):
     positive_raw_fields: list[str]
     negative_raw_fields: list[str]
     template_priority_penalties: dict[str, int]
-
-
-# 保留旧式别名向后兼容
-YamlConfigCacheEntry = dict[str, Any]

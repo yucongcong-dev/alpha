@@ -34,7 +34,7 @@ if TYPE_CHECKING:
         FieldTransformSpec,
         FieldTransformStage,
     )
-    from .profiles import DATASET_PROFILES, DEFAULT_PROFILE, get_dataset_profile
+    from .profiles import DEFAULT_PROFILE, get_dataset_profile
     from .runtime_values import clear_runtime_config_cache, get_runtime_config
     from .yaml import (
         clear_yaml_caches,
@@ -60,7 +60,6 @@ _EXPORT_MAP: dict[str, tuple[str, str]] = {
     "FeedbackPhasePolicy": (".models", "FeedbackPhasePolicy"),
     "FieldTransformSpec": (".models", "FieldTransformSpec"),
     "FieldTransformStage": (".models", "FieldTransformStage"),
-    "DATASET_PROFILES": (".profiles", "DATASET_PROFILES"),
     "DEFAULT_PROFILE": (".profiles", "DEFAULT_PROFILE"),
     "get_dataset_profile": (".profiles", "get_dataset_profile"),
     "clear_yaml_caches": (".yaml", "clear_yaml_caches"),

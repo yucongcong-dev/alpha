@@ -22,9 +22,6 @@ from .constants import (
 )
 from .types import DatasetProfile, YamlConfig
 
-DATASET_PROFILES: dict[str, DatasetProfile] = {}
-"""向后兼容保留的空字典；数据集专属配置请维护在 config/*.yaml。"""
-
 DEFAULT_PROFILE: DatasetProfile = {
     "min_request_interval": DEFAULT_MIN_REQUEST_INTERVAL,
     "sleep_between_fields": DEFAULT_SLEEP_BETWEEN_FIELDS,

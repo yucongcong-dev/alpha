@@ -9,7 +9,6 @@ from alpha.core import checkpoint as checkpoint_module
 from alpha.core.checkpoint import (
     delete_pipeline_state,
     load_pipeline_state,
-    save_checkpoint,
     save_interrupt_report,
     save_pipeline_state,
 )
@@ -466,7 +465,7 @@ def test_save_pipeline_state_handles_empty_path_and_persists_cooldown(tmp_path) 
     assert payload["pending_simulations"][0]["simulation_location"] == "/simulations/sim-1"
 
 
-def test_interrupt_report_alias_and_delete_pipeline_state(tmp_path) -> None:
+def test_interrupt_report_and_delete_pipeline_state(tmp_path) -> None:
     execution_state = _build_execution_state()
     execution_state.resumable_simulations = [
         PendingFutureContext(
@@ -486,7 +485,7 @@ def test_interrupt_report_alias_and_delete_pipeline_state(tmp_path) -> None:
         execution_state=execution_state,
         runtime_state=runtime_state,
     )
-    assert save_checkpoint(
+    assert save_interrupt_report(
         str(report),
         execution_state=execution_state,
         runtime_state=runtime_state,

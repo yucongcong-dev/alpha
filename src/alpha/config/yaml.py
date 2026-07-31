@@ -13,7 +13,7 @@ import sys
 import threading
 from typing import cast
 
-from .types import YamlConfig, YamlConfigCacheEntry
+from .types import YamlConfig
 from .yaml_sources import (
     all_files_signature as _all_files_signature,
 )
@@ -31,7 +31,7 @@ from .yaml_validator import clear_schema_cache, validate_merged_config
 _log = logging.getLogger("alpha.config.yaml")
 
 _config_lock = threading.RLock()
-_config_cache: dict[str, YamlConfigCacheEntry] = {}
+_config_cache: dict[str, YamlConfig] = {}
 _config_validated: bool = False
 _active_config_path: str | None = None
 

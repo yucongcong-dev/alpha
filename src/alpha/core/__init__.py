@@ -15,7 +15,6 @@ if TYPE_CHECKING:
     from .checkpoint import (
         delete_pipeline_state,
         load_pipeline_state,
-        save_checkpoint,
         save_interrupt_report,
         save_pipeline_state,
     )
@@ -55,7 +54,6 @@ if TYPE_CHECKING:
 _EXPORT_MAP: ExportMap = {
     "delete_pipeline_state": (".checkpoint", "delete_pipeline_state"),
     "load_pipeline_state": (".checkpoint", "load_pipeline_state"),
-    "save_checkpoint": (".checkpoint", "save_checkpoint"),
     "save_interrupt_report": (".checkpoint", "save_interrupt_report"),
     "save_pipeline_state": (".checkpoint", "save_pipeline_state"),
     "build_pending_templates_for_field": (".executor", "build_pending_templates_for_field"),

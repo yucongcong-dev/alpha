@@ -412,26 +412,6 @@ def save_interrupt_report(
     return success
 
 
-def save_checkpoint(
-    checkpoint_file: str,
-    *,
-    execution_state: ExecutionState,
-    runtime_state: RuntimeConcurrencyState,
-    field_id: str = "",
-    remaining_fields: int = 0,
-    reason: str = "",
-) -> bool:
-    """Deprecated compatibility alias for :func:`save_interrupt_report`."""
-    return save_interrupt_report(
-        checkpoint_file,
-        execution_state=execution_state,
-        runtime_state=runtime_state,
-        field_id=field_id,
-        remaining_fields=remaining_fields,
-        reason=reason,
-    )
-
-
 def delete_pipeline_state(state_file: str) -> None:
     """运行完成后删除状态文件（表示一次完整运行结束）。"""
     if state_file and os.path.exists(state_file):
