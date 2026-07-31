@@ -36,29 +36,6 @@ from ..config.policy_overrides import apply_yaml_expression_policy_overrides
 from ..models.domain_types import FieldFeedbackSummary
 
 
-def _default_transform_specs() -> tuple[
-    FieldTransformSpec,
-    FieldTransformSpec,
-    FieldTransformSpec,
-    FieldTransformSpec,
-]:
-    """Build default field transform specs used by all dataset policies."""
-    default_transform = FieldTransformSpec()
-    matrix_transform = FieldTransformSpec(
-        stages=(FieldTransformStage(kind="backfill", window=BACKFILL_WINDOW),),
-        backfill_window=BACKFILL_WINDOW,
-    )
-    vector_transform = FieldTransformSpec(
-        stages=(FieldTransformStage(kind="backfill", window=BACKFILL_WINDOW),),
-        backfill_window=BACKFILL_WINDOW,
-    )
-    ratio_transform = FieldTransformSpec(
-        stages=(FieldTransformStage(kind="backfill", window=BACKFILL_WINDOW),),
-        backfill_window=BACKFILL_WINDOW,
-    )
-    return default_transform, matrix_transform, vector_transform, ratio_transform
-
-
 def _default_feedback_loop_policy() -> FeedbackLoopPolicy:
     """Build the default generate/resimulate feedback policy."""
     return FeedbackLoopPolicy(
@@ -84,13 +61,12 @@ def _base_expression_policy(
     dataset_id: str,
     *,
     use_curated_heuristics: bool,
-    default_transform: FieldTransformSpec,
-    matrix_transform: FieldTransformSpec,
-    vector_transform: FieldTransformSpec,
-    ratio_transform: FieldTransformSpec,
-    feedback_loop_policy: FeedbackLoopPolicy,
 ) -> DatasetExpressionPolicy:
     """Build a base policy before YAML overrides are applied."""
+    backfill_transform = FieldTransformSpec(
+        stages=(FieldTransformStage(kind="backfill", window=BACKFILL_WINDOW),),
+        backfill_window=BACKFILL_WINDOW,
+    )
     policy_kwargs: dict[str, Any] = {
         "dataset_id": dataset_id,
         "use_curated_heuristics": use_curated_heuristics,
@@ -104,12 +80,12 @@ def _base_expression_policy(
         "ratio_partner_candidates": dict(RATIO_PARTNER_CANDIDATES),
         "ratio_keywords": dict(RATIO_KEYWORDS),
         "preferred_partner_score_bonuses": dict(DEFAULT_PREFERRED_PARTNER_SCORE_BONUSES),
-        "default_field_transform": default_transform,
-        "matrix_field_transform": matrix_transform,
-        "vector_field_transform": vector_transform,
-        "ratio_numerator_transform": ratio_transform,
-        "ratio_denominator_transform": ratio_transform,
-        "feedback_loop_policy": feedback_loop_policy,
+        "default_field_transform": FieldTransformSpec(),
+        "matrix_field_transform": backfill_transform,
+        "vector_field_transform": backfill_transform,
+        "ratio_numerator_transform": backfill_transform,
+        "ratio_denominator_transform": backfill_transform,
+        "feedback_loop_policy": _default_feedback_loop_policy(),
     }
     if use_curated_heuristics:
         policy_kwargs.update(
@@ -130,31 +106,17 @@ def get_dataset_expression_policy(
     控制，不再硬编码特定数据集名称。
     """
     if use_curated_heuristics is None:
-        use_curated_heuristics = _yaml_curated_heuristics(dataset_id)
+        use_curated_heuristics = use_curated_heuristics_for_dataset(dataset_id)
 
-    default_transform, matrix_transform, vector_transform, ratio_transform = (
-        _default_transform_specs()
-    )
     base_policy = _base_expression_policy(
         dataset_id,
         use_curated_heuristics=use_curated_heuristics,
-        default_transform=default_transform,
-        matrix_transform=matrix_transform,
-        vector_transform=vector_transform,
-        ratio_transform=ratio_transform,
-        feedback_loop_policy=_default_feedback_loop_policy(),
     )
     return apply_yaml_expression_policy_overrides(
         base_policy,
         dataset_id=dataset_id,
         use_curated_heuristics=use_curated_heuristics,
     )
-
-
-def _yaml_curated_heuristics(dataset_id: str) -> bool:
-    """Read the curated-heuristics switch from YAML only."""
-    return use_curated_heuristics_for_dataset(dataset_id)
-
 
 def resolve_feedback_stage(
     field_feedback: FieldFeedbackSummary | None,
