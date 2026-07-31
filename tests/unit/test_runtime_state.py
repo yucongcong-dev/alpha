@@ -5,7 +5,6 @@ from __future__ import annotations
 from concurrent.futures import Future
 from unittest.mock import patch
 
-from alpha.analysis.feedback_history import should_stop_after_submittable
 from alpha.app.bootstrap_state import create_execution_state
 from alpha.config.application_sections import QualityConfig
 from alpha.models.domain import FieldTestResult
@@ -26,7 +25,7 @@ def _state() -> ExecutionState:
 
 def test_execution_metrics_follow_results_without_manual_refresh() -> None:
     state = _state()
-    state.results.append(
+    state.result_ledger.append(
         FieldTestResult(
             field_id="field_1",
             field_type="MATRIX",
@@ -39,14 +38,15 @@ def test_execution_metrics_follow_results_without_manual_refresh() -> None:
         )
     )
 
-    assert state.unique_field_ids == {"field_1"}
-    assert state.submittable_count == 1
-    assert state.submitted_count == 1
-    assert state.error_count == 0
+    ledger = state.result_ledger
+    assert ledger.unique_field_ids == {"field_1"}
+    assert ledger.submittable_count == 1
+    assert ledger.submitted_count == 1
+    assert ledger.error_count == 0
 
-    state.results.clear()
-    assert state.unique_field_ids == set()
-    assert state.submittable_count == 0
+    ledger.results.clear()
+    assert ledger.unique_field_ids == set()
+    assert ledger.submittable_count == 0
 
 
 def test_queue_retry_state_updates_legacy_views() -> None:
@@ -88,13 +88,13 @@ def test_result_ledger_state_updates_legacy_views() -> None:
     state.sync_result_ledger()
 
     assert metrics.submittable_count == 1
-    assert state.results == [result]
+    assert state.result_ledger.results == [result]
     assert state.submittable_baseline_count == 1
     assert state.persisted_result_count == 1
-    assert state.current_run_submittable_count == 0
-    assert state.result_ledger.reached_submittable_stop_threshold(1) is False
+    assert state.result_ledger.current_run_submittable_count == 0
+    assert ledger.reached_submittable_stop_threshold(1) is False
 
-    state.results.append(
+    ledger.append(
         FieldTestResult(
             field_id="field_2",
             field_type="MATRIX",
@@ -105,7 +105,7 @@ def test_result_ledger_state_updates_legacy_views() -> None:
             expression="rank(field_2)",
         )
     )
-    assert state.result_ledger.reached_submittable_stop_threshold(1) is True
+    assert ledger.reached_submittable_stop_threshold(1) is True
 
 
 def test_future_queue_state_updates_legacy_views() -> None:
@@ -146,18 +146,12 @@ def test_bootstrap_baseline_excludes_historical_submittable_results() -> None:
             historical_state=HistoricalRunState(existing_results=[historical]),
         )
 
-    assert state.submittable_baseline_count == 1
-    assert state.current_run_submittable_count == 0
-    assert (
-        should_stop_after_submittable(
-            1,
-            state.results,
-            baseline_count=state.submittable_baseline_count,
-        )
-        is False
-    )
+    ledger = state.result_ledger
+    assert ledger.submittable_baseline_count == 1
+    assert ledger.current_run_submittable_count == 0
+    assert ledger.reached_submittable_stop_threshold(1) is False
 
-    state.results.append(
+    ledger.append(
         FieldTestResult(
             field_id="field_2",
             field_type="MATRIX",
@@ -168,16 +162,9 @@ def test_bootstrap_baseline_excludes_historical_submittable_results() -> None:
             expression="rank(field_2)",
         )
     )
-    assert state.current_run_submittable_count == 1
-    assert (
-        should_stop_after_submittable(
-            1,
-            state.results,
-            baseline_count=state.submittable_baseline_count,
-        )
-        is True
-    )
-    assert state.submitted_count == 0
+    assert ledger.current_run_submittable_count == 1
+    assert ledger.reached_submittable_stop_threshold(1) is True
+    assert ledger.submitted_count == 0
 
 
 def test_quality_config_rejects_inverted_turnover_range() -> None:

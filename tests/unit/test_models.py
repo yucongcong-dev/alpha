@@ -10,7 +10,13 @@ import pytest
 from alpha.models.domain import FieldTestContext, FieldTestResult
 from alpha.models.domain_serializers import serialize_field_test_result
 from alpha.models.io_types import RunFilters
-from alpha.models.runtime import ExecutionState, HistoricalRunState, RuntimeConcurrencyState
+from alpha.models.runtime import (
+    ExecutionMetrics,
+    ExecutionState,
+    HistoricalRunState,
+    ResultLedgerState,
+    RuntimeConcurrencyState,
+)
 from alpha.models.runtime_options import (
     ApiClientOptions,
     FieldFetchOptions,
@@ -192,6 +198,21 @@ class TestExecutionState:
         assert state.field_queue_busy_counts["f1"] == 2
         assert "f2" in state.skipped_fields_due_to_queue
         assert state.last_submission_at == 123.0
+
+    def test_result_ledger_export_and_metrics(self) -> None:
+        result = FieldTestResult(
+            field_id="field_1",
+            field_type="MATRIX",
+            field_name="field_1",
+            template_name="tpl",
+            status="simulated",
+            submittable=True,
+            expression="rank(field_1)",
+        )
+        ledger = ResultLedgerState(results=[result])
+
+        assert isinstance(ledger.metrics, ExecutionMetrics)
+        assert ledger.current_run_submittable_count == 1
 
 
 # ============================================================================
