@@ -174,7 +174,7 @@ class TestExecutionState:
             field_queue_busy_counts={},
             skipped_fields_due_to_queue=set(),
         )
-        assert state.results == []
+        assert state.result_ledger.results == []
         assert state.attempted_keys == set()
         assert state.template_stats == {}
         assert state.pending_futures == {}
@@ -192,7 +192,7 @@ class TestExecutionState:
             skipped_fields_due_to_queue={"f2"},
             last_submission_at=123.0,
         )
-        assert len(state.results) == 1
+        assert len(state.result_ledger.results) == 1
         assert "key1" in state.attempted_keys
         assert state.template_stats["tmpl"]["count"] == 1
         assert state.field_queue_busy_counts["f1"] == 2

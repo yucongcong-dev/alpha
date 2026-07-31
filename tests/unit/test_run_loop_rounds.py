@@ -155,7 +155,8 @@ def test_queue_exhausted_candidate_is_excluded_from_next_round() -> None:
 def test_historical_submittable_result_does_not_stop_new_round() -> None:
     context = _build_context(field_template_batch_size=1)
     context.scheduler_options = SchedulerControlOptions(stop_after_submittable=1)
-    context.run_ctx.execution_state.results.append(
+    ledger = context.run_ctx.execution_state.result_ledger
+    ledger.append(
         FieldTestResult(
             field_id="historical",
             field_type="MATRIX",
@@ -166,7 +167,8 @@ def test_historical_submittable_result_does_not_stop_new_round() -> None:
             expression="rank(historical)",
         )
     )
-    context.run_ctx.execution_state.submittable_baseline_count = 1
+    ledger.submittable_baseline_count = 1
+    context.run_ctx.execution_state.sync_result_ledger()
 
     with patch(
         "alpha.app.run_loop_rounds.schedule_field_round",
@@ -196,7 +198,7 @@ def test_preexisting_stop_signal_skips_round_without_building_fields() -> None:
 def test_stop_after_submittable_stops_before_next_field() -> None:
     context = _build_context(field_template_batch_size=1)
     context.scheduler_options = SchedulerControlOptions(stop_after_submittable=1)
-    context.run_ctx.execution_state.results.append(
+    context.run_ctx.execution_state.result_ledger.append(
         FieldTestResult(
             field_id="new",
             field_type="MATRIX",
@@ -303,7 +305,7 @@ def test_dispatch_honors_stop_capacity_and_success_paths() -> None:
     }
 
     context.scheduler_options = SchedulerControlOptions(stop_after_submittable=1)
-    context.run_ctx.execution_state.results.append(
+    context.run_ctx.execution_state.result_ledger.append(
         FieldTestResult(
             field_id="new",
             field_type="MATRIX",

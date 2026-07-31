@@ -80,7 +80,7 @@ def test_finalize_run_updates_separate_feedback_output(tmp_path) -> None:
         expression="rank(field_1)",
     )
     run_ctx = _build_run_ctx()
-    run_ctx.execution_state.results.append(result)
+    run_ctx.execution_state.result_ledger.append(result)
     args = argparse.Namespace(
         output=str(tmp_path / "raw-results.json"),
         dataset_id="fundamental6",

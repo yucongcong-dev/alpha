@@ -521,7 +521,7 @@ def test_drain_completed_futures_sets_stop_signal_and_cancels_unstarted_future()
             "alpha.core.scheduler.apply_completed_result",
             return_value=({}, False, None),
         ):
-            execution_state.results.append(
+            execution_state.result_ledger.append(
                 FieldTestResult(
                     field_id="field_done",
                     field_type="MATRIX",
