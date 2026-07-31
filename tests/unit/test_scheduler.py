@@ -295,7 +295,7 @@ class TestRegisterQueueBusyTemplate:
         retry_state = empty_execution_state.queue_retry_state
         assert first_key in retry_state.exhausted_keys
         assert second_key not in retry_state.exhausted_keys
-        assert empty_execution_state.skipped_fields_due_to_queue == set()
+        assert empty_execution_state.field_queue.skipped_fields == set()
 
     def test_zero_retry_limit_keeps_candidate_retryable(
         self,

@@ -221,8 +221,8 @@ def _apply_drain_state_decision(
     _apply_queue_busy_decision(
         decision.queue_busy,
         skip_after=scheduler_options.field_queue_busy_skip_after,
-        field_queue_busy_counts=execution_state.field_queue_busy_counts,
-        skipped_fields_due_to_queue=execution_state.skipped_fields_due_to_queue,
+        field_queue_busy_counts=execution_state.field_queue.busy_counts,
+        skipped_fields_due_to_queue=execution_state.field_queue.skipped_fields,
     )
 
     if decision.apply_congestion_cooldown:

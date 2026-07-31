@@ -275,7 +275,10 @@ def print_dry_run_plan(
         field_id = str(first_non_empty(field.get("id"), SENTINEL_UNKNOWN))
         field_name = choose_field_name(field)
         if should_skip_field(
-            field_id, field_name, filters, execution_state.skipped_fields_due_to_queue
+            field_id,
+            field_name,
+            filters,
+            execution_state.field_queue.skipped_fields,
         ):
             continue
         pending_templates, filtered_count, _template_count = build_pending_templates_for_field(

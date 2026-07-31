@@ -253,8 +253,8 @@ class TestExecutionState:
         assert state.attempted_keys == set()
         assert state.template_stats == {}
         assert state.future_queue.pending_futures == {}
-        assert state.field_queue_busy_counts == {}
-        assert state.skipped_fields_due_to_queue == set()
+        assert state.field_queue.busy_counts == {}
+        assert state.field_queue.skipped_fields == set()
         assert state.last_submission_at == 0.0
 
     def test_custom_values(self) -> None:
@@ -277,8 +277,8 @@ class TestExecutionState:
         assert len(state.result_ledger.results) == 1
         assert attempted_key in state.attempted_keys
         assert state.template_stats["tmpl"]["count"] == 1
-        assert state.field_queue_busy_counts["f1"] == 2
-        assert "f2" in state.skipped_fields_due_to_queue
+        assert state.field_queue.busy_counts["f1"] == 2
+        assert "f2" in state.field_queue.skipped_fields
         assert state.last_submission_at == 123.0
 
     def test_result_ledger_export_and_metrics(self) -> None:

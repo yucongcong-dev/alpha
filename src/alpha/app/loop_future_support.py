@@ -68,7 +68,7 @@ def drain_until_capacity(
             completion_ctx=completion_ctx,
             runtime_state=runtime_state,
         )
-        if field_id in executor_state.skipped_fields_due_to_queue:
+        if field_id in executor_state.field_queue.skipped_fields:
             return False
     return True
 

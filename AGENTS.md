@@ -29,6 +29,8 @@
 
 - 把 `ExecutionState` 当作共享可变运行状态，不要把它当成随手新增字段的容器。新增状态前，先考虑是否应该拆成由具体行为拥有的专用 dataclass。
 - 候选级 queue retry 行为属于 `QueueRetryState`。scheduler 代码不应再用裸 dict/set 重复实现重试预算更新规则。
+- 字段级 queue-busy 计数与跳过集合属于 `FieldQueueState`，调用方应通过
+  `ExecutionState.field_queue` 访问，不要在 `ExecutionState` 上增加影子字段。
 - checkpoint 恢复时，应通过 `ExecutionState.reset_transient_queue_state()` 重置瞬时队列状态，不要直接逐个赋值内部集合。
 - `ResultLedgerState.results` 是唯一权威结果序列；结果计数应由它派生到
   `ExecutionMetrics`。不要在 `ExecutionState` 上增加结果列表或计数的影子字段，避免状态漂移。

@@ -145,7 +145,7 @@ def schedule_field_round(
         field_id,
         field_name,
         run_ctx.filters,
-        execution_state.skipped_fields_due_to_queue,
+        execution_state.field_queue.skipped_fields,
     ):
         persist_field_progress(
             state_file=context.state_file,
