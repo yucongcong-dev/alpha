@@ -114,6 +114,14 @@ def test_initialize_results_journal_and_load_existing_results(tmp_path) -> None:
     assert loaded[0].field_id == "field_1"
 
 
+def test_append_results_journal_ignores_empty_batch(tmp_path) -> None:
+    journal_path = tmp_path / "results.jsonl"
+
+    _append_results_journal(str(journal_path), [])
+
+    assert not journal_path.exists()
+
+
 def test_journal_rows_are_versioned_and_checksums_are_validated(tmp_path) -> None:
     output_path = tmp_path / "results.json"
     initialize_results_journal(

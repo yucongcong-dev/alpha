@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 import sys
+from typing import Any
 
 CRITICAL_COVERAGE_FLOORS = {
     "src/alpha/config/runtime_values.py": 90.0,
@@ -31,10 +32,15 @@ CRITICAL_COVERAGE_FLOORS = {
 }
 
 
+def normalize_report_files(files: dict[str, Any]) -> dict[str, Any]:
+    """Normalize coverage.py file keys across POSIX and Windows reports."""
+    return {file_path.replace("\\", "/"): details for file_path, details in files.items()}
+
+
 def main() -> int:
     report_path = Path(sys.argv[1] if len(sys.argv) > 1 else ".coverage.json")
     payload = json.loads(report_path.read_text(encoding="utf-8"))
-    files = payload.get("files", {})
+    files = normalize_report_files(payload.get("files", {}))
     failures: list[str] = []
     for file_path, minimum in CRITICAL_COVERAGE_FLOORS.items():
         summary = files.get(file_path, {}).get("summary", {})

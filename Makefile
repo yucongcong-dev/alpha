@@ -1,10 +1,21 @@
-.PHONY: test coverage-check help-check whitespace-check docs-check scan-secrets repo-boundary-check removed-compat-file-check compat-import-check arch-boundary-check todo-check sync-config config-sync-check ruff-check format-check mypy-check check clean-runtime clean-dev package
+.PHONY: install-dev test coverage-check help-check whitespace-check docs-check scan-secrets repo-boundary-check removed-compat-file-check compat-import-check arch-boundary-check todo-check sync-config config-sync-check ruff-check format-check mypy-check check clean-runtime clean-dev package
 
-PYTHON ?= python3.10
+ifeq ($(OS),Windows_NT)
+GIT_EXEC_PATH := $(shell git --exec-path)
+WINDOWS_SHELL := $(patsubst %/mingw64/libexec/git-core,%/usr/bin/sh.exe,$(GIT_EXEC_PATH))
+SHELL := $(WINDOWS_SHELL)
+export PATH := $(dir $(WINDOWS_SHELL));$(PATH)
+PYTHON ?= python
+else
+PYTHON ?= python3
+endif
 PYTHONPATH ?= src
 RUFF ?= ruff
 MYPY ?= $(PYTHON) -m mypy
 SECRET_PATTERN := github_[p]at_[A-Za-z0-9_]+|WQB_[P]ASSWORD=|Authorization: [B]asic
+
+install-dev:
+	$(PYTHON) -m pip install -e ".[dev,httpx]"
 
 test:
 	PYTHONPATH=$(PYTHONPATH) $(PYTHON) -m pytest -q

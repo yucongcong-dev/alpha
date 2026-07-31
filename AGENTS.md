@@ -59,7 +59,7 @@
 - 常规代码改动后运行：
 
 ```bash
-PYTHONPATH=src python3.10 -m pytest -q
+python -m pytest -q
 ```
 
 - 修改 Python 文件后，对触达文件运行定向 Ruff 检查，例如：
@@ -74,7 +74,7 @@ ruff check src/alpha/app/planning.py tests/unit/test_planning.py
 make check
 ```
 
-- 如果 `python3` 指向 Python 3.9，请使用 `python3.10`；本项目要求 Python 3.10+。
+- 请确保当前虚拟环境中的 `python` 为 Python 3.10+。
 
 ## 修改纪律
 

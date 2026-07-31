@@ -8,14 +8,14 @@
 要求：Python 3.10+（项目根目录的 `.python-version` 为 `3.10`）。
 
 ```bash
-# 安装开发环境
-python3.10 -m pip install -e .
+# 创建并激活虚拟环境后，安装完整开发依赖
+make install-dev
 
 # 先确认本地候选计划；不会登录、联网或创建 simulation
-PYTHONPATH=src python3.10 -m alpha --dry-run-plan
+python -m alpha --dry-run-plan
 
 # 首次真实运行：登录、拉取字段缓存，并执行模拟与 check
-PYTHONPATH=src python3.10 -m alpha --dataset-id fundamental6
+python -m alpha --dataset-id fundamental6
 ```
 
 也可以安装后使用 `alpha` 命令。误用低于 Python 3.10 的解释器时，入口会直接退出并提示版本问题。
@@ -55,17 +55,17 @@ alpha/
 
 ```bash
 # 环境验证（需要登录）
-PYTHONPATH=src python3.10 -m alpha --smoke-test
+python -m alpha --smoke-test
 
 # 只读预览下一次计划
-PYTHONPATH=src python3.10 -m alpha --dry-run-plan
+python -m alpha --dry-run-plan
 
 # 聚焦历史高反馈字段
-PYTHONPATH=src python3.10 -m alpha --top-fields-by-feedback 10 --max-templates-per-field 15
+python -m alpha --top-fields-by-feedback 10 --max-templates-per-field 15
 
 # 预览 / 执行本地运行产物清理
-PYTHONPATH=src python3.10 -m alpha clean --dry-run-clean
-PYTHONPATH=src python3.10 -m alpha clean
+python -m alpha clean --dry-run-clean
+python -m alpha clean
 ```
 
 完整的运行阶段、续跑、配置覆盖、缓存和结果文件说明统一在 [02](docs/02_research_and_data_guide.md)。
@@ -73,10 +73,12 @@ PYTHONPATH=src python3.10 -m alpha clean
 ## 开发检查
 
 ```bash
-PYTHONPATH=src python3.10 -m pytest -q
+make install-dev
+python -m pytest -q
 make check
 ```
 
+`make install-dev` 会根据 `pyproject.toml` 安装运行依赖、开发检查依赖和 HTTPX 后端。
 `make check` 会执行测试、配置同步、文档和密钥扫描检查；修改根 `config/*.yaml` 后使用 `make sync-config` 更新包内镜像。
 
 ## 安全边界

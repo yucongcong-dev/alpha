@@ -64,8 +64,7 @@ def _raise_dpapi_error(operation: str) -> None:
     error_code = ctypes.get_last_error()
     message = ctypes.FormatError(error_code).strip()
     raise BrainAPIError(
-        f"Windows DPAPI failed to {operation} credentials key "
-        f"(error {error_code}: {message})."
+        f"Windows DPAPI failed to {operation} credentials key (error {error_code}: {message})."
     )
 
 
