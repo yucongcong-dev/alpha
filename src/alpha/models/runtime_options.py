@@ -195,6 +195,107 @@ class BootstrapFieldOptions:
 
 
 @dataclass(frozen=True)
+class RunConfigSnapshotOptions:
+    """Inputs serialized into the persisted run configuration snapshot."""
+
+    run_name: str = "default"
+    dataset_id: str = ""
+    region: str = ""
+    universe: str = ""
+    instrument_type: str = ""
+    delay: int = 0
+    decay: int = 0
+    neutralization: str = ""
+    truncation: float = 0.0
+    nan_handling: str = ""
+    max_trade: str = "OFF"
+    limit: int = 0
+    offset: int = 0
+    page_size: int = 0
+    sleep_between_fields: float = 0.0
+    max_templates_per_field: int = 0
+    max_templates_per_family: int = 0
+    field_template_batch_size: int = 0
+    legacy_similarity_penalty: int = 0
+    max_concurrent_simulations: int = 0
+    max_concurrent_creates: int = 0
+    simulation_create_retries: int = 0
+    simulation_poll_retries: int = 0
+    simulation_max_polls: int = 0
+    simulation_max_wait_seconds: float = 0.0
+    simulation_max_pending_cycles: int = 0
+    simulation_max_queue_seconds: float = 0.0
+    queue_busy_cooldown_seconds: float = 0.0
+    field_queue_busy_skip_after: int = 0
+    check_submit_retries: int = 0
+    rate_limit_max_retries: int = 0
+    login_retries: int = 0
+    min_request_interval: float = 0.0
+    top_fields_by_feedback: int = 0
+    stop_after_submittable: int = 0
+    auto_update_blacklist: bool = False
+    smoke_test: bool = False
+    dry_run_plan: bool = False
+    full_run: bool = False
+    verbose: bool = False
+    quiet: bool = False
+
+    @classmethod
+    def from_args(cls, args: object) -> RunConfigSnapshotOptions:
+        return cls(
+            run_name=str(getattr(args, "run_name", "default") or "default"),
+            dataset_id=str(getattr(args, "dataset_id", "") or ""),
+            region=str(getattr(args, "region", "") or ""),
+            universe=str(getattr(args, "universe", "") or ""),
+            instrument_type=str(getattr(args, "instrument_type", "") or ""),
+            delay=int(getattr(args, "delay", 0) or 0),
+            decay=int(getattr(args, "decay", 0) or 0),
+            neutralization=str(getattr(args, "neutralization", "") or ""),
+            truncation=float(getattr(args, "truncation", 0.0) or 0.0),
+            nan_handling=str(getattr(args, "nan_handling", "") or ""),
+            max_trade=str(getattr(args, "max_trade", "OFF") or "OFF"),
+            limit=int(getattr(args, "limit", 0) or 0),
+            offset=int(getattr(args, "offset", 0) or 0),
+            page_size=int(getattr(args, "page_size", 0) or 0),
+            sleep_between_fields=float(getattr(args, "sleep_between_fields", 0.0) or 0.0),
+            max_templates_per_field=int(getattr(args, "max_templates_per_field", 0) or 0),
+            max_templates_per_family=int(getattr(args, "max_templates_per_family", 0) or 0),
+            field_template_batch_size=int(getattr(args, "field_template_batch_size", 0) or 0),
+            legacy_similarity_penalty=int(getattr(args, "legacy_similarity_penalty", 0) or 0),
+            max_concurrent_simulations=int(getattr(args, "max_concurrent_simulations", 0) or 0),
+            max_concurrent_creates=int(getattr(args, "max_concurrent_creates", 0) or 0),
+            simulation_create_retries=int(getattr(args, "simulation_create_retries", 0) or 0),
+            simulation_poll_retries=int(getattr(args, "simulation_poll_retries", 0) or 0),
+            simulation_max_polls=int(getattr(args, "simulation_max_polls", 0) or 0),
+            simulation_max_wait_seconds=float(
+                getattr(args, "simulation_max_wait_seconds", 0.0) or 0.0
+            ),
+            simulation_max_pending_cycles=int(
+                getattr(args, "simulation_max_pending_cycles", 0) or 0
+            ),
+            simulation_max_queue_seconds=float(
+                getattr(args, "simulation_max_queue_seconds", 0.0) or 0.0
+            ),
+            queue_busy_cooldown_seconds=float(
+                getattr(args, "queue_busy_cooldown_seconds", 0.0) or 0.0
+            ),
+            field_queue_busy_skip_after=int(getattr(args, "field_queue_busy_skip_after", 0) or 0),
+            check_submit_retries=int(getattr(args, "check_submit_retries", 0) or 0),
+            rate_limit_max_retries=int(getattr(args, "rate_limit_max_retries", 0) or 0),
+            login_retries=int(getattr(args, "login_retries", 0) or 0),
+            min_request_interval=float(getattr(args, "min_request_interval", 0.0) or 0.0),
+            top_fields_by_feedback=int(getattr(args, "top_fields_by_feedback", 0) or 0),
+            stop_after_submittable=int(getattr(args, "stop_after_submittable", 0) or 0),
+            auto_update_blacklist=bool(getattr(args, "auto_update_blacklist", False)),
+            smoke_test=bool(getattr(args, "smoke_test", False)),
+            dry_run_plan=bool(getattr(args, "dry_run_plan", False)),
+            full_run=bool(getattr(args, "full_run", False)),
+            verbose=bool(getattr(args, "verbose", False)),
+            quiet=bool(getattr(args, "quiet", False)),
+        )
+
+
+@dataclass(frozen=True)
 class SchedulerControlOptions:
     """Queue cooldown, throttling, and stop-condition knobs for scheduling."""
 

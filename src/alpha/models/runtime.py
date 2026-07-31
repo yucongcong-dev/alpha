@@ -22,6 +22,7 @@ if TYPE_CHECKING:
         FieldFetchOptions,
         FieldSelectionOptions,
         ResultWriteOptions,
+        RunConfigSnapshotOptions,
         TemplateBuildOptions,
     )
     from .runtime_protocols import (
@@ -75,6 +76,7 @@ _EXPORT_MAP: ExportMap = {
     "FieldFetchOptions": (".runtime_options", "FieldFetchOptions"),
     "FieldSelectionOptions": (".runtime_options", "FieldSelectionOptions"),
     "ResultWriteOptions": (".runtime_options", "ResultWriteOptions"),
+    "RunConfigSnapshotOptions": (".runtime_options", "RunConfigSnapshotOptions"),
     "TemplateBuildOptions": (".runtime_options", "TemplateBuildOptions"),
     "ApiClientArgs": (".runtime_protocols", "ApiClientArgs"),
     "BlacklistRuntimeStats": (".runtime_protocols", "BlacklistRuntimeStats"),

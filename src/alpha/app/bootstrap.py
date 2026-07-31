@@ -31,6 +31,7 @@ from ..models.io_types import RunPaths
 from ..models.runtime_options import (
     BootstrapFieldOptions,
     BootstrapPathOptions,
+    RunConfigSnapshotOptions,
     TemplateBuildOptions,
 )
 from ..models.runtime_protocols import (
@@ -188,10 +189,11 @@ def initialize_run_context(
     services = build_bootstrap_services()
     path_options = BootstrapPathOptions.from_args(args)
     field_options = BootstrapFieldOptions.from_args(args)
+    run_config_options = RunConfigSnapshotOptions.from_args(args)
     template_options = TemplateBuildOptions.from_args(args)
     paths = _resolve_bootstrap_paths(path_options, run_paths)
     run_config = _prepare_runtime_outputs(
-        args,
+        run_config_options,
         path_options,
         run_paths,
         paths,

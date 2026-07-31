@@ -7,7 +7,6 @@ import logging
 
 from ..analysis.feedback_history import rebuild_historical_run_state
 from ..api.client import BrainClient, WorkerClientFactory
-from ..config.application import ApplicationConfig
 from ..io.common import resolve_datasets_root
 from ..models.domain import TemplateField
 from ..models.io_types import RunPaths
@@ -16,6 +15,7 @@ from ..models.runtime_options import (
     BootstrapFieldOptions,
     BootstrapPathOptions,
     FieldSelectionOptions,
+    RunConfigSnapshotOptions,
     TemplateBuildOptions,
 )
 from ..models.runtime_protocols import (
@@ -99,7 +99,7 @@ def build_effective_run_paths(
 
 
 def prepare_runtime_outputs(
-    args: ApplicationConfig,
+    run_config_options: RunConfigSnapshotOptions,
     path_options: BootstrapPathOptions,
     run_paths: RunPaths | None,
     paths: BootstrapPaths,
@@ -112,7 +112,7 @@ def prepare_runtime_outputs(
         services.setup_runtime_logging(paths.log_file)
     services.cleanup_legacy_sidecar_files(paths.output_file, verbose=True)
     services.ensure_analysis_synced(paths.output_file)
-    run_config = services.build_run_config_snapshot(args, effective_run_paths)
+    run_config = services.build_run_config_snapshot(run_config_options, effective_run_paths)
     logger.info("[config] 运行配置将嵌入主结果文件")
     return run_config
 

@@ -23,6 +23,7 @@ from alpha.models.runtime_options import (
     FieldFetchOptions,
     FieldSelectionOptions,
     ResultWriteOptions,
+    RunConfigSnapshotOptions,
     SchedulerControlOptions,
     TemplateBuildOptions,
 )
@@ -164,6 +165,12 @@ class TestRuntimeOptionBuilders:
                 limit=12,
             ),
         )
+        snapshot_options = RunConfigSnapshotOptions.from_args(_Args())
+        assert snapshot_options.run_name == "default"
+        assert snapshot_options.dataset_id == "model51"
+        assert snapshot_options.page_size == 100
+        assert snapshot_options.check_submit_retries == 4
+        assert snapshot_options.auto_update_blacklist is True
 
     def test_scheduler_control_options_from_args(self) -> None:
         class _Args:

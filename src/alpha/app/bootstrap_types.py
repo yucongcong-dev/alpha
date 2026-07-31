@@ -8,13 +8,16 @@ from threading import Semaphore
 from typing import Protocol
 
 from ..api.client import BrainClient
-from ..config.application import ApplicationConfig
 from ..config.models import DatasetExpressionPolicy
 from ..config.runtime_values import RuntimeConfig
 from ..generators.fields import DatasetFieldClient
 from ..models.domain import TemplateField, TemplateLibrary
 from ..models.io_types import RunFilters, RunPaths
-from ..models.runtime_options import FieldFetchOptions, FieldSelectionOptions
+from ..models.runtime_options import (
+    FieldFetchOptions,
+    FieldSelectionOptions,
+    RunConfigSnapshotOptions,
+)
 from ..models.runtime_protocols import CredentialsArgs, RunConfig, SimulationSettingsArgs
 from ..policy.types import BlacklistPayload
 from ..runtime.contexts import HistoricalRunState
@@ -87,7 +90,7 @@ class RuntimeOutputServices:
     setup_runtime_logging: Callable[[str], None]
     cleanup_legacy_sidecar_files: CleanupLegacySidecarFiles
     ensure_analysis_synced: Callable[[str], None]
-    build_run_config_snapshot: Callable[[ApplicationConfig, RunPaths], RunConfig]
+    build_run_config_snapshot: Callable[[RunConfigSnapshotOptions, RunPaths], RunConfig]
 
 
 @dataclass(frozen=True)
