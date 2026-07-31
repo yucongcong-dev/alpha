@@ -229,6 +229,20 @@ class FieldSelectionArgs(Protocol):
     def limit(self) -> int: ...
 
 
+class CheckSubmitRetryArgs(Protocol):
+    @property
+    def check_submit_retries(self) -> int: ...
+
+
+class BootstrapFieldArgs(
+    FieldFetchArgs,
+    FieldSelectionArgs,
+    CheckSubmitRetryArgs,
+    Protocol,
+):
+    pass
+
+
 class RuntimeConcurrencyArgs(Protocol):
     @property
     def max_concurrent_simulations(self) -> int: ...

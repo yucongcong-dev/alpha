@@ -13,8 +13,8 @@ from ..models.domain import TemplateField
 from ..models.io_types import RunPaths
 from ..models.runtime_options import (
     ApiClientOptions,
+    BootstrapFieldOptions,
     BootstrapPathOptions,
-    FieldFetchOptions,
     FieldSelectionOptions,
 )
 from ..models.runtime_protocols import (
@@ -195,6 +195,7 @@ def log_field_selection_stats(
 def prepare_bootstrap_resources(
     args: ApplicationConfig,
     path_options: BootstrapPathOptions,
+    field_options: BootstrapFieldOptions,
     paths: BootstrapPaths,
     bootstrap_client: BrainClient,
     *,
@@ -204,7 +205,7 @@ def prepare_bootstrap_resources(
     field_services: FieldLoadingServices,
 ) -> PreparedBootstrapResources | None:
     """Load template, feedback, and field resources needed to build the run context."""
-    dataset_id = str(args.dataset_id)
+    dataset_id = field_options.dataset_id
     effective_run_paths = build_effective_run_paths(path_options, paths, run_paths)
     supporting_resources = load_bootstrap_supporting_resources(
         dataset_id=dataset_id,
@@ -215,7 +216,7 @@ def prepare_bootstrap_resources(
     refreshed_results, refreshed_count = refresh_pending_check_results(
         bootstrap_client,
         supporting_resources.historical_state.existing_results,
-        retries=int(getattr(args, "check_submit_retries", 1) or 1),
+        retries=field_options.check_submit_retries,
     )
     if refreshed_count:
         supporting_resources = replace(
@@ -230,29 +231,27 @@ def prepare_bootstrap_resources(
             "[checksubmit-resume] refreshed %d historical pending results",
             refreshed_count,
         )
-    field_fetch_options = FieldFetchOptions.from_args(args)
     fields = load_bootstrap_fields(
         dataset_id=dataset_id,
         bootstrap_client=bootstrap_client,
         paths=paths,
-        field_fetch_options=field_fetch_options,
+        field_fetch_options=field_options.fetch,
         services=field_services,
     )
     if not fields:
-        logger.error("[error] 数据集 %s 未返回任何字段", args.dataset_id)
+        logger.error("[error] 数据集 %s 未返回任何字段", dataset_id)
         return None
 
-    field_selection_options = FieldSelectionOptions.from_args(args)
     prepared_fields, field_stats = field_services.prepare_fields_for_execution(
         list(fields),
         filters_dict=supporting_resources.filters,
         expression_policy=supporting_resources.expression_policy,
         historical_state=supporting_resources.historical_state,
-        selection_options=field_selection_options,
+        selection_options=field_options.selection,
     )
     log_field_selection_stats(
         dataset_id=dataset_id,
-        selection_options=field_selection_options,
+        selection_options=field_options.selection,
         field_stats=field_stats,
         fields=prepared_fields,
     )

@@ -19,7 +19,9 @@ from alpha.models.runtime import (
 )
 from alpha.models.runtime_options import (
     ApiClientOptions,
+    BootstrapFieldOptions,
     FieldFetchOptions,
+    FieldSelectionOptions,
     ResultWriteOptions,
     SchedulerControlOptions,
     TemplateBuildOptions,
@@ -127,6 +129,10 @@ class TestRuntimeOptionBuilders:
             universe = "TOP1000"
             instrument_type = "EQUITY"
             delay = 2
+            top_fields_by_feedback = "7"
+            offset = "3"
+            limit = "12"
+            check_submit_retries = "4"
 
         assert ResultWriteOptions.from_args(_Args()) == ResultWriteOptions(
             dataset_id="model51",
@@ -140,6 +146,23 @@ class TestRuntimeOptionBuilders:
             universe="TOP1000",
             instrument_type="EQUITY",
             delay=2,
+        )
+        assert BootstrapFieldOptions.from_args(_Args()) == BootstrapFieldOptions(
+            dataset_id="model51",
+            check_submit_retries=4,
+            fetch=FieldFetchOptions(
+                dataset_id="model51",
+                page_size=100,
+                region="USA",
+                universe="TOP1000",
+                instrument_type="EQUITY",
+                delay=2,
+            ),
+            selection=FieldSelectionOptions(
+                top_fields_by_feedback=7,
+                offset=3,
+                limit=12,
+            ),
         )
 
     def test_scheduler_control_options_from_args(self) -> None:

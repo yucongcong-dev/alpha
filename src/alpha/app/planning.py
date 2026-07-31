@@ -14,7 +14,7 @@ from ..generators.payload import build_settings_fingerprint
 from ..generators.templates.library_loader import load_template_library
 from ..generators.templates.library_store import ensure_dataset_template_library
 from ..models.io_types import RunPaths
-from ..models.runtime_options import BootstrapPathOptions, FieldFetchOptions, FieldSelectionOptions
+from ..models.runtime_options import BootstrapFieldOptions, BootstrapPathOptions
 from ..policy.blacklist_context import set_active_datasets_root
 from ..policy.blacklist_store import (
     ensure_template_blacklist_file,
@@ -51,9 +51,10 @@ def build_planning_supporting_services() -> SupportingResourceServices:
 def run_dry_run_plan(args: ApplicationConfig, run_paths: RunPaths | None) -> bool:
     """Print a plan from local resources without authentication or filesystem writes."""
     path_options = BootstrapPathOptions.from_args(args)
+    field_options = BootstrapFieldOptions.from_args(args)
     paths = resolve_bootstrap_paths(path_options, run_paths)
     effective_run_paths = build_effective_run_paths(path_options, paths, run_paths)
-    dataset_id = str(args.dataset_id)
+    dataset_id = field_options.dataset_id
 
     supporting_resources = load_supporting_resources(
         dataset_id=dataset_id,
@@ -64,14 +65,13 @@ def run_dry_run_plan(args: ApplicationConfig, run_paths: RunPaths | None) -> boo
         log_blacklist=False,
     )
 
-    field_options = FieldFetchOptions.from_args(args)
     fields = load_fields_cache(
         paths.fields_cache_file,
         dataset_id=dataset_id,
-        region=field_options.region,
-        universe=field_options.universe,
-        instrument_type=field_options.instrument_type,
-        delay=field_options.delay,
+        region=field_options.fetch.region,
+        universe=field_options.fetch.universe,
+        instrument_type=field_options.fetch.instrument_type,
+        delay=field_options.fetch.delay,
         cache_ttl_hours=0,
     )
     if not fields:
@@ -87,7 +87,7 @@ def run_dry_run_plan(args: ApplicationConfig, run_paths: RunPaths | None) -> boo
         filters_dict=supporting_resources.filters,
         expression_policy=supporting_resources.expression_policy,
         historical_state=supporting_resources.historical_state,
-        selection_options=FieldSelectionOptions.from_args(args),
+        selection_options=field_options.selection,
     )
     if not prepared_fields:
         logger.error("[dry-run] no fields remain after local filtering")

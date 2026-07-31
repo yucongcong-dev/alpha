@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from ..runtime.preset_mode import resolve_preset_mode
 from .runtime_protocols import (
     ApiClientArgs,
+    BootstrapFieldArgs,
     BootstrapPathArgs,
     FieldFetchArgs,
     FieldSelectionArgs,
@@ -171,6 +172,25 @@ class FieldSelectionOptions:
             top_fields_by_feedback=int(getattr(args, "top_fields_by_feedback", 0) or 0),
             offset=int(getattr(args, "offset", 0) or 0),
             limit=int(getattr(args, "limit", 0) or 0),
+        )
+
+
+@dataclass(frozen=True)
+class BootstrapFieldOptions:
+    """Field loading, pending-check refresh, and selection inputs for bootstrap."""
+
+    dataset_id: str
+    check_submit_retries: int
+    fetch: FieldFetchOptions
+    selection: FieldSelectionOptions
+
+    @classmethod
+    def from_args(cls, args: BootstrapFieldArgs) -> BootstrapFieldOptions:
+        return cls(
+            dataset_id=str(args.dataset_id or ""),
+            check_submit_retries=int(getattr(args, "check_submit_retries", 1) or 1),
+            fetch=FieldFetchOptions.from_args(args),
+            selection=FieldSelectionOptions.from_args(args),
         )
 
 
