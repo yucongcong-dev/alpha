@@ -2,7 +2,7 @@
   "_version": "v2",
   "_comment": "Template blacklist for fundamental6. learned_templates stores dataset-specific learned exclusions; expression_rules stores explicit expression pattern blocks.",
   "_created": "2026-07-13",
-  "_updated": "2026-07-31 20:46",
+  "_updated": "2026-07-31 20:51",
   "dataset_id": "fundamental6",
   "learned_templates": [
     {
@@ -380,6 +380,26 @@
       "date_blacklisted": "2026-07-31",
       "avg_sharpe": 0.183,
       "avg_fitness": 0.04
+    },
+    {
+      "name": "account_ir_60_decay_20",
+      "dataset_id": "fundamental6",
+      "source": "auto_detected",
+      "field_type": "MATRIX",
+      "template_family": "decayed_ratio",
+      "template_stage": "group_second_order",
+      "reason": "3个字段测试均不通过。平均 Sharpe 0.353。平均 Fitness 0.005。集中度失败 1 次。",
+      "fields_tested": [
+        "employee",
+        "equity",
+        "fnd6_acdo"
+      ],
+      "low_sharpe": 3,
+      "low_fitness": 2,
+      "date_blacklisted": "2026-07-31",
+      "avg_sharpe": 0.353,
+      "avg_fitness": 0.005,
+      "concentrated_weight": 1
     }
   ],
   "expression_rules": [
