@@ -112,8 +112,8 @@ def apply_result_state_updates(
     services: ResultProcessingServices,
 ) -> TemplateStats:
     """Apply one completed result to execution counters and template stats."""
-    execution_state.results.append(result)
-    execution_state.refresh_metrics()
+    execution_state.result_ledger.append(result)
+    execution_state.sync_result_ledger()
     if services.is_informative_result(result):
         execution_state.attempted_keys.add(services.result_identity(result))
     template_stats = services.update_template_stats_with_result(
@@ -192,13 +192,14 @@ def persist_incremental_result(
 ) -> None:
     """Persist one completed result and updated counters to the journal/results store."""
     result_write_options = completion_ctx.result_write_options
-    metrics = execution_state.refresh_metrics()
-    execution_state.persisted_result_count = services.dump_results_incremental(
+    ledger = execution_state.result_ledger
+    metrics = ledger.refresh_metrics()
+    ledger.persisted_result_count = services.dump_results_incremental(
         result_write_options.output_path,
         result_write_options.dataset_id,
         [result],
-        persisted_result_count=execution_state.persisted_result_count,
-        tested=len(execution_state.results),
+        persisted_result_count=ledger.persisted_result_count,
+        tested=len(ledger.results),
         unique_fields_tested=len(metrics.unique_field_ids),
         submittable_count=metrics.submittable_count,
         submitted_count=metrics.submitted_count,
@@ -210,6 +211,7 @@ def persist_incremental_result(
         run_config=completion_ctx.run_config,
         template_stats=execution_state.template_stats,
     )
+    execution_state.sync_result_ledger()
 
 
 def log_congestion_signals(result: FieldTestResult) -> None:

@@ -69,6 +69,31 @@ def test_queue_retry_state_updates_legacy_views() -> None:
     assert state.queue_exhausted_keys == set()
 
 
+def test_result_ledger_state_updates_legacy_views() -> None:
+    state = _state()
+    result = FieldTestResult(
+        field_id="field_1",
+        field_type="MATRIX",
+        field_name="field_1",
+        template_name="tpl",
+        status="simulated",
+        submittable=True,
+        expression="rank(field_1)",
+    )
+
+    ledger = state.result_ledger
+    metrics = ledger.append(result)
+    ledger.submittable_baseline_count = 1
+    ledger.persisted_result_count = 1
+    state.sync_result_ledger()
+
+    assert metrics.submittable_count == 1
+    assert state.results == [result]
+    assert state.submittable_baseline_count == 1
+    assert state.persisted_result_count == 1
+    assert state.current_run_submittable_count == 0
+
+
 def test_future_queue_state_updates_legacy_views() -> None:
     state = _state()
     future: Future[FieldTestResult] = Future()

@@ -139,51 +139,12 @@ class ExecutionMetrics:
 
 
 @dataclass
-class ExecutionState:
-    """执行过程中可变的待运行、跳过与累计结果状态。"""
+class ResultLedgerState:
+    """Authoritative result sequence plus derived result counters."""
 
     results: list[FieldTestResult]
-    attempted_keys: set[tuple[str, str, str, str]]
-    template_stats: TemplateStats
-    pending_futures: dict[Future[FieldTestResult], PendingFutureContext]
-    field_queue_busy_counts: dict[str, int]
-    skipped_fields_due_to_queue: set[str]
-    resumable_simulations: list[PendingFutureContext] = field(default_factory=list)
-    queue_retry_counts: dict[QueueRetryKey, int] = field(default_factory=dict)
-    queue_exhausted_keys: set[QueueRetryKey] = field(default_factory=set)
-    queue_retry_state: QueueRetryState = field(init=False)
-    future_queue_state: FutureQueueState = field(init=False)
     submittable_baseline_count: int = 0
     persisted_result_count: int = 0
-    blacklist_runtime_stats: BlacklistRuntimeStats = field(default_factory=dict)
-    blacklisted_template_keys: set[tuple[str, str, str]] = field(default_factory=set)
-    last_submission_at: float = 0.0
-    stop_signal: Event = field(default_factory=Event)
-
-    def __post_init__(self) -> None:
-        self.queue_retry_state = QueueRetryState(
-            retry_counts=self.queue_retry_counts,
-            exhausted_keys=self.queue_exhausted_keys,
-        )
-        self.future_queue_state = FutureQueueState(
-            pending_futures=self.pending_futures,
-            resumable_simulations=self.resumable_simulations,
-            stop_signal=self.stop_signal,
-        )
-
-    @property
-    def future_queue(self) -> FutureQueueState:
-        """Return a future-state view that tracks legacy mutable attributes."""
-        self.future_queue_state.pending_futures = self.pending_futures
-        self.future_queue_state.resumable_simulations = self.resumable_simulations
-        self.future_queue_state.stop_signal = self.stop_signal
-        return self.future_queue_state
-
-    def reset_transient_queue_state(self) -> None:
-        """Reset queue state that should not survive process restarts."""
-        self.field_queue_busy_counts = {}
-        self.skipped_fields_due_to_queue = set()
-        self.queue_retry_state.reset()
 
     @property
     def metrics(self) -> ExecutionMetrics:
@@ -219,9 +180,119 @@ class ExecutionState:
     def pending_check_count(self) -> int:
         return self.metrics.pending_check_count
 
+    def append(self, result: FieldTestResult) -> ExecutionMetrics:
+        self.results.append(result)
+        return self.metrics
+
     def refresh_metrics(self) -> ExecutionMetrics:
         """Compatibility method returning the current derived snapshot."""
         return self.metrics
+
+
+@dataclass
+class ExecutionState:
+    """执行过程中可变的待运行、跳过与累计结果状态。"""
+
+    results: list[FieldTestResult]
+    attempted_keys: set[tuple[str, str, str, str]]
+    template_stats: TemplateStats
+    pending_futures: dict[Future[FieldTestResult], PendingFutureContext]
+    field_queue_busy_counts: dict[str, int]
+    skipped_fields_due_to_queue: set[str]
+    resumable_simulations: list[PendingFutureContext] = field(default_factory=list)
+    queue_retry_counts: dict[QueueRetryKey, int] = field(default_factory=dict)
+    queue_exhausted_keys: set[QueueRetryKey] = field(default_factory=set)
+    queue_retry_state: QueueRetryState = field(init=False)
+    future_queue_state: FutureQueueState = field(init=False)
+    result_ledger_state: ResultLedgerState = field(init=False)
+    submittable_baseline_count: int = 0
+    persisted_result_count: int = 0
+    blacklist_runtime_stats: BlacklistRuntimeStats = field(default_factory=dict)
+    blacklisted_template_keys: set[tuple[str, str, str]] = field(default_factory=set)
+    last_submission_at: float = 0.0
+    stop_signal: Event = field(default_factory=Event)
+
+    def __post_init__(self) -> None:
+        self.queue_retry_state = QueueRetryState(
+            retry_counts=self.queue_retry_counts,
+            exhausted_keys=self.queue_exhausted_keys,
+        )
+        self.future_queue_state = FutureQueueState(
+            pending_futures=self.pending_futures,
+            resumable_simulations=self.resumable_simulations,
+            stop_signal=self.stop_signal,
+        )
+        self.result_ledger_state = ResultLedgerState(
+            results=self.results,
+            submittable_baseline_count=self.submittable_baseline_count,
+            persisted_result_count=self.persisted_result_count,
+        )
+
+    @property
+    def future_queue(self) -> FutureQueueState:
+        """Return a future-state view that tracks legacy mutable attributes."""
+        self.future_queue_state.pending_futures = self.pending_futures
+        self.future_queue_state.resumable_simulations = self.resumable_simulations
+        self.future_queue_state.stop_signal = self.stop_signal
+        return self.future_queue_state
+
+    @property
+    def result_ledger(self) -> ResultLedgerState:
+        """Return a result-state view that tracks legacy mutable attributes."""
+        self.result_ledger_state.results = self.results
+        self.result_ledger_state.submittable_baseline_count = self.submittable_baseline_count
+        self.result_ledger_state.persisted_result_count = self.persisted_result_count
+        return self.result_ledger_state
+
+    def sync_result_ledger(self) -> None:
+        """Copy ledger-owned counters back to legacy execution-state attributes."""
+        self.results = self.result_ledger_state.results
+        self.submittable_baseline_count = self.result_ledger_state.submittable_baseline_count
+        self.persisted_result_count = self.result_ledger_state.persisted_result_count
+
+    def reset_transient_queue_state(self) -> None:
+        """Reset queue state that should not survive process restarts."""
+        self.field_queue_busy_counts = {}
+        self.skipped_fields_due_to_queue = set()
+        self.queue_retry_state.reset()
+
+    @property
+    def metrics(self) -> ExecutionMetrics:
+        """Return a current snapshot derived from the authoritative results list."""
+        return self.result_ledger.metrics
+
+    @property
+    def unique_field_ids(self) -> set[str]:
+        return self.result_ledger.unique_field_ids
+
+    @property
+    def submittable_count(self) -> int:
+        return self.result_ledger.submittable_count
+
+    @property
+    def current_run_submittable_count(self) -> int:
+        """Return submittable results added after this process initialized."""
+        return self.result_ledger.current_run_submittable_count
+
+    @property
+    def submitted_count(self) -> int:
+        return self.result_ledger.submitted_count
+
+    @property
+    def error_count(self) -> int:
+        return self.result_ledger.error_count
+
+    @property
+    def queue_timeout_count(self) -> int:
+        return self.result_ledger.queue_timeout_count
+
+    @property
+    def pending_check_count(self) -> int:
+        return self.result_ledger.pending_check_count
+
+    def refresh_metrics(self) -> ExecutionMetrics:
+        """Compatibility method returning the current derived snapshot."""
+        return self.result_ledger.refresh_metrics()
 
 
 @dataclass(frozen=True)
