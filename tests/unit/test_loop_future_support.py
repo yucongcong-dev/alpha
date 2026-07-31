@@ -127,7 +127,7 @@ def test_submit_resumable_futures_registers_restored_contexts() -> None:
         simulation_location="/simulations/sim-1",
         simulation_id="sim-1",
     )
-    execution_state.future_queue.resumable_simulations = [pending]
+    execution_state.future_queue.replace_resumable_batch([pending])
     executor = _RecordingExecutor()
     run_ctx = SimpleNamespace(
         client_factory=object(),
@@ -164,7 +164,7 @@ def test_submit_resumable_futures_restores_unsubmitted_contexts_on_failure() -> 
         settings_fingerprint="settings-v1",
         simulation_location="/simulations/sim-2",
     )
-    execution_state.future_queue.resumable_simulations = [first, second]
+    execution_state.future_queue.replace_resumable_batch([first, second])
     executor = _FailingExecutor()
     run_ctx = SimpleNamespace(
         client_factory=object(),

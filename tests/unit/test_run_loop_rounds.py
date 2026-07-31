@@ -178,7 +178,7 @@ def test_historical_submittable_result_does_not_stop_new_round() -> None:
 
 def test_preexisting_stop_signal_skips_round_without_building_fields() -> None:
     context = _build_context(field_template_batch_size=1)
-    context.run_ctx.execution_state.stop_signal.set()
+    context.run_ctx.execution_state.future_queue.stop_signal.set()
 
     with patch("alpha.app.run_loop_rounds.schedule_field_round") as mock_schedule:
         result = execute_schedule_round(context, round_index=1)
@@ -205,7 +205,7 @@ def test_stop_after_submittable_stops_before_next_field() -> None:
         result = execute_schedule_round(context, round_index=1)
 
     assert result.stop_requested is True
-    assert context.run_ctx.execution_state.stop_signal.is_set()
+    assert context.run_ctx.execution_state.future_queue.stop_signal.is_set()
     mock_schedule.assert_not_called()
 
 
@@ -309,10 +309,10 @@ def test_dispatch_honors_stop_capacity_and_success_paths() -> None:
     )
 
     assert _dispatch_templates_for_field(**kwargs) is True
-    assert context.run_ctx.execution_state.stop_signal.is_set()
+    assert context.run_ctx.execution_state.future_queue.stop_signal.is_set()
 
     context.scheduler_options = SchedulerControlOptions(stop_after_submittable=0)
-    context.run_ctx.execution_state.stop_signal.clear()
+    context.run_ctx.execution_state.future_queue.stop_signal.clear()
     with (
         patch("alpha.app.run_loop_rounds.maybe_restore_runtime_concurrency"),
         patch("alpha.app.run_loop_rounds.drain_until_capacity", return_value=False),

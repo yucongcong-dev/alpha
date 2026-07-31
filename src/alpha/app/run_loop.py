@@ -125,7 +125,7 @@ def run_field_test_loop(
                 completion_ctx=completion_ctx,
             )
         except KeyboardInterrupt:
-            execution_state.stop_signal.set()
+            execution_state.future_queue.stop_signal.set()
             cancelled = cancel_unstarted_futures(execution_state)
             executor.shutdown(wait=False, cancel_futures=True)
             executor_shutdown = True

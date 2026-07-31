@@ -71,7 +71,7 @@ def execute_schedule_round(
     result_ledger = execution_state.result_ledger
     progressed_this_round = False
     last_field_id = ""
-    if execution_state.stop_signal.is_set():
+    if execution_state.future_queue.stop_signal.is_set():
         return ScheduleRoundResult(
             progressed=False,
             stop_requested=True,
@@ -89,7 +89,7 @@ def execute_schedule_round(
         if result_ledger.reached_submittable_stop_threshold(
             scheduler_options.stop_after_submittable
         ):
-            execution_state.stop_signal.set()
+            execution_state.future_queue.stop_signal.set()
             logger.info(
                 "[stop] 达到 stop-after-submittable=%d",
                 scheduler_options.stop_after_submittable,
@@ -240,14 +240,14 @@ def _dispatch_templates_for_field(
         if result_ledger.reached_submittable_stop_threshold(
             scheduler_options.stop_after_submittable
         ):
-            execution_state.stop_signal.set()
+            execution_state.future_queue.stop_signal.set()
             logger.info(
                 "[stop] 达到 stop-after-submittable=%d",
                 scheduler_options.stop_after_submittable,
             )
             return True
 
-        if execution_state.stop_signal.is_set():
+        if execution_state.future_queue.stop_signal.is_set():
             return True
 
         maybe_restore_runtime_concurrency(runtime_state)
@@ -259,7 +259,7 @@ def _dispatch_templates_for_field(
             field_id=field_id,
         ):
             return False
-        if execution_state.stop_signal.is_set():
+        if execution_state.future_queue.stop_signal.is_set():
             return True
 
         logger.debug(

@@ -140,11 +140,12 @@ def test_future_queue_containers_keep_legacy_views() -> None:
     context = PendingFutureContext(field_id="field_1", template_name="template_1")
 
     state.future_queue.register(future, context)
-    assert state.pending_futures == {future: context}
+    assert state.future_queue.pending_futures == {future: context}
     assert state.future_queue.pop_completed(future) == context
-    assert state.pending_futures == {}
+    assert state.future_queue.pending_futures == {}
 
-    state.future_queue.resumable_simulations = [context]
+    state.future_queue.replace_resumable_batch([context])
+    assert state.future_queue.resumable_simulations == [context]
     pending_contexts = state.future_queue.take_resumable_batch()
     assert pending_contexts == [context]
     assert state.future_queue.resumable_simulations == []
@@ -169,8 +170,6 @@ def test_execution_state_create_copies_future_queue_inputs() -> None:
 
     assert state.future_queue.pending_futures == {future: pending_context}
     assert state.future_queue.resumable_simulations == [resumable_context]
-    assert state.pending_futures == {future: pending_context}
-    assert state.resumable_simulations == [resumable_context]
 
 
 def test_bootstrap_baseline_excludes_historical_submittable_results() -> None:

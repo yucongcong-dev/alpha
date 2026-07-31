@@ -56,10 +56,10 @@ if TYPE_CHECKING:
         PendingTemplateEntry,
         TemplateBuildContext,
     )
+    from ..runtime.future_queue import FutureQueueState
     from ..runtime.state import (
         ExecutionMetrics,
         ExecutionState,
-        FutureQueueState,
         InitializedRunContext,
         PendingFutureLike,
         QueueRetryKey,
@@ -103,7 +103,7 @@ _EXPORT_MAP: ExportMap = {
     "TemplateStats": (".runtime_protocols", "TemplateStats"),
     "ExecutionMetrics": ("..runtime.state", "ExecutionMetrics"),
     "ExecutionState": ("..runtime.state", "ExecutionState"),
-    "FutureQueueState": ("..runtime.state", "FutureQueueState"),
+    "FutureQueueState": ("..runtime.future_queue", "FutureQueueState"),
     "FutureCompletionContext": ("..runtime.contexts", "FutureCompletionContext"),
     "HistoricalRunState": ("..runtime.contexts", "HistoricalRunState"),
     "InitializedRunContext": ("..runtime.state", "InitializedRunContext"),

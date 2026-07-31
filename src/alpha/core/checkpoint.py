@@ -291,7 +291,7 @@ def load_pipeline_state(
         not in execution_state.attempted_keys
     ]
     already_completed = restored_before_dedup - len(resumable_simulations)
-    execution_state.future_queue.resumable_simulations = resumable_simulations
+    execution_state.future_queue.replace_resumable_batch(resumable_simulations)
     if retry_from_start:
         completed_index = 0
         logger.warning(

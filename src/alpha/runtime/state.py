@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from concurrent.futures import Future
 from dataclasses import dataclass, field
-from threading import Event
 import time
 
 from ..config.constants import STATUS_ERROR
@@ -20,6 +19,7 @@ from ..models.runtime_protocols import (
 )
 from ..policy.types import BlacklistRuntimeStats
 from .contexts import HistoricalRunState, PendingFutureContext
+from .future_queue import FutureQueueState
 
 QueueRetryKey = tuple[str, str, str, str]
 
@@ -77,42 +77,6 @@ class QueueRetryState:
         """Clear transient queue retry state after a process restart."""
         self.retry_counts.clear()
         self.exhausted_keys.clear()
-
-
-@dataclass
-class FutureQueueState:
-    """Pending worker futures plus resumable remote simulations."""
-
-    pending_futures: dict[Future[FieldTestResult], PendingFutureContext]
-    resumable_simulations: list[PendingFutureContext]
-    stop_signal: Event
-
-    def cancel_unstarted(self) -> int:
-        """Cancel futures that have not started and remove their pending metadata."""
-        cancelled = 0
-        for future in list(self.pending_futures):
-            if future.cancel():
-                self.pending_futures.pop(future, None)
-                cancelled += 1
-        return cancelled
-
-    def register(
-        self,
-        future: Future[FieldTestResult],
-        context: PendingFutureContext,
-    ) -> None:
-        self.pending_futures[future] = context
-
-    def pop_completed(self, future: Future[FieldTestResult]) -> PendingFutureContext:
-        return self.pending_futures.pop(future)
-
-    def take_resumable_batch(self) -> list[PendingFutureContext]:
-        pending_contexts = list(self.resumable_simulations)
-        self.resumable_simulations.clear()
-        return pending_contexts
-
-    def restore_resumable_batch(self, pending_contexts: list[PendingFutureContext]) -> None:
-        self.resumable_simulations.extend(pending_contexts)
 
 
 @dataclass(frozen=True, slots=True)
@@ -199,16 +163,7 @@ class ExecutionState:
 
     attempted_keys: set[tuple[str, str, str, str]] = field(default_factory=set)
     template_stats: TemplateStats = field(default_factory=dict)
-    future_queue_state: FutureQueueState = field(
-        default_factory=lambda: FutureQueueState(
-            pending_futures={},
-            resumable_simulations=[],
-            stop_signal=Event(),
-        )
-    )
-    pending_futures: dict[Future[FieldTestResult], PendingFutureContext] = field(init=False)
-    resumable_simulations: list[PendingFutureContext] = field(init=False)
-    stop_signal: Event = field(init=False)
+    future_queue_state: FutureQueueState = field(default_factory=FutureQueueState.create)
     field_queue_busy_counts: dict[str, int] = field(default_factory=dict)
     skipped_fields_due_to_queue: set[str] = field(default_factory=set)
     queue_retry_counts: dict[QueueRetryKey, int] = field(default_factory=dict)
@@ -243,10 +198,9 @@ class ExecutionState:
             template_stats=dict(template_stats or {}),
             field_queue_busy_counts=dict(field_queue_busy_counts or {}),
             skipped_fields_due_to_queue=set(skipped_fields_due_to_queue or set()),
-            future_queue_state=FutureQueueState(
-                pending_futures=dict(pending_futures or {}),
-                resumable_simulations=list(resumable_simulations or []),
-                stop_signal=Event(),
+            future_queue_state=FutureQueueState.create(
+                pending_futures=pending_futures,
+                resumable_simulations=resumable_simulations,
             ),
             result_ledger_state=ResultLedgerState(results=list(initial_results or [])),
             last_submission_at=last_submission_at,
@@ -257,9 +211,6 @@ class ExecutionState:
             retry_counts=self.queue_retry_counts,
             exhausted_keys=self.queue_exhausted_keys,
         )
-        self.pending_futures = self.future_queue_state.pending_futures
-        self.resumable_simulations = self.future_queue_state.resumable_simulations
-        self.stop_signal = self.future_queue_state.stop_signal
         self.results = self.result_ledger_state.results
         self.submittable_baseline_count = self.result_ledger_state.submittable_baseline_count
         self.persisted_result_count = self.result_ledger_state.persisted_result_count

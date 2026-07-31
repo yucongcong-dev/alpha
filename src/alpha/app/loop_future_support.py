@@ -137,7 +137,7 @@ def submit_template_future(
         run_ctx.template_library_fingerprint,
         settings_variant,
         run_ctx.create_semaphore,
-        execution_state.stop_signal.is_set,
+        execution_state.future_queue.stop_signal.is_set,
         _record_simulation_created,
     )
     execution_state.last_submission_at = time.monotonic()
@@ -163,7 +163,7 @@ def submit_resumable_futures(
                 args,
                 pending_context,
                 run_ctx.template_library_fingerprint,
-                execution_state.stop_signal.is_set,
+                execution_state.future_queue.stop_signal.is_set,
             )
             typed_future: Future[FieldTestResult] = future
             execution_state.future_queue.register(typed_future, pending_context)

@@ -425,15 +425,17 @@ def test_restore_pending_simulations_sanitizes_rows_and_derives_simulation_id() 
 
 def test_save_pipeline_state_handles_empty_path_and_persists_cooldown(tmp_path) -> None:
     execution_state = _build_execution_state()
-    execution_state.future_queue.resumable_simulations = [
-        PendingFutureContext(
-            field_id="f1",
-            template_name="template",
-            expression="rank(f1)",
-            settings_fingerprint="settings",
-            simulation_location="/simulations/sim-1",
-        )
-    ]
+    execution_state.future_queue.replace_resumable_batch(
+        [
+            PendingFutureContext(
+                field_id="f1",
+                template_name="template",
+                expression="rank(f1)",
+                settings_fingerprint="settings",
+                simulation_location="/simulations/sim-1",
+            )
+        ]
+    )
     runtime_state = RuntimeConcurrencyState(max_workers=4, runtime_max_workers=1)
     runtime_state.cooldown_until = 130.0
 
@@ -460,16 +462,18 @@ def test_save_pipeline_state_handles_empty_path_and_persists_cooldown(tmp_path) 
 
 def test_interrupt_report_and_delete_pipeline_state(tmp_path) -> None:
     execution_state = _build_execution_state()
-    execution_state.future_queue.resumable_simulations = [
-        PendingFutureContext(
-            field_id="f1",
-            template_name="template",
-            expression="rank(f1)",
-            settings_fingerprint="settings",
-            simulation_location="/simulations/sim-1",
-            simulation_id="sim-1",
-        )
-    ]
+    execution_state.future_queue.replace_resumable_batch(
+        [
+            PendingFutureContext(
+                field_id="f1",
+                template_name="template",
+                expression="rank(f1)",
+                settings_fingerprint="settings",
+                simulation_location="/simulations/sim-1",
+                simulation_id="sim-1",
+            )
+        ]
+    )
     runtime_state = RuntimeConcurrencyState(max_workers=2, runtime_max_workers=1)
     report = tmp_path / "interrupt.json"
 
