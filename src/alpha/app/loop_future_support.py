@@ -185,7 +185,7 @@ def drain_remaining_futures(
     last_field_id: str,
     execution_state: ExecutionState,
     runtime_state: RuntimeConcurrencyState,
-    args: SchedulerRuntimeArgs,
+    args: SchedulerRuntimeArgs | SchedulerControlOptions,
     scheduler_options: SchedulerControlOptions | None = None,
     completion_ctx: FutureCompletionContext,
 ) -> None:

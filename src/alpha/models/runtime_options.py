@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from ..runtime.preset_mode import resolve_preset_mode
+from .runtime_config import SimulationStageConfig
 from .runtime_protocols import (
     ApiClientArgs,
     BootstrapFieldArgs,
@@ -12,6 +13,7 @@ from .runtime_protocols import (
     FieldFetchArgs,
     FieldSelectionArgs,
     ResultWriteArgs,
+    RunLoopArgs,
     SchedulerControlArgs,
     TemplateBuildArgs,
 )
@@ -83,6 +85,7 @@ class TemplateBuildOptions:
     max_templates_per_field: int = 0
     max_templates_per_family: int = 0
     legacy_similarity_penalty: int = 0
+    template_library_file: str = ""
     start_date: str | None = None
     end_date: str | None = None
     preset_mode: bool = False
@@ -107,6 +110,7 @@ class TemplateBuildOptions:
             max_templates_per_field=int(args.max_templates_per_field or 0),
             max_templates_per_family=int(args.max_templates_per_family or 0),
             legacy_similarity_penalty=int(args.legacy_similarity_penalty or 0),
+            template_library_file=template_library_file,
             start_date=getattr(args, "start_date", None),
             end_date=getattr(args, "end_date", None),
             preset_mode=bool(getattr(args, "preset_mode", False))
@@ -313,4 +317,28 @@ class SchedulerControlOptions:
             field_queue_busy_skip_after=int(getattr(args, "field_queue_busy_skip_after", 0) or 0),
             sleep_between_fields=float(getattr(args, "sleep_between_fields", 0.0) or 0.0),
             stop_after_submittable=int(getattr(args, "stop_after_submittable", 0) or 0),
+        )
+
+
+@dataclass(frozen=True)
+class RunLoopOptions:
+    """Narrow configuration bundle used by the live run loop."""
+
+    template_build: TemplateBuildOptions
+    simulation_stage: SimulationStageConfig
+    result_write: ResultWriteOptions
+    scheduler: SchedulerControlOptions
+    field_template_batch_size: int = 0
+
+    @classmethod
+    def from_args(cls, args: RunLoopArgs) -> RunLoopOptions:
+        return cls(
+            template_build=TemplateBuildOptions.from_args(args),
+            simulation_stage=SimulationStageConfig.from_stage_args(args),
+            result_write=ResultWriteOptions.from_args(args),
+            scheduler=SchedulerControlOptions.from_args(args),
+            field_template_batch_size=max(
+                0,
+                int(getattr(args, "field_template_batch_size", 0) or 0),
+            ),
         )

@@ -54,6 +54,53 @@ def _build_run_ctx(fields: list[dict[str, str]]) -> InitializedRunContext:
     )
 
 
+def _build_run_loop_args(tmp_path, **overrides) -> argparse.Namespace:
+    values = {
+        "field_template_batch_size": 0,
+        "stop_after_submittable": 0,
+        "dataset_id": "fundamental6",
+        "output": str(tmp_path / "results.json"),
+        "auto_update_blacklist": False,
+        "region": "USA",
+        "universe": "TOP3000",
+        "instrument_type": "EQUITY",
+        "delay": 1,
+        "decay": 4,
+        "neutralization": "SUBINDUSTRY",
+        "truncation": 0.08,
+        "pasteurization": "ON",
+        "unit_handling": "VERIFY",
+        "nan_handling": "OFF",
+        "max_trade": "OFF",
+        "language": "FASTEXPR",
+        "start_date": None,
+        "end_date": None,
+        "simulation_create_retries": 1,
+        "simulation_poll_retries": 1,
+        "simulation_max_polls": 1,
+        "simulation_max_wait_seconds": 1,
+        "simulation_max_pending_cycles": 1,
+        "simulation_max_queue_seconds": 1,
+        "check_submit_retries": 1,
+        "min_sharpe": 0.0,
+        "min_fitness": 0.0,
+        "min_turnover": 0.0,
+        "max_turnover": 0.0,
+        "max_weight": 0.0,
+        "max_templates_per_field": 0,
+        "max_templates_per_family": 0,
+        "legacy_similarity_penalty": 0,
+        "template_library_file": "",
+        "include_fields_file": "",
+        "include_templates_file": "",
+        "queue_busy_cooldown_seconds": 0.0,
+        "field_queue_busy_skip_after": 0,
+        "sleep_between_fields": 0.0,
+    }
+    values.update(overrides)
+    return argparse.Namespace(**values)
+
+
 def test_restore_fields_from_state_returns_empty_when_all_fields_completed(tmp_path) -> None:
     state_file = tmp_path / "state.json"
     state_file.write_text(
@@ -141,13 +188,7 @@ def test_run_field_test_loop_persists_progress_for_skipped_fields(tmp_path) -> N
         {"id": "f2", "type": "MATRIX", "name": "f2"},
     ]
     run_ctx = _build_run_ctx(fields)
-    args = argparse.Namespace(
-        field_template_batch_size=0,
-        stop_after_submittable=0,
-        dataset_id="fundamental6",
-        output=str(tmp_path / "results.json"),
-        auto_update_blacklist=False,
-    )
+    args = _build_run_loop_args(tmp_path)
 
     with (
         patch("alpha.app.run_loop.restore_fields_from_state", return_value=(fields, 0)),
@@ -186,13 +227,7 @@ def test_run_field_test_loop_persists_progress_for_skipped_fields(tmp_path) -> N
 def test_run_field_test_loop_interrupts_workers_without_waiting(tmp_path) -> None:
     fields = [{"id": "f1", "type": "MATRIX", "name": "f1"}]
     run_ctx = _build_run_ctx(fields)
-    args = argparse.Namespace(
-        field_template_batch_size=0,
-        stop_after_submittable=0,
-        dataset_id="fundamental6",
-        output=str(tmp_path / "results.json"),
-        auto_update_blacklist=False,
-    )
+    args = _build_run_loop_args(tmp_path)
     running: Future[object] = Future()
     queued: Future[object] = Future()
     assert running.set_running_or_notify_cancel() is True
@@ -265,7 +300,7 @@ def test_resolve_result_write_options_prefers_run_paths_output() -> None:
         output="/tmp/normalized-results.json",
     )
 
-    options = resolve_result_write_options(args, run_paths)
+    options = resolve_result_write_options(ResultWriteOptions.from_args(args), run_paths)
 
     assert options == ResultWriteOptions(
         dataset_id="fundamental6",

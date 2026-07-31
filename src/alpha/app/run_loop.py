@@ -7,7 +7,7 @@ import logging
 
 from ..config.application import ApplicationConfig
 from ..models.io_types import RunPaths
-from ..models.runtime_options import SchedulerControlOptions
+from ..models.runtime_options import RunLoopOptions
 from ..runtime.state import InitializedRunContext
 from .loop_future_support import cancel_unstarted_futures as cancel_unstarted_futures
 from .loop_future_support import drain_remaining_futures as drain_remaining_futures
@@ -53,11 +53,12 @@ def run_field_test_loop(
     fields = list(run_ctx.fields)
     original_fields = list(run_ctx.fields)
     max_workers = runtime_state.max_workers
-    field_template_batch_size = max(0, int(getattr(args, "field_template_batch_size", 0) or 0))
-    scheduler_options = SchedulerControlOptions.from_args(args)
+    run_loop_options = RunLoopOptions.from_args(args)
+    field_template_batch_size = run_loop_options.field_template_batch_size
+    scheduler_options = run_loop_options.scheduler
     field_resume_positions = build_field_resume_positions(original_fields)
-    result_write_options = resolve_result_write_options(args, run_paths)
-    completion_ctx = resolve_future_completion_context(args, run_ctx, result_write_options)
+    result_write_options = resolve_result_write_options(run_loop_options.result_write, run_paths)
+    completion_ctx = resolve_future_completion_context(run_ctx, result_write_options)
 
     fields, _resumed_index = restore_fields_from_state(
         fields=fields,
@@ -67,7 +68,7 @@ def run_field_test_loop(
     )
 
     template_build_ctx = create_template_build_context(
-        args=args,
+        args=run_loop_options.template_build,
         run_ctx=run_ctx,
         fields=fields,
         existing_results_count=len(execution_state.result_ledger.results),
@@ -77,7 +78,7 @@ def run_field_test_loop(
     executor_shutdown = False
     try:
         schedule_context = ScheduleRoundContext(
-            args=args,
+            args=run_loop_options.simulation_stage,
             run_ctx=run_ctx,
             executor=executor,
             template_build_ctx=template_build_ctx,
@@ -95,7 +96,7 @@ def run_field_test_loop(
                 executor=executor,
                 run_ctx=run_ctx,
                 execution_state=execution_state,
-                args=args,
+                args=run_loop_options.simulation_stage,
             )
             round_index = 0
             while True:
@@ -119,7 +120,7 @@ def run_field_test_loop(
                 last_field_id=last_field_id,
                 execution_state=execution_state,
                 runtime_state=runtime_state,
-                args=args,
+                args=run_loop_options.scheduler,
                 scheduler_options=scheduler_options,
                 completion_ctx=completion_ctx,
             )

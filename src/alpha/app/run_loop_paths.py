@@ -3,11 +3,10 @@
 from __future__ import annotations
 
 from ..core.executor import build_template_build_context
-from ..core.scheduler_completion import build_completion_context
 from ..models.domain import TemplateField
 from ..models.io_types import RunPaths
 from ..models.runtime_options import ResultWriteOptions
-from ..models.runtime_protocols import ResultWriteArgs, SchedulerRuntimeArgs, TemplateBuildArgs
+from ..models.runtime_protocols import TemplateBuildArgs
 from ..runtime.contexts import FutureCompletionContext, TemplateBuildContext
 from ..runtime.state import InitializedRunContext
 
@@ -21,11 +20,10 @@ def run_path_value(run_paths: RunPaths | None, attr: str) -> str:
 
 
 def resolve_result_write_options(
-    args: ResultWriteArgs,
+    options: ResultWriteOptions,
     run_paths: RunPaths | None,
 ) -> ResultWriteOptions:
     """Prefer run_paths output over raw args output to avoid legacy mutation coupling."""
-    options = ResultWriteOptions.from_args(args)
     output_path = run_path_value(run_paths, "output") or options.output_path
     return ResultWriteOptions(
         dataset_id=options.dataset_id,
@@ -35,13 +33,11 @@ def resolve_result_write_options(
 
 
 def resolve_future_completion_context(
-    args: SchedulerRuntimeArgs,
     run_ctx: InitializedRunContext,
     result_write_options: ResultWriteOptions,
 ) -> FutureCompletionContext:
     """Build the shared completion context once for the whole run loop."""
-    return build_completion_context(
-        args=args,
+    return FutureCompletionContext(
         result_write_options=result_write_options,
         settings_fingerprint=run_ctx.settings_fingerprint,
         template_library_fingerprint=run_ctx.template_library_fingerprint,

@@ -24,6 +24,7 @@ from alpha.models.runtime_options import (
     FieldSelectionOptions,
     ResultWriteOptions,
     RunConfigSnapshotOptions,
+    RunLoopOptions,
     SchedulerControlOptions,
     TemplateBuildOptions,
 )
@@ -185,6 +186,57 @@ class TestRuntimeOptionBuilders:
             sleep_between_fields=0.25,
             stop_after_submittable=2,
         )
+
+    def test_run_loop_options_from_args(self) -> None:
+        class _Args:
+            dataset_id = "fundamental6"
+            output = "results.json"
+            auto_update_blacklist = True
+            region = "USA"
+            universe = "TOP1000"
+            instrument_type = "EQUITY"
+            delay = 1
+            decay = 6
+            neutralization = "SUBINDUSTRY"
+            truncation = 0.08
+            pasteurization = "ON"
+            unit_handling = "VERIFY"
+            nan_handling = "OFF"
+            max_trade = "OFF"
+            language = "FASTEXPR"
+            start_date = None
+            end_date = None
+            simulation_create_retries = 2
+            simulation_poll_retries = 3
+            simulation_max_polls = 4
+            simulation_max_wait_seconds = 5
+            simulation_max_pending_cycles = 6
+            simulation_max_queue_seconds = 7
+            check_submit_retries = 8
+            min_sharpe = 1.25
+            min_fitness = 1.0
+            min_turnover = 0.01
+            max_turnover = 0.7
+            max_weight = 0.1
+            max_templates_per_field = 9
+            max_templates_per_family = 10
+            legacy_similarity_penalty = 11
+            template_library_file = "templates.json"
+            include_fields_file = ""
+            include_templates_file = ""
+            queue_busy_cooldown_seconds = 12
+            field_queue_busy_skip_after = 13
+            sleep_between_fields = 0.25
+            stop_after_submittable = 14
+            field_template_batch_size = "15"
+
+        options = RunLoopOptions.from_args(_Args())
+
+        assert options.field_template_batch_size == 15
+        assert options.template_build.template_library_file == "templates.json"
+        assert options.simulation_stage.check_submit_retries == 8
+        assert options.result_write.output_path == "results.json"
+        assert options.scheduler.stop_after_submittable == 14
 
 
 # ============================================================================
