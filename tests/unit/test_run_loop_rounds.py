@@ -302,13 +302,24 @@ def test_dispatch_honors_stop_capacity_and_success_paths() -> None:
         "scheduled_templates": [entry],
     }
 
-    with patch("alpha.app.run_loop_rounds.should_stop_after_submittable", return_value=True):
-        assert _dispatch_templates_for_field(**kwargs) is True
+    context.scheduler_options = SchedulerControlOptions(stop_after_submittable=1)
+    context.run_ctx.execution_state.results.append(
+        FieldTestResult(
+            field_id="new",
+            field_type="MATRIX",
+            field_name="new",
+            template_name="template",
+            status="simulated",
+            submittable=True,
+        )
+    )
+
+    assert _dispatch_templates_for_field(**kwargs) is True
     assert context.run_ctx.execution_state.stop_signal.is_set()
 
+    context.scheduler_options = SchedulerControlOptions(stop_after_submittable=0)
     context.run_ctx.execution_state.stop_signal.clear()
     with (
-        patch("alpha.app.run_loop_rounds.should_stop_after_submittable", return_value=False),
         patch("alpha.app.run_loop_rounds.maybe_restore_runtime_concurrency"),
         patch("alpha.app.run_loop_rounds.drain_until_capacity", return_value=False),
         patch("alpha.app.run_loop_rounds.submit_template_future") as mock_submit,
@@ -317,7 +328,6 @@ def test_dispatch_honors_stop_capacity_and_success_paths() -> None:
     mock_submit.assert_not_called()
 
     with (
-        patch("alpha.app.run_loop_rounds.should_stop_after_submittable", return_value=False),
         patch("alpha.app.run_loop_rounds.maybe_restore_runtime_concurrency"),
         patch("alpha.app.run_loop_rounds.drain_until_capacity", return_value=True),
         patch("alpha.app.run_loop_rounds.throttle_before_submission"),

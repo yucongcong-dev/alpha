@@ -184,6 +184,10 @@ class ResultLedgerState:
         self.results.append(result)
         return self.metrics
 
+    def reached_submittable_stop_threshold(self, stop_threshold: int) -> bool:
+        """Return whether current-run submittable results reached the stop threshold."""
+        return stop_threshold > 0 and self.current_run_submittable_count >= stop_threshold
+
     def refresh_metrics(self) -> ExecutionMetrics:
         """Compatibility method returning the current derived snapshot."""
         return self.metrics

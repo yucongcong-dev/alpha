@@ -92,6 +92,20 @@ def test_result_ledger_state_updates_legacy_views() -> None:
     assert state.submittable_baseline_count == 1
     assert state.persisted_result_count == 1
     assert state.current_run_submittable_count == 0
+    assert state.result_ledger.reached_submittable_stop_threshold(1) is False
+
+    state.results.append(
+        FieldTestResult(
+            field_id="field_2",
+            field_type="MATRIX",
+            field_name="field_2",
+            template_name="tpl",
+            status="simulated",
+            submittable=True,
+            expression="rank(field_2)",
+        )
+    )
+    assert state.result_ledger.reached_submittable_stop_threshold(1) is True
 
 
 def test_future_queue_state_updates_legacy_views() -> None:

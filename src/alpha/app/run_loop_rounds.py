@@ -7,7 +7,6 @@ from dataclasses import dataclass
 from dataclasses import field as dataclass_field
 import logging
 
-from ..analysis.feedback_history import should_stop_after_submittable
 from ..config.constants import SENTINEL_UNKNOWN
 from ..core.executor import (
     build_pending_templates_for_field,
@@ -69,6 +68,7 @@ def execute_schedule_round(
     """Execute one scheduling round across every remaining field."""
     scheduler_options = context.scheduler_options
     execution_state = context.run_ctx.execution_state
+    result_ledger = execution_state.result_ledger
     progressed_this_round = False
     last_field_id = ""
     if execution_state.stop_signal.is_set():
@@ -86,10 +86,8 @@ def execute_schedule_round(
         )
 
     for field_index, field in enumerate(context.fields, start=1):
-        if should_stop_after_submittable(
-            scheduler_options.stop_after_submittable,
-            execution_state.results,
-            baseline_count=execution_state.submittable_baseline_count,
+        if result_ledger.reached_submittable_stop_threshold(
+            scheduler_options.stop_after_submittable
         ):
             execution_state.stop_signal.set()
             logger.info(
@@ -235,12 +233,11 @@ def _dispatch_templates_for_field(
     scheduler_options = context.scheduler_options
     run_ctx = context.run_ctx
     execution_state = run_ctx.execution_state
+    result_ledger = execution_state.result_ledger
     runtime_state = run_ctx.runtime_state
     for template_index, entry in enumerate(scheduled_templates, start=1):
-        if should_stop_after_submittable(
-            scheduler_options.stop_after_submittable,
-            execution_state.results,
-            baseline_count=execution_state.submittable_baseline_count,
+        if result_ledger.reached_submittable_stop_threshold(
+            scheduler_options.stop_after_submittable
         ):
             execution_state.stop_signal.set()
             logger.info(
