@@ -23,7 +23,7 @@ from alpha.config import (
 from alpha.config.runtime_values import (
     clear_runtime_config_cache,
     get_runtime_config,
-    load_submit_quality_runtime_config,
+    load_quality_runtime_config,
 )
 from alpha.config.yaml import (
     clear_yaml_caches,
@@ -337,7 +337,7 @@ def test_model51_policy_disables_undersized_holdout_experiment() -> None:
 
     assert policy.closed_default_template_library is True
 
-def test_load_submit_quality_runtime_config_reads_yaml_globals(monkeypatch) -> None:
+def test_load_quality_runtime_config_reads_yaml_globals(monkeypatch) -> None:
     monkeypatch.setattr(
         "alpha.config.runtime_values.get_yaml_config",
         lambda config_path="": {
@@ -353,7 +353,7 @@ def test_load_submit_quality_runtime_config_reads_yaml_globals(monkeypatch) -> N
         },
     )
 
-    quality = load_submit_quality_runtime_config()
+    quality = load_quality_runtime_config()
 
     assert quality.min_sharpe == 1.7
     assert quality.min_fitness == 1.2

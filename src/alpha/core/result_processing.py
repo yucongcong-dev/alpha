@@ -12,10 +12,11 @@ from dataclasses import dataclass
 import logging
 from typing import Any, Protocol
 
-from ..analysis.result_identity import is_informative_result, result_identity
+from ..analysis.result_identity import result_identity
 from ..analysis.template_stats import update_template_stats_with_result
 from ..config.constants import STATUS_ERROR, STATUS_SKIPPED
 from ..models.domain import FieldTestResult
+from ..models.result_predicates import is_informative_result
 from ..models.runtime_protocols import TemplateStats
 from ..policy.blacklist_runtime_stats import build_blacklist_runtime_stats
 from ..policy.blacklist_runtime_updates import auto_update_blacklist_incremental

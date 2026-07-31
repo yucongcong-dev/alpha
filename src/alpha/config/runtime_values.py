@@ -224,16 +224,6 @@ def load_quality_runtime_config() -> QualityRuntimeConfig:
     )
 
 
-def load_submit_quality_runtime_config() -> QualityRuntimeConfig:
-    """Compatibility alias for the unified quality runtime configuration."""
-    return load_quality_runtime_config()
-
-
-def load_precheck_quality_runtime_config() -> QualityRuntimeConfig:
-    """Compatibility alias retained for callers of the former dual-quality model."""
-    return load_quality_runtime_config()
-
-
 # ---------------------------------------------------------------------------
 # 统一运行时配置复合对象 — 消除 30 个 getter 包装函数的冗余 YAML 查询
 # ---------------------------------------------------------------------------
@@ -248,17 +238,6 @@ class RuntimeConfig:
     expression: ExpressionRuntimeConfig
     simulation: SimulationRuntimeConfig
     quality: QualityRuntimeConfig
-
-    @property
-    def precheck_quality(self) -> QualityRuntimeConfig:
-        """Compatibility alias for the unified quality gate."""
-        return self.quality
-
-    @property
-    def submit_quality(self) -> QualityRuntimeConfig:
-        """Compatibility alias for the unified quality gate."""
-        return self.quality
-
 
 _runtime_config_cache: RuntimeConfig | None = None
 _runtime_config_source: object | None = None

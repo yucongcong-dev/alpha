@@ -11,7 +11,7 @@ from ..runtime.contexts import (
     FutureCompletionContext,
     PendingFutureContext,
 )
-from .simulation import build_failure_result
+from .simulation_results import build_failure_result
 
 
 def _context_value(

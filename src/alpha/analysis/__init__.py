@@ -54,7 +54,8 @@ if TYPE_CHECKING:
         current_submittable_count,
         field_priority,
     )
-    from .result_identity import attempted_template_keys, is_informative_result, result_identity
+    from .result_identity import attempted_template_keys, result_identity
+    from ..models.result_predicates import is_informative_result
     from .results_loader import load_existing_results
     from .template_registry_rules import compile_template_registry_summary
     from .template_stats import (
@@ -96,7 +97,7 @@ _EXPORT_MAP: ExportMap = {
     "current_submittable_count": (".field_stats", "current_submittable_count"),
     "field_priority": (".field_stats", "field_priority"),
     "attempted_template_keys": (".result_identity", "attempted_template_keys"),
-    "is_informative_result": (".result_identity", "is_informative_result"),
+    "is_informative_result": ("..models.result_predicates", "is_informative_result"),
     "result_identity": (".result_identity", "result_identity"),
     "load_existing_results": (".results_loader", "load_existing_results"),
     "compile_template_registry_summary": (
