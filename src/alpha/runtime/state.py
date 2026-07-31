@@ -257,30 +257,22 @@ class ExecutionState:
             retry_counts=self.queue_retry_counts,
             exhausted_keys=self.queue_exhausted_keys,
         )
-        self.sync_future_queue()
-        self.sync_result_ledger()
+        self.pending_futures = self.future_queue_state.pending_futures
+        self.resumable_simulations = self.future_queue_state.resumable_simulations
+        self.stop_signal = self.future_queue_state.stop_signal
+        self.results = self.result_ledger_state.results
+        self.submittable_baseline_count = self.result_ledger_state.submittable_baseline_count
+        self.persisted_result_count = self.result_ledger_state.persisted_result_count
 
     @property
     def future_queue(self) -> FutureQueueState:
         """Return the authoritative future-state view."""
         return self.future_queue_state
 
-    def sync_future_queue(self) -> None:
-        """Copy future-queue-owned containers back to legacy execution-state attributes."""
-        self.pending_futures = self.future_queue_state.pending_futures
-        self.resumable_simulations = self.future_queue_state.resumable_simulations
-        self.stop_signal = self.future_queue_state.stop_signal
-
     @property
     def result_ledger(self) -> ResultLedgerState:
         """Return the authoritative result-state view."""
         return self.result_ledger_state
-
-    def sync_result_ledger(self) -> None:
-        """Copy ledger-owned counters back to legacy execution-state attributes."""
-        self.results = self.result_ledger_state.results
-        self.submittable_baseline_count = self.result_ledger_state.submittable_baseline_count
-        self.persisted_result_count = self.result_ledger_state.persisted_result_count
 
     def reset_transient_queue_state(self) -> None:
         """Reset queue state that should not survive process restarts."""

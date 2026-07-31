@@ -568,7 +568,6 @@ def test_drain_completed_futures_ignores_historical_submittable_baseline() -> No
         },
     )
     execution_state.result_ledger.submittable_baseline_count = 1
-    execution_state.sync_result_ledger()
     args = argparse.Namespace(
         dataset_id="fundamental6",
         output="raw-results.json",

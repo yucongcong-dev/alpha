@@ -62,7 +62,7 @@ def test_queue_retry_state_updates_legacy_views() -> None:
     assert state.queue_exhausted_keys == set()
 
 
-def test_result_ledger_state_updates_legacy_views() -> None:
+def test_result_ledger_results_keep_legacy_list_view() -> None:
     state = _state()
     result = FieldTestResult(
         field_id="field_1",
@@ -76,16 +76,10 @@ def test_result_ledger_state_updates_legacy_views() -> None:
 
     ledger = state.result_ledger
     metrics = ledger.append(result)
-    ledger.submittable_baseline_count = 1
-    ledger.persisted_result_count = 1
-    state.sync_result_ledger()
 
     assert metrics.submittable_count == 1
+    assert state.results == [result]
     assert state.result_ledger.results == [result]
-    assert state.submittable_baseline_count == 1
-    assert state.persisted_result_count == 1
-    assert state.result_ledger.current_run_submittable_count == 0
-    assert ledger.reached_submittable_stop_threshold(1) is False
 
     ledger.append(
         FieldTestResult(
@@ -98,6 +92,7 @@ def test_result_ledger_state_updates_legacy_views() -> None:
             expression="rank(field_2)",
         )
     )
+    assert state.results == ledger.results
     assert ledger.reached_submittable_stop_threshold(1) is True
 
 
@@ -139,7 +134,7 @@ def test_result_ledger_read_does_not_restore_legacy_counters() -> None:
     assert state.persisted_result_count == 0
 
 
-def test_future_queue_state_updates_legacy_views() -> None:
+def test_future_queue_containers_keep_legacy_views() -> None:
     state = _state()
     future: Future[FieldTestResult] = Future()
     context = PendingFutureContext(field_id="field_1", template_name="template_1")
@@ -150,13 +145,12 @@ def test_future_queue_state_updates_legacy_views() -> None:
     assert state.pending_futures == {}
 
     state.future_queue.resumable_simulations = [context]
-    state.sync_future_queue()
     pending_contexts = state.future_queue.take_resumable_batch()
     assert pending_contexts == [context]
-    assert state.resumable_simulations == []
+    assert state.future_queue.resumable_simulations == []
 
     state.future_queue.restore_resumable_batch(pending_contexts)
-    assert state.resumable_simulations == [context]
+    assert state.future_queue.resumable_simulations == [context]
 
 
 def test_execution_state_create_copies_future_queue_inputs() -> None:

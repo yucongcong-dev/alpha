@@ -113,7 +113,6 @@ def apply_result_state_updates(
 ) -> TemplateStats:
     """Apply one completed result to execution counters and template stats."""
     execution_state.result_ledger.append(result)
-    execution_state.sync_result_ledger()
     if services.is_informative_result(result):
         execution_state.attempted_keys.add(services.result_identity(result))
     template_stats = services.update_template_stats_with_result(
@@ -212,7 +211,6 @@ def persist_incremental_result(
         run_config=completion_ctx.run_config,
         template_stats=execution_state.template_stats,
     )
-    execution_state.sync_result_ledger()
 
 
 def log_congestion_signals(result: FieldTestResult) -> None:

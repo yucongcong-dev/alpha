@@ -161,7 +161,6 @@ def test_historical_submittable_result_does_not_stop_new_round() -> None:
         )
     )
     ledger.submittable_baseline_count = 1
-    context.run_ctx.execution_state.sync_result_ledger()
 
     with patch(
         "alpha.app.run_loop_rounds.schedule_field_round",

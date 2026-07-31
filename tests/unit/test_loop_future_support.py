@@ -57,7 +57,6 @@ def test_cancel_unstarted_futures_preserves_running_simulations() -> None:
         queued: queued_context,
         running: running_context,
     }
-    execution_state.sync_future_queue()
 
     cancelled = cancel_unstarted_futures(execution_state)
 
@@ -129,7 +128,6 @@ def test_submit_resumable_futures_registers_restored_contexts() -> None:
         simulation_id="sim-1",
     )
     execution_state.future_queue.resumable_simulations = [pending]
-    execution_state.sync_future_queue()
     executor = _RecordingExecutor()
     run_ctx = SimpleNamespace(
         client_factory=object(),
@@ -167,7 +165,6 @@ def test_submit_resumable_futures_restores_unsubmitted_contexts_on_failure() -> 
         simulation_location="/simulations/sim-2",
     )
     execution_state.future_queue.resumable_simulations = [first, second]
-    execution_state.sync_future_queue()
     executor = _FailingExecutor()
     run_ctx = SimpleNamespace(
         client_factory=object(),

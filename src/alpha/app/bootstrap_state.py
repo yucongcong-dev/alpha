@@ -29,7 +29,6 @@ def create_execution_state(
     )
     result_ledger = execution_state.result_ledger
     result_ledger.submittable_baseline_count = result_ledger.metrics.submittable_count
-    execution_state.sync_result_ledger()
     execution_state.blacklist_runtime_stats = build_blacklist_runtime_stats(result_ledger.results)
     execution_state.blacklisted_template_keys = load_blacklisted_template_keys(dataset_id)
     return execution_state
@@ -74,5 +73,4 @@ def build_execution_state(
         run_config=run_config,
         template_stats=execution_state.template_stats,
     )
-    execution_state.sync_result_ledger()
     return execution_state

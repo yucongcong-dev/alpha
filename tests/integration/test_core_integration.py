@@ -383,7 +383,6 @@ class TestDrainCompletedFuturesFlow:
                 settings_fingerprint="abc",
             )
         }
-        empty_execution_state.sync_future_queue()
 
         with (
             patch("alpha.analysis.results_persistence.dump_results_incremental"),
@@ -438,7 +437,6 @@ class TestDrainCompletedFuturesFlow:
                 settings_fingerprint="abc",
             )
         }
-        empty_execution_state.sync_future_queue()
 
         with (
             patch("alpha.analysis.results_persistence.dump_results_incremental"),
@@ -477,7 +475,6 @@ class TestDrainCompletedFuturesFlow:
                 "settings_fingerprint": "abc",
             }
         }
-        empty_execution_state.sync_future_queue()
 
         with (
             patch("alpha.analysis.results_persistence.dump_results_incremental"),

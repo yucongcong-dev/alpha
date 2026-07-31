@@ -109,11 +109,9 @@ def test_drain_remaining_futures_persists_total_field_count() -> None:
     future = object()
     execution_state = _build_execution_state()
     execution_state.future_queue.pending_futures = {future: {"field_id": "f1"}}
-    execution_state.sync_future_queue()
 
     def _drain(*, execution_state, **_kwargs):
         execution_state.future_queue.pending_futures.clear()
-        execution_state.sync_future_queue()
 
     with (
         patch("alpha.app.loop_future_support.wait", return_value=({future}, set())),
@@ -215,7 +213,6 @@ def test_run_field_test_loop_interrupts_workers_without_waiting(tmp_path) -> Non
             running: running_context,
             queued: queued_context,
         }
-        run_ctx.execution_state.sync_future_queue()
         raise KeyboardInterrupt
 
     with (

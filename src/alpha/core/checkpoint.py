@@ -292,7 +292,6 @@ def load_pipeline_state(
     ]
     already_completed = restored_before_dedup - len(resumable_simulations)
     execution_state.future_queue.resumable_simulations = resumable_simulations
-    execution_state.sync_future_queue()
     if retry_from_start:
         completed_index = 0
         logger.warning(

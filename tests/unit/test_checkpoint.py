@@ -261,7 +261,6 @@ def test_save_pipeline_state_persists_remote_simulation_location(tmp_path) -> No
         simulation_location="/simulations/sim-1",
         simulation_id="sim-1",
     )
-    execution_state.sync_future_queue()
 
     saved = save_pipeline_state(
         str(state_file),
@@ -435,7 +434,6 @@ def test_save_pipeline_state_handles_empty_path_and_persists_cooldown(tmp_path) 
             simulation_location="/simulations/sim-1",
         )
     ]
-    execution_state.sync_future_queue()
     runtime_state = RuntimeConcurrencyState(max_workers=4, runtime_max_workers=1)
     runtime_state.cooldown_until = 130.0
 
@@ -472,7 +470,6 @@ def test_interrupt_report_and_delete_pipeline_state(tmp_path) -> None:
             simulation_id="sim-1",
         )
     ]
-    execution_state.sync_future_queue()
     runtime_state = RuntimeConcurrencyState(max_workers=2, runtime_max_workers=1)
     report = tmp_path / "interrupt.json"
 
