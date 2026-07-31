@@ -130,14 +130,7 @@ class TestExecutionStateManagement:
 
     def test_execution_state_result_management(self):
         """测试执行状态的结果管理"""
-        state = ExecutionState(
-            results=[],
-            attempted_keys=set(),
-            template_stats={},
-            pending_futures={},
-            field_queue_busy_counts={},
-            skipped_fields_due_to_queue=set(),
-        )
+        state = ExecutionState.create()
 
         result1 = FieldTestResult(
             field_id="field_1",
@@ -165,14 +158,7 @@ class TestExecutionStateManagement:
 
     def test_execution_state_pending_futures(self):
         """测试执行状态的pending futures管理"""
-        state = ExecutionState(
-            results=[],
-            attempted_keys=set(),
-            template_stats={},
-            pending_futures={},
-            field_queue_busy_counts={},
-            skipped_fields_due_to_queue=set(),
-        )
+        state = ExecutionState.create()
 
         ctx = PendingFutureContext(
             field_id="test_field",
@@ -214,14 +200,7 @@ class TestResultProcessingFlow:
         """测试应用完成结果"""
         from alpha.models.runtime import FutureCompletionContext, ResultWriteOptions
 
-        state = ExecutionState(
-            results=[],
-            attempted_keys=set(),
-            template_stats={},
-            pending_futures={},
-            field_queue_busy_counts={},
-            skipped_fields_due_to_queue=set(),
-        )
+        state = ExecutionState.create()
         result = FieldTestResult(
             field_id="test_field",
             field_type="MATRIX",

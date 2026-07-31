@@ -94,10 +94,7 @@ class TestCongestionSignalPropagation:
             template_library_fingerprint="def",
             run_config={"key": "val"},
         )
-        execution_state = ExecutionState(
-            results=[],
-            attempted_keys=set(),
-            template_stats={},
+        execution_state = ExecutionState.create(
             pending_futures={
                 future: PendingFutureContext(
                     field_id="test_field",
@@ -108,8 +105,6 @@ class TestCongestionSignalPropagation:
                     settings_fingerprint="abc",
                 )
             },
-            field_queue_busy_counts={},
-            skipped_fields_due_to_queue=set(),
         )
 
         with (
@@ -154,10 +149,7 @@ class TestCongestionSignalPropagation:
             run_config={"key": "val"},
         )
 
-        execution_state = ExecutionState(
-            results=[],
-            attempted_keys=set(),
-            template_stats={},
+        execution_state = ExecutionState.create(
             pending_futures={
                 future: PendingFutureContext(
                     field_id="test_field",
@@ -168,8 +160,6 @@ class TestCongestionSignalPropagation:
                     settings_fingerprint="abc",
                 )
             },
-            field_queue_busy_counts={},
-            skipped_fields_due_to_queue=set(),
         )
 
         with (

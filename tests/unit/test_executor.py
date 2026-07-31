@@ -57,14 +57,7 @@ def _field(field_id: str) -> TemplateField:
 
 
 def _execution_state() -> ExecutionState:
-    return ExecutionState(
-        results=[],
-        attempted_keys=set(),
-        template_stats={},
-        pending_futures={},
-        field_queue_busy_counts={},
-        skipped_fields_due_to_queue=set(),
-    )
+    return ExecutionState.create()
 
 
 def test_build_template_context_copies_narrow_options_and_feedback() -> None:

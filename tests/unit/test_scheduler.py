@@ -358,13 +358,7 @@ class TestThrottleBeforeSubmission:
 
     def test_zero_sleep_between_fields_never_waits(self) -> None:
         """sleep_between_fields=0 时永远不等待，无论上次提交时间。"""
-        state = ExecutionState(
-            results=[],
-            attempted_keys=set(),
-            template_stats={},
-            pending_futures={},
-            field_queue_busy_counts={},
-            skipped_fields_due_to_queue=set(),
+        state = ExecutionState.create(
             last_submission_at=time.monotonic(),  # 刚刚提交
         )
         args = MockArgs(sleep_between_fields=0)
@@ -423,10 +417,7 @@ def test_drain_completed_futures_prefers_explicit_result_write_options() -> None
     """Incremental writes should be able to honor normalized output paths over raw args."""
     future: Future[object] = Future()
     future.set_result(None)
-    execution_state = ExecutionState(
-        results=[],
-        attempted_keys=set(),
-        template_stats={},
+    execution_state = ExecutionState.create(
         pending_futures={
             future: PendingFutureContext(
                 field_id="field_1",
@@ -437,8 +428,6 @@ def test_drain_completed_futures_prefers_explicit_result_write_options() -> None
                 settings_fingerprint="variant-fp",
             )
         },
-        field_queue_busy_counts={},
-        skipped_fields_due_to_queue=set(),
     )
     args = argparse.Namespace(
         dataset_id="fundamental6",
@@ -478,10 +467,7 @@ def test_drain_completed_futures_sets_stop_signal_and_cancels_unstarted_future()
     with ThreadPoolExecutor(max_workers=1) as executor:
         blocker = executor.submit(time.sleep, 0.2)
         queued_future = executor.submit(time.sleep, 0.2)
-        execution_state = ExecutionState(
-            results=[],
-            attempted_keys=set(),
-            template_stats={},
+        execution_state = ExecutionState.create(
             pending_futures={
                 done_future: PendingFutureContext(
                     field_id="field_done",
@@ -500,8 +486,6 @@ def test_drain_completed_futures_sets_stop_signal_and_cancels_unstarted_future()
                     settings_fingerprint="queued-fp",
                 ),
             },
-            field_queue_busy_counts={},
-            skipped_fields_due_to_queue=set(),
         )
         args = argparse.Namespace(
             dataset_id="fundamental6",
@@ -552,8 +536,8 @@ def test_drain_completed_futures_ignores_historical_submittable_baseline() -> No
     done_future: Future[object] = Future()
     done_future.set_result(None)
     queued_future: Future[object] = Future()
-    execution_state = ExecutionState(
-        results=[
+    execution_state = ExecutionState.create(
+        initial_results=[
             FieldTestResult(
                 field_id="field_done",
                 field_type="MATRIX",
@@ -564,8 +548,6 @@ def test_drain_completed_futures_ignores_historical_submittable_baseline() -> No
                 expression="rank(field_done)",
             )
         ],
-        attempted_keys=set(),
-        template_stats={},
         pending_futures={
             done_future: PendingFutureContext(
                 field_id="field_done",
@@ -584,8 +566,6 @@ def test_drain_completed_futures_ignores_historical_submittable_baseline() -> No
                 settings_fingerprint="queued-fp",
             ),
         },
-        field_queue_busy_counts={},
-        skipped_fields_due_to_queue=set(),
     )
     execution_state.result_ledger.submittable_baseline_count = 1
     execution_state.sync_result_ledger()

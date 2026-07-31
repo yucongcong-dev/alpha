@@ -146,10 +146,8 @@ def test_scheduler_dump_results_shrinks_next_template_queue(monkeypatch, tmp_pat
             )
 
     future = _DoneFuture()
-    execution_state = ExecutionState(
-        results=existing_results,
-        attempted_keys=set(),
-        template_stats={},
+    execution_state = ExecutionState.create(
+        initial_results=existing_results,
         pending_futures={
             future: PendingFutureContext(
                 field_id="field_b",
@@ -162,8 +160,6 @@ def test_scheduler_dump_results_shrinks_next_template_queue(monkeypatch, tmp_pat
                 settings_fingerprint="variant_fp",
             )
         },
-        field_queue_busy_counts={},
-        skipped_fields_due_to_queue=set(),
     )
     handle_completed_future(
         future,

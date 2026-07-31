@@ -166,14 +166,7 @@ class TestExecutionState:
     """测试执行状态"""
 
     def test_default_state_is_empty(self) -> None:
-        state = ExecutionState(
-            results=[],
-            attempted_keys=set(),
-            template_stats={},
-            pending_futures={},
-            field_queue_busy_counts={},
-            skipped_fields_due_to_queue=set(),
-        )
+        state = ExecutionState.create()
         assert state.result_ledger.results == []
         assert state.attempted_keys == set()
         assert state.template_stats == {}
@@ -183,17 +176,24 @@ class TestExecutionState:
         assert state.last_submission_at == 0.0
 
     def test_custom_values(self) -> None:
-        state = ExecutionState(
-            results=[{"id": "alpha1"}],
-            attempted_keys={"key1"},
+        result = FieldTestResult(
+            field_id="alpha1",
+            field_type="MATRIX",
+            field_name="alpha1",
+            template_name="tpl",
+            status="simulated",
+        )
+        attempted_key = ("field_1", "tpl", "rank(field_1)", "settings")
+        state = ExecutionState.create(
+            initial_results=[result],
+            attempted_keys={attempted_key},
             template_stats={"tmpl": {"count": 1}},
-            pending_futures={},
             field_queue_busy_counts={"f1": 2},
             skipped_fields_due_to_queue={"f2"},
             last_submission_at=123.0,
         )
         assert len(state.result_ledger.results) == 1
-        assert "key1" in state.attempted_keys
+        assert attempted_key in state.attempted_keys
         assert state.template_stats["tmpl"]["count"] == 1
         assert state.field_queue_busy_counts["f1"] == 2
         assert "f2" in state.skipped_fields_due_to_queue

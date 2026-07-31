@@ -22,13 +22,10 @@ def create_execution_state(
 ) -> ExecutionState:
     """Build in-memory execution state without writing runtime artifacts."""
     set_active_datasets_root(datasets_root)
-    execution_state = ExecutionState(
-        results=list(historical_state.existing_results),
-        attempted_keys=set(historical_state.attempted_keys),
-        template_stats=dict(historical_state.template_stats),
-        pending_futures={},
-        field_queue_busy_counts={},
-        skipped_fields_due_to_queue=set(),
+    execution_state = ExecutionState.create(
+        initial_results=historical_state.existing_results,
+        attempted_keys=historical_state.attempted_keys,
+        template_stats=historical_state.template_stats,
     )
     result_ledger = execution_state.result_ledger
     result_ledger.submittable_baseline_count = result_ledger.metrics.submittable_count

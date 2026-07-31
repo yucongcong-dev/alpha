@@ -16,14 +16,7 @@ from alpha.models.runtime import ExecutionState, PendingFutureContext, RuntimeCo
 
 
 def _build_execution_state() -> ExecutionState:
-    return ExecutionState(
-        results=[],
-        attempted_keys=set(),
-        template_stats={},
-        pending_futures={},
-        field_queue_busy_counts={},
-        skipped_fields_due_to_queue=set(),
-    )
+    return ExecutionState.create()
 
 
 def test_load_pipeline_state_ignores_invalid_completed_index(tmp_path) -> None:

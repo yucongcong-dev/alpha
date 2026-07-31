@@ -13,14 +13,7 @@ from alpha.runtime.state import ExecutionState
 
 
 def _state() -> ExecutionState:
-    return ExecutionState(
-        results=[],
-        attempted_keys=set(),
-        template_stats={},
-        pending_futures={},
-        field_queue_busy_counts={},
-        skipped_fields_due_to_queue=set(),
-    )
+    return ExecutionState.create()
 
 
 def test_execution_metrics_follow_results_without_manual_refresh() -> None:
@@ -106,6 +99,32 @@ def test_result_ledger_state_updates_legacy_views() -> None:
         )
     )
     assert ledger.reached_submittable_stop_threshold(1) is True
+
+
+def test_execution_state_create_copies_runtime_inputs() -> None:
+    result = FieldTestResult(
+        field_id="field_1",
+        field_type="MATRIX",
+        field_name="field_1",
+        template_name="tpl",
+        status="simulated",
+        expression="rank(field_1)",
+    )
+    attempted_key = ("field_1", "tpl", "rank(field_1)", "settings")
+    initial_results = [result]
+    attempted_keys = {attempted_key}
+
+    state = ExecutionState.create(
+        initial_results=initial_results,
+        attempted_keys=attempted_keys,
+        template_stats={"tpl": {"attempted": 1}},
+    )
+    initial_results.clear()
+    attempted_keys.clear()
+
+    assert state.result_ledger.results == [result]
+    assert state.attempted_keys == {attempted_key}
+    assert state.template_stats == {"tpl": {"attempted": 1}}
 
 
 def test_result_ledger_read_does_not_restore_legacy_counters() -> None:

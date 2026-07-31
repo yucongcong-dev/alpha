@@ -87,15 +87,7 @@ def scheduler_args() -> MockArgs:
 
 def _make_execution_state(last_submission_at: float = 0.0) -> ExecutionState:
     """ExecutionState 工厂：除 last_submission_at 外其他字段均为空。"""
-    return ExecutionState(
-        results=[],
-        attempted_keys=set(),
-        template_stats={},
-        pending_futures={},
-        field_queue_busy_counts={},
-        skipped_fields_due_to_queue=set(),
-        last_submission_at=last_submission_at,
-    )
+    return ExecutionState.create(last_submission_at=last_submission_at)
 
 
 @pytest.fixture

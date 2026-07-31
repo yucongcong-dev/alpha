@@ -30,14 +30,7 @@ from alpha.models.runtime_options import SchedulerControlOptions
 
 def _build_context(*, field_template_batch_size: int) -> ScheduleRoundContext:
     field = TemplateField("f1", "f1", "MATRIX")
-    execution_state = ExecutionState(
-        results=[],
-        attempted_keys=set(),
-        template_stats={},
-        pending_futures={},
-        field_queue_busy_counts={},
-        skipped_fields_due_to_queue=set(),
-    )
+    execution_state = ExecutionState.create()
     runtime_state = RuntimeConcurrencyState(max_workers=1, runtime_max_workers=1)
     run_ctx = InitializedRunContext(
         client_factory=None,

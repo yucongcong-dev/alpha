@@ -164,14 +164,7 @@ def test_initialize_run_context_prefers_run_paths_for_cache_and_credentials(monk
     )
     monkeypatch.setattr(
         "alpha.app.bootstrap.build_execution_state",
-        lambda **_kwargs: ExecutionState(
-            results=[],
-            attempted_keys=set(),
-            template_stats={},
-            pending_futures={},
-            field_queue_busy_counts={},
-            skipped_fields_due_to_queue=set(),
-        ),
+        lambda **_kwargs: ExecutionState.create(),
     )
 
     run_ctx = initialize_run_context(args, run_paths)
@@ -265,14 +258,7 @@ def test_initialize_run_context_builds_fallback_run_paths_when_missing(monkeypat
     )
     monkeypatch.setattr(
         "alpha.app.bootstrap.build_execution_state",
-        lambda **_kwargs: ExecutionState(
-            results=[],
-            attempted_keys=set(),
-            template_stats={},
-            pending_futures={},
-            field_queue_busy_counts={},
-            skipped_fields_due_to_queue=set(),
-        ),
+        lambda **_kwargs: ExecutionState.create(),
     )
 
     run_ctx = initialize_run_context(args, None)

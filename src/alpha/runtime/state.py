@@ -216,6 +216,31 @@ class ExecutionState:
     last_submission_at: float = 0.0
     stop_signal: Event = field(default_factory=Event)
 
+    @classmethod
+    def create(
+        cls,
+        *,
+        initial_results: list[FieldTestResult] | None = None,
+        attempted_keys: set[tuple[str, str, str, str]] | None = None,
+        template_stats: TemplateStats | None = None,
+        pending_futures: dict[Future[FieldTestResult], PendingFutureContext] | None = None,
+        field_queue_busy_counts: dict[str, int] | None = None,
+        skipped_fields_due_to_queue: set[str] | None = None,
+        resumable_simulations: list[PendingFutureContext] | None = None,
+        last_submission_at: float = 0.0,
+    ) -> ExecutionState:
+        """Create runtime state through a narrow initialization boundary."""
+        return cls(
+            results=list(initial_results or []),
+            attempted_keys=set(attempted_keys or set()),
+            template_stats=dict(template_stats or {}),
+            pending_futures=dict(pending_futures or {}),
+            field_queue_busy_counts=dict(field_queue_busy_counts or {}),
+            skipped_fields_due_to_queue=set(skipped_fields_due_to_queue or set()),
+            resumable_simulations=list(resumable_simulations or []),
+            last_submission_at=last_submission_at,
+        )
+
     def __post_init__(self) -> None:
         self.queue_retry_state = QueueRetryState(
             retry_counts=self.queue_retry_counts,

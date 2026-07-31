@@ -32,14 +32,7 @@ from alpha.models.runtime import (
 
 
 def _build_execution_state() -> ExecutionState:
-    return ExecutionState(
-        results=[],
-        attempted_keys=set(),
-        template_stats={},
-        pending_futures={},
-        field_queue_busy_counts={},
-        skipped_fields_due_to_queue=set(),
-    )
+    return ExecutionState.create()
 
 
 def _build_run_ctx(fields: list[dict[str, str]]) -> InitializedRunContext:
