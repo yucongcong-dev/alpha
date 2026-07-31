@@ -74,7 +74,7 @@ class TestUseFundamental6Heuristics:
         assert use_fundamental6_heuristics("FUNDAMENTAL6") is True
 
     def test_contains_keyword(self) -> None:
-        assert use_fundamental6_heuristics("fundamental6_v2") is True
+        assert use_fundamental6_heuristics("fundamental6_v2") is False
 
     def test_other_dataset(self) -> None:
         assert use_fundamental6_heuristics("model51") is False
@@ -87,8 +87,8 @@ class TestUseFundamental6Heuristics:
 
     # ---- 补充边界测试 ----
     def test_partial_match(self) -> None:
-        """包含 "fundamental6" 子串即为匹配。"""
-        assert use_fundamental6_heuristics("my_fundamental6_custom") is True
+        """Derived datasets must opt in through YAML instead of substring matching."""
+        assert use_fundamental6_heuristics("my_fundamental6_custom") is False
 
     def test_whitespace_only(self) -> None:
         """纯空白不包含 fundamental6，返回 False。"""
@@ -142,7 +142,7 @@ def test_expression_policy_can_be_overridden_from_yaml(monkeypatch) -> None:
     policy = get_dataset_expression_policy("fundamental6")
 
     assert policy.partner_limit == 9
-    assert "base_protected" in policy.protected_templates
+    assert "base_protected" not in policy.protected_templates
     assert "dataset_protected" in policy.protected_templates
     assert policy.preferred_partner_score_bonuses["assets"] == 11
     assert policy.matrix_field_transform.backfill_window == 720
@@ -178,25 +178,31 @@ def test_fundamental6_default_policy_is_loaded_from_settings_yaml() -> None:
 
     assert policy.policy_version == "2026-07-30.1"
     assert policy.feedback_scope == "field_type"
-    assert policy.partner_limit == 6
-    assert "account_rank_backfill_504" in policy.protected_templates
-    assert ("cashflow_op", "fnd6_mkvalt") in policy.high_conviction_ratio_pairs
-    assert ("cashflow_op", "assets") in policy.high_conviction_ratio_pairs
-    assert ("ebitda", "enterprise_value") in policy.high_conviction_ratio_pairs
-    assert ("liabilities", "assets") in policy.high_conviction_ratio_pairs
-    assert ("income", "assets") in policy.high_conviction_ratio_pairs
-    assert ("sales", "assets") in policy.high_conviction_ratio_pairs
+    assert policy.closed_default_template_library is True
+    assert policy.partner_limit == 0
+    assert policy.account_template_boost == 0
+    assert policy.high_conviction_ratio_priority_boost == 0
+    assert policy.protected_templates == {
+        "hc_ratio_group_zscore_252_over_cap",
+        "group_ratio_delta_over_std_63_126_over_cap",
+    }
+    assert policy.high_conviction_ratio_pairs == {("cashflow_op", "cap")}
+    assert policy.matrix_delta_over_std_windows == ()
+    assert policy.ratio_delta_rank_windows == ()
+    assert policy.ratio_delta_over_std_windows == ()
+    assert policy.ratio_partner_candidates == {}
+    assert policy.ratio_keywords == {}
+    assert policy.preferred_partner_score_bonuses == {}
+    assert policy.preferred_field_order == {"cashflow_op": 0}
     assert policy.field_min_coverage == 0.20
     assert policy.field_min_date_coverage == 0.98
     assert policy.field_min_alpha_count == 40
     assert policy.field_min_user_count == 8
-    assert policy.event_field_prefixes == ("fnd6_cptnewqeventv110_",)
-    assert policy.event_field_min_coverage == 0.30
-    assert policy.event_field_min_date_coverage == 0.99
-    assert policy.event_max_templates_per_field == 3
-    assert policy.event_max_templates_per_family == 1
-    assert policy.event_allowed_template_stages == ("event_conditioned",)
-    assert "event_trade_when" in policy.event_allowed_template_families
+    assert policy.event_field_prefixes == ()
+    assert policy.event_max_templates_per_field == 0
+    assert policy.event_max_templates_per_family == 0
+    assert policy.event_allowed_template_stages == ()
+    assert policy.event_allowed_template_families == set()
     assert policy.matrix_field_transform.backfill_window == 120
     assert policy.matrix_field_transform.stages == (
         FieldTransformStage(kind="backfill", window=120, std=None),
@@ -209,10 +215,9 @@ def test_fundamental6_default_policy_is_loaded_from_settings_yaml() -> None:
     )
     assert policy.template_priority_penalties == {}
     assert policy.template_prefix_penalties == {}
-    assert policy.feedback_loop_policy.resimulate.preferred_template_stages == (
-        "group_second_order",
-        "event_conditioned",
-    )
+    assert policy.feedback_loop_policy.resimulate.settings_variant_budget == 1
+    assert policy.feedback_loop_policy.resimulate.enable_template_pruning is False
+    assert policy.feedback_loop_policy.resimulate.preferred_template_stages == ()
 
 
 def test_unknown_dataset_uses_nonzero_default_field_selection_policy() -> None:

@@ -145,7 +145,7 @@ def test_explicit_include_fields_bypass_metadata_filters_and_feedback_ranking() 
     assert stats["low_date_coverage_count"] == 0
 
 
-def test_prepare_fields_for_execution_applies_stricter_event_field_filters() -> None:
+def test_fundamental6_no_longer_applies_stricter_event_field_filters() -> None:
     fields = [
         {
             "id": "cash_st",
@@ -178,8 +178,8 @@ def test_prepare_fields_for_execution_applies_stricter_event_field_filters() -> 
         args=args,
     )
 
-    assert [row["id"] for row in selected] == ["cash_st"]
-    assert stats["low_coverage_count"] == 1
+    assert {row["id"] for row in selected} == {"cash_st", "fnd6_cptnewqeventv110_apq"}
+    assert stats["low_coverage_count"] == 0
 
 
 def test_prepare_fields_for_execution_tags_model16_field_lanes() -> None:

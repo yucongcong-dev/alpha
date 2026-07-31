@@ -47,8 +47,11 @@ expression_policies:
   # fundamental6 — 季度财报数据
   # --------------------------------------------------------------------------
   fundamental6:
-    use_curated_heuristics: true
-    partner_limit: 6
+    # Maintenance pool: the active strategy lives in datasets/fundamental6/presets.
+    # Keep the default dataset library closed and do not auto-expand ratio/event neighbors.
+    use_curated_heuristics: false
+    closed_default_template_library: true
+    partner_limit: 0
     default_field_transform:
       stages: []
       backfill_window: 0
@@ -86,126 +89,29 @@ expression_policies:
         min_best_score: -999.0
         settings_variant_budget: 1
       resimulate:
-        min_attempted_templates: 3
-        min_best_score: 0.50
-        settings_variant_budget: 3
-        enable_template_pruning: true
-        preferred_template_stages:
-          - "group_second_order"
-          - "event_conditioned"
-    account_template_boost: "@account_boost"
-    high_conviction_ratio_priority_boost: "@high_conviction_boost"
+        min_attempted_templates: 0
+        min_best_score: -999.0
+        settings_variant_budget: 1
+        enable_template_pruning: false
+    account_template_boost: 0
+    high_conviction_ratio_priority_boost: 0
     protected_templates:
-      - "account_rank_backfill_504"
-      - "account_ir_60"
-      - "account_ts_rank_60"
-      - "account_ir_60_decay_20"
-      - "account_zscore_decay_60"
-      - "account_zscore_decay_60_longfill"
-      - "account_bucket_cap_zscore_60"
-      - "account_ratio_cap_zscore_60"
+      - "hc_ratio_group_zscore_252_over_cap"
+      - "group_ratio_delta_over_std_63_126_over_cap"
     high_conviction_ratio_pairs:
-      - ["cash", "assets"]
-      - ["cash_st", "assets_curr"]
-      - ["cash_st", "assets"]
-      - ["debt", "assets"]
-      - ["debt_lt", "assets"]
-      - ["debt_st", "assets"]
-      - ["cogs", "assets"]
-      - ["capex", "assets"]
-      - ["cashflow", "assets"]
       - ["cashflow_op", "cap"]
-      - ["cashflow_op", "assets"]
-      - ["cashflow_op", "fnd6_mkvalt"]
-      - ["cashflow_op", "fnd6_mkvaltq"]
-      - ["cashflow_invst", "assets"]
-      - ["ebitda", "enterprise_value"]
-      - ["liabilities", "assets"]
-      - ["income", "assets"]
-      - ["sales", "assets"]
-      - ["revenue", "assets"]
-    matrix_delta_over_std_windows:
-      - [63, 126, 144]
-    matrix_diversified_template_specs:
-      - ["group_short_long_mean_spread_subindustry_63_{backfill_window}", "group_rank(ts_mean(ts_backfill({field}, {backfill_window}), 63) - ts_mean(ts_backfill({field}, {backfill_window}), {backfill_window}), subindustry)", 164]
-      - ["group_zscore_subindustry_63", "group_rank(ts_zscore(ts_backfill({field}, {backfill_window}), 63), subindustry)", 161]
-    ratio_delta_rank_windows:
-      - [63, 186]
-    ratio_delta_over_std_windows:
-      - [63, 126, 172]
-    ratio_diversified_template_specs:
-      - ["group_ratio_zscore_{ratio_label}", "group_rank(ts_zscore(ts_backfill({ratio_expr}, {backfill_window}), 63), subindustry)", 160]
-    ratio_partner_candidates:
-      debt: ["cap", "fnd6_mkvalt", "fnd6_mkvaltq", "assets", "equity", "enterprise_value"]
-      debt_lt: ["cap", "fnd6_mkvalt", "fnd6_mkvaltq", "assets", "equity", "enterprise_value"]
-      debt_st: ["assets", "cash", "cash_st", "fnd6_mkvalt"]
-      assets_curr: ["cash_st", "debt_st", "liabilities_curr"]
-      liabilities: ["assets", "equity", "fnd6_mkvalt", "fnd6_mkvaltq", "cap", "liabilities_curr"]
-      liabilities_curr: ["assets", "equity", "fnd6_mkvalt", "fnd6_mkvaltq"]
-      cash: ["assets", "debt", "liabilities"]
-      cash_st: ["assets_curr", "assets", "debt_st", "liabilities_curr"]
-      cashflow: ["assets", "enterprise_value", "fnd6_mkvalt", "fnd6_mkvaltq"]
-      cashflow_op: ["cap", "fnd6_mkvalt", "fnd6_mkvaltq", "assets", "debt", "enterprise_value"]
-      cashflow_invst: ["assets", "enterprise_value", "capex"]
-      cashflow_fin: ["assets", "debt", "equity"]
-      capex: ["assets", "cashflow_op", "cashflow_invst", "enterprise_value"]
-      cogs: ["assets", "cash", "fnd6_mkvalt", "fnd6_mkvaltq"]
-      current_ratio: ["cash_st", "debt_st", "liabilities_curr"]
-      income: ["assets", "sales", "revenue", "enterprise_value"]
-      ebit: ["assets", "sales", "revenue", "enterprise_value"]
-      ebitda: ["assets", "sales", "revenue", "enterprise_value"]
-      revenue: ["assets", "enterprise_value"]
-      sales: ["assets", "enterprise_value"]
-      equity: ["assets", "debt", "enterprise_value"]
-      enterprise_value: ["assets", "ebitda", "ebit", "cashflow_op"]
-    ratio_keywords:
-      debt: ["cap", "assets", "equity", "enterprise_value", "liabilities"]
-      liabilities: ["assets", "equity", "cap", "enterprise_value"]
-      cash: ["debt", "liabilities", "assets", "enterprise_value"]
-      cash_st: ["assets_curr", "assets", "debt_st", "liabilities_curr"]
-      cashflow: ["assets", "enterprise_value", "debt"]
-      cashflow_op: ["cap", "assets", "enterprise_value", "debt", "fnd6_mkvalt", "fnd6_mkvaltq"]
-      cashflow_invst: ["assets", "enterprise_value", "capex"]
-      cashflow_fin: ["assets", "debt", "equity"]
-      capex: ["cashflow_op", "assets", "enterprise_value", "cashflow_invst"]
-      cogs: ["assets", "cash", "enterprise_value"]
-      income: ["assets", "enterprise_value", "sales", "revenue"]
-      ebit: ["assets", "enterprise_value", "sales", "revenue"]
-      ebitda: ["assets", "enterprise_value", "sales", "revenue"]
-      revenue: ["assets", "enterprise_value"]
-      sales: ["assets", "enterprise_value"]
-      equity: ["assets", "enterprise_value", "debt"]
-      enterprise_value: ["assets", "ebitda", "ebit", "cashflow_op"]
-      assets: ["debt", "liabilities", "equity", "cash", "enterprise_value"]
-    preferred_partner_score_bonuses:
-      assets: 15
-      equity: 15
-      debt: 15
-      liabilities: 15
-      cash: 15
-      enterprise_value: 15
-      cap: 15
-      fnd6_mkvalt: 25
-      fnd6_mkvaltq: 25
-      liabilities_curr: 25
+    matrix_delta_over_std_windows: []
+    matrix_diversified_template_specs: []
+    ratio_delta_rank_windows: []
+    ratio_delta_over_std_windows: []
+    ratio_diversified_template_specs: []
+    ratio_partner_candidates: {}
+    ratio_keywords: {}
+    preferred_partner_score_bonuses: {}
     preferred_field_order:
-      cash_st: 0
-      debt_lt: 1
-      cogs: 2
-      cashflow_invst: 3
-      cashflow_op: 4
-      debt: 5
-      debt_st: 6
-      cashflow: 7
-      cashflow_fin: 8
-      current_ratio: 9
-      unsystematic_risk_last_360_days: 10
-      unsystematic_risk_last_60_days: 11
-      fnd6_cptnewqeventv110_apq: 12
-      fnd6_cptnewqeventv110_lctq: 13
-      fnd6_cptnewqeventv110_dpq: 14
+      cashflow_op: 0
     promising_field_min_priority: 0.65
-    blacklist_min_fields_for_nearpass: 4
+    blacklist_min_fields_for_nearpass: 0
     blacklist_protected_min_avg_sharpe: 0.70
     blacklist_protected_min_avg_fitness: 0.35
     field_min_coverage: 0.20
@@ -214,31 +120,12 @@ expression_policies:
     field_min_user_count: 8
     field_max_alpha_count: 0
     field_max_user_count: 0
-    event_field_prefixes:
-      - "fnd6_cptnewqeventv110_"
-    event_field_min_coverage: 0.30
-    event_field_min_date_coverage: 0.99
-    event_field_min_alpha_count: 60
-    event_field_min_user_count: 10
-    event_max_templates_per_field: 3
-    event_max_templates_per_family: 1
-    event_allowed_template_stages:
-      - "event_conditioned"
-    event_allowed_template_prefixes:
-      - "vec_avg_ts_rank_"
-      - "vec_avg_ts_zscore_"
-      - "vec_avg_decay_"
-      - "refine_exact_"
-      - "refine_tsrank_"
-      - "refine_zscore_"
-      - "refine_trade_when_"
-      - "refine_decay_"
-      - "iter_reuse_best_trade_when_"
-    event_allowed_template_families:
-      - "ts_rank"
-      - "zscore_time"
-      - "decay_level"
-      - "event_trade_when"
+    event_field_prefixes: []
+    event_max_templates_per_field: 0
+    event_max_templates_per_family: 0
+    event_allowed_template_stages: []
+    event_allowed_template_prefixes: []
+    event_allowed_template_families: []
 
   # --------------------------------------------------------------------------
   # model16

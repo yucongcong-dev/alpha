@@ -35,7 +35,7 @@ def test_high_conviction_ratio_recognizes_optional_whitespace() -> None:
     assert keep is True
 
 
-def test_feedback_priority_threshold_uses_current_runtime_config(monkeypatch) -> None:
+def test_fundamental6_maintenance_policy_disables_feedback_priority_pruning(monkeypatch) -> None:
     monkeypatch.setattr(
         feedback_filters_module,
         "get_runtime_config",
@@ -51,7 +51,7 @@ def test_feedback_priority_threshold_uses_current_runtime_config(monkeypatch) ->
         template_metadata={"family": "custom"},
     )
 
-    assert keep is False
+    assert keep is True
 
 
 def test_load_existing_results_reads_template_family(tmp_path) -> None:
@@ -92,7 +92,7 @@ def test_feedback_stage_and_settings_budget_advance_for_strong_history() -> None
 
     assert resolve_feedback_stage(feedback, policy.feedback_loop_policy) == "resimulate"
     assert choose_settings_variant_budget(None, expression_policy=policy) == 1
-    assert choose_settings_variant_budget(feedback, expression_policy=policy) == 3
+    assert choose_settings_variant_budget(feedback, expression_policy=policy) == 1
 
 
 def test_build_historical_run_state_uses_dataset_feedback_across_runs(tmp_path) -> None:

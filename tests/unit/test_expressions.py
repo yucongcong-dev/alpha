@@ -249,7 +249,7 @@ def test_high_conviction_ratio_templates_are_group_second_order() -> None:
     assert all(item.metadata["stage"] == "group_second_order" for item in templates)
 
 
-def test_build_expression_candidates_adds_financial_ratio_templates() -> None:
+def test_fundamental6_default_policy_does_not_auto_expand_financial_ratio_templates() -> None:
     policy = get_dataset_expression_policy("fundamental6")
     field = {"id": "cashflow_op", "type": "MATRIX"}
     all_fields = [
@@ -261,6 +261,7 @@ def test_build_expression_candidates_adds_financial_ratio_templates() -> None:
     build_ctx = TemplateBuildContext(
         options=TemplateBuildOptions(**_DEFAULT_SIM_SETTINGS, legacy_similarity_penalty=0),
         all_fields=all_fields,
+        template_library_file="datasets/fundamental6/template.json",
         template_library={"default": []},
     )
     candidates = build_expression_candidates(
@@ -271,12 +272,10 @@ def test_build_expression_candidates_adds_financial_ratio_templates() -> None:
         expression_policy=policy,
     )
 
-    names = {item.name for item in candidates}
-    assert "hc_ratio_group_level_cashflow_op_over_assets" in names
-    assert "hc_ratio_group_zscore_252_cashflow_op_over_assets" in names
+    assert candidates == []
 
 
-def test_build_expression_candidates_narrows_event_field_template_pool() -> None:
+def test_fundamental6_default_template_library_is_closed_for_vector_fields() -> None:
     policy = get_dataset_expression_policy("fundamental6")
     field = {"id": "fnd6_cptnewqeventv110_apq", "type": "VECTOR"}
     template_file = (
@@ -301,9 +300,17 @@ def test_build_expression_candidates_narrows_event_field_template_pool() -> None
     names = {item.name for item in candidates}
     families = {item.metadata["family"] for item in candidates}
 
-    assert "vec_avg_ts_mean_63" not in names
-    assert "vec_avg_zscore" not in names
-    assert families <= {"ts_rank", "zscore_time", "decay_level", "event_trade_when"}
+    assert "event_trade_when_recent_change_zscore_60" in names
+    assert "vec_avg_ts_rank_60" in names
+    assert names <= {
+        "3layer_zscore_decay",
+        "ts_rank_120",
+        "ratio_cap_zscore_60",
+        "bucket_cap_ratio_zscore_60",
+        "event_trade_when_recent_change_zscore_60",
+        "vec_avg_ts_rank_60",
+    }
+    assert families <= {"ts_rank", "neutralize_decay", "ratio_cap", "bucket_ratio", "event_trade_when"}
     assert all("vec_avg(vec_avg(" not in item.expression for item in candidates)
 
 

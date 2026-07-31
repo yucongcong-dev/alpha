@@ -506,7 +506,7 @@ def test_event_field_exploration_uses_one_seed_template(monkeypatch) -> None:
         prior_results=[],
     )
 
-    assert total == 3
+    assert total == 4
     assert len(pending) == 1
 
 
