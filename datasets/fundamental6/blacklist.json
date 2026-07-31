@@ -2,7 +2,7 @@
   "_version": "v2",
   "_comment": "Template blacklist for fundamental6. learned_templates stores dataset-specific learned exclusions; expression_rules stores explicit expression pattern blocks.",
   "_created": "2026-07-13",
-  "_updated": "2026-07-31 20:25",
+  "_updated": "2026-07-31 20:46",
   "dataset_id": "fundamental6",
   "learned_templates": [
     {
@@ -361,6 +361,25 @@
       "date_blacklisted": "2026-07-31",
       "avg_sharpe": -0.17,
       "avg_fitness": -0.08
+    },
+    {
+      "name": "account_ratio_assets_delta_63",
+      "dataset_id": "fundamental6",
+      "source": "auto_detected",
+      "field_type": "MATRIX",
+      "template_family": "ratio_assets",
+      "template_stage": "group_second_order",
+      "reason": "3个字段测试均不通过。平均 Sharpe 0.183。平均 Fitness 0.040。",
+      "fields_tested": [
+        "cashflow_op",
+        "cashflow_invst",
+        "cogs"
+      ],
+      "low_sharpe": 3,
+      "low_fitness": 3,
+      "date_blacklisted": "2026-07-31",
+      "avg_sharpe": 0.183,
+      "avg_fitness": 0.04
     }
   ],
   "expression_rules": [
