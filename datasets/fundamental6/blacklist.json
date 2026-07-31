@@ -2,7 +2,7 @@
   "_version": "v2",
   "_comment": "Template blacklist for fundamental6. learned_templates stores dataset-specific learned exclusions; expression_rules stores explicit expression pattern blocks.",
   "_created": "2026-07-13",
-  "_updated": "2026-07-31 19:53",
+  "_updated": "2026-07-31 20:00",
   "dataset_id": "fundamental6",
   "learned_templates": [
     {
@@ -186,6 +186,46 @@
       "avg_sharpe": 0.711,
       "avg_fitness": 0.484,
       "concentrated_weight": 2
+    },
+    {
+      "name": "account_zscore_decay_60",
+      "dataset_id": "fundamental6",
+      "source": "auto_detected",
+      "field_type": "MATRIX",
+      "template_family": "neutralize_decay",
+      "template_stage": "group_second_order",
+      "reason": "3个字段测试均不通过。平均 Sharpe 0.107。平均 Fitness 0.077。集中度失败 2 次。",
+      "fields_tested": [
+        "fnd6_exre",
+        "fnd6_fatb",
+        "fnd6_fatc"
+      ],
+      "low_sharpe": 3,
+      "low_fitness": 3,
+      "date_blacklisted": "2026-07-31",
+      "avg_sharpe": 0.107,
+      "avg_fitness": 0.077,
+      "concentrated_weight": 2
+    },
+    {
+      "name": "account_zscore_decay_60_longfill",
+      "dataset_id": "fundamental6",
+      "source": "auto_detected",
+      "field_type": "MATRIX",
+      "template_family": "neutralize_decay",
+      "template_stage": "group_second_order",
+      "reason": "3个字段测试均不通过。平均 Sharpe 0.050。平均 Fitness 0.020。集中度失败 3 次。",
+      "fields_tested": [
+        "fnd6_fato",
+        "fnd6_fatp",
+        "fnd6_fic"
+      ],
+      "low_sharpe": 3,
+      "low_fitness": 3,
+      "date_blacklisted": "2026-07-31",
+      "avg_sharpe": 0.05,
+      "avg_fitness": 0.02,
+      "concentrated_weight": 3
     }
   ],
   "expression_rules": [
