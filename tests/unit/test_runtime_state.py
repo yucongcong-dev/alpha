@@ -159,6 +159,26 @@ def test_future_queue_state_updates_legacy_views() -> None:
     assert state.resumable_simulations == [context]
 
 
+def test_execution_state_create_copies_future_queue_inputs() -> None:
+    future: Future[FieldTestResult] = Future()
+    pending_context = PendingFutureContext(field_id="pending")
+    resumable_context = PendingFutureContext(field_id="resumable")
+    pending_futures = {future: pending_context}
+    resumable_simulations = [resumable_context]
+
+    state = ExecutionState.create(
+        pending_futures=pending_futures,
+        resumable_simulations=resumable_simulations,
+    )
+    pending_futures.clear()
+    resumable_simulations.clear()
+
+    assert state.future_queue.pending_futures == {future: pending_context}
+    assert state.future_queue.resumable_simulations == [resumable_context]
+    assert state.pending_futures == {future: pending_context}
+    assert state.resumable_simulations == [resumable_context]
+
+
 def test_bootstrap_baseline_excludes_historical_submittable_results() -> None:
     historical = FieldTestResult(
         field_id="field_1",

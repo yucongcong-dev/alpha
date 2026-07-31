@@ -199,16 +199,21 @@ class ExecutionState:
 
     attempted_keys: set[tuple[str, str, str, str]] = field(default_factory=set)
     template_stats: TemplateStats = field(default_factory=dict)
-    pending_futures: dict[Future[FieldTestResult], PendingFutureContext] = field(
-        default_factory=dict
+    future_queue_state: FutureQueueState = field(
+        default_factory=lambda: FutureQueueState(
+            pending_futures={},
+            resumable_simulations=[],
+            stop_signal=Event(),
+        )
     )
+    pending_futures: dict[Future[FieldTestResult], PendingFutureContext] = field(init=False)
+    resumable_simulations: list[PendingFutureContext] = field(init=False)
+    stop_signal: Event = field(init=False)
     field_queue_busy_counts: dict[str, int] = field(default_factory=dict)
     skipped_fields_due_to_queue: set[str] = field(default_factory=set)
-    resumable_simulations: list[PendingFutureContext] = field(default_factory=list)
     queue_retry_counts: dict[QueueRetryKey, int] = field(default_factory=dict)
     queue_exhausted_keys: set[QueueRetryKey] = field(default_factory=set)
     queue_retry_state: QueueRetryState = field(init=False)
-    future_queue_state: FutureQueueState = field(init=False)
     result_ledger_state: ResultLedgerState = field(
         default_factory=lambda: ResultLedgerState(results=[])
     )
@@ -218,7 +223,6 @@ class ExecutionState:
     blacklist_runtime_stats: BlacklistRuntimeStats = field(default_factory=dict)
     blacklisted_template_keys: set[tuple[str, str, str]] = field(default_factory=set)
     last_submission_at: float = 0.0
-    stop_signal: Event = field(default_factory=Event)
 
     @classmethod
     def create(
@@ -237,10 +241,13 @@ class ExecutionState:
         return cls(
             attempted_keys=set(attempted_keys or set()),
             template_stats=dict(template_stats or {}),
-            pending_futures=dict(pending_futures or {}),
             field_queue_busy_counts=dict(field_queue_busy_counts or {}),
             skipped_fields_due_to_queue=set(skipped_fields_due_to_queue or set()),
-            resumable_simulations=list(resumable_simulations or []),
+            future_queue_state=FutureQueueState(
+                pending_futures=dict(pending_futures or {}),
+                resumable_simulations=list(resumable_simulations or []),
+                stop_signal=Event(),
+            ),
             result_ledger_state=ResultLedgerState(results=list(initial_results or [])),
             last_submission_at=last_submission_at,
         )
@@ -250,11 +257,7 @@ class ExecutionState:
             retry_counts=self.queue_retry_counts,
             exhausted_keys=self.queue_exhausted_keys,
         )
-        self.future_queue_state = FutureQueueState(
-            pending_futures=self.pending_futures,
-            resumable_simulations=self.resumable_simulations,
-            stop_signal=self.stop_signal,
-        )
+        self.sync_future_queue()
         self.sync_result_ledger()
 
     @property
