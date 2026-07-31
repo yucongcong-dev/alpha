@@ -6,13 +6,8 @@ import os
 from pathlib import Path
 from typing import cast
 
-from ..workspace import DEFAULT_WORKSPACE, find_resource_root
+from ..workspace import DEFAULT_WORKSPACE
 from .types import YamlConfig
-
-
-def find_project_root() -> Path:
-    """Compatibility wrapper for the canonical resource-root resolver."""
-    return find_resource_root()
 
 
 PROJECT_ROOT = DEFAULT_WORKSPACE.config_dir.parent
