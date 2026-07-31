@@ -6,8 +6,8 @@ import sys
 
 import pytest
 
-from alpha.cli.parser import normalize_args_paths, parse_application_config, parse_args
-from alpha.cli.path_resolution import apply_run_paths
+from alpha.cli.parser import parse_application_config, parse_args
+from alpha.cli.path_resolution import apply_run_paths, normalize_args_paths
 from alpha.config import get_yaml_config
 
 
