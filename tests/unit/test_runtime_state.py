@@ -62,7 +62,7 @@ def test_queue_retry_state_updates_legacy_views() -> None:
     assert state.queue_exhausted_keys == set()
 
 
-def test_result_ledger_results_keep_legacy_list_view() -> None:
+def test_result_ledger_owns_results_and_stop_threshold() -> None:
     state = _state()
     result = FieldTestResult(
         field_id="field_1",
@@ -78,8 +78,7 @@ def test_result_ledger_results_keep_legacy_list_view() -> None:
     metrics = ledger.append(result)
 
     assert metrics.submittable_count == 1
-    assert state.results == [result]
-    assert state.result_ledger.results == [result]
+    assert ledger.results == [result]
 
     ledger.append(
         FieldTestResult(
@@ -92,7 +91,7 @@ def test_result_ledger_results_keep_legacy_list_view() -> None:
             expression="rank(field_2)",
         )
     )
-    assert state.results == ledger.results
+    assert len(ledger.results) == 2
     assert ledger.reached_submittable_stop_threshold(1) is True
 
 
@@ -122,7 +121,7 @@ def test_execution_state_create_copies_runtime_inputs() -> None:
     assert state.template_stats == {"tpl": {"attempted": 1}}
 
 
-def test_result_ledger_read_does_not_restore_legacy_counters() -> None:
+def test_result_ledger_owns_runtime_counters() -> None:
     state = _state()
     ledger = state.result_ledger
     ledger.submittable_baseline_count = 2
@@ -130,8 +129,6 @@ def test_result_ledger_read_does_not_restore_legacy_counters() -> None:
 
     assert state.result_ledger.submittable_baseline_count == 2
     assert state.result_ledger.persisted_result_count == 3
-    assert state.submittable_baseline_count == 0
-    assert state.persisted_result_count == 0
 
 
 def test_future_queue_containers_keep_legacy_views() -> None:

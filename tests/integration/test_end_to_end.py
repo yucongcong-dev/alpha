@@ -229,7 +229,7 @@ class TestResultProcessingFlow:
         )
 
         assert len(state.result_ledger.results) == 1
-        assert state.submittable_count == 1
+        assert state.result_ledger.submittable_count == 1
 
 
 if __name__ == "__main__":

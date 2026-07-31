@@ -18,7 +18,7 @@ from ..models.runtime_protocols import (
 from ..policy.types import BlacklistRuntimeStats
 from .contexts import HistoricalRunState, PendingFutureContext
 from .future_queue import FutureQueueState
-from .result_ledger import ExecutionMetrics, ResultLedgerState
+from .result_ledger import ResultLedgerState
 
 QueueRetryKey = tuple[str, str, str, str]
 
@@ -93,9 +93,6 @@ class ExecutionState:
     result_ledger_state: ResultLedgerState = field(
         default_factory=lambda: ResultLedgerState(results=[])
     )
-    results: list[FieldTestResult] = field(init=False)
-    submittable_baseline_count: int = field(init=False, default=0)
-    persisted_result_count: int = field(init=False, default=0)
     blacklist_runtime_stats: BlacklistRuntimeStats = field(default_factory=dict)
     blacklisted_template_keys: set[tuple[str, str, str]] = field(default_factory=set)
     last_submission_at: float = 0.0
@@ -132,9 +129,6 @@ class ExecutionState:
             retry_counts=self.queue_retry_counts,
             exhausted_keys=self.queue_exhausted_keys,
         )
-        self.results = self.result_ledger_state.results
-        self.submittable_baseline_count = self.result_ledger_state.submittable_baseline_count
-        self.persisted_result_count = self.result_ledger_state.persisted_result_count
 
     @property
     def future_queue(self) -> FutureQueueState:
@@ -151,44 +145,6 @@ class ExecutionState:
         self.field_queue_busy_counts = {}
         self.skipped_fields_due_to_queue = set()
         self.queue_retry_state.reset()
-
-    @property
-    def metrics(self) -> ExecutionMetrics:
-        """Return a current snapshot derived from the authoritative results list."""
-        return self.result_ledger.metrics
-
-    @property
-    def unique_field_ids(self) -> set[str]:
-        return self.result_ledger.unique_field_ids
-
-    @property
-    def submittable_count(self) -> int:
-        return self.result_ledger.submittable_count
-
-    @property
-    def current_run_submittable_count(self) -> int:
-        """Return submittable results added after this process initialized."""
-        return self.result_ledger.current_run_submittable_count
-
-    @property
-    def submitted_count(self) -> int:
-        return self.result_ledger.submitted_count
-
-    @property
-    def error_count(self) -> int:
-        return self.result_ledger.error_count
-
-    @property
-    def queue_timeout_count(self) -> int:
-        return self.result_ledger.queue_timeout_count
-
-    @property
-    def pending_check_count(self) -> int:
-        return self.result_ledger.pending_check_count
-
-    def refresh_metrics(self) -> ExecutionMetrics:
-        """Compatibility method returning the current derived snapshot."""
-        return self.result_ledger.refresh_metrics()
 
 
 @dataclass(frozen=True)
