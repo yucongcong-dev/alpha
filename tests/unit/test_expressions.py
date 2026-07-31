@@ -19,7 +19,7 @@ from alpha.generators.templates.classification import (
     classify_expression_family,
     is_legacy_family,
 )
-from alpha.generators.templates.variations import (
+from alpha.generators.templates.wrappers import (
     build_bucket_group_templates,
     build_trade_when_templates,
 )

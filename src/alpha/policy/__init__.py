@@ -3,7 +3,7 @@
 
 集中管理所有策略相关逻辑：
 - expression: 数据集表达式策略构建与反馈阶段解析
-- blacklist_runtime: 黑名单运行态聚合与自动更新规则
+- blacklist_runtime_updates / blacklist_runtime_stats: 黑名单运行态聚合与自动更新规则
 - blacklist_store: 黑名单文件存取与缓存失效
 - template_blacklist: 模板黑名单匹配策略
 """
@@ -15,10 +15,10 @@ from typing import TYPE_CHECKING
 from .._facade import ExportMap, facade_dir, resolve_export
 
 if TYPE_CHECKING:
-    from .blacklist_runtime import (
+    from .blacklist_runtime_stats import build_blacklist_runtime_stats
+    from .blacklist_runtime_updates import (
         auto_update_blacklist,
         auto_update_blacklist_incremental,
-        build_blacklist_runtime_stats,
     )
     from .blacklist_store import (
         ensure_template_blacklist_file,
@@ -33,12 +33,15 @@ if TYPE_CHECKING:
     )
 
 _EXPORT_MAP: ExportMap = {
-    "auto_update_blacklist": (".blacklist_runtime", "auto_update_blacklist"),
+    "auto_update_blacklist": (".blacklist_runtime_updates", "auto_update_blacklist"),
     "auto_update_blacklist_incremental": (
-        ".blacklist_runtime",
+        ".blacklist_runtime_updates",
         "auto_update_blacklist_incremental",
     ),
-    "build_blacklist_runtime_stats": (".blacklist_runtime", "build_blacklist_runtime_stats"),
+    "build_blacklist_runtime_stats": (
+        ".blacklist_runtime_stats",
+        "build_blacklist_runtime_stats",
+    ),
     "ensure_template_blacklist_file": (".blacklist_store", "ensure_template_blacklist_file"),
     "get_dataset_expression_policy": (".expression", "get_dataset_expression_policy"),
     "load_blacklisted_template_keys": (".blacklist_store", "load_blacklisted_template_keys"),

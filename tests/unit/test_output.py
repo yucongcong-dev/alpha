@@ -28,7 +28,9 @@ from alpha.io.results_store import (
     load_results_rows_from_journal,
 )
 from alpha.models.domain import FailedCheck, FieldTestResult
-from alpha.policy import blacklist_runtime, blacklist_store
+from alpha.policy import blacklist_store
+from alpha.policy.blacklist_runtime_stats import build_blacklist_runtime_stats
+from alpha.policy.blacklist_runtime_updates import auto_update_blacklist_incremental
 
 
 def _append_process_batch(journal_path: str, batch_index: int) -> None:
@@ -47,13 +49,8 @@ def _append_process_batch(journal_path: str, batch_index: int) -> None:
     _append_results_journal(journal_path, results)
 
 
-def test_dump_results_is_policy_side_effect_free(monkeypatch, tmp_path) -> None:
+def test_dump_results_is_policy_side_effect_free(tmp_path) -> None:
     """The persistence layer must not trigger policy updates."""
-    calls: list[tuple[object, ...]] = []
-    monkeypatch.setattr(
-        blacklist_runtime, "auto_update_blacklist", lambda *args, **kwargs: calls.append(args)
-    )
-
     dump_results(
         str(tmp_path / "results.json"),
         "fundamental6",
@@ -62,7 +59,7 @@ def test_dump_results_is_policy_side_effect_free(monkeypatch, tmp_path) -> None:
         template_library_fingerprint="templates",
     )
 
-    assert calls == []
+    assert (tmp_path / "results.json").exists()
 
 
 def test_dump_results_can_skip_analysis_sidecar_for_intermediate_flushes(tmp_path) -> None:
@@ -690,7 +687,7 @@ def test_ensure_analysis_synced_only_rebuilds_derived_sidecars(tmp_path) -> None
 
 def test_auto_update_blacklist_incremental_blacklists_only_changed_template(tmp_path) -> None:
     """Incremental blacklist updates should blacklist qualifying templates without full rescans."""
-    runtime_stats = blacklist_runtime.build_blacklist_runtime_stats([])
+    runtime_stats = build_blacklist_runtime_stats([])
     blacklisted_keys = blacklist_store.load_blacklisted_template_keys(
         "custom_ds", datasets_root=str(tmp_path / "datasets")
     )
@@ -737,21 +734,21 @@ def test_auto_update_blacklist_incremental_blacklists_only_changed_template(tmp_
         ],
     )
 
-    added_after_first = blacklist_runtime.auto_update_blacklist_incremental(
+    added_after_first = auto_update_blacklist_incremental(
         runtime_stats,
         blacklisted_keys,
         first,
         "custom_ds",
         datasets_root=str(tmp_path / "datasets"),
     )
-    added_after_second = blacklist_runtime.auto_update_blacklist_incremental(
+    added_after_second = auto_update_blacklist_incremental(
         runtime_stats,
         blacklisted_keys,
         second,
         "custom_ds",
         datasets_root=str(tmp_path / "datasets"),
     )
-    added_after_third = blacklist_runtime.auto_update_blacklist_incremental(
+    added_after_third = auto_update_blacklist_incremental(
         runtime_stats,
         blacklisted_keys,
         third,

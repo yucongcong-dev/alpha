@@ -6,7 +6,7 @@ import json
 
 from alpha.generators.expression_builder import _is_blacklisted_template
 from alpha.models.domain import FailedCheck, FieldTestResult
-from alpha.policy.blacklist_runtime import auto_update_blacklist
+from alpha.policy.blacklist_runtime_updates import auto_update_blacklist
 from alpha.policy.blacklist_store import ensure_template_blacklist_file
 from alpha.policy.template_blacklist import invalidate_blacklist_cache
 

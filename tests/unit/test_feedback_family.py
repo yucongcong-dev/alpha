@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 from types import SimpleNamespace
 
-from alpha.analysis.feedback_filters import should_keep_template_for_feedback
+from alpha.selection.feedback_filters import should_keep_template_for_feedback
 from alpha.analysis.feedback_history import (
     build_historical_run_state,
     choose_settings_variant_budget,

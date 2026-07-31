@@ -11,7 +11,6 @@
     - failed_checks: 失败检查评分、near-pass 与优化建议
     - feedback_stats: 字段反馈画像与全局失败检查计数
     - feedback_history: 历史反馈状态与 settings 预算
-    - feedback_filters: 模板剪枝策略
     - report_builder: 结果分析报告构建
     - analysis_sync: 分析边车文件同步
 """
@@ -33,7 +32,7 @@ if TYPE_CHECKING:
         score_failed_checks,
         summarize_failed_check,
     )
-    from .feedback_filters import (
+    from ..selection.feedback_filters import (
         should_keep_template_for_feedback,
         should_skip_field_template_family,
     )
@@ -73,8 +72,14 @@ _EXPORT_MAP: ExportMap = {
     "failed_check_gap": (".failed_checks", "failed_check_gap"),
     "score_failed_checks": (".failed_checks", "score_failed_checks"),
     "summarize_failed_check": (".failed_checks", "summarize_failed_check"),
-    "should_keep_template_for_feedback": (".feedback_filters", "should_keep_template_for_feedback"),
-    "should_skip_field_template_family": (".feedback_filters", "should_skip_field_template_family"),
+    "should_keep_template_for_feedback": (
+        "..selection.feedback_filters",
+        "should_keep_template_for_feedback",
+    ),
+    "should_skip_field_template_family": (
+        "..selection.feedback_filters",
+        "should_skip_field_template_family",
+    ),
     "build_historical_run_state": (".feedback_history", "build_historical_run_state"),
     "choose_settings_variant_budget": (".feedback_history", "choose_settings_variant_budget"),
     "should_stop_after_submittable": (".feedback_history", "should_stop_after_submittable"),

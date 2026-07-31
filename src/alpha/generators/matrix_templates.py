@@ -35,7 +35,7 @@ from .templates.candidates import (
     _make_template_candidate,
     _render_template_specs,
 )
-from .templates.variations import build_bucket_group_templates, build_trade_when_templates
+from .templates.wrappers import build_bucket_group_templates, build_trade_when_templates
 
 
 def build_matrix_templates(
