@@ -16,7 +16,7 @@ from ..models.runtime_protocols import (
     ApiClientArgs,
     RunConfig,
 )
-from .bootstrap_fields import resolve_field_selection
+from .bootstrap_field_ranking import resolve_field_selection
 from .bootstrap_pending_checks import refresh_pending_check_results
 from .bootstrap_resource_loading import (
     load_bootstrap_fields,

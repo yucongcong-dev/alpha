@@ -42,7 +42,7 @@ from ..policy.blacklist_store import (
 from ..policy.expression import get_dataset_expression_policy
 from ..runtime.state import InitializedRunContext, RuntimeConcurrencyState
 from .bootstrap_cleanup import clean_runtime_artifacts as clean_runtime_artifacts
-from .bootstrap_fields import prepare_fields_for_execution
+from .bootstrap_field_selection import prepare_fields_for_execution
 from .bootstrap_state import build_execution_state
 from .bootstrap_steps import (
     create_and_login_client as _create_and_login_client,
