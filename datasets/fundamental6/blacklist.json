@@ -2,7 +2,7 @@
   "_version": "v2",
   "_comment": "Template blacklist for fundamental6. learned_templates stores dataset-specific learned exclusions; expression_rules stores explicit expression pattern blocks.",
   "_created": "2026-07-13",
-  "_updated": "2026-07-31 20:04",
+  "_updated": "2026-07-31 20:14",
   "dataset_id": "fundamental6",
   "learned_templates": [
     {
@@ -246,6 +246,63 @@
       "avg_sharpe": 0.07,
       "avg_fitness": -0.043,
       "concentrated_weight": 2
+    },
+    {
+      "name": "account_ts_rank_60",
+      "dataset_id": "fundamental6",
+      "source": "auto_detected",
+      "field_type": "MATRIX",
+      "template_family": "ts_rank",
+      "template_stage": "group_second_order",
+      "reason": "3个字段测试均不通过。平均 Sharpe -0.170。平均 Fitness -0.063。",
+      "fields_tested": [
+        "fnd6_intc",
+        "fnd6_intpn",
+        "fnd6_invfg"
+      ],
+      "low_sharpe": 3,
+      "low_fitness": 3,
+      "date_blacklisted": "2026-07-31",
+      "avg_sharpe": -0.17,
+      "avg_fitness": -0.063
+    },
+    {
+      "name": "account_ts_rank_252",
+      "dataset_id": "fundamental6",
+      "source": "auto_detected",
+      "field_type": "MATRIX",
+      "template_family": "ts_rank",
+      "template_stage": "group_second_order",
+      "reason": "3个字段测试均不通过。平均 Sharpe 0.297。平均 Fitness 0.097。",
+      "fields_tested": [
+        "fnd6_itci",
+        "fnd6_ivaco",
+        "fnd6_itcb"
+      ],
+      "low_sharpe": 3,
+      "low_fitness": 3,
+      "date_blacklisted": "2026-07-31",
+      "avg_sharpe": 0.297,
+      "avg_fitness": 0.097
+    },
+    {
+      "name": "account_ts_rank_504",
+      "dataset_id": "fundamental6",
+      "source": "auto_detected",
+      "field_type": "MATRIX",
+      "template_family": "ts_rank",
+      "template_stage": "group_second_order",
+      "reason": "3个字段测试均不通过。平均 Sharpe 0.193。平均 Fitness 0.047。",
+      "fields_tested": [
+        "fnd6_ivst",
+        "fnd6_ivstch",
+        "fnd6_lcox"
+      ],
+      "low_sharpe": 3,
+      "low_fitness": 3,
+      "date_blacklisted": "2026-07-31",
+      "avg_sharpe": 0.193,
+      "avg_fitness": 0.047
     }
   ],
   "expression_rules": [
