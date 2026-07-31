@@ -388,8 +388,8 @@ def test_dump_results_incremental_writes_lightweight_summary(tmp_path) -> None:
         template_registry_summary=[
             {
                 "template_name": "tpl",
-                "recommended_role": "promoted_core",
-                "recommended_scope": "broad",
+                "template_role": "promoted_core",
+                "activation_scope": "broad",
             }
         ],
     )
@@ -501,7 +501,7 @@ def test_compile_template_stats_excludes_self_correlation_pending_results() -> N
     assert stats == {}
 
 
-def test_compile_template_registry_summary_recommends_demotion_for_weak_templates() -> None:
+def test_compile_template_registry_summary_reports_weak_template_stats() -> None:
     stats = compile_template_stats(
         [
             FieldTestResult(
@@ -528,9 +528,13 @@ def test_compile_template_registry_summary_recommends_demotion_for_weak_template
     summary = compile_template_registry_summary(stats)
     row = next(item for item in summary if item["template_name"] == "weak_template")
 
-    assert row["recommended_scope"] == "diagnostic"
-    assert row["recommended_role"] == "diagnostic_probe"
-    assert row["should_suppress_in_generate"] is True
+    assert row["activation_scope"] == "broad"
+    assert row["template_role"] == "default_seed"
+    assert row["attempted"] == 6
+    assert row["simulated"] == 6
+    assert row["submittable"] == 0
+    assert row["low_sharpe"] == 6
+    assert row["low_fitness"] == 6
 
 
 def test_load_existing_results_falls_back_to_orphaned_journal_when_summary_missing(

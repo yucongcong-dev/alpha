@@ -35,7 +35,6 @@ class FeedbackPhasePolicy:
     min_best_score: float = -999.0
     settings_variant_budget: int = 3
     enable_template_pruning: bool = False
-    enable_resimulation_mutations: bool = False
     preferred_template_stages: tuple[str, ...] = ()
 
 
@@ -57,13 +56,11 @@ class DatasetExpressionPolicy:
     supported_grouping_fields: set[str] = field(
         default_factory=lambda: {"subindustry", "industry", "sector"}
     )
-    evaluation_holdout_percent: int = 0
     use_curated_heuristics: bool = False
     closed_default_template_library: bool = False
     partner_limit: int = 4
     account_template_boost: int = 0
     high_conviction_ratio_priority_boost: int = 0
-    disabled_templates: set[str] = field(default_factory=set)
     protected_templates: set[str] = field(default_factory=set)
     high_conviction_ratio_pairs: set[tuple[str, str]] = field(default_factory=set)
     template_priority_penalties: dict[str, int] = field(default_factory=dict)
@@ -76,7 +73,6 @@ class DatasetExpressionPolicy:
     ratio_legacy_template_specs: tuple[tuple[str, str, int], ...] = ()
     positive_raw_fields: set[str] = field(default_factory=set)
     negative_raw_fields: set[str] = field(default_factory=set)
-    blacklisted_template_name_substrings: tuple[str, ...] = ()
     ratio_partner_candidates: dict[str, tuple[str, ...]] = field(default_factory=dict)
     ratio_keywords: dict[str, tuple[str, ...]] = field(default_factory=dict)
     preferred_partner_score_bonuses: dict[str, int] = field(default_factory=dict)

@@ -83,7 +83,6 @@ def dump_results_incremental(
     run_config: dict[str, Any] | None = None,
     template_registry_summary: list[dict[str, Any]] | None = None,
     template_stats: dict[str, dict[str, Any]] | None = None,
-    policy_evaluation: dict[str, Any] | None = None,
     pending_check_count: int = 0,
 ) -> int:
     """Append new journal rows and persist lightweight derived views."""
@@ -102,14 +101,6 @@ def dump_results_incremental(
         "errors": error_count,
         "queue_timeouts": queue_timeout_count,
         "pending_checks": pending_check_count,
-        "policy_evaluation": policy_evaluation
-        or {
-            "evaluation_unit": "field",
-            "confidence_level": 0.95,
-            "minimum_fields_per_arm": 20,
-            "groups": [],
-            "comparisons": [],
-        },
         "results_embedded": False,
         "results_journal": _portable_journal_reference(path, sidecar_paths["results_journal"]),
     }

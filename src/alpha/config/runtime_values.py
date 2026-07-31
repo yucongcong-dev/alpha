@@ -25,14 +25,9 @@ _HTTP_DEFAULTS = {
     "backend": "urllib",
 }
 _FEEDBACK_DEFAULTS = {
-    "settings_variant_budget_high": 0.35,
-    "settings_variant_budget_mid": 0.10,
-    "feedback_mutation_nearpass_threshold": 0.08,
     "feedback_mutation_highscore_threshold": 0.25,
     "feedback_template_min_priority": 105,
     "delta_std_priority_boost": 15,
-    "settings_nearpass_threshold": 0.45,
-    "settings_close_threshold": 0.65,
     "expr_nearpass_boost_threshold": 0.50,
     "expr_iter_boost_threshold": 0.20,
     "expr_ratio_penalty_threshold": 0.30,
@@ -85,14 +80,9 @@ class HttpRuntimeConfig:
 
 @dataclass(frozen=True)
 class FeedbackRuntimeConfig:
-    settings_variant_budget_high: float
-    settings_variant_budget_mid: float
-    feedback_mutation_nearpass_threshold: float
     feedback_mutation_highscore_threshold: float
     feedback_template_min_priority: int
     delta_std_priority_boost: int
-    settings_nearpass_threshold: float
-    settings_close_threshold: float
     expr_nearpass_boost_threshold: float
     expr_iter_boost_threshold: float
     expr_ratio_penalty_threshold: float
@@ -163,26 +153,10 @@ def load_http_runtime_config() -> HttpRuntimeConfig:
 def load_feedback_runtime_config() -> FeedbackRuntimeConfig:
     """Build the current feedback threshold configuration snapshot.
 
-    单次 YAML 查询，从 local feedback section 读取全部 12 个字段。
+    单次 YAML 查询，从 local feedback section 读取有效阈值。
     """
     section = yaml_global_section("feedback")
     return FeedbackRuntimeConfig(
-        settings_variant_budget_high=float(
-            section.get(
-                "settings_variant_budget_high", _FEEDBACK_DEFAULTS["settings_variant_budget_high"]
-            )
-        ),
-        settings_variant_budget_mid=float(
-            section.get(
-                "settings_variant_budget_mid", _FEEDBACK_DEFAULTS["settings_variant_budget_mid"]
-            )
-        ),
-        feedback_mutation_nearpass_threshold=float(
-            section.get(
-                "feedback_mutation_nearpass_threshold",
-                _FEEDBACK_DEFAULTS["feedback_mutation_nearpass_threshold"],
-            )
-        ),
         feedback_mutation_highscore_threshold=float(
             section.get(
                 "feedback_mutation_highscore_threshold",
@@ -197,14 +171,6 @@ def load_feedback_runtime_config() -> FeedbackRuntimeConfig:
         ),
         delta_std_priority_boost=int(
             section.get("delta_std_priority_boost", _FEEDBACK_DEFAULTS["delta_std_priority_boost"])
-        ),
-        settings_nearpass_threshold=float(
-            section.get(
-                "settings_nearpass_threshold", _FEEDBACK_DEFAULTS["settings_nearpass_threshold"]
-            )
-        ),
-        settings_close_threshold=float(
-            section.get("settings_close_threshold", _FEEDBACK_DEFAULTS["settings_close_threshold"])
         ),
         expr_nearpass_boost_threshold=float(
             section.get(

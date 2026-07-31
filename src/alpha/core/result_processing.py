@@ -7,7 +7,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable, Sequence
+from collections.abc import Callable
 from dataclasses import dataclass
 import logging
 from typing import Any, Protocol
@@ -19,7 +19,6 @@ from ..models.domain import FieldTestResult
 from ..models.runtime_protocols import TemplateStats
 from ..policy.blacklist_runtime_stats import build_blacklist_runtime_stats
 from ..policy.blacklist_runtime_updates import auto_update_blacklist_incremental
-from ..policy.evaluation import summarize_policy_evaluation
 from ..policy.types import BlacklistEntryKey, BlacklistRuntimeStats
 from ..runtime.contexts import FutureCompletionContext
 from ..runtime.state import ExecutionState
@@ -50,7 +49,6 @@ class IncrementalResultsWriter(Protocol):
         run_config: dict[str, Any] | None = None,
         template_registry_summary: list[dict[str, Any]] | None = None,
         template_stats: TemplateStats | None = None,
-        policy_evaluation: dict[str, Any] | None = None,
         pending_check_count: int = 0,
     ) -> int: ...
 
@@ -67,7 +65,6 @@ class ResultProcessingServices:
         [BlacklistRuntimeStats, set[BlacklistEntryKey], FieldTestResult, str], bool
     ]
     dump_results_incremental: IncrementalResultsWriter
-    summarize_policy_evaluation: Callable[[Sequence[FieldTestResult]], dict[str, Any]]
 
 
 def build_result_processing_services() -> ResultProcessingServices:
@@ -81,7 +78,6 @@ def build_result_processing_services() -> ResultProcessingServices:
         build_blacklist_runtime_stats=build_blacklist_runtime_stats,
         auto_update_blacklist_incremental=auto_update_blacklist_incremental,
         dump_results_incremental=dump_results_incremental,
-        summarize_policy_evaluation=summarize_policy_evaluation,
     )
 
 
@@ -212,7 +208,6 @@ def persist_incremental_result(
         template_library_fingerprint=completion_ctx.template_library_fingerprint,
         run_config=completion_ctx.run_config,
         template_stats=execution_state.template_stats,
-        policy_evaluation=services.summarize_policy_evaluation(execution_state.results),
     )
 
 

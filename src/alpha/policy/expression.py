@@ -72,7 +72,6 @@ def _default_feedback_loop_policy() -> FeedbackLoopPolicy:
             min_best_score=FEEDBACK_MUTATION_HIGHSCORE_THRESHOLD,
             settings_variant_budget=3,
             enable_template_pruning=True,
-            enable_resimulation_mutations=True,
             preferred_template_stages=(
                 TEMPLATE_STAGE_GROUP_SECOND_ORDER,
                 TEMPLATE_STAGE_EVENT_CONDITIONED,

@@ -66,7 +66,6 @@ def serialize_field_test_result(result: FieldTestResult) -> ResultRow:
         "template_role": result.template_role,
         "template_activation_scope": result.template_activation_scope,
         "policy_version": result.policy_version,
-        "policy_arm": result.policy_arm,
         "simulation_id": result.simulation_id,
         "alpha_id": result.alpha_id,
         "status": result.status,

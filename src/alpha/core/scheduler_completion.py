@@ -62,7 +62,6 @@ def resolve_completed_future_result(
             template_role=str(_context_value(context, "template_role")),
             template_activation_scope=str(_context_value(context, "template_activation_scope")),
             policy_version=str(_context_value(context, "policy_version")),
-            policy_arm=str(_context_value(context, "policy_arm")),
             simulation_id=None,
             alpha_id=None,
             expression=str(_context_value(context, "expression")),

@@ -74,7 +74,6 @@ def _rows_to_results(rows: list[Any]) -> list[FieldTestResult]:
                     template_role=str(row.get("template_role", "")),
                     template_activation_scope=str(row.get("template_activation_scope", "")),
                     policy_version=str(row.get("policy_version", "")),
-                    policy_arm=str(row.get("policy_arm", "")),
                     simulation_id=row.get("simulation_id"),
                     alpha_id=row.get("alpha_id"),
                     status=str(row.get(API_KEY_STATUS, SENTINEL_UNKNOWN_STATUS)),

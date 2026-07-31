@@ -20,7 +20,6 @@ from ..models.domain import (
 )
 from ..models.domain_serializers import serialize_field_test_result
 from ..models.result_predicates import has_pending_checks, is_queue_timeout_result
-from ..policy.evaluation import summarize_policy_evaluation
 from .failed_checks import (
     compile_failed_check_leaderboard,
     compile_near_pass_summary,
@@ -93,7 +92,6 @@ def build_results_summary_payload(
         "errors": error_count,
         "queue_timeouts": queue_timeout_count,
         "pending_checks": pending_check_count,
-        "policy_evaluation": summarize_policy_evaluation(results),
         "template_registry_embedded": False,
         "results_journal": results_journal_path,
         "results": results_dicts,
@@ -132,7 +130,6 @@ def build_analysis_payload(
         "error_count": summary["errors"],
         "queue_timeout_count": summary["queue_timeouts"],
         "pending_check_count": summary.get("pending_checks", 0),
-        "policy_evaluation": summary["policy_evaluation"],
         "submittable": analysis_inputs["submittable_results"],
         "submitted": analysis_inputs["submitted_results"],
         "failed_checks_summary": analysis_inputs["failed_checks_summary"],

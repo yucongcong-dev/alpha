@@ -95,7 +95,6 @@ def apply_yaml_expression_policy_overrides(
 
     update_map: dict[str, Any] = {}
     set_fields = {
-        "disabled_templates",
         "protected_templates",
         "supported_grouping_fields",
         "positive_raw_fields",
@@ -103,7 +102,6 @@ def apply_yaml_expression_policy_overrides(
         "event_allowed_template_families",
     }
     tuple_fields = {
-        "blacklisted_template_name_substrings",
         "event_field_prefixes",
         "event_allowed_template_stages",
         "event_allowed_template_prefixes",
@@ -118,7 +116,6 @@ def apply_yaml_expression_policy_overrides(
     # 单一 int 字段，支持 @tier 引用
     int_fields = {
         "account_template_boost",
-        "evaluation_holdout_percent",
         "high_conviction_ratio_priority_boost",
         "partner_limit",
         "field_feedback_half_life_days",

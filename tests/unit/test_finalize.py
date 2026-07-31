@@ -60,31 +60,8 @@ def test_finalize_run_prefers_run_paths_output(monkeypatch) -> None:
     with (
         patch("alpha.app.finalize.dump_results") as mock_dump,
         patch("alpha.app.finalize.delete_pipeline_state") as mock_delete,
-        patch("alpha.app.finalize.auto_update_blacklist") as mock_blacklist_update,
     ):
         finalize_run(args, run_ctx, run_paths=run_paths)
 
     assert mock_dump.call_args.args[0] == "/tmp/normalized-results.json"
     assert mock_delete.call_args.args[0] == "/tmp/state.json"
-    mock_blacklist_update.assert_not_called()
-
-
-def test_finalize_run_updates_blacklist_only_when_enabled() -> None:
-    args = argparse.Namespace(
-        output="results.json",
-        dataset_id="fundamental6",
-        auto_update_blacklist=True,
-    )
-    run_ctx = _build_run_ctx()
-
-    with (
-        patch("alpha.app.finalize.dump_results"),
-        patch("alpha.app.finalize.delete_pipeline_state"),
-        patch("alpha.app.finalize.auto_update_blacklist") as mock_blacklist_update,
-    ):
-        finalize_run(args, run_ctx)
-
-    mock_blacklist_update.assert_called_once_with(
-        run_ctx.execution_state.results,
-        "fundamental6",
-    )

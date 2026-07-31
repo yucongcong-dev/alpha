@@ -25,25 +25,12 @@ FAILURE_SUMMARY_MAX_LEN: int = _yaml_int("failed_check", "failure_summary_max_le
 BACKFILL_WINDOW: int = _yaml_int("expression", "backfill_window", default=504)
 
 # ---- Feedback 阈值 ----
-SETTINGS_VARIANT_BUDGET_HIGH: float = _yaml_float(
-    "feedback", "settings_variant_budget_high", default=0.35
-)
-SETTINGS_VARIANT_BUDGET_MID: float = _yaml_float(
-    "feedback", "settings_variant_budget_mid", default=0.10
-)
-FEEDBACK_MUTATION_NEARPASS_THRESHOLD: float = _yaml_float(
-    "feedback", "mutation_nearpass_threshold", default=0.08
-)
 FEEDBACK_MUTATION_HIGHSCORE_THRESHOLD: float = _yaml_float(
     "feedback", "mutation_highscore_threshold", default=0.25
 )
 FEEDBACK_TEMPLATE_MIN_PRIORITY: int = _yaml_int("feedback", "template_min_priority", default=105)
 DELTA_STD_PRIORITY_BOOST: int = _yaml_int("feedback", "delta_std_priority_boost", default=15)
 
-SETTINGS_NEARPASS_THRESHOLD: float = _yaml_float(
-    "feedback", "settings_nearpass_threshold", default=0.45
-)
-SETTINGS_CLOSE_THRESHOLD: float = _yaml_float("feedback", "settings_close_threshold", default=0.65)
 EXPR_NEARPASS_BOOST_THRESHOLD: float = _yaml_float(
     "feedback", "expr_nearpass_boost_threshold", default=0.50
 )

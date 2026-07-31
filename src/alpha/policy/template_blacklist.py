@@ -55,30 +55,38 @@ def invalidate_blacklist_cache(dataset_id: str = "") -> None:
 
 
 def _normalize_pattern_rule(rule: dict[str, object]) -> BlacklistPatternRule | None:
-    """规范化黑名单 pattern 规则。"""
+    """规范化模板名称或表达式的黑名单 pattern 规则。"""
     pattern = str(rule.get("pattern", "")).strip()
     if not pattern:
         return None
     match_type = str(rule.get("type", "contains")).strip().lower() or "contains"
     if match_type not in {"contains", "exact", "regex"}:
         match_type = "contains"
-    return {"pattern": pattern, "type": match_type}
+    target = str(rule.get("target", "expression")).strip().lower() or "expression"
+    if target not in {"expression", "template_name"}:
+        target = "expression"
+    return {"pattern": pattern, "type": match_type, "target": target}
 
 
-def _match_pattern_rule(expression: str, rule: BlacklistPatternRule) -> bool:
-    """按规则类型匹配表达式黑名单。"""
+def _match_pattern_rule(
+    template_name: str,
+    expression: str,
+    rule: BlacklistPatternRule,
+) -> bool:
+    """按 target 和规则类型匹配模板名称或表达式。"""
     pattern = rule.get("pattern", "")
     match_type = rule.get("type", "contains")
+    value = template_name if rule.get("target") == "template_name" else expression
     if not pattern:
         return False
     if match_type == "exact":
-        return expression.strip() == pattern
+        return value.strip() == pattern
     if match_type == "regex":
         try:
-            return re.search(pattern, expression) is not None
+            return re.search(pattern, value) is not None
         except re.error:
             return False
-    return pattern in expression
+    return pattern in value
 
 
 def _load_blacklist(dataset_id: str) -> None:
@@ -146,9 +154,6 @@ def runtime_blacklist_match_reason(
     """Match a template against blacklist rules with optional runtime policy context."""
     effective_dataset_id = policy.dataset_id if policy is not None else dataset_id
     protected_templates = policy.protected_templates if policy is not None else set()
-    blocked_name_substrings = (
-        policy.blacklisted_template_name_substrings if policy is not None else ()
-    )
     return blacklist_match_reason(
         template_name,
         expression,
@@ -157,7 +162,6 @@ def runtime_blacklist_match_reason(
         current_stage=current_stage,
         has_runtime_context=bool(template_metadata or expression),
         protected_templates=set(protected_templates),
-        blocked_name_substrings=tuple(blocked_name_substrings),
     )
 
 
@@ -195,7 +199,6 @@ def blacklist_match_reason(
     current_stage: str,
     has_runtime_context: bool,
     protected_templates: set[str],
-    blocked_name_substrings: tuple[str, ...],
 ) -> str | None:
     """返回命中的黑名单原因；未命中则返回 None。"""
     if template_name in protected_templates:
@@ -223,9 +226,6 @@ def blacklist_match_reason(
         if matched_legacy_name and not has_runtime_context:
             return "legacy_name_only"
         for rule in cached.get("pattern_rules", []):
-            if isinstance(rule, dict) and _match_pattern_rule(expression, rule):
-                return f"pattern:{rule.get('type', 'contains')}"
-        for blocked_substring in blocked_name_substrings:
-            if blocked_substring and blocked_substring in template_name:
-                return "policy_name_substring"
+            if isinstance(rule, dict) and _match_pattern_rule(template_name, expression, rule):
+                return f"pattern:{rule.get('target', 'expression')}:{rule.get('type', 'contains')}"
     return None

@@ -58,13 +58,7 @@ if TYPE_CHECKING:
     )
     from .result_identity import attempted_template_keys, is_informative_result, result_identity
     from .results_loader import load_existing_results
-    from .template_execution_policy import build_template_execution_decision
-    from .template_registry_rules import (
-        compile_template_registry_summary,
-        normalize_activation_scope,
-        normalize_template_role,
-        recommend_template_role_transition,
-    )
+    from .template_registry_rules import compile_template_registry_summary
     from .template_stats import (
         compile_template_performance_summary,
         compile_template_stats,
@@ -102,19 +96,9 @@ _EXPORT_MAP: ExportMap = {
     "is_informative_result": (".result_identity", "is_informative_result"),
     "result_identity": (".result_identity", "result_identity"),
     "load_existing_results": (".results_loader", "load_existing_results"),
-    "build_template_execution_decision": (
-        ".template_execution_policy",
-        "build_template_execution_decision",
-    ),
     "compile_template_registry_summary": (
         ".template_registry_rules",
         "compile_template_registry_summary",
-    ),
-    "normalize_activation_scope": (".template_registry_rules", "normalize_activation_scope"),
-    "normalize_template_role": (".template_registry_rules", "normalize_template_role"),
-    "recommend_template_role_transition": (
-        ".template_registry_rules",
-        "recommend_template_role_transition",
     ),
     "compile_template_performance_summary": (
         ".template_stats",

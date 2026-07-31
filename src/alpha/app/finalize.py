@@ -23,7 +23,6 @@ from ..core.checkpoint import delete_pipeline_state
 from ..io.results_store import exclusive_results_transaction
 from ..models.io_types import RunPaths
 from ..models.runtime_options import ResultWriteOptions
-from ..policy.blacklist_runtime_updates import auto_update_blacklist
 from ..runtime.state import InitializedRunContext
 
 logger = logging.getLogger(__name__)
@@ -91,6 +90,4 @@ def finalize_run(
             feedback_output_path,
             len(feedback_results),
         )
-    if write_options.auto_update_blacklist:
-        auto_update_blacklist(execution_state.results, write_options.dataset_id)
     delete_pipeline_state(state_file)

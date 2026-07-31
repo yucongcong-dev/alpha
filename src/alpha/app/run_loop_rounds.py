@@ -279,7 +279,6 @@ def _dispatch_templates_for_field(
             template_role=entry.template_role,
             template_activation_scope=entry.template_activation_scope,
             policy_version=entry.policy_version,
-            policy_arm=entry.policy_arm,
             expression=entry.expression,
             settings_variant=entry.settings_variant,
             variant_fingerprint=entry.variant_fingerprint,

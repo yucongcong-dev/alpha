@@ -115,7 +115,6 @@ def coerce_feedback_phase_policy(value: Any) -> FeedbackPhasePolicy | None:
         min_best_score=min_best_score,
         settings_variant_budget=settings_variant_budget,
         enable_template_pruning=bool(value.get("enable_template_pruning", False)),
-        enable_resimulation_mutations=bool(value.get("enable_resimulation_mutations", False)),
         preferred_template_stages=preferred_template_stages,
     )
 

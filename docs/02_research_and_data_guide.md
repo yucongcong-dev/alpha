@@ -574,6 +574,11 @@ datasets/<dataset>/cache/<region>_<universe>_<instrument>_d<delay>.json
 | `datasets/<id>/runs/` | 单次运行 journal、state、分析与日志 | 否 |
 | `datasets/<id>/feedback/<scope>/` | 跨 run 反馈、只读模板统计和去重索引 | 否 |
 
+`blacklist.json` 是唯一模板排除入口：`learned_templates` 保存增量回测自动学习的条目，
+`expression_rules` 保存人工规则；规则可用 `target: expression` 匹配表达式，或用
+`target: template_name` 匹配模板名称。运行过程中一旦条目达到学习门槛就增量写入，
+无需在结束阶段再次全量生成。
+
 成熟结论必须从 `runs/` 或 `feedback/` 中沉淀到 `template.json`、`presets/` 或数据集 README；
 不要把长期人工决策留在临时文件名或 JSON 结果里。一次性实验输入放 `tmp/`，外部对照材料或手工草稿放 `scratch/`。
 模板的默认排序直接维护在 `template.json` 的 `priority`；不要再为单个历史模板名叠加 YAML 优先级惩罚。

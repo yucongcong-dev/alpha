@@ -120,7 +120,6 @@ def _validate_cross_consistency(
     overlap_sections = {"quality", "http", "expression", "feedback"}
     known_aliases: dict[str, dict[str, str]] = {
         "feedback": {
-            "feedback_mutation_nearpass_threshold": "mutation_nearpass_threshold",
             "feedback_mutation_highscore_threshold": "mutation_highscore_threshold",
             "feedback_template_min_priority": "template_min_priority",
         },

@@ -96,7 +96,6 @@ class ExpressionPolicyOverrides(TypedDict, total=False):
     partner_limit: int
     positive_raw_fields: list[str]
     negative_raw_fields: list[str]
-    disabled_templates: list[str]
     template_priority_penalties: dict[str, int]
 
 

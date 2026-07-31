@@ -185,7 +185,6 @@ class FieldTestResult:
     template_role: str = ""
     template_activation_scope: str = ""
     policy_version: str = ""
-    policy_arm: str = ""
     simulation_id: str | None = None
     alpha_id: str | None = None
     status: str = "unknown"
@@ -286,7 +285,6 @@ class FieldTestContext:
     template_role: str = ""
     template_activation_scope: str = ""
     policy_version: str = ""
-    policy_arm: str = ""
     settings_fingerprint: str = ""
     template_library_fingerprint: str = ""
     settings: dict[str, Any] = field(default_factory=dict)
@@ -313,7 +311,6 @@ class FieldTestContext:
             template_role=self.template_role,
             template_activation_scope=self.template_activation_scope,
             policy_version=self.policy_version,
-            policy_arm=self.policy_arm,
             simulation_id=simulation_id,
             alpha_id=alpha_id,
             status=status,
@@ -351,7 +348,6 @@ class FieldTestContext:
             template_role=self.template_role,
             template_activation_scope=self.template_activation_scope,
             policy_version=self.policy_version,
-            policy_arm=self.policy_arm,
             simulation_id=simulation_id,
             alpha_id=alpha_id,
             status=status,

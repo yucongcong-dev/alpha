@@ -32,6 +32,10 @@ from ..generators.templates.classification import (
     classify_expression_family,
     classify_template_stage,
 )
+from ..generators.templates.metadata import (
+    normalize_activation_scope,
+    normalize_template_role,
+)
 from ..generators.templates.priority import cap_templates_per_family
 from ..generators.templates.refine import build_refine_templates
 from ..generators.variants import build_setting_variants
@@ -42,10 +46,10 @@ from ..models.domain import (
     TemplateCandidate,
     TemplateField,
 )
+from ..models.domain_parsers import parse_failed_check
 from ..models.runtime_protocols import SimulationSettingsArgs, TemplateFeedback
 from ..policy.expression import get_dataset_expression_policy, resolve_feedback_stage
 from ..runtime.contexts import PendingTemplateEntry, TemplateBuildContext
-from ..selection.template_execution_policy import build_template_execution_decision
 from ..utils.helpers import first_non_empty, is_event_field_name
 
 
@@ -176,6 +180,32 @@ def _resolve_feedback_stage(
     )
 
 
+def _refine_candidate_from_metadata(
+    *,
+    field_id: str,
+    field_name: str,
+    template_name: str,
+    expression: str,
+    template_family: str,
+    template_stage: str,
+    template_metadata: dict[str, object],
+) -> NearPassCandidate | None:
+    """Rebuild settings-refinement context embedded by near-pass templates."""
+    failed_checks = template_metadata.get("refine_failed_checks")
+    if not isinstance(failed_checks, list):
+        return None
+    return NearPassCandidate(
+        field_id=field_id,
+        field_name=field_name,
+        template_name=template_name,
+        expression=expression,
+        template_family=template_family,
+        template_stage=template_stage,
+        score=float(template_metadata.get("refine_score", 0.0) or 0.0),
+        failed_checks=[parse_failed_check(check) for check in failed_checks],
+    )
+
+
 def resolve_field_template_candidates(
     build_ctx: TemplateBuildContext,
     field: TemplateField,
@@ -284,24 +314,26 @@ def build_pending_template_variants(
             expression,
             template_metadata,
         )
-        execution_decision = build_template_execution_decision(
+        template_role = normalize_template_role(template_metadata.get("role"))
+        template_activation_scope = normalize_activation_scope(
+            template_metadata.get("activation_scope")
+        )
+        refine_candidate = _refine_candidate_from_metadata(
             template_name=template_name,
             expression=expression,
-            priority=priority,
             template_family=template_family,
             template_stage=template_stage,
             template_metadata=template_metadata,
             field_id=field_id,
             field_name=field_name,
-            base_variant_budget=max_setting_variants,
         )
         for settings_variant in active_services.build_setting_variants(
             options,
             template_name,
             expression,
             field_feedback=field_feedback,
-            refine_candidate=execution_decision.refine_candidate,
-        )[: execution_decision.effective_variant_budget]:
+            refine_candidate=refine_candidate,
+        )[: max(1, int(max_setting_variants or 1))]:
             variant_fingerprint = active_services.build_settings_fingerprint(settings_variant)
             expression_variant_key = (field_id, expression, variant_fingerprint)
             if expression_variant_key in reserved_expression_variant_keys:
@@ -316,12 +348,11 @@ def build_pending_template_variants(
                     template_name=template_name,
                     template_family=template_family,
                     template_stage=template_stage,
-                    template_role=execution_decision.template_role,
-                    template_activation_scope=execution_decision.template_activation_scope,
+                    template_role=template_role,
+                    template_activation_scope=template_activation_scope,
                     policy_version=str(template_metadata.get("policy_version", "")),
-                    policy_arm=str(template_metadata.get("policy_arm", "")),
                     expression=expression,
-                    priority=execution_decision.effective_priority,
+                    priority=priority,
                     settings_variant=settings_variant,
                     variant_fingerprint=variant_fingerprint,
                 )

@@ -15,6 +15,17 @@ TemplateMetadataMap = dict[tuple[str, str], TemplateMetadata]
 """表达式构建阶段使用的模板元数据映射。key=(template_name, expression)。"""
 
 
+def normalize_template_role(role: object) -> str:
+    """Normalize an optional template role for persisted/runtime metadata."""
+    return str(role or "").strip().lower() or "default_seed"
+
+
+def normalize_activation_scope(scope: object) -> str:
+    """Normalize an optional activation scope and fall back to broad."""
+    value = str(scope or "").strip().lower()
+    return value if value in {"broad", "refine", "diagnostic"} else "broad"
+
+
 def _template_key(template_name: str, expression: str) -> tuple[str, str]:
     """生成模板元数据映射键。"""
     return (template_name, expression)

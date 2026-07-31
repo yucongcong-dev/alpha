@@ -180,14 +180,9 @@ global:
   # --------------------------------------------------------------------------
   # 控制模板优先级、变异生成和自适应调整的精细参数。
   feedback:
-    settings_variant_budget_high: 0.35   # settings 变体高分阈值 (>= 此值分配 3 个变体)
-    settings_variant_budget_mid: 0.10    # settings 变体中分阈值 (>= 此值分配 2 个变体)
-    feedback_mutation_nearpass_threshold: 0.08  # 接近通过时生成额外变异的阈值
     feedback_mutation_highscore_threshold: 0.25 # 高分时生成最佳变体的阈值
     feedback_template_min_priority: 105   # 反馈剪枝最低优先级 (仅保留 >= 此值的模板)
     delta_std_priority_boost: 15          # delta/std 模板额外优先级加成
-    settings_nearpass_threshold: 0.45     # settings nearpass 阈值 (>= 时生成 MARKET 变体)
-    settings_close_threshold: 0.65        # settings close 阈值 (>= 时生成更多微调变体)
     expr_nearpass_boost_threshold: 0.50   # 表达式 nearpass 大幅加分阈值
     expr_iter_boost_threshold: 0.20       # 表达式 iter 适度加分阈值
     expr_ratio_penalty_threshold: 0.30    # 表达式 ratio 家族惩罚阈值

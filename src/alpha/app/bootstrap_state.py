@@ -10,7 +10,6 @@ from ..models.runtime_protocols import RunConfig
 from ..policy.blacklist_context import set_active_datasets_root
 from ..policy.blacklist_runtime_stats import build_blacklist_runtime_stats
 from ..policy.blacklist_store import load_blacklisted_template_keys
-from ..policy.evaluation import summarize_policy_evaluation
 from ..runtime.contexts import HistoricalRunState
 from ..runtime.state import ExecutionState
 
@@ -74,6 +73,5 @@ def build_execution_state(
         template_library_fingerprint=template_library_fingerprint,
         run_config=run_config,
         template_stats=execution_state.template_stats,
-        policy_evaluation=summarize_policy_evaluation(execution_state.results),
     )
     return execution_state

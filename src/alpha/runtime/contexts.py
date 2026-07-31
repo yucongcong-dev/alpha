@@ -30,7 +30,6 @@ class PendingFutureContext:
     template_role: str = ""
     template_activation_scope: str = ""
     policy_version: str = ""
-    policy_arm: str = ""
     expression: str = ""
     settings_fingerprint: str = ""
     settings: dict[str, object] = field(default_factory=dict)
@@ -52,7 +51,6 @@ class PendingTemplateEntry:
     settings_variant: SettingsVariant
     variant_fingerprint: str
     policy_version: str = ""
-    policy_arm: str = ""
 
 
 @dataclass

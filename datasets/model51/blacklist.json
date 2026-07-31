@@ -5,5 +5,16 @@
   "_updated": "2026-07-08",
   "dataset_id": "model51",
   "learned_templates": [],
-  "expression_rules": []
+  "expression_rules": [
+    {
+      "target": "template_name",
+      "type": "exact",
+      "pattern": "model51_zscore_decay_60"
+    },
+    {
+      "target": "template_name",
+      "type": "exact",
+      "pattern": "model51_zscore_decay_120"
+    }
+  ]
 }

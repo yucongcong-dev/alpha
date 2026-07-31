@@ -263,9 +263,6 @@ def prepare_bootstrap_resources(
         "dataset_id": dataset_id,
         "policy_version": str(getattr(expression_policy, "policy_version", "unversioned")),
         "feedback_scope": str(getattr(expression_policy, "feedback_scope", "field_type")),
-        "evaluation_holdout_percent": int(
-            getattr(expression_policy, "evaluation_holdout_percent", 0) or 0
-        ),
         "use_curated_heuristics": bool(expression_policy.use_curated_heuristics),
     }
 

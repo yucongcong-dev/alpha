@@ -25,7 +25,6 @@ from ..config.runtime_values import get_runtime_config
 from ..generators.field_transforms import build_field_view
 from ..models.domain import FieldView, TemplateCandidate, TemplateField, TemplateLibraryItem
 from ..models.runtime_protocols import TemplateFeedback
-from ..policy.evaluation import POLICY_ARM_ADAPTIVE, assign_policy_arm
 from ..policy.expression import get_dataset_expression_policy, resolve_feedback_stage
 from ..runtime.contexts import TemplateBuildContext
 from ..utils.helpers import is_event_field_name
@@ -255,12 +254,6 @@ def build_expression_candidates(
         )
     else:
         global_failed_check_counts = dict(build_ctx.global_failed_check_counts)
-    policy_arm = assign_policy_arm(
-        dataset_id=policy.dataset_id,
-        field_id=field_id,
-        policy_version=policy.policy_version,
-        holdout_percent=policy.evaluation_holdout_percent,
-    )
     feedback_stage = resolve_feedback_stage(field_feedback, policy.feedback_loop_policy)
     field_view = build_field_view(field, policy)
     is_event_field = _is_event_field(field_name, policy)
@@ -290,7 +283,6 @@ def build_expression_candidates(
         )
         for item in raw_templates
         if isinstance(item, TemplateLibraryItem)
-        and item.name not in policy.disabled_templates
         and not _is_blacklisted_template(
             item.name,
             item.expression,
@@ -334,19 +326,17 @@ def build_expression_candidates(
     templates = [item for item in templates if _template_supports_grouping_fields(item, policy)]
 
     templates = apply_similarity_penalty(templates, options.legacy_similarity_penalty)
-    if policy_arm == POLICY_ARM_ADAPTIVE:
-        templates = apply_adaptive_priority(
-            templates,
-            field_feedback=field_feedback,
-            global_failed_check_counts=global_failed_check_counts,
-        )
+    templates = apply_adaptive_priority(
+        templates,
+        field_feedback=field_feedback,
+        global_failed_check_counts=global_failed_check_counts,
+    )
     templates = [
         replace(
             template,
             metadata={
                 **template.metadata,
                 "policy_version": policy.policy_version,
-                "policy_arm": policy_arm,
                 "feedback_scope": policy.feedback_scope,
             },
         )

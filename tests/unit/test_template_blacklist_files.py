@@ -245,6 +245,11 @@ def test_blacklist_pattern_rules_support_exact_and_regex(monkeypatch, tmp_path) 
                 "expression_rules": [
                     {"type": "exact", "pattern": "rank(close)"},
                     {"type": "regex", "pattern": r"ts_delta\(.*?, 5\)"},
+                    {
+                        "target": "template_name",
+                        "type": "contains",
+                        "pattern": "blocked_name",
+                    },
                 ],
             }
         ),
@@ -255,4 +260,5 @@ def test_blacklist_pattern_rules_support_exact_and_regex(monkeypatch, tmp_path) 
 
     assert _is_blacklisted_template("t1", "rank(close)", dataset_id="custom_ds")
     assert _is_blacklisted_template("t2", "rank(ts_delta(close, 5))", dataset_id="custom_ds")
+    assert _is_blacklisted_template("blocked_name_template", "rank(open)", dataset_id="custom_ds")
     assert not _is_blacklisted_template("t3", "rank(close) + 1", dataset_id="custom_ds")

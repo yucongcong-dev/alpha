@@ -92,7 +92,6 @@ def submit_template_future(
     template_role: str,
     template_activation_scope: str,
     policy_version: str = "",
-    policy_arm: str = "",
     expression: str,
     settings_variant: SettingsVariant,
     variant_fingerprint: str,
@@ -107,7 +106,6 @@ def submit_template_future(
             "template_role": template_role,
             "template_activation_scope": template_activation_scope,
             "policy_version": policy_version,
-            "policy_arm": policy_arm,
         },
     )
     effective_payload = build_simulation_payload(args, expression)
@@ -122,7 +120,6 @@ def submit_template_future(
         template_role=template_role,
         template_activation_scope=template_activation_scope,
         policy_version=policy_version,
-        policy_arm=policy_arm,
         expression=expression,
         settings_fingerprint=variant_fingerprint,
         settings=dict(effective_payload["settings"]),

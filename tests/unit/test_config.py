@@ -113,12 +113,11 @@ def test_expression_policy_can_be_overridden_from_yaml(monkeypatch) -> None:
                     "preferred_partner_score_bonuses": {"assets": 11},
                 },
                 "__curated__": {
-                    "disabled_templates": ["base_disabled"],
+                    "protected_templates": ["base_protected"],
                 },
                 "fundamental6": {
                     "partner_limit": 9,
-                    "blacklisted_template_name_substrings": ["custom_block"],
-                    "disabled_templates": ["weak_template"],
+                    "protected_templates": ["dataset_protected"],
                     "matrix_field_transform": {
                         "stages": [{"kind": "backfill", "window": 720}],
                         "backfill_window": 720,
@@ -129,7 +128,6 @@ def test_expression_policy_can_be_overridden_from_yaml(monkeypatch) -> None:
                             "min_best_score": 0.4,
                             "settings_variant_budget": 4,
                             "enable_template_pruning": True,
-                            "enable_resimulation_mutations": True,
                             "preferred_template_stages": ["event_conditioned"],
                         }
                     },
@@ -144,9 +142,8 @@ def test_expression_policy_can_be_overridden_from_yaml(monkeypatch) -> None:
     policy = get_dataset_expression_policy("fundamental6")
 
     assert policy.partner_limit == 9
-    assert policy.blacklisted_template_name_substrings == ("custom_block",)
-    assert "base_disabled" in policy.disabled_templates
-    assert "weak_template" in policy.disabled_templates
+    assert "base_protected" in policy.protected_templates
+    assert "dataset_protected" in policy.protected_templates
     assert policy.preferred_partner_score_bonuses["assets"] == 11
     assert policy.matrix_field_transform.backfill_window == 720
     assert policy.matrix_field_transform.stages == (
@@ -181,10 +178,8 @@ def test_fundamental6_default_policy_is_loaded_from_settings_yaml() -> None:
 
     assert policy.policy_version == "2026-07-30.1"
     assert policy.feedback_scope == "field_type"
-    assert policy.evaluation_holdout_percent == 0
     assert policy.partner_limit == 6
     assert "account_rank_backfill_504" in policy.protected_templates
-    assert policy.disabled_templates == set()
     assert ("cashflow_op", "fnd6_mkvalt") in policy.high_conviction_ratio_pairs
     assert ("cashflow_op", "assets") in policy.high_conviction_ratio_pairs
     assert ("ebitda", "enterprise_value") in policy.high_conviction_ratio_pairs
@@ -354,7 +349,7 @@ def test_expression_policy_default_section_applies_to_non_curated_dataset(monkey
                     "preferred_partner_score_bonuses": {"assets": 33},
                 },
                 "__curated__": {
-                    "disabled_templates": ["curated_only"],
+                    "protected_templates": ["curated_only"],
                 },
             }
         },
@@ -364,14 +359,13 @@ def test_expression_policy_default_section_applies_to_non_curated_dataset(monkey
 
     assert policy.partner_limit == 7
     assert policy.preferred_partner_score_bonuses["assets"] == 33
-    assert "curated_only" not in policy.disabled_templates
+    assert "curated_only" not in policy.protected_templates
 
 def test_model51_policy_disables_undersized_holdout_experiment() -> None:
     """The small closed library cannot produce a statistically useful A/B holdout."""
     policy = get_dataset_expression_policy("model51")
 
     assert policy.closed_default_template_library is True
-    assert policy.evaluation_holdout_percent == 0
 
 def test_load_submit_quality_runtime_config_reads_yaml_globals(monkeypatch) -> None:
     monkeypatch.setattr(

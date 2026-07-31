@@ -37,7 +37,7 @@ BlacklistMatcherEntry = dict[str, str]
 """用于名称 / stage / family 命中的轻量匹配记录。"""
 
 BlacklistPatternRule = dict[str, str]
-"""表达式自动规避规则。"""
+"""模板名称或表达式的人工规避规则。"""
 
 BlacklistCacheEntry = dict[str, Any]
 """单个数据集的黑名单缓存项。"""
@@ -51,10 +51,6 @@ class BlacklistRuntimePolicy(Protocol):
 
     @property
     def protected_templates(self) -> set[str]: ...
-
-    @property
-    def blacklisted_template_name_substrings(self) -> tuple[str, ...]: ...
-
 
 @dataclass
 class BlacklistRuntimeSummary:

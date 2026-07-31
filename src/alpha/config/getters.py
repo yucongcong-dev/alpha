@@ -16,7 +16,6 @@ __all__ = [
     "get_expr_nearpass_boost_threshold",
     "get_expr_ratio_penalty_threshold",
     "get_feedback_mutation_highscore_threshold",
-    "get_feedback_mutation_nearpass_threshold",
     "get_feedback_template_min_priority",
     "get_http_backend",
     "get_http_request_timeout",
@@ -33,10 +32,6 @@ __all__ = [
     "get_retry_operation_default_wait",
     "get_server_error_backoff_max",
     "get_server_error_backoff_step",
-    "get_settings_close_threshold",
-    "get_settings_nearpass_threshold",
-    "get_settings_variant_budget_high",
-    "get_settings_variant_budget_mid",
     "get_simulation_default_end_date",
     "get_simulation_default_start_date",
     "get_simulation_retry_wait",
@@ -102,18 +97,6 @@ def get_polling_retry_buffer() -> float:
 # ---- Feedback ----
 
 
-def get_settings_variant_budget_high() -> float:
-    return _rc().feedback.settings_variant_budget_high
-
-
-def get_settings_variant_budget_mid() -> float:
-    return _rc().feedback.settings_variant_budget_mid
-
-
-def get_feedback_mutation_nearpass_threshold() -> float:
-    return _rc().feedback.feedback_mutation_nearpass_threshold
-
-
 def get_feedback_mutation_highscore_threshold() -> float:
     return _rc().feedback.feedback_mutation_highscore_threshold
 
@@ -124,14 +107,6 @@ def get_feedback_template_min_priority() -> int:
 
 def get_delta_std_priority_boost() -> int:
     return _rc().feedback.delta_std_priority_boost
-
-
-def get_settings_nearpass_threshold() -> float:
-    return _rc().feedback.settings_nearpass_threshold
-
-
-def get_settings_close_threshold() -> float:
-    return _rc().feedback.settings_close_threshold
 
 
 def get_expr_nearpass_boost_threshold() -> float:

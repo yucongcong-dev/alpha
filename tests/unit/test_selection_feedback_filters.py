@@ -97,16 +97,17 @@ def test_combined_turnover_concentration_prunes_zscore_spread() -> None:
     )
 
 
-def test_field_family_skip_policy_only_applies_explicit_blacklist() -> None:
+def test_field_family_skip_policy_only_applies_explicit_blacklist(monkeypatch) -> None:
     assert not should_skip_field_template_family(
         "field", "template", "rank(field)", expression_policy=DatasetExpressionPolicy()
+    )
+    monkeypatch.setattr(
+        "alpha.selection.feedback_filters._is_blacklisted_template",
+        lambda *args, **kwargs: True,
     )
     assert should_skip_field_template_family(
         "field",
         "blocked_template",
         "rank(field)",
-        expression_policy=_policy(
-            dataset_id="test",
-            blacklisted_template_name_substrings=("blocked",),
-        ),
+        expression_policy=_policy(dataset_id="test"),
     )

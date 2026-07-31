@@ -94,7 +94,6 @@ def _serialize_pending_simulations(
             "template_role": str(getattr(meta, "template_role", "") or ""),
             "template_activation_scope": str(getattr(meta, "template_activation_scope", "") or ""),
             "policy_version": str(getattr(meta, "policy_version", "") or ""),
-            "policy_arm": str(getattr(meta, "policy_arm", "") or ""),
             "expression": str(getattr(meta, "expression", "") or ""),
             "settings_fingerprint": str(getattr(meta, "settings_fingerprint", "") or ""),
             "settings": dict(getattr(meta, "settings", {}) or {}),
@@ -140,7 +139,6 @@ def _restore_pending_simulations(
                 template_role=str(item.get("template_role", "") or ""),
                 template_activation_scope=str(item.get("template_activation_scope", "") or ""),
                 policy_version=str(item.get("policy_version", "") or ""),
-                policy_arm=str(item.get("policy_arm", "") or ""),
                 expression=expression,
                 settings_fingerprint=settings_fingerprint,
                 settings=dict(item.get("settings", {}))
