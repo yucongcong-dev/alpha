@@ -152,22 +152,8 @@ def get_dataset_expression_policy(
 
 
 def _yaml_curated_heuristics(dataset_id: str) -> bool:
-    """从 YAML expression_policies.<dataset>.use_curated_heuristics 读取精选启发式开关。
-
-    YAML 显式配置优先；未配置时保留 fundamental6 历史兼容默认。
-    """
-    if not dataset_id:
-        return False
-    from ..config.yaml import get_yaml_config
-
-    yaml_config = get_yaml_config() or {}
-    policies = yaml_config.get("expression_policies", {})
-    if not isinstance(policies, dict):
-        return "fundamental6" in dataset_id.lower()
-    dataset_policy = policies.get(dataset_id, {})
-    if isinstance(dataset_policy, dict) and "use_curated_heuristics" in dataset_policy:
-        return bool(dataset_policy.get("use_curated_heuristics", False))
-    return "fundamental6" in dataset_id.lower()
+    """Read the curated-heuristics switch from YAML only."""
+    return use_curated_heuristics_for_dataset(dataset_id)
 
 
 def resolve_feedback_stage(
@@ -210,26 +196,4 @@ def use_curated_heuristics_for_dataset(
     dataset_policy = policies.get(dataset_id, {})
     if isinstance(dataset_policy, dict):
         return bool(dataset_policy.get("use_curated_heuristics", False))
-    return False
-
-
-def use_fundamental6_heuristics(dataset_id: str | None = None) -> bool:
-    """Backward-compatible curated-heuristic helper for fundamental6-style datasets."""
-    if dataset_id is None:
-        dataset_id = "fundamental6"
-    if not dataset_id:
-        return False
-    if "fundamental6" not in dataset_id.lower():
-        return False
-    if use_curated_heuristics_for_dataset(dataset_id):
-        return True
-    if dataset_id.lower() == "fundamental6":
-        return True
-
-    from ..config.yaml import get_yaml_config
-
-    yaml_config = get_yaml_config() or {}
-    policies = yaml_config.get("expression_policies", {})
-    if not isinstance(policies, dict) or dataset_id not in policies:
-        return use_curated_heuristics_for_dataset("fundamental6", yaml_config=yaml_config)
     return False

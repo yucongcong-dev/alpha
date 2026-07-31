@@ -32,7 +32,7 @@ from alpha.config.yaml import (
 )
 from alpha.policy.expression import (
     get_dataset_expression_policy,
-    use_fundamental6_heuristics,
+    use_curated_heuristics_for_dataset,
 )
 
 
@@ -64,43 +64,11 @@ class TestConfigConstants:
         assert AUTH_URL.startswith("https://")
 
 
-class TestUseFundamental6Heuristics:
-    """use_fundamental6_heuristics 函数测试用例"""
-
-    def test_exact_match(self) -> None:
-        assert use_fundamental6_heuristics("fundamental6") is True
-
-    def test_case_insensitive_match(self) -> None:
-        assert use_fundamental6_heuristics("FUNDAMENTAL6") is True
-
-    def test_contains_keyword(self) -> None:
-        assert use_fundamental6_heuristics("fundamental6_v2") is False
-
-    def test_other_dataset(self) -> None:
-        assert use_fundamental6_heuristics("model51") is False
-
-    def test_empty_string(self) -> None:
-        assert use_fundamental6_heuristics("") is False
-
-    def test_default_parameter(self) -> None:
-        assert use_fundamental6_heuristics() is True
-
-    # ---- 补充边界测试 ----
-    def test_partial_match(self) -> None:
-        """Derived datasets must opt in through YAML instead of substring matching."""
-        assert use_fundamental6_heuristics("my_fundamental6_custom") is False
-
-    def test_whitespace_only(self) -> None:
-        """纯空白不包含 fundamental6，返回 False。"""
-        assert use_fundamental6_heuristics("   ") is False
-
-    def test_near_match_not_confused(self) -> None:
-        """fundamental5 不应匹配 fundamental6。"""
-        assert use_fundamental6_heuristics("fundamental5") is False
-
-    def test_similar_but_different_dataset(self) -> None:
-        """类似但不包含 fundamental6 的数据集名称不匹配。"""
-        assert use_fundamental6_heuristics("price6") is False
+def test_curated_heuristics_are_loaded_only_from_yaml() -> None:
+    assert use_curated_heuristics_for_dataset("fundamental6") is False
+    assert use_curated_heuristics_for_dataset("model16") is True
+    assert use_curated_heuristics_for_dataset("fundamental6_v2") is False
+    assert use_curated_heuristics_for_dataset("") is False
 
 
 def test_expression_policy_can_be_overridden_from_yaml(monkeypatch) -> None:

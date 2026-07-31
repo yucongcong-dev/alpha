@@ -30,7 +30,6 @@ if TYPE_CHECKING:
         get_dataset_expression_policy,
         resolve_feedback_stage,
         use_curated_heuristics_for_dataset,
-        use_fundamental6_heuristics,
     )
 
 _EXPORT_MAP: ExportMap = {
@@ -47,7 +46,6 @@ _EXPORT_MAP: ExportMap = {
     "load_blacklisted_template_names": (".blacklist_store", "load_blacklisted_template_names"),
     "resolve_feedback_stage": (".expression", "resolve_feedback_stage"),
     "use_curated_heuristics_for_dataset": (".expression", "use_curated_heuristics_for_dataset"),
-    "use_fundamental6_heuristics": (".expression", "use_fundamental6_heuristics"),
 }
 
 __all__ = list(_EXPORT_MAP)
