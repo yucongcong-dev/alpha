@@ -2,7 +2,7 @@
   "_version": "v2",
   "_comment": "Template blacklist for fundamental6. learned_templates stores dataset-specific learned exclusions; expression_rules stores explicit expression pattern blocks.",
   "_created": "2026-07-13",
-  "_updated": "2026-07-31 20:14",
+  "_updated": "2026-07-31 20:18",
   "dataset_id": "fundamental6",
   "learned_templates": [
     {
@@ -303,6 +303,26 @@
       "date_blacklisted": "2026-07-31",
       "avg_sharpe": 0.193,
       "avg_fitness": 0.047
+    },
+    {
+      "name": "account_bucket_cap_zscore_60",
+      "dataset_id": "fundamental6",
+      "source": "auto_detected",
+      "field_type": "MATRIX",
+      "template_family": "bucket_group_rank",
+      "template_stage": "group_second_order",
+      "reason": "3个字段测试均不通过。平均 Sharpe -0.387。平均 Fitness -0.253。集中度失败 2 次。",
+      "fields_tested": [
+        "fnd6_loc",
+        "fnd6_lol2",
+        "fnd6_loxdr"
+      ],
+      "low_sharpe": 3,
+      "low_fitness": 3,
+      "date_blacklisted": "2026-07-31",
+      "avg_sharpe": -0.387,
+      "avg_fitness": -0.253,
+      "concentrated_weight": 2
     }
   ],
   "expression_rules": [
