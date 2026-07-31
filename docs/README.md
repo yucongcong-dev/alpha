@@ -1,6 +1,8 @@
 # Docs Index
 
 `docs/` 收敛为四篇主文档。每个主题只保留一个主要解释位置，其他文档只做简短引用。
+官网 Documentation、Courses、FAQ 和 Community 内容按主题吸收进这四篇；不做官网全文镜像，
+也不为每个 FAQ 分类新增平行摘录页。
 
 ## 推荐阅读顺序
 
@@ -23,6 +25,7 @@
 - Delay、Decay、Neutralization、Truncation、Universe
 - Fast Expression 基础语法
 - NaN、Pasteurize、Unit Handling
+- Starter Pack / 10 Steps / Learn2Quant 里适合新手先建立的学习路径
 
 这里只讲第一次学习所需的最小知识；平台状态的完整定义放在 Reference。
 
@@ -31,8 +34,10 @@
 [02_research_and_data_guide.md](02_research_and_data_guide.md) 负责从想法到实验：
 
 - Beginners / Bronze / Silver 示例
+- Learn/Courses 课程地图
 - MATRIX、VECTOR、GROUP
 - Data Explorer 和字段体检
+- Dataset Usage Management 与数据集优先级
 - 专题数据集研究方法
 - Broad search、Local refine、模板库设计
 - 本地运行、缓存、反馈、结果与配置资产管理
@@ -44,6 +49,7 @@
 
 - `LOW_SHARPE / LOW_FITNESS / HIGH_TURNOVER`
 - 权重、Sub-Universe、相关性和成本问题
+- Research FAQ 里的常见诊断顺序
 - 抗过拟合与稳定性验证
 - Neutralization 和 D0 的最终决策
 - 提交前统一检查顺序
@@ -55,6 +61,7 @@
 - IS、Semi-OS、OS 与状态生命周期
 - 页面字段、评分、Universe、Weight、Booksize
 - NaN、Pasteurize、Coverage、Correlation
+- IQC / Challenge-Country / Dataset Usage Management 等平台状态边界
 - submission check 名称和页面语义
 
 Reference 主要回答“这个词是什么意思”；具体怎么优化，回到 03。
@@ -66,6 +73,7 @@ Reference 主要回答“这个词是什么意思”；具体怎么优化，回�
 | Alpha、基础指标和设置是什么？ | [01](01_beginner_guide.md) |
 | 如何理解 Fast Expression 和基本算子？ | [01](01_beginner_guide.md) |
 | 官网 Alpha examples 应该怎么学？ | [02](02_research_and_data_guide.md) |
+| Learn 页课程应该按什么地图理解？ | [02](02_research_and_data_guide.md) |
 | MATRIX、VECTOR、GROUP 如何分流？ | [02](02_research_and_data_guide.md) |
 | Data Explorer 怎么搜，字段怎么体检？ | [02](02_research_and_data_guide.md) |
 | 仓库里 Broad search 和 Local refine 怎么安排？ | [02](02_research_and_data_guide.md) |
@@ -88,9 +96,11 @@ Reference 主要回答“这个词是什么意思”；具体怎么优化，回�
 新增知识前先判断归属：
 
 - 基础概念放 01
-- 数据、示例和仓库研究方法放 02
+- 数据、示例、课程地图和仓库研究方法放 02
 - 诊断、稳健性和提交方法放 03
 - 纯定义、状态和错误码放 04
 - 数据集专属经验放对应 dataset 的 README、template.json 或 presets
 
-原则上不再新增与四篇主线平行的 FAQ 或专题摘录页。
+原则上不再新增与四篇主线平行的 FAQ 或专题摘录页。顾问申请、Workday、银行信息、
+账号支持、Referral、IQC 具体日期和付款规则这类内容，只在确实影响研究状态或页面术语时
+进入 Reference；否则不进入本仓库长期文档。

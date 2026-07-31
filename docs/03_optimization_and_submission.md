@@ -22,6 +22,24 @@
 3. 设置
 4. 参数
 
+### 1.1 Research FAQ 的诊断矩阵
+
+FAQ 里大多数优化建议可以归成下面这张表。它比逐篇记 FAQ 更适合本仓库落地：
+
+| 症状 | 先问什么 | 优先动作 |
+|---|---|---|
+| Sharpe 低 | 收益低，还是收益波动太大？ | 增强信号、分组比较、neutralization、标准化和平滑 |
+| Returns 低 | 信号方向弱，还是交易太少？ | 换数据类别/字段关系，必要时降低 decay 或放宽事件条件 |
+| Turnover 高 | 是信号抖动、NaN 跳变，还是低流动性股票贡献太多？ | decay、trade_when、hump、backfill、流动性分层 |
+| Fitness 低 | Sharpe、Returns、Turnover 哪个拖累公式？ | 先拆公式，不把 Fitness 当独立黑盒 |
+| Margin 低 | 每交易一美元是否赚得太少？ | 提高 returns 或降低无效换手 |
+| PnL 突跳 | NaN、权重集中、Alpha 值突变哪个在驱动？ | backfill、decay、truncation、rank/normalize |
+| Weight Coverage 失败 | 覆盖低还是权重过度集中？ | 检查缺失、极值、long/short 是否失衡 |
+| Correlation 高 | 是同字段近邻，还是同一研究假设重复？ | 换字段族、算子族、grouping、neutralization 或假设 |
+
+这张表也定义了本仓库的 refine 优先级：先定位主失败项，再做少量有语义的结构替换。
+不要把 FAQ 理解成“每篇文章对应一个模板补丁”。
+
 ---
 
 ## 2. 先分清 IS、OS 和状态
@@ -347,6 +365,16 @@ subuniverse_sharpe
 
 换句话说，Sharpe 的提升通常不是靠“更花的表达式”，而是靠“更稳的结构”。
 
+FAQ 里还特别提醒：不要为了提高 Sharpe 只反复调参数。更好的改进通常来自：
+
+- 更有解释力的数据字段
+- 更低噪声的表达式结构
+- 合理的 group/neutralization
+- 对缺失、极值和更新频率的处理
+
+如果一条 Alpha 的 Sharpe 只能靠某个孤立窗口撑住，优先把它当作过拟合风险，而不是
+“终于调到最优参数”。
+
 ---
 
 ## 10. 提升 Fitness 的更合理顺序
@@ -389,6 +417,16 @@ subuniverse_sharpe
 - 换字段族
 - 换事件源
 - 换关系结构
+
+FAQ 里给过几类提高 Returns 的常见方向，但都要和风险一起看：
+
+- 降低过强的 Decay，允许信号更快反应
+- 在更液态或更合适的 Universe 中验证想法
+- 让 long/short 两侧更均衡，避免收益来自单侧市场暴露
+- 用数据类别差异寻找更强信息源，而不是只压榨同一价量字段
+
+这些动作可能同时推高 Turnover 或波动，因此必须回到 Fitness、Drawdown 和 after-cost
+检查一起判断。
 
 ---
 
@@ -509,6 +547,18 @@ Test Period 可以更具体地按下面方式使用：
 
 `Truncation` 主要控制单股权重和集中度，不应被当作首要降换手工具。
 
+降低 Turnover 时要避免两个极端：
+
+- 只把 Decay 一路调大，导致信号被抹平
+- 只用 `trade_when` 延持旧值，却不检查事件条件是否真的有经济含义
+
+更合理的是先判断 turnover 来源：
+
+- 日常小幅抖动：优先 `hump / decay`
+- 缺失值频繁出现：优先 `ts_backfill / group_backfill`
+- 事件只在少数日期有效：优先 `trade_when`
+- 低流动性股票贡献过多：优先流动性分层或更核心 Universe
+
 ---
 
 ## 14. ISLadder 应该怎么理解
@@ -606,6 +656,12 @@ Rank/Binary、Train/Test、参数扰动、Sub/Super Universe 和 Max Trade 挑�
 - [Alpha better suited for Delay 1](https://support.worldquantbrain.com/hc/en-us/articles/19083452017559-Error-Message-Alpha-better-suited-for-Delay-1)
 - [Sub-universe Sharpe cutoff and calculation](https://support.worldquantbrain.com/hc/en-us/articles/6568644868375-How-do-I-resolve-this-error-Sub-universe-Sharpe-NaN-is-not-above-cutoff)
 - [Self-correlation cutoff and performance exception](https://support.worldquantbrain.com/hc/en-us/articles/6726867827991-Ideas-to-clear-the-submission-test-Self-correlation-0-9588-is-above-cutoff-of-0-7-and-performance-not-better-by-10-0-or-more)
+- [How to improve Sharpe](https://support.worldquantbrain.com/hc/en-us/articles/20251383456663-How-to-improve-Sharpe)
+- [How to improve returns](https://support.worldquantbrain.com/hc/en-us/articles/20251364149655-How-to-improve-returns)
+- [How to improve Turnover](https://support.worldquantbrain.com/hc/en-us/articles/20251419309719-How-to-improve-Turnover)
+- [How to increase fitness of alphas](https://support.worldquantbrain.com/hc/en-us/articles/20251386376471-How-to-increase-fitness-of-alphas)
+- [Weight Coverage common issues and advice](https://support.worldquantbrain.com/hc/en-us/articles/19248385997719-Weight-Coverage-common-issues-and-advice)
+- [How to smooth the PnL curve to minimize sudden fluctuations](https://support.worldquantbrain.com/hc/en-us/articles/20251420634135-How-to-smooth-the-PnL-curve-to-minimize-sudden-fluctuations)
 - [Using Test Period to improve OS robustness](https://support.worldquantbrain.com/hc/en-us/community/posts/22205077935895--BRAIN-TIPS-How-can-I-use-the-test-period-to-improve-the-OS-performance-of-my-Alpha)
 - [Sequencing Multiple Operators](https://support.worldquantbrain.com/hc/en-us/community/posts/19344464221335--BRAIN-TIPS-Sequencing-Multiple-Operators-in-an-Expression)
 - [Why linear combinations are discouraged](https://support.worldquantbrain.com/hc/en-us/community/posts/15238236356375--BRAIN-TIPS-Why-is-linear-combination-of-expressions-in-one-alpha-not-recommended-)

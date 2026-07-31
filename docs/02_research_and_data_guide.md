@@ -82,6 +82,30 @@ Silver 比 Bronze 再进一步，引入：
 - Bronze 更像“会搭表达式”
 - Silver 更像“会把表达式写得更接近可提交研究”
 
+### 2.4 Learn/Courses 课程地图
+
+Learn 页课程主要适合作为研究地图，不适合直接转成模板全文。当前课程可以按用途分成几类：
+
+| 课程 | 用途 |
+|---|---|
+| `Quantcepts` | 快速建立量化金融概念，例如 alpha、factor risk、market neutrality、options、sentiment、fundamentals |
+| `Introduction to Quantitative Finance` | 理解 quant research ecosystem、Alpha 创建和质量评估 |
+| `Introduction to WorldQuant BRAIN` | 了解 BRAIN 顾问路径和平台定位 |
+| `Introduction to Alphas` | 学习创建、分析和改进 Alpha 的基础流程 |
+| `Basic Operators` | 学习基础 operator 和 neutralization |
+| `Alpha Examples by Data Category` | 按数据类别理解 idea 到结果的转换 |
+| `Alpha Examples by Idea type and Delay` | 按 idea 类型和 D0/D1 延迟差异理解 Alpha |
+| `Combining Alphas and Risk Management` | 从 Alpha 池多样性和风险管理角度理解组合 |
+| `Implementing Advanced Ideas on Brain` | 了解更高级数据和深度学习方向 |
+| `International Quant Championship 2026` | 竞赛规则与赛程，和普通研究方法保持边界 |
+
+本仓库吸收课程内容时只保留两类东西：
+
+- 能改变研究流程的概念，例如多样性、风险管理、data category、Delay 匹配
+- 能落到模板和检查逻辑的结构，例如 event gate、group relative、operator sequencing
+
+纯视频课时、竞赛报名、团队和顾问权益信息不进入模板文档。
+
 ---
 
 ## 3. 从 examples 提炼出的通用表达式骨架
@@ -368,6 +392,28 @@ X < scale_down(field) && scale_down(field) < Y
 2. 再看 coverage 和更新频率
 3. 最后用 `Value Score` 和拥挤度辅助排序
 
+### 8.1 Dataset Usage Management 的研究含义
+
+FAQ 里的 Dataset Usage Management 主要是平台对部分数据集类别访问和使用的管理机制。
+它不应该被理解成“某个数据集质量变差”，更接近：
+
+- 平台会对特定数据集类别设置使用阈值或约束
+- 约束可能影响能否继续使用某一类 dataset
+- 恢复访问通常取决于平台规则和用户后续研究表现
+
+对本仓库最实用的结论是：
+
+- 不要把研究流程绑死在单一数据集类别上
+- `datasets/<dataset_id>/README.md` 应记录替代字段族和替代数据集方向
+- 模板库应优先沉淀可迁移结构，而不是只记住某个字段名
+- dry-run 计划和缓存缺失要能清楚提示“本地没有资源”，不要误判成字段质量差
+
+如果某类数据集访问受限，优先动作不是删掉相关模板，而是：
+
+1. 保留历史结论
+2. 将该数据集标记为暂不可用或降优先级
+3. 用同类 idea 在其他 dataset category 上找替代字段
+
 ---
 
 ## 9. Option6 Implied Volatility：专题数据集怎么拆
@@ -643,6 +689,7 @@ PYTHONPATH=src python3.10 -m alpha clean
 - [Alpha Examples for Beginners](https://platform.worldquantbrain.com/learn/documentation/create-alphas/19-alpha-examples)
 - [Alpha Examples for Bronze Users](https://platform.worldquantbrain.com/learn/documentation/examples/sample-alpha-concepts)
 - [Alpha Examples for Silver Users](https://platform.worldquantbrain.com/learn/documentation/examples/example-expression-alphas)
+- [Courses](https://platform.worldquantbrain.com/learn/courses)
 - [Understanding Data in BRAIN: Key Concepts and Tips](https://platform.worldquantbrain.com/learn/documentation/understanding-data/data)
 - [How to use the Data Explorer](https://platform.worldquantbrain.com/learn/documentation/understanding-data/how-use-data-explorer)
 - [Vector Data Fields](https://platform.worldquantbrain.com/learn/documentation/understanding-data/vector-datafields)

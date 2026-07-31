@@ -54,6 +54,22 @@
 - 本地大部分探索都停在 `Simulate` 和 `Check submission`
 - 真正决定“能不能长期留下来”的，还要看后续相关性和 OS 表现
 
+### 2.1 官网 Starter Pack 和 10 Steps 的学习顺序
+
+官网新手材料不是让你一开始就堆公式，而是按下面顺序建立直觉：
+
+1. 先知道 BRAIN 是一个历史回测工具，输入表达式，输出一组每日持仓和 PnL
+2. 再理解 Alpha 是把 price-volume、fundamental、news、sentiment 等数据转成股票权重
+3. 然后学会区分 long、short、volume、open/close price、PnL、Return 等基础金融词
+4. 最后才进入 Fast Expression、operator、data field 和 simulation settings
+
+对本仓库来说，这个顺序可以压成一句话：
+
+- 先解释假设，再写表达式；先理解字段，再调模板。
+
+如果你还不能用自然语言说清楚“这条表达式为什么应该预测收益”，通常不该进入大规模
+broad search。
+
 ---
 
 ## 3. 新手先会看结果
@@ -283,6 +299,13 @@ group_rank(ts_zscore(stable / cap, 252), industry)
 - Fast Expression 没有类、对象、指针或自定义函数
 - 多行写法不会自动改善 Alpha，仍要保证每个算子都有明确作用
 
+官网 Expression Language 的关键不是“语法很像代码”，而是它始终在做两层变换：
+
+- 时间维度：每只股票自己和自己的历史比较，例如 `ts_rank / ts_zscore / ts_delta`
+- 截面维度：同一天不同股票之间比较，例如 `rank / group_rank / zscore`
+
+看一条表达式时，先问它每一步是在做“历史比较”还是“横截面比较”。这比死记单个算子更重要。
+
 ---
 
 ## 7. Alpha 值怎样变成最终持仓
@@ -463,3 +486,4 @@ rank(close) + rank(adv20)
 - 先理解结构，再扩模板
 - 先让 Alpha 有质量，再考虑更高收益
 - 不要把高 Returns 误当成高质量
+- 官网课程和 Starter Pack 适合建立地图；真正研究时仍要回到假设、字段和失败项

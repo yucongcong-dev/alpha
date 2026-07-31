@@ -258,6 +258,28 @@
 
 如果你的本地文档未来继续服务竞赛使用，这一块值得单独维护，但和普通 Alpha 研究文档要保持边界。
 
+### 6.3.1 `Challenge-Country Leaderboard`
+
+Challenge-Country Leaderboard 更像地区维度的挑战排名入口。它会受挑战积分、活动和
+平台定义的排名规则影响，不等同于普通 Alpha submission 的质量判断。
+
+对本仓库而言：
+
+- 它可以说明用户为什么关注某些比赛分数
+- 但不应该反向改变 alpha runner 的默认筛选逻辑
+- 研究质量仍以 Sharpe、Fitness、Turnover、相关性、稳健性和提交检查为主
+
+### 6.3.2 IQC 信息的文档边界
+
+IQC FAQ 覆盖报名、组队、阶段分数、leaderboard 更新、顾问权益和付款时间等大量动态信息。
+这些内容容易随赛季变化，本仓库只保留与研究状态有关的稳定语义：
+
+- Stage 1 通常更偏 IS/leaderboard 计分展示
+- 后续阶段和最终评价会继续关注 OS 和提交结果
+- 团队、付款、资格和证书等规则不进入研究方法文档
+
+如果后续要做竞赛专用自动化，应另行维护赛季配置，而不是把动态规则写死进模板。
+
 ### 6.4 D1 / D0 Fitness 评级
 
 官网给出的显示档位并不相同：
@@ -748,6 +770,23 @@ group_zscore(alpha, densify(asset_group))
 因此筛选数据集时应把它和 `coverage / alphaCount / userCount` 一起看，不能只按
 Value Score 排序就直接投入大量仿真预算。
 
+### 11.2.4 `Dataset Usage Management`
+
+Dataset Usage Management 是平台对某些 dataset category 使用权限和使用阈值的管理机制。
+它和字段本身的统计质量不是同一个概念。
+
+实战上要分清：
+
+- 字段质量差：coverage、dateCoverage、分布、更新频率或历史结果不好
+- 数据集受管理：平台权限或阈值限制导致某类 dataset 暂时不能继续正常使用
+
+所以在本仓库里不应把“访问受限”自动写成字段 blacklist。更稳妥的处理是：
+
+- 保留历史结果
+- 在数据集 README 或运行总结中记录访问状态
+- 给同类 idea 寻找替代 dataset category
+- 等平台访问恢复后再重新验证
+
 ### 11.3 `Correlation`
 
 官方 Glossary 直接把 Correlation 解释成：
@@ -997,6 +1036,13 @@ subuniverse_sharpe
 不对。  
 OS 是提交之后逐步积累出来的样本外表现。
 
+### 15.6 `FAQ 全部都应该进研究文档`
+
+不对。
+FAQ 里有大量顾问申请、Workday、银行账户、Referral、账号和竞赛运营信息。它们是平台使用资料，
+但不是本仓库 alpha 生成和提交策略的核心知识。只有能影响研究流程、页面状态、错误码或指标解释的内容，
+才进入这四篇主文档。
+
 ---
 
 ## 16. 建议怎样配合其他文档使用
@@ -1030,10 +1076,12 @@ OS 是提交之后逐步积累出来的样本外表现。
 - [What is ISladder test and how is it constructed?](https://api.worldquantbrain.com/faqs/isladder-test)
 - [What is the IQC scoring metrics?](https://api.worldquantbrain.com/faqs/iqc-scoring-metrics)
 - [After I submit an alpha, how much time does it take for it to be reflected as the score on leaderboard?](https://api.worldquantbrain.com/faqs/score-update-frequency)
+- [What is Challenge-Country Leaderboard?](https://support.worldquantbrain.com/hc/en-us/articles/41765589602327-What-is-Challenge-Country-Leaderboard)
 - [Understanding Data in BRAIN: Key Concepts and Tips](https://platform.worldquantbrain.com/learn/documentation/understanding-data/data)
 - [Group Data Fields](https://platform.worldquantbrain.com/learn/documentation/understanding-data/group-data-fields)
 - [D0](https://platform.worldquantbrain.com/learn/documentation/advanced-topics/getting-started-d0)
 - [Simulation Settings](https://platform.worldquantbrain.com/learn/documentation/create-alphas/simulation-settings)
+- [Dataset Usage Management](https://support.worldquantbrain.com/hc/en-us/articles/22696472589079-What-s-Dataset-Usage-Management)
 - [Self-Correlation](https://support.worldquantbrain.com/hc/en-us/articles/19083458643863-Error-Message-Alpha-is-too-correlated-with-your-other-Alphas)
 - [Sub-Universe Sharpe](https://support.worldquantbrain.com/hc/en-us/articles/19083526884759-Error-Message-Sub-universe-Sharpe-is-below-cutoff)
 - [Most illiquid 50% instruments after-cost test](https://support.worldquantbrain.com/hc/en-us/articles/19083525654551-Error-message-Most-illiquid-50-instruments-after-cost-Sharpe-is-above-cutoff-of-original-universe)
