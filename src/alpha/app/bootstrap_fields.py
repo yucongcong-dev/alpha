@@ -5,6 +5,7 @@ bootstrap 字段准备辅助模块。
 from __future__ import annotations
 
 from collections.abc import Sequence
+from dataclasses import dataclass
 from datetime import datetime, timezone
 import re
 from typing import Any, cast
@@ -24,13 +25,6 @@ def _safe_int(value: Any) -> int:
         return int(value)
     except (TypeError, ValueError):
         return 0
-
-
-def _safe_float(value: Any) -> float:
-    try:
-        return float(value)
-    except (TypeError, ValueError):
-        return 0.0
 
 
 def _optional_int(value: Any) -> int | None:
@@ -78,6 +72,28 @@ def _infer_runtime_field_tags(
     elif coverage <= 0.50:
         tags.append("sparse_coverage")
     return tuple(tags)
+
+
+@dataclass(frozen=True)
+class FieldMetadataValues:
+    coverage: float | None
+    date_coverage: float | None
+    alpha_count: int | None
+    user_count: int | None
+
+    @property
+    def coverage_for_tags(self) -> float:
+        return self.coverage or 0.0
+
+
+@dataclass(frozen=True)
+class FieldQualityThresholds:
+    min_coverage: float
+    min_date_coverage: float
+    min_alpha_count: int
+    min_user_count: int
+    max_alpha_count: int
+    max_user_count: int
 
 
 def _attach_runtime_metadata(
@@ -143,6 +159,82 @@ def _base_field_stats(cached_field_count: int) -> dict[str, int]:
         "selected_family_count": 0,
         "selected_unexplored_count": 0,
     }
+
+
+def _metadata_values(field: TemplateField | dict[str, Any]) -> FieldMetadataValues:
+    return FieldMetadataValues(
+        coverage=_optional_float(field.get("coverage")),
+        date_coverage=_optional_float(field.get("dateCoverage")),
+        alpha_count=_optional_int(field.get("alphaCount")),
+        user_count=_optional_int(field.get("userCount")),
+    )
+
+
+def _quality_thresholds(
+    field_name: str,
+    expression_policy: DatasetExpressionPolicy,
+) -> FieldQualityThresholds:
+    is_event_field = is_event_field_name(field_name, expression_policy.event_field_prefixes)
+    return FieldQualityThresholds(
+        min_coverage=(
+            expression_policy.event_field_min_coverage
+            if is_event_field and expression_policy.event_field_min_coverage > 0
+            else expression_policy.field_min_coverage
+        ),
+        min_date_coverage=(
+            expression_policy.event_field_min_date_coverage
+            if is_event_field and expression_policy.event_field_min_date_coverage > 0
+            else expression_policy.field_min_date_coverage
+        ),
+        min_alpha_count=(
+            expression_policy.event_field_min_alpha_count
+            if is_event_field and expression_policy.event_field_min_alpha_count > 0
+            else expression_policy.field_min_alpha_count
+        ),
+        min_user_count=(
+            expression_policy.event_field_min_user_count
+            if is_event_field and expression_policy.event_field_min_user_count > 0
+            else expression_policy.field_min_user_count
+        ),
+        max_alpha_count=expression_policy.field_max_alpha_count,
+        max_user_count=expression_policy.field_max_user_count,
+    )
+
+
+def _passes_quality_filters(
+    values: FieldMetadataValues,
+    thresholds: FieldQualityThresholds,
+    stats: dict[str, int],
+) -> bool:
+    if values.coverage is None:
+        stats["unknown_coverage_count"] += 1
+    elif values.coverage < thresholds.min_coverage:
+        stats["low_coverage_count"] += 1
+        return False
+    if values.date_coverage is None:
+        stats["unknown_date_coverage_count"] += 1
+    elif values.date_coverage < thresholds.min_date_coverage:
+        stats["low_date_coverage_count"] += 1
+        return False
+    if values.alpha_count is None:
+        stats["unknown_alpha_count"] += 1
+    elif values.alpha_count < thresholds.min_alpha_count:
+        stats["low_alpha_count"] += 1
+        return False
+    if values.user_count is None:
+        stats["unknown_user_count"] += 1
+    elif values.user_count < thresholds.min_user_count:
+        stats["low_user_count"] += 1
+        return False
+    if thresholds.max_alpha_count > 0 and values.alpha_count is not None:
+        if values.alpha_count > thresholds.max_alpha_count:
+            stats["high_alpha_count"] += 1
+            return False
+    if thresholds.max_user_count > 0 and values.user_count is not None:
+        if values.user_count > thresholds.max_user_count:
+            stats["high_user_count"] += 1
+            return False
+    return True
 
 
 FieldSortKey = tuple[int, int, int, int, int, float, int, str]
@@ -510,6 +602,7 @@ def _prepare_explicit_fields_for_execution(
     filtered_fields: list[TemplateField | dict[str, Any]] = []
     for field in fields:
         field_id, field_name = _field_identity(field)
+        values = _metadata_values(field)
         if not _is_explicitly_included(field_id, field_name, filters_dict):
             stats["prefiltered_count"] += 1
             continue
@@ -520,7 +613,7 @@ def _prepare_explicit_fields_for_execution(
             _field_with_runtime_metadata(
                 field,
                 expression_policy=expression_policy,
-                coverage=_optional_float(field.get("coverage")) or 0.0,
+                coverage=values.coverage_for_tags,
             )
         )
 
@@ -571,67 +664,15 @@ def prepare_fields_for_execution(
 
     for field in fields:
         field_id, field_name = _field_identity(field)
-        is_event_field = is_event_field_name(field_name, expression_policy.event_field_prefixes)
-        min_coverage = (
-            expression_policy.event_field_min_coverage
-            if is_event_field and expression_policy.event_field_min_coverage > 0
-            else expression_policy.field_min_coverage
-        )
-        min_date_coverage = (
-            expression_policy.event_field_min_date_coverage
-            if is_event_field and expression_policy.event_field_min_date_coverage > 0
-            else expression_policy.field_min_date_coverage
-        )
-        min_alpha_count = (
-            expression_policy.event_field_min_alpha_count
-            if is_event_field and expression_policy.event_field_min_alpha_count > 0
-            else expression_policy.field_min_alpha_count
-        )
-        min_user_count = (
-            expression_policy.event_field_min_user_count
-            if is_event_field and expression_policy.event_field_min_user_count > 0
-            else expression_policy.field_min_user_count
-        )
-        coverage_value = _optional_float(field.get("coverage"))
-        date_coverage_value = _optional_float(field.get("dateCoverage"))
-        alpha_count_value = _optional_int(field.get("alphaCount"))
-        user_count_value = _optional_int(field.get("userCount"))
         if field_id in filters_dict.exclude_fields or field_name in filters_dict.exclude_fields:
             stats["prefiltered_count"] += 1
             continue
-        if coverage_value is None:
-            stats["unknown_coverage_count"] += 1
-        elif coverage_value < min_coverage:
-            stats["low_coverage_count"] += 1
-            continue
-        if date_coverage_value is None:
-            stats["unknown_date_coverage_count"] += 1
-        elif date_coverage_value < min_date_coverage:
-            stats["low_date_coverage_count"] += 1
-            continue
-        if alpha_count_value is None:
-            stats["unknown_alpha_count"] += 1
-        elif alpha_count_value < min_alpha_count:
-            stats["low_alpha_count"] += 1
-            continue
-        if user_count_value is None:
-            stats["unknown_user_count"] += 1
-        elif user_count_value < min_user_count:
-            stats["low_user_count"] += 1
-            continue
-        if (
-            expression_policy.field_max_alpha_count > 0
-            and alpha_count_value is not None
-            and alpha_count_value > expression_policy.field_max_alpha_count
+        values = _metadata_values(field)
+        if not _passes_quality_filters(
+            values,
+            _quality_thresholds(field_name, expression_policy),
+            stats,
         ):
-            stats["high_alpha_count"] += 1
-            continue
-        if (
-            expression_policy.field_max_user_count > 0
-            and user_count_value is not None
-            and user_count_value > expression_policy.field_max_user_count
-        ):
-            stats["high_user_count"] += 1
             continue
         filtered_fields.append(
             cast(
@@ -639,7 +680,7 @@ def prepare_fields_for_execution(
                 _field_with_runtime_metadata(
                     field,
                     expression_policy=expression_policy,
-                    coverage=coverage_value or 0.0,
+                    coverage=values.coverage_for_tags,
                 ),
             )
         )
