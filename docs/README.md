@@ -1,8 +1,8 @@
 # Docs Index
 
-`docs/` 收敛为四篇主文档。每个主题只保留一个主要解释位置，其他文档只做简短引用。
-官网 Documentation、Courses、FAQ 和 Community 内容按主题吸收进这四篇；不做官网全文镜像，
-也不为每个 FAQ 分类新增平行摘录页。
+`docs/` 收敛为四篇研究主文档和一篇平台运营 reference。每个主题只保留一个主要解释位置，其他文档只做简短引用。
+官网 Documentation、Courses、FAQ 和 Community 内容按主题吸收：研究相关内容进入 01-04，
+平台运营内容进入 05；不做官网全文镜像，也不为每个 FAQ 分类新增平行摘录页。
 
 ## 推荐阅读顺序
 
@@ -14,7 +14,11 @@
 
 - [04_platform_reference.md](04_platform_reference.md)
 
-## 四篇文档的边界
+遇到顾问申请、Workday、银行账户、背景调查、Referral、账号支持等平台运营问题时，查：
+
+- [05_platform_operations_reference.md](05_platform_operations_reference.md)
+
+## 文档边界
 
 ### 01 入门
 
@@ -66,6 +70,17 @@
 
 Reference 主要回答“这个词是什么意思”；具体怎么优化，回到 03。
 
+### 05 平台运营 Reference
+
+[05_platform_operations_reference.md](05_platform_operations_reference.md) 负责平台运营类 FAQ：
+
+- Research Consultant 机会和 onboarding
+- Workday、背景调查、协议和 conditional consultant
+- 银行账户、earnings、payment 和 referral
+- Account、登录、技术支持和 submit request
+
+这篇不参与 Alpha 研究方法和本地 runner 逻辑，只作为平台使用参考。
+
 ## 按问题快速定位
 
 | 问题 | 文档 |
@@ -84,10 +99,11 @@ Reference 主要回答“这个词是什么意思”；具体怎么优化，回�
 | IS、Semi-OS、OS、OSTEST 状态是什么意思？ | [04](04_platform_reference.md) |
 | 页面上的 N/A、Booksize、Coverage 是什么？ | [04](04_platform_reference.md) |
 | 某个 submission check 名称是什么意思？ | [04](04_platform_reference.md) |
+| 顾问申请、Workday、银行、Referral 或账号问题看哪里？ | [05](05_platform_operations_reference.md) |
 
 ## 仓库文档分层
 
-- `docs/`：通用学习路径、研究方法、优化流程和平台查表
+- `docs/`：通用学习路径、研究方法、优化流程、平台查表和运营参考
 - 根 [README.md](../README.md)：快速启动、项目入口和文档导航
 - `datasets/<dataset_id>/README.md`：具体数据集策略与本地经验
 - `datasets/<dataset_id>/runs/`：运行产物，不作为长期知识库
@@ -99,8 +115,8 @@ Reference 主要回答“这个词是什么意思”；具体怎么优化，回�
 - 数据、示例、课程地图和仓库研究方法放 02
 - 诊断、稳健性和提交方法放 03
 - 纯定义、状态和错误码放 04
+- 顾问申请、Workday、银行、Referral、账号支持放 05
 - 数据集专属经验放对应 dataset 的 README、template.json 或 presets
 
-原则上不再新增与四篇主线平行的 FAQ 或专题摘录页。顾问申请、Workday、银行信息、
-账号支持、Referral、IQC 具体日期和付款规则这类内容，只在确实影响研究状态或页面术语时
-进入 Reference；否则不进入本仓库长期文档。
+原则上不再新增与研究主线平行的 FAQ 或专题摘录页。顾问申请、Workday、银行信息、
+账号支持、Referral、IQC 具体日期和付款规则这类内容，只进入 05，不进入 Alpha 研究主线。
