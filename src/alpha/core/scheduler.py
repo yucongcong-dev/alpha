@@ -43,6 +43,7 @@ from .scheduler_decisions import (
 
 logger = logging.getLogger(__name__)
 
+
 def _stop_after_submittable_threshold(args: SchedulerRuntimeArgs) -> int:
     try:
         return int(getattr(args, "stop_after_submittable", 0) or 0)

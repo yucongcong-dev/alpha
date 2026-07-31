@@ -3,12 +3,10 @@
 from __future__ import annotations
 
 import os
-from pathlib import Path
 from typing import cast
 
 from ..workspace import DEFAULT_WORKSPACE
 from .types import YamlConfig
-
 
 PROJECT_ROOT = DEFAULT_WORKSPACE.config_dir.parent
 

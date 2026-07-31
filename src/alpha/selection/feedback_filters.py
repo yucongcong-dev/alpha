@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from ..analysis.feedback_stats import dominant_failed_check_names
 from ..config.constants import (
     CHECK_CONCENTRATED_WEIGHT,
     CHECK_HIGH_TURNOVER,
@@ -14,7 +15,6 @@ from ..generators.templates.classification import (
     classify_expression_family,
     classify_template_stage,
 )
-from ..analysis.feedback_stats import dominant_failed_check_names
 from ..generators.templates.variation_common import (
     is_blacklisted_template as _is_blacklisted_template,
 )
@@ -104,12 +104,9 @@ def should_skip_field_template_family(
     if not policy.use_curated_heuristics:
         return False
 
-    if _is_blacklisted_template(
+    return _is_blacklisted_template(
         template_name,
         expression,
         template_metadata=template_metadata,
         policy=policy,
-    ):
-        return True
-
-    return False
+    )

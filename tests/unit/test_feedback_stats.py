@@ -116,9 +116,9 @@ def test_queue_timeout_does_not_update_global_failures() -> None:
 
 def test_field_priority_uses_history_and_penalizes_exhausted_fields() -> None:
     assert field_priority("unknown", {}) == STATS_DEFAULT_SCORE
-    assert field_priority(
-        "cash_st", {"cash_st": {"best_score": 0.5, "attempted_templates": 2}}
-    ) == 0.5
-    assert field_priority(
-        "cash_st", {"cash_st": {"best_score": 0.3, "attempted_templates": 10}}
-    ) < 0.3
+    assert (
+        field_priority("cash_st", {"cash_st": {"best_score": 0.5, "attempted_templates": 2}}) == 0.5
+    )
+    assert (
+        field_priority("cash_st", {"cash_st": {"best_score": 0.3, "attempted_templates": 10}}) < 0.3
+    )

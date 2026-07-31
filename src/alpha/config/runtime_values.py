@@ -239,6 +239,7 @@ class RuntimeConfig:
     simulation: SimulationRuntimeConfig
     quality: QualityRuntimeConfig
 
+
 _runtime_config_cache: RuntimeConfig | None = None
 _runtime_config_source: object | None = None
 

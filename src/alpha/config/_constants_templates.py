@@ -15,6 +15,7 @@ from ._constants_core import (
     _yaml_tuple_str_int,
 )
 
+
 # ---- 模板优先级调整辅助 ----
 def _pa(key: str, default: int) -> int:
     return _yaml_int("templates", "priority_adj", key, default=default)

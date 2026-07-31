@@ -52,6 +52,7 @@ class BlacklistRuntimePolicy(Protocol):
     @property
     def protected_templates(self) -> set[str]: ...
 
+
 @dataclass
 class BlacklistRuntimeSummary:
     """单个模板在运行期聚合出的黑名单统计摘要。"""

@@ -8,6 +8,7 @@ template.json 中的显式 priority 决定。
 from __future__ import annotations
 
 from collections.abc import Sequence
+
 from ...config.constants import (
     SIMILARITY_PENALTY_OFFSET_GROUP_RATIO_LEVEL,
     SIMILARITY_PENALTY_OFFSET_LEGACY_GROUP_LEVEL,

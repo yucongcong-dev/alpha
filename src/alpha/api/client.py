@@ -65,7 +65,6 @@ class BrainClient(BrainSessionMixin, BrainFieldsMixin, BrainSimulationsMixin, Br
         self.rate_limit_max_retries = max(rate_limit_max_retries, 1)
         self._http_backend = create_http_backend(http_backend)
 
-
     def close(self) -> None:
         """Release resources held by the selected HTTP backend."""
         self._http_backend.close()
@@ -75,6 +74,7 @@ class BrainClient(BrainSessionMixin, BrainFieldsMixin, BrainSimulationsMixin, Br
 
     def __exit__(self, *_args: object) -> None:
         self.close()
+
 
 class WorkerClientFactory:
     """为每个工作线程提供独立且已认证的 BrainClient。"""

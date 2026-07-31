@@ -169,7 +169,7 @@ def resolve_field_template_candidates(
     """为单个字段解析模板候选、字段反馈和表达式策略。"""
     active_services = services or build_template_planning_services()
     options = build_ctx.options
-    field_id, field_name, field_feedback, expression_policy = _resolve_field_planning_policy(
+    _field_id, field_name, field_feedback, expression_policy = _resolve_field_planning_policy(
         build_ctx,
         field,
     )
@@ -208,7 +208,7 @@ def build_pending_template_variants(
     """把模板候选展开为真正待执行的 settings 变体队列。"""
     active_services = services or build_template_planning_services()
     options = build_ctx.options
-    field_id, field_name, _policy_feedback, expression_policy = _resolve_field_planning_policy(
+    field_id, _field_name, _policy_feedback, expression_policy = _resolve_field_planning_policy(
         build_ctx,
         field,
     )

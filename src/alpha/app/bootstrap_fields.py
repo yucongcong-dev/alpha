@@ -534,16 +534,17 @@ def _rank_by_id(fields: Sequence[TemplateField | dict[str, Any]]) -> dict[str, i
 
 
 def _apply_offset_limit(
-    fields: list[TemplateField | dict[str, Any]],
+    fields: Sequence[TemplateField | dict[str, Any]],
     *,
     offset: int,
     limit: int,
 ) -> list[TemplateField | dict[str, Any]]:
+    window = list(fields)
     if offset > 0:
-        fields = fields[offset:]
+        window = window[offset:]
     if limit > 0:
-        fields = fields[:limit]
-    return fields
+        window = window[:limit]
+    return window
 
 
 def _attach_selection_to_fields(

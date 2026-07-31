@@ -35,13 +35,16 @@ def exclusive_file_lock(lock_path: str) -> Iterator[None]:
             lock_handle.seek(0)
             msvcrt = cast(Any, import_module("msvcrt"))
             msvcrt.locking(lock_handle.fileno(), msvcrt.LK_LOCK, 1)
+
             def unlock() -> None:
                 msvcrt.locking(lock_handle.fileno(), msvcrt.LK_UNLCK, 1)
         else:
             fcntl = cast(Any, import_module("fcntl"))
             fcntl.flock(lock_handle.fileno(), fcntl.LOCK_EX)
+
             def unlock() -> None:
                 fcntl.flock(lock_handle.fileno(), fcntl.LOCK_UN)
+
         try:
             yield
         finally:

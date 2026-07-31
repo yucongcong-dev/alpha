@@ -27,9 +27,7 @@ def compile_template_registry_summary(
             "template_family": str(stat.get("template_family", "") or ""),
             "template_stage": str(stat.get("template_stage", "") or ""),
             "template_role": normalize_template_role(stat.get("template_role")),
-            "activation_scope": normalize_activation_scope(
-                stat.get("template_activation_scope")
-            ),
+            "activation_scope": normalize_activation_scope(stat.get("template_activation_scope")),
             "attempted": int(stat.get("attempted", 0) or 0),
             "simulated": int(stat.get("simulated", 0) or 0),
             "submittable": int(stat.get("submittable", 0) or 0),

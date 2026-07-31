@@ -26,11 +26,11 @@ from ..generators.field_transforms import build_field_view
 from ..models.domain import FieldView, TemplateCandidate, TemplateField, TemplateLibraryItem
 from ..models.runtime_protocols import TemplateFeedback
 from ..policy.expression import get_dataset_expression_policy, resolve_feedback_stage
+from ..runtime.contexts import TemplateBuildContext
 from ..runtime.preset_mode import (
     is_explicit_template_preset,
     resolve_preset_mode,
 )
-from ..runtime.contexts import TemplateBuildContext
 from ..utils.helpers import is_event_field_name
 from .fields import choose_field_name, choose_field_type
 from .matrix_templates import build_matrix_templates
@@ -233,11 +233,6 @@ def build_expression_candidates(
     options = build_ctx.options
     field_name = choose_field_name(field)
     field_type = choose_field_type(field)
-    field_id = (
-        field.field_id
-        if isinstance(field, TemplateField)
-        else str(field.get("id", field.get("name", "")))
-    )
     all_fields = list(build_ctx.all_fields)
     policy = expression_policy or get_dataset_expression_policy(
         options.dataset_id,
@@ -255,11 +250,14 @@ def build_expression_candidates(
         template_library_file=build_ctx.template_library_file,
     )
 
-    closed_candidate_library = _is_closed_candidate_library(
-        build_ctx.template_library_file,
-        dataset_id=policy.dataset_id,
-        policy=policy,
-    ) or preset_mode
+    closed_candidate_library = (
+        _is_closed_candidate_library(
+            build_ctx.template_library_file,
+            dataset_id=policy.dataset_id,
+            policy=policy,
+        )
+        or preset_mode
+    )
     raw_templates = _select_template_items(
         build_ctx.template_library, field_type, policy.dataset_id
     )

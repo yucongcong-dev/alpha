@@ -5,7 +5,6 @@ from __future__ import annotations
 import json
 from types import SimpleNamespace
 
-from alpha.selection.feedback_filters import should_keep_template_for_feedback
 from alpha.analysis.feedback_history import (
     build_historical_run_state,
     choose_settings_variant_budget,
@@ -16,6 +15,7 @@ from alpha.generators.variants import build_setting_variants
 from alpha.models.domain import FieldTestResult
 from alpha.policy.expression import get_dataset_expression_policy, resolve_feedback_stage
 from alpha.selection import feedback_filters as feedback_filters_module
+from alpha.selection.feedback_filters import should_keep_template_for_feedback
 
 
 def test_high_conviction_ratio_recognizes_optional_whitespace() -> None:

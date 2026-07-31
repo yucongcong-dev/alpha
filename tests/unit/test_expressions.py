@@ -218,6 +218,7 @@ def test_build_expression_candidates_skip_unsupported_grouping_fields() -> None:
 
     assert candidates == []
 
+
 def test_bucket_group_templates_add_four_controlled_groups() -> None:
     templates = build_bucket_group_templates("rank(cash_st)", name_prefix="bucket")
 
@@ -310,7 +311,13 @@ def test_fundamental6_default_template_library_is_closed_for_vector_fields() -> 
         "event_trade_when_recent_change_zscore_60",
         "vec_avg_ts_rank_60",
     }
-    assert families <= {"ts_rank", "neutralize_decay", "ratio_cap", "bucket_ratio", "event_trade_when"}
+    assert families <= {
+        "ts_rank",
+        "neutralize_decay",
+        "ratio_cap",
+        "bucket_ratio",
+        "event_trade_when",
+    }
     assert all("vec_avg(vec_avg(" not in item.expression for item in candidates)
 
 
