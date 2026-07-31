@@ -33,7 +33,7 @@ def create_execution_state(
     result_ledger = execution_state.result_ledger
     result_ledger.submittable_baseline_count = result_ledger.metrics.submittable_count
     execution_state.sync_result_ledger()
-    execution_state.blacklist_runtime_stats = build_blacklist_runtime_stats(execution_state.results)
+    execution_state.blacklist_runtime_stats = build_blacklist_runtime_stats(result_ledger.results)
     execution_state.blacklisted_template_keys = load_blacklisted_template_keys(dataset_id)
     return execution_state
 

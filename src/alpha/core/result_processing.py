@@ -171,9 +171,10 @@ def maybe_update_blacklist_incrementally(
     """Apply incremental blacklist side effects for one completed result if enabled."""
     if not auto_update_enabled:
         return
-    if not execution_state.blacklist_runtime_stats and len(execution_state.results) > 1:
+    ledger = execution_state.result_ledger
+    if not execution_state.blacklist_runtime_stats and len(ledger.results) > 1:
         execution_state.blacklist_runtime_stats = services.build_blacklist_runtime_stats(
-            execution_state.results[:-1]
+            ledger.results[:-1]
         )
     services.auto_update_blacklist_incremental(
         execution_state.blacklist_runtime_stats,

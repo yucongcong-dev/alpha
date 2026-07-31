@@ -188,6 +188,7 @@ def save_pipeline_state(
     if runtime_state.cooldown_until > 0 and now_mono < runtime_state.cooldown_until:
         remaining_cooldown = runtime_state.cooldown_until - now_mono
 
+    result_ledger = execution_state.result_ledger
     payload: dict[str, Any] = {
         "version": STATE_VERSION,
         "completed_field_index": completed_field_index,
@@ -197,7 +198,7 @@ def save_pipeline_state(
         "remaining_cooldown_seconds": round(remaining_cooldown, 3),
         "template_stats": dict(execution_state.template_stats),
         "last_submission_at": execution_state.last_submission_at,
-        "result_count": len(execution_state.results),
+        "result_count": len(result_ledger.results),
         "attempted_keys_count": len(execution_state.attempted_keys),
         "completed_at": datetime.now(timezone.utc).isoformat(),
     }
@@ -383,12 +384,13 @@ def save_interrupt_report(
         for meta in pending_contexts[-CHECKPOINT_PENDING_FUTURES_LIMIT:]
     ]
 
+    result_ledger = execution_state.result_ledger
     payload: dict[str, Any] = {
         "version": STATE_VERSION,
         "reason": reason,
         "field_id": field_id,
         "remaining_fields": remaining_fields,
-        "result_count": len(execution_state.results),
+        "result_count": len(result_ledger.results),
         "attempted_keys_count": len(execution_state.attempted_keys),
         "pending_count": len(pending_contexts),
         "pending_summary": pending_summary,
