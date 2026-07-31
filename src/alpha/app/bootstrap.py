@@ -66,6 +66,7 @@ from .bootstrap_types import (
     CredentialServices,
     FieldLoadingServices,
     PreparedBootstrapResources,
+    ResolvedCredentials,
     RuntimeConcurrencyResources,
     RuntimeOutputServices,
     SupportingResourceServices,
@@ -191,8 +192,12 @@ def initialize_run_context(
         services=services.runtime_outputs,
     )
     email, password = _resolve_credentials(
-        args,
-        paths,
+        ResolvedCredentials(
+            email=args.email,
+            password=args.password,
+            creds_file=paths.creds_file,
+            creds_key_file=paths.creds_key_file,
+        ),
         services=services.credentials,
     )
     if not email or not password:

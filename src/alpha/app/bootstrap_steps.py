@@ -117,19 +117,12 @@ def prepare_runtime_outputs(
 
 
 def resolve_credentials(
-    args: ApplicationConfig,
-    paths: BootstrapPaths,
+    credentials: ResolvedCredentials,
     *,
     services: CredentialServices,
 ) -> tuple[str, str]:
     """Resolve credentials without mutating the runtime args object."""
-    credentials_args = ResolvedCredentials(
-        email=args.email,
-        password=args.password,
-        creds_file=paths.creds_file,
-        creds_key_file=paths.creds_key_file,
-    )
-    email, password = services.load_credentials(credentials_args)
+    email, password = services.load_credentials(credentials)
     return str(email or ""), str(password or "")
 
 
