@@ -15,7 +15,7 @@ from ..generators.fields import DatasetFieldClient
 from ..models.domain import TemplateField, TemplateLibrary
 from ..models.io_types import RunFilters, RunPaths
 from ..models.runtime_options import FieldFetchOptions, FieldSelectionOptions
-from ..models.runtime_protocols import CredentialsArgs, RunConfig
+from ..models.runtime_protocols import CredentialsArgs, RunConfig, SimulationSettingsArgs
 from ..policy.types import BlacklistPayload
 from ..runtime.contexts import HistoricalRunState
 from ..runtime.state import RuntimeConcurrencyState
@@ -103,7 +103,7 @@ class SupportingResourceServices:
     load_run_filters_extended: Callable[[RunPaths], RunFilters]
     get_dataset_expression_policy: Callable[[str], DatasetExpressionPolicy]
     stable_fingerprint: Callable[[object], str]
-    build_settings_fingerprint: Callable[[ApplicationConfig], str]
+    build_settings_fingerprint: Callable[[SimulationSettingsArgs], str]
     build_historical_run_state: BuildHistoricalRunState
 
 

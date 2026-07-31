@@ -16,6 +16,7 @@ from ..models.runtime_options import (
     BootstrapFieldOptions,
     BootstrapPathOptions,
     FieldSelectionOptions,
+    TemplateBuildOptions,
 )
 from ..models.runtime_protocols import (
     ApiClientArgs,
@@ -193,9 +194,9 @@ def log_field_selection_stats(
 
 
 def prepare_bootstrap_resources(
-    args: ApplicationConfig,
     path_options: BootstrapPathOptions,
     field_options: BootstrapFieldOptions,
+    template_options: TemplateBuildOptions,
     paths: BootstrapPaths,
     bootstrap_client: BrainClient,
     *,
@@ -281,7 +282,7 @@ def prepare_bootstrap_resources(
         template_library_fingerprint=supporting_services.stable_fingerprint(
             supporting_resources.template_library
         ),
-        settings_fingerprint=supporting_services.build_settings_fingerprint(args),
+        settings_fingerprint=supporting_services.build_settings_fingerprint(template_options),
         historical_state=supporting_resources.historical_state,
         fields=prepared_fields,
         run_config=effective_run_config,
