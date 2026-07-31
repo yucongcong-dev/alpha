@@ -57,14 +57,12 @@ if TYPE_CHECKING:
         TemplateBuildContext,
     )
     from ..runtime.future_queue import FutureQueueState
+    from ..runtime.queue_retry import QueueRetryKey, QueueRetryState, QueueRetryUpdate
     from ..runtime.result_ledger import ExecutionMetrics, ResultLedgerState
     from ..runtime.state import (
         ExecutionState,
         InitializedRunContext,
         PendingFutureLike,
-        QueueRetryKey,
-        QueueRetryState,
-        QueueRetryUpdate,
         RuntimeConcurrencyState,
     )
 
@@ -109,9 +107,9 @@ _EXPORT_MAP: ExportMap = {
     "PendingFutureContext": ("..runtime.contexts", "PendingFutureContext"),
     "PendingFutureLike": ("..runtime.state", "PendingFutureLike"),
     "PendingTemplateEntry": ("..runtime.contexts", "PendingTemplateEntry"),
-    "QueueRetryKey": ("..runtime.state", "QueueRetryKey"),
-    "QueueRetryState": ("..runtime.state", "QueueRetryState"),
-    "QueueRetryUpdate": ("..runtime.state", "QueueRetryUpdate"),
+    "QueueRetryKey": ("..runtime.queue_retry", "QueueRetryKey"),
+    "QueueRetryState": ("..runtime.queue_retry", "QueueRetryState"),
+    "QueueRetryUpdate": ("..runtime.queue_retry", "QueueRetryUpdate"),
     "ResultLedgerState": ("..runtime.result_ledger", "ResultLedgerState"),
     "RuntimeConcurrencyState": ("..runtime.state", "RuntimeConcurrencyState"),
     "TemplateBuildContext": ("..runtime.contexts", "TemplateBuildContext"),

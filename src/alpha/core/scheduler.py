@@ -25,7 +25,8 @@ from ..models.domain import FieldTestResult
 from ..models.runtime_options import ResultWriteOptions, SchedulerControlOptions
 from ..models.runtime_protocols import RunConfig, SchedulerRuntimeArgs, TemplateStats
 from ..runtime.contexts import FutureCompletionContext
-from ..runtime.state import ExecutionState, QueueRetryKey, RuntimeConcurrencyState
+from ..runtime.queue_retry import QueueRetryKey
+from ..runtime.state import ExecutionState, RuntimeConcurrencyState
 from .result_processing import apply_completed_result
 from .scheduler_completion import (
     build_completion_context,
