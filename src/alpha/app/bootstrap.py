@@ -28,6 +28,7 @@ from ..generators.templates.library_store import ensure_dataset_template_library
 from ..io.credentials import load_credentials
 from ..io.output_paths import cleanup_legacy_sidecar_files
 from ..models.io_types import RunPaths
+from ..models.runtime_options import BootstrapPathOptions
 from ..models.runtime_protocols import (
     ApiClientArgs,
     ClientFactoryLike,
@@ -180,9 +181,11 @@ def initialize_run_context(
 ) -> InitializedRunContext | None:
     """执行主流程的初始化阶段，返回结构化运行上下文。"""
     services = build_bootstrap_services()
-    paths = _resolve_bootstrap_paths(args, run_paths)
+    path_options = BootstrapPathOptions.from_args(args)
+    paths = _resolve_bootstrap_paths(path_options, run_paths)
     run_config = _prepare_runtime_outputs(
         args,
+        path_options,
         run_paths,
         paths,
         services=services.runtime_outputs,
@@ -205,6 +208,7 @@ def initialize_run_context(
     try:
         prepared = _prepare_bootstrap_resources(
             args,
+            path_options,
             paths,
             bootstrap_client,
             run_config=run_config,

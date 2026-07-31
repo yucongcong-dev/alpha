@@ -11,7 +11,12 @@ from ..config.application import ApplicationConfig
 from ..io.common import resolve_datasets_root
 from ..models.domain import TemplateField
 from ..models.io_types import RunPaths
-from ..models.runtime_options import ApiClientOptions, FieldFetchOptions, FieldSelectionOptions
+from ..models.runtime_options import (
+    ApiClientOptions,
+    BootstrapPathOptions,
+    FieldFetchOptions,
+    FieldSelectionOptions,
+)
 from ..models.runtime_protocols import (
     ApiClientArgs,
     RunConfig,
@@ -45,28 +50,28 @@ def run_path_value(run_paths: RunPaths | None, attr: str) -> str:
 
 
 def resolve_bootstrap_paths(
-    args: ApplicationConfig,
+    path_options: BootstrapPathOptions,
     run_paths: RunPaths | None,
 ) -> BootstrapPaths:
     """Resolve all runtime-sensitive paths up front."""
-    output_file = run_path_value(run_paths, "output") or str(args.output)
+    output_file = run_path_value(run_paths, "output") or path_options.output
     return BootstrapPaths(
         output_file=output_file,
         log_file=run_path_value(run_paths, "log_file"),
         datasets_root=run_path_value(run_paths, "datasets_root") or str(resolve_datasets_root()),
         template_library_file=(
-            run_path_value(run_paths, "template_library_file") or str(args.template_library_file)
+            run_path_value(run_paths, "template_library_file") or path_options.template_library_file
         ),
         fields_cache_file=run_path_value(run_paths, "fields_cache_file")
-        or str(args.fields_cache_file),
+        or path_options.fields_cache_file,
         feedback_output=run_path_value(run_paths, "feedback_output") or output_file,
-        creds_file=run_path_value(run_paths, "creds_file") or str(args.creds_file),
-        creds_key_file=run_path_value(run_paths, "creds_key_file") or str(args.creds_key_file),
+        creds_file=run_path_value(run_paths, "creds_file") or path_options.creds_file,
+        creds_key_file=run_path_value(run_paths, "creds_key_file") or path_options.creds_key_file,
     )
 
 
 def build_effective_run_paths(
-    args: ApplicationConfig,
+    path_options: BootstrapPathOptions,
     paths: BootstrapPaths,
     run_paths: RunPaths | None,
 ) -> RunPaths:
@@ -85,22 +90,23 @@ def build_effective_run_paths(
         feedback_output=paths.feedback_output,
         creds_file=paths.creds_file,
         creds_key_file=paths.creds_key_file,
-        include_fields_file=str(args.include_fields_file or ""),
-        exclude_fields_file=str(args.exclude_fields_file or ""),
-        include_templates_file=str(args.include_templates_file or ""),
-        exclude_templates_file=str(args.exclude_templates_file or ""),
+        include_fields_file=path_options.include_fields_file,
+        exclude_fields_file=path_options.exclude_fields_file,
+        include_templates_file=path_options.include_templates_file,
+        exclude_templates_file=path_options.exclude_templates_file,
     )
 
 
 def prepare_runtime_outputs(
     args: ApplicationConfig,
+    path_options: BootstrapPathOptions,
     run_paths: RunPaths | None,
     paths: BootstrapPaths,
     *,
     services: RuntimeOutputServices,
 ) -> RunConfig:
     """Prepare logging/output side effects and capture the embedded run config."""
-    effective_run_paths = build_effective_run_paths(args, paths, run_paths)
+    effective_run_paths = build_effective_run_paths(path_options, paths, run_paths)
     if paths.log_file:
         services.setup_runtime_logging(paths.log_file)
     services.cleanup_legacy_sidecar_files(paths.output_file, verbose=True)
@@ -195,6 +201,7 @@ def log_field_selection_stats(
 
 def prepare_bootstrap_resources(
     args: ApplicationConfig,
+    path_options: BootstrapPathOptions,
     paths: BootstrapPaths,
     bootstrap_client: BrainClient,
     *,
@@ -205,7 +212,7 @@ def prepare_bootstrap_resources(
 ) -> PreparedBootstrapResources | None:
     """Load template, feedback, and field resources needed to build the run context."""
     dataset_id = str(args.dataset_id)
-    effective_run_paths = build_effective_run_paths(args, paths, run_paths)
+    effective_run_paths = build_effective_run_paths(path_options, paths, run_paths)
     supporting_resources = load_bootstrap_supporting_resources(
         dataset_id=dataset_id,
         paths=paths,

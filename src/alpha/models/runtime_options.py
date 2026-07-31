@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from ..runtime.preset_mode import resolve_preset_mode
 from .runtime_protocols import (
     ApiClientArgs,
+    BootstrapPathArgs,
     FieldFetchArgs,
     FieldSelectionArgs,
     ResultWriteArgs,
@@ -29,6 +30,35 @@ class ApiClientOptions:
             min_request_interval=float(args.min_request_interval or 0.0),
             rate_limit_max_retries=int(args.rate_limit_max_retries or 0),
             login_retries=int(args.login_retries or 0),
+        )
+
+
+@dataclass(frozen=True)
+class BootstrapPathOptions:
+    """Bootstrap path inputs normalized away from the full runtime config."""
+
+    output: str = ""
+    template_library_file: str = ""
+    fields_cache_file: str = ""
+    creds_file: str = ""
+    creds_key_file: str = ""
+    include_fields_file: str = ""
+    exclude_fields_file: str = ""
+    include_templates_file: str = ""
+    exclude_templates_file: str = ""
+
+    @classmethod
+    def from_args(cls, args: BootstrapPathArgs) -> BootstrapPathOptions:
+        return cls(
+            output=str(args.output or ""),
+            template_library_file=str(args.template_library_file or ""),
+            fields_cache_file=str(args.fields_cache_file or ""),
+            creds_file=str(args.creds_file or ""),
+            creds_key_file=str(args.creds_key_file or ""),
+            include_fields_file=str(args.include_fields_file or ""),
+            exclude_fields_file=str(args.exclude_fields_file or ""),
+            include_templates_file=str(args.include_templates_file or ""),
+            exclude_templates_file=str(args.exclude_templates_file or ""),
         )
 
 

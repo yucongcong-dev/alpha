@@ -14,7 +14,7 @@ from ..generators.payload import build_settings_fingerprint
 from ..generators.templates.library_loader import load_template_library
 from ..generators.templates.library_store import ensure_dataset_template_library
 from ..models.io_types import RunPaths
-from ..models.runtime_options import FieldFetchOptions, FieldSelectionOptions
+from ..models.runtime_options import BootstrapPathOptions, FieldFetchOptions, FieldSelectionOptions
 from ..policy.blacklist_context import set_active_datasets_root
 from ..policy.blacklist_store import (
     ensure_template_blacklist_file,
@@ -50,8 +50,9 @@ def build_planning_supporting_services() -> SupportingResourceServices:
 
 def run_dry_run_plan(args: ApplicationConfig, run_paths: RunPaths | None) -> bool:
     """Print a plan from local resources without authentication or filesystem writes."""
-    paths = resolve_bootstrap_paths(args, run_paths)
-    effective_run_paths = build_effective_run_paths(args, paths, run_paths)
+    path_options = BootstrapPathOptions.from_args(args)
+    paths = resolve_bootstrap_paths(path_options, run_paths)
+    effective_run_paths = build_effective_run_paths(path_options, paths, run_paths)
     dataset_id = str(args.dataset_id)
 
     supporting_resources = load_supporting_resources(
