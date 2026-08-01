@@ -87,6 +87,8 @@ FAQ 里大多数优化建议可以归成下面这张表。它比逐篇记 FAQ �
 - `ts_decay_linear()` 做平滑
 - 回到研究假设，看它是否真有经济含义
 
+> LOW_SHARPE 的平台检查语义见 [04 §12.1](04_platform_reference.md)。
+
 ---
 
 ## 4. 当 `LOW_FITNESS` 出现时
@@ -121,6 +123,8 @@ FAQ 里大多数优化建议可以归成下面这张表。它比逐篇记 FAQ �
 - 当前 D1 submission check 要求 `Fitness > 1`，不是 `Fitness >= 1`
 - 页面显示通常经过四舍五入；显示为 `1.00` 不代表底层未舍入值一定严格大于 `1`
 - 实际研究可把 `1.05+` 当作留有舍入和波动余量的目标，但它不是平台公布的新硬门槛
+
+> LOW_FITNESS 的平台检查语义和 Fitness 公式见 [04 §12.2](04_platform_reference.md)。
 
 ---
 
@@ -175,6 +179,8 @@ FAQ 里大多数优化建议可以归成下面这张表。它比逐篇记 FAQ �
 如果高换手主要来自低流动性股票，不要只给全 Universe 增加同一个 Decay。
 更合理的是用 `cap` 或平均成交量划分流动性层，并给低流动性组更长的持有周期。
 
+> HIGH_TURNOVER 的平台检查语义见 [04 §12.3](04_platform_reference.md)。
+
 ---
 
 ## 5.5 D0 Alpha 应该单独研究
@@ -207,6 +213,8 @@ D0 研究建议按下面的顺序进行：
 
 - 本文后半部分的提交前检查与高级设置章节
 
+> D0/D1 Fitness 评级和 OS 页面 N/A 含义见 [04 §6.4, §4](04_platform_reference.md)。
+
 ---
 
 ## 6. 当相关性问题出现时
@@ -223,9 +231,13 @@ D0 研究建议按下面的顺序进行：
 因此超过 `0.7` 不等于只靠抬高一点 Sharpe 就一定能解决。平台仍然更鼓励换数据集、
 换算子集合和换研究想法，而不是围绕旧 Alpha 做参数化复制。
 
+> SELF_CORRELATION 的平台检查语义见 [04 §12.6](04_platform_reference.md)。
+
 ### 6.2 `PROD_CORRELATION`
 
 说明它和平台已有 Alpha 太像。
+
+> PROD_CORRELATION 的平台检查语义见 [04 §12.7](04_platform_reference.md)。
 
 ### 6.3 这类问题最容易被误处理
 
@@ -280,6 +292,8 @@ D0 研究建议按下面的顺序进行：
 
 如果需要大量 backfill 才能勉强通过，通常更该回头怀疑字段或假设本身。
 
+> 权重集中和覆盖的平台检查语义见 [04 §12.4, §12.8](04_platform_reference.md)。
+
 ---
 
 ## 7.5 当 `LOW_SUB_UNIVERSE_SHARPE` 出现时
@@ -333,6 +347,8 @@ subuniverse_sharpe
 
 例如 USA `TOP3000` 通常会检查更液态的 `TOP1000`。如果结果主要来自 TOP1000
 以外的低流动性股票，Sub-Universe 表现会明显下降。
+
+> LOW_SUB_UNIVERSE_SHARPE 的平台检查语义和缩放公式见 [04 §12.5](04_platform_reference.md)。
 
 ---
 
