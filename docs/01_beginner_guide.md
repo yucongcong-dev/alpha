@@ -186,7 +186,7 @@ broad search。
 - [03_optimization_and_submission.md](03_optimization_and_submission.md)
 
 > `neutralization` 设置与 `group_neutralize(...)` 算子的完整区分和实际选择见
-> [03 §17.1](03_optimization_and_submission.md) 和 [04 §14](04_platform_reference.md)。
+> [03 §23.1](03_optimization_and_submission.md) 和 [04 §14](04_platform_reference.md)。
 
 ### 5.4 Truncation
 

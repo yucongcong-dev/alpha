@@ -183,7 +183,7 @@ FAQ 里大多数优化建议可以归成下面这张表。它比逐篇记 FAQ �
 
 ---
 
-## 5.5 D0 Alpha 应该单独研究
+## 6. D0 Alpha 应该单独研究
 
 `Delay=0` 不是简单把 D1 Alpha 的设置改成 0。官网对 D0 的定位是：
 
@@ -217,9 +217,9 @@ D0 研究建议按下面的顺序进行：
 
 ---
 
-## 6. 当相关性问题出现时
+## 7. 当相关性问题出现时
 
-### 6.1 `SELF_CORRELATION`
+### 7.1 `SELF_CORRELATION`
 
 说明你现在这条 Alpha 和你自己已有 Alpha 太像。
 
@@ -233,13 +233,13 @@ D0 研究建议按下面的顺序进行：
 
 > SELF_CORRELATION 的平台检查语义见 [04 §12.6](04_platform_reference.md)。
 
-### 6.2 `PROD_CORRELATION`
+### 7.2 `PROD_CORRELATION`
 
 说明它和平台已有 Alpha 太像。
 
 > PROD_CORRELATION 的平台检查语义见 [04 §12.7](04_platform_reference.md)。
 
-### 6.3 这类问题最容易被误处理
+### 7.3 这类问题最容易被误处理
 
 官方更推荐的是结构替换，而不是窗口微调：
 
@@ -266,7 +266,7 @@ D0 研究建议按下面的顺序进行：
 
 ---
 
-## 7. 当权重或集中度问题出现时
+## 8. 当权重或集中度问题出现时
 
 如果遇到：
 
@@ -296,7 +296,7 @@ D0 研究建议按下面的顺序进行：
 
 ---
 
-## 7.5 当 `LOW_SUB_UNIVERSE_SHARPE` 出现时
+## 9. 当 `LOW_SUB_UNIVERSE_SHARPE` 出现时
 
 这类失败项最容易被误解成：
 
@@ -352,7 +352,7 @@ subuniverse_sharpe
 
 ---
 
-## 8. 交易成本要怎么理解
+## 10. 交易成本要怎么理解
 
 官方这里给了两个非常容易被忽略的点：
 
@@ -369,7 +369,7 @@ subuniverse_sharpe
 - Turnover 越高，真实交易成本压力通常越大
 - 因此高 Turnover Alpha 要更谨慎地看待
 
-### 8.1 Margin 与 Turnover 目标
+### 10.1 Margin 与 Turnover 目标
 
 官方定义是：
 
@@ -385,7 +385,7 @@ Margin = PnL / total dollars traded
 
 ---
 
-## 9. 提升 Sharpe 的更合理方向
+## 11. 提升 Sharpe 的更合理方向
 
 官方口径可以浓缩成两件事：
 
@@ -413,7 +413,7 @@ FAQ 里还特别提醒：不要为了提高 Sharpe 只反复调参数。更好�
 
 ---
 
-## 10. 提升 Fitness 的更合理顺序
+## 12. 提升 Fitness 的更合理顺序
 
 经验顺序更推荐这样：
 
@@ -428,7 +428,7 @@ FAQ 里还特别提醒：不要为了提高 Sharpe 只反复调参数。更好�
 
 ---
 
-## 11. 提升 Returns 时要保持克制
+## 13. 提升 Returns 时要保持克制
 
 官方承认提高 Returns 往往会伴随：
 
@@ -466,7 +466,7 @@ FAQ 里给过几类提高 Returns 的常见方向，但都要和风险一起看�
 
 ---
 
-## 11.5 `Robust universe` 应该怎么直觉理解
+## 14. `Robust universe` 应该怎么直觉理解
 
 官方社区里围绕 `robust universe sharpe / returns` 的讨论很多，说明这是常见痛点。
 
@@ -485,7 +485,7 @@ FAQ 里给过几类提高 Returns 的常见方向，但都要和风险一起看�
 - 它对边缘样本依赖太强
 - 或结构稳健性还不够
 
-## 11.6 最不流动 50% 的 after-cost 检查
+## 15. 最不流动 50% 的 after-cost 检查
 
 官网说明里还有一项容易遗漏的提交检查：
 
@@ -500,7 +500,7 @@ FAQ 里给过几类提高 Returns 的常见方向，但都要和风险一起看�
 - 用 `group_neutralize()` 降低 size / liquidity 风险暴露
 - 在有明确风险向量时使用 `vector_neut()`
 
-## 11.7 一套可执行的抗过拟合测试
+## 16. 一套可执行的抗过拟合测试
 
 官方社区明确建议把 disciplined research 放在“找到最高 IS 数字”之前。
 进入最终候选池前至少做：
@@ -530,7 +530,7 @@ Test Period 可以更具体地按下面方式使用：
 - Test Sharpe / Fitness 等下降超过约 `50%`，通常是明显的过拟合警报
 - 进一步用 `20% / 30% / 40%` 的不同 Test Period 做时间稳定性检查
 
-### 11.7.1 Decay 改动与过拟合边界
+### 16.1 Decay 改动与过拟合边界
 
 官方 FAQ 的区分很实用：同一表达式把 Decay 从 `1` 改到 `5`，如果变化有合理的平滑假设并通过参数敏感性检查，通常不应直接称为过拟合；在 `5` 和 `6` 之间继续追逐一次回测中的最高值，则更接近对噪声调参。
 
@@ -538,7 +538,7 @@ Test Period 可以更具体地按下面方式使用：
 
 官方来源：[Does changing the decay value from 1 to 5 for the same expression mean overfitting?](https://support.worldquantbrain.com/hc/en-us/articles/5970380583191-Does-changing-the-decay-value-from-1-to-5-for-the-same-expression-mean-overfitting)
 
-## 11.8 算子顺序和线性组合
+## 17. 算子顺序和线性组合
 
 算子顺序会改变比较对象和最终权重。例如：
 
@@ -578,7 +578,7 @@ winsorize(x / y, std=4)
 
 ---
 
-## 12. PnL 曲线突然跳变时先查什么
+## 18. PnL 曲线突然跳变时先查什么
 
 官方给出的常见原因有 3 类：
 
@@ -600,7 +600,7 @@ winsorize(x / y, std=4)
 
 ---
 
-## 13. 降低 Turnover 的一组工具
+## 19. 降低 Turnover 的一组工具
 
 可以把下面这组东西当成“稳健化工具组”：
 
@@ -629,7 +629,7 @@ winsorize(x / y, std=4)
 
 ---
 
-## 14. ISLadder 应该怎么理解
+## 20. ISLadder 应该怎么理解
 
 官方把它描述为一种显著性检验思路：
 
@@ -645,7 +645,7 @@ winsorize(x / y, std=4)
 
 ---
 
-## 15. 优化时最容易犯的错
+## 21. 优化时最容易犯的错
 
 - 把“多跑”当优化
 - 把“调参数”当研究
@@ -655,7 +655,7 @@ winsorize(x / y, std=4)
 
 ---
 
-## 16. 优化阶段最该记住的几句话
+## 22. 优化阶段最该记住的几句话
 
 - 先分清 IS 和 OS
 - 先拆原因，再做动作
@@ -666,7 +666,7 @@ winsorize(x / y, std=4)
 
 ---
 
-## 17. 提交前统一收口
+## 23. 提交前统一收口
 
 优化结束不等于可以提交。最终候选应按固定顺序复查：
 
@@ -684,7 +684,7 @@ winsorize(x / y, std=4)
 - 第一层检查收益质量、成本和可实现性
 - 第二层检查独特性、稳健性和是否值得加入现有 Alpha 池
 
-### 17.1 Neutralization 的最终决策
+### 23.1 Neutralization 的最终决策
 
 表达式里的 `group_neutralize(x, group)` 与回测设置的 Neutralization 都会改变持仓结构，但作用范围不同：前者只处理表达式中传入的局部值，Simulation Settings 的 Neutralization 则在平台操作链最后对整个 Alpha 起作用。
 
@@ -699,12 +699,12 @@ winsorize(x / y, std=4)
 - Option：`Market` 或 `Sector`
 - Price Volume / Macro：`Market`、`Sector`，必要时再试 `Industry`
 
-### 17.2 D0 的提交判断
+### 23.2 D0 的提交判断
 
 D0 应当作为独立研究分支。除更高换手和成本压力外，还要验证同一逻辑在 D1 上
 是否保留合理表现。如果 D1 明显更强，不应为了 D0 标签继续强行调参。
 
-### 17.3 社区压力测试与平台硬门槛要分开
+### 23.3 社区压力测试与平台硬门槛要分开
 
 Rank/Binary、Train/Test、参数扰动、Sub/Super Universe 和 Max Trade 挑战用于提高
 研究置信度；它们不应被描述成平台统一硬门槛。文档和结果记录中应明确区分：
@@ -714,7 +714,7 @@ Rank/Binary、Train/Test、参数扰动、Sub/Super Universe 和 Max Trade 挑�
 
 ---
 
-## 18. 官方来源
+## 24. 官方来源
 
 - [Understanding Data in BRAIN: Key Concepts and Tips](https://platform.worldquantbrain.com/learn/documentation/understanding-data/data)
 - [How to use the Data Explorer](https://platform.worldquantbrain.com/learn/documentation/understanding-data/how-use-data-explorer)
