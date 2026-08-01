@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from alpha.app.bootstrap_pending_checks import refresh_pending_check_results
+from alpha.app.bootstrap_state import refresh_pending_check_results
 from alpha.models.domain import FailedCheck, FieldTestResult
 
 
@@ -25,7 +25,7 @@ def _pending_result(*, alpha_id: str | None = "alpha_1") -> FieldTestResult:
 
 def test_refresh_pending_check_results_replaces_terminal_result(monkeypatch) -> None:
     monkeypatch.setattr(
-        "alpha.app.bootstrap_pending_checks.checksubmit_with_retry",
+        "alpha.app.bootstrap_state.checksubmit_with_retry",
         lambda *_args, **_kwargs: (True, "checks passed", []),
     )
 
@@ -40,7 +40,7 @@ def test_refresh_pending_check_results_replaces_terminal_result(monkeypatch) -> 
 def test_refresh_pending_check_results_keeps_still_pending_result(monkeypatch) -> None:
     original = _pending_result()
     monkeypatch.setattr(
-        "alpha.app.bootstrap_pending_checks.checksubmit_with_retry",
+        "alpha.app.bootstrap_state.checksubmit_with_retry",
         lambda *_args, **_kwargs: (
             None,
             "checks pending",
@@ -59,7 +59,7 @@ def test_refresh_pending_check_results_skips_rows_without_alpha_id(monkeypatch) 
         raise AssertionError("checksubmit should not be called")
 
     monkeypatch.setattr(
-        "alpha.app.bootstrap_pending_checks.checksubmit_with_retry",
+        "alpha.app.bootstrap_state.checksubmit_with_retry",
         _unexpected,
     )
 
