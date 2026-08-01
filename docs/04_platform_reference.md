@@ -890,7 +890,7 @@ BRAIN Alpha 按日模拟、按日再平衡，不模拟高频或日内交易。�
 
 ### 12.5 `LOW_SUB_UNIVERSE_SHARPE`
 
-Glossary 把 robust performance 明确当成平台关心的方向。
+Glossary 把 robust performance 明确当成平台关心的方向（复核 2026-07-31）。
 
 对实战更好记的理解是：
 
@@ -934,7 +934,7 @@ subuniverse_sharpe
 - `20 -> 22`
 - `60 -> 63`
 
-常见检查语义是：最大自相关高于 `0.7` 时，如果新 Alpha 的表现没有比相关 Alpha 至少改善约 `10%`，就可能失败。因此 `0.7` 不是脱离表现比较的孤立硬线；本地仍应把高相关候选优先视为低增量分支。
+常见检查语义是：最大自相关高于 `0.7` 时，如果新 Alpha 的表现没有比相关 Alpha 至少改善约 `10%`，就可能失败（来源：[Self-correlation error message](https://support.worldquantbrain.com/hc/en-us/articles/6726867827991)，复核 2026-07-31）。因此 `0.7` 不是脱离表现比较的孤立硬线；本地仍应把高相关候选优先视为低增量分支。
 
 ### 12.7 `PROD_CORRELATION`
 
@@ -958,7 +958,7 @@ subuniverse_sharpe
 ### 12.9 最不流动 50% 的 after-cost Sharpe 检查
 
 平台会检查原 Universe 中最不流动的 50% 股票在计入交易成本后的 Sharpe。
-官网示例要求该部分达到原 Universe after-cost Sharpe 的约 `52.5%`。
+官网示例要求该部分达到原 Universe after-cost Sharpe 的约 `52.5%`（复核 2026-07-31）。
 
 这项检查回答的是：
 
@@ -977,7 +977,7 @@ subuniverse_sharpe
 
 该提示出现在 D0 Alpha 上，含义是：
 
-- 同一 Alpha 在 D1 的 Sharpe 高于 D0
+- 同一 Alpha 在 D1 的 Sharpe 高于 D0（来源：[Alpha better suited for Delay 1](https://support.worldquantbrain.com/hc/en-us/articles/19083452017559)，复核 2026-07-31）
 - 平台认为它更适合 Delay 1
 
 这种情况下通常应优先提交 D1，因为 D1 往往同时具有：
