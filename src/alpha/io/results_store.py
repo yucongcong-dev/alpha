@@ -145,17 +145,40 @@ def initialize_results_journal(output_path: str, results: list[FieldTestResult])
     return len(results)
 
 
-def _append_results_journal(journal_path: str, results: list[FieldTestResult]) -> None:
+def _append_results_journal(
+    journal_path: str,
+    results: list[FieldTestResult],
+    *,
+    expected_row_count: int | None = None,
+) -> int:
     """把新增结果追加到 journal。"""
     if not results:
-        return
+        return expected_row_count or 0
     directory = os.path.dirname(os.path.abspath(journal_path)) or "."
     os.makedirs(directory, exist_ok=True)
     payload = _serialize_journal_batch(results)
-    with _exclusive_journal_lock(journal_path), open(journal_path, "a", encoding="utf-8") as handle:
-        handle.write(payload)
-        handle.flush()
-        os.fsync(handle.fileno())
+    with _exclusive_journal_lock(journal_path):
+        if expected_row_count is not None:
+            existing_rows = load_results_rows_from_journal(journal_path)
+            existing_count = len(existing_rows)
+            retry_count = expected_row_count + len(results)
+            if existing_count == retry_count:
+                expected_rows = [_journal_row_payload(result) for result in results]
+                if existing_rows[-len(expected_rows) :] != expected_rows:
+                    raise RuntimeError(
+                        "results journal advanced with different rows; refusing duplicate append"
+                    )
+                return existing_count
+            if existing_count != expected_row_count:
+                raise RuntimeError(
+                    "results journal row count does not match persisted result count "
+                    f"({existing_count} != {expected_row_count})"
+                )
+        with open(journal_path, "a", encoding="utf-8") as handle:
+            handle.write(payload)
+            handle.flush()
+            os.fsync(handle.fileno())
+        return (expected_row_count or 0) + len(results)
 
 
 _COMPAT_EXPORTS: ExportMap = {

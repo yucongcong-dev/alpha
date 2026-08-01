@@ -122,6 +122,93 @@ def test_append_results_journal_ignores_empty_batch(tmp_path) -> None:
     assert not journal_path.exists()
 
 
+def test_append_results_journal_retry_is_idempotent(tmp_path) -> None:
+    output_path = tmp_path / "results.json"
+    initialize_results_journal(str(output_path), [])
+    journal_path = tmp_path / "results_results.jsonl"
+    results = [
+        FieldTestResult(
+            field_id="field_retry",
+            field_type="MATRIX",
+            field_name="field_retry",
+            template_name="tpl",
+            status="simulated",
+            submittable=False,
+            expression="rank(field_retry)",
+        )
+    ]
+
+    assert _append_results_journal(str(journal_path), results, expected_row_count=0) == 1
+    assert _append_results_journal(str(journal_path), results, expected_row_count=0) == 1
+
+    rows = load_results_rows_from_journal(str(journal_path))
+    assert [row["field_id"] for row in rows] == ["field_retry"]
+
+
+def test_append_results_journal_rejects_retry_with_different_rows(tmp_path) -> None:
+    output_path = tmp_path / "results.json"
+    initialize_results_journal(str(output_path), [])
+    journal_path = tmp_path / "results_results.jsonl"
+    _append_results_journal(
+        str(journal_path),
+        [
+            FieldTestResult(
+                field_id="field_original",
+                field_type="MATRIX",
+                field_name="field_original",
+                template_name="tpl",
+                status="simulated",
+                submittable=False,
+                expression="rank(field_original)",
+            )
+        ],
+        expected_row_count=0,
+    )
+
+    with pytest.raises(RuntimeError, match="advanced with different rows"):
+        _append_results_journal(
+            str(journal_path),
+            [
+                FieldTestResult(
+                    field_id="field_other",
+                    field_type="MATRIX",
+                    field_name="field_other",
+                    template_name="tpl",
+                    status="simulated",
+                    submittable=False,
+                    expression="rank(field_other)",
+                )
+            ],
+            expected_row_count=0,
+        )
+
+
+def test_append_results_journal_rejects_unexpected_row_count(tmp_path) -> None:
+    output_path = tmp_path / "results.json"
+    initialize_results_journal(str(output_path), [])
+    journal_path = tmp_path / "results_results.jsonl"
+    result = FieldTestResult(
+        field_id="field_count",
+        field_type="MATRIX",
+        field_name="field_count",
+        template_name="tpl",
+        status="simulated",
+        submittable=False,
+        expression="rank(field_count)",
+    )
+    _append_results_journal(str(journal_path), [result], expected_row_count=0)
+
+    with pytest.raises(RuntimeError, match="does not match"):
+        _append_results_journal(str(journal_path), [result], expected_row_count=5)
+
+
+def test_append_results_journal_empty_batch_returns_expected_count(tmp_path) -> None:
+    journal_path = tmp_path / "results.jsonl"
+
+    assert _append_results_journal(str(journal_path), [], expected_row_count=3) == 3
+    assert not journal_path.exists()
+
+
 def test_journal_rows_are_versioned_and_checksums_are_validated(tmp_path) -> None:
     output_path = tmp_path / "results.json"
     initialize_results_journal(
@@ -147,6 +234,28 @@ def test_journal_rows_are_versioned_and_checksums_are_validated(tmp_path) -> Non
     rows[0]["field_id"] = "tampered"
     journal_path.write_text(json.dumps(rows[0]) + "\n", encoding="utf-8")
     with pytest.raises(ValueError, match="checksum mismatch"):
+        load_results_rows_from_journal(str(journal_path))
+
+
+def test_journal_reader_rejects_unsupported_schema_version(tmp_path) -> None:
+    journal_path = tmp_path / "results.jsonl"
+    journal_path.write_text(
+        json.dumps(
+            {
+                "field_id": "field_schema",
+                "field_type": "MATRIX",
+                "field_name": "field_schema",
+                "template_name": "tpl",
+                "status": "simulated",
+                "submittable": False,
+                JOURNAL_SCHEMA_FIELD: 99,
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="unsupported results journal schema version"):
         load_results_rows_from_journal(str(journal_path))
 
 

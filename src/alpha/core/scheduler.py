@@ -262,7 +262,7 @@ def handle_completed_future(
         - 结果立即落盘以防止中断丢失
         - 检测拥塞信号并返回给调用方
     """
-    context = execution_state.future_queue.pop_completed(future)
+    context = execution_state.future_queue.pending_futures[future]
     result = resolve_completed_future_result(
         future,
         context=context,
@@ -274,6 +274,7 @@ def handle_completed_future(
         completion_ctx=completion_ctx,
         execution_state=execution_state,
     )
+    execution_state.future_queue.pop_completed(future)
     return DrainResult(template_stats, congestion_detected, queue_busy_key)
 
 

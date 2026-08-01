@@ -8,6 +8,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
+from copy import deepcopy
 from dataclasses import dataclass
 import logging
 from typing import Any, Protocol
@@ -22,6 +23,7 @@ from ..policy.blacklist_runtime_stats import build_blacklist_runtime_stats
 from ..policy.blacklist_runtime_updates import auto_update_blacklist_incremental
 from ..policy.types import BlacklistEntryKey, BlacklistRuntimeStats
 from ..runtime.contexts import FutureCompletionContext
+from ..runtime.result_ledger import ExecutionMetrics
 from ..runtime.state import ExecutionState
 
 logger = logging.getLogger(__name__)
@@ -110,14 +112,14 @@ def apply_result_state_updates(
     *,
     execution_state: ExecutionState,
     services: ResultProcessingServices,
+    template_stats: TemplateStats,
+    persisted_result_count: int,
 ) -> TemplateStats:
-    """Apply one completed result to execution counters and template stats."""
+    """Commit one result after its durable write has completed."""
     execution_state.result_ledger.append(result)
+    execution_state.result_ledger.persisted_result_count = persisted_result_count
     if services.is_informative_result(result):
         execution_state.attempted_keys.add(services.result_identity(result))
-    template_stats = services.update_template_stats_with_result(
-        execution_state.template_stats, result
-    )
     execution_state.template_stats = template_stats
     return template_stats
 
@@ -189,17 +191,20 @@ def persist_incremental_result(
     completion_ctx: FutureCompletionContext,
     execution_state: ExecutionState,
     services: ResultProcessingServices,
-) -> None:
-    """Persist one completed result and updated counters to the journal/results store."""
+) -> tuple[int, TemplateStats]:
+    """Persist one result using prospective counters without mutating runtime state."""
     result_write_options = completion_ctx.result_write_options
     ledger = execution_state.result_ledger
-    metrics = ledger.refresh_metrics()
-    ledger.persisted_result_count = services.dump_results_incremental(
+    prospective_results = [*ledger.results, result]
+    metrics = ExecutionMetrics.from_results(prospective_results)
+    prospective_template_stats = deepcopy(execution_state.template_stats)
+    services.update_template_stats_with_result(prospective_template_stats, result)
+    persisted_result_count = services.dump_results_incremental(
         result_write_options.output_path,
         result_write_options.dataset_id,
         [result],
         persisted_result_count=ledger.persisted_result_count,
-        tested=len(ledger.results),
+        tested=len(prospective_results),
         unique_fields_tested=len(metrics.unique_field_ids),
         submittable_count=metrics.submittable_count,
         submitted_count=metrics.submitted_count,
@@ -209,8 +214,9 @@ def persist_incremental_result(
         settings_fingerprint=completion_ctx.settings_fingerprint,
         template_library_fingerprint=completion_ctx.template_library_fingerprint,
         run_config=completion_ctx.run_config,
-        template_stats=execution_state.template_stats,
+        template_stats=prospective_template_stats,
     )
+    return persisted_result_count, prospective_template_stats
 
 
 def log_congestion_signals(result: FieldTestResult) -> None:
@@ -238,10 +244,18 @@ def apply_completed_result(
     """把单条结果并入执行状态，并执行增量持久化与策略副作用。"""
     active_services = services or build_result_processing_services()
     result_write_options = completion_ctx.result_write_options
+    persisted_result_count, prospective_template_stats = persist_incremental_result(
+        result,
+        completion_ctx=completion_ctx,
+        execution_state=execution_state,
+        services=active_services,
+    )
     template_stats = apply_result_state_updates(
         result,
         execution_state=execution_state,
         services=active_services,
+        template_stats=prospective_template_stats,
+        persisted_result_count=persisted_result_count,
     )
     log_completed_result(result)
     maybe_update_blacklist_incrementally(
@@ -252,12 +266,6 @@ def apply_completed_result(
         services=active_services,
     )
 
-    persist_incremental_result(
-        result,
-        completion_ctx=completion_ctx,
-        execution_state=execution_state,
-        services=active_services,
-    )
     congestion_detected, queue_busy_key = detect_result_congestion(result)
     log_congestion_signals(result)
     return template_stats, congestion_detected, queue_busy_key

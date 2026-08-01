@@ -9,7 +9,11 @@ from typing import Any
 
 from ..io.common import atomic_write_json
 from ..io.output_paths import build_output_sidecar_paths, cleanup_legacy_sidecar_files
-from ..io.results_store import _append_results_journal, initialize_results_journal
+from ..io.results_store import (
+    _append_results_journal,
+    exclusive_results_transaction,
+    initialize_results_journal,
+)
 from ..models.domain import FieldTestResult
 from .report_builder import build_analysis_payload, build_results_summary_payload
 from .template_registry_sidecars import (
@@ -87,31 +91,39 @@ def dump_results_incremental(
 ) -> int:
     """Append new journal rows and persist lightweight derived views."""
     sidecar_paths = build_output_sidecar_paths(path)
-    if new_results:
-        _append_results_journal(sidecar_paths["results_journal"], new_results)
-    summary = {
-        "dataset_id": dataset_id,
-        "run_config": run_config or {},
-        "settings_fingerprint": settings_fingerprint,
-        "template_library_fingerprint": template_library_fingerprint,
-        "tested": tested,
-        "unique_fields_tested": unique_fields_tested,
-        "submittable": submittable_count,
-        "submitted": submitted_count,
-        "errors": error_count,
-        "queue_timeouts": queue_timeout_count,
-        "pending_checks": pending_check_count,
-        "results_embedded": False,
-        "results_journal": _portable_journal_reference(path, sidecar_paths["results_journal"]),
-    }
-    atomic_write_json(path, summary)
-    if template_registry_summary is not None or template_stats is not None:
-        persist_template_registry_summary(
-            path,
-            summary_rows=template_registry_summary,
-            template_stats=template_stats,
-        )
-    cleanup_legacy_sidecar_files(path)
+    output_directory = os.path.dirname(os.path.abspath(path)) or "."
+    os.makedirs(output_directory, exist_ok=True)
+    with exclusive_results_transaction(path):
+        next_persisted_result_count = persisted_result_count
+        if new_results:
+            next_persisted_result_count = _append_results_journal(
+                sidecar_paths["results_journal"],
+                new_results,
+                expected_row_count=persisted_result_count,
+            )
+        summary = {
+            "dataset_id": dataset_id,
+            "run_config": run_config or {},
+            "settings_fingerprint": settings_fingerprint,
+            "template_library_fingerprint": template_library_fingerprint,
+            "tested": tested,
+            "unique_fields_tested": unique_fields_tested,
+            "submittable": submittable_count,
+            "submitted": submitted_count,
+            "errors": error_count,
+            "queue_timeouts": queue_timeout_count,
+            "pending_checks": pending_check_count,
+            "results_embedded": False,
+            "results_journal": _portable_journal_reference(path, sidecar_paths["results_journal"]),
+        }
+        atomic_write_json(path, summary)
+        if template_registry_summary is not None or template_stats is not None:
+            persist_template_registry_summary(
+                path,
+                summary_rows=template_registry_summary,
+                template_stats=template_stats,
+            )
+        cleanup_legacy_sidecar_files(path)
     logger.info(
         "[done] wrote incremental results to %s (tested=%d, submittable=%d, appended=%d)",
         path,
@@ -119,4 +131,4 @@ def dump_results_incremental(
         submittable_count,
         len(new_results),
     )
-    return persisted_result_count + len(new_results)
+    return next_persisted_result_count
