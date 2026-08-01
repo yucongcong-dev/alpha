@@ -68,7 +68,7 @@ class TemplateBuildContext:
     exclude_templates: set[str] = field(default_factory=set)
     use_dataset_heuristics: bool = False
     expression_policy: DatasetExpressionPolicy | None = None
-    feedback_result_count: int = -1
+    feedback_result_count: int | None = None
 
 
 @dataclass

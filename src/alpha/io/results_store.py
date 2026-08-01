@@ -84,6 +84,8 @@ def _serialize_journal_batch(results: list[FieldTestResult]) -> str:
 
 
 def _fsync_directory(directory: str) -> None:
+    # On Windows os.open on a directory raises PermissionError so directory-level
+    # fsync is a no-op; per-file os.fsync is sufficient for crash-safety.
     """Persist a replace operation where directory fsync is supported."""
     flags = os.O_RDONLY | getattr(os, "O_DIRECTORY", 0)
     try:

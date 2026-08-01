@@ -28,6 +28,8 @@ def create_execution_state(
         template_stats=historical_state.template_stats,
     )
     result_ledger = execution_state.result_ledger
+    # Rewrite journal from the complete in-memory result set then atomically switch
+    # to incremental mode so subsequent appends are always relative to a known base.
     result_ledger.submittable_baseline_count = result_ledger.metrics.submittable_count
     execution_state.blacklist_runtime_stats = build_blacklist_runtime_stats(result_ledger.results)
     execution_state.blacklisted_template_keys = load_blacklisted_template_keys(dataset_id)
@@ -51,6 +53,8 @@ def build_execution_state(
         datasets_root=datasets_root,
     )
     result_ledger = execution_state.result_ledger
+    # Rewrite journal from the complete in-memory result set then atomically switch
+    # to incremental mode so subsequent appends are always relative to a known base.
     result_ledger.persisted_result_count = initialize_results_journal(
         output_file,
         result_ledger.results,

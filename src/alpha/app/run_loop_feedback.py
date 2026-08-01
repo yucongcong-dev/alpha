@@ -33,7 +33,7 @@ def refresh_runtime_feedback(
         return
     if cached_count == result_count:
         return
-    if cached_count < 0 or cached_count > result_count:
+    if cached_count is None or cached_count > result_count:
         template_build_ctx.field_feedback = compile_field_feedback(results)
         template_build_ctx.global_failed_check_counts = compile_global_failed_check_counts(results)
         template_build_ctx.failed_check_counts_by_field_type = (
