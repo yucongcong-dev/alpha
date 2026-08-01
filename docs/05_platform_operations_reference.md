@@ -233,9 +233,36 @@ FAQ 里的技术支持常见主题包括：
 - API / 页面异常：区分平台异常、网络异常、认证异常和本地代码异常
 - HAR file：只在 support 明确要求时由用户手动生成，避免自动收集敏感请求
 
+### 10.1 Support 诊断材料脱敏清单
+
+生成截图、日志或 HAR 前，只保留 support 要求的最小范围，并检查：
+
+1. 删除 `Authorization`、Cookie、Session、Token 和密码
+2. 删除验证码、个人身份信息、银行账户和付款资料
+3. 截图只保留与当前错误直接相关的页面区域
+4. 不把完整浏览器导出文件提交到仓库、issue 或反馈目录
+5. 诊断材料应由用户手动确认后再发送给官方 support
+
+这是一条长期安全边界，不代表仓库会自动收集、上传或检查这些材料。
+
 ---
 
-## 11. 不进入本仓库研究逻辑的内容
+## 11. 本轮官网 Help Center 审阅快照
+
+截至 `2026-07-31`，本轮已复核当前账号可见的 Help Center 一级分类与文章正文：Research FAQ 14 个 section、123 篇文章；其余 General FAQs、Getting Started、Consultant、Glossary、WQ Challenge Country、IQC 2026 合计去重 166 篇；总计 289 篇。
+
+其中 Webinars / Admin 相关资料主要覆盖：
+
+- webinar 录播与回看入口
+- 工作副本、工作证明或证书
+- 个人数据与隐私处理
+- 其他后台运营说明
+
+这些内容只作为平台使用参考。赛事赛季、地区资格、付款日期、咨询流程和账号政策都可能变化，本地文档只保留入口、边界和“以官网当前页面为准”，不把动态条款写成长期规则。
+
+---
+
+## 12. 不进入本仓库研究逻辑的内容
 
 以下信息可以在本篇作为平台操作参考，但不应进入 alpha 生成、筛选或提交策略：
 
@@ -255,7 +282,7 @@ FAQ 里的技术支持常见主题包括：
 
 ---
 
-## 12. 官方入口
+## 13. 官方入口
 
 - [FAQ 首页](https://support.worldquantbrain.com/hc/en-us)
 - [General FAQs](https://support.worldquantbrain.com/hc/en-us/categories/4413011872791-General-FAQs)

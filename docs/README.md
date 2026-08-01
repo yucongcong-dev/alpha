@@ -12,12 +12,16 @@
 - Courses：`10` 门课程、`46` 个视频课时；已审阅课程目录和课时主题，没有复制或伪造视频逐字稿
 - Operators：`7` 个分类、当前账号可见 `66` 个 `base` 算子
 - Must-read：重点核对 Sharpe、Returns、Correlation、`trade_when`、PnL 平滑、抗过拟合 `6` 个主题
+- Help Center：`7` 个一级分类；已展开隐藏的 `See all` 入口
+- Research FAQ：`14` 个 section、当前账号可见 `123` 篇独立文章
+- 其他 FAQ：`23` 个 section、去重后 `166` 篇文章；合计逐篇读取 `289` 篇 Help Center 正文
 
 知识库采用“按主题吸收”而不是“逐页镜像”：
 
 - 官方 Documentation 和 Help Center 主文用于确认定义、流程和检查语义
 - Community 评论只作为次级经验，不覆盖官方正文和平台实际检查结果
 - 不复制官网全文，也不把课程视频目录冒充完整视频内容
+- 本轮 FAQ 复核覆盖 Research、General、Getting Started、Consultant、Glossary、WQ Challenge Country、IQC 2026；动态赛事、支付和地区规则仍只保留原则，不写死为永久规则
 - 课程、算子和门槛可能随账号等级与平台版本变化；动态数量和阈值必须附核对日期
 
 ## 推荐阅读顺序

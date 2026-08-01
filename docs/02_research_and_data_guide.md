@@ -421,6 +421,28 @@ FAQ 里的 Dataset Usage Management 主要是平台对部分数据集类别访�
 2. 将该数据集标记为暂不可用或降优先级
 3. 用同类 idea 在其他 dataset category 上找替代字段
 
+### 8.2 数据访问、外部工具与数据集退役
+
+本轮逐篇复核 Research FAQ 后，下面几条应作为硬边界记住：
+
+- BRAIN 的底层数据属于专有信息；研究者可以查看模拟结果，但不能下载每个 instrument 的逐日底层数据。
+- BRAIN 平台当前用于编写 Alpha 的入口是 Fast Expressions。FAQ 同时说明，顾问可获得 Python API 文档，低强度的程序化 API 访问目前不被禁止；这不等于可以绕过平台读取原始数据，也不等于所有账号都自动拥有相同 API 权限。
+- 因此，Python / R / MATLAB 更适合做研究记录、参数管理和结果分析；Alpha 本身仍应按平台允许的 Fast Expressions / API 流程提交，不能把“外部算出一个向量后上传”理解成官方支持的原始数据工作流。
+- 如果 Dataset XYZ 从 Data Explorer 消失，官方解释通常是数据集被 decommission：供应方停止发布，或 WorldQuant 暂停访问。依赖它的 Alpha 可能被标记为 `DECOMMISSIONED`；数据集未来恢复时，相关 Alpha 可能重新激活。
+
+对仓库的落地方式：
+
+1. 数据集 README 记录状态、替代字段族和最后核对日期。
+2. 不把底层数据下载写入自动化设计，也不把 API 低强度访问当成无限速率权限。
+3. 运行器遇到数据集消失时，区分“本地缓存缺失”和“平台数据集退役”，不要自动改写研究假设。
+
+官方入口：
+
+- [Can I download the underlying data used in making Alphas?](https://support.worldquantbrain.com/hc/en-us/articles/5971334165655-Can-I-download-the-underlying-data-used-in-making-Alphas)
+- [Can we use API?](https://support.worldquantbrain.com/hc/en-us/articles/5970985302679-Can-we-use-API)
+- [Can I use Python / R / MATLAB etc. for Alphas?](https://support.worldquantbrain.com/hc/en-us/articles/5971076730775-Can-I-use-Python-R-MATLAB-etc-for-Alphas)
+- [I can no longer find Dataset XYZ on the platform. Where can I find it?](https://support.worldquantbrain.com/hc/en-us/articles/22468202055959-I-can-no-longer-find-Dataset-XYZ-on-the-platform-Where-can-I-find-it)
+
 ---
 
 ## 9. Option6 Implied Volatility：专题数据集怎么拆

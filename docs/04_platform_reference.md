@@ -463,9 +463,13 @@ D0 的门槛更高，因此不能只看绝对 Fitness 数字就断言 D0 优于 
 
 ### 9.4 `Margin`
 
-可以把它理解成：
+官方定义为：
 
-- 每交易一美元能赚多少钱
+```text
+Margin = PnL / total dollars traded
+```
+
+可以把它理解成每交易一美元能赚多少钱。官方建议优先提高 Returns，同时管理 Turnover；它没有把某个 Margin 数字写成所有设置通用的硬门槛。
 
 所以：
 
@@ -801,6 +805,20 @@ Dataset Usage Management 是平台对某些 dataset category 使用权限和使�
 所以相关性问题本质上不是“结果页面的小红字”，而是平台在判断：
 
 - 这条 Alpha 有没有增量价值
+
+### 11.4 Alpha 页面与 Alpha List 操作
+
+官网 Alpha 页面支持筛选、排序以及增删列；隐藏的 Alpha 可以通过 `Hidden` filter 找回。当前没有删除 Alpha 的功能，但可以重命名，未重命名时可能显示为 `anonymous`。`Alpha list` 用于把多条 Alpha 放在一起比较表现和相关性。
+
+页面不提供完整 Alpha output vector，也不提供每只股票逐日权重明细；研究时不要把页面可见的汇总指标误认为底层持仓明细。
+
+官方来源：[How to view your Alphas](https://support.worldquantbrain.com/hc/en-us/articles/24439802248471-How-to-view-your-Alphas)；[How do I delete my Alphas?](https://support.worldquantbrain.com/hc/en-us/articles/5971823272215-How-do-I-delete-my-Alphas)；[Can I give meaningful names to my Alphas?](https://support.worldquantbrain.com/hc/en-us/articles/5969975774103-Can-I-give-meaningful-names-to-my-Alphas)；[Can I see the Alpha output vector?](https://support.worldquantbrain.com/hc/en-us/articles/5969712153239-Can-I-see-the-Alpha-output-vector)
+
+### 11.5 Simulation 的频率与取消
+
+BRAIN Alpha 按日模拟、按日再平衡，不模拟高频或日内交易。正在运行的 simulation 可以使用 `Cancel simulation` 中止。
+
+官方来源：[Does BRAIN platform simulate high frequency trade and intraday trade?](https://support.worldquantbrain.com/hc/en-us/articles/5971017679639-Does-BRAIN-platform-simulate-high-frequency-trade-and-intraday-trade)；[Is it possible to abort a running simulation?](https://support.worldquantbrain.com/hc/en-us/articles/5971303624471-Is-it-possible-to-abort-a-running-simulation)
 
 ---
 

@@ -353,6 +353,20 @@ subuniverse_sharpe
 - Turnover 越高，真实交易成本压力通常越大
 - 因此高 Turnover Alpha 要更谨慎地看待
 
+### 8.1 Margin 与 Turnover 目标
+
+官方定义是：
+
+```text
+Margin = PnL / total dollars traded
+```
+
+因此 Margin 低，不能只看成“换手太高”。更直接的优化方向是提高信号带来的 Returns / PnL，同时减少没有信息增量的交易，并把 Turnover、after-cost 表现和可交易性一起看。平台没有把某一个 Margin 数字解释成适用于所有设置的统一硬门槛。
+
+官方资料把 Turnover 低于 `40%` 作为更理想的可交易性建议，但它不是所有 Alpha、Region、Delay 和评估阶段共用的统一硬门槛。当前本地带日期的 submission check 快照另记录了 D1 Turnover 严格 `<70%`，两者不能混写：前者是经验目标，后者是特定快照中的检查条件。
+
+官方来源：[How to improve margins in simulation results](https://support.worldquantbrain.com/hc/en-us/articles/20311116434839-How-to-improve-margins-in-simulation-results)；[Is it necessary to have turnover < 40% for the Alpha to be evaluated?](https://support.worldquantbrain.com/hc/en-us/articles/5969425740823-Is-it-necessary-to-have-turnover-40-for-the-Alpha-to-be-evaluated)
+
 ---
 
 ## 9. 提升 Sharpe 的更合理方向
@@ -497,6 +511,14 @@ Test Period 可以更具体地按下面方式使用：
 - Test Sharpe / Fitness 等下降超过约 `50%`，通常是明显的过拟合警报
 - 进一步用 `20% / 30% / 40%` 的不同 Test Period 做时间稳定性检查
 
+### 11.7.1 Decay 改动与过拟合边界
+
+官方 FAQ 的区分很实用：同一表达式把 Decay 从 `1` 改到 `5`，如果变化有合理的平滑假设并通过参数敏感性检查，通常不应直接称为过拟合；在 `5` 和 `6` 之间继续追逐一次回测中的最高值，则更接近对噪声调参。
+
+本地记录应至少保留自然窗口附近的 A/B 结果，优先选择稳定平台而不是单点最优。不要把“Decay 1→5”写成自动有效，也不要把“Decay 5→6”写成自动失败。
+
+官方来源：[Does changing the decay value from 1 to 5 for the same expression mean overfitting?](https://support.worldquantbrain.com/hc/en-us/articles/5970380583191-Does-changing-the-decay-value-from-1-to-5-for-the-same-expression-mean-overfitting)
+
 `Max Trade` 是社区常用稳健性压力测试，不是这里描述的固定提交门槛。它更适合在
 最终候选阶段使用，而不是默认开启后替代普通 broad search。
 
@@ -534,7 +556,9 @@ winsorize(x / y, std=4)
 - 无法单独观察子表达式之间的相关性
 - 为系数和组合方式调参，很容易形成 IS 过拟合
 
-如果确实需要组合，先分别标准化和验证每个子表达式；不要用组合掩盖单个假设本身偏弱。
+如果确实需要组合，先分别标准化和验证每个子表达式；不要用组合掩盖单个假设本身偏弱。官方 FAQ 不建议在单个 Alpha 内混合多个 signal 来追求 Sharpe 或 Returns；更适合先独立验证，再在 Alpha 组合层或平台组合工具层处理。
+
+官方来源：[Is it ok to mix signals inside an Alpha to improve the Sharpe ratio and return?](https://support.worldquantbrain.com/hc/en-us/articles/5970027840791-Is-it-ok-to-mix-signals-inside-an-Alpha-to-improve-the-Sharpe-ratio-and-return)
 
 ---
 
@@ -553,6 +577,10 @@ winsorize(x / y, std=4)
 - 用更严格的 `truncation` 控制单股权重
 
 这一块很实用，因为它把“PnL 不平滑”从抽象问题变成了可检查的结构问题。
+
+如果最大回撤集中在回测初始年份，官方建议先检查市场方向暴露，并优先验证合理的 Neutralization；如果处理后仍异常，应回到 idea 或实现方式本身，而不是继续盲目调参。
+
+官方来源：[How do I resolve max drawdowns in initial years of the backtest?](https://support.worldquantbrain.com/hc/en-us/articles/5969512978199-How-do-I-resolve-max-drawdowns-in-initial-years-of-the-backtest)
 
 ---
 
@@ -642,9 +670,11 @@ winsorize(x / y, std=4)
 
 ### 17.1 Neutralization 的最终决策
 
-表达式里的 `group_neutralize(x, group)` 与回测设置的 Neutralization 属于同类处理。
-如果表达式最后已经显式完成组内中性化，通常先用 `Neutralization=None` 做对照，
-避免重复处理。是否保留双层中性化，应由对照实验决定，而不是默认叠加。
+表达式里的 `group_neutralize(x, group)` 与回测设置的 Neutralization 都会改变持仓结构，但作用范围不同：前者只处理表达式中传入的局部值，Simulation Settings 的 Neutralization 则在平台操作链最后对整个 Alpha 起作用。
+
+`Neutralization=None` 适合用于分析数据集、验证表达式或做研究对照；正式提交时，如果没有最后一层 `group_neutralize`、`group_normalize` 等平衡处理，可能造成 long/short 失衡和市场风险暴露，不能把 `None` 当成默认提交方案。是否保留双层处理，应通过对照实验和风险暴露检查决定。
+
+官方来源：[Why is it not recommended to submit Neutralization None alphas](https://support.worldquantbrain.com/hc/en-us/articles/13306223024151-Why-is-it-not-recommended-to-submit-Neutralization-None-alphas)；[Difference between group neutralize and Neutralization setting](https://support.worldquantbrain.com/hc/en-us/articles/6425949726487-Difference-between-group-neutralize-and-Neutralization-setting)
 
 常见起点：
 
