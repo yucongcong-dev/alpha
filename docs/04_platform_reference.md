@@ -397,7 +397,7 @@ D0 的门槛更高，因此不能只看绝对 Fitness 数字就断言 D0 优于 
 
 ---
 
-## 8.5 `truncate(...)`、`truncation`、`group_neutralize(...)`、`neutralization`
+### 8.5 `truncate(...)`、`truncation`、`group_neutralize(...)`、`neutralization`
 
 这几组词在平台里非常容易混。
 

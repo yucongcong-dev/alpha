@@ -497,6 +497,9 @@ FAQ 里给过几类提高 Returns 的常见方向，但都要和风险一起看�
 6. 因子暴露检查：避免表现主要来自波动率、规模或常见风格因子
 7. Max Trade test：在 `Max Trade=ON` 下做可交易性压力测试，观察表现是否断崖下降
 
+`Max Trade` 是社区常用稳健性压力测试，不是这里描述的固定提交门槛。它更适合在
+最终候选阶段使用，而不是默认开启后替代普通 broad search。
+
 几个很实用的官方社区经验：
 
 - 不要总选数字最高的参数，稳定的次优点通常更可信
@@ -518,9 +521,6 @@ Test Period 可以更具体地按下面方式使用：
 本地记录应至少保留自然窗口附近的 A/B 结果，优先选择稳定平台而不是单点最优。不要把“Decay 1→5”写成自动有效，也不要把“Decay 5→6”写成自动失败。
 
 官方来源：[Does changing the decay value from 1 to 5 for the same expression mean overfitting?](https://support.worldquantbrain.com/hc/en-us/articles/5970380583191-Does-changing-the-decay-value-from-1-to-5-for-the-same-expression-mean-overfitting)
-
-`Max Trade` 是社区常用稳健性压力测试，不是这里描述的固定提交门槛。它更适合在
-最终候选阶段使用，而不是默认开启后替代普通 broad search。
 
 ## 11.8 算子顺序和线性组合
 
