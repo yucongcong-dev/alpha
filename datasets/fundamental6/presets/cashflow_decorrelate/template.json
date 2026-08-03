@@ -1,0 +1,49 @@
+{
+  "_comment": "fundamental6 cashflow decorrelation pack — cashflow_op 历史可提交主线自相关过高后，用 denominator、分组粒度、bucket 和 trade_when 做去相关变体。",
+  "_comment_placeholders": "{field}=字段名, {field_preprocessed}=winsorize(ts_backfill({field}, {backfill_window}), std=4), {backfill_window}=settings.yaml expression.backfill_window",
+  "default": [
+    {
+      "name": "cashflow_assets_industry_zscore_252",
+      "expression": "group_rank(ts_zscore({field_preprocessed} / ts_backfill(assets, {backfill_window}), 252), industry)",
+      "priority": 1000,
+      "family": "decorrelated_ratio",
+      "layer": "account",
+      "stage": "group_second_order",
+      "role": "refine_neighbor",
+      "activation_scope": "refine"
+    },
+    {
+      "name": "cashflow_enterprise_value_industry_zscore_252",
+      "expression": "group_rank(ts_zscore({field_preprocessed} / ts_backfill(enterprise_value, {backfill_window}), 252), industry)",
+      "priority": 995,
+      "family": "decorrelated_ratio",
+      "layer": "account",
+      "stage": "group_second_order",
+      "role": "refine_neighbor",
+      "activation_scope": "refine"
+    },
+    {
+      "name": "cashflow_cap_bucket_delta_over_std_63_126",
+      "expression": "group_rank(ts_delta({field_preprocessed} / cap, 63) / ts_std_dev({field_preprocessed} / cap, 126), densify(bucket(rank(cap), range='0.1, 1, 0.1')))",
+      "priority": 990,
+      "family": "decorrelated_bucket_ratio",
+      "layer": "account",
+      "stage": "group_second_order",
+      "role": "refine_neighbor",
+      "activation_scope": "refine"
+    },
+    {
+      "name": "cashflow_change_trade_when_assets_zscore_252",
+      "expression": "trade_when(days_from_last_change({field}) <= 20, group_rank(ts_zscore({field_preprocessed} / ts_backfill(assets, {backfill_window}), 252), industry), -1)",
+      "priority": 985,
+      "family": "decorrelated_event_ratio",
+      "layer": "account",
+      "stage": "event_conditioned",
+      "role": "refine_neighbor",
+      "activation_scope": "refine"
+    }
+  ],
+  "VECTOR": [],
+  "GROUP": [],
+  "SET": []
+}

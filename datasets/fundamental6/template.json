@@ -166,25 +166,66 @@
   ],
   "DATASET_FUNDAMENTAL6_MATRIX": [
     {
-      "_comment": "=== Submit/refine 主线：来自 cashflow_op 已验证可提交结构，默认库优先使用同类 ratio/group 结构 ===",
-      "name": "hc_ratio_group_zscore_252_over_cap",
-      "expression": "group_rank(ts_zscore({field_preprocessed} / cap, 252), subindustry)",
-      "priority": 1200,
-      "family": "high_conviction_ratio",
+      "_comment": "=== Self-correlation escape：cashflow_op / cap / subindustry 主线已撞高相关，优先换 denominator、分组和触发条件 ===",
+      "name": "cashflow_assets_industry_zscore_252",
+      "expression": "group_rank(ts_zscore({field_preprocessed} / ts_backfill(assets, {backfill_window}), 252), industry)",
+      "priority": 1220,
+      "family": "decorrelated_ratio",
       "layer": "account",
       "stage": "group_second_order",
       "role": "refine_neighbor",
       "activation_scope": "broad"
     },
     {
-      "name": "group_ratio_delta_over_std_63_126_over_cap",
-      "expression": "group_rank(ts_delta({field_preprocessed} / cap, 63) / ts_std_dev({field_preprocessed} / cap, 126), subindustry)",
-      "priority": 1190,
-      "family": "group_ratio_delta_over_std",
+      "name": "cashflow_enterprise_value_industry_zscore_252",
+      "expression": "group_rank(ts_zscore({field_preprocessed} / ts_backfill(enterprise_value, {backfill_window}), 252), industry)",
+      "priority": 1215,
+      "family": "decorrelated_ratio",
       "layer": "account",
       "stage": "group_second_order",
       "role": "refine_neighbor",
       "activation_scope": "broad"
+    },
+    {
+      "name": "cashflow_cap_bucket_delta_over_std_63_126",
+      "expression": "group_rank(ts_delta({field_preprocessed} / cap, 63) / ts_std_dev({field_preprocessed} / cap, 126), densify(bucket(rank(cap), range='0.1, 1, 0.1')))",
+      "priority": 1210,
+      "family": "decorrelated_bucket_ratio",
+      "layer": "account",
+      "stage": "group_second_order",
+      "role": "refine_neighbor",
+      "activation_scope": "broad"
+    },
+    {
+      "name": "cashflow_change_trade_when_assets_zscore_252",
+      "expression": "trade_when(days_from_last_change({field}) <= 20, group_rank(ts_zscore({field_preprocessed} / ts_backfill(assets, {backfill_window}), 252), industry), -1)",
+      "priority": 1205,
+      "family": "decorrelated_event_ratio",
+      "layer": "account",
+      "stage": "event_conditioned",
+      "role": "refine_neighbor",
+      "activation_scope": "broad"
+    },
+    {
+      "_comment": "=== Historical pass line：仍保留作诊断对照，但不再作为默认最高优先候选 ===",
+      "name": "hc_ratio_group_zscore_252_over_cap",
+      "expression": "group_rank(ts_zscore({field_preprocessed} / cap, 252), subindustry)",
+      "priority": 260,
+      "family": "high_conviction_ratio",
+      "layer": "account",
+      "stage": "group_second_order",
+      "role": "diagnostic_probe",
+      "activation_scope": "diagnostic"
+    },
+    {
+      "name": "group_ratio_delta_over_std_63_126_over_cap",
+      "expression": "group_rank(ts_delta({field_preprocessed} / cap, 63) / ts_std_dev({field_preprocessed} / cap, 126), subindustry)",
+      "priority": 250,
+      "family": "group_ratio_delta_over_std",
+      "layer": "account",
+      "stage": "group_second_order",
+      "role": "diagnostic_probe",
+      "activation_scope": "diagnostic"
     },
     {
       "_comment": "=== Account: 去模板内中性化, 依赖 settings neutralization ===",

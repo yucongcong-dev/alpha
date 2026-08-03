@@ -1,0 +1,4 @@
+cashflow_assets_industry_zscore_252
+cashflow_enterprise_value_industry_zscore_252
+cashflow_cap_bucket_delta_over_std_63_126
+cashflow_change_trade_when_assets_zscore_252
