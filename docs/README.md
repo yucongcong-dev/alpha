@@ -4,13 +4,13 @@
 官网 Documentation、Courses、FAQ 和 Community 内容按主题吸收：研究相关内容进入 01-04，
 平台运营内容进入 05；不做官网全文镜像，也不为每个 FAQ 分类新增平行摘录页。
 
-## 官网知识审阅快照（2026-07-31）
+## 官网知识审阅快照（2026-08-03）
 
 本次使用已登录的 WorldQuant BRAIN 官网会话，完成了当前账号可见 Learn 目录的系统审阅：
 
-- Documentation：`24` 篇，覆盖 Discover BRAIN、Create Alphas、Examples、Interpret Results、Understanding Data、Advanced Topics
+- Documentation：`24` 篇，覆盖 Discover BRAIN、Create Alphas、Examples、Interpret Results、Understanding Data、Advanced Topics；原始快照位于 [source_snapshots/worldquant_official_2026-08-03](source_snapshots/worldquant_official_2026-08-03)
 - Courses：`10` 门课程、`46` 个视频课时；已审阅课程目录和课时主题，没有复制或伪造视频逐字稿
-- Operators：`7` 个分类、当前账号可见 `66` 个 `base` 算子
+- Operators：`7` 个分类、当前账号可见 `66` 个 `base` 算子；原始快照位于 [source_snapshots/worldquant_operators_2026-08-03](source_snapshots/worldquant_operators_2026-08-03/README.md)
 - Must-read：重点核对 Sharpe、Returns、Correlation、`trade_when`、PnL 平滑、抗过拟合 `6` 个主题
 - Help Center：`7` 个一级分类；已展开隐藏的 `See all` 入口
 - Research FAQ：`14` 个 section、当前账号可见 `123` 篇独立文章
@@ -59,6 +59,7 @@
 
 - Beginners / Bronze / Silver 示例
 - Learn/Courses 课程地图
+- Operators 分类和本地官方快照入口
 - MATRIX、VECTOR、GROUP
 - Data Explorer 和字段体检
 - Dataset Usage Management 与数据集优先级
@@ -85,6 +86,7 @@
 - IS、Semi-OS、OS 与状态生命周期
 - 页面字段、评分、Universe、Weight、Booksize
 - NaN、Pasteurize、Coverage、Correlation
+- Operators 官方分类和签名快照
 - IQC / Challenge-Country / Dataset Usage Management 等平台状态边界
 - submission check 名称和页面语义
 

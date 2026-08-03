@@ -633,9 +633,37 @@ group_zscore(alpha, densify(asset_group))
 
 ---
 
-## 11. Coverage、Alpha list、Correlation 工具
+## 11. Operators 官方快照与分类
 
-### 11.1 `Coverage`
+Operators 的精确定义、参数和分类以平台当前可见页面/API 为准。本地保存了一份 `2026-08-03`
+账号可见快照，作为离线查表入口：
+
+- 本地索引：[source_snapshots/worldquant_operators_2026-08-03/README.md](source_snapshots/worldquant_operators_2026-08-03/README.md)
+- 官方 API：`https://api.worldquantbrain.com/operators`
+- 捕获日期：`2026-08-03`
+
+当前快照包含 `66` 个 `base` 算子，分布如下：
+
+| 分类 | 数量 | 本地明细 |
+|---|---:|---|
+| Arithmetic | 15 | [arithmetic.md](source_snapshots/worldquant_operators_2026-08-03/arithmetic.md) |
+| Cross Sectional | 6 | [cross-sectional.md](source_snapshots/worldquant_operators_2026-08-03/cross-sectional.md) |
+| Group | 6 | [group.md](source_snapshots/worldquant_operators_2026-08-03/group.md) |
+| Logical | 11 | [logical.md](source_snapshots/worldquant_operators_2026-08-03/logical.md) |
+| Time Series | 24 | [time-series.md](source_snapshots/worldquant_operators_2026-08-03/time-series.md) |
+| Transformational | 2 | [transformational.md](source_snapshots/worldquant_operators_2026-08-03/transformational.md) |
+| Vector | 2 | [vector.md](source_snapshots/worldquant_operators_2026-08-03/vector.md) |
+
+使用时要注意两个边界：
+
+- 这是一份带日期的账号可见快照，不表示所有账号、所有等级、所有时间都只有这些算子。
+- 主文档只总结分类和研究用途；逐个算子的签名、说明和例子在快照文件里查，避免把 reference 变成重复镜像。
+
+---
+
+## 12. Coverage、Alpha list、Correlation 工具
+
+### 12.1 `Coverage`
 
 官方 Glossary 的定义是：
 
@@ -685,7 +713,7 @@ group_zscore(alpha, densify(asset_group))
 - `dateCoverage` 更回答“这条字段历史上在不在”
 - `coverage` 更回答“这条字段每天覆盖了多少股票”
 
-### 11.2 `Alpha list`
+### 12.2 `Alpha list`
 
 官方 Glossary 里把 `Alpha list` 定义成：
 
@@ -697,7 +725,7 @@ group_zscore(alpha, densify(asset_group))
 - 不要只盯单条 Alpha
 - 也要看一组 Alpha 是否只是高相关的小变体
 
-### 11.2.1 `alphaCount` / `userCount` 怎么看
+### 12.2.1 `alphaCount` / `userCount` 怎么看
 
 这两个指标更适合被理解成：
 
@@ -733,12 +761,12 @@ group_zscore(alpha, densify(asset_group))
 - 对拥挤的经典字段，少做最直白的单字段模板堆叠
 - 对相对不拥挤的分支，优先考虑专项模板和结构差异
 
-### 11.2.2 放到 `fundamental6` 上该怎么整体理解
+### 12.2.2 放到 `fundamental6` 上该怎么整体理解
 
 > 以 fundamental6 为例的详细分析已移至
 > [datasets/fundamental6/README.md](../datasets/fundamental6/README.md)。
 
-### 11.2.3 `Dataset Value Score`
+### 12.2.3 `Dataset Value Score`
 
 官网把 Dataset Value Score 定义为数据集“未被充分使用”的程度，该指标目前主要
 面向 Consultant。它不是传统意义上的 Value Factor，也不等于数据质量分数。
@@ -751,7 +779,7 @@ group_zscore(alpha, densify(asset_group))
 因此筛选数据集时应把它和 `coverage / alphaCount / userCount` 一起看，不能只按
 Value Score 排序就直接投入大量仿真预算。
 
-### 11.2.4 `Dataset Usage Management`
+### 12.2.4 `Dataset Usage Management`
 
 Dataset Usage Management 是平台对某些 dataset category 使用权限和使用阈值的管理机制。
 它和字段本身的统计质量不是同一个概念。
@@ -768,7 +796,7 @@ Dataset Usage Management 是平台对某些 dataset category 使用权限和使�
 - 给同类 idea 寻找替代 dataset category
 - 等平台访问恢复后再重新验证
 
-### 11.3 `Correlation`
+### 12.3 `Correlation`
 
 官方 Glossary 直接把 Correlation 解释成：
 
@@ -783,7 +811,7 @@ Dataset Usage Management 是平台对某些 dataset category 使用权限和使�
 
 - 这条 Alpha 有没有增量价值
 
-### 11.4 Alpha 页面与 Alpha List 操作
+### 12.4 Alpha 页面与 Alpha List 操作
 
 官网 Alpha 页面支持筛选、排序以及增删列；隐藏的 Alpha 可以通过 `Hidden` filter 找回。当前没有删除 Alpha 的功能，但可以重命名，未重命名时可能显示为 `anonymous`。`Alpha list` 用于把多条 Alpha 放在一起比较表现和相关性。
 
@@ -791,7 +819,7 @@ Dataset Usage Management 是平台对某些 dataset category 使用权限和使�
 
 官方来源：[How to view your Alphas](https://support.worldquantbrain.com/hc/en-us/articles/24439802248471-How-to-view-your-Alphas)；[How do I delete my Alphas?](https://support.worldquantbrain.com/hc/en-us/articles/5971823272215-How-do-I-delete-my-Alphas)；[Can I give meaningful names to my Alphas?](https://support.worldquantbrain.com/hc/en-us/articles/5969975774103-Can-I-give-meaningful-names-to-my-Alphas)；[Can I see the Alpha output vector?](https://support.worldquantbrain.com/hc/en-us/articles/5969712153239-Can-I-see-the-Alpha-output-vector)
 
-### 11.5 Simulation 的频率与取消
+### 12.5 Simulation 的频率与取消
 
 BRAIN Alpha 按日模拟、按日再平衡，不模拟高频或日内交易。正在运行的 simulation 可以使用 `Cancel simulation` 中止。
 
@@ -799,7 +827,7 @@ BRAIN Alpha 按日模拟、按日再平衡，不模拟高频或日内交易。�
 
 ---
 
-## 12. 提交检查词典
+## 13. 提交检查词典
 
 这一节不追求覆盖平台所有检查，而是优先解释本仓库最常遇到的几类。
 
@@ -820,7 +848,7 @@ BRAIN Alpha 按日模拟、按日再平衡，不模拟高频或日内交易。�
 - 检查会因 Delay、Region、Universe、Alpha 类型和平台版本而变化；这里是带日期的常见 D1 快照，不应写死成永久全球规则
 - “研究目标留余量”（例如 Fitness 争取 `1.05+`）和“平台硬门槛”必须分开记录
 
-### 12.1 `LOW_SHARPE`
+### 13.1 `LOW_SHARPE`
 
 - 风险调整后的收益不够稳定
 - 更像“信号质量不够硬”，而不只是收益不够高
@@ -831,7 +859,7 @@ BRAIN Alpha 按日模拟、按日再平衡，不模拟高频或日内交易。�
 - 是否缺少 group-relative 结构
 - 是否没有做足够平滑
 
-### 12.2 `LOW_FITNESS`
+### 13.2 `LOW_FITNESS`
 
 官方公式是：
 
@@ -843,7 +871,7 @@ BRAIN Alpha 按日模拟、按日再平衡，不模拟高频或日内交易。�
 - `Returns` 不够
 - `Turnover` 太高
 
-### 12.3 `HIGH_TURNOVER`
+### 13.3 `HIGH_TURNOVER`
 
 - 代表信号变化太快
 - 真实交易成本压力通常也会更高
@@ -854,7 +882,7 @@ BRAIN Alpha 按日模拟、按日再平衡，不模拟高频或日内交易。�
 - 用 `trade_when`
 - 用更稳定的截面整形和 backfill
 
-### 12.4 `CONCENTRATED_WEIGHT`
+### 13.4 `CONCENTRATED_WEIGHT`
 
 - 代表少数股票权重过大
 - 更接近“组合结构问题”，不只是表达式长得难看
@@ -865,7 +893,7 @@ BRAIN Alpha 按日模拟、按日再平衡，不模拟高频或日内交易。�
 - `truncation` 太松
 - 没有做 rank / group 处理
 
-### 12.5 `LOW_SUB_UNIVERSE_SHARPE`
+### 13.5 `LOW_SUB_UNIVERSE_SHARPE`
 
 Glossary 把 robust performance 明确当成平台关心的方向（复核 2026-07-31）。
 
@@ -895,7 +923,7 @@ subuniverse_sharpe
 
 这说明阈值会随子宇宙相对大小缩放，不是所有 Universe 都使用同一个固定 Sharpe 数字。
 
-### 12.6 `SELF_CORRELATION`
+### 13.6 `SELF_CORRELATION`
 
 - 和你自己已有 Alpha 太像
 - 平台通常不会鼓励你反复提交同一个想法的近邻分支
@@ -913,14 +941,14 @@ subuniverse_sharpe
 
 常见检查语义是：最大自相关高于 `0.7` 时，如果新 Alpha 的表现没有比相关 Alpha 至少改善约 `10%`，就可能失败（来源：[Self-correlation error message](https://support.worldquantbrain.com/hc/en-us/articles/6726867827991)，复核 2026-07-31）。因此 `0.7` 不是脱离表现比较的孤立硬线；本地仍应把高相关候选优先视为低增量分支。
 
-### 12.7 `PROD_CORRELATION`
+### 13.7 `PROD_CORRELATION`
 
 - 和平台已有已提交 Alpha 太像
 - 说明它缺少足够的独特性
 
 这类问题通常也更适合做结构替换，而不是参数微调。
 
-### 12.8 `WEIGHT_COVERAGE`
+### 13.8 `WEIGHT_COVERAGE`
 
 虽然它在不同页面或 FAQ 里展示口径可能略有不同，但核心都指向：
 
@@ -932,7 +960,7 @@ subuniverse_sharpe
 - 是否 coverage 很低却没做 backfill
 - 是否某些极端值把权重挤到少数股票上
 
-### 12.9 最不流动 50% 的 after-cost Sharpe 检查
+### 13.9 最不流动 50% 的 after-cost Sharpe 检查
 
 平台会检查原 Universe 中最不流动的 50% 股票在计入交易成本后的 Sharpe。
 官网示例要求该部分达到原 Universe after-cost Sharpe 的约 `52.5%`（复核 2026-07-31）。
@@ -950,7 +978,7 @@ subuniverse_sharpe
 - 用 `group_neutralize()` 处理 size / liquidity 分层
 - 有合适风险向量时使用 `vector_neut()`
 
-### 12.10 `Alpha better suited for Delay 1`
+### 13.10 `Alpha better suited for Delay 1`
 
 该提示出现在 D0 Alpha 上，含义是：
 
@@ -965,7 +993,7 @@ subuniverse_sharpe
 
 它不是要求继续优化 D0，而是在提醒研究假设和 Delay 不匹配。
 
-### 12.11 `Max Trade`
+### 13.11 `Max Trade`
 
 `Max Trade` 是模拟设置中的单票交易约束开关，可用于观察 Alpha 是否依赖少数股票上的大额交易。社区常把它作为稳健性压力测试：开启后若表现立即崩溃，应检查权重集中、极端值和流动性依赖。
 
@@ -973,17 +1001,17 @@ subuniverse_sharpe
 
 ---
 
-## 13. PnL、Drawdown、平滑
+## 14. PnL、Drawdown、平滑
 
-### 13.1 `PnL`
+### 14.1 `PnL`
 
 你看到的 PnL 是组合层面的表现，不是单只股票单独收益图。
 
-### 13.2 `Drawdown`
+### 14.2 `Drawdown`
 
 就是组合从峰值往下回撤的幅度。
 
-### 13.3 PnL 为什么会突然跳
+### 14.3 PnL 为什么会突然跳
 
 官方给出的常见原因主要有：
 
@@ -999,7 +1027,7 @@ subuniverse_sharpe
 
 ---
 
-## 14. `Neutralization` 的页面语义
+## 15. `Neutralization` 的页面语义
 
 如果你不只是想查页面语义，而是想进一步理解：
 
@@ -1021,34 +1049,34 @@ subuniverse_sharpe
 
 ---
 
-## 15. 最常见的误读速查
+## 16. 最常见的误读速查
 
-### 15.1 `N/A = 异常`
+### 16.1 `N/A = 异常`
 
 不一定。  
 很多时候只是 OS 样本还没积累够。
 
-### 15.2 `0 = 不持仓`
+### 16.2 `0 = 不持仓`
 
 不对。  
 `NaN` 才更接近“不持仓”。
 
-### 15.3 `模拟结果已经扣了真实交易成本`
+### 16.3 `模拟结果已经扣了真实交易成本`
 
 不对。  
 官方说模拟结果不直接包含交易成本，Turnover 只是 proxy。
 
-### 15.4 `提交更多同类 Alpha 一定更好`
+### 16.4 `提交更多同类 Alpha 一定更好`
 
 不对。  
 官方 `Meta Score` 明确看组合相关性与池子质量。
 
-### 15.5 `OS 只是 IS 的重复显示`
+### 16.5 `OS 只是 IS 的重复显示`
 
 不对。  
 OS 是提交之后逐步积累出来的样本外表现。
 
-### 15.6 `FAQ 全部都应该进研究文档`
+### 16.6 `FAQ 全部都应该进研究文档`
 
 不对。
 FAQ 里有大量顾问申请、Workday、银行账户、Referral、账号和竞赛运营信息。它们是平台使用资料，
@@ -1057,7 +1085,7 @@ FAQ 里有大量顾问申请、Workday、银行账户、Referral、账号和竞�
 
 ---
 
-## 16. 建议怎样配合其他文档使用
+## 17. 建议怎样配合其他文档使用
 
 - 想理解平台在做什么：
   看 [01_beginner_guide.md](01_beginner_guide.md)
@@ -1070,7 +1098,7 @@ FAQ 里有大量顾问申请、Workday、银行账户、Referral、账号和竞�
 
 ---
 
-## 17. 官方来源
+## 18. 官方来源
 
 本篇主要整理自这些官方 FAQ：
 
@@ -1091,6 +1119,7 @@ FAQ 里有大量顾问申请、Workday、银行账户、Referral、账号和竞�
 - [What is Challenge-Country Leaderboard?](https://support.worldquantbrain.com/hc/en-us/articles/41765589602327-What-is-Challenge-Country-Leaderboard)
 - [Understanding Data in BRAIN: Key Concepts and Tips](https://platform.worldquantbrain.com/learn/documentation/understanding-data/data)
 - [Group Data Fields](https://platform.worldquantbrain.com/learn/documentation/understanding-data/group-data-fields)
+- [Operators API](https://api.worldquantbrain.com/operators)
 - [D0](https://platform.worldquantbrain.com/learn/documentation/advanced-topics/getting-started-d0)
 - [Simulation Settings](https://platform.worldquantbrain.com/learn/documentation/create-alphas/simulation-settings)
 - [Dataset Usage Management](https://support.worldquantbrain.com/hc/en-us/articles/22696472589079-What-s-Dataset-Usage-Management)

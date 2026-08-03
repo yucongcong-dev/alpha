@@ -106,6 +106,18 @@ Operators 页当前账号可见 `7` 类算子：Arithmetic、Logical、Time Seri
 Transformational、Group，共解析到 `66` 个 `base` 算子。平台说明更高等级可能解锁更多算子，
 因此本地知识库记录的是带日期的账号可见快照，不把 `66` 当成全平台永久总数。
 
+本地已保存 `2026-08-03` 的官方 Operators API 快照：
+[worldquant_operators_2026-08-03](source_snapshots/worldquant_operators_2026-08-03/README.md)。
+研究时不需要把它当成一篇从头读到尾的教程，而应该把分类当成表达式设计的积木：
+
+- Arithmetic：做符号、安全变换和基础比例关系，例如 `log`、`signed_power`、`divide`
+- Logical：做条件判断和事件门控，例如 `if_else`、比较运算、`is_nan`
+- Time Series：做历史窗口里的平滑、排名、缺失修复和变化检测，例如 `ts_rank`、`ts_zscore`、`ts_backfill`
+- Cross Sectional：做同一天同 Universe 内的排序、标准化和极值处理，例如 `rank`、`zscore`、`winsorize`
+- Group：做组内比较、组内中性化和组内缺失修复，例如 `group_rank`、`group_neutralize`、`group_backfill`
+- Vector：先把向量字段聚合成可进入普通模板的标量，例如 `vec_avg`、`vec_sum`
+- Transformational：控制分桶和持仓触发，例如 `bucket`、`trade_when`
+
 本仓库吸收课程内容时只保留两类东西：
 
 - 能改变研究流程的概念，例如多样性、风险管理、data category、Delay 匹配
@@ -317,7 +329,7 @@ X < scale_down(field) && scale_down(field) < Y
 
 - 判断分布是否偏斜、是否大量堆在边界附近
 
-> Coverage 的完整定义和平台语义见 [04 §11.1](04_platform_reference.md)。
+> Coverage 的完整定义和平台语义见 [04 §12.1](04_platform_reference.md)。
 
 ---
 
@@ -403,7 +415,7 @@ X < scale_down(field) && scale_down(field) < Y
 2. 再看 coverage 和更新频率
 3. 最后用 `Value Score` 和拥挤度辅助排序
 
-> Dataset Value Score 和 Alpha list 的平台语义见 [04 §11.2.3](04_platform_reference.md)。
+> Dataset Value Score 和 Alpha list 的平台语义见 [04 §12.2.3](04_platform_reference.md)。
 
 ### 8.1 Dataset Usage Management 的研究含义
 
@@ -427,7 +439,7 @@ FAQ 里的 Dataset Usage Management 主要是平台对部分数据集类别访�
 2. 将该数据集标记为暂不可用或降优先级
 3. 用同类 idea 在其他 dataset category 上找替代字段
 
-> Dataset Usage Management 的平台定义见 [04 §11.2.4](04_platform_reference.md)。
+> Dataset Usage Management 的平台定义见 [04 §12.2.4](04_platform_reference.md)。
 
 ### 8.2 数据访问、外部工具与数据集退役
 
@@ -740,6 +752,7 @@ python -m alpha clean
 - [Alpha Examples for Silver Users](https://platform.worldquantbrain.com/learn/documentation/examples/example-expression-alphas)
 - [Courses](https://platform.worldquantbrain.com/learn/courses)
 - [Operators](https://platform.worldquantbrain.com/learn/operators)
+- [本地 Operators API 快照（2026-08-03）](source_snapshots/worldquant_operators_2026-08-03/README.md)
 - [Understanding Data in BRAIN: Key Concepts and Tips](https://platform.worldquantbrain.com/learn/documentation/understanding-data/data)
 - [How to use the Data Explorer](https://platform.worldquantbrain.com/learn/documentation/understanding-data/how-use-data-explorer)
 - [Vector Data Fields](https://platform.worldquantbrain.com/learn/documentation/understanding-data/vector-datafields)
