@@ -254,6 +254,7 @@ def build_pending_template_variants(
         template_activation_scope = normalize_activation_scope(
             template_metadata.get("activation_scope")
         )
+        appended_expression_variant = False
         for settings_variant in active_services.build_setting_variants(
             options,
             template_name,
@@ -283,9 +284,9 @@ def build_pending_template_variants(
                     variant_fingerprint=variant_fingerprint,
                 )
             )
-            if feedback_stage == FEEDBACK_STAGE_RESIMULATE:
-                seen_resimulate_expressions.add(expression_key)
-                break
+            appended_expression_variant = True
+        if feedback_stage == FEEDBACK_STAGE_RESIMULATE and appended_expression_variant:
+            seen_resimulate_expressions.add(expression_key)
     pending_templates.sort(
         key=lambda item: (
             -item.priority,

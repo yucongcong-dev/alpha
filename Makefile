@@ -20,7 +20,7 @@ MYPY ?= $(PYTHON) -m mypy
 python-version-check:
 	$(PYTHON) scripts/check_python_version.py
 
-install-dev:
+install-dev: python-version-check
 	$(PYTHON) -m pip install -e ".[dev,httpx]"
 
 test: python-version-check

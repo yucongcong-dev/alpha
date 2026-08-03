@@ -146,7 +146,9 @@ def test_build_setting_variants_keeps_explicit_refine_small_and_deterministic() 
         "group_rank(ts_zscore(ts_backfill(cash_st, 504), 60), subindustry)",
     )
 
-    assert len(variants) == 3
+    assert len(variants) == 5
+    assert [variant.get("decay") for variant in variants[:2]] == [4, 6]
+    assert any(variant.get("decay") == 2 for variant in variants)
     assert any(variant.get("truncation") == 0.05 for variant in variants)
     assert any(variant.get("neutralization") == "INDUSTRY" for variant in variants)
     assert all(variant.to_dict().get("maxTrade") == "OFF" for variant in variants)

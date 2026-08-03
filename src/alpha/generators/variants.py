@@ -9,6 +9,8 @@ from ..config.constants import (
     NEUTRALIZATION_INDUSTRY,
     NEUTRALIZATION_MARKET,
     NEUTRALIZATION_NONE,
+    SETTINGS_VARIANT_DECAY_FAST,
+    SETTINGS_VARIANT_DECAY_SLOW,
     TRUNCATION_TIGHTER_MAX,
     TRUNCATION_WEB_DEFAULT,
 )
@@ -46,6 +48,7 @@ def build_setting_variants(
         float(base_settings.get("truncation", TRUNCATION_WEB_DEFAULT)), TRUNCATION_TIGHTER_MAX
     )
 
+    add_variant(decay=SETTINGS_VARIANT_DECAY_SLOW)
     add_variant(truncation=tighter_truncation)
 
     if "group_neutralize(" in lower_expr:
@@ -55,4 +58,5 @@ def build_setting_variants(
     else:
         add_variant(neutralization=NEUTRALIZATION_MARKET)
 
+    add_variant(decay=SETTINGS_VARIANT_DECAY_FAST)
     return variants

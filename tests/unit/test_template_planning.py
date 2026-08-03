@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from alpha.config.models import DatasetExpressionPolicy, FeedbackLoopPolicy, FeedbackPhasePolicy
 import alpha.core.executor as executor
 import alpha.core.template_planning as template_planning
 from alpha.core.template_planning import build_pending_template_variants
@@ -75,3 +76,37 @@ def test_preset_mode_limits_settings_variants_to_baseline() -> None:
     )
 
     assert len(pending) == 1
+
+
+def test_resimulate_budget_prioritizes_slow_decay_variant() -> None:
+    build_ctx = TemplateBuildContext(
+        options=TemplateBuildOptions(**_DEFAULT_SIM_SETTINGS),
+        expression_policy=DatasetExpressionPolicy(
+            feedback_loop_policy=FeedbackLoopPolicy(
+                generate=FeedbackPhasePolicy(settings_variant_budget=1),
+                resimulate=FeedbackPhasePolicy(
+                    min_attempted_templates=3,
+                    min_best_score=0.5,
+                    settings_variant_budget=3,
+                ),
+            ),
+        ),
+    )
+    pending = build_pending_template_variants(
+        build_ctx,
+        {"id": "cash_st", "type": "MATRIX"},
+        templates=[
+            TemplateCandidate(
+                name="manual_group_rank",
+                expression="group_rank(cash_st, subindustry)",
+                priority=100,
+                metadata={},
+            )
+        ],
+        attempted_keys=set(),
+        reserved_keys=set(),
+        field_feedback={"best_score": 1.0, "attempted_templates": 3},
+    )
+
+    assert len(pending) == 3
+    assert [entry.settings_variant.get("decay") for entry in pending[:2]] == [4, 6]
