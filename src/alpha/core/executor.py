@@ -40,6 +40,7 @@ from ..runtime.contexts import (
 from ..runtime.preset_mode import resolve_preset_mode
 from ..runtime.state import ExecutionState
 from ..utils.helpers import first_non_empty
+from . import executor_dry_run as _dry_run
 from .execution_filters import (
     is_template_actionable,
     is_template_selected_by_filters,
@@ -256,90 +257,17 @@ def print_dry_run_plan(
         - 打印计划字段数、模板数、禁用模板数等信息
         - 打印最多 sample_limit 个样本详情
     """
-    planned_fields = 0
-    planned_templates = 0
-    filtered_templates = 0
-    unactionable_fields = 0
-    samples: list[dict[str, object]] = []
-    build_ctx = build_template_build_context(
+    _dry_run.print_dry_run_plan(
         args=args,
         fields=fields,
+        filters=filters,
         template_library=template_library,
         historical_state=historical_state,
-        filters=filters,
+        execution_state=execution_state,
         use_dataset_heuristics=use_dataset_heuristics,
-        existing_results_count=len(execution_state.result_ledger.results),
+        build_context=build_template_build_context,
+        should_skip=should_skip_field,
+        build_pending=build_pending_templates_for_field,
+        sample_limit=sample_limit,
+        log=logger,
     )
-
-    for field in fields:
-        field_id = str(first_non_empty(field.get("id"), SENTINEL_UNKNOWN))
-        field_name = choose_field_name(field)
-        if should_skip_field(
-            field_id,
-            field_name,
-            filters,
-            execution_state.field_queue.skipped_fields,
-        ):
-            continue
-        pending_templates, filtered_count, _template_count = build_pending_templates_for_field(
-            build_ctx,
-            field,
-            attempted_keys=execution_state.attempted_keys,
-            prior_results=[
-                *historical_state.feedback_results,
-                *execution_state.result_ledger.results,
-            ],
-        )
-        if not pending_templates:
-            unactionable_fields += 1
-            continue
-        planned_fields += 1
-        planned_templates += len(pending_templates)
-        filtered_templates += filtered_count
-        for entry in pending_templates:
-            if len(samples) >= sample_limit:
-                break
-            samples.append(
-                {
-                    "field_id": field_id,
-                    "field_name": field_name,
-                    "template_name": entry.template_name,
-                    "priority": entry.priority,
-                    "settings": entry.variant_fingerprint,
-                    "expression": entry.expression,
-                }
-            )
-
-    logger.info("[dry-run] simulation creation is disabled; this is a plan only")
-    logger.info("[dry-run] planned_fields=%d", planned_fields)
-    logger.info("[dry-run] planned_simulations=%d", planned_templates)
-    logger.info("[dry-run] filtered_templates=%d", filtered_templates)
-    logger.info("[dry-run] unactionable_fields=%d", unactionable_fields)
-    logger.info("[dry-run] existing_results=%d", len(execution_state.result_ledger.results))
-    logger.info("[dry-run] attempted_keys=%d", len(execution_state.attempted_keys))
-    for index, field in enumerate(fields[:sample_limit], start=1):
-        logger.info(
-            "[dry-run] field %d/%d id=%s rank=%s score=%.4f family=%s reason=%s "
-            "coverage=%.4f alpha_count=%d user_count=%d",
-            index,
-            min(len(fields), sample_limit),
-            str(first_non_empty(field.get("id"), SENTINEL_UNKNOWN)),
-            field.get("selection_rank", "?"),
-            float(field.get("selection_score", 0.0) or 0.0),
-            field.get("selection_family", "unknown"),
-            field.get("selection_reason", "unknown"),
-            float(field.get("coverage", 0.0) or 0.0),
-            int(field.get("alphaCount", 0) or 0),
-            int(field.get("userCount", 0) or 0),
-        )
-    for index, sample in enumerate(samples, start=1):
-        logger.info(
-            "[dry-run] sample %d/%d field=%s template=%s priority=%d settings=%s expression=%s",
-            index,
-            len(samples),
-            sample["field_id"],
-            sample["template_name"],
-            sample["priority"],
-            sample["settings"],
-            sample["expression"],
-        )
