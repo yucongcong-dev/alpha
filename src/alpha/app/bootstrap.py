@@ -205,7 +205,7 @@ def prepare_bootstrap_resources(
     refreshed_results, refreshed_count = refresh_pending_check_results(
         bootstrap_client,
         supporting_resources.historical_state.existing_results,
-        retries=field_options.check_submit_retries,
+        retries=field_options.check_submission_retries,
     )
     if refreshed_count:
         supporting_resources = replace(

@@ -74,7 +74,7 @@ def scheduler_args() -> MockArgs:
         simulation_max_wait_seconds=600.0,
         simulation_max_pending_cycles=10,
         simulation_max_queue_seconds=60.0,
-        check_submit_retries=3,
+        check_submission_retries=3,
         output="results",
         dataset_id="fundamental6",
     )

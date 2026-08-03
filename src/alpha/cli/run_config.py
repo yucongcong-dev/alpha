@@ -56,7 +56,7 @@ def build_run_config_snapshot(
             "simulation_max_queue_seconds": options.simulation_max_queue_seconds,
             "queue_busy_cooldown_seconds": options.queue_busy_cooldown_seconds,
             "field_queue_busy_skip_after": options.field_queue_busy_skip_after,
-            "check_submit_retries": options.check_submit_retries,
+            "check_submission_retries": options.check_submission_retries,
             "rate_limit_max_retries": options.rate_limit_max_retries,
             "login_retries": options.login_retries,
             "min_request_interval": options.min_request_interval,

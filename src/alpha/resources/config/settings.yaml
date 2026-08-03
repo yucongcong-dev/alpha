@@ -128,7 +128,7 @@ global:
     simulation_max_queue_seconds: 300    # 排队最大等待时间 (秒)
     queue_busy_cooldown_seconds: 60      # 队列繁忙后冷却时间 (秒)
     field_queue_busy_skip_after: 2       # 单候选连续队列拥挤 N 次后本次运行停止重试，0=不限制
-    check_submit_retries: 3              # Check Submission 结果的重试次数
+    check_submission_retries: 3              # Check Submission 结果的重试次数
     rate_limit_max_retries: 5            # 触发限流 (429) 的最大重试次数
     login_retries: 3                     # 登录失败重试次数
 

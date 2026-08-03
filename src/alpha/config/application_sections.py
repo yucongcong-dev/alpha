@@ -131,7 +131,7 @@ class ExecutionConfig:
     simulation_max_queue_seconds: float
     queue_busy_cooldown_seconds: float
     field_queue_busy_skip_after: int
-    check_submit_retries: int
+    check_submission_retries: int
 
     @classmethod
     def from_args(cls, args: object) -> ExecutionConfig:
@@ -157,7 +157,7 @@ class ExecutionConfig:
                 _value(args, "queue_busy_cooldown_seconds", 0.0) or 0.0
             ),
             field_queue_busy_skip_after=int(_value(args, "field_queue_busy_skip_after", 0) or 0),
-            check_submit_retries=int(_value(args, "check_submit_retries", 0) or 0),
+            check_submission_retries=int(_value(args, "check_submission_retries", 0) or 0),
         )
 
 

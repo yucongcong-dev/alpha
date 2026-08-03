@@ -189,7 +189,7 @@ class BootstrapFieldOptions:
     """Field loading, pending-check refresh, and selection inputs for bootstrap."""
 
     dataset_id: str
-    check_submit_retries: int
+    check_submission_retries: int
     fetch: FieldFetchOptions
     selection: FieldSelectionOptions
 
@@ -197,7 +197,7 @@ class BootstrapFieldOptions:
     def from_args(cls, args: BootstrapFieldArgs) -> BootstrapFieldOptions:
         return cls(
             dataset_id=str(args.dataset_id or ""),
-            check_submit_retries=int(getattr(args, "check_submit_retries", 1) or 1),
+            check_submission_retries=int(getattr(args, "check_submission_retries", 1) or 1),
             fetch=FieldFetchOptions.from_args(args),
             selection=FieldSelectionOptions.from_args(args),
         )
@@ -236,7 +236,7 @@ class RunConfigSnapshotOptions:
     simulation_max_queue_seconds: float = 0.0
     queue_busy_cooldown_seconds: float = 0.0
     field_queue_busy_skip_after: int = 0
-    check_submit_retries: int = 0
+    check_submission_retries: int = 0
     rate_limit_max_retries: int = 0
     login_retries: int = 0
     min_request_interval: float = 0.0
@@ -291,7 +291,7 @@ class RunConfigSnapshotOptions:
                 getattr(args, "queue_busy_cooldown_seconds", 0.0) or 0.0
             ),
             field_queue_busy_skip_after=int(getattr(args, "field_queue_busy_skip_after", 0) or 0),
-            check_submit_retries=int(getattr(args, "check_submit_retries", 0) or 0),
+            check_submission_retries=int(getattr(args, "check_submission_retries", 0) or 0),
             rate_limit_max_retries=int(getattr(args, "rate_limit_max_retries", 0) or 0),
             login_retries=int(getattr(args, "login_retries", 0) or 0),
             min_request_interval=float(getattr(args, "min_request_interval", 0.0) or 0.0),

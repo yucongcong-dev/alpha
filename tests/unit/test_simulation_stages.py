@@ -273,7 +273,7 @@ def test_check_submission_stage_precheck_failure_success_and_error() -> None:
         passed = stages.run_check_submission_stage(
             _context(),
             client=client,  # type: ignore[arg-type]
-            args=SimpleNamespace(check_submit_retries=2),  # type: ignore[arg-type]
+            args=SimpleNamespace(check_submission_retries=2),  # type: ignore[arg-type]
             alpha_id="alpha-1",
             simulation_id="sim-1",
         )
@@ -287,7 +287,7 @@ def test_check_submission_stage_precheck_failure_success_and_error() -> None:
         error = stages.run_check_submission_stage(
             _context(),
             client=object(),  # type: ignore[arg-type]
-            args=SimpleNamespace(check_submit_retries="invalid"),  # type: ignore[arg-type]
+            args=SimpleNamespace(check_submission_retries="invalid"),  # type: ignore[arg-type]
             alpha_id="alpha-1",
             simulation_id="sim-1",
         )

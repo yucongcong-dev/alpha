@@ -668,7 +668,7 @@ def test_run_check_submission_stage_with_self_correlation_pending(monkeypatch) -
         template_library_fingerprint="tlib1",
     )
     args = MockArgs(
-        check_submit_retries=3,
+        check_submission_retries=3,
         min_sharpe=1.25,
         min_fitness=1.0,
         min_turnover=0.01,
@@ -751,7 +751,7 @@ def test_run_simulation_create_stage_merges_dict_settings_with_baseline(monkeypa
         simulation_max_wait_seconds=60,
         simulation_max_pending_cycles=10,
         simulation_max_queue_seconds=30,
-        check_submit_retries=3,
+        check_submission_retries=3,
         min_sharpe=1.25,
         min_fitness=1.0,
         min_turnover=0.01,
@@ -819,7 +819,7 @@ def test_run_simulation_create_stage_merges_settings_variant_with_baseline(monke
         simulation_max_wait_seconds=60,
         simulation_max_pending_cycles=10,
         simulation_max_queue_seconds=30,
-        check_submit_retries=3,
+        check_submission_retries=3,
         min_sharpe=1.25,
         min_fitness=1.0,
         min_turnover=0.01,

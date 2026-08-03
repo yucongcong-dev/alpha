@@ -52,7 +52,7 @@ class SimulationStageConfig(SimulationSettingsConfig):
     simulation_max_wait_seconds: int = 0
     simulation_max_pending_cycles: int = 0
     simulation_max_queue_seconds: int = 0
-    check_submit_retries: int = 0
+    check_submission_retries: int = 0
 
     min_sharpe: float = 0.0
     min_fitness: float = 0.0
@@ -84,7 +84,7 @@ class SimulationStageConfig(SimulationSettingsConfig):
             simulation_max_wait_seconds=int(args.simulation_max_wait_seconds or 0),
             simulation_max_pending_cycles=int(args.simulation_max_pending_cycles or 0),
             simulation_max_queue_seconds=int(args.simulation_max_queue_seconds or 0),
-            check_submit_retries=int(args.check_submit_retries or 0),
+            check_submission_retries=int(args.check_submission_retries or 0),
             min_sharpe=float(args.min_sharpe or 0.0),
             min_fitness=float(args.min_fitness or 0.0),
             min_turnover=float(args.min_turnover or 0.0),

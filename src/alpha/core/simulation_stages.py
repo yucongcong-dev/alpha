@@ -313,7 +313,7 @@ def run_check_submission_stage(
         return check_submission_with_retry(
             client,
             alpha_id,
-            _int_arg(args, "check_submit_retries"),
+            _int_arg(args, "check_submission_retries"),
         )
     except Exception as exc:
         return handle_stage_error(

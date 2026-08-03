@@ -87,7 +87,7 @@ class ApplicationConfig:
     simulation_max_queue_seconds = SectionField[float]("execution")
     queue_busy_cooldown_seconds = SectionField[float]("execution")
     field_queue_busy_skip_after = SectionField[int]("execution")
-    check_submit_retries = SectionField[int]("execution")
+    check_submission_retries = SectionField[int]("execution")
 
     min_sharpe = SectionField[float]("quality")
     min_fitness = SectionField[float]("quality")

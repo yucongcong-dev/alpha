@@ -262,7 +262,7 @@ def add_api_runtime_arguments(parser: argparse.ArgumentParser) -> None:
         help="单候选队列拥塞重试阈值（保留旧参数名）；0 表示不限制",
     )
     parser.add_argument(
-        "--check-submit-retries", type=int, default=3, help="Check Submission 重试次数"
+        "--check-submission-retries", type=int, default=3, help="Check Submission 重试次数"
     )
 
 

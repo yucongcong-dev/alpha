@@ -136,7 +136,7 @@ class TestRuntimeOptionBuilders:
             top_fields_by_feedback = "7"
             offset = "3"
             limit = "12"
-            check_submit_retries = "4"
+            check_submission_retries = "4"
 
         assert ResultWriteOptions.from_args(_Args()) == ResultWriteOptions(
             dataset_id="model51",
@@ -154,7 +154,7 @@ class TestRuntimeOptionBuilders:
         )
         assert BootstrapFieldOptions.from_args(_Args()) == BootstrapFieldOptions(
             dataset_id="model51",
-            check_submit_retries=4,
+            check_submission_retries=4,
             fetch=FieldFetchOptions(
                 dataset_id="model51",
                 page_size=100,
@@ -173,7 +173,7 @@ class TestRuntimeOptionBuilders:
         assert snapshot_options.run_name == "default"
         assert snapshot_options.dataset_id == "model51"
         assert snapshot_options.page_size == 100
-        assert snapshot_options.check_submit_retries == 4
+        assert snapshot_options.check_submission_retries == 4
         assert snapshot_options.auto_update_blacklist is True
         assert snapshot_options.auto_update_blacklist_mode == "staging"
         assert snapshot_options.strategy_profile == "refine"
@@ -217,7 +217,7 @@ class TestRuntimeOptionBuilders:
             simulation_max_wait_seconds = 5
             simulation_max_pending_cycles = 6
             simulation_max_queue_seconds = 7
-            check_submit_retries = 8
+            check_submission_retries = 8
             min_sharpe = 1.25
             min_fitness = 1.0
             min_turnover = 0.01
@@ -239,7 +239,7 @@ class TestRuntimeOptionBuilders:
 
         assert options.field_template_batch_size == 15
         assert options.template_build.template_library_file == "templates.json"
-        assert options.simulation_stage.check_submit_retries == 8
+        assert options.simulation_stage.check_submission_retries == 8
         assert options.result_write.output_path == "results.json"
         assert options.scheduler.stop_after_submittable == 14
 

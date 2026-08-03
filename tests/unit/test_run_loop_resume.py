@@ -81,7 +81,7 @@ def _build_run_loop_args(tmp_path, **overrides) -> argparse.Namespace:
         "simulation_max_wait_seconds": 1,
         "simulation_max_pending_cycles": 1,
         "simulation_max_queue_seconds": 1,
-        "check_submit_retries": 1,
+        "check_submission_retries": 1,
         "min_sharpe": 0.0,
         "min_fitness": 0.0,
         "min_turnover": 0.0,

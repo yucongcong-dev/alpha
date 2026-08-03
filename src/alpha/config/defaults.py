@@ -111,7 +111,7 @@ def apply_yaml_global_defaults(
             "simulation_max_queue_seconds",
             "queue_busy_cooldown_seconds",
             "field_queue_busy_skip_after",
-            "check_submit_retries",
+            "check_submission_retries",
             "rate_limit_max_retries",
             "login_retries",
             "min_request_interval",

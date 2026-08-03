@@ -222,7 +222,7 @@ class FieldSelectionArgs(Protocol):
 
 class CheckSubmissionRetryArgs(Protocol):
     @property
-    def check_submit_retries(self) -> int: ...
+    def check_submission_retries(self) -> int: ...
 
 
 class BootstrapFieldArgs(
@@ -265,7 +265,7 @@ class SimulationRetryArgs(Protocol):
     def simulation_max_queue_seconds(self) -> float: ...
 
     @property
-    def check_submit_retries(self) -> int: ...
+    def check_submission_retries(self) -> int: ...
 
 
 class SchedulerControlArgs(Protocol):
