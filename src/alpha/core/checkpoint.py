@@ -13,17 +13,15 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
-import json
 import logging
-import math
-import os
 import time
 from typing import Any
 
-from ..config.constants import CHECKPOINT_PENDING_FUTURES_LIMIT, CHECKPOINT_RESUME_SAFETY_SECONDS
+from ..config.constants import CHECKPOINT_PENDING_FUTURES_LIMIT
 from ..runtime.concurrency import RuntimeConcurrencyState
 from ..runtime.state import ExecutionState
 from . import checkpoint_files as _files
+from . import checkpoint_loading as _loading
 from . import checkpoint_payloads as _payloads
 
 __all__ = [
@@ -38,6 +36,7 @@ __all__ = [
 logger = logging.getLogger(__name__)
 
 STATE_VERSION = 1
+os = _files.os
 
 _all_pending_contexts = _payloads.all_pending_contexts
 _atomic_save = _files.atomic_save
@@ -130,107 +129,14 @@ def load_pipeline_state(
     """
     if not state_file or not os.path.exists(state_file):
         return 0
-
-    try:
-        with open(state_file, encoding="utf-8") as handle:
-            payload = json.load(handle)
-    except Exception as exc:
-        logger.warning("[checkpoint] failed to read state file %s: %s", state_file, exc)
-        return 0
-
-    if not isinstance(payload, dict) or payload.get("version") != STATE_VERSION:
-        logger.info("[checkpoint] state file version mismatch, starting fresh")
-        return 0
-
-    try:
-        completed_index = int(payload.get("completed_field_index", 0))
-        remaining = float(payload.get("remaining_cooldown_seconds", 0))
-        runtime_max_workers = int(payload.get("runtime_max_workers", runtime_state.max_workers))
-        last_submission = float(payload.get("last_submission_at", 0))
-    except (TypeError, ValueError) as exc:
-        logger.warning("[checkpoint] invalid state payload in %s: %s", state_file, exc)
-        return 0
-
-    if not math.isfinite(remaining) or remaining < 0:
-        logger.warning(
-            "[checkpoint] invalid remaining cooldown in %s: %s",
-            state_file,
-            remaining,
-        )
-        remaining = 0.0
-
-    if completed_index < 0:
-        logger.warning(
-            "[checkpoint] invalid negative completed index in %s: %d",
-            state_file,
-            completed_index,
-        )
-        return 0
-
-    # 平台拥塞是瞬时全局状态，不从 checkpoint 恢复字段级跳过信息。
-    execution_state.reset_transient_queue_state()
-
-    pending_payload = payload.get("pending_simulations")
-    if pending_payload is None:
-        pending_payload = payload.get("pending_template_keys")
-    resumable_simulations, retry_from_start = _restore_pending_simulations(pending_payload)
-    restored_before_dedup = len(resumable_simulations)
-    resumable_simulations = [
-        pending
-        for pending in resumable_simulations
-        if (
-            pending.field_id,
-            pending.template_name,
-            pending.expression,
-            pending.settings_fingerprint,
-        )
-        not in execution_state.attempted_keys
-    ]
-    already_completed = restored_before_dedup - len(resumable_simulations)
-    execution_state.future_queue.replace_resumable_batch(resumable_simulations)
-    if retry_from_start:
-        completed_index = 0
-        logger.warning(
-            "[checkpoint] %d pending simulations had no Location; restarting field scheduling",
-            retry_from_start,
-        )
-
-    # 恢复模板统计
-    execution_state.template_stats = _restore_template_stats(payload.get("template_stats"))
-
-    # 恢复冷却状态（用剩余秒数重建绝对单调钟）
-    if remaining > 0:
-        runtime_state.cooldown_until = time.monotonic() + remaining
-        runtime_state.runtime_max_workers = max(
-            1,
-            min(runtime_max_workers, max(1, runtime_state.max_workers)),
-        )
-    else:
-        runtime_state.cooldown_until = 0.0
-        runtime_state.runtime_max_workers = runtime_state.max_workers
-
-    # 恢复上次提交时间（需注意单调钟在进程重启后不连续）
-    if last_submission > 0:
-        # 保守估计：减去一个安全余量，避免立即节流
-        execution_state.last_submission_at = max(
-            0, time.monotonic() - CHECKPOINT_RESUME_SAFETY_SECONDS
-        )
-
-    logger.info(
-        "[checkpoint] resumed from state_file=%s completed=%d "
-        "results=%d attempted=%d resumable=%d already_completed=%d retry_from_start=%d "
-        "cooldown=%.1fs",
+    return _loading.load_pipeline_state(
         state_file,
-        completed_index,
-        payload.get("result_count", 0),
-        payload.get("attempted_keys_count", 0),
-        len(resumable_simulations),
-        already_completed,
-        retry_from_start,
-        remaining,
+        runtime_state=runtime_state,
+        execution_state=execution_state,
+        state_version=STATE_VERSION,
+        monotonic=time.monotonic,
+        log=logger,
     )
-
-    return completed_index
 
 
 # ============================================================================
