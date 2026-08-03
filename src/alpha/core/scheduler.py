@@ -17,7 +17,6 @@ from __future__ import annotations
 from collections.abc import Sequence
 from concurrent.futures import Future
 import logging
-import time
 from typing import NamedTuple
 
 from ..api.timing import wait_seconds
@@ -28,6 +27,7 @@ from ..runtime.concurrency import RuntimeConcurrencyState
 from ..runtime.contexts import FutureCompletionContext
 from ..runtime.queue_retry import QueueRetryKey
 from ..runtime.state import ExecutionState
+from . import scheduler_concurrency as _concurrency
 from . import scheduler_queue as _queue
 from .result_processing import apply_completed_result
 from .scheduler_completion import (
@@ -37,9 +37,6 @@ from .scheduler_completion import (
 from .scheduler_decisions import (
     DrainStateDecision,
     decide_drain_state_updates,
-    resolve_congestion_cooldown_until,
-    should_restore_runtime_concurrency,
-    submission_throttle_delay,
 )
 
 __all__ = [
@@ -94,18 +91,7 @@ class DrainResult(NamedTuple):
 
 def maybe_restore_runtime_concurrency(state: RuntimeConcurrencyState) -> None:
     """在拥塞冷却结束后恢复正常并发度。"""
-    if should_restore_runtime_concurrency(
-        cooldown_until=state.cooldown_until,
-        runtime_max_workers=state.runtime_max_workers,
-        max_workers=state.max_workers,
-        now=time.monotonic(),
-    ):
-        state.runtime_max_workers = state.max_workers
-        state.cooldown_until = 0.0
-        logger.info(
-            "[cooldown] restored runtime concurrency to %d",
-            state.runtime_max_workers,
-        )
+    _concurrency.maybe_restore_runtime_concurrency(state, log=logger)
 
 
 def apply_congestion_cooldown(
@@ -114,15 +100,7 @@ def apply_congestion_cooldown(
 ) -> None:
     """检测到拥塞后，临时切换到单 worker 运行模式。"""
     options = _scheduler_control_options(args)
-    state.runtime_max_workers = 1
-    state.cooldown_until = resolve_congestion_cooldown_until(
-        now=time.monotonic(),
-        cooldown_seconds=options.queue_busy_cooldown_seconds,
-    )
-    logger.info(
-        "[cooldown] detected queue congestion, runtime concurrency -> 1 for %.0fs",
-        options.queue_busy_cooldown_seconds,
-    )
+    _concurrency.apply_congestion_cooldown(options, state, log=logger)
 
 
 def throttle_before_submission(
@@ -131,13 +109,7 @@ def throttle_before_submission(
 ) -> None:
     """在提交新任务前控制节奏，避免阻塞已完成任务处理。"""
     options = _scheduler_control_options(args)
-    remaining = submission_throttle_delay(
-        interval_seconds=options.sleep_between_fields,
-        last_submission_at=execution_state.last_submission_at,
-        now=time.monotonic(),
-    )
-    if remaining > 0:
-        wait_seconds(remaining, "before next template submission")
+    _concurrency.throttle_before_submission(options, execution_state, wait=wait_seconds)
 
 
 def _apply_drain_state_decision(
