@@ -6,31 +6,12 @@ from dataclasses import replace
 import logging
 from typing import Any, cast
 
+from .expression_policy_coercion import coerce_expression_policy_override
 from .expression_policy_schema import (
-    EXPRESSION_POLICY_DICT_INT_FIELDS,
-    EXPRESSION_POLICY_DICT_TUPLE_FIELDS,
-    EXPRESSION_POLICY_FEEDBACK_LOOP_FIELD,
-    EXPRESSION_POLICY_INT_FIELDS,
     EXPRESSION_POLICY_META_FIELDS,
-    EXPRESSION_POLICY_SET_FIELDS,
-    EXPRESSION_POLICY_TEMPLATE_PREFIX_PENALTIES_FIELD,
-    EXPRESSION_POLICY_TEMPLATE_SPEC_FIELDS,
-    EXPRESSION_POLICY_TRANSFORM_FIELDS,
-    EXPRESSION_POLICY_TUPLE_FIELDS,
-    EXPRESSION_POLICY_TUPLE_PAIR_FIELDS,
-    EXPRESSION_POLICY_TUPLE_WINDOW2_FIELDS,
-    EXPRESSION_POLICY_TUPLE_WINDOW3_FIELDS,
 )
 from .models import DatasetExpressionPolicy
-from .policy_coercers import (
-    coerce_feedback_loop_policy,
-    coerce_field_transform_spec,
-    coerce_template_prefix_penalties,
-    resolve_priority_tiers,
-    resolve_tier_value,
-    tuple_tuple_int,
-    tuple_tuple_str_int,
-)
+from .policy_coercers import resolve_priority_tiers
 from .types import ExpressionPolicyOverrides, YamlConfig
 from .yaml import get_yaml_config
 
@@ -120,50 +101,8 @@ def apply_yaml_expression_policy_overrides(
                 dataset_id,
             )
             continue
-        if key in EXPRESSION_POLICY_SET_FIELDS and isinstance(value, (list, tuple, set)):
-            update_map[key] = {str(item) for item in value}
-        elif key in EXPRESSION_POLICY_TUPLE_FIELDS and isinstance(value, (list, tuple)):
-            update_map[key] = tuple(str(item) for item in value)
-        elif key in EXPRESSION_POLICY_DICT_TUPLE_FIELDS and isinstance(value, dict):
-            update_map[key] = {
-                str(name): tuple(str(item) for item in items)
-                for name, items in value.items()
-                if isinstance(items, (list, tuple))
-            }
-        elif key in EXPRESSION_POLICY_DICT_INT_FIELDS and isinstance(value, dict):
-            coerced: dict[Any, int] = {}
-            for name, score in value.items():
-                resolved = resolve_tier_value(score, tiers)
-                if resolved is not None:
-                    coerced[name] = resolved
-            update_map[key] = coerced
-        elif key == EXPRESSION_POLICY_TEMPLATE_PREFIX_PENALTIES_FIELD:
-            update_map[key] = coerce_template_prefix_penalties(value, tiers=tiers)
-        elif key in EXPRESSION_POLICY_INT_FIELDS:
-            resolved = resolve_tier_value(value, tiers)
-            if resolved is not None:
-                update_map[key] = resolved
-        elif key in EXPRESSION_POLICY_TUPLE_PAIR_FIELDS and isinstance(value, (list, tuple)):
-            update_map[key] = {
-                (str(item[0]), str(item[1]))
-                for item in value
-                if isinstance(item, (list, tuple)) and len(item) == 2
-            }
-        elif key in EXPRESSION_POLICY_TUPLE_WINDOW3_FIELDS:
-            update_map[key] = tuple_tuple_int(value, 3)
-        elif key in EXPRESSION_POLICY_TUPLE_WINDOW2_FIELDS:
-            update_map[key] = tuple_tuple_int(value, 2)
-        elif key in EXPRESSION_POLICY_TEMPLATE_SPEC_FIELDS:
-            update_map[key] = tuple_tuple_str_int(value)
-        elif key in EXPRESSION_POLICY_TRANSFORM_FIELDS:
-            transform = coerce_field_transform_spec(value)
-            if transform is not None:
-                update_map[key] = transform
-        elif key == EXPRESSION_POLICY_FEEDBACK_LOOP_FIELD:
-            loop_policy = coerce_feedback_loop_policy(value)
-            if loop_policy is not None:
-                update_map[key] = loop_policy
-        else:
-            update_map[key] = value
+        should_update, coerced_value = coerce_expression_policy_override(key, value, tiers=tiers)
+        if should_update:
+            update_map[key] = coerced_value
 
     return replace(policy, **update_map)

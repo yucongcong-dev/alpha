@@ -23,6 +23,7 @@ from alpha.config import (
     FieldTransformStage,
     get_yaml_config,
 )
+from alpha.config.expression_policy_coercion import coerce_expression_policy_override
 from alpha.config.expression_policy_schema import EXPRESSION_POLICY_TYPED_OVERRIDE_FIELDS
 from alpha.config.models import DatasetExpressionPolicy
 from alpha.config.runtime_values import (
@@ -261,6 +262,32 @@ def test_expression_policy_schema_keys_match_policy_fields() -> None:
     policy_fields = {field.name for field in fields(DatasetExpressionPolicy)}
 
     assert policy_fields >= EXPRESSION_POLICY_TYPED_OVERRIDE_FIELDS
+
+
+def test_expression_policy_coercion_resolves_tiers_and_skip_failures() -> None:
+    should_update, value = coerce_expression_policy_override(
+        "partner_limit",
+        "@wide",
+        tiers={"wide": 7},
+    )
+    assert should_update is True
+    assert value == 7
+
+    should_update, value = coerce_expression_policy_override(
+        "partner_limit",
+        "@missing",
+        tiers={"wide": 7},
+    )
+    assert should_update is False
+    assert value is None
+
+    should_update, value = coerce_expression_policy_override(
+        "matrix_field_transform",
+        None,
+        tiers={},
+    )
+    assert should_update is False
+    assert value is None
 
 
 def test_model16_policy_uses_long_backfill_with_winsorize() -> None:
