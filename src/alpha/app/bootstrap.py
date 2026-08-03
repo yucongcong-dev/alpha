@@ -10,7 +10,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, replace
+from dataclasses import replace
 import logging
 import threading
 
@@ -20,7 +20,6 @@ from ..api.client import BrainClient, WorkerClientFactory, login_with_retry
 from ..cli.filters import load_run_filters_extended, setup_runtime_logging
 from ..cli.run_config import build_run_config_snapshot
 from ..config.application import ApplicationConfig
-from ..config.models import DatasetExpressionPolicy
 from ..config.runtime_values import get_runtime_config
 from ..generators.fields import fetch_fields_with_cache, load_fields_cache
 from ..generators.fingerprint import stable_fingerprint
@@ -29,8 +28,8 @@ from ..generators.templates.library_loader import load_template_library
 from ..generators.templates.library_store import ensure_dataset_template_library
 from ..io.credentials import load_credentials
 from ..io.output_paths import cleanup_legacy_sidecar_files
-from ..models.domain import TemplateField, TemplateLibrary
-from ..models.io_types import RunFilters, RunPaths
+from ..models.domain import TemplateField
+from ..models.io_types import RunPaths
 from ..models.runtime_options import (
     ApiClientOptions,
     BootstrapFieldOptions,
@@ -54,7 +53,6 @@ from ..policy.blacklist_store import (
 )
 from ..policy.expression import get_dataset_expression_policy
 from ..runtime.concurrency import RuntimeConcurrencyState
-from ..runtime.contexts import HistoricalRunState
 from ..runtime.state import InitializedRunContext
 from .bootstrap_cleanup import clean_runtime_artifacts as clean_runtime_artifacts
 from .bootstrap_fields import prepare_fields_for_execution, resolve_field_selection
@@ -64,6 +62,7 @@ from .bootstrap_runtime_outputs import (
     resolve_bootstrap_paths,
 )
 from .bootstrap_state import build_execution_state, refresh_pending_check_results
+from .bootstrap_supporting_resources import load_bootstrap_supporting_resources
 from .bootstrap_types import (
     ApiClientServices,
     BootstrapPaths,
@@ -434,84 +433,6 @@ def create_and_login_client(
         http_backend=http_backend,
     )
     return bootstrap_client, client_factory
-
-
-logger = logging.getLogger(__name__)
-
-
-@dataclass(frozen=True)
-class BootstrapLoadedResources:
-    """Non-field bootstrap resources loaded before field fetch and ranking."""
-
-    template_library: TemplateLibrary
-    filters: RunFilters
-    expression_policy: DatasetExpressionPolicy
-    historical_state: HistoricalRunState
-
-
-def load_bootstrap_supporting_resources(
-    *,
-    dataset_id: str,
-    paths: BootstrapPaths,
-    effective_run_paths: RunPaths,
-    services: SupportingResourceServices,
-) -> BootstrapLoadedResources:
-    """Load template library, blacklist, filters, and historical feedback state."""
-    return load_supporting_resources(
-        dataset_id=dataset_id,
-        paths=paths,
-        effective_run_paths=effective_run_paths,
-        services=services,
-        repair_corrupt_summary=True,
-        log_blacklist=True,
-    )
-
-
-def load_supporting_resources(
-    *,
-    dataset_id: str,
-    paths: BootstrapPaths,
-    effective_run_paths: RunPaths,
-    services: SupportingResourceServices,
-    repair_corrupt_summary: bool,
-    log_blacklist: bool = True,
-) -> BootstrapLoadedResources:
-    """Load local template, filter, policy, and history resources for a run plan."""
-    services.set_active_datasets_root(paths.datasets_root)
-    template_library_file = services.ensure_dataset_template_library(
-        paths.template_library_file, dataset_id
-    )
-
-    template_library = services.load_template_library(template_library_file)
-    logger.info(
-        "[templates] dataset=%s library=%s entries=%d",
-        dataset_id,
-        template_library_file,
-        sum(len(items) for items in template_library.values()),
-    )
-
-    if log_blacklist:
-        blacklist_path = services.ensure_template_blacklist_file(dataset_id)
-        blacklist_payload = services.read_blacklist_payload(dataset_id)
-        learned_count, rule_count = services.summarize_blacklist_payload(blacklist_payload)
-        logger.info(
-            "[blacklist] dataset=%s file=%s learned_templates=%d expression_rules=%d",
-            dataset_id,
-            blacklist_path,
-            learned_count,
-            rule_count,
-        )
-
-    return BootstrapLoadedResources(
-        template_library=template_library,
-        filters=services.load_run_filters_extended(effective_run_paths),
-        expression_policy=services.get_dataset_expression_policy(dataset_id),
-        historical_state=services.build_historical_run_state(
-            paths.output_file,
-            paths.feedback_output,
-            repair_corrupt_summary=repair_corrupt_summary,
-        ),
-    )
 
 
 def load_bootstrap_fields(
