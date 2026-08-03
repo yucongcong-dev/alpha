@@ -164,4 +164,8 @@ def test_print_dry_run_plan_counts_only_actionable_fields(caplog) -> None:
         "[dry-run] explain_summary fields_total=3 planned=1 skipped=1 "
         "unactionable=1 templates_planned=2 templates_filtered=1"
     ) in messages
+    assert (
+        "[dry-run] explain_fields skipped_queue=0 skipped_include=0 "
+        "skipped_exclude=0 skipped_unknown=1 unactionable=1"
+    ) in messages
     assert any("sample 1/1 field=active template=rank" in message for message in messages)

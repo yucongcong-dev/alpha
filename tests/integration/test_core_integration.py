@@ -15,6 +15,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from alpha.core.execution_filters import resolve_field_skip_reason
 from alpha.core.executor import should_skip_expression_by_history, should_skip_field
 from alpha.core.scheduler import (
     apply_congestion_cooldown,
@@ -339,6 +340,29 @@ class TestFieldSkipIntegration:
         """默认过滤器不过滤任何字段。"""
         filters = RunFilters()
         assert not should_skip_field("any_field", "any_name", filters, set())
+
+    def test_skip_reason_is_explainable(self) -> None:
+        """字段跳过原因可被 dry-run explain 复用。"""
+        assert resolve_field_skip_reason("field_1", "test", RunFilters(), {"field_1"}) == "queue"
+        assert (
+            resolve_field_skip_reason(
+                "field_1",
+                "test",
+                RunFilters(include_fields={"allowed"}),
+                set(),
+            )
+            == "include"
+        )
+        assert (
+            resolve_field_skip_reason(
+                "field_1",
+                "test",
+                RunFilters(exclude_fields={"field_1"}),
+                set(),
+            )
+            == "exclude"
+        )
+        assert resolve_field_skip_reason("field_1", "test", RunFilters(), set()) is None
 
 
 # ============================================================================

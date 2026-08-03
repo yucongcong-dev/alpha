@@ -54,6 +54,7 @@ class FieldPendingTemplateBuilder(Protocol):
 
 
 FieldSkipPredicate = Callable[[str, str, RunFilters, set[str]], bool]
+FieldSkipReasonResolver = Callable[[str, str, RunFilters, set[str]], str | None]
 
 
 def print_dry_run_plan(
@@ -67,6 +68,7 @@ def print_dry_run_plan(
     use_dataset_heuristics: bool,
     build_context: TemplateBuildContextBuilder,
     should_skip: FieldSkipPredicate,
+    resolve_skip_reason: FieldSkipReasonResolver | None,
     build_pending: FieldPendingTemplateBuilder,
     sample_limit: int = DRY_RUN_SAMPLE_LIMIT,
     log: logging.Logger = logger,
@@ -98,6 +100,17 @@ def print_dry_run_plan(
             execution_state.field_queue.skipped_fields,
         ):
             explain_counts["field_skipped"] += 1
+            skip_reason = (
+                resolve_skip_reason(
+                    field_id,
+                    field_name,
+                    filters,
+                    execution_state.field_queue.skipped_fields,
+                )
+                if resolve_skip_reason is not None
+                else None
+            )
+            explain_counts[f"field_skipped_{skip_reason or 'unknown'}"] += 1
             continue
         pending_templates, filtered_count, _template_count = build_pending(
             build_ctx,
@@ -148,6 +161,15 @@ def print_dry_run_plan(
         explain_counts["field_unactionable"],
         planned_templates,
         explain_counts["templates_filtered"],
+    )
+    log.info(
+        "[dry-run] explain_fields skipped_queue=%d skipped_include=%d "
+        "skipped_exclude=%d skipped_unknown=%d unactionable=%d",
+        explain_counts["field_skipped_queue"],
+        explain_counts["field_skipped_include"],
+        explain_counts["field_skipped_exclude"],
+        explain_counts["field_skipped_unknown"],
+        explain_counts["field_unactionable"],
     )
     for index, field in enumerate(fields[:sample_limit], start=1):
         log.info(

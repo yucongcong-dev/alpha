@@ -44,6 +44,7 @@ from . import executor_dry_run as _dry_run
 from .execution_filters import (
     is_template_actionable,
     is_template_selected_by_filters,
+    resolve_field_skip_reason,
     should_skip_field,
 )
 from .execution_filters import (
@@ -267,6 +268,7 @@ def print_dry_run_plan(
         use_dataset_heuristics=use_dataset_heuristics,
         build_context=build_template_build_context,
         should_skip=should_skip_field,
+        resolve_skip_reason=resolve_field_skip_reason,
         build_pending=build_pending_templates_for_field,
         sample_limit=sample_limit,
         log=logger,
