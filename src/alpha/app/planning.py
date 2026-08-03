@@ -22,8 +22,9 @@ from ..policy.blacklist_store import (
     summarize_blacklist_payload,
 )
 from ..policy.expression import get_dataset_expression_policy
-from .bootstrap import build_effective_run_paths, load_supporting_resources, resolve_bootstrap_paths
+from .bootstrap import load_supporting_resources
 from .bootstrap_fields import prepare_fields_for_execution
+from .bootstrap_runtime_outputs import build_effective_run_paths, resolve_bootstrap_paths
 from .bootstrap_state import create_execution_state
 from .bootstrap_types import SupportingResourceServices
 
