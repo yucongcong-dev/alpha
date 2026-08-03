@@ -404,6 +404,15 @@ def test_normalize_args_paths_resolves_relative_files_from_cwd(monkeypatch, tmp_
     assert paths.include_fields_file == str((tmp_path / "tmp_priority_fields_round1.txt").resolve())
 
 
+def test_cli_rejects_abbreviated_long_options(monkeypatch) -> None:
+    """Mistyped long options should fail instead of matching a longer option by prefix."""
+    clear_yaml_cache()
+    monkeypatch.setattr(sys, "argv", ["alpha", "--include-fields", "cashflow_op"])
+
+    with pytest.raises(SystemExit):
+        parse_args()
+
+
 def test_apply_run_paths_syncs_legacy_runtime_path_attrs(monkeypatch, tmp_path) -> None:
     """Normalized CLI paths should be mirrored back to args for legacy call sites."""
     clear_yaml_cache()

@@ -48,6 +48,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="alpha",
         description="测试 WorldQuant Brain 数据集中的所有字段并筛选可提交的 Alpha。",
+        allow_abbrev=False,
     )
     add_base_arguments(parser)
     add_credentials_arguments(parser)
