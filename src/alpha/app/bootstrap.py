@@ -16,7 +16,7 @@ import threading
 
 from ..analysis.analysis_sync import ensure_analysis_synced
 from ..analysis.feedback_history import build_historical_run_state, rebuild_historical_run_state
-from ..api.client import BrainClient, WorkerClientFactory, login_with_retry
+from ..api.client import BrainClient, login_with_retry
 from ..cli.filters import load_run_filters_extended, setup_runtime_logging
 from ..cli.run_config import build_run_config_snapshot
 from ..config.application import ApplicationConfig
@@ -31,7 +31,6 @@ from ..io.output_paths import cleanup_legacy_sidecar_files
 from ..models.domain import TemplateField
 from ..models.io_types import RunPaths
 from ..models.runtime_options import (
-    ApiClientOptions,
     BootstrapFieldOptions,
     BootstrapPathOptions,
     FieldFetchOptions,
@@ -40,7 +39,6 @@ from ..models.runtime_options import (
     TemplateBuildOptions,
 )
 from ..models.runtime_protocols import (
-    ApiClientArgs,
     ClientFactoryLike,
     RunConfig,
     RuntimeConcurrencyArgs,
@@ -55,6 +53,7 @@ from ..policy.expression import get_dataset_expression_policy
 from ..runtime.concurrency import RuntimeConcurrencyState
 from ..runtime.state import InitializedRunContext
 from .bootstrap_cleanup import clean_runtime_artifacts as clean_runtime_artifacts
+from .bootstrap_clients import create_and_login_client, resolve_credentials
 from .bootstrap_fields import prepare_fields_for_execution, resolve_field_selection
 from .bootstrap_runtime_outputs import (
     build_effective_run_paths,
@@ -236,16 +235,6 @@ def initialize_run_context(
     )
 
 
-def resolve_credentials(
-    credentials: ResolvedCredentials,
-    *,
-    services: CredentialServices,
-) -> tuple[str, str]:
-    """Resolve credentials without mutating the runtime args object."""
-    email, password = services.load_credentials(credentials)
-    return str(email or ""), str(password or "")
-
-
 def log_field_selection_stats(
     *,
     dataset_id: str,
@@ -406,33 +395,6 @@ def prepare_bootstrap_resources(
         fields=prepared_fields,
         run_config=effective_run_config,
     )
-
-
-def create_and_login_client(
-    email: str,
-    password: str,
-    args: ApiClientArgs,
-    *,
-    services: ApiClientServices,
-) -> tuple[BrainClient, WorkerClientFactory]:
-    """创建 Brain API 客户端并完成登录，同时创建工作线程客户端工厂。"""
-    client_options = ApiClientOptions.from_args(args)
-    http_backend = services.get_runtime_config().http.backend
-    bootstrap_client = BrainClient(
-        email,
-        password,
-        min_request_interval=client_options.min_request_interval,
-        rate_limit_max_retries=client_options.rate_limit_max_retries,
-        http_backend=http_backend,
-    )
-    services.login_with_retry(bootstrap_client, client_options.login_retries)
-    client_factory = WorkerClientFactory(
-        client_options,
-        email,
-        password,
-        http_backend=http_backend,
-    )
-    return bootstrap_client, client_factory
 
 
 def load_bootstrap_fields(
