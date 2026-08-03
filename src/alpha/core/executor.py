@@ -16,7 +16,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping, Sequence
+from collections.abc import Mapping, MutableMapping, Sequence
 from concurrent.futures import Future
 from dataclasses import replace
 import logging
@@ -42,9 +42,8 @@ from ..runtime.state import ExecutionState
 from ..utils.helpers import first_non_empty
 from . import executor_dry_run as _dry_run
 from .execution_filters import (
-    is_template_actionable,
-    is_template_selected_by_filters,
     resolve_field_skip_reason,
+    resolve_template_skip_reason,
     should_skip_field,
 )
 from .execution_filters import (
@@ -140,6 +139,7 @@ def build_pending_templates_for_field(
     prior_results: Sequence[FieldTestResult],
     reserved_keys: set[tuple[str, str, str, str]] | None = None,
     planning_services: TemplatePlanningServices | None = None,
+    template_skip_reasons: MutableMapping[str, int] | None = None,
 ) -> tuple[list[PendingTemplateEntry], int, int]:
     """
     为单个字段构建真正可执行的模板与 settings 队列。
@@ -184,9 +184,7 @@ def build_pending_templates_for_field(
     enabled_templates: list[TemplateCandidate] = []
     filtered_templates = 0
     for template in planning_templates:
-        if not is_template_selected_by_filters(planning_ctx, template.name):
-            continue
-        if is_template_actionable(
+        skip_reason = resolve_template_skip_reason(
             template=template,
             build_ctx=planning_ctx,
             field_id=field_id,
@@ -194,10 +192,20 @@ def build_pending_templates_for_field(
             field_feedback=field_feedback,
             expression_policy=expression_policy,
             prior_results=prior_results,
-        ):
+        )
+        if skip_reason == "name_filter":
+            if template_skip_reasons is not None:
+                template_skip_reasons["template_filtered_name_filter"] = (
+                    template_skip_reasons.get("template_filtered_name_filter", 0) + 1
+                )
+            continue
+        if skip_reason is None:
             enabled_templates.append(template)
         else:
             filtered_templates += 1
+            if template_skip_reasons is not None:
+                key = f"template_filtered_{skip_reason}"
+                template_skip_reasons[key] = template_skip_reasons.get(key, 0) + 1
     pending_templates = build_pending_template_variants(
         planning_ctx,
         field,

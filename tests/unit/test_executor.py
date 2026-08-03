@@ -6,6 +6,7 @@ import logging
 from types import SimpleNamespace
 from unittest.mock import patch
 
+from alpha.core.execution_filters import resolve_template_skip_reason
 from alpha.core.executor import (
     build_pending_templates_for_field,
     build_template_build_context,
@@ -114,6 +115,73 @@ def test_unexplored_field_gets_one_seed(monkeypatch) -> None:
     assert pending[0].template_name == "seed"
 
 
+def test_template_skip_reason_explains_name_filter() -> None:
+    field = _field("signal")
+    candidate = TemplateCandidate(
+        name="seed",
+        expression="rank(signal)",
+        priority=1000,
+        metadata={"family": "rank", "activation_scope": "broad"},
+    )
+    context = TemplateBuildContext(
+        options=TemplateBuildOptions.from_args(_args()),
+        all_fields=[field],
+        include_templates={"other"},
+        expression_policy=get_dataset_expression_policy("model16"),
+    )
+
+    assert (
+        resolve_template_skip_reason(
+            template=candidate,
+            build_ctx=context,
+            field_id="signal",
+            field_name="signal",
+            field_feedback={},
+            expression_policy=get_dataset_expression_policy("model16"),
+            prior_results=[],
+        )
+        == "name_filter"
+    )
+
+
+def test_build_pending_templates_records_name_filter_reason(monkeypatch) -> None:
+    field = _field("signal")
+    candidate = TemplateCandidate(
+        name="seed",
+        expression="rank(signal)",
+        priority=1000,
+        metadata={"family": "rank", "activation_scope": "broad"},
+    )
+    context = TemplateBuildContext(
+        options=TemplateBuildOptions.from_args(_args()),
+        all_fields=[field],
+        include_templates={"other"},
+        expression_policy=get_dataset_expression_policy("model16"),
+    )
+    monkeypatch.setattr(
+        "alpha.core.executor.resolve_field_template_candidates",
+        lambda *_args, **_kwargs: (
+            [candidate],
+            {"attempted": 1},
+            get_dataset_expression_policy("model16"),
+        ),
+    )
+    reasons: dict[str, int] = {}
+
+    pending, disabled, total = build_pending_templates_for_field(
+        context,
+        field,
+        attempted_keys=set(),
+        prior_results=[],
+        template_skip_reasons=reasons,
+    )
+
+    assert pending == []
+    assert disabled == 0
+    assert total == 1
+    assert reasons == {"template_filtered_name_filter": 1}
+
+
 def test_print_dry_run_plan_counts_only_actionable_fields(caplog) -> None:
     fields = [_field("skip"), _field("empty"), _field("active")]
     entry = PendingTemplateEntry(
@@ -168,4 +236,5 @@ def test_print_dry_run_plan_counts_only_actionable_fields(caplog) -> None:
         "[dry-run] explain_fields skipped_queue=0 skipped_include=0 "
         "skipped_exclude=0 skipped_unknown=1 unactionable=1"
     ) in messages
+    assert "[dry-run] explain_templates name_filter=0 feedback=0 family=0 history=0" in messages
     assert any("sample 1/1 field=active template=rank" in message for message in messages)

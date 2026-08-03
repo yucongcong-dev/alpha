@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections import Counter
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, MutableMapping, Sequence
 import logging
 from typing import Protocol
 
@@ -50,6 +50,7 @@ class FieldPendingTemplateBuilder(Protocol):
         attempted_keys: set[tuple[str, str, str, str]],
         prior_results: Sequence[FieldTestResult],
         reserved_keys: set[tuple[str, str, str, str]] | None = None,
+        template_skip_reasons: MutableMapping[str, int] | None = None,
     ) -> tuple[list[PendingTemplateEntry], int, int]: ...
 
 
@@ -120,6 +121,7 @@ def print_dry_run_plan(
                 *historical_state.feedback_results,
                 *execution_state.result_ledger.results,
             ],
+            template_skip_reasons=explain_counts,
         )
         if filtered_count:
             explain_counts["templates_filtered"] += filtered_count
@@ -170,6 +172,13 @@ def print_dry_run_plan(
         explain_counts["field_skipped_exclude"],
         explain_counts["field_skipped_unknown"],
         explain_counts["field_unactionable"],
+    )
+    log.info(
+        "[dry-run] explain_templates name_filter=%d feedback=%d family=%d history=%d",
+        explain_counts["template_filtered_name_filter"],
+        explain_counts["template_filtered_feedback"],
+        explain_counts["template_filtered_family"],
+        explain_counts["template_filtered_history"],
     )
     for index, field in enumerate(fields[:sample_limit], start=1):
         log.info(

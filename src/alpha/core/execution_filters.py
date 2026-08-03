@@ -129,19 +129,46 @@ def is_template_actionable(
     prior_results: Sequence[FieldTestResult],
 ) -> bool:
     """判断模板在当前字段上下文中是否应继续展开 settings 变体。"""
+    return (
+        resolve_template_skip_reason(
+            template=template,
+            build_ctx=build_ctx,
+            field_id=field_id,
+            field_name=field_name,
+            field_feedback=field_feedback,
+            expression_policy=expression_policy,
+            prior_results=prior_results,
+        )
+        is None
+    )
+
+
+def resolve_template_skip_reason(
+    *,
+    template: TemplateCandidate,
+    build_ctx: TemplateBuildContext,
+    field_id: str,
+    field_name: str,
+    field_feedback: TemplateFeedback | None,
+    expression_policy: DatasetExpressionPolicy | None,
+    prior_results: Sequence[FieldTestResult],
+) -> str | None:
+    """Return the template skip reason without emitting logs or mutating state."""
     template_name = template.name
     expression = template.expression
     priority = template.priority
     template_metadata = template.metadata
     if not is_template_selected_by_filters(build_ctx, template_name):
-        return False
+        return "name_filter"
     if build_ctx.options.preset_mode:
-        return not should_skip_expression_by_history(
+        if should_skip_expression_by_history(
             field_id,
             template_name,
             expression,
             prior_results,
-        )
+        ):
+            return "history"
+        return None
     if not should_keep_template_for_feedback(
         template_name,
         expression,
@@ -150,7 +177,7 @@ def is_template_actionable(
         expression_policy=expression_policy,
         template_metadata=template_metadata,
     ):
-        return False
+        return "feedback"
     if should_skip_field_template_family(
         field_name,
         template_name,
@@ -158,5 +185,7 @@ def is_template_actionable(
         template_metadata=template_metadata,
         expression_policy=expression_policy,
     ):
-        return False
-    return not should_skip_expression_by_history(field_id, template_name, expression, prior_results)
+        return "family"
+    if should_skip_expression_by_history(field_id, template_name, expression, prior_results):
+        return "history"
+    return None
