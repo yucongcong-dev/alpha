@@ -17,6 +17,29 @@ from ..io.output_paths import (
 from ..models.io_types import RunPaths
 from .constants import DEFAULT_CREDS_FILE, DEFAULT_CREDS_KEY_FILE
 
+FILTER_FILE_OPTIONS = {
+    "include_fields_file": "--include-fields-file",
+    "exclude_fields_file": "--exclude-fields-file",
+    "include_templates_file": "--include-templates-file",
+    "exclude_templates_file": "--exclude-templates-file",
+}
+
+
+def _explicit_cli_keys(args: argparse.Namespace) -> frozenset[str]:
+    return frozenset(getattr(args, "_explicit_cli_keys", frozenset()))
+
+
+def _validate_explicit_filter_files(
+    args: argparse.Namespace, paths_by_key: dict[str, str]
+) -> None:
+    explicit_keys = _explicit_cli_keys(args)
+    for key, option in FILTER_FILE_OPTIONS.items():
+        if key not in explicit_keys:
+            continue
+        path = paths_by_key.get(key, "")
+        if path and not Path(path).is_file():
+            raise ValueError(f"{option} does not exist or is not a file: {path}")
+
 
 def normalize_args_paths(args: argparse.Namespace) -> RunPaths:
     """按 dataset 上下文解析运行文件路径，但不修改 args 本身。"""
@@ -51,6 +74,15 @@ def normalize_args_paths(args: argparse.Namespace) -> RunPaths:
     exclude_fields_file = resolve_cli_path(args.exclude_fields_file, base_dir=os.getcwd())
     include_templates_file = resolve_cli_path(args.include_templates_file, base_dir=os.getcwd())
     exclude_templates_file = resolve_cli_path(args.exclude_templates_file, base_dir=os.getcwd())
+    _validate_explicit_filter_files(
+        args,
+        {
+            "include_fields_file": include_fields_file,
+            "exclude_fields_file": exclude_fields_file,
+            "include_templates_file": include_templates_file,
+            "exclude_templates_file": exclude_templates_file,
+        },
+    )
 
     sidecar_paths = build_output_sidecar_paths(output_file)
     log_file = resolve_cli_path(args.log_file, base_dir=os.getcwd()) or sidecar_paths["run_log"]

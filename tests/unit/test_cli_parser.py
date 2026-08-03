@@ -388,6 +388,7 @@ def test_normalize_args_paths_resolves_relative_files_from_cwd(monkeypatch, tmp_
     """User-supplied relative file paths should resolve from the shell cwd."""
     clear_yaml_cache()
     monkeypatch.chdir(tmp_path)
+    (tmp_path / "tmp_priority_fields_round1.txt").write_text("cashflow_op\n", encoding="utf-8")
     monkeypatch.setattr(
         sys,
         "argv",
@@ -404,6 +405,28 @@ def test_normalize_args_paths_resolves_relative_files_from_cwd(monkeypatch, tmp_
     assert paths.include_fields_file == str((tmp_path / "tmp_priority_fields_round1.txt").resolve())
 
 
+def test_normalize_args_paths_rejects_missing_explicit_filter_file(
+    monkeypatch, tmp_path
+) -> None:
+    """Explicit filter files should not silently degrade into empty filters."""
+    clear_yaml_cache()
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "alpha",
+            "--include-fields-file",
+            "missing_fields.txt",
+        ],
+    )
+
+    args = parse_args()
+
+    with pytest.raises(ValueError, match="--include-fields-file"):
+        normalize_args_paths(args)
+
+
 def test_cli_rejects_abbreviated_long_options(monkeypatch) -> None:
     """Mistyped long options should fail instead of matching a longer option by prefix."""
     clear_yaml_cache()
@@ -417,6 +440,12 @@ def test_apply_run_paths_syncs_legacy_runtime_path_attrs(monkeypatch, tmp_path) 
     """Normalized CLI paths should be mirrored back to args for legacy call sites."""
     clear_yaml_cache()
     monkeypatch.chdir(tmp_path)
+    filters_dir = tmp_path / "filters"
+    filters_dir.mkdir()
+    (filters_dir / "include_fields.txt").write_text("f1\n", encoding="utf-8")
+    (filters_dir / "exclude_fields.txt").write_text("f2\n", encoding="utf-8")
+    (filters_dir / "include_templates.txt").write_text("rank\n", encoding="utf-8")
+    (filters_dir / "exclude_templates.txt").write_text("raw\n", encoding="utf-8")
     monkeypatch.setattr(
         sys,
         "argv",

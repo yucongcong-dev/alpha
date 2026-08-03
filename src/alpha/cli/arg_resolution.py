@@ -50,6 +50,7 @@ def resolve_cli_args(
         explicit_cli_keys=explicit_cli_keys,
     )
     apply_run_mode_overrides(args)
+    args._explicit_cli_keys = frozenset(explicit_cli_keys)
     return args
 
 
