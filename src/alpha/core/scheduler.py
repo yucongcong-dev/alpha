@@ -28,6 +28,7 @@ from ..runtime.concurrency import RuntimeConcurrencyState
 from ..runtime.contexts import FutureCompletionContext
 from ..runtime.queue_retry import QueueRetryKey
 from ..runtime.state import ExecutionState
+from . import scheduler_queue as _queue
 from .result_processing import apply_completed_result
 from .scheduler_completion import (
     build_completion_context,
@@ -35,23 +36,29 @@ from .scheduler_completion import (
 )
 from .scheduler_decisions import (
     DrainStateDecision,
-    QueueBusyDecision,
     decide_drain_state_updates,
-    decide_queue_busy_update,
     resolve_congestion_cooldown_until,
     should_restore_runtime_concurrency,
     submission_throttle_delay,
 )
 
+__all__ = [
+    "apply_congestion_cooldown",
+    "drain_completed_futures",
+    "drain_completed_futures_with_context",
+    "handle_completed_future",
+    "maybe_restore_runtime_concurrency",
+    "register_queue_busy_field",
+    "register_queue_busy_template",
+    "throttle_before_submission",
+]
+
 logger = logging.getLogger(__name__)
 
-
-def _scheduler_control_options(
-    args: SchedulerRuntimeArgs | SchedulerControlOptions,
-) -> SchedulerControlOptions:
-    if isinstance(args, SchedulerControlOptions):
-        return args
-    return SchedulerControlOptions.from_args(args)
+_apply_queue_busy_decision = _queue.apply_queue_busy_decision
+_scheduler_control_options = _queue.scheduler_control_options
+register_queue_busy_field = _queue.register_queue_busy_field
+register_queue_busy_template = _queue.register_queue_busy_template
 
 
 def _stop_after_submittable_threshold(options: SchedulerControlOptions) -> int:
@@ -70,27 +77,6 @@ def _cancel_unstarted_pending_futures(execution_state: ExecutionState) -> None:
                 context.field_id,
                 context.template_name,
             )
-
-
-def _apply_queue_busy_decision(
-    decision: QueueBusyDecision,
-    *,
-    skip_after: int,
-    field_queue_busy_counts: dict[str, int],
-    skipped_fields_due_to_queue: set[str],
-) -> None:
-    """Apply one queue-busy state decision and emit its transition log."""
-    if not decision.should_register or decision.field_id is None:
-        return
-    field_queue_busy_counts[decision.field_id] = decision.next_count
-    if decision.should_skip:
-        skipped_fields_due_to_queue.add(decision.field_id)
-        logger.info(
-            "[skip] field=%s hit queue-busy limit %d/%d",
-            decision.field_id,
-            decision.next_count,
-            skip_after,
-        )
 
 
 class DrainResult(NamedTuple):
@@ -137,59 +123,6 @@ def apply_congestion_cooldown(
         "[cooldown] detected queue congestion, runtime concurrency -> 1 for %.0fs",
         options.queue_busy_cooldown_seconds,
     )
-
-
-def register_queue_busy_field(
-    field_id: str | None,
-    args: SchedulerRuntimeArgs | SchedulerControlOptions,
-    field_queue_busy_counts: dict[str, int],
-    skipped_fields_due_to_queue: set[str],
-) -> None:
-    """记录重复的排队拥塞字段，并在达到阈值后跳过该字段。"""
-    options = _scheduler_control_options(args)
-    decision = decide_queue_busy_update(
-        field_id,
-        current_count=field_queue_busy_counts.get(field_id or "", 0),
-        skip_after=options.field_queue_busy_skip_after,
-    )
-    _apply_queue_busy_decision(
-        decision,
-        skip_after=options.field_queue_busy_skip_after,
-        field_queue_busy_counts=field_queue_busy_counts,
-        skipped_fields_due_to_queue=skipped_fields_due_to_queue,
-    )
-
-
-def register_queue_busy_template(
-    key: QueueRetryKey | None,
-    args: SchedulerRuntimeArgs | SchedulerControlOptions,
-    execution_state: ExecutionState,
-) -> None:
-    """Bound retries for one candidate without blacklisting its whole field."""
-    if key is None:
-        return
-    options = _scheduler_control_options(args)
-    update = execution_state.queue_retry_state.register_busy(
-        key,
-        retry_limit=options.field_queue_busy_skip_after,
-    )
-    if update.exhausted:
-        logger.info(
-            "[queue] exhausted retry budget %d/%d field=%s template=%s settings=%s",
-            update.next_count,
-            update.retry_limit,
-            key[0],
-            key[1],
-            key[3],
-        )
-    else:
-        logger.info(
-            "[queue] candidate remains retryable attempt=%d%s field=%s template=%s",
-            update.next_count,
-            f"/{update.retry_limit}" if update.retry_limit > 0 else "",
-            key[0],
-            key[1],
-        )
 
 
 def throttle_before_submission(
