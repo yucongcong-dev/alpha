@@ -203,12 +203,29 @@ def test_field_query_reports_failure_after_all_parameter_shapes() -> None:
 
 
 class _AlphaClient(BrainAlphasMixin):
-    def request(self, *_args: Any, **_kwargs: Any):
+    def __init__(self) -> None:
+        self.requests: list[tuple[Any, ...]] = []
+
+    def request(self, *args: Any, **_kwargs: Any):
+        self.requests.append(args)
         return 200, {}, b'{"id": "alpha1", "status": "UNSUBMITTED"}'
 
 
 def test_alpha_detail_decodes_response_payload() -> None:
-    assert _AlphaClient().get_alpha_detail("alpha1") == {
+    client = _AlphaClient()
+
+    assert client.get_alpha_detail("alpha1") == {
         "id": "alpha1",
         "status": "UNSUBMITTED",
     }
+    assert client.requests[0][1].endswith("/alphas/alpha1")
+
+
+def test_check_alpha_submission_uses_check_endpoint() -> None:
+    client = _AlphaClient()
+
+    assert client.check_alpha_submission("alpha1") == {
+        "id": "alpha1",
+        "status": "UNSUBMITTED",
+    }
+    assert client.requests[0][1].endswith("/alphas/alpha1/check")

@@ -225,7 +225,7 @@ def test_poll_stage_converts_stop_and_unexpected_errors() -> None:
     assert stopped.failed_stage == "stopped"
 
 
-def test_checksubmit_stage_precheck_failure_success_and_error() -> None:
+def test_check_submission_stage_precheck_failure_success_and_error() -> None:
     failed_check = {
         "name": "LOW_SHARPE",
         "value": 0.5,
@@ -247,9 +247,9 @@ def test_checksubmit_stage_precheck_failure_success_and_error() -> None:
             "alpha.core.simulation_stages.precheck_simulation_metrics",
             return_value=(False, "low sharpe", [failed_check]),
         ),
-        patch("alpha.core.simulation_stages.checksubmit_with_retry") as checksubmit,
+        patch("alpha.core.simulation_stages.check_submission_with_retry") as check_submission,
     ):
-        rejected = stages.run_checksubmit_stage(
+        rejected = stages.run_check_submission_stage(
             _context(),
             client=object(),  # type: ignore[arg-type]
             args=MockArgs(),
@@ -263,14 +263,14 @@ def test_checksubmit_stage_precheck_failure_success_and_error() -> None:
         "precheck_failed: low sharpe",
         [FailedCheck(name="LOW_SHARPE", value=0.5, limit=1.25, result="FAIL")],
     )
-    checksubmit.assert_not_called()
+    check_submission.assert_not_called()
 
     client = object()
     with patch(
-        "alpha.core.simulation_stages.checksubmit_with_retry",
+        "alpha.core.simulation_stages.check_submission_with_retry",
         return_value=(True, "checks passed", []),
-    ) as checksubmit:
-        passed = stages.run_checksubmit_stage(
+    ) as check_submission:
+        passed = stages.run_check_submission_stage(
             _context(),
             client=client,  # type: ignore[arg-type]
             args=SimpleNamespace(check_submit_retries=2),  # type: ignore[arg-type]
@@ -278,13 +278,13 @@ def test_checksubmit_stage_precheck_failure_success_and_error() -> None:
             simulation_id="sim-1",
         )
     assert passed == (True, "checks passed", [])
-    checksubmit.assert_called_once_with(client, "alpha-1", 2)
+    check_submission.assert_called_once_with(client, "alpha-1", 2)
 
     with patch(
-        "alpha.core.simulation_stages.checksubmit_with_retry",
+        "alpha.core.simulation_stages.check_submission_with_retry",
         side_effect=RuntimeError("checks failed remotely"),
     ):
-        error = stages.run_checksubmit_stage(
+        error = stages.run_check_submission_stage(
             _context(),
             client=object(),  # type: ignore[arg-type]
             args=SimpleNamespace(check_submit_retries="invalid"),  # type: ignore[arg-type]
@@ -292,5 +292,5 @@ def test_checksubmit_stage_precheck_failure_success_and_error() -> None:
             simulation_id="sim-1",
         )
     assert isinstance(error, FieldTestResult)
-    assert error.failed_stage == "checksubmit"
+    assert error.failed_stage == "check_submission"
     assert error.alpha_id == "alpha-1"

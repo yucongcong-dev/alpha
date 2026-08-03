@@ -217,7 +217,7 @@ def prepare_bootstrap_resources(
             ),
         )
         logger.info(
-            "[checksubmit-resume] refreshed %d historical pending results",
+            "[check-submission-resume] refreshed %d historical pending results",
             refreshed_count,
         )
     fields = load_bootstrap_fields(

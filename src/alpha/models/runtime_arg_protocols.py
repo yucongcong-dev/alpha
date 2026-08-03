@@ -220,7 +220,7 @@ class FieldSelectionArgs(Protocol):
     def limit(self) -> int: ...
 
 
-class CheckSubmitRetryArgs(Protocol):
+class CheckSubmissionRetryArgs(Protocol):
     @property
     def check_submit_retries(self) -> int: ...
 
@@ -228,7 +228,7 @@ class CheckSubmitRetryArgs(Protocol):
 class BootstrapFieldArgs(
     FieldFetchArgs,
     FieldSelectionArgs,
-    CheckSubmitRetryArgs,
+    CheckSubmissionRetryArgs,
     Protocol,
 ):
     pass

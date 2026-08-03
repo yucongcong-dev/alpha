@@ -80,7 +80,7 @@ def precheck_simulation_metrics(
     max_turnover: float | None = None,
     max_weight: float | None = None,
 ) -> tuple[bool, str, list[CheckResultDict]]:
-    """Run local metric checks before calling check-submit."""
+    """Run local metric checks before calling Check Submission."""
     if any(
         value is None for value in (min_sharpe, min_fitness, min_turnover, max_turnover, max_weight)
     ):

@@ -9,7 +9,7 @@ import logging
 
 from ..analysis.results_persistence import dump_results_incremental
 from ..api.client import BrainClient
-from ..core.simulation_stages import checksubmit_with_retry
+from ..core.simulation_stages import check_submission_with_retry
 from ..io.results_store import initialize_results_journal
 from ..models.domain import FieldTestResult
 from ..models.result_predicates import has_pending_checks
@@ -102,14 +102,14 @@ def refresh_pending_check_results(
         if not has_pending_checks(result) or not result.alpha_id:
             continue
         try:
-            submittable, message, failed_checks = checksubmit_with_retry(
+            submittable, message, failed_checks = check_submission_with_retry(
                 client,
                 result.alpha_id,
                 retries,
             )
         except Exception as exc:
             logger.warning(
-                "[checksubmit-resume] failed alpha_id=%s field=%s template=%s: %s",
+                "[check-submission-resume] failed alpha_id=%s field=%s template=%s: %s",
                 result.alpha_id,
                 result.field_id,
                 result.template_name,
@@ -118,7 +118,7 @@ def refresh_pending_check_results(
             continue
         if submittable is None:
             logger.info(
-                "[checksubmit-resume] still pending alpha_id=%s field=%s template=%s",
+                "[check-submission-resume] still pending alpha_id=%s field=%s template=%s",
                 result.alpha_id,
                 result.field_id,
                 result.template_name,
@@ -133,7 +133,7 @@ def refresh_pending_check_results(
         )
         refreshed_count += 1
         logger.info(
-            "[checksubmit-resume] resolved alpha_id=%s field=%s template=%s submittable=%s",
+            "[check-submission-resume] resolved alpha_id=%s field=%s template=%s submittable=%s",
             result.alpha_id,
             result.field_id,
             result.template_name,

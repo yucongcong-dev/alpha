@@ -31,8 +31,8 @@ from alpha.core.simulation_parsing import (
 from alpha.core.simulation_precheck import PrecheckConfig, precheck_simulation_metrics
 from alpha.core.simulation_results import build_failure_result
 from alpha.core.simulation_stages import (
-    checksubmit_with_retry,
-    run_checksubmit_stage,
+    check_submission_with_retry,
+    run_check_submission_stage,
     run_simulation_create_stage,
     run_simulation_poll_stage,
 )
@@ -254,17 +254,17 @@ class TestIsSubmittableFromChecks:
         )
 
 
-class TestChecksubmitWithRetry:
-    """checksubmit_with_retry 测试"""
+class TestCheckSubmissionWithRetry:
+    """check_submission_with_retry 测试"""
 
     def test_all_pass(self, monkeypatch) -> None:
         class DummyClient:
-            def get_alpha_detail(self, _alpha_id: str) -> dict[str, object]:
+            def check_alpha_submission(self, _alpha_id: str) -> dict[str, object]:
                 return {"is": {"checks": [{"name": "LOW_SHARPE", "result": "PASS"}]}}
 
         monkeypatch.setattr("alpha.core.simulation_stages.retry_operation", lambda *a, **k: a[2]())
 
-        result = checksubmit_with_retry(
+        result = check_submission_with_retry(
             DummyClient(),
             "alpha_1",
             retries=3,
@@ -274,7 +274,7 @@ class TestChecksubmitWithRetry:
 
     def test_checks_failed(self, monkeypatch) -> None:
         class DummyClient:
-            def get_alpha_detail(self, _alpha_id: str) -> dict[str, object]:
+            def check_alpha_submission(self, _alpha_id: str) -> dict[str, object]:
                 return {
                     "is": {
                         "checks": [
@@ -290,7 +290,7 @@ class TestChecksubmitWithRetry:
 
         monkeypatch.setattr("alpha.core.simulation_stages.retry_operation", lambda *a, **k: a[2]())
 
-        result = checksubmit_with_retry(
+        result = check_submission_with_retry(
             DummyClient(),
             "alpha_1",
             retries=3,
@@ -312,7 +312,7 @@ class TestChecksubmitWithRetry:
         waits: list[str] = []
 
         class DummyClient:
-            def get_alpha_detail(self, _alpha_id: str) -> dict[str, object]:
+            def check_alpha_submission(self, _alpha_id: str) -> dict[str, object]:
                 return next(responses)
 
         monkeypatch.setattr("alpha.core.simulation_stages.retry_operation", lambda *a, **k: a[2]())
@@ -321,7 +321,7 @@ class TestChecksubmitWithRetry:
             lambda _seconds, reason, **_kwargs: waits.append(reason),
         )
 
-        result = checksubmit_with_retry(DummyClient(), "alpha_1", retries=3)
+        result = check_submission_with_retry(DummyClient(), "alpha_1", retries=3)
 
         assert result == (True, "checks passed", [])
         assert waits == ["pending submission checks for alpha alpha_1"]
@@ -330,7 +330,7 @@ class TestChecksubmitWithRetry:
         calls = 0
 
         class DummyClient:
-            def get_alpha_detail(self, _alpha_id: str) -> dict[str, object]:
+            def check_alpha_submission(self, _alpha_id: str) -> dict[str, object]:
                 nonlocal calls
                 calls += 1
                 return {"is": {"checks": [{"name": "SELF_CORRELATION", "result": "PENDING"}]}}
@@ -338,7 +338,7 @@ class TestChecksubmitWithRetry:
         monkeypatch.setattr("alpha.core.simulation_stages.retry_operation", lambda *a, **k: a[2]())
         monkeypatch.setattr("alpha.core.simulation_stages.wait_seconds", lambda *_a, **_k: None)
 
-        result = checksubmit_with_retry(DummyClient(), "alpha_1", retries=2)
+        result = check_submission_with_retry(DummyClient(), "alpha_1", retries=2)
 
         assert calls == 2
         assert result == (
@@ -545,7 +545,7 @@ class TestBuildFailureResult:
             expression="rank(sales)",
             settings_fingerprint="abc",
             template_library_fingerprint="def",
-            failed_stage="checksubmit",
+            failed_stage="check_submission",
             message="checks failed",
             status="simulation_failed",
             failed_checks=checks,
@@ -621,15 +621,15 @@ class TestFieldTestContext:
 
     def test_failure_with_optional_fields(self, minimal_test_context: FieldTestContext) -> None:
         result = minimal_test_context.failure(
-            failed_stage="checksubmit",
+            failed_stage="check_submission",
             message="err",
             simulation_id="sim_1",
             alpha_id="alpha_1",
-            status="checksubmit_failed",
+            status="check_submission_failed",
         )
         assert result.simulation_id == "sim_1"
         assert result.alpha_id == "alpha_1"
-        assert result.status == "checksubmit_failed"
+        assert result.status == "check_submission_failed"
 
     def test_failure_default_status_is_error(self, minimal_test_context: FieldTestContext) -> None:
         result = minimal_test_context.failure(failed_stage="simulation", message="err")
@@ -650,14 +650,14 @@ class TestFieldTestContext:
     def test_failure_with_failed_checks(self, basic_test_context: FieldTestContext) -> None:
         checks = [{"name": "LOW_SHARPE", "value": 0.5, "limit": 1.0}]
         result = basic_test_context.failure(
-            failed_stage="checksubmit",
+            failed_stage="check_submission",
             message="checks failed",
             failed_checks=checks,
         )
         assert result.failed_checks == [FailedCheck(name="LOW_SHARPE", value=0.5, limit=1.0)]
 
 
-def test_run_checksubmit_stage_with_self_correlation_pending(monkeypatch) -> None:
+def test_run_check_submission_stage_with_self_correlation_pending(monkeypatch) -> None:
     ctx = FieldTestContext(
         field_id="f1",
         field_type="MATRIX",
@@ -677,12 +677,12 @@ def test_run_checksubmit_stage_with_self_correlation_pending(monkeypatch) -> Non
     )
 
     class DummyClient:
-        def get_alpha_detail(self, _alpha_id: str) -> dict[str, object]:
+        def check_alpha_submission(self, _alpha_id: str) -> dict[str, object]:
             return {"is": {"checks": [{"name": "SELF_CORRELATION", "result": "PENDING"}]}}
 
     monkeypatch.setattr("alpha.core.simulation_stages.retry_operation", lambda *a, **k: a[2]())
 
-    result = run_checksubmit_stage(
+    result = run_check_submission_stage(
         ctx,
         DummyClient(),
         args,
@@ -939,7 +939,7 @@ def test_resume_field_test_skips_create_and_completes_existing_simulation() -> N
             return_value=("alpha-1", {"status": "COMPLETE"}),
         ) as mock_poll,
         patch(
-            "alpha.core.simulation.run_checksubmit_stage",
+            "alpha.core.simulation.run_check_submission_stage",
             return_value=(True, "checks passed", []),
         ),
     ):

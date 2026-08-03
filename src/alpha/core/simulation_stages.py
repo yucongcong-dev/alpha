@@ -117,7 +117,7 @@ def poll_simulation_with_retry(
     )
 
 
-def checksubmit_with_retry(
+def check_submission_with_retry(
     client: BrainClient,
     alpha_id: str,
     retries: int,
@@ -129,18 +129,18 @@ def checksubmit_with_retry(
         [],
     )
     for attempt in range(1, attempts + 1):
-        alpha_detail = retry_operation(
-            "checksubmit",
+        submission_check = retry_operation(
+            "check submission",
             attempts,
-            lambda: client.get_alpha_detail(alpha_id),
+            lambda: client.check_alpha_submission(alpha_id),
             retry_wait_seconds=SIMULATION_RETRY_WAIT,
         )
-        checks = extract_checks(alpha_detail)
+        checks = extract_checks(submission_check)
         submittable = is_submittable_from_checks(
             [parse_failed_check(c) for c in checks if isinstance(c, dict)]
         )
-        unresolved_checks = extract_failed_checks(alpha_detail) + extract_pending_checks(
-            alpha_detail
+        unresolved_checks = extract_failed_checks(submission_check) + extract_pending_checks(
+            submission_check
         )
         message = (
             "checks unavailable"
@@ -153,7 +153,7 @@ def checksubmit_with_retry(
         )
         last_result = submittable, message, unresolved_checks
         logger.debug(
-            "[checksubmit] alpha_id=%s attempt=%d/%d submittable=%s message=%s",
+            "[check-submission] alpha_id=%s attempt=%d/%d submittable=%s message=%s",
             alpha_id,
             attempt,
             attempts,
@@ -277,7 +277,7 @@ def run_simulation_poll_stage(
         )
 
 
-def run_checksubmit_stage(
+def run_check_submission_stage(
     ctx: FieldTestContext,
     client: BrainClient,
     args: SimulationStageArgs,
@@ -298,7 +298,7 @@ def run_checksubmit_stage(
         )
         if not passed:
             logger.info(
-                "[checksubmit-precheck] alpha_id=%s simulation_id=%s precheck_failed=%s",
+                "[check-submission-precheck] alpha_id=%s simulation_id=%s precheck_failed=%s",
                 alpha_id,
                 simulation_id,
                 reason,
@@ -310,7 +310,7 @@ def run_checksubmit_stage(
             )
 
     try:
-        return checksubmit_with_retry(
+        return check_submission_with_retry(
             client,
             alpha_id,
             _int_arg(args, "check_submit_retries"),
@@ -318,7 +318,7 @@ def run_checksubmit_stage(
     except Exception as exc:
         return handle_stage_error(
             ctx,
-            "checksubmit",
+            "check_submission",
             exc,
             simulation_id=simulation_id,
             alpha_id=alpha_id,
@@ -327,11 +327,11 @@ def run_checksubmit_stage(
 
 __all__ = [
     "PrecheckConfig",
-    "checksubmit_with_retry",
+    "check_submission_with_retry",
     "create_simulation_with_retry",
     "poll_simulation_with_retry",
     "precheck_simulation_metrics",
-    "run_checksubmit_stage",
+    "run_check_submission_stage",
     "run_simulation_create_stage",
     "run_simulation_poll_stage",
 ]

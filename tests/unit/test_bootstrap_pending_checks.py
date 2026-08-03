@@ -25,7 +25,7 @@ def _pending_result(*, alpha_id: str | None = "alpha_1") -> FieldTestResult:
 
 def test_refresh_pending_check_results_replaces_terminal_result(monkeypatch) -> None:
     monkeypatch.setattr(
-        "alpha.app.bootstrap_state.checksubmit_with_retry",
+        "alpha.app.bootstrap_state.check_submission_with_retry",
         lambda *_args, **_kwargs: (True, "checks passed", []),
     )
 
@@ -40,7 +40,7 @@ def test_refresh_pending_check_results_replaces_terminal_result(monkeypatch) -> 
 def test_refresh_pending_check_results_keeps_still_pending_result(monkeypatch) -> None:
     original = _pending_result()
     monkeypatch.setattr(
-        "alpha.app.bootstrap_state.checksubmit_with_retry",
+        "alpha.app.bootstrap_state.check_submission_with_retry",
         lambda *_args, **_kwargs: (
             None,
             "checks pending",
@@ -56,10 +56,10 @@ def test_refresh_pending_check_results_keeps_still_pending_result(monkeypatch) -
 
 def test_refresh_pending_check_results_skips_rows_without_alpha_id(monkeypatch) -> None:
     def _unexpected(*_args, **_kwargs):
-        raise AssertionError("checksubmit should not be called")
+        raise AssertionError("check_submission should not be called")
 
     monkeypatch.setattr(
-        "alpha.app.bootstrap_state.checksubmit_with_retry",
+        "alpha.app.bootstrap_state.check_submission_with_retry",
         _unexpected,
     )
 

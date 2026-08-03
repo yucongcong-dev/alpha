@@ -646,14 +646,14 @@ class TestFailureReportingPipeline:
             expression="rank(ts_mean(sales, 20))",
             settings_fingerprint="abc",
             template_library_fingerprint="def",
-            failed_stage="checksubmit",
+            failed_stage="check_submission",
             message=summary,
             failed_checks=[
                 {"name": "LOW_SHARPE", "value": 0.3, "limit": 1.0},
                 {"name": "LOW_FITNESS", "value": 0.5, "limit": 1.0},
             ],
         )
-        assert result.failed_stage == "checksubmit"
+        assert result.failed_stage == "check_submission"
         assert result.failed_checks is not None
         assert len(result.failed_checks) == 2
 

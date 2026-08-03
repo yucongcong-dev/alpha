@@ -15,10 +15,20 @@ class BrainAlphasMixin:
     """Alpha detail helpers for BrainClient."""
 
     def get_alpha_detail(self, alpha_id: str) -> ApiPayload:
-        """获取 Alpha 详情，包括可用时的 check-submit 结果。"""
+        """获取 Alpha 详情。"""
         _, _, content = self.request(  # type: ignore[attr-defined]
             "GET",
             f"{ALPHAS_URL}/{alpha_id}",
+            headers=SIM_ACCEPT_HEADER,
+            expected={200},
+        )
+        return safe_json_bytes(content)
+
+    def check_alpha_submission(self, alpha_id: str) -> ApiPayload:
+        """触发网页 Check Submission 并返回提交检查结果。"""
+        _, _, content = self.request(  # type: ignore[attr-defined]
+            "GET",
+            f"{ALPHAS_URL}/{alpha_id}/check",
             headers=SIM_ACCEPT_HEADER,
             expected={200},
         )

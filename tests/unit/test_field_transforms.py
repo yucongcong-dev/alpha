@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from dataclasses import replace
+
 from alpha.config import FieldTransformSpec, FieldTransformStage
 from alpha.generators.expression_builder import build_expression_candidates
 from alpha.generators.field_transforms import (
@@ -85,8 +87,12 @@ def test_build_expression_candidates_uses_preprocessed_raw_field_view() -> None:
     )
 
 
-def test_fundamental6_account_templates_use_preprocessed_field_view() -> None:
-    policy = get_dataset_expression_policy("fundamental6")
+def test_fundamental6_matrix_templates_use_preprocessed_field_view() -> None:
+    policy = replace(
+        get_dataset_expression_policy("fundamental6"),
+        closed_default_template_library=False,
+        protected_templates=set(),
+    )
     template_library = load_template_library("datasets/fundamental6/template.json")
     build_ctx = TemplateBuildContext(
         options=TemplateBuildOptions(
@@ -104,11 +110,9 @@ def test_fundamental6_account_templates_use_preprocessed_field_view() -> None:
     )
 
     by_name = {name: expression for name, expression, _ in candidates}
-    assert (
-        by_name["account_rank_backfill_504"] == "rank(winsorize(ts_backfill(cash_st, 120), std=4))"
-    )
-    assert by_name["account_bucket_cap_zscore_60"] == (
-        "group_rank(ts_zscore(winsorize(ts_backfill(cash_st, 120), std=4), 60), densify(bucket(rank(cap), range='0.1, 1, 0.1')))"
+    assert by_name["rank_raw_field"] == "rank(winsorize(ts_backfill(cash_st, 120), std=4))"
+    assert by_name["bucket_bucket_group_rank_cap_bucket"] == (
+        "group_rank(winsorize(ts_backfill(cash_st, 120), std=4), densify(bucket(rank(cap), range='0.1, 1, 0.1')))"
     )
 
 

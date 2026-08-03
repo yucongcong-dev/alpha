@@ -1,7 +1,7 @@
 # WorldQuant Brain Alpha Runner
 
 面向 WorldQuant BRAIN 的数据集 Alpha 模拟、submission check 与本地研究运行器。默认只执行
-`simulation + check-submit`，**不会自动正式提交 Alpha**。
+`simulation + Check Submission`，**不会自动正式提交 Alpha**。
 
 ## 快速开始
 

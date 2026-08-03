@@ -163,6 +163,10 @@ def test_fundamental6_default_policy_is_loaded_from_settings_yaml() -> None:
     assert policy.account_template_boost == 0
     assert policy.high_conviction_ratio_priority_boost == 0
     assert policy.protected_templates == {
+        "cashflow_assets_industry_zscore_252",
+        "cashflow_enterprise_value_industry_zscore_252",
+        "cashflow_cap_bucket_delta_over_std_63_126",
+        "cashflow_change_trade_when_assets_zscore_252",
         "hc_ratio_group_zscore_252_over_cap",
         "group_ratio_delta_over_std_63_126_over_cap",
     }

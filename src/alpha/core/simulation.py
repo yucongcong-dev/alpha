@@ -26,7 +26,7 @@ from .simulation_parsing import (
     extract_simulation_metrics,
 )
 from .simulation_stages import (
-    run_checksubmit_stage,
+    run_check_submission_stage,
     run_simulation_create_stage,
     run_simulation_poll_stage,
 )
@@ -67,7 +67,7 @@ def _complete_field_test_from_simulation(
             status=STATUS_SKIPPED,
         )
 
-    check_result = run_checksubmit_stage(
+    check_result = run_check_submission_stage(
         ctx,
         client,
         args,
@@ -81,7 +81,7 @@ def _complete_field_test_from_simulation(
 
     if submittable:
         logger.info(
-            "[checksubmit] submittable alpha_id=%s simulation_id=%s simulation_location=%s",
+            "[check-submission] submittable alpha_id=%s simulation_id=%s simulation_location=%s",
             alpha_id,
             simulation_id,
             simulation_location,
@@ -112,7 +112,7 @@ def run_field_test(
     should_abort: Callable[[], bool] | None = None,
     on_simulation_created: SimulationCreatedCallback | None = None,
 ) -> FieldTestResult:
-    """执行单个候选表达式的 simulation / checksubmit 两阶段流程。"""
+    """执行单个候选表达式的 simulation / Check Submission 两阶段流程。"""
     if not expression or not expression.strip():
         raise ValueError("expression cannot be empty")
     if not template_name or not template_name.strip():
