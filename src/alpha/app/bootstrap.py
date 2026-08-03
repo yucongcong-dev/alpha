@@ -12,7 +12,6 @@ from __future__ import annotations
 
 from dataclasses import replace
 import logging
-import threading
 
 from ..analysis.analysis_sync import ensure_analysis_synced
 from ..analysis.feedback_history import build_historical_run_state, rebuild_historical_run_state
@@ -35,11 +34,7 @@ from ..models.runtime_options import (
     RunConfigSnapshotOptions,
     TemplateBuildOptions,
 )
-from ..models.runtime_protocols import (
-    ClientFactoryLike,
-    RunConfig,
-    RuntimeConcurrencyArgs,
-)
+from ..models.runtime_protocols import RunConfig
 from ..policy.blacklist_context import set_active_datasets_root
 from ..policy.blacklist_store import (
     ensure_template_blacklist_file,
@@ -47,12 +42,12 @@ from ..policy.blacklist_store import (
     summarize_blacklist_payload,
 )
 from ..policy.expression import get_dataset_expression_policy
-from ..runtime.concurrency import RuntimeConcurrencyState
 from ..runtime.state import InitializedRunContext
 from .bootstrap_cleanup import clean_runtime_artifacts as clean_runtime_artifacts
 from .bootstrap_clients import create_and_login_client, resolve_credentials
 from .bootstrap_field_resources import load_bootstrap_fields, log_field_selection_stats
 from .bootstrap_fields import prepare_fields_for_execution
+from .bootstrap_run_context import assemble_initialized_run_context, build_runtime_concurrency
 from .bootstrap_runtime_outputs import (
     build_effective_run_paths,
     prepare_runtime_outputs,
@@ -68,7 +63,6 @@ from .bootstrap_types import (
     FieldLoadingServices,
     PreparedBootstrapResources,
     ResolvedCredentials,
-    RuntimeConcurrencyResources,
     RuntimeOutputServices,
     SupportingResourceServices,
 )
@@ -108,52 +102,6 @@ def build_bootstrap_services() -> BootstrapServices:
             get_runtime_config=get_runtime_config,
             login_with_retry=login_with_retry,
         ),
-    )
-
-
-def build_runtime_concurrency(
-    args: RuntimeConcurrencyArgs,
-) -> RuntimeConcurrencyResources:
-    """Build runtime concurrency state and semaphore from narrow concurrency args."""
-    max_workers = max(1, int(args.max_concurrent_simulations or 0))
-    runtime_state = RuntimeConcurrencyState(
-        max_workers=max_workers,
-        runtime_max_workers=max_workers,
-    )
-    max_create_workers = max(1, int(args.max_concurrent_creates or 0))
-    create_semaphore = threading.Semaphore(max_create_workers)
-    logger.info("[config] max_concurrent_simulations=%d", max_workers)
-    logger.info("[config] max_concurrent_creates=%d", max_create_workers)
-    logger.info("[config] simulation_max_pending_cycles=%d", args.simulation_max_pending_cycles)
-    return RuntimeConcurrencyResources(
-        runtime_state=runtime_state,
-        create_semaphore=create_semaphore,
-    )
-
-
-def assemble_initialized_run_context(
-    *,
-    client_factory: ClientFactoryLike,
-    prepared: PreparedBootstrapResources,
-    execution_state,
-    runtime_state: RuntimeConcurrencyState,
-    create_semaphore: threading.Semaphore,
-) -> InitializedRunContext:
-    """Assemble the final initialized run context from prepared bootstrap parts."""
-    return InitializedRunContext(
-        client_factory=client_factory,
-        template_library=prepared.template_library,
-        filters=prepared.filters,
-        expression_policy=prepared.expression_policy,
-        use_dataset_heuristics=prepared.use_dataset_heuristics,
-        template_library_fingerprint=prepared.template_library_fingerprint,
-        settings_fingerprint=prepared.settings_fingerprint,
-        historical_state=prepared.historical_state,
-        fields=prepared.fields,
-        execution_state=execution_state,
-        runtime_state=runtime_state,
-        create_semaphore=create_semaphore,
-        run_config=prepared.run_config,
     )
 
 
