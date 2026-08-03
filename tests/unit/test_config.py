@@ -24,6 +24,9 @@ from alpha.config import (
     get_yaml_config,
 )
 from alpha.config.expression_policy_coercion import coerce_expression_policy_override
+from alpha.config.expression_policy_merging import (
+    expression_policy_overrides_for_dataset,
+)
 from alpha.config.expression_policy_schema import EXPRESSION_POLICY_TYPED_OVERRIDE_FIELDS
 from alpha.config.models import DatasetExpressionPolicy
 from alpha.config.runtime_values import (
@@ -82,7 +85,7 @@ def test_curated_heuristics_are_loaded_only_from_yaml() -> None:
 
 def test_expression_policy_can_be_overridden_from_yaml(monkeypatch) -> None:
     monkeypatch.setattr(
-        "alpha.config.policy_overrides.get_yaml_config",
+        "alpha.config.expression_policy_merging.get_yaml_config",
         lambda config_path="": {
             "expression_policies": {
                 "__default__": {
@@ -135,7 +138,7 @@ def test_expression_policy_can_be_overridden_from_yaml(monkeypatch) -> None:
 
 def test_unknown_expression_policy_key_is_reported(caplog, monkeypatch) -> None:
     monkeypatch.setattr(
-        "alpha.config.policy_overrides.get_yaml_config",
+        "alpha.config.expression_policy_merging.get_yaml_config",
         lambda config_path="": {
             "expression_policies": {
                 "new_dataset": {"unknown_selector": 1},
@@ -281,6 +284,42 @@ def test_expression_policy_coercion_resolves_tiers_and_skip_failures() -> None:
     assert should_update is False
     assert value is None
 
+
+def test_expression_policy_overrides_merge_default_curated_and_dataset_layers() -> None:
+    yaml_config = {
+        "expression_policies": {
+            "__default__": {
+                "protected_templates": ["base"],
+                "matrix_field_transform": {"stages": [{"kind": "backfill", "window": 120}]},
+                "feedback_loop_policy": {
+                    "resimulate": {"preferred_template_stages": ["default_stage"]}
+                },
+            },
+            "__curated__": {
+                "protected_templates": ["curated"],
+                "feedback_loop_policy": {
+                    "resimulate": {"preferred_template_stages": ["curated_stage"]}
+                },
+            },
+            "model51": {
+                "protected_templates": ["dataset"],
+                "matrix_field_transform": {"stages": [{"kind": "winsorize", "std": 4}]},
+            },
+        }
+    }
+
+    overrides = expression_policy_overrides_for_dataset(
+        "model51",
+        use_curated_heuristics=True,
+        yaml_config=yaml_config,
+    )
+
+    assert overrides["protected_templates"] == ["base", "curated", "dataset"]
+    assert overrides["matrix_field_transform"]["stages"] == [{"kind": "winsorize", "std": 4}]
+    assert overrides["feedback_loop_policy"]["resimulate"]["preferred_template_stages"] == [
+        "curated_stage"
+    ]
+
     should_update, value = coerce_expression_policy_override(
         "matrix_field_transform",
         None,
@@ -392,7 +431,7 @@ assert get_runtime_config().http.request_timeout == 12.5
 
 def test_expression_policy_default_section_applies_to_non_curated_dataset(monkeypatch) -> None:
     monkeypatch.setattr(
-        "alpha.config.policy_overrides.get_yaml_config",
+        "alpha.config.expression_policy_merging.get_yaml_config",
         lambda config_path="": {
             "expression_policies": {
                 "__default__": {
