@@ -28,16 +28,14 @@ from ..runtime.contexts import FutureCompletionContext
 from ..runtime.queue_retry import QueueRetryKey
 from ..runtime.state import ExecutionState
 from . import scheduler_concurrency as _concurrency
+from . import scheduler_drain_state as _drain_state
 from . import scheduler_queue as _queue
 from .result_processing import apply_completed_result
 from .scheduler_completion import (
     build_completion_context,
     resolve_completed_future_result,
 )
-from .scheduler_decisions import (
-    DrainStateDecision,
-    decide_drain_state_updates,
-)
+from .scheduler_decisions import decide_drain_state_updates
 
 __all__ = [
     "apply_congestion_cooldown",
@@ -52,28 +50,9 @@ __all__ = [
 
 logger = logging.getLogger(__name__)
 
-_apply_queue_busy_decision = _queue.apply_queue_busy_decision
 _scheduler_control_options = _queue.scheduler_control_options
 register_queue_busy_field = _queue.register_queue_busy_field
 register_queue_busy_template = _queue.register_queue_busy_template
-
-
-def _stop_after_submittable_threshold(options: SchedulerControlOptions) -> int:
-    try:
-        return int(options.stop_after_submittable or 0)
-    except (TypeError, ValueError):
-        return 0
-
-
-def _cancel_unstarted_pending_futures(execution_state: ExecutionState) -> None:
-    for future, context in list(execution_state.future_queue.pending_futures.items()):
-        if future.cancel():
-            execution_state.future_queue.pending_futures.pop(future, None)
-            logger.info(
-                "[stop] cancelled queued future field=%s template=%s after stop-after-submittable",
-                context.field_id,
-                context.template_name,
-            )
 
 
 class DrainResult(NamedTuple):
@@ -110,29 +89,6 @@ def throttle_before_submission(
     """在提交新任务前控制节奏，避免阻塞已完成任务处理。"""
     options = _scheduler_control_options(args)
     _concurrency.throttle_before_submission(options, execution_state, wait=wait_seconds)
-
-
-def _apply_drain_state_decision(
-    decision: DrainStateDecision,
-    *,
-    scheduler_options: SchedulerControlOptions,
-    execution_state: ExecutionState,
-    runtime_state: RuntimeConcurrencyState,
-) -> None:
-    """Apply a previously computed post-persistence scheduler decision."""
-    if decision.activate_stop_signal:
-        execution_state.future_queue.stop_signal.set()
-        _cancel_unstarted_pending_futures(execution_state)
-
-    _apply_queue_busy_decision(
-        decision.queue_busy,
-        skip_after=scheduler_options.field_queue_busy_skip_after,
-        field_queue_busy_counts=execution_state.field_queue.busy_counts,
-        skipped_fields_due_to_queue=execution_state.field_queue.skipped_fields,
-    )
-
-    if decision.apply_congestion_cooldown:
-        apply_congestion_cooldown(scheduler_options, runtime_state)
 
 
 # ============================================================================
@@ -259,18 +215,19 @@ def drain_completed_futures_with_context(
         # Queue timeouts are tracked per candidate below. Keep the shared
         # decision helper focused here on stop/cooldown state only.
         decision = decide_drain_state_updates(
-            stop_threshold=_stop_after_submittable_threshold(scheduler_options),
+            stop_threshold=_drain_state.stop_after_submittable_threshold(scheduler_options),
             current_submittable_count=current_submittable_count,
             congestion_detected=drain_result.congestion_detected,
             queue_busy_field_id=None,
             current_queue_busy_count=0,
             queue_busy_skip_after=scheduler_options.field_queue_busy_skip_after,
         )
-        _apply_drain_state_decision(
+        _drain_state.apply_drain_state_decision(
             decision,
             scheduler_options=scheduler_options,
             execution_state=execution_state,
             runtime_state=runtime_state,
+            log=logger,
         )
         register_queue_busy_template(
             drain_result.queue_busy_key, scheduler_options, execution_state
