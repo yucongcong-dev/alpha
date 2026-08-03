@@ -18,7 +18,7 @@ python -m alpha --dry-run-plan
 python -m alpha --dataset-id fundamental6
 ```
 
-也可以安装后使用 `alpha` 命令。误用低于 Python 3.10 的解释器时，入口会直接退出并提示版本问题。需要显式选择解释器时，macOS 可用 `python3.10`，Windows 可用 `py -3.10`。
+也可以安装后使用 `alpha` 命令。误用低于 Python 3.10 的解释器时，入口会直接退出并提示版本问题。Makefile 会优先选择 Python 3.10：macOS/Linux 优先 `python3.10`，Windows 优先 `py -3.10`。需要手动覆盖时可以传入 `PYTHON`，例如 `make check PYTHON=python3.10` 或 `make check PYTHON="py -3.10"`。
 
 ## 文档导航
 
@@ -75,7 +75,7 @@ python -m alpha clean
 
 ```bash
 make install-dev
-python -m pytest -q
+make test
 make check
 ```
 

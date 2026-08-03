@@ -1,25 +1,32 @@
-.PHONY: install-dev test coverage-check help-check whitespace-check docs-check scan-secrets repo-boundary-check removed-compat-file-check compat-import-check arch-boundary-check todo-check sync-config config-sync-check ruff-check format-check mypy-check check clean-runtime clean-dev package
+.PHONY: install-dev python-version-check test coverage-check help-check whitespace-check docs-check scan-secrets repo-boundary-check removed-compat-file-check compat-import-check arch-boundary-check todo-check sync-config config-sync-check ruff-check format-check mypy-check check clean-runtime clean-dev package
 
 ifeq ($(OS),Windows_NT)
 GIT_EXEC_PATH := $(shell git --exec-path)
 WINDOWS_SHELL := $(patsubst %/mingw64/libexec/git-core,%/usr/bin/sh.exe,$(GIT_EXEC_PATH))
 SHELL := $(WINDOWS_SHELL)
 export PATH := $(dir $(WINDOWS_SHELL));$(PATH)
-PYTHON ?= python
+ifndef PYTHON
+PYTHON := $(shell if command -v py >/dev/null 2>&1; then echo "py -3.10"; elif command -v python >/dev/null 2>&1; then echo python; else echo python; fi)
+endif
 else
-PYTHON ?= python3
+ifndef PYTHON
+PYTHON := $(shell if command -v python3.10 >/dev/null 2>&1; then echo python3.10; elif command -v python3 >/dev/null 2>&1; then echo python3; else echo python; fi)
+endif
 endif
 PYTHONPATH ?= src
 RUFF ?= ruff
 MYPY ?= $(PYTHON) -m mypy
 
+python-version-check:
+	$(PYTHON) scripts/check_python_version.py
+
 install-dev:
 	$(PYTHON) -m pip install -e ".[dev,httpx]"
 
-test:
+test: python-version-check
 	PYTHONPATH=$(PYTHONPATH) $(PYTHON) -m pytest -q
 
-coverage-check:
+coverage-check: python-version-check
 	PYTHONPATH=$(PYTHONPATH) $(PYTHON) -m pytest --cov=alpha --cov-report=term:skip-covered --cov-report=json:.coverage.json -q
 	$(PYTHON) scripts/check_critical_coverage.py .coverage.json
 

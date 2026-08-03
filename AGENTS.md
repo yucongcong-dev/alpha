@@ -73,7 +73,7 @@
 - 常规代码改动后运行：
 
 ```bash
-python -m pytest -q
+make test
 ```
 
 - 修改 Python 文件后，对触达文件运行定向 Ruff 检查，例如：
@@ -88,8 +88,10 @@ ruff check src/alpha/app/planning.py tests/unit/test_planning.py
 make check
 ```
 
-- 请在 Python 3.10+ 的虚拟环境里运行检查。需要显式解释器时，macOS 可用
-  `python3.10`，Windows 可用 `py -3.10` 或已激活虚拟环境中的 `python`。
+- 请在 Python 3.10+ 的虚拟环境里运行检查。Makefile 会优先选择可用的 3.10
+  解释器；需要显式解释器时，macOS 可用 `make check PYTHON=python3.10`，
+  Windows 可用 `make check PYTHON="py -3.10"`，也可以使用已激活虚拟环境中的
+  `python`。
 
 ## 修改纪律
 
