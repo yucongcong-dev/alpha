@@ -389,6 +389,7 @@ expression_policies:
       - ["group_zscore_subindustry_120", "group_rank(ts_zscore({field_preprocessed}, 120), subindustry)", 161]
       - ["rank_mean_reversion_60_252", "rank(ts_mean({field_preprocessed}, 60) - ts_mean({field_preprocessed}, 252))", 156]
     protected_templates:
+      - "model51_bucket_cap_ratio_zscore_120"
       - "model51_ratio_cap_zscore_60"
       - "model51_bucket_cap_ratio_zscore_60"
       - "model51_group_zscore_subindustry_120"
@@ -399,9 +400,10 @@ expression_policies:
     field_min_user_count: 0
     field_max_alpha_count: 3000
     field_max_user_count: 2000
+    field_exploration_ratio: 0.0
     preferred_field_order:
-      unsystematic_risk_last_30_days: 0
-      unsystematic_risk_last_60_days: 1
+      unsystematic_risk_last_60_days: 0
+      unsystematic_risk_last_30_days: 1
       systematic_risk_last_30_days: 2
       systematic_risk_last_60_days: 3
 

@@ -1,10 +1,10 @@
 # ============================================================================
 # strategy_profiles.yaml — 顶层运行策略 profile schema
 # ============================================================================
-# 这份文件只定义策略意图和常调参数边界，不会自动改写运行参数。
-# 真实默认值仍来自 settings.yaml、dataset_profiles.yaml、expression_policies.yaml
-# 和命令行参数。后续收敛 policy_overrides.py 时，应优先把常调参数挂到
-# 这里列出的边界下，而不是继续扩大单个 dataset policy 覆盖面。
+# 这份文件定义策略意图、常调参数边界，以及非 CLI 显式指定时使用的
+# runtime_defaults。命令行参数优先级最高；smoke-test/full-run 仍会在最后改写
+# 搜索范围。后续收敛 policy_overrides.py 时，应优先把常调参数挂到这里列出的
+# 边界下，而不是继续扩大单个 dataset policy 覆盖面。
 # ============================================================================
 
 strategy_profiles:
@@ -55,6 +55,13 @@ strategy_profiles:
     notes:
       - "适合已有历史反馈、需要围绕通过边缘做结构微调时使用。"
       - "settings 变体预算应通过 feedback_loop_policy 显式表达。"
+    runtime_defaults:
+      limits:
+        limit: 80
+        max_templates_per_field: 4
+        field_template_batch_size: 2
+      runtime:
+        auto_update_blacklist_mode: "staging"
 
   submit-focused:
     purpose: "提交导向收敛，优先控制风险、相关性和可提交数量。"
@@ -81,3 +88,13 @@ strategy_profiles:
     notes:
       - "适合候选池已经较清楚、目标是少量高质量提交前验证时使用。"
       - "长期 blacklist.json 应保持人工确认边界，自动学习优先使用 staging。"
+    runtime_defaults:
+      limits:
+        limit: 30
+        max_templates_per_field: 2
+        field_template_batch_size: 1
+      filters:
+        top_fields_by_feedback: 20
+        stop_after_submittable: 1
+      runtime:
+        auto_update_blacklist_mode: "staging"

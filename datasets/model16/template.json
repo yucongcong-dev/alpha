@@ -9,8 +9,11 @@
       "priority": 1000,
       "family": "group_zscore",
       "layer": "group",
+      "stage": "group_second_order",
       "field_tags": ["model16_sparse_fscore", "model16_sparse_bfl"],
-      "dataset_tags": ["model16", "fundamental_scores"]
+      "dataset_tags": ["model16", "fundamental_scores"],
+      "role": "default_seed",
+      "activation_scope": "broad"
     },
     {
       "name": "model16_bucket_cap_ratio_zscore_120",
@@ -18,8 +21,11 @@
       "priority": 999,
       "family": "bucket_ratio",
       "layer": "group",
+      "stage": "group_second_order",
       "field_tags": ["model16_dense_derivative"],
-      "dataset_tags": ["model16", "fundamental_scores"]
+      "dataset_tags": ["model16", "fundamental_scores"],
+      "role": "default_seed",
+      "activation_scope": "broad"
     },
     {
       "name": "model16_groupfill_ts_rank_120",
@@ -27,8 +33,11 @@
       "priority": 998,
       "family": "groupfill",
       "layer": "time_series",
+      "stage": "first_order",
       "field_tags": ["model16_sparse_fscore", "model16_sparse_bfl"],
-      "dataset_tags": ["model16", "fundamental_scores"]
+      "dataset_tags": ["model16", "fundamental_scores"],
+      "role": "default_seed",
+      "activation_scope": "broad"
     },
     {
       "name": "model16_ratio_cap_zscore_120",
@@ -36,8 +45,11 @@
       "priority": 980,
       "family": "ratio_cap",
       "layer": "composite",
+      "stage": "first_order",
       "field_tags": ["model16_dense_derivative"],
-      "dataset_tags": ["model16", "fundamental_scores"]
+      "dataset_tags": ["model16", "fundamental_scores"],
+      "role": "default_seed",
+      "activation_scope": "broad"
     },
     {
       "name": "model16_mean_spread_over_std_120_252",
@@ -45,8 +57,11 @@
       "priority": 970,
       "family": "mean_spread",
       "layer": "time_series",
+      "stage": "first_order",
       "field_tags": ["model16_sparse_fscore", "model16_sparse_bfl"],
-      "dataset_tags": ["model16", "fundamental_scores"]
+      "dataset_tags": ["model16", "fundamental_scores"],
+      "role": "default_seed",
+      "activation_scope": "broad"
     }
   ],
   "VECTOR": []

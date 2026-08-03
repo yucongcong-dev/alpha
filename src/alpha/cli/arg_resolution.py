@@ -8,7 +8,10 @@ from typing import cast
 from ..config.constants import SMOKE_TEST_MAX_PENDING_CYCLES, SMOKE_TEST_MAX_QUEUE_SECONDS
 from ..config.defaults import apply_yaml_global_defaults
 from ..config.profiles import get_dataset_profile
-from ..config.strategy_profiles import normalize_strategy_profile
+from ..config.strategy_profiles import (
+    get_strategy_profile_runtime_defaults,
+    normalize_strategy_profile,
+)
 from ..config.yaml import get_yaml_config, set_active_config_path
 
 DATASET_PROFILE_KEYS = (
@@ -41,6 +44,11 @@ def resolve_cli_args(
         explicit_cli_keys=explicit_cli_keys,
     )
     args.strategy_profile = normalize_strategy_profile(getattr(args, "strategy_profile", "explore"))
+    apply_strategy_profile_defaults(
+        args,
+        yaml_config=yaml_config,
+        explicit_cli_keys=explicit_cli_keys,
+    )
     apply_run_mode_overrides(args)
     return args
 
@@ -68,6 +76,20 @@ def apply_dataset_profile_defaults(
             continue
         if getattr(args, key, None) == parser_defaults.get(key):
             setattr(args, key, profile_dict[key])
+
+
+def apply_strategy_profile_defaults(
+    args: argparse.Namespace,
+    *,
+    yaml_config: dict[str, object] | None,
+    explicit_cli_keys: set[str],
+) -> None:
+    """Apply selected strategy profile defaults unless CLI set the knob."""
+    defaults = get_strategy_profile_runtime_defaults(args.strategy_profile, yaml_config)
+    for key, value in defaults.items():
+        if key in explicit_cli_keys or not hasattr(args, key):
+            continue
+        setattr(args, key, value)
 
 
 def apply_run_mode_overrides(args: argparse.Namespace) -> None:

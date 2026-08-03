@@ -123,8 +123,8 @@ def test_yaml_can_enable_auto_update_blacklist(monkeypatch, tmp_path) -> None:
     assert args.strategy_profile == "refine"
 
 
-def test_cli_strategy_profile_overrides_yaml(monkeypatch, tmp_path) -> None:
-    """CLI can select the named strategy profile without rewriting other knobs."""
+def test_cli_strategy_profile_applies_runtime_defaults(monkeypatch, tmp_path) -> None:
+    """CLI can select a named strategy profile that rewrites non-explicit knobs."""
     clear_yaml_cache()
     config_path = tmp_path / "settings.yaml"
     write_config(config_path)
@@ -137,7 +137,12 @@ def test_cli_strategy_profile_overrides_yaml(monkeypatch, tmp_path) -> None:
     args = parse_args()
 
     assert args.strategy_profile == "submit-focused"
-    assert args.limit == 300
+    assert args.limit == 30
+    assert args.max_templates_per_field == 2
+    assert args.field_template_batch_size == 1
+    assert args.top_fields_by_feedback == 20
+    assert args.stop_after_submittable == 1
+    assert args.auto_update_blacklist_mode == "staging"
 
 
 def test_yaml_strategy_profile_rejects_unknown_value(monkeypatch, tmp_path) -> None:

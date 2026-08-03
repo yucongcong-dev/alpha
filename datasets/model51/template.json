@@ -4,6 +4,17 @@
   "_dataset_id": "model51",
   "default": [
     {
+      "name": "model51_bucket_cap_ratio_zscore_120",
+      "expression": "group_rank(ts_zscore({field_preprocessed} / ts_backfill(cap, 120), 120), densify(bucket(rank(cap), range='0.1, 1, 0.1')))",
+      "priority": 1005,
+      "family": "bucket_ratio",
+      "layer": "group",
+      "stage": "group_second_order",
+      "dataset_tags": ["model51", "risk_metrics"],
+      "role": "refine_neighbor",
+      "activation_scope": "broad"
+    },
+    {
       "name": "model51_bucket_cap_ratio_zscore_60",
       "expression": "group_rank(ts_zscore({field_preprocessed} / ts_backfill(cap, 120), 60), densify(bucket(rank(cap), range='0.1, 1, 0.1')))",
       "priority": 1000,

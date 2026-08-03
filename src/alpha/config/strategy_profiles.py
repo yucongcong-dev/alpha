@@ -28,6 +28,7 @@ class StrategyProfileSchema:
     purpose: str
     primary_goal: str
     tuning_keys: dict[str, tuple[str, ...]]
+    runtime_defaults: dict[str, dict[str, object]]
     notes: tuple[str, ...] = ()
 
 
@@ -64,9 +65,25 @@ def load_strategy_profile_schemas(
             purpose=str(raw_profile.get("purpose", "") or ""),
             primary_goal=str(raw_profile.get("primary_goal", "") or ""),
             tuning_keys=_coerce_tuning_keys(raw_profile.get("tuning_keys", {})),
+            runtime_defaults=_coerce_runtime_defaults(raw_profile.get("runtime_defaults", {})),
             notes=tuple(str(item) for item in _list_like(raw_profile.get("notes", ()))),
         )
     return schemas
+
+
+def get_strategy_profile_runtime_defaults(
+    profile: str,
+    yaml_config: YamlConfig | None = None,
+) -> dict[str, object]:
+    """Return flattened runtime defaults for a strategy profile."""
+    schemas = load_strategy_profile_schemas(yaml_config)
+    schema = schemas.get(normalize_strategy_profile(profile))
+    if schema is None:
+        return {}
+    defaults: dict[str, object] = {}
+    for section_defaults in schema.runtime_defaults.values():
+        defaults.update(section_defaults)
+    return defaults
 
 
 def _coerce_tuning_keys(value: object) -> dict[str, tuple[str, ...]]:
@@ -77,6 +94,17 @@ def _coerce_tuning_keys(value: object) -> dict[str, tuple[str, ...]]:
     for section, keys in value.items():
         tuning_keys[str(section)] = tuple(str(item) for item in _list_like(keys))
     return tuning_keys
+
+
+def _coerce_runtime_defaults(value: object) -> dict[str, dict[str, object]]:
+    """Coerce strategy runtime defaults from YAML."""
+    if not isinstance(value, dict):
+        return {}
+    defaults: dict[str, dict[str, object]] = {}
+    for section, section_defaults in value.items():
+        if isinstance(section_defaults, dict):
+            defaults[str(section)] = dict(section_defaults)
+    return defaults
 
 
 def _list_like(value: object) -> tuple[Any, ...]:

@@ -233,6 +233,11 @@ def test_strategy_profile_schemas_are_loaded_from_yaml() -> None:
     )
     assert "feedback_loop_policy" in schemas["refine"].tuning_keys["expression_policies"]
     assert "auto_update_blacklist_mode" in schemas["submit-focused"].tuning_keys["runtime"]
+    assert "filters" not in schemas["refine"].runtime_defaults
+    assert (
+        schemas["submit-focused"].runtime_defaults["runtime"]["auto_update_blacklist_mode"]
+        == "staging"
+    )
 
 
 def test_strategy_profile_schema_validation_reports_unknown_sections(tmp_path) -> None:
@@ -250,6 +255,9 @@ strategy_profiles:
     tuning_keys:
       magic:
         - hidden_knob
+    runtime_defaults:
+      magic:
+        hidden_knob: true
 """.strip(),
         encoding="utf-8",
     )
@@ -258,6 +266,7 @@ strategy_profiles:
 
     assert any("未知 profile 'aggressive'" in warning for warning in warnings)
     assert any("未知 section ['magic']" in warning for warning in warnings)
+    assert any("runtime_defaults 存在未知 section ['magic']" in warning for warning in warnings)
 
 
 def test_expression_policy_schema_keys_match_policy_fields() -> None:

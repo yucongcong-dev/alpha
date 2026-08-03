@@ -24,7 +24,13 @@ GLOBAL_KNOWN_KEYS = {
     "runtime",
 }
 
-STRATEGY_PROFILE_SCHEMA_KEYS = {"purpose", "primary_goal", "tuning_keys", "notes"}
+STRATEGY_PROFILE_SCHEMA_KEYS = {
+    "purpose",
+    "primary_goal",
+    "tuning_keys",
+    "runtime_defaults",
+    "notes",
+}
 STRATEGY_PROFILE_CHOICES = ("explore", "refine", "submit-focused")
 STRATEGY_PROFILE_TUNING_SECTIONS = {
     "limits",
@@ -251,6 +257,25 @@ def _validate_strategy_profiles_section(config: YamlConfig) -> list[str]:
                     f"strategy_profiles.{profile_name}.tuning_keys.{section_name} "
                     "必须是字符串列表。"
                 )
+
+        runtime_defaults = profile_data.get("runtime_defaults", {})
+        if runtime_defaults and not isinstance(runtime_defaults, dict):
+            warnings.append(f"strategy_profiles.{profile_name}.runtime_defaults 必须是 mapping。")
+            continue
+        if isinstance(runtime_defaults, dict):
+            unknown_default_sections = set(runtime_defaults) - STRATEGY_PROFILE_TUNING_SECTIONS
+            if unknown_default_sections:
+                warnings.append(
+                    f"strategy_profiles.{profile_name}.runtime_defaults 存在未知 section "
+                    f"{sorted(unknown_default_sections)}，已知 section: "
+                    f"{sorted(STRATEGY_PROFILE_TUNING_SECTIONS)}"
+                )
+            for section_name, defaults in runtime_defaults.items():
+                if not isinstance(defaults, dict):
+                    warnings.append(
+                        f"strategy_profiles.{profile_name}.runtime_defaults.{section_name} "
+                        "必须是 mapping。"
+                    )
 
     return warnings
 
