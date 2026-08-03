@@ -21,6 +21,7 @@ YAML_FILES: list[tuple[str, list[str]]] = [
     ("constants_defaults", ["config/constants_defaults.yaml"]),
     ("quality_feedback_defaults", ["config/quality_feedback.yaml"]),
     ("template_defaults", ["config/templates.yaml"]),
+    ("strategy_profiles", ["config/strategy_profiles.yaml"]),
     ("dataset_profiles", ["config/dataset_profiles.yaml"]),
     ("expression_policies", ["config/expression_policies.yaml"]),
     ("settings", ["config/settings.yaml"]),

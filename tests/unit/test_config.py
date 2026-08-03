@@ -28,10 +28,12 @@ from alpha.config.runtime_values import (
     load_http_runtime_config,
     load_quality_runtime_config,
 )
+from alpha.config.strategy_profiles import load_strategy_profile_schemas
 from alpha.config.yaml import (
     clear_yaml_caches,
     get_active_config_path,
     set_active_config_path,
+    validate_yaml_config,
 )
 from alpha.policy.expression import (
     get_dataset_expression_policy,
@@ -210,6 +212,45 @@ def test_unknown_dataset_uses_nonzero_default_field_selection_policy() -> None:
         "GROUP": 2,
         "SET": 3,
     }
+
+
+def test_strategy_profile_schemas_are_loaded_from_yaml() -> None:
+    schemas = load_strategy_profile_schemas()
+
+    assert set(schemas) == {"explore", "refine", "submit-focused"}
+    assert schemas["explore"].tuning_keys["limits"] == (
+        "limit",
+        "max_templates_per_field",
+        "max_templates_per_family",
+        "field_template_batch_size",
+    )
+    assert "feedback_loop_policy" in schemas["refine"].tuning_keys["expression_policies"]
+    assert "auto_update_blacklist_mode" in schemas["submit-focused"].tuning_keys["runtime"]
+
+
+def test_strategy_profile_schema_validation_reports_unknown_sections(tmp_path) -> None:
+    config_path = tmp_path / "settings.yaml"
+    config_path.write_text(
+        """
+strategy_profiles:
+  aggressive:
+    purpose: "bad profile"
+    primary_goal: "bad"
+    tuning_keys: {}
+  explore:
+    purpose: "bad section"
+    primary_goal: "bad"
+    tuning_keys:
+      magic:
+        - hidden_knob
+""".strip(),
+        encoding="utf-8",
+    )
+
+    warnings = validate_yaml_config(str(config_path))
+
+    assert any("未知 profile 'aggressive'" in warning for warning in warnings)
+    assert any("未知 section ['magic']" in warning for warning in warnings)
 
 
 def test_model16_policy_uses_long_backfill_with_winsorize() -> None:

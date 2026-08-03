@@ -65,6 +65,7 @@ class YamlConfigTyped(TypedDict, total=False):
 
     global_: ConfigSection
     dataset_profiles: dict[str, DatasetProfile]
+    strategy_profiles: dict[str, StrategyProfileSchema]
     expression_policies: dict[str, ExpressionPolicyOverrides]
 
 
@@ -86,6 +87,15 @@ class DatasetProfile(TypedDict, total=False):
     simulation_max_wait_seconds: int
     simulation_max_queue_seconds: int
     queue_busy_cooldown_seconds: int
+
+
+class StrategyProfileSchema(TypedDict, total=False):
+    """顶层策略 profile 的说明性 schema。"""
+
+    purpose: str
+    primary_goal: str
+    tuning_keys: dict[str, list[str]]
+    notes: list[str]
 
 
 class ExpressionPolicyOverrides(TypedDict, total=False):

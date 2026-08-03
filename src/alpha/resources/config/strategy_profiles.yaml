@@ -1,0 +1,83 @@
+# ============================================================================
+# strategy_profiles.yaml — 顶层运行策略 profile schema
+# ============================================================================
+# 这份文件只定义策略意图和常调参数边界，不会自动改写运行参数。
+# 真实默认值仍来自 settings.yaml、dataset_profiles.yaml、expression_policies.yaml
+# 和命令行参数。后续收敛 policy_overrides.py 时，应优先把常调参数挂到
+# 这里列出的边界下，而不是继续扩大单个 dataset policy 覆盖面。
+# ============================================================================
+
+strategy_profiles:
+  explore:
+    purpose: "广覆盖探索，优先发现字段和模板是否有基本信息量。"
+    primary_goal: "扩大字段/模板覆盖面，保留足够未探索候选。"
+    tuning_keys:
+      limits:
+        - limit
+        - max_templates_per_field
+        - max_templates_per_family
+        - field_template_batch_size
+      filters:
+        - top_fields_by_feedback
+      expression_policies:
+        - field_exploration_ratio
+        - field_max_per_family
+        - field_min_coverage
+        - field_min_date_coverage
+        - field_min_alpha_count
+        - field_min_user_count
+    notes:
+      - "适合新数据集、字段族覆盖尚不清楚、模板表现还没有稳定反馈时使用。"
+      - "不应把 explore 调成提交收敛模式；提交门槛和黑名单提升应放到 submit-focused。"
+
+  refine:
+    purpose: "反馈邻域优化，围绕 near-pass 和已知有效结构做小范围变体。"
+    primary_goal: "提高已有候选的通过率，同时控制重复测试。"
+    tuning_keys:
+      limits:
+        - max_templates_per_field
+        - max_templates_per_family
+        - field_template_batch_size
+      filters:
+        - top_fields_by_feedback
+      feedback:
+        - feedback_mutation_highscore_threshold
+        - feedback_template_min_priority
+        - expr_nearpass_boost_threshold
+        - expr_iter_boost_threshold
+        - expr_mutation_extend_threshold
+      expression_policies:
+        - feedback_loop_policy
+        - preferred_field_order
+        - preferred_field_type_order
+        - protected_templates
+        - promising_field_min_priority
+    notes:
+      - "适合已有历史反馈、需要围绕通过边缘做结构微调时使用。"
+      - "settings 变体预算应通过 feedback_loop_policy 显式表达。"
+
+  submit-focused:
+    purpose: "提交导向收敛，优先控制风险、相关性和可提交数量。"
+    primary_goal: "减少噪声搜索，把预算集中到最可能提交的候选。"
+    tuning_keys:
+      filters:
+        - top_fields_by_feedback
+        - stop_after_submittable
+      quality:
+        - min_sharpe
+        - min_fitness
+        - min_turnover
+        - max_turnover
+        - max_weight
+      runtime:
+        - auto_update_blacklist
+        - auto_update_blacklist_mode
+      expression_policies:
+        - blacklist_min_fields_for_nearpass
+        - blacklist_protected_min_avg_sharpe
+        - blacklist_protected_min_avg_fitness
+        - closed_default_template_library
+        - protected_templates
+    notes:
+      - "适合候选池已经较清楚、目标是少量高质量提交前验证时使用。"
+      - "长期 blacklist.json 应保持人工确认边界，自动学习优先使用 staging。"

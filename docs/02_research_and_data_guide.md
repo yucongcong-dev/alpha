@@ -692,7 +692,7 @@ datasets/<dataset>/cache/<region>_<universe>_<instrument>_d<delay>.json
 相对路径参数按命令执行目录解析；`--output`、`--fields-cache-file`、`--include-fields-file` 和模板库路径都可显式覆盖默认值。
 
 可编辑配置的唯一来源是根目录 `config/*.yaml`。日常运行参数主要在 `settings.yaml`，
-数据集 profile、表达式策略、质量反馈和模板默认值分别按各自 YAML 维护；
+运行策略 profile schema、数据集 profile、表达式策略、质量反馈和模板默认值分别按各自 YAML 维护；
 `src/alpha/resources/config/*.yaml` 是安装包镜像，不应直接修改。
 
 运行策略用 `global.runtime.strategy_profile` 或 `--strategy-profile` 显式标记，当前支持：
@@ -704,6 +704,8 @@ datasets/<dataset>/cache/<region>_<universe>_<instrument>_d<delay>.json
 这个字段目前只记录策略意图并进入 run config snapshot，不会隐式改写 `limit`、并发、模板预算或质量阈值。
 真正会改变运行规模的参数仍然要在 `limits`、`concurrency`、`quality`、`expression_policies`
 或 dataset profile 中显式配置。
+`config/strategy_profiles.yaml` 只维护这三种模式的说明性 schema 和常调参数清单，用来约束后续
+策略收敛，不参与运行时参数合并。
 
 ```bash
 # YAML 改动后同步并检查

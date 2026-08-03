@@ -24,6 +24,19 @@ GLOBAL_KNOWN_KEYS = {
     "runtime",
 }
 
+STRATEGY_PROFILE_SCHEMA_KEYS = {"purpose", "primary_goal", "tuning_keys", "notes"}
+STRATEGY_PROFILE_CHOICES = ("explore", "refine", "submit-focused")
+STRATEGY_PROFILE_TUNING_SECTIONS = {
+    "limits",
+    "concurrency",
+    "filters",
+    "quality",
+    "feedback",
+    "runtime",
+    "expression_policies",
+    "dataset_profiles",
+}
+
 
 def clear_schema_cache() -> None:
     """Clear cached schema keys after YAML cache invalidation."""
@@ -68,7 +81,11 @@ def _get_schema_keys(resolved_files: dict[str, str]) -> dict[str, set[str]]:
         keys_by_file: dict[str, set[str]] = {}
         keys_by_file["settings"] = {"global", "dataset_profiles", "expression_policies"}
 
-        for name in DEFAULT_CONFIG_NAMES | {"dataset_profiles", "expression_policies"}:
+        for name in DEFAULT_CONFIG_NAMES | {
+            "strategy_profiles",
+            "dataset_profiles",
+            "expression_policies",
+        }:
             path = resolved_files.get(name)
             if path:
                 data = load_yaml_file(path)
@@ -174,7 +191,7 @@ def _validate_cross_consistency(
 def _validate_nested_paths(config: YamlConfig) -> list[str]:
     """Warn on unexpectedly deep generic settings sections."""
     warnings: list[str] = []
-    skip_sections = {"global", "dataset_profiles", "expression_policies"}
+    skip_sections = {"global", "strategy_profiles", "dataset_profiles", "expression_policies"}
 
     for section, section_data in config.items():
         if section in skip_sections or not isinstance(section_data, dict):
@@ -191,6 +208,53 @@ def _validate_nested_paths(config: YamlConfig) -> list[str]:
     return warnings
 
 
+def _validate_strategy_profiles_section(config: YamlConfig) -> list[str]:
+    """Validate the descriptive strategy profile schema."""
+    section = config.get("strategy_profiles", {})
+    if not isinstance(section, dict):
+        return []
+
+    warnings: list[str] = []
+    for profile_name, profile_data in section.items():
+        if profile_name not in STRATEGY_PROFILE_CHOICES:
+            warnings.append(
+                f"strategy_profiles 存在未知 profile '{profile_name}'，"
+                f"已知 profile: {list(STRATEGY_PROFILE_CHOICES)}"
+            )
+            continue
+        if not isinstance(profile_data, dict):
+            warnings.append(f"strategy_profiles.{profile_name} 必须是 mapping。")
+            continue
+
+        unknown_keys = set(profile_data) - STRATEGY_PROFILE_SCHEMA_KEYS
+        if unknown_keys:
+            warnings.append(
+                f"strategy_profiles.{profile_name} 存在未知 key {sorted(unknown_keys)}，"
+                f"已知 key: {sorted(STRATEGY_PROFILE_SCHEMA_KEYS)}"
+            )
+
+        tuning_keys = profile_data.get("tuning_keys", {})
+        if not isinstance(tuning_keys, dict):
+            warnings.append(f"strategy_profiles.{profile_name}.tuning_keys 必须是 mapping。")
+            continue
+
+        unknown_sections = set(tuning_keys) - STRATEGY_PROFILE_TUNING_SECTIONS
+        if unknown_sections:
+            warnings.append(
+                f"strategy_profiles.{profile_name}.tuning_keys 存在未知 section "
+                f"{sorted(unknown_sections)}，已知 section: "
+                f"{sorted(STRATEGY_PROFILE_TUNING_SECTIONS)}"
+            )
+        for section_name, keys in tuning_keys.items():
+            if not isinstance(keys, list) or any(not isinstance(item, str) for item in keys):
+                warnings.append(
+                    f"strategy_profiles.{profile_name}.tuning_keys.{section_name} "
+                    "必须是字符串列表。"
+                )
+
+    return warnings
+
+
 def validate_merged_config(config: Any, resolved_files: dict[str, str]) -> list[str]:
     """Validate merged YAML config and return warnings."""
     if not isinstance(config, dict):
@@ -202,5 +266,6 @@ def validate_merged_config(config: Any, resolved_files: dict[str, str]) -> list[
     warnings.extend(_validate_top_level_keys(config, schema_keys))
     warnings.extend(_validate_global_section(config, resolved_files))
     warnings.extend(_validate_cross_consistency(config, resolved_files))
+    warnings.extend(_validate_strategy_profiles_section(config))
     warnings.extend(_validate_nested_paths(config))
     return warnings
