@@ -78,6 +78,7 @@ class ConfigSection(TypedDict, total=False):
 class DatasetProfile(TypedDict, total=False):
     """单个数据集的运行参数 profile。"""
 
+    default_preset: str
     min_request_interval: float
     sleep_between_fields: float
     max_concurrent_simulations: int

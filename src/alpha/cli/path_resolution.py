@@ -8,6 +8,8 @@ import argparse
 import os
 from pathlib import Path
 
+from ..config.profiles import get_dataset_profile
+from ..config.yaml import get_yaml_config
 from ..io.common import resolve_datasets_root
 from ..io.output_paths import (
     build_dataset_scoped_paths,
@@ -23,15 +25,20 @@ FILTER_FILE_OPTIONS = {
     "include_templates_file": "--include-templates-file",
     "exclude_templates_file": "--exclude-templates-file",
 }
+PRESET_CONTROLLED_PATH_KEYS = frozenset(
+    {
+        "template_library_file",
+        "include_fields_file",
+        "include_templates_file",
+    }
+)
 
 
 def _explicit_cli_keys(args: argparse.Namespace) -> frozenset[str]:
     return frozenset(getattr(args, "_explicit_cli_keys", frozenset()))
 
 
-def _validate_explicit_filter_files(
-    args: argparse.Namespace, paths_by_key: dict[str, str]
-) -> None:
+def _validate_explicit_filter_files(args: argparse.Namespace, paths_by_key: dict[str, str]) -> None:
     explicit_keys = _explicit_cli_keys(args)
     for key, option in FILTER_FILE_OPTIONS.items():
         if key not in explicit_keys:
@@ -39,6 +46,36 @@ def _validate_explicit_filter_files(
         path = paths_by_key.get(key, "")
         if path and not Path(path).is_file():
             raise ValueError(f"{option} does not exist or is not a file: {path}")
+
+
+def _default_dataset_preset_paths(
+    args: argparse.Namespace,
+    *,
+    datasets_root: str,
+) -> dict[str, str]:
+    explicit_keys = _explicit_cli_keys(args)
+    if explicit_keys & PRESET_CONTROLLED_PATH_KEYS:
+        return {}
+    if any(str(getattr(args, key, "") or "").strip() for key in PRESET_CONTROLLED_PATH_KEYS):
+        return {}
+
+    profile = get_dataset_profile(args.dataset_id, get_yaml_config())
+    preset_name = str(profile.get("default_preset", "") or "").strip()
+    if not preset_name:
+        return {}
+
+    preset_dir = Path(datasets_root) / args.dataset_id / "presets" / preset_name
+    paths = {
+        "template_library_file": str(preset_dir / "template.json"),
+        "include_fields_file": str(preset_dir / "fields.txt"),
+        "include_templates_file": str(preset_dir / "templates.txt"),
+    }
+    missing = [path for path in paths.values() if not Path(path).is_file()]
+    if missing:
+        raise ValueError(
+            f"dataset preset {args.dataset_id}/{preset_name} is incomplete: {', '.join(missing)}"
+        )
+    return paths
 
 
 def normalize_args_paths(args: argparse.Namespace) -> RunPaths:
@@ -51,9 +88,12 @@ def normalize_args_paths(args: argparse.Namespace) -> RunPaths:
         delay=args.delay,
         run_name=str(getattr(args, "run_name", "default") or "default"),
     )
+    datasets_root = scoped_paths["datasets_root"] or str(resolve_datasets_root())
+    preset_paths = _default_dataset_preset_paths(args, datasets_root=datasets_root)
 
     template_library_file = (
         resolve_cli_path(args.template_library_file, base_dir=os.getcwd())
+        or preset_paths.get("template_library_file", "")
         or scoped_paths["template_library_file"]
     )
     fields_cache_file = (
@@ -69,10 +109,13 @@ def normalize_args_paths(args: argparse.Namespace) -> RunPaths:
     creds_key_file = (
         resolve_cli_path(args.creds_key_file, base_dir=os.getcwd()) or DEFAULT_CREDS_KEY_FILE
     )
-    datasets_root = scoped_paths["datasets_root"] or str(resolve_datasets_root())
-    include_fields_file = resolve_cli_path(args.include_fields_file, base_dir=os.getcwd())
+    include_fields_file = resolve_cli_path(
+        args.include_fields_file, base_dir=os.getcwd()
+    ) or preset_paths.get("include_fields_file", "")
     exclude_fields_file = resolve_cli_path(args.exclude_fields_file, base_dir=os.getcwd())
-    include_templates_file = resolve_cli_path(args.include_templates_file, base_dir=os.getcwd())
+    include_templates_file = resolve_cli_path(
+        args.include_templates_file, base_dir=os.getcwd()
+    ) or preset_paths.get("include_templates_file", "")
     exclude_templates_file = resolve_cli_path(args.exclude_templates_file, base_dir=os.getcwd())
     _validate_explicit_filter_files(
         args,

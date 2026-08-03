@@ -48,6 +48,9 @@ group_rank(
 
 ## 推荐命令
 
+普通 `--dataset-id fundamental6` 运行会自动绑定 `cashflow_submit_core` preset。下面保留
+完整写法用于审计和显式复跑；只要显式传入模板或 include 文件，自动 preset 就不会介入。
+
 ```bash
 PYTHONPATH=src python3.10 -m alpha \
   --dataset-id fundamental6 \

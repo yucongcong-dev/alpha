@@ -311,6 +311,45 @@ def test_normalize_args_paths_uses_dataset_scoped_defaults(monkeypatch, tmp_path
     assert paths.log_file.replace("\\", "/").endswith("/datasets/pv1/runs/default/run.log")
 
 
+def test_normalize_args_paths_applies_fundamental6_default_preset(monkeypatch, tmp_path) -> None:
+    clear_yaml_cache()
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(sys, "argv", ["alpha", "--dataset-id", "fundamental6"])
+
+    paths = normalize_args_paths(parse_args())
+
+    preset_suffix = "/datasets/fundamental6/presets/cashflow_submit_core"
+    assert paths.template_library_file.replace("\\", "/").endswith(f"{preset_suffix}/template.json")
+    assert paths.include_fields_file.replace("\\", "/").endswith(f"{preset_suffix}/fields.txt")
+    assert paths.include_templates_file.replace("\\", "/").endswith(
+        f"{preset_suffix}/templates.txt"
+    )
+
+
+def test_explicit_template_path_disables_fundamental6_default_preset(monkeypatch, tmp_path) -> None:
+    clear_yaml_cache()
+    monkeypatch.chdir(tmp_path)
+    custom_template = tmp_path / "custom-template.json"
+    custom_template.write_text("{}", encoding="utf-8")
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "alpha",
+            "--dataset-id",
+            "fundamental6",
+            "--template-library-file",
+            str(custom_template),
+        ],
+    )
+
+    paths = normalize_args_paths(parse_args())
+
+    assert paths.template_library_file == str(custom_template)
+    assert paths.include_fields_file == ""
+    assert paths.include_templates_file == ""
+
+
 def test_normalize_args_paths_does_not_mutate_original_args(monkeypatch, tmp_path) -> None:
     """Path normalization should return RunPaths without rewriting raw CLI attrs in-place."""
     clear_yaml_cache()
@@ -405,9 +444,7 @@ def test_normalize_args_paths_resolves_relative_files_from_cwd(monkeypatch, tmp_
     assert paths.include_fields_file == str((tmp_path / "tmp_priority_fields_round1.txt").resolve())
 
 
-def test_normalize_args_paths_rejects_missing_explicit_filter_file(
-    monkeypatch, tmp_path
-) -> None:
+def test_normalize_args_paths_rejects_missing_explicit_filter_file(monkeypatch, tmp_path) -> None:
     """Explicit filter files should not silently degrade into empty filters."""
     clear_yaml_cache()
     monkeypatch.chdir(tmp_path)
