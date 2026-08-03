@@ -22,6 +22,7 @@ from ..models.io_types import RunFilters
 from ..models.runtime_protocols import TemplateFeedback
 from ..runtime.contexts import TemplateBuildContext
 from ..selection.feedback_filters import (
+    resolve_field_template_family_skip_reason,
     should_keep_template_for_feedback,
     should_skip_field_template_family,
 )
@@ -178,6 +179,15 @@ def resolve_template_skip_reason(
         template_metadata=template_metadata,
     ):
         return "feedback"
+    blacklist_reason = resolve_field_template_family_skip_reason(
+        field_name,
+        template_name,
+        expression,
+        template_metadata=template_metadata,
+        expression_policy=expression_policy,
+    )
+    if blacklist_reason is not None:
+        return _normalize_blacklist_skip_reason(blacklist_reason)
     if should_skip_field_template_family(
         field_name,
         template_name,
@@ -189,3 +199,9 @@ def resolve_template_skip_reason(
     if should_skip_expression_by_history(field_id, template_name, expression, prior_results):
         return "history"
     return None
+
+
+def _normalize_blacklist_skip_reason(reason: str) -> str:
+    """Normalize blacklist matcher reasons into stable dry-run counter keys."""
+    normalized = reason.strip().lower().replace("+", "_").replace(":", "_").replace("-", "_")
+    return f"blacklist_{normalized or 'unknown'}"

@@ -20,6 +20,7 @@ from ..generators.templates.variation_common import (
 )
 from ..models.domain_types import FieldFeedbackSummary, TemplateMetadata
 from ..policy.expression import get_dataset_expression_policy, resolve_feedback_stage
+from ..policy.template_blacklist import runtime_blacklist_match_reason
 
 
 def should_keep_template_for_feedback(
@@ -97,16 +98,55 @@ def should_skip_field_template_family(
     template_metadata: TemplateMetadata | None = None,
 ) -> bool:
     """对已经证明偏弱的字段-模板家族组合做先验剪枝。"""
+    return (
+        resolve_field_template_family_skip_reason(
+            field_name,
+            template_name,
+            expression,
+            use_dataset_heuristics=use_dataset_heuristics,
+            dataset_id=dataset_id,
+            expression_policy=expression_policy,
+            template_metadata=template_metadata,
+        )
+        is not None
+    )
+
+
+def resolve_field_template_family_skip_reason(
+    field_name: str,
+    template_name: str,
+    expression: str,
+    *,
+    use_dataset_heuristics: bool | None = None,
+    dataset_id: str = "",
+    expression_policy: DatasetExpressionPolicy | None = None,
+    template_metadata: TemplateMetadata | None = None,
+) -> str | None:
+    """Return the explicit blacklist reason for field-template family pruning."""
     policy = expression_policy or get_dataset_expression_policy(
         dataset_id,
         use_curated_heuristics=use_dataset_heuristics,
     )
     if not policy.use_curated_heuristics:
-        return False
+        return None
 
-    return _is_blacklisted_template(
+    if not _is_blacklisted_template(
         template_name,
         expression,
         template_metadata=template_metadata,
         policy=policy,
+    ):
+        return None
+    template_family = classify_expression_family(template_name, expression, template_metadata)
+    template_stage = classify_template_stage(template_name, expression, template_metadata)
+    return (
+        runtime_blacklist_match_reason(
+            template_name,
+            expression,
+            template_metadata=template_metadata,
+            policy=policy,
+            current_family=template_family,
+            current_stage=template_stage,
+        )
+        or "unknown"
     )
