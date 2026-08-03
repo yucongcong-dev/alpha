@@ -12,7 +12,6 @@
 
 from __future__ import annotations
 
-from contextlib import suppress
 from datetime import datetime, timezone
 import json
 import logging
@@ -24,6 +23,7 @@ from typing import Any
 from ..config.constants import CHECKPOINT_PENDING_FUTURES_LIMIT, CHECKPOINT_RESUME_SAFETY_SECONDS
 from ..runtime.concurrency import RuntimeConcurrencyState
 from ..runtime.state import ExecutionState
+from . import checkpoint_files as _files
 from . import checkpoint_payloads as _payloads
 
 __all__ = [
@@ -40,6 +40,8 @@ logger = logging.getLogger(__name__)
 STATE_VERSION = 1
 
 _all_pending_contexts = _payloads.all_pending_contexts
+_atomic_save = _files.atomic_save
+delete_pipeline_state = _files.delete_pipeline_state
 _non_negative_int = _payloads.non_negative_int
 _restore_pending_simulations = _payloads.restore_pending_simulations
 _restore_template_stats = _payloads.restore_template_stats
@@ -304,45 +306,3 @@ def save_interrupt_report(
             reason,
         )
     return success
-
-
-def delete_pipeline_state(state_file: str) -> None:
-    """运行完成后删除状态文件（表示一次完整运行结束）。"""
-    if state_file and os.path.exists(state_file):
-        with suppress(OSError):
-            os.remove(state_file)
-            logger.debug("[checkpoint] removed completed state file %s", state_file)
-
-
-# ============================================================================
-# 内部辅助
-# ============================================================================
-
-
-def _atomic_save(path: str, payload: dict[str, Any]) -> bool:
-    """原子性保存 JSON 到文件（先写临时文件，再替换）。"""
-    import tempfile
-
-    if not path:
-        return False
-    fd: int | None = None
-    tmp = ""
-    try:
-        directory = os.path.dirname(os.path.abspath(path)) or "."
-        os.makedirs(directory, exist_ok=True)
-        fd, tmp = tempfile.mkstemp(prefix=".tmp_state_", suffix=".json", dir=directory)
-        with os.fdopen(fd, "w", encoding="utf-8") as handle:
-            fd = None
-            json.dump(payload, handle, ensure_ascii=False, indent=2)
-        os.replace(tmp, path)
-        return True
-    except Exception as exc:
-        logger.debug("[checkpoint] failed to save %s: %s", path, exc)
-        return False
-    finally:
-        if fd is not None:
-            with suppress(OSError):
-                os.close(fd)
-        with suppress(OSError):
-            if tmp and os.path.exists(tmp):
-                os.remove(tmp)
