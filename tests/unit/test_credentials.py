@@ -12,6 +12,7 @@ from unittest.mock import patch
 import pytest
 
 from alpha.exceptions import BrainAPIError
+from alpha.io import credentials_crypto
 from alpha.io.credentials import (
     CREDENTIALS_STORAGE_VERSION,
     load_credentials,
@@ -179,6 +180,27 @@ def test_invalid_windows_dpapi_key_payload_has_clear_error(tmp_path) -> None:
 
     with pytest.raises(BrainAPIError, match="DPAPI key payload is invalid"):
         read_or_create_credentials_key(str(key_file))
+
+
+def test_windows_dpapi_key_payload_round_trip_with_mocked_dpapi(monkeypatch) -> None:
+    from cryptography.fernet import Fernet
+
+    raw_key = Fernet.generate_key()
+    monkeypatch.setattr(credentials_crypto.os, "name", "nt")
+    monkeypatch.setattr(
+        credentials_crypto,
+        "protect_for_current_user",
+        lambda key: b"protected:" + key,
+    )
+    monkeypatch.setattr(
+        credentials_crypto,
+        "unprotect_for_current_user",
+        lambda protected: protected.removeprefix(b"protected:"),
+    )
+
+    serialized = credentials_crypto._serialize_windows_dpapi_key(raw_key)
+
+    assert credentials_crypto._deserialize_windows_dpapi_key(serialized, "key") == raw_key
 
 
 def test_decrypt_rejects_missing_ciphertext_or_key(tmp_path) -> None:

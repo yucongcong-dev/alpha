@@ -12,7 +12,6 @@ endif
 PYTHONPATH ?= src
 RUFF ?= ruff
 MYPY ?= $(PYTHON) -m mypy
-SECRET_PATTERN := github_[p]at_[A-Za-z0-9_]+|WQB_[P]ASSWORD=|Authorization: [B]asic
 
 install-dev:
 	$(PYTHON) -m pip install -e ".[dev,httpx]"
@@ -34,78 +33,22 @@ docs-check:
 	$(PYTHON) scripts/check_docs.py
 
 scan-secrets:
-	@if rg -n "$(SECRET_PATTERN)" . --glob '!Makefile'; then \
-		echo "[check] sensitive literal scan failed" >&2; \
-		exit 1; \
-	fi
+	$(PYTHON) scripts/check_repo.py scan-secrets
 
 repo-boundary-check:
-	@if find . -maxdepth 1 -type f \( -name 'tmp_*.txt' -o -name 'tmp_*.json' \) | rg -n .; then \
-		echo "[check] root tmp_* files are not allowed; move them to tmp/ or datasets/<dataset>/presets/" >&2; \
-		exit 1; \
-	fi
+	$(PYTHON) scripts/check_repo.py repo-boundary
 
 removed-compat-file-check:
-	@if find src/alpha -maxdepth 1 -type f \( \
-		-name 'bootstrap*.py' -o \
-		-name 'finalize.py' -o \
-		-name 'loop_*.py' -o \
-		-name 'run_loop*.py' \
-	\) | rg -n .; then \
-		echo "[check] root app compatibility files were removed; use src/alpha/app/* directly" >&2; \
-		exit 1; \
-	fi
-	@if find src/alpha/app -maxdepth 1 -type f \( \
-		-name 'loop_support.py' -o \
-		-name 'run_loop_state.py' \
-	\) | rg -n .; then \
-		echo "[check] app aggregate compatibility files were removed; import concrete app modules" >&2; \
-		exit 1; \
-	fi
+	$(PYTHON) scripts/check_repo.py removed-compat-file
 
 compat-import-check:
-	@if rg -n "from alpha\.models\.base|from alpha\.(bootstrap|run_loop|finalize|loop_)|from alpha\.generators\.settings" tests; then \
-		echo "[check] tests should import canonical modules instead of compatibility exports" >&2; \
-		exit 1; \
-	fi
-	@if rg -n "from alpha\.(bootstrap|bootstrap_cleanup|bootstrap_fields|bootstrap_state|finalize|loop_|run_loop)|import alpha\.(bootstrap|bootstrap_cleanup|bootstrap_fields|bootstrap_state|finalize|loop_|run_loop)" src/alpha \
-		--glob '!app/**'; then \
-		echo "[check] internal code should import alpha.app modules instead of root compatibility exports" >&2; \
-		exit 1; \
-	fi
-	@if rg -n "from \.\.generators\.settings|from \.generators\.settings|from alpha\.generators\.settings|import alpha\.generators\.settings" src/alpha; then \
-		echo "[check] internal code should import generators.payload/fingerprint/variants instead of generators.settings" >&2; \
-		exit 1; \
-	fi
-	@if rg -n "from \.\.generators\.templates import|from \.generators\.templates import|from alpha\.generators\.templates import" src/alpha \
-		--glob '!generators/templates/__init__.py'; then \
-		echo "[check] internal code should import concrete generators.templates modules instead of compatibility exports" >&2; \
-		exit 1; \
-	fi
-	@if rg -n "from \. import get_yaml_config" src/alpha/config --glob '!__init__.py'; then \
-		echo "[check] internal config modules should import config.yaml instead of the package facade" >&2; \
-		exit 1; \
-	fi
+	$(PYTHON) scripts/check_repo.py compat-import
 
 arch-boundary-check:
-	@if rg -n "from \.\.analysis|from alpha\.analysis|import alpha\.analysis" src/alpha/io \
-		--glob '!__init__.py'; then \
-		echo "[check] alpha.io must remain below analysis and cannot import analysis modules" >&2; \
-		exit 1; \
-	fi
-	@if rg -n "(from alpha\.app(\.| import)|import alpha\.app(\.|$$)|from \.\.app(\.| import)|from \.app(\.| import))" src/alpha \
-		--glob '!app/**' \
-		--glob '!main.py' \
-		--glob '!__main__.py'; then \
-		echo "[check] lower-level modules must not import alpha.app orchestration modules" >&2; \
-		exit 1; \
-	fi
+	$(PYTHON) scripts/check_repo.py arch-boundary
 
 todo-check:
-	@if rg -n "TODO|FIXME|HACK" src tests; then \
-		echo "[check] avoid stale TODO/FIXME/HACK comments; document follow-up work explicitly" >&2; \
-		exit 1; \
-	fi
+	$(PYTHON) scripts/check_repo.py todo
 
 sync-config:
 	$(PYTHON) scripts/sync_config.py
@@ -143,10 +86,7 @@ clean-runtime:
 	PYTHONPATH=$(PYTHONPATH) $(PYTHON) -m alpha clean
 
 clean-dev:
-	@find src tests scripts -type d -name '__pycache__' -prune -exec rm -rf {} +
-	@rm -rf __pycache__ .pycache .mypy_cache .pytest_cache .ruff_cache .coverage .coverage.json htmlcov tmp/pycache
-	@find src -maxdepth 2 -type d -name '*.egg-info' -prune -exec rm -rf {} +
-	@echo "[clean-dev] removed Python bytecode, tool caches, coverage, and package metadata"
+	$(PYTHON) scripts/clean_dev.py
 
 package: sync-config
 	$(PYTHON) -m build

@@ -24,8 +24,11 @@ def _windows_libraries() -> tuple[Any, Any]:
     if os.name != "nt":
         raise BrainAPIError("Windows DPAPI is only available on Windows.")
 
-    crypt32 = cast(Any, ctypes.WinDLL("crypt32", use_last_error=True))
-    kernel32 = cast(Any, ctypes.WinDLL("kernel32", use_last_error=True))
+    win_dll = getattr(ctypes, "WinDLL", None)
+    if win_dll is None:
+        raise BrainAPIError("Windows DPAPI is only available on Windows.")
+    crypt32 = cast(Any, win_dll("crypt32", use_last_error=True))
+    kernel32 = cast(Any, win_dll("kernel32", use_last_error=True))
     crypt32.CryptProtectData.argtypes = [
         ctypes.POINTER(_DataBlob),
         wintypes.LPCWSTR,
@@ -61,8 +64,10 @@ def _input_blob(data: bytes) -> tuple[_DataBlob, Any]:
 
 
 def _raise_dpapi_error(operation: str) -> None:
-    error_code = ctypes.get_last_error()
-    message = ctypes.FormatError(error_code).strip()
+    get_last_error = getattr(ctypes, "get_last_error", lambda: 0)
+    format_error = getattr(ctypes, "FormatError", lambda error_code: "unknown error")
+    error_code = int(get_last_error())
+    message = str(format_error(error_code)).strip()
     raise BrainAPIError(
         f"Windows DPAPI failed to {operation} credentials key (error {error_code}: {message})."
     )

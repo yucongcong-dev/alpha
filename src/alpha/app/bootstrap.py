@@ -10,33 +10,41 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass, replace
 import logging
 import threading
 
 from ..analysis.analysis_sync import ensure_analysis_synced
-from ..analysis.feedback_history import build_historical_run_state
+from ..analysis.feedback_history import build_historical_run_state, rebuild_historical_run_state
 from ..api.client import BrainClient, WorkerClientFactory, login_with_retry
 from ..cli.filters import load_run_filters_extended, setup_runtime_logging
 from ..cli.run_config import build_run_config_snapshot
 from ..config.application import ApplicationConfig
+from ..config.models import DatasetExpressionPolicy
 from ..config.runtime_values import get_runtime_config
 from ..generators.fields import fetch_fields_with_cache, load_fields_cache
 from ..generators.fingerprint import stable_fingerprint
 from ..generators.payload import build_settings_fingerprint
 from ..generators.templates.library_loader import load_template_library
 from ..generators.templates.library_store import ensure_dataset_template_library
+from ..io.common import resolve_datasets_root
 from ..io.credentials import load_credentials
 from ..io.output_paths import cleanup_legacy_sidecar_files
-from ..models.io_types import RunPaths
+from ..models.domain import TemplateField, TemplateLibrary
+from ..models.io_types import RunFilters, RunPaths
 from ..models.runtime_options import (
+    ApiClientOptions,
     BootstrapFieldOptions,
     BootstrapPathOptions,
+    FieldFetchOptions,
+    FieldSelectionOptions,
     RunConfigSnapshotOptions,
     TemplateBuildOptions,
 )
 from ..models.runtime_protocols import (
     ApiClientArgs,
     ClientFactoryLike,
+    RunConfig,
     RuntimeConcurrencyArgs,
 )
 from ..policy.blacklist_context import set_active_datasets_root
@@ -47,10 +55,11 @@ from ..policy.blacklist_store import (
 )
 from ..policy.expression import get_dataset_expression_policy
 from ..runtime.concurrency import RuntimeConcurrencyState
+from ..runtime.contexts import HistoricalRunState
 from ..runtime.state import InitializedRunContext
 from .bootstrap_cleanup import clean_runtime_artifacts as clean_runtime_artifacts
-from .bootstrap_fields import prepare_fields_for_execution
-from .bootstrap_state import build_execution_state
+from .bootstrap_fields import prepare_fields_for_execution, resolve_field_selection
+from .bootstrap_state import build_execution_state, refresh_pending_check_results
 from .bootstrap_types import (
     ApiClientServices,
     BootstrapPaths,
@@ -64,14 +73,8 @@ from .bootstrap_types import (
     SupportingResourceServices,
 )
 
-from dataclasses import dataclass, replace
-
-from ..analysis.feedback_history import rebuild_historical_run_state
-from ..config.models import DatasetExpressionPolicy
-from ..io.common import resolve_datasets_root
-from .bootstrap_state import refresh_pending_check_results
-from .bootstrap_fields import resolve_field_selection
 logger = logging.getLogger(__name__)
+
 
 def build_bootstrap_services() -> BootstrapServices:
     """Build bootstrap dependencies dynamically so test/runtime overrides stay effective."""
@@ -107,6 +110,7 @@ def build_bootstrap_services() -> BootstrapServices:
         ),
     )
 
+
 def build_runtime_concurrency(
     args: RuntimeConcurrencyArgs,
 ) -> RuntimeConcurrencyResources:
@@ -125,6 +129,7 @@ def build_runtime_concurrency(
         runtime_state=runtime_state,
         create_semaphore=create_semaphore,
     )
+
 
 def assemble_initialized_run_context(
     *,
@@ -150,6 +155,7 @@ def assemble_initialized_run_context(
         create_semaphore=create_semaphore,
         run_config=prepared.run_config,
     )
+
 
 def initialize_run_context(
     args: ApplicationConfig,
@@ -225,6 +231,7 @@ def initialize_run_context(
         runtime_state=concurrency.runtime_state,
         create_semaphore=concurrency.create_semaphore,
     )
+
 
 logger = logging.getLogger(__name__)
 
@@ -501,6 +508,7 @@ def create_and_login_client(
         http_backend=http_backend,
     )
     return bootstrap_client, client_factory
+
 
 logger = logging.getLogger(__name__)
 

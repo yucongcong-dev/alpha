@@ -2,30 +2,26 @@
 
 from __future__ import annotations
 
-import re
-
 from collections.abc import Sequence
 from dataclasses import dataclass
-from typing import Any
+import re
 from typing import Any, cast
 
 from ..analysis.field_stats import decay_field_feedback, field_priority
-from ..config.constants import PREFERRED_FIELD_RANK_SENTINEL
 from ..config.constants import PREFERRED_FIELD_RANK_SENTINEL, SENTINEL_UNKNOWN, STATS_DEFAULT_SCORE
-from ..config.constants import SENTINEL_UNKNOWN
 from ..config.models import DatasetExpressionPolicy
 from ..generators.fields import choose_field_name
 from ..models.domain import TemplateField
 from ..models.io_types import RunFilters
 from ..models.runtime_options import FieldSelectionOptions
 from ..runtime.contexts import HistoricalRunState
-from ..utils.helpers import first_non_empty
 from ..utils.helpers import first_non_empty, is_event_field_name
 
 _FIELD_ALL_SUFFIX = re.compile(r"_all$")
 _FIELD_WINDOW_TOKEN = re.compile(r"_(?:last_)?\d+(?:_days?)?(?=_|$)")
 _FIELD_TRAILING_WINDOW = re.compile(r"(?:_last)?_(\d+)(?:_days?)?(?:_|$)")
 _PREFERRED_FIELD_WINDOWS = (30, 60, 90, 20, 120, 180, 10, 150, 270, 360, 720, 1080)
+
 
 def infer_field_family(field_name: str) -> str:
     """Collapse repeated tenor/window variants into a stable semantic family.
@@ -39,6 +35,7 @@ def infer_field_family(field_name: str) -> str:
     family = _FIELD_ALL_SUFFIX.sub("", normalized)
     family = _FIELD_WINDOW_TOKEN.sub("", family)
     return family or normalized
+
 
 def preferred_field_rank(field_name: str, preferred_order: dict[str, int]) -> int:
     """Resolve exact and semantic aliases in preferred field ordering.
@@ -58,6 +55,7 @@ def preferred_field_rank(field_name: str, preferred_order: dict[str, int]) -> in
     ]
     return min(semantic_matches) if semantic_matches else PREFERRED_FIELD_RANK_SENTINEL
 
+
 def field_window_rank(field_name: str) -> int:
     """Rank common tenor suffixes so preferred windows sort first."""
     match = _FIELD_TRAILING_WINDOW.search(field_name.strip().lower())
@@ -69,6 +67,7 @@ def field_window_rank(field_name: str) -> int:
     except ValueError:
         return len(_PREFERRED_FIELD_WINDOWS) + 1
 
+
 def _optional_int(value: Any) -> int | None:
     if value is None or value == "":
         return None
@@ -77,6 +76,7 @@ def _optional_int(value: Any) -> int | None:
     except (TypeError, ValueError):
         return None
 
+
 def _optional_float(value: Any) -> float | None:
     if value is None or value == "":
         return None
@@ -84,6 +84,7 @@ def _optional_float(value: Any) -> float | None:
         return float(value)
     except (TypeError, ValueError):
         return None
+
 
 def _infer_runtime_field_tags(
     field_name: str,
@@ -106,6 +107,7 @@ def _infer_runtime_field_tags(
         tags.append("sparse_coverage")
     return tuple(tags)
 
+
 @dataclass(frozen=True)
 class FieldMetadataValues:
     coverage: float | None
@@ -117,6 +119,7 @@ class FieldMetadataValues:
     def coverage_for_tags(self) -> float:
         return self.coverage or 0.0
 
+
 @dataclass(frozen=True)
 class FieldQualityThresholds:
     min_coverage: float
@@ -125,6 +128,7 @@ class FieldQualityThresholds:
     min_user_count: int
     max_alpha_count: int
     max_user_count: int
+
 
 def _attach_runtime_metadata(
     field: TemplateField,
@@ -142,11 +146,13 @@ def _attach_runtime_metadata(
         metadata=metadata,
     )
 
+
 def field_identity(field: TemplateField | dict[str, Any]) -> tuple[str, str]:
     return (
         str(first_non_empty(field.get("id"), SENTINEL_UNKNOWN)),
         choose_field_name(field),
     )
+
 
 def field_with_runtime_metadata(
     field: TemplateField | dict[str, Any],
@@ -166,6 +172,7 @@ def field_with_runtime_metadata(
     if runtime_field_tags:
         field_copy["runtime_field_tags"] = list(runtime_field_tags)
     return field_copy
+
 
 def base_field_stats(cached_field_count: int) -> dict[str, int]:
     return {
@@ -187,6 +194,7 @@ def base_field_stats(cached_field_count: int) -> dict[str, int]:
         "selected_unexplored_count": 0,
     }
 
+
 def metadata_values(field: TemplateField | dict[str, Any]) -> FieldMetadataValues:
     return FieldMetadataValues(
         coverage=_optional_float(field.get("coverage")),
@@ -194,6 +202,7 @@ def metadata_values(field: TemplateField | dict[str, Any]) -> FieldMetadataValue
         alpha_count=_optional_int(field.get("alphaCount")),
         user_count=_optional_int(field.get("userCount")),
     )
+
 
 def quality_thresholds(
     field_name: str,
@@ -224,6 +233,7 @@ def quality_thresholds(
         max_alpha_count=expression_policy.field_max_alpha_count,
         max_user_count=expression_policy.field_max_user_count,
     )
+
 
 def passes_quality_filters(
     values: FieldMetadataValues,
@@ -266,7 +276,9 @@ def passes_quality_filters(
         return False
     return True
 
+
 FieldSortKey = tuple[int, int, int, int, int, float, int, str]
+
 
 def _safe_int(value: Any) -> int:
     try:
@@ -274,8 +286,10 @@ def _safe_int(value: Any) -> int:
     except (TypeError, ValueError):
         return 0
 
+
 def _clamp_unit(value: float) -> float:
     return min(max(value, 0.0), 1.0)
+
 
 def _feedback_priority(
     field_id: str,
@@ -291,6 +305,7 @@ def _feedback_priority(
     if feedback is None:
         return field_priority(field_id, historical_state.field_feedback)
     return float(feedback.get("best_score", STATS_DEFAULT_SCORE) or STATS_DEFAULT_SCORE)
+
 
 def _is_promising_feedback(
     field_id: str,
@@ -310,6 +325,7 @@ def _is_promising_feedback(
     attempted = _safe_int(feedback.get("attempted_templates"))
     minimum = expression_policy.field_feedback_min_attempts_for_promising
     return minimum <= 0 or attempted >= minimum
+
 
 def _selection_reason(
     field: TemplateField | dict[str, Any],
@@ -341,6 +357,7 @@ def _selection_reason(
         return "preferred_unexplored"
     return "unexplored"
 
+
 def _attach_selection_metadata(
     field: TemplateField | dict[str, Any],
     *,
@@ -368,6 +385,7 @@ def _attach_selection_metadata(
     field_copy.update(updates)
     return field_copy
 
+
 def _append_with_family_cap(
     candidates: Sequence[TemplateField | dict[str, Any]],
     selected: list[TemplateField | dict[str, Any]],
@@ -389,6 +407,7 @@ def _append_with_family_cap(
         selected.append(field)
         selected_ids.add(field_id)
         family_counts[family] = family_counts.get(family, 0) + 1
+
 
 def _select_diverse_fields(
     fields: Sequence[TemplateField | dict[str, Any]],
@@ -471,6 +490,7 @@ def _select_diverse_fields(
         )
     return selected
 
+
 def resolve_field_selection(selection_options: FieldSelectionOptions) -> tuple[int, int, int]:
     """Extract top-N/offset/limit knobs from field selection options."""
     return (
@@ -479,11 +499,13 @@ def resolve_field_selection(selection_options: FieldSelectionOptions) -> tuple[i
         _safe_int(selection_options.limit),
     )
 
+
 def rank_by_id(fields: Sequence[TemplateField | dict[str, Any]]) -> dict[str, int]:
     return {
         str(first_non_empty(field.get("id"), SENTINEL_UNKNOWN)): index
         for index, field in enumerate(fields, start=1)
     }
+
 
 def apply_offset_limit(
     fields: Sequence[TemplateField | dict[str, Any]],
@@ -497,6 +519,7 @@ def apply_offset_limit(
     if limit > 0:
         window = window[:limit]
     return window
+
 
 def attach_selection_to_fields(
     fields: Sequence[TemplateField | dict[str, Any]],
@@ -526,6 +549,7 @@ def attach_selection_to_fields(
         )
     return cast(list[TemplateField], selected_fields)
 
+
 def field_selection_scores(
     fields: Sequence[TemplateField | dict[str, Any]],
     *,
@@ -544,6 +568,7 @@ def field_selection_scores(
                 expression_policy=expression_policy,
             )
     return scores
+
 
 def _field_sort_key(
     item: TemplateField,
@@ -592,6 +617,7 @@ def _field_sort_key(
         field_name,
     )
 
+
 def rank_and_select_exploration_fields(
     fields: list[TemplateField],
     *,
@@ -638,11 +664,13 @@ def rank_and_select_exploration_fields(
     fields = cast(list[TemplateField], apply_offset_limit(fields, offset=offset, limit=limit))
     return fields, rank_by_field_id, ranked_field_count
 
+
 def _is_explicitly_included(field_id: str, field_name: str, filters_dict: RunFilters) -> bool:
     return bool(
         filters_dict.include_fields
         and (field_id in filters_dict.include_fields or field_name in filters_dict.include_fields)
     )
+
 
 def _finish_field_stats(
     stats: dict[str, int],
@@ -662,6 +690,7 @@ def _finish_field_stats(
         if str(field.get("selection_reason", "")).endswith("unexplored")
     )
     return stats
+
 
 def _prepare_explicit_fields_for_execution(
     fields: list[TemplateField],
@@ -711,6 +740,7 @@ def _prepare_explicit_fields_for_execution(
         ranked_field_count=len(filtered_fields),
         selected_fields=selected_fields,
     )
+
 
 def prepare_fields_for_execution(
     fields: list[TemplateField],

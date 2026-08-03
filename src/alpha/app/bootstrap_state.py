@@ -4,10 +4,15 @@ bootstrap 执行态与历史结果装配辅助模块。
 
 from __future__ import annotations
 
+from dataclasses import replace
 import logging
 
 from ..analysis.results_persistence import dump_results_incremental
+from ..api.client import BrainClient
+from ..core.simulation_stages import checksubmit_with_retry
 from ..io.results_store import initialize_results_journal
+from ..models.domain import FieldTestResult
+from ..models.result_predicates import has_pending_checks
 from ..models.runtime_protocols import RunConfig
 from ..policy.blacklist_context import set_active_datasets_root
 from ..policy.blacklist_runtime_stats import build_blacklist_runtime_stats
@@ -15,14 +20,8 @@ from ..policy.blacklist_store import load_blacklisted_template_keys
 from ..runtime.contexts import HistoricalRunState
 from ..runtime.state import ExecutionState
 
-
-from dataclasses import replace
-from ..api.client import BrainClient
-from ..core.simulation_stages import checksubmit_with_retry
-from ..models.domain import FieldTestResult
-from ..models.result_predicates import has_pending_checks
-
 logger = logging.getLogger(__name__)
+
 
 def create_execution_state(
     *,
@@ -88,6 +87,7 @@ def build_execution_state(
         template_stats=execution_state.template_stats,
     )
     return execution_state
+
 
 def refresh_pending_check_results(
     client: BrainClient,

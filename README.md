@@ -81,6 +81,8 @@ make check
 
 `make install-dev` 会根据 `pyproject.toml` 安装运行依赖、开发检查依赖和 HTTPX 后端。
 `make check` 会执行测试、配置同步、文档和密钥扫描检查；修改根 `config/*.yaml` 后使用 `make sync-config` 更新包内镜像。
+Makefile 只是快捷入口；Windows 环境如果没有完整 Unix 工具链，也可以直接运行
+`python scripts/check_repo.py` 和 `python scripts/clean_dev.py`。
 
 ## 安全边界
 
