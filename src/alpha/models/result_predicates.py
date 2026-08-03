@@ -12,7 +12,9 @@ from .domain import FieldTestResult
 
 def has_pending_checks(result: FieldTestResult) -> bool:
     """Return whether any persisted submission check is still unresolved."""
-    return any(str(check.result or "").upper() == "PENDING" for check in result.failed_checks or [])
+    return result.submittable is not False and any(
+        str(check.result or "").upper() == "PENDING" for check in result.failed_checks or []
+    )
 
 
 def is_queue_timeout_result(result: FieldTestResult) -> bool:

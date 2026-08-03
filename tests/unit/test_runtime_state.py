@@ -7,7 +7,7 @@ from unittest.mock import patch
 
 from alpha.app.bootstrap_state import create_execution_state
 from alpha.config.application_sections import QualityConfig
-from alpha.models.domain import FieldTestResult
+from alpha.models.domain import FailedCheck, FieldTestResult
 from alpha.runtime.contexts import HistoricalRunState, PendingFutureContext
 from alpha.runtime.state import ExecutionState
 
@@ -40,6 +40,39 @@ def test_execution_metrics_follow_results_without_manual_refresh() -> None:
     ledger.results.clear()
     assert ledger.unique_field_ids == set()
     assert ledger.submittable_count == 0
+
+
+def test_terminal_failed_result_is_not_counted_as_pending() -> None:
+    state = _state()
+    state.result_ledger.append(
+        FieldTestResult(
+            field_id="field_1",
+            field_type="MATRIX",
+            field_name="field_1",
+            template_name="tpl",
+            status="simulated",
+            submittable=False,
+            expression="rank(field_1)",
+            failed_checks=[FailedCheck(name="SELF_CORRELATION", result="PENDING")],
+        )
+    )
+
+    assert state.result_ledger.pending_check_count == 0
+
+    state.result_ledger.append(
+        FieldTestResult(
+            field_id="field_2",
+            field_type="MATRIX",
+            field_name="field_2",
+            template_name="tpl",
+            status="simulated",
+            submittable=None,
+            expression="rank(field_2)",
+            failed_checks=[FailedCheck(name="SELF_CORRELATION", result="PENDING")],
+        )
+    )
+
+    assert state.result_ledger.pending_check_count == 1
 
 
 def test_queue_retry_state_owns_retry_budget() -> None:

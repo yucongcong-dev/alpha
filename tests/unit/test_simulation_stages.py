@@ -225,7 +225,8 @@ def test_poll_stage_converts_stop_and_unexpected_errors() -> None:
     assert stopped.failed_stage == "stopped"
 
 
-def test_check_submission_stage_precheck_failure_success_and_error() -> None:
+def test_check_submission_stage_precheck_failure_still_calls_remote_check() -> None:
+    client = object()
     failed_check = {
         "name": "LOW_SHARPE",
         "value": 0.5,
@@ -247,12 +248,19 @@ def test_check_submission_stage_precheck_failure_success_and_error() -> None:
             "alpha.core.simulation_stages.precheck_simulation_metrics",
             return_value=(False, "low sharpe", [failed_check]),
         ),
-        patch("alpha.core.simulation_stages.check_submission_with_retry") as check_submission,
+        patch(
+            "alpha.core.simulation_stages.check_submission_with_retry",
+            return_value=(
+                False,
+                "checks failed",
+                [FailedCheck(name="LOW_SHARPE", result="FAIL")],
+            ),
+        ) as check_submission,
     ):
         rejected = stages.run_check_submission_stage(
             _context(),
-            client=object(),  # type: ignore[arg-type]
-            args=MockArgs(),
+            client=client,  # type: ignore[arg-type]
+            args=SimpleNamespace(check_submission_retries=3),  # type: ignore[arg-type]
             alpha_id="alpha-1",
             simulation_id="sim-1",
             simulation_result={"alpha": "alpha-1"},
@@ -260,11 +268,13 @@ def test_check_submission_stage_precheck_failure_success_and_error() -> None:
 
     assert rejected == (
         False,
-        "precheck_failed: low sharpe",
-        [FailedCheck(name="LOW_SHARPE", value=0.5, limit=1.25, result="FAIL")],
+        "checks failed",
+        [FailedCheck(name="LOW_SHARPE", result="FAIL")],
     )
-    check_submission.assert_not_called()
+    check_submission.assert_called_once_with(client, "alpha-1", 3)
 
+
+def test_check_submission_stage_success_and_error() -> None:
     client = object()
     with patch(
         "alpha.core.simulation_stages.check_submission_with_retry",

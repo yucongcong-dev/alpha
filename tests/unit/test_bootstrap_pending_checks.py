@@ -6,7 +6,11 @@ from alpha.app.bootstrap_state import refresh_pending_check_results
 from alpha.models.domain import FailedCheck, FieldTestResult
 
 
-def _pending_result(*, alpha_id: str | None = "alpha_1") -> FieldTestResult:
+def _pending_result(
+    *,
+    alpha_id: str | None = "alpha_1",
+    submittable: bool | None = None,
+) -> FieldTestResult:
     return FieldTestResult(
         field_id="field_1",
         field_type="MATRIX",
@@ -14,7 +18,7 @@ def _pending_result(*, alpha_id: str | None = "alpha_1") -> FieldTestResult:
         template_name="template_1",
         alpha_id=alpha_id,
         status="simulated",
-        submittable=None,
+        submittable=submittable,
         message="checks pending",
         expression="rank(field_1)",
         settings_fingerprint="settings",
@@ -71,3 +75,19 @@ def test_refresh_pending_check_results_skips_rows_without_alpha_id(monkeypatch) 
 
     assert count == 0
     assert refreshed[0].alpha_id is None
+
+
+def test_refresh_pending_check_results_skips_terminal_failure(monkeypatch) -> None:
+    def _unexpected(*_args, **_kwargs):
+        raise AssertionError("check_submission should not be called")
+
+    monkeypatch.setattr(
+        "alpha.app.bootstrap_state.check_submission_with_retry",
+        _unexpected,
+    )
+
+    original = _pending_result(submittable=False)
+    refreshed, count = refresh_pending_check_results(object(), [original], retries=2)
+
+    assert count == 0
+    assert refreshed[0] is original

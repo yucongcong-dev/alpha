@@ -288,7 +288,7 @@ def run_check_submission_stage(
 ) -> FieldTestResult | tuple[bool | None, str, list[FailedCheck]]:
     if simulation_result:
         precheck_config = PrecheckConfig.from_args(args)
-        passed, reason, precheck_failed_checks = precheck_simulation_metrics(
+        passed, reason, _ = precheck_simulation_metrics(
             simulation_result,
             min_sharpe=precheck_config.min_sharpe,
             min_fitness=precheck_config.min_fitness,
@@ -302,11 +302,6 @@ def run_check_submission_stage(
                 alpha_id,
                 simulation_id,
                 reason,
-            )
-            return (
-                False,
-                f"precheck_failed: {reason}",
-                [parse_failed_check(check) for check in precheck_failed_checks],
             )
 
     try:
