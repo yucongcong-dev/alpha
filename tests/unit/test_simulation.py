@@ -302,6 +302,33 @@ class TestCheckSubmissionWithRetry:
             [FailedCheck(name="SELF_CORRELATION", result="FAIL", value=0.91, limit=0.7)],
         )
 
+    def test_terminal_failure_drops_unrelated_pending_checks(self, monkeypatch) -> None:
+        class DummyClient:
+            def check_alpha_submission(self, _alpha_id: str) -> dict[str, object]:
+                return {
+                    "is": {
+                        "checks": [
+                            {
+                                "name": "LOW_FITNESS",
+                                "result": "FAIL",
+                                "value": 0.9,
+                                "limit": 1.0,
+                            },
+                            {"name": "SELF_CORRELATION", "result": "PENDING"},
+                        ]
+                    }
+                }
+
+        monkeypatch.setattr("alpha.core.simulation_stages.retry_operation", lambda *a, **k: a[2]())
+
+        result = check_submission_with_retry(DummyClient(), "alpha_1", retries=3)
+
+        assert result == (
+            False,
+            "checks failed",
+            [FailedCheck(name="LOW_FITNESS", result="FAIL", value=0.9, limit=1.0)],
+        )
+
     def test_pending_checks_are_polled_until_terminal(self, monkeypatch) -> None:
         responses = iter(
             [

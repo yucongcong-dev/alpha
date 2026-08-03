@@ -139,9 +139,9 @@ def check_submission_with_retry(
         submittable = is_submittable_from_checks(
             [parse_failed_check(c) for c in checks if isinstance(c, dict)]
         )
-        unresolved_checks = extract_failed_checks(submission_check) + extract_pending_checks(
-            submission_check
-        )
+        failed_checks = extract_failed_checks(submission_check)
+        pending_checks = extract_pending_checks(submission_check)
+        unresolved_checks = pending_checks if submittable is None else failed_checks
         message = (
             "checks unavailable"
             if submittable is None and not unresolved_checks
