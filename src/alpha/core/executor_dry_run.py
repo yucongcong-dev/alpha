@@ -7,11 +7,19 @@ from collections.abc import Callable, MutableMapping, Sequence
 import logging
 from typing import Protocol
 
-from ..config.constants import DRY_RUN_SAMPLE_LIMIT, SENTINEL_UNKNOWN
+from ..analysis.field_stats import decay_field_feedback
+from ..config.constants import (
+    DRY_RUN_SAMPLE_LIMIT,
+    FEEDBACK_STAGE_RESIMULATE,
+    SENTINEL_UNKNOWN,
+    STAT_FIELD_ATTEMPTED_TEMPLATES,
+    STATS_DEFAULT_SCORE,
+)
 from ..generators.fields import choose_field_name
 from ..models.domain import FieldTestResult, TemplateField, TemplateLibrary
 from ..models.io_types import RunFilters
 from ..models.runtime_protocols import TemplateBuildArgs
+from ..policy.expression import get_dataset_expression_policy, resolve_feedback_stage
 from ..runtime.contexts import (
     HistoricalRunState,
     PendingTemplateEntry,
@@ -56,6 +64,57 @@ class FieldPendingTemplateBuilder(Protocol):
 
 FieldSkipPredicate = Callable[[str, str, RunFilters, set[str]], bool]
 FieldSkipReasonResolver = Callable[[str, str, RunFilters, set[str]], str | None]
+
+
+def _record_feedback_explain_counts(
+    explain_counts: Counter[str],
+    build_ctx: TemplateBuildContext,
+    field_id: str,
+    *,
+    args: TemplateBuildArgs,
+) -> None:
+    """Record why one field enters generate or resimulate planning."""
+    options = getattr(build_ctx, "options", args)
+    expression_policy = getattr(
+        build_ctx, "expression_policy", None
+    ) or get_dataset_expression_policy(str(getattr(options, "dataset_id", "") or ""))
+    field_feedback_map = getattr(build_ctx, "field_feedback", {}) or {}
+    raw_feedback = (
+        field_feedback_map.get(field_id) if isinstance(field_feedback_map, dict) else None
+    )
+    field_feedback = decay_field_feedback(
+        raw_feedback,
+        half_life_days=expression_policy.field_feedback_half_life_days,
+    )
+    if not field_feedback:
+        explain_counts["feedback_generate_no_feedback"] += 1
+        explain_counts["feedback_settings_budget"] += (
+            expression_policy.feedback_loop_policy.generate.settings_variant_budget
+        )
+        return
+
+    feedback_stage = resolve_feedback_stage(
+        field_feedback,
+        expression_policy.feedback_loop_policy,
+    )
+    if feedback_stage == FEEDBACK_STAGE_RESIMULATE:
+        explain_counts["feedback_resimulate"] += 1
+        explain_counts["feedback_settings_budget"] += (
+            expression_policy.feedback_loop_policy.resimulate.settings_variant_budget
+        )
+        return
+
+    attempted = int(field_feedback.get(STAT_FIELD_ATTEMPTED_TEMPLATES, 0) or 0)
+    best_score = float(field_feedback.get("best_score", STATS_DEFAULT_SCORE) or STATS_DEFAULT_SCORE)
+    if attempted < expression_policy.feedback_loop_policy.resimulate.min_attempted_templates:
+        explain_counts["feedback_generate_attempts"] += 1
+    elif best_score < expression_policy.feedback_loop_policy.resimulate.min_best_score:
+        explain_counts["feedback_generate_score"] += 1
+    else:
+        explain_counts["feedback_generate_other"] += 1
+    explain_counts["feedback_settings_budget"] += (
+        expression_policy.feedback_loop_policy.generate.settings_variant_budget
+    )
 
 
 def print_dry_run_plan(
@@ -113,6 +172,12 @@ def print_dry_run_plan(
             )
             explain_counts[f"field_skipped_{skip_reason or 'unknown'}"] += 1
             continue
+        _record_feedback_explain_counts(
+            explain_counts,
+            build_ctx,
+            field_id,
+            args=args,
+        )
         pending_templates, filtered_count, _template_count = build_pending(
             build_ctx,
             field,
@@ -179,6 +244,16 @@ def print_dry_run_plan(
         explain_counts["template_filtered_feedback"],
         explain_counts["template_filtered_family"],
         explain_counts["template_filtered_history"],
+    )
+    log.info(
+        "[dry-run] explain_feedback generate_no_feedback=%d generate_attempts=%d "
+        "generate_score=%d generate_other=%d resimulate=%d settings_budget=%d",
+        explain_counts["feedback_generate_no_feedback"],
+        explain_counts["feedback_generate_attempts"],
+        explain_counts["feedback_generate_score"],
+        explain_counts["feedback_generate_other"],
+        explain_counts["feedback_resimulate"],
+        explain_counts["feedback_settings_budget"],
     )
     for index, field in enumerate(fields[:sample_limit], start=1):
         log.info(

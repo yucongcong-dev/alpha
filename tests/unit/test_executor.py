@@ -237,4 +237,57 @@ def test_print_dry_run_plan_counts_only_actionable_fields(caplog) -> None:
         "skipped_exclude=0 skipped_unknown=1 unactionable=1"
     ) in messages
     assert "[dry-run] explain_templates name_filter=0 feedback=0 family=0 history=0" in messages
+    assert (
+        "[dry-run] explain_feedback generate_no_feedback=2 generate_attempts=0 "
+        "generate_score=0 generate_other=0 resimulate=0 settings_budget=2"
+    ) in messages
     assert any("sample 1/1 field=active template=rank" in message for message in messages)
+
+
+def test_print_dry_run_plan_explains_feedback_stage_reasons(caplog) -> None:
+    fields = [
+        _field("new"),
+        _field("few_attempts"),
+        _field("low_score"),
+        _field("strong"),
+    ]
+    entry = PendingTemplateEntry(
+        template_name="rank",
+        template_family="rank",
+        template_stage="first_order",
+        template_role="core",
+        template_activation_scope="broad",
+        expression="rank(field)",
+        priority=200,
+        settings_variant=SettingsVariant(decay=4),
+        variant_fingerprint="settings-1",
+    )
+    historical_state = HistoricalRunState(
+        field_feedback={
+            "few_attempts": {"attempted_templates": 1, "best_score": 0.9},
+            "low_score": {"attempted_templates": 3, "best_score": 0.1},
+            "strong": {"attempted_templates": 3, "best_score": 0.9},
+        }
+    )
+
+    caplog.set_level(logging.INFO)
+    with patch(
+        "alpha.core.executor.build_pending_templates_for_field",
+        return_value=([entry], 0, 1),
+    ):
+        print_dry_run_plan(
+            args=_args(),
+            fields=fields,
+            filters=RunFilters(),
+            template_library={},
+            historical_state=historical_state,
+            execution_state=_execution_state(),
+            use_dataset_heuristics=False,
+            sample_limit=1,
+        )
+
+    messages = [record.getMessage() for record in caplog.records]
+    assert (
+        "[dry-run] explain_feedback generate_no_feedback=1 generate_attempts=1 "
+        "generate_score=1 generate_other=0 resimulate=1 settings_budget=6"
+    ) in messages
