@@ -25,6 +25,7 @@ def clean_runtime_artifacts(
                 [
                     dataset_dir / "cache",
                     dataset_dir / "runs",
+                    dataset_dir / "feedback",
                 ]
             )
     targets: list[Path] = [
