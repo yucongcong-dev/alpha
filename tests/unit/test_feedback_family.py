@@ -147,8 +147,7 @@ def test_build_setting_variants_keeps_explicit_refine_small_and_deterministic() 
     )
 
     assert len(variants) == 5
-    assert [variant.get("decay") for variant in variants[:2]] == [4, 6]
-    assert any(variant.get("decay") == 2 for variant in variants)
+    assert [variant.get("decay") for variant in variants[:3]] == [4, 6, 2]
     assert any(variant.get("truncation") == 0.05 for variant in variants)
     assert any(variant.get("neutralization") == "INDUSTRY" for variant in variants)
     assert all(variant.to_dict().get("maxTrade") == "OFF" for variant in variants)

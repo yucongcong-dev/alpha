@@ -49,6 +49,7 @@ def build_setting_variants(
     )
 
     add_variant(decay=SETTINGS_VARIANT_DECAY_SLOW)
+    add_variant(decay=SETTINGS_VARIANT_DECAY_FAST)
     add_variant(truncation=tighter_truncation)
 
     if "group_neutralize(" in lower_expr:
@@ -58,5 +59,4 @@ def build_setting_variants(
     else:
         add_variant(neutralization=NEUTRALIZATION_MARKET)
 
-    add_variant(decay=SETTINGS_VARIANT_DECAY_FAST)
     return variants

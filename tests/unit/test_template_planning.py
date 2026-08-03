@@ -78,7 +78,7 @@ def test_preset_mode_limits_settings_variants_to_baseline() -> None:
     assert len(pending) == 1
 
 
-def test_resimulate_budget_prioritizes_slow_decay_variant() -> None:
+def test_resimulate_budget_prioritizes_decay_variants() -> None:
     build_ctx = TemplateBuildContext(
         options=TemplateBuildOptions(**_DEFAULT_SIM_SETTINGS),
         expression_policy=DatasetExpressionPolicy(
@@ -109,4 +109,40 @@ def test_resimulate_budget_prioritizes_slow_decay_variant() -> None:
     )
 
     assert len(pending) == 3
-    assert [entry.settings_variant.get("decay") for entry in pending[:2]] == [4, 6]
+    assert {entry.settings_variant.get("decay") for entry in pending} == {2, 4, 6}
+
+
+def test_resimulate_budget_can_include_full_settings_variant_set() -> None:
+    build_ctx = TemplateBuildContext(
+        options=TemplateBuildOptions(**_DEFAULT_SIM_SETTINGS),
+        expression_policy=DatasetExpressionPolicy(
+            feedback_loop_policy=FeedbackLoopPolicy(
+                generate=FeedbackPhasePolicy(settings_variant_budget=1),
+                resimulate=FeedbackPhasePolicy(
+                    min_attempted_templates=3,
+                    min_best_score=0.5,
+                    settings_variant_budget=5,
+                ),
+            ),
+        ),
+    )
+    pending = build_pending_template_variants(
+        build_ctx,
+        {"id": "cash_st", "type": "MATRIX"},
+        templates=[
+            TemplateCandidate(
+                name="manual_group_rank",
+                expression="group_rank(cash_st, subindustry)",
+                priority=100,
+                metadata={},
+            )
+        ],
+        attempted_keys=set(),
+        reserved_keys=set(),
+        field_feedback={"best_score": 1.0, "attempted_templates": 3},
+    )
+
+    assert len(pending) == 5
+    assert {entry.settings_variant.get("decay") for entry in pending} == {2, 4, 6}
+    assert any(entry.settings_variant.get("truncation") == 0.05 for entry in pending)
+    assert any(entry.settings_variant.get("neutralization") == "INDUSTRY" for entry in pending)

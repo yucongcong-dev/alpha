@@ -37,6 +37,9 @@ jobs:
         if: runner.os == 'macOS'
         run: brew install ripgrep
 
+      - name: Validate default Python selection
+        run: make python-version-check
+
       - name: Install project dependencies
         run: make install-dev PYTHON=python
 
