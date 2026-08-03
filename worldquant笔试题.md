@@ -96,7 +96,7 @@ Sharpe 衡量的是 Alpha 的风险调整后收益和收益一致性。Sharpe �
 答案：
 
 ```text
-BRAIN 中的自相关性（Self-correlation）是用来衡量你当前 Alpha 与你自己之前已提交、且符合 OS 测试资格的 Alpha 在表现或行为上有多相似的指标。
+BRAIN 中的自相关性（Self-correlation）是用来衡量你当前 Alpha 与你自己之前已提交 Alpha 的 PnL 曲线有多相似的指标。
 
 它衡量什么：
 它主要衡量 Alpha 的“重复度”或“相似度”，帮助判断这个 Alpha 是否只是你历史研究的轻微变体，而不是一个真正新的想法。自相关性越高，通常说明它和你以前的 Alpha 越像，多样性越差。
@@ -106,7 +106,9 @@ BRAIN 中的自相关性（Self-correlation）是用来衡量你当前 Alpha 与
 
 提交时如何用：
 提交前应该主动查看自相关性。
-- 如果自相关性很高，说明这个 Alpha 很可能只是旧 Alpha 的重复或小改版，提交价值较低。
+- 常规提交检查里，Self-Correlation 要求 PnL correlation < 0.7。
+- 如果相关性超过 0.7，新 Alpha 仍可能通过，但 Sharpe 需要比所有超过 cutoff 的相关 Alpha 至少高 10%。
+- 如果自相关性很高且表现没有明显提升，说明这个 Alpha 很可能只是旧 Alpha 的重复或小改版，提交价值较低。
 - 如果自相关性较低，说明它和你已有研究区分度更高，更值得保留或提交。
 
 实战上，自相关性不是看收益强弱，而是看“新不新”。所以提交前除了看 Sharpe、Fitness、Turnover，还要看 Self-correlation，避免把很多本质相同的 Alpha 重复提交。
@@ -117,7 +119,7 @@ BRAIN 中的自相关性（Self-correlation）是用来衡量你当前 Alpha 与
 答案：
 
 ```text
-在 BRAIN 中，Decay 是一个用于平滑信号、降低换手的模拟参数，通常取非负整数；常见合法取值是 0 到 15。
+在 BRAIN 中，Decay 是一个用于平滑信号、降低换手的模拟参数。官方合法取值是非负整数 n，即 n >= 0；负数或非整数会导致 simulation 失败。
 
 它对换手的影响：
 - Decay 越小，组合越快跟随当天信号变化，换手通常越高。
