@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections import Counter
 from collections.abc import Callable, Sequence
 import logging
 from typing import Protocol
@@ -75,6 +76,7 @@ def print_dry_run_plan(
     planned_templates = 0
     filtered_templates = 0
     unactionable_fields = 0
+    explain_counts: Counter[str] = Counter()
     samples: list[dict[str, object]] = []
     build_ctx = build_context(
         args=args,
@@ -95,6 +97,7 @@ def print_dry_run_plan(
             filters,
             execution_state.field_queue.skipped_fields,
         ):
+            explain_counts["field_skipped"] += 1
             continue
         pending_templates, filtered_count, _template_count = build_pending(
             build_ctx,
@@ -105,10 +108,14 @@ def print_dry_run_plan(
                 *execution_state.result_ledger.results,
             ],
         )
+        if filtered_count:
+            explain_counts["templates_filtered"] += filtered_count
         if not pending_templates:
             unactionable_fields += 1
+            explain_counts["field_unactionable"] += 1
             continue
         planned_fields += 1
+        explain_counts["field_planned"] += 1
         planned_templates += len(pending_templates)
         filtered_templates += filtered_count
         for entry in pending_templates:
@@ -132,6 +139,16 @@ def print_dry_run_plan(
     log.info("[dry-run] unactionable_fields=%d", unactionable_fields)
     log.info("[dry-run] existing_results=%d", len(execution_state.result_ledger.results))
     log.info("[dry-run] attempted_keys=%d", len(execution_state.attempted_keys))
+    log.info(
+        "[dry-run] explain_summary fields_total=%d planned=%d skipped=%d "
+        "unactionable=%d templates_planned=%d templates_filtered=%d",
+        len(fields),
+        explain_counts["field_planned"],
+        explain_counts["field_skipped"],
+        explain_counts["field_unactionable"],
+        planned_templates,
+        explain_counts["templates_filtered"],
+    )
     for index, field in enumerate(fields[:sample_limit], start=1):
         log.info(
             "[dry-run] field %d/%d id=%s rank=%s score=%.4f family=%s reason=%s "
