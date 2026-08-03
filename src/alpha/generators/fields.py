@@ -15,7 +15,7 @@ API 调用次数，提高运行效率。
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 import json
 import logging
 import os
@@ -85,7 +85,7 @@ class DatasetFieldClient(Protocol):
         universe: str,
         instrument_type: str,
         delay: int,
-    ) -> list[dict[str, object]]: ...
+    ) -> Sequence[Mapping[str, object]]: ...
 
 
 def load_fields_cache(
