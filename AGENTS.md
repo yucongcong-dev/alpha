@@ -12,8 +12,9 @@
   不登录、不创建 simulation、不初始化结果 journal、不修改运行状态文件、不从远端刷新资源。
 - 真实运行只属于 `src/alpha/app/bootstrap.py`、`src/alpha/app/run_loop.py` 和
   `src/alpha/app/finalize.py`。`run_loop.py` 不应包含 dry-run 行为。
-- dry-run 和真实 bootstrap 共用的本地资源加载逻辑放在
-  `src/alpha/app/bootstrap_resource_loading.py`。差异必须显式表达，例如
+- dry-run 和真实 bootstrap 共用的本地支持资源加载入口是
+  `src/alpha/app/bootstrap.py` 里的 `load_supporting_resources()`；dry-run 从
+  `src/alpha/app/planning.py` 调用它时，差异必须通过参数显式表达，例如
   `repair_corrupt_summary` 和黑名单日志。
 
 ## 配置边界
@@ -29,6 +30,9 @@
 
 - 把 `ExecutionState` 当作共享可变运行状态，不要把它当成随手新增字段的容器。新增状态前，先考虑是否应该拆成由具体行为拥有的专用 dataclass。
 - 候选级 queue retry 行为属于 `QueueRetryState`。scheduler 代码不应再用裸 dict/set 重复实现重试预算更新规则。
+- future 队列、可恢复 simulation 和 stop signal 属于 `FutureQueueState`，调用方应通过
+  `ExecutionState.future_queue` 访问，不要在 `ExecutionState` 上增加
+  `pending_futures`、`resumable_simulations` 或 `stop_signal` 影子字段。
 - 字段级 queue-busy 计数与跳过集合属于 `FieldQueueState`，调用方应通过
   `ExecutionState.field_queue` 访问，不要在 `ExecutionState` 上增加影子字段。
 - 运行时 worker 上限与拥塞冷却属于 `RuntimeConcurrencyState`；内部代码从
@@ -44,6 +48,14 @@
 - 内部代码应导入具体模块，不要导入已移除的兼容出口。Makefile 的
   `compat-import-check` 记录了当前禁止形式。
 - 旧根目录 app 兼容文件已经移除；使用 `src/alpha/app/*` 下的具体模块。
+
+## 跨平台边界
+
+- 代码和测试必须兼容 Windows 与 macOS。路径处理优先使用 `pathlib.Path`、`os.PathLike`
+  或仓库已有路径封装，不要拼接硬编码 `/`、`\`、盘符或用户目录。
+- 运行时代码不要依赖 POSIX-only shell 命令、macOS 专用工具或大小写敏感文件系统行为。
+  必须调用外部命令时，优先使用 Python 标准库并显式处理 Windows 与 macOS 差异。
+- 文件锁、凭证存储、换行、临时目录和权限逻辑应走仓库已有抽象；新增平台分支时补充聚焦测试。
 
 ## 仓库数据规则
 
@@ -74,7 +86,8 @@ ruff check src/alpha/app/planning.py tests/unit/test_planning.py
 make check
 ```
 
-- 请确保当前虚拟环境中的 `python` 为 Python 3.10+。
+- 请在 Python 3.10+ 的虚拟环境里运行检查。需要显式解释器时，macOS 可用
+  `python3.10`，Windows 可用 `py -3.10` 或已激活虚拟环境中的 `python`。
 
 ## 修改纪律
 

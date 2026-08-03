@@ -18,7 +18,7 @@ python -m alpha --dry-run-plan
 python -m alpha --dataset-id fundamental6
 ```
 
-也可以安装后使用 `alpha` 命令。误用低于 Python 3.10 的解释器时，入口会直接退出并提示版本问题。
+也可以安装后使用 `alpha` 命令。误用低于 Python 3.10 的解释器时，入口会直接退出并提示版本问题。需要显式选择解释器时，macOS 可用 `python3.10`，Windows 可用 `py -3.10`。
 
 ## 文档导航
 
@@ -28,6 +28,7 @@ python -m alpha --dataset-id fundamental6
 | 字段研究、仓库运行、缓存、反馈与资产管理 | [02 数据研究与仓库实践](docs/02_research_and_data_guide.md) |
 | 根据回测和 submission check 优化 Alpha | [03 优化与提交](docs/03_optimization_and_submission.md) |
 | 查 IS/OS、Coverage、状态或平台术语 | [04 平台 Reference](docs/04_platform_reference.md) |
+| 顾问申请、Workday、银行、Referral 或账号问题 | [05 平台运营 Reference](docs/05_platform_operations_reference.md) |
 | 按问题查找全部文档 | [Docs Index](docs/README.md) |
 | 某一数据集当前策略与下一步 | `datasets/<dataset_id>/README.md` |
 
@@ -38,7 +39,7 @@ alpha/
 ├── src/alpha/       # CLI、运行编排、模板生成、策略、API 与结果处理
 ├── config/          # 唯一可编辑的 YAML 配置源
 ├── datasets/        # 各数据集的模板、预设、黑名单、缓存与本地运行状态
-├── docs/            # 四篇主文档与索引
+├── docs/            # 研究主文档、平台运营 reference 与索引
 └── tests/           # unit / integration
 ```
 

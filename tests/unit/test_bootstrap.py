@@ -85,21 +85,23 @@ def test_build_bootstrap_services_reads_current_module_dependencies(monkeypatch)
     assert second_services.api_client.login_with_retry is replacement_login
 
 
-def test_initialize_run_context_prefers_run_paths_for_cache_and_credentials(monkeypatch) -> None:
+def test_initialize_run_context_prefers_run_paths_for_cache_and_credentials(
+    monkeypatch, tmp_path
+) -> None:
     """Runtime initialization should honor normalized run_paths before raw args paths."""
     args = _build_args()
     run_paths = RunPaths(
-        results_dir="/tmp/results",
-        log_file="/tmp/run.log",
-        state_file="/tmp/state.json",
-        checkpoint_file="/tmp/checkpoint.json",
-        datasets_root="/tmp/datasets",
-        fields_cache_file="/tmp/normalized-fields.json",
-        template_library_file="/tmp/templates.json",
-        output="/tmp/output.json",
-        feedback_output="/tmp/feedback.json",
-        creds_file="/tmp/normalized-creds.json",
-        creds_key_file="/tmp/normalized-creds.key",
+        results_dir=str(tmp_path / "results"),
+        log_file=str(tmp_path / "run.log"),
+        state_file=str(tmp_path / "state.json"),
+        checkpoint_file=str(tmp_path / "checkpoint.json"),
+        datasets_root=str(tmp_path / "datasets"),
+        fields_cache_file=str(tmp_path / "normalized-fields.json"),
+        template_library_file=str(tmp_path / "templates.json"),
+        output=str(tmp_path / "output.json"),
+        feedback_output=str(tmp_path / "feedback.json"),
+        creds_file=str(tmp_path / "normalized-creds.json"),
+        creds_key_file=str(tmp_path / "normalized-creds.key"),
     )
     captured: dict[str, str] = {}
 
@@ -190,13 +192,15 @@ def test_initialize_run_context_prefers_run_paths_for_cache_and_credentials(monk
     assert args.creds_key_file == "raw-creds.key"
 
 
-def test_initialize_run_context_builds_fallback_run_paths_when_missing(monkeypatch) -> None:
+def test_initialize_run_context_builds_fallback_run_paths_when_missing(
+    monkeypatch, tmp_path
+) -> None:
     """Initialization should build a minimal RunPaths snapshot when no normalized paths are passed."""
     args = _build_args()
-    args.output = "/tmp/raw-output.json"
-    args.template_library_file = "/tmp/raw-templates.json"
-    args.include_fields_file = "/tmp/include_fields.txt"
-    args.exclude_templates_file = "/tmp/exclude_templates.txt"
+    args.output = str(tmp_path / "raw-output.json")
+    args.template_library_file = str(tmp_path / "raw-templates.json")
+    args.include_fields_file = str(tmp_path / "include_fields.txt")
+    args.exclude_templates_file = str(tmp_path / "exclude_templates.txt")
     captured: dict[str, object] = {}
 
     monkeypatch.setattr("alpha.app.bootstrap.setup_runtime_logging", lambda *_args, **_kwargs: None)

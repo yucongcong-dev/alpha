@@ -60,12 +60,13 @@ def test_persistence_update_advances_revision() -> None:
     assert merged[0].revision == 4
 
 
-def test_enrich_results_provenance_fills_scope_and_portable_source() -> None:
+def test_enrich_results_provenance_fills_scope_and_portable_source(tmp_path) -> None:
     result = _result()
+    output_path = tmp_path / "datasets" / "model16" / "runs" / "run-7" / "summary.json"
 
     enrich_results_provenance(
         [result],
-        output_path="/tmp/datasets/model16/runs/run-7/summary.json",
+        output_path=str(output_path),
         run_config={
             "run": {"name": "run-7"},
             "dataset": {

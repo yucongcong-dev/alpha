@@ -415,7 +415,7 @@ class TestRuntimeConcurrencyState:
         assert state.cooldown_until == 0.0
 
 
-def test_drain_completed_futures_prefers_explicit_result_write_options() -> None:
+def test_drain_completed_futures_prefers_explicit_result_write_options(tmp_path) -> None:
     """Incremental writes should be able to honor normalized output paths over raw args."""
     future: Future[object] = Future()
     future.set_result(None)
@@ -440,7 +440,7 @@ def test_drain_completed_futures_prefers_explicit_result_write_options() -> None
     )
     result_write_options = ResultWriteOptions(
         dataset_id="fundamental6",
-        output_path="/tmp/normalized-results.json",
+        output_path=str(tmp_path / "normalized-results.json"),
         auto_update_blacklist=False,
     )
 
@@ -459,10 +459,12 @@ def test_drain_completed_futures_prefers_explicit_result_write_options() -> None
         )
 
     completion_ctx = mock_apply.call_args.kwargs["completion_ctx"]
-    assert completion_ctx.result_write_options.output_path == "/tmp/normalized-results.json"
+    assert completion_ctx.result_write_options.output_path == str(
+        tmp_path / "normalized-results.json"
+    )
 
 
-def test_drain_completed_futures_sets_stop_signal_and_cancels_unstarted_future() -> None:
+def test_drain_completed_futures_sets_stop_signal_and_cancels_unstarted_future(tmp_path) -> None:
     done_future: Future[object] = Future()
     done_future.set_result(None)
 
@@ -499,7 +501,7 @@ def test_drain_completed_futures_sets_stop_signal_and_cancels_unstarted_future()
         )
         result_write_options = ResultWriteOptions(
             dataset_id="fundamental6",
-            output_path="/tmp/normalized-results.json",
+            output_path=str(tmp_path / "normalized-results.json"),
             auto_update_blacklist=False,
         )
 

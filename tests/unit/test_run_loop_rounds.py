@@ -28,7 +28,9 @@ from alpha.models.runtime import (
 from alpha.models.runtime_options import SchedulerControlOptions
 
 
-def _build_context(*, field_template_batch_size: int) -> ScheduleRoundContext:
+def _build_context(
+    *, field_template_batch_size: int, state_file: str = "state.json"
+) -> ScheduleRoundContext:
     field = TemplateField("f1", "f1", "MATRIX")
     execution_state = ExecutionState.create()
     runtime_state = RuntimeConcurrencyState(max_workers=1, runtime_max_workers=1)
@@ -56,14 +58,17 @@ def _build_context(*, field_template_batch_size: int) -> ScheduleRoundContext:
         original_fields=[field],
         field_resume_positions={"f1": 1},
         completion_ctx=FutureCompletionContext(),
-        state_file="/tmp/state.json",
+        state_file=state_file,
         field_template_batch_size=field_template_batch_size,
     )
 
 
-def test_breadth_first_field_progress_keeps_resume_cursor_at_start() -> None:
+def test_breadth_first_field_progress_keeps_resume_cursor_at_start(tmp_path) -> None:
     """A partial template batch must keep every field eligible after restart."""
-    context = _build_context(field_template_batch_size=1)
+    context = _build_context(
+        field_template_batch_size=1,
+        state_file=str(tmp_path / "state.json"),
+    )
 
     with (
         context.executor,

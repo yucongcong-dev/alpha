@@ -120,10 +120,10 @@ def test_restore_fields_from_state_returns_empty_when_all_fields_completed(tmp_p
     assert resumed_index == 2
 
 
-def test_persist_field_progress_keeps_terminal_index() -> None:
+def test_persist_field_progress_keeps_terminal_index(tmp_path) -> None:
     with patch("alpha.app.run_loop_resume.save_pipeline_state") as mock_save:
         persist_field_progress(
-            state_file="/tmp/state.json",
+            state_file=str(tmp_path / "state.json"),
             field_id="f3",
             field_index=3,
             original_fields=[{"id": "f1"}, {"id": "f2"}, {"id": "f3"}],
@@ -135,11 +135,11 @@ def test_persist_field_progress_keeps_terminal_index() -> None:
     assert mock_save.call_args.kwargs["completed_field_index"] == 3
 
 
-def test_persist_field_progress_allows_resuming_from_first_field() -> None:
+def test_persist_field_progress_allows_resuming_from_first_field(tmp_path) -> None:
     """Breadth-first rounds must not mark partially processed fields complete."""
     with patch("alpha.app.run_loop_resume.save_pipeline_state") as mock_save:
         persist_field_progress(
-            state_file="/tmp/state.json",
+            state_file=str(tmp_path / "state.json"),
             field_id="f3",
             field_index=3,
             original_fields=[{"id": "f1"}, {"id": "f2"}, {"id": "f3"}],
@@ -152,7 +152,7 @@ def test_persist_field_progress_allows_resuming_from_first_field() -> None:
     assert mock_save.call_args.kwargs["completed_field_index"] == 0
 
 
-def test_drain_remaining_futures_persists_total_field_count() -> None:
+def test_drain_remaining_futures_persists_total_field_count(tmp_path) -> None:
     future = object()
     execution_state = _build_execution_state()
     execution_state.future_queue.pending_futures = {future: {"field_id": "f1"}}
@@ -168,7 +168,7 @@ def test_drain_remaining_futures_persists_total_field_count() -> None:
         patch("alpha.app.run_loop_resume.save_pipeline_state") as mock_save,
     ):
         drain_remaining_futures(
-            state_file="/tmp/state.json",
+            state_file=str(tmp_path / "state.json"),
             total_fields=5,
             last_field_id="f5",
             execution_state=execution_state,
@@ -286,30 +286,30 @@ def test_run_field_test_loop_interrupts_workers_without_waiting(tmp_path) -> Non
     )
 
 
-def test_resolve_result_write_options_prefers_run_paths_output() -> None:
+def test_resolve_result_write_options_prefers_run_paths_output(tmp_path) -> None:
     args = argparse.Namespace(
         dataset_id="fundamental6",
         output="raw-results.json",
         auto_update_blacklist=False,
     )
     run_paths = RunPaths(
-        results_dir="/tmp/results",
-        log_file="/tmp/run.log",
-        state_file="/tmp/state.json",
-        checkpoint_file="/tmp/checkpoint.json",
-        output="/tmp/normalized-results.json",
+        results_dir=str(tmp_path / "results"),
+        log_file=str(tmp_path / "run.log"),
+        state_file=str(tmp_path / "state.json"),
+        checkpoint_file=str(tmp_path / "checkpoint.json"),
+        output=str(tmp_path / "normalized-results.json"),
     )
 
     options = resolve_result_write_options(ResultWriteOptions.from_args(args), run_paths)
 
     assert options == ResultWriteOptions(
         dataset_id="fundamental6",
-        output_path="/tmp/normalized-results.json",
+        output_path=str(tmp_path / "normalized-results.json"),
         auto_update_blacklist=False,
     )
 
 
-def test_save_runtime_checkpoint_updates_resumable_pipeline_state() -> None:
+def test_save_runtime_checkpoint_updates_resumable_pipeline_state(tmp_path) -> None:
     """Interrupt handling must persist live simulation locations to the resume file."""
     execution_state = _build_execution_state()
     runtime_state = RuntimeConcurrencyState(max_workers=2, runtime_max_workers=2)
@@ -319,8 +319,8 @@ def test_save_runtime_checkpoint_updates_resumable_pipeline_state() -> None:
         patch("alpha.app.run_loop_resume.save_interrupt_report") as mock_interrupt_report,
     ):
         save_runtime_checkpoint(
-            state_file="/tmp/state.json",
-            interrupt_report_file="/tmp/checkpoint.json",
+            state_file=str(tmp_path / "state.json"),
+            interrupt_report_file=str(tmp_path / "checkpoint.json"),
             completed_field_index=1,
             execution_state=execution_state,
             runtime_state=runtime_state,

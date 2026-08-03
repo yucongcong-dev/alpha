@@ -36,7 +36,7 @@ def _build_run_ctx() -> InitializedRunContext:
     )
 
 
-def test_finalize_run_prefers_run_paths_output(monkeypatch) -> None:
+def test_finalize_run_prefers_run_paths_output(monkeypatch, tmp_path) -> None:
     """Final flush should honor normalized output paths over raw args.output."""
     args = argparse.Namespace(
         output="raw-results.json",
@@ -44,11 +44,11 @@ def test_finalize_run_prefers_run_paths_output(monkeypatch) -> None:
         auto_update_blacklist=False,
     )
     run_paths = RunPaths(
-        results_dir="/tmp/results",
-        log_file="/tmp/run.log",
-        state_file="/tmp/state.json",
-        checkpoint_file="/tmp/checkpoint.json",
-        output="/tmp/normalized-results.json",
+        results_dir=str(tmp_path / "results"),
+        log_file=str(tmp_path / "run.log"),
+        state_file=str(tmp_path / "state.json"),
+        checkpoint_file=str(tmp_path / "checkpoint.json"),
+        output=str(tmp_path / "normalized-results.json"),
     )
     run_ctx = _build_run_ctx()
 
@@ -58,8 +58,8 @@ def test_finalize_run_prefers_run_paths_output(monkeypatch) -> None:
     ):
         finalize_run(args, run_ctx, run_paths=run_paths)
 
-    assert mock_dump.call_args.args[0] == "/tmp/normalized-results.json"
-    assert mock_delete.call_args.args[0] == "/tmp/state.json"
+    assert mock_dump.call_args.args[0] == str(tmp_path / "normalized-results.json")
+    assert mock_delete.call_args.args[0] == str(tmp_path / "state.json")
 
 
 def test_finalize_run_updates_separate_feedback_output(tmp_path) -> None:
