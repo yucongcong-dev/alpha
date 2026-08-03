@@ -185,6 +185,7 @@ class QualityConfig:
 @dataclass(frozen=True, slots=True, kw_only=True)
 class RuntimeFlagsConfig:
     auto_update_blacklist: bool
+    auto_update_blacklist_mode: str
     verbose: bool
     quiet: bool
 
@@ -192,6 +193,9 @@ class RuntimeFlagsConfig:
     def from_args(cls, args: object) -> RuntimeFlagsConfig:
         return cls(
             auto_update_blacklist=bool(_value(args, "auto_update_blacklist", False)),
+            auto_update_blacklist_mode=str(
+                _value(args, "auto_update_blacklist_mode", "repository") or "repository"
+            ),
             verbose=bool(_value(args, "verbose", False)),
             quiet=bool(_value(args, "quiet", False)),
         )

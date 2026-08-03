@@ -28,6 +28,7 @@ global:
   runtime:
     smoke_test: false
     auto_update_blacklist: true
+    auto_update_blacklist_mode: staging
 dataset_profiles:
   fundamental6:
     max_concurrent_simulations: 3
@@ -117,6 +118,7 @@ def test_yaml_can_enable_auto_update_blacklist(monkeypatch, tmp_path) -> None:
     args = parse_args()
 
     assert args.auto_update_blacklist is True
+    assert args.auto_update_blacklist_mode == "staging"
 
 
 def test_cli_auto_update_blacklist_flag(monkeypatch, tmp_path) -> None:
@@ -140,6 +142,22 @@ global:
     args = parse_args()
 
     assert args.auto_update_blacklist is True
+
+
+def test_cli_auto_update_blacklist_mode(monkeypatch, tmp_path) -> None:
+    """CLI can select the auto-learned blacklist write target."""
+    clear_yaml_cache()
+    config_path = tmp_path / "settings.yaml"
+    write_config(config_path)
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        ["alpha", "--config", str(config_path), "--auto-update-blacklist-mode", "repository"],
+    )
+
+    args = parse_args()
+
+    assert args.auto_update_blacklist_mode == "repository"
 
 
 def test_cli_no_flag_overrides_yaml_true(monkeypatch, tmp_path) -> None:

@@ -54,6 +54,12 @@ def resolve_blacklist_path(dataset_id: str, *, datasets_root: str = "") -> str:
     return resolved
 
 
+def resolve_blacklist_staging_path(dataset_id: str, *, datasets_root: str = "") -> str:
+    """Resolve the review/staging blacklist path for auto-learned entries."""
+    dataset_key = sanitize_dataset_id_for_filename(dataset_id)
+    return str(Path(_resolve_datasets_root(datasets_root)) / dataset_key / "blacklist.staging.json")
+
+
 def invalidate_blacklist_path_cache(dataset_id: str = "", *, datasets_root: str = "") -> None:
     """Invalidate cached blacklist path lookups."""
     if not dataset_id:
@@ -135,6 +141,35 @@ def write_blacklist_payload(
     blacklist_path = resolve_blacklist_path(dataset_id, datasets_root=datasets_root)
     atomic_write_json(blacklist_path, normalize_blacklist_payload(payload, dataset_id))
     return blacklist_path
+
+
+def read_blacklist_staging_payload(
+    dataset_id: str,
+    *,
+    datasets_root: str = "",
+) -> BlacklistPayload:
+    staging_path = resolve_blacklist_staging_path(dataset_id, datasets_root=datasets_root)
+    try:
+        if os.path.isfile(staging_path):
+            with open(staging_path, encoding="utf-8") as fh:
+                payload = json.load(fh)
+        else:
+            payload = build_default_blacklist(dataset_id)
+    except (json.JSONDecodeError, OSError):
+        logger.warning("[blacklist] failed to read %s; using empty staging payload", staging_path)
+        payload = build_default_blacklist(dataset_id)
+    return normalize_blacklist_payload(payload, dataset_id)
+
+
+def write_blacklist_staging_payload(
+    dataset_id: str,
+    payload: BlacklistPayload,
+    *,
+    datasets_root: str = "",
+) -> str:
+    staging_path = resolve_blacklist_staging_path(dataset_id, datasets_root=datasets_root)
+    atomic_write_json(staging_path, normalize_blacklist_payload(payload, dataset_id))
+    return staging_path
 
 
 def invalidate_blacklist_runtime_cache(dataset_id: str) -> None:

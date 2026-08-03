@@ -100,6 +100,9 @@ class ResultWriteArgs(Protocol):
     @property
     def auto_update_blacklist(self) -> bool: ...
 
+    @property
+    def auto_update_blacklist_mode(self) -> str: ...
+
 
 class CleanRuntimeArgs(Protocol):
     @property
@@ -281,6 +284,9 @@ class RuntimeModeArgs(Protocol):
     def auto_update_blacklist(self) -> bool: ...
 
     @property
+    def auto_update_blacklist_mode(self) -> str: ...
+
+    @property
     def smoke_test(self) -> bool: ...
 
     @property
@@ -368,6 +374,9 @@ class SchedulerRuntimeArgs(
 
     @property
     def auto_update_blacklist(self) -> bool: ...
+
+    @property
+    def auto_update_blacklist_mode(self) -> str: ...
 
 
 class RunLoopArgs(

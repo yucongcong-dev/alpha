@@ -283,6 +283,15 @@ def add_output_logging_arguments(parser: argparse.ArgumentParser) -> None:
         help_disable="不自动更新模板黑名单（覆盖 YAML runtime.auto_update_blacklist=true）",
     )
     parser.add_argument(
+        "--auto-update-blacklist-mode",
+        choices=("repository", "staging"),
+        default="repository",
+        help=(
+            "自动黑名单写入目标：repository 写 datasets/<dataset>/blacklist.json；"
+            "staging 写 blacklist.staging.json 供人工确认"
+        ),
+    )
+    parser.add_argument(
         "--output", default="", help="结果 JSON 输出文件路径（留空则根据 dataset_id 自动生成）"
     )
     parser.add_argument(

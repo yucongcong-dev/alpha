@@ -126,6 +126,7 @@ class TestRuntimeOptionBuilders:
             dataset_id = "model51"
             output = "results.json"
             auto_update_blacklist = True
+            auto_update_blacklist_mode = "staging"
             page_size = "100"
             region = "USA"
             universe = "TOP1000"
@@ -140,6 +141,7 @@ class TestRuntimeOptionBuilders:
             dataset_id="model51",
             output_path="results.json",
             auto_update_blacklist=True,
+            auto_update_blacklist_mode="staging",
         )
         assert FieldFetchOptions.from_args(_Args()) == FieldFetchOptions(
             dataset_id="model51",
@@ -172,6 +174,7 @@ class TestRuntimeOptionBuilders:
         assert snapshot_options.page_size == 100
         assert snapshot_options.check_submit_retries == 4
         assert snapshot_options.auto_update_blacklist is True
+        assert snapshot_options.auto_update_blacklist_mode == "staging"
 
     def test_scheduler_control_options_from_args(self) -> None:
         class _Args:

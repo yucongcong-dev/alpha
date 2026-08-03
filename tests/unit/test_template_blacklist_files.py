@@ -79,6 +79,38 @@ def test_auto_update_blacklist_appends_low_quality_template_once(tmp_path) -> No
     assert entries[0]["fields_tested"] == ["sales", "assets", "income"]
 
 
+def test_auto_update_blacklist_can_write_staging_file(tmp_path) -> None:
+    """Staging mode records learned entries without changing the repository blacklist."""
+    results = [
+        FieldTestResult(
+            field_id=field_id,
+            field_type="MATRIX",
+            field_name=field_id,
+            template_name="weak_template",
+            template_family="group_vol_scaled_delta",
+            expression=f"rank({field_id})",
+            submittable=False,
+            failed_checks=[
+                FailedCheck(name="LOW_SHARPE", value=0.1),
+                FailedCheck(name="LOW_FITNESS", value=0.2),
+            ],
+        )
+        for field_id in ("sales", "assets", "income")
+    ]
+
+    auto_update_blacklist(
+        results,
+        "custom_ds",
+        datasets_root=str(tmp_path / "datasets"),
+        update_mode="staging",
+    )
+
+    dataset_dir = tmp_path / "datasets" / "custom_ds"
+    assert not (dataset_dir / "blacklist.json").exists()
+    payload = json.loads((dataset_dir / "blacklist.staging.json").read_text(encoding="utf-8"))
+    assert [entry["name"] for entry in payload["learned_templates"]] == ["weak_template"]
+
+
 def test_auto_update_blacklist_is_visible_to_same_process(monkeypatch, tmp_path) -> None:
     monkeypatch.chdir(tmp_path)
     invalidate_blacklist_cache()
