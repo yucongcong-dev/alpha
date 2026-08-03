@@ -41,6 +41,18 @@ _QUALITY_DEFAULTS = {
     "max_weight": 0.10,
 }
 
+_SUPPORTED_HTTP_BACKENDS = {"urllib", "httpx"}
+
+
+def _validate_non_negative(name: str, value: float) -> None:
+    if value < 0:
+        raise ValueError(f"{name} must be >= 0; got {value!r}")
+
+
+def _validate_positive(name: str, value: float) -> None:
+    if value <= 0:
+        raise ValueError(f"{name} must be > 0; got {value!r}")
+
 
 def _get_yaml_global() -> dict[str, Any]:
     """获取整个 global 段（一次查询，避免重复遍历）。"""
@@ -77,6 +89,31 @@ class HttpRuntimeConfig:
     polling_retry_buffer: float
     backend: str = "urllib"
 
+    def __post_init__(self) -> None:
+        backend = self.backend.strip().lower()
+        if backend not in _SUPPORTED_HTTP_BACKENDS:
+            supported = ", ".join(sorted(_SUPPORTED_HTTP_BACKENDS))
+            raise ValueError(f"http.backend must be one of: {supported}; got {self.backend!r}")
+        object.__setattr__(self, "backend", backend)
+        _validate_positive("http.request_timeout", self.request_timeout)
+        _validate_non_negative("http.rate_limit_default_wait", self.rate_limit_default_wait)
+        _validate_non_negative("http.polling_default_wait", self.polling_default_wait)
+        _validate_non_negative("http.polling_no_retry_after_wait", self.polling_no_retry_after_wait)
+        _validate_non_negative("http.server_error_backoff_max", self.server_error_backoff_max)
+        _validate_non_negative("http.server_error_backoff_step", self.server_error_backoff_step)
+        if self.server_error_backoff_max < self.server_error_backoff_step:
+            raise ValueError(
+                "http.server_error_backoff_max must be >= "
+                f"http.server_error_backoff_step; got {self.server_error_backoff_max!r} < "
+                f"{self.server_error_backoff_step!r}"
+            )
+        _validate_non_negative(
+            "http.retry_operation_default_wait", self.retry_operation_default_wait
+        )
+        _validate_non_negative("http.login_retry_wait", self.login_retry_wait)
+        _validate_non_negative("http.simulation_retry_wait", self.simulation_retry_wait)
+        _validate_non_negative("http.polling_retry_buffer", self.polling_retry_buffer)
+
 
 @dataclass(frozen=True)
 class FeedbackRuntimeConfig:
@@ -107,6 +144,19 @@ class QualityRuntimeConfig:
     min_turnover: float
     max_turnover: float
     max_weight: float
+
+    def __post_init__(self) -> None:
+        _validate_non_negative("quality.min_sharpe", self.min_sharpe)
+        _validate_non_negative("quality.min_fitness", self.min_fitness)
+        _validate_non_negative("quality.min_turnover", self.min_turnover)
+        _validate_positive("quality.max_turnover", self.max_turnover)
+        if self.min_turnover > self.max_turnover:
+            raise ValueError(
+                "quality.min_turnover must be <= quality.max_turnover; "
+                f"got {self.min_turnover!r} > {self.max_turnover!r}"
+            )
+        if not 0 < self.max_weight <= 1:
+            raise ValueError(f"quality.max_weight must be > 0 and <= 1; got {self.max_weight!r}")
 
 
 def load_http_runtime_config() -> HttpRuntimeConfig:

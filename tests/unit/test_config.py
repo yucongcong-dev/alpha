@@ -11,6 +11,8 @@ import subprocess
 import sys
 import time
 
+import pytest
+
 from alpha.config import (
     API_BASE,
     AUTH_URL,
@@ -23,6 +25,7 @@ from alpha.config import (
 from alpha.config.runtime_values import (
     clear_runtime_config_cache,
     get_runtime_config,
+    load_http_runtime_config,
     load_quality_runtime_config,
 )
 from alpha.config.yaml import (
@@ -362,3 +365,54 @@ def test_load_quality_runtime_config_reads_yaml_globals(monkeypatch) -> None:
     assert quality.min_turnover == 0.03
     assert quality.max_turnover == 0.55
     assert quality.max_weight == 0.08
+
+
+def test_load_http_runtime_config_normalizes_backend(monkeypatch) -> None:
+    monkeypatch.setattr(
+        "alpha.config.runtime_values.get_yaml_config",
+        lambda config_path="": {"global": {"http": {"backend": " HTTPX "}}},
+    )
+
+    http = load_http_runtime_config()
+
+    assert http.backend == "httpx"
+
+
+def test_load_http_runtime_config_rejects_invalid_waits(monkeypatch) -> None:
+    monkeypatch.setattr(
+        "alpha.config.runtime_values.get_yaml_config",
+        lambda config_path="": {"global": {"http": {"request_timeout": 0}}},
+    )
+
+    with pytest.raises(ValueError, match=r"http\.request_timeout"):
+        load_http_runtime_config()
+
+
+def test_load_http_runtime_config_rejects_unknown_backend(monkeypatch) -> None:
+    monkeypatch.setattr(
+        "alpha.config.runtime_values.get_yaml_config",
+        lambda config_path="": {"global": {"http": {"backend": "requests"}}},
+    )
+
+    with pytest.raises(ValueError, match=r"http\.backend"):
+        load_http_runtime_config()
+
+
+def test_load_quality_runtime_config_rejects_invalid_turnover_range(monkeypatch) -> None:
+    monkeypatch.setattr(
+        "alpha.config.runtime_values.get_yaml_config",
+        lambda config_path="": {"global": {"quality": {"min_turnover": 0.8, "max_turnover": 0.7}}},
+    )
+
+    with pytest.raises(ValueError, match="min_turnover"):
+        load_quality_runtime_config()
+
+
+def test_load_quality_runtime_config_rejects_invalid_max_weight(monkeypatch) -> None:
+    monkeypatch.setattr(
+        "alpha.config.runtime_values.get_yaml_config",
+        lambda config_path="": {"global": {"quality": {"max_weight": 1.2}}},
+    )
+
+    with pytest.raises(ValueError, match="max_weight"):
+        load_quality_runtime_config()

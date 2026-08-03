@@ -16,8 +16,13 @@ from __future__ import annotations
 
 import logging
 import os
+from pathlib import Path
 import sys
-from typing import Any
+
+from .config.application import ApplicationConfig
+from .models.io_types import RunPaths
+from .models.runtime_protocols import CleanRuntimeArgs
+from .runtime.state import InitializedRunContext
 
 
 def _bootstrap_config_environment() -> None:
@@ -39,39 +44,47 @@ _bootstrap_config_environment()
 logger = logging.getLogger(__name__)
 
 
-def parse_application_config() -> Any:
+def parse_application_config() -> ApplicationConfig:
     """Lazy compatibility export for the CLI boundary parser."""
     from .cli.parser import parse_application_config as parse
 
     return parse()
 
 
-def clean_runtime_artifacts(config: Any, **kwargs: Any) -> int:
+def clean_runtime_artifacts(config: CleanRuntimeArgs, *, project_root: Path | None = None) -> int:
     """Compatibility export that preserves lazy application imports."""
     from .app.bootstrap import clean_runtime_artifacts as clean
 
-    return clean(config, **kwargs)
+    if project_root is None:
+        return clean(config)
+    return clean(config, project_root=project_root)
 
 
-def initialize_run_context(config: Any, paths: Any) -> Any:
+def initialize_run_context(
+    config: ApplicationConfig, paths: RunPaths | None
+) -> InitializedRunContext | None:
     from .app.bootstrap import initialize_run_context as initialize
 
     return initialize(config, paths)
 
 
-def run_dry_run_plan(config: Any, paths: Any) -> bool:
+def run_dry_run_plan(config: ApplicationConfig, paths: RunPaths | None) -> bool:
     from .app.planning import run_dry_run_plan as plan
 
     return plan(config, paths)
 
 
-def run_field_test_loop(config: Any, run_ctx: Any, paths: Any) -> None:
+def run_field_test_loop(
+    config: ApplicationConfig, run_ctx: InitializedRunContext, paths: RunPaths | None
+) -> None:
     from .app.run_loop import run_field_test_loop as run
 
     run(args=config, run_ctx=run_ctx, run_paths=paths)
 
 
-def finalize_run(config: Any, run_ctx: Any, paths: Any) -> None:
+def finalize_run(
+    config: ApplicationConfig, run_ctx: InitializedRunContext, paths: RunPaths | None
+) -> None:
     from .app.finalize import finalize_run as finalize
 
     finalize(args=config, run_ctx=run_ctx, run_paths=paths)
@@ -105,9 +118,7 @@ def main() -> int:
         run_field_test_loop(config, init_result, config.paths)
         finalize_run(config, init_result, config.paths)
     finally:
-        close = getattr(init_result.client_factory, "close", None)
-        if callable(close):
-            close()
+        init_result.client_factory.close()
     return 0
 
 
