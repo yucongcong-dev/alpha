@@ -90,6 +90,12 @@ ruff check src/alpha/app/planning.py tests/unit/test_planning.py
 make check
 ```
 
+- Windows 或没有 `make` 的环境可直接运行完整跨平台检查：
+
+```bash
+py -3.10 scripts/check_all.py
+```
+
 - 请在 Python 3.10+ 的虚拟环境里运行检查。Makefile 会优先选择可用的 3.10
   解释器；需要显式解释器时，macOS 可用 `make check PYTHON=python3.10`，
   Windows 可用 `make check PYTHON="py -3.10"`，也可以使用已激活虚拟环境中的

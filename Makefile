@@ -1,96 +1,70 @@
 .PHONY: install-dev python-version-check test coverage-check help-check whitespace-check docs-check scan-secrets repo-boundary-check removed-compat-file-check compat-import-check arch-boundary-check todo-check sync-config config-sync-check ruff-check format-check mypy-check check clean-runtime clean-dev package
 
 ifeq ($(OS),Windows_NT)
-GIT_EXEC_PATH := $(shell git --exec-path)
-WINDOWS_SHELL := $(patsubst %/mingw64/libexec/git-core,%/usr/bin/sh.exe,$(GIT_EXEC_PATH))
-SHELL := $(WINDOWS_SHELL)
-export PATH := $(dir $(WINDOWS_SHELL));$(PATH)
-ifndef PYTHON
-PYTHON := $(shell if command -v py >/dev/null 2>&1; then echo "py -3.10"; elif command -v python >/dev/null 2>&1; then echo python; else echo python; fi)
-endif
+PYTHON ?= py -3.10
 else
-ifndef PYTHON
-PYTHON := $(shell if command -v python3.10 >/dev/null 2>&1; then echo python3.10; elif command -v python3 >/dev/null 2>&1; then echo python3; else echo python; fi)
+PYTHON ?= python3.10
 endif
-endif
-PYTHONPATH ?= src
-RUFF ?= ruff
-MYPY ?= $(PYTHON) -m mypy
 
 python-version-check:
-	$(PYTHON) scripts/check_python_version.py
+	$(PYTHON) scripts/check_all.py python-version
 
 install-dev: python-version-check
 	$(PYTHON) -m pip install -e ".[dev,httpx]"
 
 test: python-version-check
-	PYTHONPATH=$(PYTHONPATH) $(PYTHON) -m pytest -q
+	$(PYTHON) scripts/check_all.py test
 
 coverage-check: python-version-check
-	PYTHONPATH=$(PYTHONPATH) $(PYTHON) -m pytest --cov=alpha --cov-report=term:skip-covered --cov-report=json:.coverage.json -q
-	$(PYTHON) scripts/check_critical_coverage.py .coverage.json
+	$(PYTHON) scripts/check_all.py coverage
 
 help-check:
-	PYTHONPATH=$(PYTHONPATH) $(PYTHON) -m alpha --help >/dev/null
+	$(PYTHON) scripts/check_all.py help
 
 whitespace-check:
-	git diff --check
+	$(PYTHON) scripts/check_all.py whitespace
 
 docs-check:
-	$(PYTHON) scripts/check_docs.py
+	$(PYTHON) scripts/check_all.py docs
 
 scan-secrets:
-	$(PYTHON) scripts/check_repo.py scan-secrets
+	$(PYTHON) scripts/check_all.py scan-secrets
 
 repo-boundary-check:
-	$(PYTHON) scripts/check_repo.py repo-boundary
+	$(PYTHON) scripts/check_all.py repo-boundary
 
 removed-compat-file-check:
-	$(PYTHON) scripts/check_repo.py removed-compat-file
+	$(PYTHON) scripts/check_all.py removed-compat-file
 
 compat-import-check:
-	$(PYTHON) scripts/check_repo.py compat-import
+	$(PYTHON) scripts/check_all.py compat-import
 
 arch-boundary-check:
-	$(PYTHON) scripts/check_repo.py arch-boundary
+	$(PYTHON) scripts/check_all.py arch-boundary
 
 todo-check:
-	$(PYTHON) scripts/check_repo.py todo
+	$(PYTHON) scripts/check_all.py todo
 
 sync-config:
 	$(PYTHON) scripts/sync_config.py
 
 config-sync-check:
-	$(PYTHON) scripts/sync_config.py --check
+	$(PYTHON) scripts/check_all.py config-sync
 
 ruff-check:
-	@if $(RUFF) --version >/dev/null 2>&1; then \
-		$(RUFF) check .; \
-	else \
-		echo "[check] ruff executable not installed; install the dev dependencies or Ruff binary" >&2; \
-		exit 1; \
-	fi
+	$(PYTHON) scripts/check_all.py ruff
 
 format-check:
-	@if $(RUFF) --version >/dev/null 2>&1; then \
-		$(RUFF) format --check src tests scripts; \
-	else \
-		echo "[check] ruff executable not installed; install the dev dependencies or Ruff binary" >&2; \
-		exit 1; \
-	fi
+	$(PYTHON) scripts/check_all.py format
 
 mypy-check:
-	@if PYTHONPATH=$(PYTHONPATH) $(MYPY) --version >/dev/null 2>&1; then \
-		PYTHONPATH=$(PYTHONPATH) $(MYPY) src/alpha; \
-	else \
-		echo "[check] mypy is not installed; install the dev dependencies" >&2; \
-		exit 1; \
-	fi
+	$(PYTHON) scripts/check_all.py mypy
 
-check: coverage-check help-check whitespace-check docs-check scan-secrets repo-boundary-check removed-compat-file-check compat-import-check arch-boundary-check todo-check config-sync-check ruff-check format-check mypy-check
+check:
+	$(PYTHON) scripts/check_all.py
 
 clean-runtime:
-	PYTHONPATH=$(PYTHONPATH) $(PYTHON) -m alpha clean
+	$(PYTHON) scripts/run_alpha.py clean
 
 clean-dev:
 	$(PYTHON) scripts/clean_dev.py
