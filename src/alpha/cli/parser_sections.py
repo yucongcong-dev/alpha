@@ -6,6 +6,7 @@ import argparse
 import os
 
 from ..config.constants import DEFAULT_DATASET_ID
+from ..config.strategy_profiles import STRATEGY_PROFILE_CHOICES
 from .constants import DEFAULT_CREDS_FILE, DEFAULT_CREDS_KEY_FILE
 
 
@@ -88,6 +89,12 @@ def add_dataset_arguments(parser: argparse.ArgumentParser) -> None:
 
 def add_run_mode_arguments(parser: argparse.ArgumentParser) -> None:
     """Add run-mode toggles."""
+    parser.add_argument(
+        "--strategy-profile",
+        choices=STRATEGY_PROFILE_CHOICES,
+        default="explore",
+        help="运行策略标签：explore=广覆盖探索，refine=反馈邻域优化，submit-focused=提交导向收敛",
+    )
     run_mode_group = parser.add_mutually_exclusive_group()
     run_mode_group.add_argument(
         "--smoke-test",

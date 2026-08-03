@@ -695,6 +695,16 @@ datasets/<dataset>/cache/<region>_<universe>_<instrument>_d<delay>.json
 数据集 profile、表达式策略、质量反馈和模板默认值分别按各自 YAML 维护；
 `src/alpha/resources/config/*.yaml` 是安装包镜像，不应直接修改。
 
+运行策略用 `global.runtime.strategy_profile` 或 `--strategy-profile` 显式标记，当前支持：
+
+- `explore`：广覆盖探索，优先发现字段/模板是否有基本信息量
+- `refine`：反馈邻域优化，优先围绕 near-pass 和已知有效结构做小范围变体
+- `submit-focused`：提交导向收敛，优先控制风险、相关性和可提交数量
+
+这个字段目前只记录策略意图并进入 run config snapshot，不会隐式改写 `limit`、并发、模板预算或质量阈值。
+真正会改变运行规模的参数仍然要在 `limits`、`concurrency`、`quality`、`expression_policies`
+或 dataset profile 中显式配置。
+
 ```bash
 # YAML 改动后同步并检查
 make sync-config

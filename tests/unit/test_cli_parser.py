@@ -26,6 +26,7 @@ global:
     limit: 300
     max_templates_per_field: 0
   runtime:
+    strategy_profile: refine
     smoke_test: false
     auto_update_blacklist: true
     auto_update_blacklist_mode: staging
@@ -119,6 +120,42 @@ def test_yaml_can_enable_auto_update_blacklist(monkeypatch, tmp_path) -> None:
 
     assert args.auto_update_blacklist is True
     assert args.auto_update_blacklist_mode == "staging"
+    assert args.strategy_profile == "refine"
+
+
+def test_cli_strategy_profile_overrides_yaml(monkeypatch, tmp_path) -> None:
+    """CLI can select the named strategy profile without rewriting other knobs."""
+    clear_yaml_cache()
+    config_path = tmp_path / "settings.yaml"
+    write_config(config_path)
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        ["alpha", "--config", str(config_path), "--strategy-profile", "submit-focused"],
+    )
+
+    args = parse_args()
+
+    assert args.strategy_profile == "submit-focused"
+    assert args.limit == 300
+
+
+def test_yaml_strategy_profile_rejects_unknown_value(monkeypatch, tmp_path) -> None:
+    """YAML strategy profiles should use the same supported names as CLI choices."""
+    clear_yaml_cache()
+    config_path = tmp_path / "settings.yaml"
+    config_path.write_text(
+        """
+global:
+  runtime:
+    strategy_profile: aggressive
+""".strip(),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(sys, "argv", ["alpha", "--config", str(config_path)])
+
+    with pytest.raises(ValueError, match="unsupported strategy_profile"):
+        parse_args()
 
 
 def test_cli_auto_update_blacklist_flag(monkeypatch, tmp_path) -> None:
@@ -331,6 +368,7 @@ def test_parse_application_config_is_immutable_and_uses_normalized_paths(
     assert config.output == str((tmp_path / "results/custom.json").resolve())
     assert config.dataset.dataset_id == "pv1"
     assert config.dataset_id == config.dataset.dataset_id
+    assert config.strategy_profile == "explore"
     assert config.planning.limit == config.limit
     assert config.execution.max_concurrent_simulations == config.max_concurrent_simulations
     assert config.quality.min_sharpe == config.min_sharpe

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from ..config.strategy_profiles import normalize_strategy_profile
 from ..runtime.preset_mode import resolve_preset_mode
 from .runtime_config import SimulationStageConfig
 from .runtime_protocols import (
@@ -241,6 +242,7 @@ class RunConfigSnapshotOptions:
     min_request_interval: float = 0.0
     top_fields_by_feedback: int = 0
     stop_after_submittable: int = 0
+    strategy_profile: str = "explore"
     auto_update_blacklist: bool = False
     auto_update_blacklist_mode: str = "repository"
     smoke_test: bool = False
@@ -295,6 +297,9 @@ class RunConfigSnapshotOptions:
             min_request_interval=float(getattr(args, "min_request_interval", 0.0) or 0.0),
             top_fields_by_feedback=int(getattr(args, "top_fields_by_feedback", 0) or 0),
             stop_after_submittable=int(getattr(args, "stop_after_submittable", 0) or 0),
+            strategy_profile=normalize_strategy_profile(
+                getattr(args, "strategy_profile", "explore")
+            ),
             auto_update_blacklist=bool(getattr(args, "auto_update_blacklist", False)),
             auto_update_blacklist_mode=str(
                 getattr(args, "auto_update_blacklist_mode", "repository") or "repository"

@@ -127,6 +127,7 @@ class TestRuntimeOptionBuilders:
             output = "results.json"
             auto_update_blacklist = True
             auto_update_blacklist_mode = "staging"
+            strategy_profile = "refine"
             page_size = "100"
             region = "USA"
             universe = "TOP1000"
@@ -175,6 +176,7 @@ class TestRuntimeOptionBuilders:
         assert snapshot_options.check_submit_retries == 4
         assert snapshot_options.auto_update_blacklist is True
         assert snapshot_options.auto_update_blacklist_mode == "staging"
+        assert snapshot_options.strategy_profile == "refine"
 
     def test_scheduler_control_options_from_args(self) -> None:
         class _Args:

@@ -8,6 +8,7 @@ from typing import cast
 from ..config.constants import SMOKE_TEST_MAX_PENDING_CYCLES, SMOKE_TEST_MAX_QUEUE_SECONDS
 from ..config.defaults import apply_yaml_global_defaults
 from ..config.profiles import get_dataset_profile
+from ..config.strategy_profiles import normalize_strategy_profile
 from ..config.yaml import get_yaml_config, set_active_config_path
 
 DATASET_PROFILE_KEYS = (
@@ -39,6 +40,7 @@ def resolve_cli_args(
         parser_defaults=parser_defaults,
         explicit_cli_keys=explicit_cli_keys,
     )
+    args.strategy_profile = normalize_strategy_profile(getattr(args, "strategy_profile", "explore"))
     apply_run_mode_overrides(args)
     return args
 

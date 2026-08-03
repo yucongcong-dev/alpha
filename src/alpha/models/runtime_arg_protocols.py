@@ -281,6 +281,9 @@ class SchedulerControlArgs(Protocol):
 
 class RuntimeModeArgs(Protocol):
     @property
+    def strategy_profile(self) -> str: ...
+
+    @property
     def auto_update_blacklist(self) -> bool: ...
 
     @property

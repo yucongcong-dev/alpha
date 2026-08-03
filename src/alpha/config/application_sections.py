@@ -5,6 +5,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Generic, TypeVar, cast, overload
 
+from .strategy_profiles import normalize_strategy_profile
+
 _T = TypeVar("_T")
 
 
@@ -184,6 +186,7 @@ class QualityConfig:
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class RuntimeFlagsConfig:
+    strategy_profile: str
     auto_update_blacklist: bool
     auto_update_blacklist_mode: str
     verbose: bool
@@ -192,6 +195,9 @@ class RuntimeFlagsConfig:
     @classmethod
     def from_args(cls, args: object) -> RuntimeFlagsConfig:
         return cls(
+            strategy_profile=normalize_strategy_profile(
+                _value(args, "strategy_profile", "explore")
+            ),
             auto_update_blacklist=bool(_value(args, "auto_update_blacklist", False)),
             auto_update_blacklist_mode=str(
                 _value(args, "auto_update_blacklist_mode", "repository") or "repository"
