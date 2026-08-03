@@ -6,6 +6,7 @@
 
 from __future__ import annotations
 
+from dataclasses import fields
 import os
 import subprocess
 import sys
@@ -22,6 +23,8 @@ from alpha.config import (
     FieldTransformStage,
     get_yaml_config,
 )
+from alpha.config.expression_policy_schema import EXPRESSION_POLICY_TYPED_OVERRIDE_FIELDS
+from alpha.config.models import DatasetExpressionPolicy
 from alpha.config.runtime_values import (
     clear_runtime_config_cache,
     get_runtime_config,
@@ -251,6 +254,13 @@ strategy_profiles:
 
     assert any("未知 profile 'aggressive'" in warning for warning in warnings)
     assert any("未知 section ['magic']" in warning for warning in warnings)
+
+
+def test_expression_policy_schema_keys_match_policy_fields() -> None:
+    """Typed override schema should only name real DatasetExpressionPolicy fields."""
+    policy_fields = {field.name for field in fields(DatasetExpressionPolicy)}
+
+    assert policy_fields >= EXPRESSION_POLICY_TYPED_OVERRIDE_FIELDS
 
 
 def test_model16_policy_uses_long_backfill_with_winsorize() -> None:

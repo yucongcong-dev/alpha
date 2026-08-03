@@ -6,6 +6,21 @@ from dataclasses import replace
 import logging
 from typing import Any, cast
 
+from .expression_policy_schema import (
+    EXPRESSION_POLICY_DICT_INT_FIELDS,
+    EXPRESSION_POLICY_DICT_TUPLE_FIELDS,
+    EXPRESSION_POLICY_FEEDBACK_LOOP_FIELD,
+    EXPRESSION_POLICY_INT_FIELDS,
+    EXPRESSION_POLICY_META_FIELDS,
+    EXPRESSION_POLICY_SET_FIELDS,
+    EXPRESSION_POLICY_TEMPLATE_PREFIX_PENALTIES_FIELD,
+    EXPRESSION_POLICY_TEMPLATE_SPEC_FIELDS,
+    EXPRESSION_POLICY_TRANSFORM_FIELDS,
+    EXPRESSION_POLICY_TUPLE_FIELDS,
+    EXPRESSION_POLICY_TUPLE_PAIR_FIELDS,
+    EXPRESSION_POLICY_TUPLE_WINDOW2_FIELDS,
+    EXPRESSION_POLICY_TUPLE_WINDOW3_FIELDS,
+)
 from .models import DatasetExpressionPolicy
 from .policy_coercers import (
     coerce_feedback_loop_policy,
@@ -94,51 +109,9 @@ def apply_yaml_expression_policy_overrides(
     tiers = resolve_priority_tiers(cast(dict[str, Any], overrides))
 
     update_map: dict[str, Any] = {}
-    set_fields = {
-        "protected_templates",
-        "supported_grouping_fields",
-        "positive_raw_fields",
-        "negative_raw_fields",
-        "event_allowed_template_families",
-    }
-    tuple_fields = {
-        "event_field_prefixes",
-        "event_allowed_template_stages",
-        "event_allowed_template_prefixes",
-    }
-    dict_tuple_fields = {"ratio_partner_candidates", "ratio_keywords"}
-    dict_int_fields = {
-        "template_priority_penalties",
-        "preferred_partner_score_bonuses",
-        "preferred_field_order",
-        "preferred_field_type_order",
-    }
-    # 单一 int 字段，支持 @tier 引用
-    int_fields = {
-        "account_template_boost",
-        "high_conviction_ratio_priority_boost",
-        "partner_limit",
-        "field_feedback_half_life_days",
-        "field_feedback_min_attempts_for_promising",
-    }
-    tuple_pair_fields = {"high_conviction_ratio_pairs"}
-    tuple_window3_fields = {"matrix_delta_over_std_windows", "ratio_delta_over_std_windows"}
-    tuple_window2_fields = {"ratio_delta_rank_windows"}
-    template_spec_fields = {
-        "matrix_diversified_template_specs",
-        "ratio_diversified_template_specs",
-        "ratio_legacy_template_specs",
-    }
-    transform_fields = {
-        "default_field_transform",
-        "matrix_field_transform",
-        "vector_field_transform",
-        "ratio_numerator_transform",
-        "ratio_denominator_transform",
-    }
 
     for key, value in overrides.items():
-        if key == "priority_tiers":
+        if key in EXPRESSION_POLICY_META_FIELDS:
             continue  # meta 字段，不映射到 DatasetExpressionPolicy
         if not hasattr(policy, key):
             logger.warning(
@@ -147,46 +120,46 @@ def apply_yaml_expression_policy_overrides(
                 dataset_id,
             )
             continue
-        if key in set_fields and isinstance(value, (list, tuple, set)):
+        if key in EXPRESSION_POLICY_SET_FIELDS and isinstance(value, (list, tuple, set)):
             update_map[key] = {str(item) for item in value}
-        elif key in tuple_fields and isinstance(value, (list, tuple)):
+        elif key in EXPRESSION_POLICY_TUPLE_FIELDS and isinstance(value, (list, tuple)):
             update_map[key] = tuple(str(item) for item in value)
-        elif key in dict_tuple_fields and isinstance(value, dict):
+        elif key in EXPRESSION_POLICY_DICT_TUPLE_FIELDS and isinstance(value, dict):
             update_map[key] = {
                 str(name): tuple(str(item) for item in items)
                 for name, items in value.items()
                 if isinstance(items, (list, tuple))
             }
-        elif key in dict_int_fields and isinstance(value, dict):
+        elif key in EXPRESSION_POLICY_DICT_INT_FIELDS and isinstance(value, dict):
             coerced: dict[Any, int] = {}
             for name, score in value.items():
                 resolved = resolve_tier_value(score, tiers)
                 if resolved is not None:
                     coerced[name] = resolved
             update_map[key] = coerced
-        elif key == "template_prefix_penalties":
+        elif key == EXPRESSION_POLICY_TEMPLATE_PREFIX_PENALTIES_FIELD:
             update_map[key] = coerce_template_prefix_penalties(value, tiers=tiers)
-        elif key in int_fields:
+        elif key in EXPRESSION_POLICY_INT_FIELDS:
             resolved = resolve_tier_value(value, tiers)
             if resolved is not None:
                 update_map[key] = resolved
-        elif key in tuple_pair_fields and isinstance(value, (list, tuple)):
+        elif key in EXPRESSION_POLICY_TUPLE_PAIR_FIELDS and isinstance(value, (list, tuple)):
             update_map[key] = {
                 (str(item[0]), str(item[1]))
                 for item in value
                 if isinstance(item, (list, tuple)) and len(item) == 2
             }
-        elif key in tuple_window3_fields:
+        elif key in EXPRESSION_POLICY_TUPLE_WINDOW3_FIELDS:
             update_map[key] = tuple_tuple_int(value, 3)
-        elif key in tuple_window2_fields:
+        elif key in EXPRESSION_POLICY_TUPLE_WINDOW2_FIELDS:
             update_map[key] = tuple_tuple_int(value, 2)
-        elif key in template_spec_fields:
+        elif key in EXPRESSION_POLICY_TEMPLATE_SPEC_FIELDS:
             update_map[key] = tuple_tuple_str_int(value)
-        elif key in transform_fields:
+        elif key in EXPRESSION_POLICY_TRANSFORM_FIELDS:
             transform = coerce_field_transform_spec(value)
             if transform is not None:
                 update_map[key] = transform
-        elif key == "feedback_loop_policy":
+        elif key == EXPRESSION_POLICY_FEEDBACK_LOOP_FIELD:
             loop_policy = coerce_feedback_loop_policy(value)
             if loop_policy is not None:
                 update_map[key] = loop_policy
