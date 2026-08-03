@@ -612,7 +612,7 @@ feedback 目录用于机器自动复用历史，但仍属于可重建运行状�
 ## 12. 运行器操作与本地资产
 
 这一节说明仓库如何把研究计划变成可恢复的本地运行。默认流程只执行
-`simulation + check-submit`，不会自动执行平台的正式 `submit`。
+`simulation + Check Submission`，不会自动执行平台的正式 `submit`。
 
 ### 12.1 最小运行路径
 
