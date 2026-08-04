@@ -7,6 +7,7 @@ from concurrent.futures import ThreadPoolExecutor
 from threading import Semaphore
 from unittest.mock import MagicMock, patch
 
+from alpha.app.run_loop_feedback import RuntimeFeedbackRefresh
 from alpha.app.run_loop_rounds import (
     ScheduleRoundContext,
     ScheduleRoundResult,
@@ -26,6 +27,7 @@ from alpha.models.runtime import (
     TemplateBuildContext,
 )
 from alpha.models.runtime_options import SchedulerControlOptions
+from alpha.runtime.field_template_queue import FieldTemplateQueue
 
 
 def _build_context(
@@ -72,7 +74,10 @@ def test_breadth_first_field_progress_keeps_resume_cursor_at_start(tmp_path) -> 
 
     with (
         context.executor,
-        patch("alpha.app.run_loop_rounds.refresh_runtime_feedback"),
+        patch(
+            "alpha.app.run_loop_rounds.refresh_runtime_feedback",
+            return_value=RuntimeFeedbackRefresh(feedback_changed=False),
+        ),
         patch("alpha.app.run_loop_rounds.should_skip_field", return_value=False),
         patch(
             "alpha.app.run_loop_rounds.build_pending_templates_for_field",
@@ -98,7 +103,10 @@ def test_unbatched_field_progress_keeps_linear_resume_cursor() -> None:
 
     with (
         context.executor,
-        patch("alpha.app.run_loop_rounds.refresh_runtime_feedback"),
+        patch(
+            "alpha.app.run_loop_rounds.refresh_runtime_feedback",
+            return_value=RuntimeFeedbackRefresh(feedback_changed=False),
+        ),
         patch("alpha.app.run_loop_rounds.should_skip_field", return_value=False),
         patch(
             "alpha.app.run_loop_rounds.build_pending_templates_for_field",
@@ -130,7 +138,10 @@ def test_queue_exhausted_candidate_is_excluded_from_next_round() -> None:
 
     with (
         context.executor,
-        patch("alpha.app.run_loop_rounds.refresh_runtime_feedback"),
+        patch(
+            "alpha.app.run_loop_rounds.refresh_runtime_feedback",
+            return_value=RuntimeFeedbackRefresh(feedback_changed=False),
+        ),
         patch("alpha.app.run_loop_rounds.should_skip_field", return_value=False),
         patch(
             "alpha.app.run_loop_rounds.build_pending_templates_for_field",
@@ -148,6 +159,61 @@ def test_queue_exhausted_candidate_is_excluded_from_next_round() -> None:
         )
 
     assert exhausted_key in captured_attempted[0]
+
+
+def test_queue_timeout_invalidates_only_retry_field_template_queue() -> None:
+    context = _build_context(field_template_batch_size=1)
+    context.template_build_ctx = TemplateBuildContext(options=MagicMock())
+    context.template_build_ctx.feedback_result_count = 0
+    stale_entry = PendingTemplateEntry(
+        template_name="stale",
+        template_family="rank",
+        template_stage="first_order",
+        template_role="signal",
+        template_activation_scope="broad",
+        expression="rank(f1)",
+        priority=100,
+        settings_variant=SettingsVariant(),
+        variant_fingerprint="settings",
+    )
+    context.field_template_queues["f1"] = FieldTemplateQueue.create(
+        [stale_entry],
+        filtered_templates=0,
+        template_count=1,
+    )
+    context.run_ctx.execution_state.result_ledger.append(
+        FieldTestResult(
+            field_id="f1",
+            field_type="MATRIX",
+            field_name="f1",
+            template_name="stale",
+            status="error",
+            failed_stage="simulation",
+            message="simulation queued too long",
+            expression="rank(f1)",
+        )
+    )
+
+    with (
+        context.executor,
+        patch("alpha.app.run_loop_rounds.should_skip_field", return_value=False),
+        patch(
+            "alpha.app.run_loop_rounds.build_pending_templates_for_field",
+            return_value=([], 0, 1),
+        ) as mock_build,
+        patch("alpha.app.run_loop_rounds._dispatch_templates_for_field", return_value=False),
+        patch("alpha.app.run_loop_rounds.persist_field_progress"),
+    ):
+        schedule_field_round(
+            context=context,
+            field=context.fields[0],
+            field_index=1,
+            total_fields=1,
+            round_index=2,
+        )
+
+    mock_build.assert_called_once()
+    assert not context.field_template_queues["f1"].entries
 
 
 def test_historical_submittable_result_does_not_stop_new_round() -> None:
@@ -219,7 +285,10 @@ def test_skipped_field_persists_progress_without_building_templates() -> None:
 
     with (
         context.executor,
-        patch("alpha.app.run_loop_rounds.refresh_runtime_feedback"),
+        patch(
+            "alpha.app.run_loop_rounds.refresh_runtime_feedback",
+            return_value=RuntimeFeedbackRefresh(feedback_changed=False),
+        ),
         patch("alpha.app.run_loop_rounds.should_skip_field", return_value=True),
         patch("alpha.app.run_loop_rounds.build_pending_templates_for_field") as mock_build,
         patch("alpha.app.run_loop_rounds.persist_field_progress") as mock_persist,
@@ -256,7 +325,10 @@ def test_breadth_first_round_dispatches_only_configured_batch() -> None:
 
     with (
         context.executor,
-        patch("alpha.app.run_loop_rounds.refresh_runtime_feedback"),
+        patch(
+            "alpha.app.run_loop_rounds.refresh_runtime_feedback",
+            return_value=RuntimeFeedbackRefresh(feedback_changed=False),
+        ),
         patch("alpha.app.run_loop_rounds.should_skip_field", return_value=False),
         patch(
             "alpha.app.run_loop_rounds.build_pending_templates_for_field",
@@ -277,6 +349,132 @@ def test_breadth_first_round_dispatches_only_configured_batch() -> None:
 
     assert result == ScheduleRoundResult(True, False, "f1")
     assert dispatch.call_args.kwargs["scheduled_templates"] == entries[:1]
+
+
+def test_breadth_first_reuses_cached_field_template_queue() -> None:
+    context = _build_context(field_template_batch_size=1)
+    context.template_build_ctx.feedback_result_count = 0
+    entries = [
+        PendingTemplateEntry(
+            template_name=f"template-{index}",
+            template_family="rank",
+            template_stage="first_order",
+            template_role="signal",
+            template_activation_scope="broad",
+            expression=f"rank(f1) + {index}",
+            priority=100 - index,
+            settings_variant=SettingsVariant(),
+            variant_fingerprint=f"settings-{index}",
+        )
+        for index in range(2)
+    ]
+
+    with (
+        context.executor,
+        patch(
+            "alpha.app.run_loop_rounds.refresh_runtime_feedback",
+            return_value=RuntimeFeedbackRefresh(feedback_changed=False),
+        ),
+        patch("alpha.app.run_loop_rounds.should_skip_field", return_value=False),
+        patch(
+            "alpha.app.run_loop_rounds.build_pending_templates_for_field",
+            return_value=(entries, 0, 2),
+        ) as mock_build,
+        patch("alpha.app.run_loop_rounds.maybe_restore_runtime_concurrency"),
+        patch("alpha.app.run_loop_rounds.drain_until_capacity", return_value=True),
+        patch("alpha.app.run_loop_rounds.throttle_before_submission"),
+        patch("alpha.app.run_loop_rounds.submit_template_future") as mock_submit,
+        patch("alpha.app.run_loop_rounds.persist_field_progress"),
+    ):
+        for round_index in (1, 2):
+            schedule_field_round(
+                context=context,
+                field=context.fields[0],
+                field_index=1,
+                total_fields=1,
+                round_index=round_index,
+            )
+
+    mock_build.assert_called_once()
+    assert [call.kwargs["expression"] for call in mock_submit.call_args_list] == [
+        "rank(f1) + 0",
+        "rank(f1) + 1",
+    ]
+    assert not context.field_template_queues["f1"].entries
+
+
+def test_feedback_change_invalidates_cached_field_template_queue() -> None:
+    context = _build_context(field_template_batch_size=1)
+    context.template_build_ctx.feedback_result_count = 0
+    initial_entries = [
+        PendingTemplateEntry(
+            template_name=f"initial-{index}",
+            template_family="rank",
+            template_stage="first_order",
+            template_role="signal",
+            template_activation_scope="broad",
+            expression=f"rank(f1) + {index}",
+            priority=100 - index,
+            settings_variant=SettingsVariant(),
+            variant_fingerprint=f"initial-{index}",
+        )
+        for index in range(2)
+    ]
+    refreshed_entry = PendingTemplateEntry(
+        template_name="refreshed",
+        template_family="rank",
+        template_stage="feedback",
+        template_role="signal",
+        template_activation_scope="feedback_only",
+        expression="ts_rank(f1, 20)",
+        priority=120,
+        settings_variant=SettingsVariant(),
+        variant_fingerprint="refreshed",
+    )
+    refresh_calls = 0
+
+    def _refresh_feedback(template_build_ctx, _results) -> RuntimeFeedbackRefresh:
+        nonlocal refresh_calls
+        refresh_calls += 1
+        if refresh_calls == 2:
+            template_build_ctx.feedback_result_count = 1
+            return RuntimeFeedbackRefresh(feedback_changed=True)
+        return RuntimeFeedbackRefresh(feedback_changed=False)
+
+    with (
+        context.executor,
+        patch(
+            "alpha.app.run_loop_rounds.refresh_runtime_feedback",
+            side_effect=_refresh_feedback,
+        ),
+        patch("alpha.app.run_loop_rounds.should_skip_field", return_value=False),
+        patch(
+            "alpha.app.run_loop_rounds.build_pending_templates_for_field",
+            side_effect=[
+                (initial_entries, 0, 2),
+                ([refreshed_entry], 0, 1),
+            ],
+        ) as mock_build,
+        patch("alpha.app.run_loop_rounds.maybe_restore_runtime_concurrency"),
+        patch("alpha.app.run_loop_rounds.drain_until_capacity", return_value=True),
+        patch("alpha.app.run_loop_rounds.throttle_before_submission"),
+        patch("alpha.app.run_loop_rounds.submit_template_future") as mock_submit,
+        patch("alpha.app.run_loop_rounds.persist_field_progress"),
+    ):
+        for round_index in (1, 2):
+            schedule_field_round(
+                context=context,
+                field=context.fields[0],
+                field_index=1,
+                total_fields=1,
+                round_index=round_index,
+            )
+
+    assert mock_build.call_count == 2
+    assert [call.kwargs["expression"] for call in mock_submit.call_args_list] == [
+        "rank(f1) + 0",
+        "ts_rank(f1, 20)",
+    ]
 
 
 def test_dispatch_honors_stop_capacity_and_success_paths() -> None:

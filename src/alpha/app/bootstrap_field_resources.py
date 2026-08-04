@@ -76,7 +76,7 @@ def log_field_selection_stats(
         limit,
         len(fields),
     )
-    logger.info("[data] 从数据集 %s 获取 %d 个字段", dataset_id, len(fields))
+    logger.info("[data] 本次选中数据集 %s 的 %d 个字段进入执行", dataset_id, len(fields))
 
 
 def load_bootstrap_fields(

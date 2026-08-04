@@ -23,6 +23,7 @@ from ..runtime.contexts import (
     PendingTemplateEntry,
     TemplateBuildContext,
 )
+from ..runtime.field_template_queue import FieldTemplateQueue
 from ..runtime.state import InitializedRunContext
 from ..utils.helpers import first_non_empty
 from .loop_future_support import drain_until_capacity, submit_template_future
@@ -59,6 +60,7 @@ class ScheduleRoundContext:
         default_factory=SchedulerControlOptions
     )
     scheduled_simulations: int = 0
+    field_template_queues: dict[str, FieldTemplateQueue] = dataclass_field(default_factory=dict)
 
     def reached_simulation_budget(self) -> bool:
         """Return whether this process has dispatched its configured simulation budget."""
@@ -155,7 +157,12 @@ def schedule_field_round(
     field_id = str(first_non_empty(field.get("id"), SENTINEL_UNKNOWN))
     field_name = choose_field_name(field)
     field_type = choose_field_type(field)
-    refresh_runtime_feedback(context.template_build_ctx, result_ledger.results)
+    feedback_refresh = refresh_runtime_feedback(context.template_build_ctx, result_ledger.results)
+    if feedback_refresh.feedback_changed:
+        context.field_template_queues.clear()
+    else:
+        for retry_field_id in feedback_refresh.retry_field_ids:
+            context.field_template_queues.pop(retry_field_id, None)
 
     if should_skip_field(
         field_id,
@@ -175,33 +182,42 @@ def schedule_field_round(
         )
         return ScheduleRoundResult(progressed=False, stop_requested=False, last_field_id=field_id)
 
-    pending_templates, filtered_templates, template_count = build_pending_templates_for_field(
-        context.template_build_ctx,
-        field,
-        attempted_keys=(
-            execution_state.attempted_keys | execution_state.queue_retry_state.exhausted_keys
-        ),
-        prior_results=[
-            *run_ctx.historical_state.feedback_results,
-            *result_ledger.results,
-        ],
-        reserved_keys=inflight_template_keys(execution_state.future_queue.pending_futures),
-    )
+    template_queue = context.field_template_queues.get(field_id)
+    if template_queue is None:
+        pending_templates, filtered_templates, template_count = build_pending_templates_for_field(
+            context.template_build_ctx,
+            field,
+            attempted_keys=(
+                execution_state.attempted_keys | execution_state.queue_retry_state.exhausted_keys
+            ),
+            prior_results=[
+                *run_ctx.historical_state.feedback_results,
+                *result_ledger.results,
+            ],
+            reserved_keys=inflight_template_keys(execution_state.future_queue.pending_futures),
+        )
+        template_queue = FieldTemplateQueue.create(
+            pending_templates,
+            filtered_templates=filtered_templates,
+            template_count=template_count,
+        )
+        context.field_template_queues[field_id] = template_queue
+    pending_count = len(template_queue.entries)
     logger.debug(
         "[progress] 字段 %d/%d field_id=%s templates=%d pending=%d filtered=%d",
         field_index,
         total_fields,
         field_id,
-        template_count,
-        len(pending_templates),
-        filtered_templates,
+        template_queue.template_count,
+        pending_count,
+        template_queue.filtered_templates,
     )
 
     if context.field_template_batch_size > 0:
-        scheduled_templates = pending_templates[: context.field_template_batch_size]
-        deferred_templates = max(0, len(pending_templates) - len(scheduled_templates))
+        scheduled_templates = template_queue.peek(context.field_template_batch_size)
+        deferred_templates = max(0, pending_count - len(scheduled_templates))
     else:
-        scheduled_templates = pending_templates
+        scheduled_templates = template_queue.peek(0)
         deferred_templates = 0
     progressed = bool(scheduled_templates)
     if deferred_templates > 0:
@@ -220,6 +236,7 @@ def schedule_field_round(
         field_name=field_name,
         field_type=field_type,
         scheduled_templates=scheduled_templates,
+        template_queue=template_queue,
     )
     persist_field_progress(
         state_file=context.state_file,
@@ -246,6 +263,7 @@ def _dispatch_templates_for_field(
     field_name: str,
     field_type: str,
     scheduled_templates: list[PendingTemplateEntry],
+    template_queue: FieldTemplateQueue | None = None,
 ) -> bool:
     """Dispatch scheduled templates for a single field; return whether a stop was requested."""
     args = context.args
@@ -317,5 +335,7 @@ def _dispatch_templates_for_field(
             settings_variant=entry.settings_variant,
             variant_fingerprint=entry.variant_fingerprint,
         )
+        if template_queue is not None:
+            template_queue.consume_one()
         context.scheduled_simulations += 1
     return False

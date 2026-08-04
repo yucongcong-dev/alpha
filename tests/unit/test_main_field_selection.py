@@ -672,8 +672,9 @@ def test_refresh_runtime_feedback_rebuilds_feedback_from_current_results() -> No
         )
     ]
 
-    refresh_runtime_feedback(build_ctx, results, force=True)
+    refresh = refresh_runtime_feedback(build_ctx, results, force=True)
 
+    assert refresh.feedback_changed is True
     assert build_ctx.field_feedback["cash_st"]["attempted_templates"] == 1
     assert build_ctx.field_feedback["cash_st"]["best_template_stage"] == "group_second_order"
     assert build_ctx.global_failed_check_counts["LOW_SHARPE"] == 1
@@ -722,12 +723,37 @@ def test_refresh_runtime_feedback_preserves_seed_feedback_and_only_adds_new_resu
         ),
     ]
 
-    refresh_runtime_feedback(build_ctx, results)
+    assert refresh_runtime_feedback(build_ctx, results).feedback_changed is True
+    assert refresh_runtime_feedback(build_ctx, results).feedback_changed is False
 
     assert build_ctx.field_feedback["seed_field"]["attempted_templates"] == 3
     assert build_ctx.field_feedback["new_field"]["attempted_templates"] == 1
     assert build_ctx.global_failed_check_counts["LOW_FITNESS"] == 2
     assert build_ctx.global_failed_check_counts["LOW_SHARPE"] == 1
+
+
+def test_refresh_runtime_feedback_invalidates_retry_field_for_queue_timeout() -> None:
+    build_ctx = TemplateBuildContext(options=TemplateBuildOptions(**_DEFAULT_SIM_SETTINGS))
+    build_ctx.feedback_result_count = 0
+    results = [
+        FieldTestResult(
+            field_id="queued_field",
+            field_type="MATRIX",
+            field_name="queued_field",
+            template_name="queued_template",
+            status="error",
+            failed_stage="simulation",
+            message="simulation queued too long",
+            expression="rank(queued_field)",
+        )
+    ]
+
+    refresh = refresh_runtime_feedback(build_ctx, results)
+
+    assert refresh.feedback_changed is False
+    assert refresh.retry_field_ids == frozenset({"queued_field"})
+    assert build_ctx.feedback_result_count == 1
+    assert build_ctx.field_feedback == {}
 
 
 def test_build_field_resume_positions_tracks_original_order() -> None:

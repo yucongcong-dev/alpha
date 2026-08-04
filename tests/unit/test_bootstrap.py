@@ -3,11 +3,15 @@
 from __future__ import annotations
 
 import argparse
+import logging
 
 import alpha.app.bootstrap as bootstrap_module
 from alpha.app.bootstrap import initialize_run_context
+from alpha.app.bootstrap_field_resources import log_field_selection_stats
+from alpha.models.domain import TemplateField
 from alpha.models.io_types import RunFilters, RunPaths
 from alpha.models.runtime import ExecutionState, HistoricalRunState
+from alpha.models.runtime_options import FieldSelectionOptions
 
 
 def _build_args() -> argparse.Namespace:
@@ -50,6 +54,36 @@ def _build_args() -> argparse.Namespace:
         include_templates_file="",
         exclude_templates_file="",
     )
+
+
+def test_field_selection_log_describes_selected_execution_fields(caplog) -> None:
+    caplog.set_level(logging.INFO, logger="alpha.app.bootstrap_field_resources")
+    field = TemplateField("f1", "f1", "MATRIX")
+
+    log_field_selection_stats(
+        dataset_id="fundamental6",
+        selection_options=FieldSelectionOptions(limit=1),
+        field_stats={
+            "prefiltered_count": 0,
+            "low_coverage_count": 0,
+            "low_date_coverage_count": 0,
+            "low_alpha_count": 0,
+            "low_user_count": 0,
+            "high_alpha_count": 0,
+            "high_user_count": 0,
+            "unknown_coverage_count": 0,
+            "unknown_date_coverage_count": 0,
+            "unknown_alpha_count": 0,
+            "unknown_user_count": 0,
+            "cached_field_count": 10,
+            "filtered_field_count": 4,
+            "ranked_field_count": 4,
+        },
+        fields=[field],
+    )
+
+    assert "本次选中数据集 fundamental6 的 1 个字段进入执行" in caplog.text
+    assert "从数据集 fundamental6 获取 1 个字段" not in caplog.text
 
 
 def test_build_bootstrap_services_reads_current_module_dependencies(monkeypatch) -> None:
