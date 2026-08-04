@@ -131,7 +131,7 @@ def check_submission_with_retry(
     for attempt in range(1, attempts + 1):
         submission_check = retry_operation(
             "check submission",
-            attempts,
+            1,
             lambda: client.check_alpha_submission(alpha_id),
             retry_wait_seconds=SIMULATION_RETRY_WAIT,
         )

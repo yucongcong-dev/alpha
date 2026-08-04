@@ -337,12 +337,17 @@ class TestCheckSubmissionWithRetry:
             ]
         )
         waits: list[str] = []
+        transport_attempts: list[int] = []
 
         class DummyClient:
             def check_alpha_submission(self, _alpha_id: str) -> dict[str, object]:
                 return next(responses)
 
-        monkeypatch.setattr("alpha.core.simulation_stages.retry_operation", lambda *a, **k: a[2]())
+        def _retry(_name, attempts, operation, **_kwargs):
+            transport_attempts.append(attempts)
+            return operation()
+
+        monkeypatch.setattr("alpha.core.simulation_stages.retry_operation", _retry)
         monkeypatch.setattr(
             "alpha.core.simulation_stages.wait_seconds",
             lambda _seconds, reason, **_kwargs: waits.append(reason),
@@ -352,6 +357,7 @@ class TestCheckSubmissionWithRetry:
 
         assert result == (True, "checks passed", [])
         assert waits == ["waiting for submission checks for alpha alpha_1"]
+        assert transport_attempts == [1, 1]
 
     def test_unavailable_checks_are_polled_until_available(self, monkeypatch) -> None:
         responses = iter(
