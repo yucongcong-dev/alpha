@@ -7,12 +7,14 @@ import logging
 
 import pytest
 
-from alpha.api.client import BrainClient
+import alpha.api.client as client_module
+from alpha.api.client import BrainClient, WorkerClientFactory
 from alpha.api.http_backend import (
     HttpxHttpBackend,
     UrllibHttpBackend,
     create_http_backend,
 )
+from alpha.models.runtime_options import ApiClientOptions
 
 
 def test_create_http_backend_accepts_supported_names() -> None:
@@ -24,6 +26,33 @@ def test_create_http_backend_accepts_supported_names() -> None:
 def test_create_http_backend_rejects_unknown_name() -> None:
     with pytest.raises(ValueError, match="Unsupported HTTP backend 'httpxx'"):
         create_http_backend("httpxx")
+
+
+def test_worker_client_factory_closes_client_when_login_fails(monkeypatch) -> None:
+    closed: list[bool] = []
+
+    class FakeClient:
+        def __init__(self, *_args, **_kwargs) -> None:
+            return None
+
+        def close(self) -> None:
+            closed.append(True)
+
+    def _fail_login(_client, _retries) -> None:
+        raise RuntimeError("worker login failed")
+
+    monkeypatch.setattr(client_module, "BrainClient", FakeClient)
+    monkeypatch.setattr(client_module, "login_with_retry", _fail_login)
+    factory = WorkerClientFactory(
+        ApiClientOptions(login_retries=1),
+        "user@example.com",
+        "secret",
+    )
+
+    with pytest.raises(RuntimeError, match="worker login failed"):
+        factory.get_client()
+
+    assert closed == [True]
 
 
 def _make_cookie(name: str, value: str, *, domain: str = "api.worldquantbrain.com") -> Cookie:

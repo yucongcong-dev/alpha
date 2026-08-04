@@ -4,6 +4,9 @@ from __future__ import annotations
 
 import argparse
 import logging
+from types import SimpleNamespace
+
+import pytest
 
 import alpha.app.bootstrap as bootstrap_module
 from alpha.app.bootstrap import initialize_run_context
@@ -117,6 +120,91 @@ def test_build_bootstrap_services_reads_current_module_dependencies(monkeypatch)
     )
     assert second_services.credentials.load_credentials is bootstrap_module.load_credentials
     assert second_services.api_client.login_with_retry is replacement_login
+
+
+def test_initialize_run_context_closes_clients_when_resources_are_unavailable(
+    monkeypatch,
+) -> None:
+    args = _build_args()
+    paths = SimpleNamespace(
+        creds_file="creds.json",
+        creds_key_file="creds.key",
+    )
+    closed: list[str] = []
+    bootstrap_client = SimpleNamespace(close=lambda: closed.append("bootstrap"))
+    client_factory = SimpleNamespace(close=lambda: closed.append("factory"))
+
+    monkeypatch.setattr(bootstrap_module, "resolve_bootstrap_paths", lambda *_args: paths)
+    monkeypatch.setattr(bootstrap_module, "prepare_runtime_outputs", lambda *_args, **_kwargs: {})
+    monkeypatch.setattr(
+        bootstrap_module,
+        "resolve_credentials",
+        lambda *_args, **_kwargs: ("user@example.com", "secret"),
+    )
+    monkeypatch.setattr(
+        bootstrap_module,
+        "create_and_login_client",
+        lambda *_args, **_kwargs: (bootstrap_client, client_factory),
+    )
+    monkeypatch.setattr(
+        bootstrap_module,
+        "prepare_bootstrap_resources",
+        lambda *_args, **_kwargs: None,
+    )
+
+    assert initialize_run_context(args, None) is None
+    assert closed == ["bootstrap", "factory"]
+
+
+def test_initialize_run_context_closes_factory_when_state_build_fails(monkeypatch) -> None:
+    args = _build_args()
+    paths = SimpleNamespace(
+        creds_file="creds.json",
+        creds_key_file="creds.key",
+        output_file="results.json",
+        datasets_root="datasets",
+    )
+    closed: list[str] = []
+    bootstrap_client = SimpleNamespace(close=lambda: closed.append("bootstrap"))
+    client_factory = SimpleNamespace(close=lambda: closed.append("factory"))
+    prepared = SimpleNamespace(
+        historical_state=HistoricalRunState(),
+        settings_fingerprint="settings-fp",
+        template_library_fingerprint="templates-fp",
+        run_config={},
+    )
+
+    monkeypatch.setattr(bootstrap_module, "resolve_bootstrap_paths", lambda *_args: paths)
+    monkeypatch.setattr(bootstrap_module, "prepare_runtime_outputs", lambda *_args, **_kwargs: {})
+    monkeypatch.setattr(
+        bootstrap_module,
+        "resolve_credentials",
+        lambda *_args, **_kwargs: ("user@example.com", "secret"),
+    )
+    monkeypatch.setattr(
+        bootstrap_module,
+        "create_and_login_client",
+        lambda *_args, **_kwargs: (bootstrap_client, client_factory),
+    )
+    monkeypatch.setattr(
+        bootstrap_module,
+        "prepare_bootstrap_resources",
+        lambda *_args, **_kwargs: prepared,
+    )
+
+    def _fail_state_build(**_kwargs):
+        raise RuntimeError("state failed")
+
+    monkeypatch.setattr(
+        bootstrap_module,
+        "build_execution_state",
+        _fail_state_build,
+    )
+
+    with pytest.raises(RuntimeError, match="state failed"):
+        initialize_run_context(args, None)
+
+    assert closed == ["bootstrap", "factory"]
 
 
 def test_initialize_run_context_prefers_run_paths_for_cache_and_credentials(

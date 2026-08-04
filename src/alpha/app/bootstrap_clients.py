@@ -35,11 +35,15 @@ def create_and_login_client(
         rate_limit_max_retries=client_options.rate_limit_max_retries,
         http_backend=http_backend,
     )
-    services.login_with_retry(bootstrap_client, client_options.login_retries)
-    client_factory = WorkerClientFactory(
-        client_options,
-        email,
-        password,
-        http_backend=http_backend,
-    )
+    try:
+        services.login_with_retry(bootstrap_client, client_options.login_retries)
+        client_factory = WorkerClientFactory(
+            client_options,
+            email,
+            password,
+            http_backend=http_backend,
+        )
+    except BaseException:
+        bootstrap_client.close()
+        raise
     return bootstrap_client, client_factory

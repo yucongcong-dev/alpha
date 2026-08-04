@@ -105,7 +105,11 @@ class WorkerClientFactory:
             rate_limit_max_retries=self.options.rate_limit_max_retries,
             http_backend=self._http_backend,
         )
-        login_with_retry(client, self.options.login_retries)
+        try:
+            login_with_retry(client, self.options.login_retries)
+        except BaseException:
+            client.close()
+            raise
         with self._clients_lock:
             if self._closed:
                 client.close()

@@ -142,43 +142,51 @@ def initialize_run_context(
         args,
         services=services.api_client,
     )
+    run_context: InitializedRunContext | None = None
     try:
-        prepared = prepare_bootstrap_resources(
-            path_options,
-            field_options,
-            template_options,
-            paths,
-            bootstrap_client,
-            run_config=run_config,
-            run_paths=run_paths,
-            supporting_services=services.supporting_resources,
-            field_services=services.field_loading,
+        try:
+            prepared = prepare_bootstrap_resources(
+                path_options,
+                field_options,
+                template_options,
+                paths,
+                bootstrap_client,
+                run_config=run_config,
+                run_paths=run_paths,
+                supporting_services=services.supporting_resources,
+                field_services=services.field_loading,
+            )
+        finally:
+            close = getattr(bootstrap_client, "close", None)
+            if callable(close):
+                close()
+        if prepared is None:
+            return None
+
+        execution_state = build_execution_state(
+            dataset_id=str(args.dataset_id),
+            output_file=paths.output_file,
+            historical_state=prepared.historical_state,
+            settings_fingerprint=prepared.settings_fingerprint,
+            template_library_fingerprint=prepared.template_library_fingerprint,
+            run_config=prepared.run_config,
+            datasets_root=paths.datasets_root,
         )
+
+        concurrency = build_runtime_concurrency(args)
+        run_context = assemble_initialized_run_context(
+            client_factory=client_factory,
+            prepared=prepared,
+            execution_state=execution_state,
+            runtime_state=concurrency.runtime_state,
+            create_semaphore=concurrency.create_semaphore,
+        )
+        return run_context
     finally:
-        close = getattr(bootstrap_client, "close", None)
-        if callable(close):
-            close()
-    if prepared is None:
-        return None
-
-    execution_state = build_execution_state(
-        dataset_id=str(args.dataset_id),
-        output_file=paths.output_file,
-        historical_state=prepared.historical_state,
-        settings_fingerprint=prepared.settings_fingerprint,
-        template_library_fingerprint=prepared.template_library_fingerprint,
-        run_config=prepared.run_config,
-        datasets_root=paths.datasets_root,
-    )
-
-    concurrency = build_runtime_concurrency(args)
-    return assemble_initialized_run_context(
-        client_factory=client_factory,
-        prepared=prepared,
-        execution_state=execution_state,
-        runtime_state=concurrency.runtime_state,
-        create_semaphore=concurrency.create_semaphore,
-    )
+        if run_context is None:
+            close_factory = getattr(client_factory, "close", None)
+            if callable(close_factory):
+                close_factory()
 
 
 def prepare_bootstrap_resources(
