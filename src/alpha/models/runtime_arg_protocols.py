@@ -343,10 +343,6 @@ class BootstrapRuntimeArgs(
     def exclude_templates_file(self) -> str: ...
 
 
-# Deprecated compatibility alias; active application code uses ApplicationConfig.
-RunConfigArgs = BootstrapRuntimeArgs
-
-
 class QualityThresholdArgs(Protocol):
     @property
     def min_sharpe(self) -> float: ...

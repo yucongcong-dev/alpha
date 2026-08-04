@@ -7,7 +7,7 @@ import sys
 import pytest
 
 from alpha.cli.parser import parse_application_config, parse_args
-from alpha.cli.path_resolution import apply_run_paths, normalize_args_paths
+from alpha.cli.path_resolution import normalize_args_paths
 from alpha.config import get_yaml_config
 from alpha.config.constants import FULL_RUN_MAX_TOTAL_SIMULATIONS
 
@@ -700,65 +700,6 @@ def test_cli_rejects_abbreviated_long_options(monkeypatch) -> None:
 
     with pytest.raises(SystemExit):
         parse_args()
-
-
-def test_apply_run_paths_syncs_legacy_runtime_path_attrs(monkeypatch, tmp_path) -> None:
-    """Normalized CLI paths should be mirrored back to args for legacy call sites."""
-    clear_yaml_cache()
-    monkeypatch.chdir(tmp_path)
-    filters_dir = tmp_path / "filters"
-    filters_dir.mkdir()
-    (filters_dir / "include_fields.txt").write_text("f1\n", encoding="utf-8")
-    (filters_dir / "exclude_fields.txt").write_text("f2\n", encoding="utf-8")
-    (filters_dir / "include_templates.txt").write_text("rank\n", encoding="utf-8")
-    (filters_dir / "exclude_templates.txt").write_text("raw\n", encoding="utf-8")
-    monkeypatch.setattr(
-        sys,
-        "argv",
-        [
-            "alpha",
-            "--output",
-            "results/custom.json",
-            "--feedback-output",
-            "results/feedback.json",
-            "--fields-cache-file",
-            "cache/fields.json",
-            "--template-library-file",
-            "templates/custom.json",
-            "--creds-file",
-            "~/.alpha/credentials.json",
-            "--creds-key-file",
-            "~/.alpha/credentials.key",
-            "--include-fields-file",
-            "filters/include_fields.txt",
-            "--exclude-fields-file",
-            "filters/exclude_fields.txt",
-            "--include-templates-file",
-            "filters/include_templates.txt",
-            "--exclude-templates-file",
-            "filters/exclude_templates.txt",
-            "--log-file",
-            "logs/runtime.log",
-        ],
-    )
-
-    args = parse_args()
-    paths = normalize_args_paths(args)
-    apply_run_paths(args, paths)
-
-    assert args.output == paths.output
-    assert args.feedback_output == paths.feedback_output
-    assert args.fields_cache_file == paths.fields_cache_file
-    assert args.template_library_file == paths.template_library_file
-    assert args.creds_file == paths.creds_file
-    assert args.creds_key_file == paths.creds_key_file
-    assert args.include_fields_file == paths.include_fields_file
-    assert args.exclude_fields_file == paths.exclude_fields_file
-    assert args.include_templates_file == paths.include_templates_file
-    assert args.exclude_templates_file == paths.exclude_templates_file
-    assert args.log_file == paths.log_file
-    assert args.state_file == paths.state_file
-    assert args.checkpoint_file == paths.checkpoint_file
 
 
 def test_default_profile_applies_when_dataset_profile_is_missing(monkeypatch, tmp_path) -> None:
