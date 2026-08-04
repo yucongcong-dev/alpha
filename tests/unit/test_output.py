@@ -145,6 +145,42 @@ def test_append_results_journal_retry_is_idempotent(tmp_path) -> None:
     assert [row["field_id"] for row in rows] == ["field_retry"]
 
 
+def test_append_results_journal_uses_cached_state_for_normal_appends(
+    tmp_path,
+    monkeypatch,
+) -> None:
+    output_path = tmp_path / "results.json"
+    initialize_results_journal(str(output_path), [])
+    journal_path = tmp_path / "results_results.jsonl"
+
+    def _result(field_id: str) -> FieldTestResult:
+        return FieldTestResult(
+            field_id=field_id,
+            field_type="MATRIX",
+            field_name=field_id,
+            template_name="tpl",
+            status="simulated",
+            submittable=False,
+            expression=f"rank({field_id})",
+        )
+
+    assert _append_results_journal(
+        str(journal_path),
+        [_result("field_1")],
+        expected_row_count=0,
+    ) == 1
+    monkeypatch.setattr(
+        "alpha.io.results_store.load_results_rows_from_journal",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(AssertionError("unexpected full scan")),
+    )
+
+    assert _append_results_journal(
+        str(journal_path),
+        [_result("field_2")],
+        expected_row_count=1,
+    ) == 2
+
+
 def test_append_results_journal_rejects_retry_with_different_rows(tmp_path) -> None:
     output_path = tmp_path / "results.json"
     initialize_results_journal(str(output_path), [])

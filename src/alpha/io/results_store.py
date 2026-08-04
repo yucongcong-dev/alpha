@@ -6,6 +6,7 @@ from __future__ import annotations
 
 from collections.abc import Iterator
 from contextlib import contextmanager, suppress
+from dataclasses import dataclass
 import hashlib
 import json
 import logging
@@ -25,6 +26,16 @@ JOURNAL_SCHEMA_VERSION = 2
 SUPPORTED_JOURNAL_SCHEMA_VERSIONS = frozenset({1, JOURNAL_SCHEMA_VERSION})
 JOURNAL_SCHEMA_FIELD = "_journal_schema_version"
 JOURNAL_CHECKSUM_FIELD = "_journal_checksum"
+
+
+@dataclass(frozen=True)
+class _JournalAppendState:
+    row_count: int
+    file_signature: tuple[int, int] | None
+    last_batch_rows: tuple[dict[str, Any], ...] = ()
+
+
+_JOURNAL_APPEND_STATES: dict[str, _JournalAppendState] = {}
 
 
 @contextmanager
@@ -80,6 +91,47 @@ def _validate_journal_row(row: dict[str, Any], journal_path: str, line_number: i
 def _serialize_journal_batch(results: list[FieldTestResult]) -> str:
     return "".join(
         f"{json.dumps(_journal_row_payload(result), ensure_ascii=False)}\n" for result in results
+    )
+
+
+def _journal_file_signature(journal_path: str) -> tuple[int, int] | None:
+    try:
+        stat_result = os.stat(journal_path)
+    except FileNotFoundError:
+        return None
+    return stat_result.st_size, stat_result.st_mtime_ns
+
+
+def _remember_journal_state(
+    journal_path: str,
+    *,
+    row_count: int,
+    last_batch_rows: tuple[dict[str, Any], ...] = (),
+) -> _JournalAppendState:
+    state = _JournalAppendState(
+        row_count=row_count,
+        file_signature=_journal_file_signature(journal_path),
+        last_batch_rows=last_batch_rows,
+    )
+    _JOURNAL_APPEND_STATES[os.path.abspath(journal_path)] = state
+    return state
+
+
+def _load_current_journal_state(
+    journal_path: str,
+    *,
+    tail_count: int,
+) -> _JournalAppendState:
+    cache_key = os.path.abspath(journal_path)
+    cached_state = _JOURNAL_APPEND_STATES.get(cache_key)
+    current_signature = _journal_file_signature(journal_path)
+    if cached_state is not None and cached_state.file_signature == current_signature:
+        return cached_state
+    existing_rows = load_results_rows_from_journal(journal_path)
+    return _remember_journal_state(
+        journal_path,
+        row_count=len(existing_rows),
+        last_batch_rows=tuple(existing_rows[-tail_count:]) if tail_count > 0 else (),
     )
 
 
@@ -144,6 +196,7 @@ def initialize_results_journal(output_path: str, results: list[FieldTestResult])
             if os.path.exists(temp_path):
                 with suppress(OSError):
                     os.remove(temp_path)
+        _remember_journal_state(journal_path, row_count=len(results))
     return len(results)
 
 
@@ -161,12 +214,15 @@ def _append_results_journal(
     payload = _serialize_journal_batch(results)
     with _exclusive_journal_lock(journal_path):
         if expected_row_count is not None:
-            existing_rows = load_results_rows_from_journal(journal_path)
-            existing_count = len(existing_rows)
+            journal_state = _load_current_journal_state(
+                journal_path,
+                tail_count=len(results),
+            )
+            existing_count = journal_state.row_count
             retry_count = expected_row_count + len(results)
             if existing_count == retry_count:
                 expected_rows = [_journal_row_payload(result) for result in results]
-                if existing_rows[-len(expected_rows) :] != expected_rows:
+                if list(journal_state.last_batch_rows) != expected_rows:
                     raise RuntimeError(
                         "results journal advanced with different rows; refusing duplicate append"
                     )
@@ -180,7 +236,13 @@ def _append_results_journal(
             handle.write(payload)
             handle.flush()
             os.fsync(handle.fileno())
-        return (expected_row_count or 0) + len(results)
+        next_row_count = (expected_row_count or 0) + len(results)
+        _remember_journal_state(
+            journal_path,
+            row_count=next_row_count,
+            last_batch_rows=tuple(_journal_row_payload(result) for result in results),
+        )
+        return next_row_count
 
 
 _COMPAT_EXPORTS: ExportMap = {

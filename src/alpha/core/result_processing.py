@@ -23,7 +23,6 @@ from ..policy.blacklist_runtime_stats import build_blacklist_runtime_stats
 from ..policy.blacklist_runtime_updates import auto_update_blacklist_incremental
 from ..policy.types import BlacklistEntryKey, BlacklistRuntimeStats
 from ..runtime.contexts import FutureCompletionContext
-from ..runtime.result_ledger import ExecutionMetrics
 from ..runtime.state import ExecutionState
 
 logger = logging.getLogger(__name__)
@@ -209,16 +208,18 @@ def persist_incremental_result(
     """Persist one result using prospective counters without mutating runtime state."""
     result_write_options = completion_ctx.result_write_options
     ledger = execution_state.result_ledger
-    prospective_results = [*ledger.results, result]
-    metrics = ExecutionMetrics.from_results(prospective_results)
-    prospective_template_stats = deepcopy(execution_state.template_stats)
+    metrics = ledger.metrics.with_result(result)
+    prospective_template_stats = dict(execution_state.template_stats)
+    existing_template_stats = prospective_template_stats.get(result.template_name)
+    if existing_template_stats is not None:
+        prospective_template_stats[result.template_name] = deepcopy(existing_template_stats)
     services.update_template_stats_with_result(prospective_template_stats, result)
     persisted_result_count = services.dump_results_incremental(
         result_write_options.output_path,
         result_write_options.dataset_id,
         [result],
         persisted_result_count=ledger.persisted_result_count,
-        tested=len(prospective_results),
+        tested=len(ledger.results) + 1,
         unique_fields_tested=len(metrics.unique_field_ids),
         submittable_count=metrics.submittable_count,
         submitted_count=metrics.submitted_count,

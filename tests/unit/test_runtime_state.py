@@ -41,6 +41,18 @@ def test_execution_metrics_follow_results_without_manual_refresh() -> None:
     assert ledger.unique_field_ids == set()
     assert ledger.submittable_count == 0
 
+    ledger.append(
+        FieldTestResult(
+            field_id="field_2",
+            field_type="MATRIX",
+            field_name="field_2",
+            template_name="tpl",
+            status="simulated",
+            expression="rank(field_2)",
+        )
+    )
+    assert ledger.unique_field_ids == {"field_2"}
+
 
 def test_terminal_failed_result_is_not_counted_as_pending() -> None:
     state = _state()
