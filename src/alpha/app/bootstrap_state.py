@@ -123,6 +123,9 @@ def refresh_pending_check_results(
         )
     )
     for index, result in pending_results:
+        alpha_id = result.alpha_id
+        if not alpha_id:
+            continue
         if refresh_limit > 0 and attempted_count >= refresh_limit:
             break
         if max_refresh_seconds > 0 and time.monotonic() - started_at >= max_refresh_seconds:
@@ -132,13 +135,13 @@ def refresh_pending_check_results(
         try:
             submittable, message, failed_checks = check_submission_with_retry(
                 client,
-                result.alpha_id,
+                alpha_id,
                 retries,
             )
         except Exception as exc:
             logger.warning(
                 "[check-submission-resume] failed alpha_id=%s field=%s template=%s: %s",
-                result.alpha_id,
+                alpha_id,
                 result.field_id,
                 result.template_name,
                 exc,
@@ -156,7 +159,7 @@ def refresh_pending_check_results(
         if submittable is None:
             logger.info(
                 "[check-submission-resume] still pending alpha_id=%s field=%s template=%s",
-                result.alpha_id,
+                alpha_id,
                 result.field_id,
                 result.template_name,
             )
@@ -164,7 +167,7 @@ def refresh_pending_check_results(
         refreshed_count += 1
         logger.info(
             "[check-submission-resume] resolved alpha_id=%s field=%s template=%s submittable=%s",
-            result.alpha_id,
+            alpha_id,
             result.field_id,
             result.template_name,
             submittable,
