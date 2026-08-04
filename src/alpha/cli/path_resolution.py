@@ -32,6 +32,11 @@ PRESET_CONTROLLED_PATH_KEYS = frozenset(
         "include_templates_file",
     }
 )
+RESEARCH_ENTRY_FILE_OPTIONS = {
+    "template_library_file": "--template-library-file",
+    "include_fields_file": "--include-fields-file",
+    "include_templates_file": "--include-templates-file",
+}
 
 
 def _explicit_cli_keys(args: argparse.Namespace) -> frozenset[str]:
@@ -87,7 +92,14 @@ def _validate_paused_dataset(args: argparse.Namespace) -> None:
     if not bool(profile.get("paused", False)):
         return
     explicit_keys = _explicit_cli_keys(args)
-    if explicit_keys & PRESET_CONTROLLED_PATH_KEYS:
+    explicit_research_paths = explicit_keys & PRESET_CONTROLLED_PATH_KEYS
+    if explicit_research_paths:
+        for key in explicit_research_paths:
+            option = RESEARCH_ENTRY_FILE_OPTIONS[key]
+            raw_path = str(getattr(args, key, "") or "").strip()
+            resolved_path = resolve_cli_path(raw_path, base_dir=os.getcwd())
+            if not resolved_path or not Path(resolved_path).is_file():
+                raise ValueError(f"{option} must reference an existing file for a paused dataset")
         return
 
     if "full_run" in explicit_keys and bool(getattr(args, "full_run", False)):

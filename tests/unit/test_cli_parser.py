@@ -398,6 +398,50 @@ def test_explicit_template_path_allows_paused_fundamental6(monkeypatch, tmp_path
     assert paths.include_templates_file == ""
 
 
+@pytest.mark.parametrize(
+    "option",
+    [
+        "--template-library-file",
+        "--include-fields-file",
+        "--include-templates-file",
+    ],
+)
+def test_paused_dataset_rejects_empty_explicit_research_path(
+    monkeypatch,
+    tmp_path,
+    option,
+) -> None:
+    clear_yaml_cache()
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        ["alpha", "--dataset-id", "fundamental6", option, ""],
+    )
+
+    with pytest.raises(ValueError, match="must reference an existing file"):
+        normalize_args_paths(parse_args())
+
+
+def test_paused_dataset_rejects_missing_explicit_template_path(monkeypatch, tmp_path) -> None:
+    clear_yaml_cache()
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "alpha",
+            "--dataset-id",
+            "fundamental6",
+            "--template-library-file",
+            str(tmp_path / "missing-template.json"),
+        ],
+    )
+
+    with pytest.raises(ValueError, match="must reference an existing file"):
+        normalize_args_paths(parse_args())
+
+
 def test_explicit_budgeted_full_run_allows_paused_fundamental6(monkeypatch, tmp_path) -> None:
     clear_yaml_cache()
     monkeypatch.chdir(tmp_path)
