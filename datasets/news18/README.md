@@ -91,8 +91,44 @@ group_rank(
 新颖度本身没有明确的收益方向，结果也明显为负。该字段已停止，不再测试事件持仓版本，
 也不通过反转符号或调整窗口继续搜索。
 
+### mean_event_sentiment_score
+
+元数据：MATRIX，coverage `1.0`，dateCoverage `1.0`，alphaCount `59`，userCount `46`。
+
+慢频情绪异常：
+
+```text
+group_rank(
+  ts_zscore(ts_backfill(mean_event_sentiment_score, 20), 60),
+  subindustry
+)
+```
+
+- Alpha ID：`9qp1kml9`
+- Sharpe：`-0.80`
+- Fitness：`-0.16`
+- Sub-universe Sharpe：`-0.61`
+
+事件更新持仓：
+
+```text
+trade_when(
+  days_from_last_change(mean_event_sentiment_score) <= 5,
+  group_rank(ts_backfill(mean_event_sentiment_score, 5), subindustry),
+  -1
+)
+```
+
+- Alpha ID：`2rpzexAw`
+- Sharpe：`-0.38`
+- Fitness：`-0.08`
+- Sub-universe Sharpe：`-0.52`
+
+两条结构和 Sub-universe 表现均为负，Fitness 绝对值最高仅 `0.16`。该字段已停止，
+不再通过反转符号、窗口或 settings 变体继续搜索。
+
 ## 下一字段
 
-`mean_event_sentiment_score`：MATRIX，coverage `1.0`，dateCoverage `1.0`，alphaCount `59`，
-userCount `46`。它具有明确的正负方向，下一轮分别验证慢频情绪异常和事件条件持仓，
-仍不引入第二个字段。
+`mean_earnings_evaluation_sentiment`：MATRIX，coverage `1.0`，dateCoverage `1.0`，
+alphaCount `83`，userCount `68`。下一轮继续使用慢频异常和事件条件持仓，但研究假设收窄为
+盈利评价新闻，而不是宽泛事件情绪。
