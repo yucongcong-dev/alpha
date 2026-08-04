@@ -127,8 +127,43 @@ trade_when(
 两条结构和 Sub-universe 表现均为负，Fitness 绝对值最高仅 `0.16`。该字段已停止，
 不再通过反转符号、窗口或 settings 变体继续搜索。
 
+### mean_earnings_evaluation_sentiment
+
+元数据：MATRIX，coverage `1.0`，dateCoverage `1.0`，alphaCount `83`，userCount `68`。
+
+慢频盈利评价情绪异常：
+
+```text
+group_rank(
+  ts_zscore(ts_backfill(mean_earnings_evaluation_sentiment, 20), 60),
+  subindustry
+)
+```
+
+- Alpha ID：`58p0dvw1`
+- Sharpe：`-0.92`
+- Fitness：`-0.19`
+- Sub-universe Sharpe：`-0.50`
+
+盈利评价新闻更新时刷新持仓：
+
+```text
+trade_when(
+  days_from_last_change(mean_earnings_evaluation_sentiment) <= 5,
+  group_rank(ts_backfill(mean_earnings_evaluation_sentiment, 5), subindustry),
+  -1
+)
+```
+
+- Alpha ID：`LLGaYkxv`
+- Sharpe：`-0.27`
+- Fitness：`-0.04`
+
+两条结构均为负。结合公司行动情绪和宽泛事件情绪的结果，日均情绪 MATRIX 的单字段路径
+已停止，不再继续替换专项情绪字段复用相同模板。
+
 ## 下一字段
 
-`mean_earnings_evaluation_sentiment`：MATRIX，coverage `1.0`，dateCoverage `1.0`，
-alphaCount `83`，userCount `68`。下一轮继续使用慢频异常和事件条件持仓，但研究假设收窄为
-盈利评价新闻，而不是宽泛事件情绪。
+`nws18_bee_fast_d1`：VECTOR，coverage `1.0`，dateCoverage `1.0`，alphaCount `16`，
+userCount `13`。它是事件级盈利评价分数，下一轮必须先使用 VECTOR 聚合算子，再验证慢频方向
+与事件条件持仓；不能直接复用 MATRIX 表达式。

@@ -37,6 +37,6 @@ datasets/<dataset_id>/
 | `option9` | 暂停 | 无 |
 | `news18` | 探索中（显式入口） | 无 |
 
-`news18` 的公司行动情绪、单字段事件新颖度和宽泛事件情绪均已停止，下一字段是
-`mean_earnings_evaluation_sentiment`；仍按 1 个字段、2 条经济结构的最小验证推进。
+`news18` 的单字段 MATRIX 路径已停止。下一步转向低拥挤的事件级 VECTOR 字段
+`nws18_bee_fast_d1`，先验证聚合后的盈利评价方向；仍按 1 个字段、2 条结构推进。
 跨数据集的下一候选是 `fundamental2`。
