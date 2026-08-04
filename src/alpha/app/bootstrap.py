@@ -222,7 +222,6 @@ def prepare_bootstrap_resources(
             historical_state=rebuild_historical_run_state(
                 supporting_resources.historical_state,
                 refreshed_results,
-                refresh_feedback=paths.feedback_output == paths.output_file,
             ),
         )
         if refreshed_count:

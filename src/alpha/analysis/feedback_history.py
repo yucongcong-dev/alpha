@@ -127,28 +127,18 @@ def build_historical_run_state(
 def rebuild_historical_run_state(
     state: HistoricalRunState,
     existing_results: list[FieldTestResult],
-    *,
-    refresh_feedback: bool,
 ) -> HistoricalRunState:
     """Recompute derived history after in-memory result reconciliation."""
     feedback_results = merge_results_by_identity(state.feedback_results, existing_results)
     template_stats = compile_template_stats(feedback_results)
-    feedback = (
-        compile_field_feedback(feedback_results) if refresh_feedback else state.field_feedback
-    )
-    failed_counts = (
-        compile_global_failed_check_counts(feedback_results)
-        if refresh_feedback
-        else state.global_failed_check_counts
-    )
     return replace(
         state,
         existing_results=existing_results,
         feedback_results=feedback_results,
         attempted_keys=attempted_template_keys(feedback_results),
         template_stats=template_stats,
-        field_feedback=feedback,
-        global_failed_check_counts=failed_counts,
+        field_feedback=compile_field_feedback(feedback_results),
+        global_failed_check_counts=compile_global_failed_check_counts(feedback_results),
     )
 
 

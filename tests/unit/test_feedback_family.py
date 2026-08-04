@@ -8,12 +8,14 @@ from types import SimpleNamespace
 from alpha.analysis.feedback_history import (
     build_historical_run_state,
     choose_settings_variant_budget,
+    rebuild_historical_run_state,
 )
 from alpha.analysis.results_loader import load_existing_results
 from alpha.analysis.results_persistence import dump_results
 from alpha.generators.variants import build_setting_variants
 from alpha.models.domain import FieldTestResult
 from alpha.policy.expression import get_dataset_expression_policy, resolve_feedback_stage
+from alpha.runtime.contexts import HistoricalRunState
 from alpha.selection import feedback_filters as feedback_filters_module
 from alpha.selection.feedback_filters import should_keep_template_for_feedback
 
@@ -122,6 +124,43 @@ def test_build_historical_run_state_uses_dataset_feedback_across_runs(tmp_path) 
 
     assert state.feedback_results == [historical]
     assert ("cash_st", "weak_template", "rank(cash_st)", "settings-v1") in state.attempted_keys
+
+
+def test_rebuild_historical_run_state_refreshes_all_derived_feedback() -> None:
+    pending = FieldTestResult(
+        field_id="cash_st",
+        field_type="MATRIX",
+        field_name="cash_st",
+        template_name="candidate",
+        status="simulated",
+        submittable=None,
+        message="checks pending",
+        expression="rank(cash_st)",
+        settings_fingerprint="settings-v1",
+    )
+    resolved = FieldTestResult(
+        field_id="cash_st",
+        field_type="MATRIX",
+        field_name="cash_st",
+        template_name="candidate",
+        status="simulated",
+        submittable=True,
+        message="checks passed",
+        expression="rank(cash_st)",
+        settings_fingerprint="settings-v1",
+    )
+    state = HistoricalRunState(
+        existing_results=[pending],
+        feedback_results=[pending],
+        field_feedback={},
+        global_failed_check_counts={"SELF_CORRELATION": 1},
+    )
+
+    rebuilt = rebuild_historical_run_state(state, [resolved])
+
+    assert rebuilt.feedback_results == [resolved]
+    assert rebuilt.field_feedback["cash_st"]["submittable_templates"] == 1
+    assert rebuilt.global_failed_check_counts == {}
 
 
 def test_build_setting_variants_keeps_explicit_refine_small_and_deterministic() -> None:
