@@ -641,6 +641,7 @@ Operators 的精确定义、参数和分类以平台当前可见页面/API 为�
 - 本地索引：[source_snapshots/worldquant_operators_2026-08-03/README.md](source_snapshots/worldquant_operators_2026-08-03/README.md)
 - 官方 API：`https://api.worldquantbrain.com/operators`
 - 捕获日期：`2026-08-03`
+- 官网复核：`2026-08-04`，算子数量、签名和说明未变化；见 [增量记录](source_snapshots/worldquant_review_2026-08-04/README.md)
 
 当前快照包含 `66` 个 `base` 算子，分布如下：
 

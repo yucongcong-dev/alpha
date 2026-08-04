@@ -4,9 +4,16 @@
 官网 Documentation、Courses、FAQ 和 Community 内容按主题吸收：研究相关内容进入 01-04，
 平台运营内容进入 05；不做官网全文镜像，也不为每个 FAQ 分类新增平行摘录页。
 
-## 官网知识审阅快照（2026-08-03）
+## 官网知识审阅快照
 
-本次使用已登录的 WorldQuant BRAIN 官网会话，完成了当前账号可见 Learn 目录的系统审阅：
+`2026-08-04` 使用已登录的 WorldQuant BRAIN 官网会话完成增量复核：
+
+- Documentation：仍为 `24` 篇，当前 section 数量为 Discover BRAIN `6`、Create Alphas `5`、Examples `3`、Interpret Results `2`、Understanding Data `5`、Advanced Topics `3`
+- `Introduction to BRAIN Expression Language` 已从 Discover BRAIN 移到 Create Alphas；24 篇正文与 `2026-08-03` 基线相比没有实质变化
+- Operators：仍为 `7` 个分类、当前账号可见 `66` 个 `base` 算子；签名和页面说明没有变化
+- 本轮目录和差异记录位于 [source_snapshots/worldquant_review_2026-08-04](source_snapshots/worldquant_review_2026-08-04/README.md)
+
+`2026-08-03` 完成的系统审阅继续作为完整正文和 FAQ 基线：
 
 - Documentation：`24` 篇，覆盖 Discover BRAIN、Create Alphas、Examples、Interpret Results、Understanding Data、Advanced Topics；原始快照位于 [source_snapshots/worldquant_official_2026-08-03](source_snapshots/worldquant_official_2026-08-03)
 - Courses：`10` 门课程、`46` 个视频课时；已审阅课程目录和课时主题，没有复制或伪造视频逐字稿
