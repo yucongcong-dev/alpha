@@ -432,8 +432,8 @@ class TestCheckSubmissionWithRetry:
             is False
         )
 
-    def test_missing_result_field_treated_as_pass(self) -> None:
-        """缺少 result 字段的检查项视为通过。"""
+    def test_missing_result_field_is_unresolved(self) -> None:
+        """缺少 result 字段时不能推断检查已经通过。"""
         assert (
             is_submittable_from_checks(
                 [
@@ -441,8 +441,11 @@ class TestCheckSubmissionWithRetry:
                     FailedCheck(name="B", result=None),  # no result field
                 ]
             )
-            is True
+            is None
         )
+
+    def test_unknown_result_is_unresolved(self) -> None:
+        assert is_submittable_from_checks([FailedCheck(name="A", result="UNKNOWN")]) is None
 
 
 # ============================================================================

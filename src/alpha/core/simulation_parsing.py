@@ -22,6 +22,7 @@ from ..utils.helpers import first_non_empty
 
 _ALPHA_ID_REGEX: re.Pattern[str] = re.compile(r"/alphas/([^/]+)", re.IGNORECASE)
 _RESULT_FAIL: str = "FAIL"
+_RESULT_PASS: str = "PASS"
 _KEY_ALPHA: str = "alpha"
 _KEY_ALPHA_ID: str = "alphaId"
 _KEY_CHECKS: str = "checks"
@@ -167,7 +168,7 @@ def is_submittable_from_checks(checks: list[FailedCheck]) -> bool | None:
     results = {str(check.result or "").upper() for check in checks}
     if _RESULT_FAIL in results:
         return False
-    if _RESULT_PENDING in results:
+    if _RESULT_PENDING in results or results != {_RESULT_PASS}:
         return None
     return True
 
