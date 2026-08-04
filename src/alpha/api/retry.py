@@ -121,7 +121,9 @@ def retry_operation(
 
     if isinstance(last_error, BrainHTTPError):
         raise last_error
-    raise BrainAPIError(f"{name} failed after {last_attempt} attempts: {last_error}") from last_error
+    raise BrainAPIError(
+        f"{name} failed after {last_attempt} attempts: {last_error}"
+    ) from last_error
 
 
 def is_invalid_credentials_error(error: Exception) -> bool:
