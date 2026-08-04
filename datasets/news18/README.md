@@ -15,6 +15,7 @@ dataset profile 标记为 `paused`，普通 `--dataset-id news18` 会拒绝运�
 - 优先低 alphaCount、低 userCount 的专项情绪、事件新颖度和新闻影响字段。
 - 不使用 5/20 短窗变化率作为默认种子；首个自动基线出现高换手且表现为负。
 - 一个字段的两条独立结构都明显为负时立即停止，不调整 Decay、Truncation 或邻近窗口。
+- VECTOR 分区模板使用 `{field}`，生成器会自动展开为单层 `vec_avg(field)`；不要手动重复聚合。
 
 ## 已停止字段
 
@@ -162,8 +163,41 @@ trade_when(
 两条结构均为负。结合公司行动情绪和宽泛事件情绪的结果，日均情绪 MATRIX 的单字段路径
 已停止，不再继续替换专项情绪字段复用相同模板。
 
+### nws18_bee_fast_d1
+
+元数据：VECTOR，coverage `1.0`，dateCoverage `1.0`，alphaCount `16`，userCount `13`。
+
+聚合后的慢频盈利评价异常：
+
+```text
+group_rank(
+  ts_zscore(ts_backfill(vec_avg(nws18_bee_fast_d1), 20), 60),
+  subindustry
+)
+```
+
+- Alpha ID：`78zbPqg8`
+- Sharpe：`-0.38`
+- Fitness：`-0.05`
+
+聚合后的事件更新持仓：
+
+```text
+trade_when(
+  days_from_last_change(vec_avg(nws18_bee_fast_d1)) <= 5,
+  group_rank(ts_backfill(vec_avg(nws18_bee_fast_d1), 5), subindustry),
+  -1
+)
+```
+
+- Alpha ID：`WjAQrK2Z`
+- Sharpe：`0.06`
+- Fitness：`0.00`
+
+事件持仓只把结果从负值改善到接近零，没有形成可研究基线。该字段已停止，不保留 preset。
+
 ## 下一字段
 
-`nws18_bee_fast_d1`：VECTOR，coverage `1.0`，dateCoverage `1.0`，alphaCount `16`，
-userCount `13`。它是事件级盈利评价分数，下一轮必须先使用 VECTOR 聚合算子，再验证慢频方向
-与事件条件持仓；不能直接复用 MATRIX 表达式。
+`nws18_qmb_fast_d1`：VECTOR，coverage `1.0`，dateCoverage `1.0`，alphaCount `12`，
+userCount `8`。它是编辑评论立场分数，是 `news18` 最后一轮单字段验证。若慢频异常和事件持仓
+都不能达到 Sharpe `0.5`，则暂停整个数据集并转向 `fundamental2`。

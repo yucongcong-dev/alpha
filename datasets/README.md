@@ -37,6 +37,5 @@ datasets/<dataset_id>/
 | `option9` | 暂停 | 无 |
 | `news18` | 探索中（显式入口） | 无 |
 
-`news18` 的单字段 MATRIX 路径已停止。下一步转向低拥挤的事件级 VECTOR 字段
-`nws18_bee_fast_d1`，先验证聚合后的盈利评价方向；仍按 1 个字段、2 条结构推进。
-跨数据集的下一候选是 `fundamental2`。
+`news18` 的单字段 MATRIX 路径和盈利评价 VECTOR 均已停止。最后一轮候选是低拥挤的
+`nws18_qmb_fast_d1`；若两条结构仍无正向基线，则暂停 `news18` 并转向 `fundamental2`。
