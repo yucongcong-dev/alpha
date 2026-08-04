@@ -28,7 +28,7 @@ def atomic_save(path: str, payload: dict[str, Any]) -> bool:
         os.replace(tmp, path)
         return True
     except Exception as exc:
-        logger.debug("[checkpoint] failed to save %s: %s", path, exc)
+        logger.error("[checkpoint] failed to save %s: %s", path, exc)
         return False
     finally:
         if fd is not None:

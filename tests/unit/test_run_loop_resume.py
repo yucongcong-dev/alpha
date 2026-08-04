@@ -19,7 +19,7 @@ from alpha.app.run_loop import (
     restore_fields_from_state,
     run_field_test_loop,
 )
-from alpha.app.run_loop_resume import save_runtime_checkpoint
+from alpha.app.run_loop_resume import save_runtime_checkpoint, save_terminal_pipeline_state
 from alpha.models.io_types import RunFilters, RunPaths
 from alpha.models.runtime import (
     ExecutionState,
@@ -150,6 +150,22 @@ def test_persist_field_progress_allows_resuming_from_first_field(tmp_path) -> No
         )
 
     assert mock_save.call_args.kwargs["completed_field_index"] == 0
+
+
+def test_persist_field_progress_raises_when_checkpoint_write_fails(tmp_path) -> None:
+    with (
+        patch("alpha.app.run_loop_resume.save_pipeline_state", return_value=False),
+        pytest.raises(RuntimeError, match="failed to save pipeline state"),
+    ):
+        persist_field_progress(
+            state_file=str(tmp_path / "state.json"),
+            field_id="f1",
+            field_index=1,
+            original_fields=[{"id": "f1"}],
+            field_resume_positions={"f1": 1},
+            execution_state=_build_execution_state(),
+            runtime_state=RuntimeConcurrencyState(max_workers=1, runtime_max_workers=1),
+        )
 
 
 def test_drain_remaining_futures_persists_total_field_count(tmp_path) -> None:
@@ -455,3 +471,40 @@ def test_save_runtime_checkpoint_updates_resumable_pipeline_state(tmp_path) -> N
     assert mock_state.call_args.kwargs["completed_field_index"] == 1
     assert mock_state.call_args.kwargs["field_id"] == "f1"
     assert mock_interrupt_report.call_args.kwargs["reason"] == "KeyboardInterrupt"
+
+
+def test_save_runtime_checkpoint_logs_failed_writes_without_masking_abort(
+    tmp_path,
+    caplog,
+) -> None:
+    with (
+        patch("alpha.app.run_loop_resume.save_pipeline_state", return_value=False),
+        patch("alpha.app.run_loop_resume.save_interrupt_report", return_value=False),
+    ):
+        save_runtime_checkpoint(
+            state_file=str(tmp_path / "state.json"),
+            interrupt_report_file=str(tmp_path / "interrupt.json"),
+            completed_field_index=0,
+            execution_state=_build_execution_state(),
+            runtime_state=RuntimeConcurrencyState(max_workers=1, runtime_max_workers=1),
+            last_field_id="f1",
+            fields=[{"id": "f1"}],
+            reason="KeyboardInterrupt",
+        )
+
+    assert "runtime state was not saved" in caplog.text
+    assert "interrupt report was not saved" in caplog.text
+
+
+def test_save_terminal_pipeline_state_raises_when_write_fails(tmp_path) -> None:
+    with (
+        patch("alpha.app.run_loop_resume.save_pipeline_state", return_value=False),
+        pytest.raises(RuntimeError, match="failed to save terminal pipeline state"),
+    ):
+        save_terminal_pipeline_state(
+            state_file=str(tmp_path / "state.json"),
+            total_fields=1,
+            last_field_id="f1",
+            execution_state=_build_execution_state(),
+            runtime_state=RuntimeConcurrencyState(max_workers=1, runtime_max_workers=1),
+        )

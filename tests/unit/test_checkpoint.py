@@ -500,9 +500,12 @@ def test_interrupt_report_and_delete_pipeline_state(tmp_path) -> None:
     delete_pipeline_state(str(report))
 
 
-def test_atomic_save_returns_false_when_directory_creation_fails(tmp_path) -> None:
+def test_atomic_save_reports_directory_creation_failure(tmp_path, caplog) -> None:
     with patch("alpha.core.checkpoint.os.makedirs", side_effect=OSError("read only")):
         assert not checkpoint_module._atomic_save(
             str(tmp_path / "state.json"),
             {"version": 1},
         )
+
+    assert "failed to save" in caplog.text
+    assert "read only" in caplog.text

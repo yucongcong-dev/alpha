@@ -89,13 +89,15 @@ def persist_field_progress(
         else completed_field_index_override
     )
     completed_index = max(0, min(completed_index, len(original_fields)))
-    save_pipeline_state(
+    saved = save_pipeline_state(
         state_file,
         completed_field_index=completed_index,
         execution_state=execution_state,
         runtime_state=runtime_state,
         field_id=field_id,
     )
+    if not saved:
+        raise RuntimeError(f"failed to save pipeline state: {state_file}")
 
 
 def save_runtime_checkpoint(
@@ -111,15 +113,17 @@ def save_runtime_checkpoint(
 ) -> None:
     """Persist resumable pipeline state and a diagnostic interrupt report."""
     if state_file:
-        save_pipeline_state(
+        state_saved = save_pipeline_state(
             state_file,
             completed_field_index=max(0, completed_field_index),
             execution_state=execution_state,
             runtime_state=runtime_state,
             field_id=last_field_id or "",
         )
+        if not state_saved:
+            logger.error("[checkpoint] runtime state was not saved: %s", state_file)
     if interrupt_report_file:
-        save_interrupt_report(
+        report_saved = save_interrupt_report(
             interrupt_report_file,
             execution_state=execution_state,
             runtime_state=runtime_state,
@@ -127,6 +131,11 @@ def save_runtime_checkpoint(
             remaining_fields=max(0, len(fields)),
             reason=reason,
         )
+        if not report_saved:
+            logger.error(
+                "[checkpoint] interrupt report was not saved: %s",
+                interrupt_report_file,
+            )
 
 
 def save_terminal_pipeline_state(
@@ -140,10 +149,12 @@ def save_terminal_pipeline_state(
     """Persist the terminal completed-field cursor after draining all futures."""
     if not state_file:
         return
-    save_pipeline_state(
+    saved = save_pipeline_state(
         state_file,
         completed_field_index=max(0, total_fields),
         execution_state=execution_state,
         runtime_state=runtime_state,
         field_id=last_field_id,
     )
+    if not saved:
+        raise RuntimeError(f"failed to save terminal pipeline state: {state_file}")
