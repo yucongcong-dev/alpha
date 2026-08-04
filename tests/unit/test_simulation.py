@@ -351,7 +351,48 @@ class TestCheckSubmissionWithRetry:
         result = check_submission_with_retry(DummyClient(), "alpha_1", retries=3)
 
         assert result == (True, "checks passed", [])
-        assert waits == ["pending submission checks for alpha alpha_1"]
+        assert waits == ["waiting for submission checks for alpha alpha_1"]
+
+    def test_unavailable_checks_are_polled_until_available(self, monkeypatch) -> None:
+        responses = iter(
+            [
+                {},
+                {"is": {"checks": [{"name": "LOW_SHARPE", "result": "PASS"}]}},
+            ]
+        )
+        waits: list[str] = []
+
+        class DummyClient:
+            def check_alpha_submission(self, _alpha_id: str) -> dict[str, object]:
+                return next(responses)
+
+        monkeypatch.setattr("alpha.core.simulation_stages.retry_operation", lambda *a, **k: a[2]())
+        monkeypatch.setattr(
+            "alpha.core.simulation_stages.wait_seconds",
+            lambda _seconds, reason, **_kwargs: waits.append(reason),
+        )
+
+        result = check_submission_with_retry(DummyClient(), "alpha_1", retries=3)
+
+        assert result == (True, "checks passed", [])
+        assert waits == ["waiting for submission checks for alpha alpha_1"]
+
+    def test_unavailable_checks_stop_after_retry_budget(self, monkeypatch) -> None:
+        calls = 0
+
+        class DummyClient:
+            def check_alpha_submission(self, _alpha_id: str) -> dict[str, object]:
+                nonlocal calls
+                calls += 1
+                return {}
+
+        monkeypatch.setattr("alpha.core.simulation_stages.retry_operation", lambda *a, **k: a[2]())
+        monkeypatch.setattr("alpha.core.simulation_stages.wait_seconds", lambda *_a, **_k: None)
+
+        result = check_submission_with_retry(DummyClient(), "alpha_1", retries=2)
+
+        assert calls == 2
+        assert result == (None, "checks unavailable", [])
 
     def test_pending_checks_stop_after_retry_budget(self, monkeypatch) -> None:
         calls = 0

@@ -160,12 +160,12 @@ def check_submission_with_retry(
             submittable,
             message,
         )
-        if submittable is not None or message != "checks pending":
+        if submittable is not None:
             return last_result
         if attempt < attempts:
             wait_seconds(
                 SIMULATION_RETRY_WAIT,
-                f"pending submission checks for alpha {alpha_id}",
+                f"waiting for submission checks for alpha {alpha_id}",
                 verbose=False,
             )
     return last_result

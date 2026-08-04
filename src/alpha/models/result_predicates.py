@@ -12,7 +12,10 @@ from .domain import FieldTestResult
 
 def has_pending_checks(result: FieldTestResult) -> bool:
     """Return whether any persisted submission check is still unresolved."""
-    return result.submittable is not False and any(
+    if result.submittable is False:
+        return False
+    message = str(result.message or "").strip().lower()
+    return message in {"checks pending", "checks unavailable"} or any(
         str(check.result or "").upper() == "PENDING" for check in result.failed_checks or []
     )
 
