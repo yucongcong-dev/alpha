@@ -27,7 +27,7 @@ from ..runtime.field_template_queue import FieldTemplateQueue
 from ..runtime.state import InitializedRunContext
 from ..utils.helpers import first_non_empty
 from .loop_future_support import drain_until_capacity, submit_template_future
-from .run_loop_feedback import refresh_runtime_feedback
+from .run_loop_feedback import RuntimeFeedbackRefresh, refresh_runtime_feedback
 from .run_loop_resume import persist_field_progress
 
 logger = logging.getLogger(__name__)
@@ -66,6 +66,18 @@ class ScheduleRoundContext:
         """Return whether this process has dispatched its configured simulation budget."""
         budget = self.scheduler_options.max_total_simulations
         return budget > 0 and self.scheduled_simulations >= budget
+
+
+def _apply_feedback_refresh(
+    context: ScheduleRoundContext,
+    feedback_refresh: RuntimeFeedbackRefresh,
+) -> None:
+    """Invalidate cached field queues affected by newly consumed runtime feedback."""
+    if feedback_refresh.feedback_changed:
+        context.field_template_queues.clear()
+        return
+    for retry_field_id in feedback_refresh.retry_field_ids:
+        context.field_template_queues.pop(retry_field_id, None)
 
 
 def execute_schedule_round(
@@ -158,11 +170,7 @@ def schedule_field_round(
     field_name = choose_field_name(field)
     field_type = choose_field_type(field)
     feedback_refresh = refresh_runtime_feedback(context.template_build_ctx, result_ledger.results)
-    if feedback_refresh.feedback_changed:
-        context.field_template_queues.clear()
-    else:
-        for retry_field_id in feedback_refresh.retry_field_ids:
-            context.field_template_queues.pop(retry_field_id, None)
+    _apply_feedback_refresh(context, feedback_refresh)
 
     if should_skip_field(
         field_id,
@@ -293,6 +301,7 @@ def _dispatch_templates_for_field(
             return True
 
         maybe_restore_runtime_concurrency(runtime_state)
+        result_count_before_drain = len(result_ledger.results)
         if not drain_until_capacity(
             executor_state=execution_state,
             runtime_state=runtime_state,
@@ -303,6 +312,18 @@ def _dispatch_templates_for_field(
             return False
         if execution_state.future_queue.should_stop_scheduling():
             return True
+        if len(result_ledger.results) != result_count_before_drain:
+            feedback_refresh = refresh_runtime_feedback(
+                context.template_build_ctx,
+                result_ledger.results,
+            )
+            _apply_feedback_refresh(context, feedback_refresh)
+            if feedback_refresh.feedback_changed or field_id in feedback_refresh.retry_field_ids:
+                logger.debug(
+                    "[schedule] field=%s queue invalidated after completed results; replanning",
+                    field_id,
+                )
+                return False
 
         logger.debug(
             "[progress] field=%s template %d/%d name=%s priority=%d queued=%d/%d settings=%s",
