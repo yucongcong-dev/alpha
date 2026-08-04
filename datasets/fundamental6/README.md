@@ -51,8 +51,22 @@ group_rank(
 
 ## cashflow_dividends 窄研究线
 
-2026-08-04 对 `cashflow_dividends` 做了 4 个结构变体的真实 simulation 和 Check
-Submission。唯一保留的近通过结构是：
+2026-08-04 对 `cashflow_dividends` 做了 5 个结构变体的真实 simulation 和 Check
+Submission。当前保留两个近通过结构，其中优先级更高的是市值分桶版本：
+
+```text
+group_rank(
+  ts_delta(winsorize(ts_backfill(cashflow_dividends, 120), std=4) / cap, 63)
+  / ts_std_dev(winsorize(ts_backfill(cashflow_dividends, 120), std=4) / cap, 126),
+  densify(bucket(rank(cap), range='0.1, 1, 0.1'))
+)
+```
+
+- Alpha ID：`YPvKdx56`
+- Self Correlation 检查通过
+- Fitness：`0.99`，略低于 `1.0` 上限，暂不可提交
+
+原始 `subindustry` 版本作为对照保留：
 
 ```text
 group_rank(
@@ -66,16 +80,17 @@ group_rank(
 - Sharpe 和 Fitness 检查通过
 - Self Correlation：`0.7113`，高于 `0.7` 上限，暂不可提交
 
-它说明字段仍有有效信号，但与已有 Alpha 边界过近。后续只允许围绕独立结构做少量研究，
-不再调整 Decay、Truncation 或相邻窗口。`assets` 分母、`enterprise_value` 分母和单纯
-`subindustry` 长期 zscore 在本轮明显降低 Sharpe/Fitness，已停止。
+市值分桶已经解决原结构的 Self Correlation 问题，但 Fitness 仍差 `0.01`。后续只允许围绕
+独立持仓触发方式做最多一轮研究，不再调整 Decay、Truncation 或相邻窗口。`assets` 分母、
+`enterprise_value` 分母和单纯 `subindustry` 长期 zscore 在本轮明显降低 Sharpe/Fitness，
+已停止。
 
 显式复跑命令：
 
 ```bash
 PYTHONPATH=src python3.10 -m alpha \
   --dataset-id fundamental6 \
-  --strategy-profile refine \
+  --strategy-profile explore \
   --template-library-file datasets/fundamental6/presets/cashflow_dividends_refine/template.json \
   --include-fields-file datasets/fundamental6/presets/cashflow_dividends_refine/fields.txt \
   --include-templates-file datasets/fundamental6/presets/cashflow_dividends_refine/templates.txt \
