@@ -106,7 +106,7 @@ def run_field_test_loop(
                     round_index=round_index,
                 )
                 last_field_id = round_result.last_field_id or last_field_id
-                if field_template_batch_size <= 0 or round_result.stop_requested:
+                if round_result.stop_requested:
                     break
                 if not round_result.progressed:
                     logger.info(
@@ -138,13 +138,10 @@ def run_field_test_loop(
                     if pending.simulation_location
                 ),
             )
-            completed_field_index = (
-                0 if field_template_batch_size > 0 else field_resume_positions.get(last_field_id, 0)
-            )
             save_runtime_checkpoint(
                 state_file=state_file,
                 interrupt_report_file=interrupt_report_file,
-                completed_field_index=completed_field_index,
+                completed_field_index=0,
                 execution_state=execution_state,
                 runtime_state=runtime_state,
                 last_field_id=last_field_id,
@@ -166,13 +163,10 @@ def run_field_test_loop(
                     if pending.simulation_location
                 ),
             )
-            completed_field_index = (
-                0 if field_template_batch_size > 0 else field_resume_positions.get(last_field_id, 0)
-            )
             save_runtime_checkpoint(
                 state_file=state_file,
                 interrupt_report_file=interrupt_report_file,
-                completed_field_index=completed_field_index,
+                completed_field_index=0,
                 execution_state=execution_state,
                 runtime_state=runtime_state,
                 last_field_id=last_field_id,

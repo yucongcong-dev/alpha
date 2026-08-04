@@ -159,7 +159,7 @@ def add_search_arguments(parser: argparse.ArgumentParser) -> None:
         "--field-template-batch-size",
         type=int,
         default=2,
-        help="每轮每个字段最多发出的模板/setting 组合数；默认 2，启用 breadth-first 浅层轮转",
+        help="每轮每个字段最多发出的模板/setting 组合数；最小为 1，默认 2",
     )
     parser.add_argument(
         "--legacy-similarity-penalty",

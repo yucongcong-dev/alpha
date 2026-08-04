@@ -97,9 +97,10 @@ def test_breadth_first_field_progress_keeps_resume_cursor_at_start(tmp_path) -> 
     assert mock_persist.call_args.kwargs["completed_field_index_override"] == 0
 
 
-def test_unbatched_field_progress_keeps_linear_resume_cursor() -> None:
-    """The original field cursor remains active when a field is processed in full."""
+def test_zero_batch_size_is_normalized_to_breadth_first() -> None:
     context = _build_context(field_template_batch_size=0)
+
+    assert context.field_template_batch_size == 1
 
     with (
         context.executor,
@@ -123,7 +124,7 @@ def test_unbatched_field_progress_keeps_linear_resume_cursor() -> None:
             round_index=1,
         )
 
-    assert mock_persist.call_args.kwargs["completed_field_index_override"] is None
+    assert mock_persist.call_args.kwargs["completed_field_index_override"] == 0
 
 
 def test_queue_exhausted_candidate_is_excluded_from_next_round() -> None:

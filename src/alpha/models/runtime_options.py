@@ -273,7 +273,10 @@ class RunConfigSnapshotOptions:
             max_templates_per_field=int(getattr(args, "max_templates_per_field", 0) or 0),
             max_templates_per_family=int(getattr(args, "max_templates_per_family", 0) or 0),
             max_total_simulations=max(0, int(getattr(args, "max_total_simulations", 0) or 0)),
-            field_template_batch_size=int(getattr(args, "field_template_batch_size", 0) or 0),
+            field_template_batch_size=max(
+                1,
+                int(getattr(args, "field_template_batch_size", 0) or 0),
+            ),
             legacy_similarity_penalty=int(getattr(args, "legacy_similarity_penalty", 0) or 0),
             max_concurrent_simulations=int(getattr(args, "max_concurrent_simulations", 0) or 0),
             max_concurrent_creates=int(getattr(args, "max_concurrent_creates", 0) or 0),
@@ -355,7 +358,7 @@ class RunLoopOptions:
             result_write=ResultWriteOptions.from_args(args),
             scheduler=SchedulerControlOptions.from_args(args),
             field_template_batch_size=max(
-                0,
+                1,
                 int(getattr(args, "field_template_batch_size", 0) or 0),
             ),
         )

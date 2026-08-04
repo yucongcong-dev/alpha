@@ -62,6 +62,9 @@ class ScheduleRoundContext:
     scheduled_simulations: int = 0
     field_template_queues: dict[str, FieldTemplateQueue] = dataclass_field(default_factory=dict)
 
+    def __post_init__(self) -> None:
+        self.field_template_batch_size = max(1, int(self.field_template_batch_size or 0))
+
     def reached_simulation_budget(self) -> bool:
         """Return whether this process has dispatched its configured simulation budget."""
         budget = self.scheduler_options.max_total_simulations
@@ -97,13 +100,12 @@ def execute_schedule_round(
             stop_requested=True,
             last_field_id="",
         )
-    if context.field_template_batch_size > 0:
-        logger.info(
-            "[schedule] round=%d breadth-first batch_size=%d fields=%d",
-            round_index,
-            context.field_template_batch_size,
-            len(context.fields),
-        )
+    logger.info(
+        "[schedule] round=%d breadth-first batch_size=%d fields=%d",
+        round_index,
+        context.field_template_batch_size,
+        len(context.fields),
+    )
 
     for field_index, field in enumerate(context.fields, start=1):
         if context.reached_simulation_budget():
@@ -186,7 +188,7 @@ def schedule_field_round(
             field_resume_positions=context.field_resume_positions,
             execution_state=execution_state,
             runtime_state=runtime_state,
-            completed_field_index_override=(0 if context.field_template_batch_size > 0 else None),
+            completed_field_index_override=0,
         )
         return ScheduleRoundResult(progressed=False, stop_requested=False, last_field_id=field_id)
 
@@ -221,12 +223,8 @@ def schedule_field_round(
         template_queue.filtered_templates,
     )
 
-    if context.field_template_batch_size > 0:
-        scheduled_templates = template_queue.peek(context.field_template_batch_size)
-        deferred_templates = max(0, pending_count - len(scheduled_templates))
-    else:
-        scheduled_templates = template_queue.peek(0)
-        deferred_templates = 0
+    scheduled_templates = template_queue.peek(context.field_template_batch_size)
+    deferred_templates = max(0, pending_count - len(scheduled_templates))
     progressed = bool(scheduled_templates)
     if deferred_templates > 0:
         logger.debug(
@@ -254,7 +252,7 @@ def schedule_field_round(
         field_resume_positions=context.field_resume_positions,
         execution_state=execution_state,
         runtime_state=runtime_state,
-        completed_field_index_override=(0 if context.field_template_batch_size > 0 else None),
+        completed_field_index_override=0,
     )
     return ScheduleRoundResult(
         progressed=progressed,

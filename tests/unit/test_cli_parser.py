@@ -170,6 +170,21 @@ def test_cli_strategy_profile_applies_runtime_defaults(monkeypatch, tmp_path) ->
     assert args.auto_update_blacklist_mode == "staging"
 
 
+def test_cli_normalizes_zero_field_template_batch_size(monkeypatch, tmp_path) -> None:
+    clear_yaml_cache()
+    config_path = tmp_path / "settings.yaml"
+    write_config(config_path)
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        ["alpha", "--config", str(config_path), "--field-template-batch-size", "0"],
+    )
+
+    args = parse_args()
+
+    assert args.field_template_batch_size == 1
+
+
 def test_yaml_strategy_profile_rejects_unknown_value(monkeypatch, tmp_path) -> None:
     """YAML strategy profiles should use the same supported names as CLI choices."""
     clear_yaml_cache()
