@@ -37,5 +37,6 @@ datasets/<dataset_id>/
 | `option9` | 暂停 | 无 |
 | `news18` | 探索中（显式入口） | 无 |
 
-`news18` 首轮公司行动情绪字段已停止，下一字段是 `mean_event_novelty_score`；仍按
-1 个字段、2 条经济结构的最小验证推进。跨数据集的下一候选是 `fundamental2`。
+`news18` 的公司行动情绪和单字段事件新颖度方向均已停止，下一字段是
+`mean_event_sentiment_score`；仍按 1 个字段、2 条经济结构的最小验证推进。
+跨数据集的下一候选是 `fundamental2`。

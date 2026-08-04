@@ -70,8 +70,29 @@ trade_when(
 
 两条独立结构都明显为负，该字段已停止，不保留可执行 preset。
 
+### mean_event_novelty_score
+
+元数据：MATRIX，coverage `1.0`，dateCoverage `1.0`，alphaCount `64`，userCount `55`。
+
+慢频新颖度异常：
+
+```text
+group_rank(
+  ts_zscore(ts_backfill(mean_event_novelty_score, 20), 60),
+  subindustry
+)
+```
+
+- Alpha ID：`qMNrVZEZ`
+- Sharpe：`-0.47`
+- Fitness：`-0.07`
+- Sub-universe Sharpe：`-0.74`
+
+新颖度本身没有明确的收益方向，结果也明显为负。该字段已停止，不再测试事件持仓版本，
+也不通过反转符号或调整窗口继续搜索。
+
 ## 下一字段
 
-`mean_event_novelty_score`：MATRIX，coverage `1.0`，dateCoverage `1.0`，alphaCount `64`，
-userCount `55`。下一轮应分别验证慢频新颖度异常和事件条件持仓，不与情绪字段组合，
-避免在基线阶段引入多字段解释成本。
+`mean_event_sentiment_score`：MATRIX，coverage `1.0`，dateCoverage `1.0`，alphaCount `59`，
+userCount `46`。它具有明确的正负方向，下一轮分别验证慢频情绪异常和事件条件持仓，
+仍不引入第二个字段。
