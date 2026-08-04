@@ -9,7 +9,7 @@ from datetime import datetime, timezone
 import logging
 import time
 
-from ..analysis.results_persistence import dump_results_incremental
+from ..analysis.results_persistence import dump_results, dump_results_incremental
 from ..api.client import BrainClient
 from ..core.simulation_stages import check_submission_with_retry
 from ..io.results_store import initialize_results_journal
@@ -96,6 +96,26 @@ def build_execution_state(
         template_stats=execution_state.template_stats,
     )
     return execution_state
+
+
+def persist_reconciled_historical_results(
+    *,
+    output_file: str,
+    dataset_id: str,
+    results: list[FieldTestResult],
+    settings_fingerprint: str,
+    template_library_fingerprint: str,
+    run_config: RunConfig,
+) -> None:
+    """Persist startup reconciliation before later bootstrap stages may return early."""
+    dump_results(
+        output_file,
+        dataset_id,
+        results,
+        settings_fingerprint=settings_fingerprint,
+        template_library_fingerprint=template_library_fingerprint,
+        run_config=run_config,
+    )
 
 
 def refresh_pending_check_results(

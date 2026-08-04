@@ -9,9 +9,10 @@ from types import SimpleNamespace
 import pytest
 
 import alpha.app.bootstrap as bootstrap_module
-from alpha.app.bootstrap import initialize_run_context
+from alpha.app.bootstrap import initialize_run_context, prepare_bootstrap_resources
 from alpha.app.bootstrap_field_resources import log_field_selection_stats
-from alpha.models.domain import TemplateField
+from alpha.app.bootstrap_supporting_resources import BootstrapLoadedResources
+from alpha.models.domain import FieldTestResult, TemplateField
 from alpha.models.io_types import RunFilters, RunPaths
 from alpha.models.runtime import ExecutionState, HistoricalRunState
 from alpha.models.runtime_options import FieldSelectionOptions
@@ -205,6 +206,94 @@ def test_initialize_run_context_closes_factory_when_state_build_fails(monkeypatc
         initialize_run_context(args, None)
 
     assert closed == ["bootstrap", "factory"]
+
+
+def test_prepare_bootstrap_resources_persists_pending_refresh_before_empty_field_return(
+    monkeypatch,
+) -> None:
+    original = FieldTestResult(
+        field_id="f1",
+        field_type="MATRIX",
+        field_name="f1",
+        template_name="t1",
+    )
+    refreshed = FieldTestResult(
+        field_id="f1",
+        field_type="MATRIX",
+        field_name="f1",
+        template_name="t1",
+        updated_at="2026-08-04T00:00:00Z",
+    )
+    historical_state = HistoricalRunState(existing_results=[original])
+    expression_policy = SimpleNamespace(
+        policy_version="policy-v1",
+        feedback_scope="field_type",
+        use_curated_heuristics=True,
+    )
+    supporting_resources = BootstrapLoadedResources(
+        historical_state=historical_state,
+        expression_policy=expression_policy,
+        template_library={"MATRIX": []},
+        filters={},
+    )
+    persisted: dict[str, object] = {}
+
+    monkeypatch.setattr(
+        bootstrap_module,
+        "build_effective_run_paths",
+        lambda *_args: SimpleNamespace(),
+    )
+    monkeypatch.setattr(
+        bootstrap_module,
+        "load_bootstrap_supporting_resources",
+        lambda **_kwargs: supporting_resources,
+    )
+    monkeypatch.setattr(
+        bootstrap_module,
+        "refresh_pending_check_results",
+        lambda *_args, **_kwargs: ([refreshed], 1),
+    )
+    monkeypatch.setattr(
+        bootstrap_module,
+        "rebuild_historical_run_state",
+        lambda _state, results: HistoricalRunState(existing_results=list(results)),
+    )
+    monkeypatch.setattr(
+        bootstrap_module,
+        "persist_reconciled_historical_results",
+        lambda **kwargs: persisted.update(kwargs),
+    )
+    monkeypatch.setattr(bootstrap_module, "load_bootstrap_fields", lambda **_kwargs: [])
+
+    result = prepare_bootstrap_resources(
+        SimpleNamespace(),
+        SimpleNamespace(dataset_id="fundamental6", check_submission_retries=1, fetch=None),
+        SimpleNamespace(),
+        SimpleNamespace(output_file="results.json"),
+        object(),
+        run_config={"run_name": "test"},
+        run_paths=None,
+        supporting_services=SimpleNamespace(
+            stable_fingerprint=lambda _value: "templates-fp",
+            build_settings_fingerprint=lambda _value: "settings-fp",
+        ),
+        field_services=SimpleNamespace(),
+    )
+
+    assert result is None
+    assert persisted["results"] == [refreshed]
+    assert persisted["output_file"] == "results.json"
+    assert persisted["settings_fingerprint"] == "settings-fp"
+    assert persisted["template_library_fingerprint"] == "templates-fp"
+    assert persisted["run_config"] == {
+        "run_name": "test",
+        "heuristic_policy": {
+            "dataset_id": "fundamental6",
+            "policy_version": "policy-v1",
+            "feedback_scope": "field_type",
+            "use_curated_heuristics": True,
+        },
+    }
 
 
 def test_initialize_run_context_prefers_run_paths_for_cache_and_credentials(

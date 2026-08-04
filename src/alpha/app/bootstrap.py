@@ -53,7 +53,11 @@ from .bootstrap_runtime_outputs import (
     prepare_runtime_outputs,
     resolve_bootstrap_paths,
 )
-from .bootstrap_state import build_execution_state, refresh_pending_check_results
+from .bootstrap_state import (
+    build_execution_state,
+    persist_reconciled_historical_results,
+    refresh_pending_check_results,
+)
 from .bootstrap_supporting_resources import load_bootstrap_supporting_resources
 from .bootstrap_types import (
     ApiClientServices,
@@ -210,6 +214,18 @@ def prepare_bootstrap_resources(
         effective_run_paths=effective_run_paths,
         services=supporting_services,
     )
+    expression_policy = supporting_resources.expression_policy
+    effective_run_config = dict(run_config)
+    effective_run_config["heuristic_policy"] = {
+        "dataset_id": dataset_id,
+        "policy_version": str(getattr(expression_policy, "policy_version", "unversioned")),
+        "feedback_scope": str(getattr(expression_policy, "feedback_scope", "field_type")),
+        "use_curated_heuristics": bool(expression_policy.use_curated_heuristics),
+    }
+    template_library_fingerprint = supporting_services.stable_fingerprint(
+        supporting_resources.template_library
+    )
+    settings_fingerprint = supporting_services.build_settings_fingerprint(template_options)
     existing_results = supporting_resources.historical_state.existing_results
     refreshed_results, refreshed_count = refresh_pending_check_results(
         bootstrap_client,
@@ -223,6 +239,14 @@ def prepare_bootstrap_resources(
                 supporting_resources.historical_state,
                 refreshed_results,
             ),
+        )
+        persist_reconciled_historical_results(
+            output_file=paths.output_file,
+            dataset_id=dataset_id,
+            results=refreshed_results,
+            settings_fingerprint=settings_fingerprint,
+            template_library_fingerprint=template_library_fingerprint,
+            run_config=effective_run_config,
         )
         if refreshed_count:
             logger.info(
@@ -262,24 +286,13 @@ def prepare_bootstrap_resources(
             len(supporting_resources.historical_state.existing_results),
         )
 
-    effective_run_config = dict(run_config)
-    expression_policy = supporting_resources.expression_policy
-    effective_run_config["heuristic_policy"] = {
-        "dataset_id": dataset_id,
-        "policy_version": str(getattr(expression_policy, "policy_version", "unversioned")),
-        "feedback_scope": str(getattr(expression_policy, "feedback_scope", "field_type")),
-        "use_curated_heuristics": bool(expression_policy.use_curated_heuristics),
-    }
-
     return PreparedBootstrapResources(
         template_library=supporting_resources.template_library,
         filters=supporting_resources.filters,
         expression_policy=supporting_resources.expression_policy,
         use_dataset_heuristics=supporting_resources.expression_policy.use_curated_heuristics,
-        template_library_fingerprint=supporting_services.stable_fingerprint(
-            supporting_resources.template_library
-        ),
-        settings_fingerprint=supporting_services.build_settings_fingerprint(template_options),
+        template_library_fingerprint=template_library_fingerprint,
+        settings_fingerprint=settings_fingerprint,
         historical_state=supporting_resources.historical_state,
         fields=prepared_fields,
         run_config=effective_run_config,
