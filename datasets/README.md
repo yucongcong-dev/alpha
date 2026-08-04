@@ -35,7 +35,7 @@ datasets/<dataset_id>/
 | `model51` | 暂停 | 无 |
 | `socialmedia12` | 暂停 | 无 |
 | `option9` | 暂停 | 无 |
-| `news18` | 探索中（显式入口） | 无 |
+| `news18` | 暂停 | 无 |
 
-`news18` 的单字段 MATRIX 路径和盈利评价 VECTOR 均已停止。最后一轮候选是低拥挤的
-`nws18_qmb_fast_d1`；若两条结构仍无正向基线，则暂停 `news18` 并转向 `fundamental2`。
+`news18` 的 MATRIX 与 VECTOR 单字段路径均未形成正向基线，当前已暂停。下一候选是
+`fundamental2`，仍从 1 个字段、2 条独立结构开始。

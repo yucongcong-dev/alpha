@@ -2,11 +2,11 @@
 
 ## 当前状态
 
-`news18` 是 RavenPack News Data 的显式入口探索池。2026-08-04 在 USA TOP3000、
-EQUITY、Delay 1 下获取到 121 个字段，其中 71 个 MATRIX、50 个 VECTOR。
+`news18` 已暂停。2026-08-04 在 USA TOP3000、EQUITY、Delay 1 下获取到 121 个字段，
+其中 71 个 MATRIX、50 个 VECTOR。
 
-dataset profile 标记为 `paused`，普通 `--dataset-id news18` 会拒绝运行。每轮必须显式提供
-字段和模板文件，并保持 1 个字段、2 条结构的预算边界。当前没有现役 preset。
+dataset profile 标记为 `paused`，普通 `--dataset-id news18` 会拒绝运行。当前没有现役
+preset，也不再继续单字段枚举、窗口调整或 settings 变体。
 
 ## 字段选择原则
 
@@ -196,8 +196,43 @@ trade_when(
 
 事件持仓只把结果从负值改善到接近零，没有形成可研究基线。该字段已停止，不保留 preset。
 
-## 下一字段
+### nws18_qmb_fast_d1
 
-`nws18_qmb_fast_d1`：VECTOR，coverage `1.0`，dateCoverage `1.0`，alphaCount `12`，
-userCount `8`。它是编辑评论立场分数，是 `news18` 最后一轮单字段验证。若慢频异常和事件持仓
-都不能达到 Sharpe `0.5`，则暂停整个数据集并转向 `fundamental2`。
+元数据：VECTOR，coverage `1.0`，dateCoverage `1.0`，alphaCount `12`，userCount `8`。
+
+聚合后的慢频编辑评论异常：
+
+```text
+group_rank(
+  ts_zscore(ts_backfill(vec_avg(nws18_qmb_fast_d1), 20), 60),
+  subindustry
+)
+```
+
+- Alpha ID：`KPGdoqG1`
+- Sharpe：`-0.51`
+- Fitness：`-0.07`
+- Turnover：`0.7005`
+- Sub-universe Sharpe：`-0.63`
+
+聚合后的事件更新持仓：
+
+```text
+trade_when(
+  days_from_last_change(vec_avg(nws18_qmb_fast_d1)) <= 5,
+  group_rank(ts_backfill(vec_avg(nws18_qmb_fast_d1), 5), subindustry),
+  -1
+)
+```
+
+- Alpha ID：`kqPrw1VP`
+- Sharpe：`-0.08`
+- Fitness：约 `0`
+- Sub-universe Sharpe：`-0.44`
+
+两条结构都低于 Sharpe `0.5` 停止线，该字段和整个 `news18` 单字段研究已关闭。
+
+## 重新开启条件
+
+只有出现新的经济假设、平台数据定义变化，或明确需要验证的多字段关系时才重新开启。
+不要继续替换相似情绪字段复用同一组模板。仓库下一候选转为 `fundamental2`。
