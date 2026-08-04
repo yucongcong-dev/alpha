@@ -91,3 +91,30 @@ def test_refresh_pending_check_results_skips_terminal_failure(monkeypatch) -> No
 
     assert count == 0
     assert refreshed[0] is original
+
+
+def test_refresh_pending_check_results_respects_startup_budget(monkeypatch) -> None:
+    calls = 0
+
+    def _resolve(*_args, **_kwargs):
+        nonlocal calls
+        calls += 1
+        return True, "checks passed", []
+
+    monkeypatch.setattr(
+        "alpha.app.bootstrap_state.check_submission_with_retry",
+        _resolve,
+    )
+    originals = [_pending_result(alpha_id=f"alpha_{index}") for index in range(3)]
+
+    refreshed, count = refresh_pending_check_results(
+        object(),
+        originals,
+        retries=2,
+        refresh_limit=1,
+    )
+
+    assert calls == 1
+    assert count == 1
+    assert refreshed[0].submittable is True
+    assert refreshed[1:] == originals[1:]

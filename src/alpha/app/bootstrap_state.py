@@ -22,6 +22,8 @@ from ..runtime.state import ExecutionState
 
 logger = logging.getLogger(__name__)
 
+DEFAULT_PENDING_CHECK_REFRESH_LIMIT = 20
+
 
 def create_execution_state(
     *,
@@ -94,13 +96,20 @@ def refresh_pending_check_results(
     results: list[FieldTestResult],
     *,
     retries: int,
+    refresh_limit: int = DEFAULT_PENDING_CHECK_REFRESH_LIMIT,
 ) -> tuple[list[FieldTestResult], int]:
     """Resolve historical PENDING checks without recreating their simulations."""
     refreshed_results = list(results)
     refreshed_count = 0
+    attempted_count = 0
+    deferred_count = 0
     for index, result in enumerate(results):
         if not has_pending_checks(result) or not result.alpha_id:
             continue
+        if refresh_limit > 0 and attempted_count >= refresh_limit:
+            deferred_count += 1
+            continue
+        attempted_count += 1
         try:
             submittable, message, failed_checks = check_submission_with_retry(
                 client,
@@ -138,5 +147,11 @@ def refresh_pending_check_results(
             result.field_id,
             result.template_name,
             submittable,
+        )
+    if deferred_count:
+        logger.info(
+            "[check-submission-resume] deferred %d pending results after startup limit=%d",
+            deferred_count,
+            refresh_limit,
         )
     return refreshed_results, refreshed_count
