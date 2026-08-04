@@ -86,6 +86,8 @@ def build_check_environment(root: Path = ROOT) -> dict[str, str]:
     src_path = str(root / "src")
     existing = env.get("PYTHONPATH", "")
     env["PYTHONPATH"] = src_path if not existing else f"{src_path}{os.pathsep}{existing}"
+    env["PYTHONUTF8"] = "1"
+    env["PYTHONIOENCODING"] = "utf-8"
     return env
 
 

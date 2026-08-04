@@ -21,10 +21,14 @@ def _load_check_all_module():
 def test_build_check_environment_prepends_repo_src(monkeypatch, tmp_path) -> None:
     module = _load_check_all_module()
     monkeypatch.setenv("PYTHONPATH", "existing")
+    monkeypatch.setenv("PYTHONUTF8", "0")
+    monkeypatch.setenv("PYTHONIOENCODING", "cp1252")
 
     env = module.build_check_environment(tmp_path)
 
     assert env["PYTHONPATH"] == f"{tmp_path / 'src'}{os.pathsep}existing"
+    assert env["PYTHONUTF8"] == "1"
+    assert env["PYTHONIOENCODING"] == "utf-8"
 
 
 def test_test_task_uses_current_python_module_entry() -> None:

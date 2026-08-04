@@ -20,10 +20,10 @@ jobs:
 
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
           cache: pip
@@ -37,8 +37,8 @@ jobs:
         if: runner.os == 'macOS'
         run: brew install ripgrep
 
-      - name: Validate default Python selection
-        run: make python-version-check
+      - name: Validate matrix Python
+        run: make python-version-check PYTHON=python
 
       - name: Install project dependencies
         run: make install-dev PYTHON=python
