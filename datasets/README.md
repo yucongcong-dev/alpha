@@ -35,5 +35,7 @@ datasets/<dataset_id>/
 | `model51` | 暂停 | 无 |
 | `socialmedia12` | 暂停 | 无 |
 | `option9` | 暂停 | 无 |
+| `news18` | 探索中（显式入口） | 无 |
 
-下一候选优先级：`news18`（低拥挤的新闻影响、事件新颖度与专项情绪 MATRIX 字段），其次 `fundamental2`。新一轮仍应先做 1 个字段、2 条经济结构的最小验证。
+`news18` 首轮公司行动情绪字段已停止，下一字段是 `mean_event_novelty_score`；仍按
+1 个字段、2 条经济结构的最小验证推进。跨数据集的下一候选是 `fundamental2`。
