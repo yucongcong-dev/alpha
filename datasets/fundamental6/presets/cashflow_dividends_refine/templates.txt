@@ -1,2 +1,0 @@
-cashflow_dividends_cap_bucket_delta_over_std_63_126
-group_ratio_delta_over_std_63_126_over_cap

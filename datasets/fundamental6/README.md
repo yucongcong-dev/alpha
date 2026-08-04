@@ -10,9 +10,6 @@
 - [cashflow_submit_core/template.json](presets/cashflow_submit_core/template.json)
 - [cashflow_submit_core/fields.txt](presets/cashflow_submit_core/fields.txt)
 - [cashflow_submit_core/templates.txt](presets/cashflow_submit_core/templates.txt)
-- [cashflow_dividends_refine/template.json](presets/cashflow_dividends_refine/template.json)
-- [cashflow_dividends_refine/fields.txt](presets/cashflow_dividends_refine/fields.txt)
-- [cashflow_dividends_refine/templates.txt](presets/cashflow_dividends_refine/templates.txt)
 
 其余历史、观察和单模板 preset 已删除；关键结论已经收录在本文，不再维护可执行副本。
 
@@ -49,10 +46,10 @@ group_rank(
 
 两条主线曾在同一次最小 core pack 复跑中同时通过，当前不需要再拆分成独立 preset。
 
-## cashflow_dividends 窄研究线
+## 已关闭的 cashflow_dividends 研究线
 
-2026-08-04 对 `cashflow_dividends` 做了 5 个结构变体的真实 simulation 和 Check
-Submission。当前保留两个近通过结构，其中优先级更高的是市值分桶版本：
+2026-08-04 对 `cashflow_dividends` 做了 6 个结构变体的真实 simulation 和 Check
+Submission。最佳近通过结构是市值分桶版本：
 
 ```text
 group_rank(
@@ -66,7 +63,7 @@ group_rank(
 - Self Correlation 检查通过
 - Fitness：`0.99`，略低于 `1.0` 上限，暂不可提交
 
-原始 `subindustry` 版本作为对照保留：
+原始 `subindustry` 版本的结果是：
 
 ```text
 group_rank(
@@ -80,25 +77,29 @@ group_rank(
 - Sharpe 和 Fitness 检查通过
 - Self Correlation：`0.7113`，高于 `0.7` 上限，暂不可提交
 
-市值分桶已经解决原结构的 Self Correlation 问题，但 Fitness 仍差 `0.01`。后续只允许围绕
-独立持仓触发方式做最多一轮研究，不再调整 Decay、Truncation 或相邻窗口。`assets` 分母、
-`enterprise_value` 分母和单纯 `subindustry` 长期 zscore 在本轮明显降低 Sharpe/Fitness，
-已停止。
+最后测试了股息字段更新后 20 日内刷新持仓的事件触发版本：
 
-显式复跑命令：
-
-```bash
-PYTHONPATH=src python3.10 -m alpha \
-  --dataset-id fundamental6 \
-  --strategy-profile explore \
-  --template-library-file datasets/fundamental6/presets/cashflow_dividends_refine/template.json \
-  --include-fields-file datasets/fundamental6/presets/cashflow_dividends_refine/fields.txt \
-  --include-templates-file datasets/fundamental6/presets/cashflow_dividends_refine/templates.txt \
-  --no-auto-update-blacklist \
-  --limit 1 \
-  --max-templates-per-field 1 \
-  --run-name verify-cashflow-dividends-refine
+```text
+trade_when(
+  days_from_last_change(cashflow_dividends) <= 20,
+  group_rank(
+    ts_delta(winsorize(ts_backfill(cashflow_dividends, 120), std=4) / cap, 63)
+    / ts_std_dev(winsorize(ts_backfill(cashflow_dividends, 120), std=4) / cap, 126),
+    densify(bucket(rank(cap), range='0.1, 1, 0.1'))
+  ),
+  -1
+)
 ```
+
+- Alpha ID：`XgoQ1b7x`
+- Sharpe：`0.33`
+- Fitness：`0.10`
+- Sub-universe Sharpe：`0.05`
+
+事件触发明显破坏了信号。市值分桶虽然解决了 Self Correlation，但 Fitness 仍差 `0.01`；
+`assets`、`enterprise_value` 分母和长期 zscore 结构也都明显变弱。因此该字段研究已关闭，
+不再调整窗口、Decay、Truncation、Neutralization 或触发条件，也不保留可执行 preset。
+只有字段定义、平台数据状态或经济假设发生实质变化时才重新开启。
 
 ## 推荐命令
 
