@@ -15,31 +15,19 @@
 from __future__ import annotations
 
 import logging
-import os
 from pathlib import Path
-import sys
+from typing import TYPE_CHECKING
 
-from .config.application import ApplicationConfig
-from .models.io_types import RunPaths
-from .models.runtime_protocols import CleanRuntimeArgs
-from .runtime.state import InitializedRunContext
+from .config.yaml import activate_config_from_argv
 
-
-def _bootstrap_config_environment() -> None:
-    """Expose --config before importing the config package and app graph."""
-    tokens = sys.argv[1:]
-    for index, token in enumerate(tokens):
-        value = ""
-        if token == "--config" and index + 1 < len(tokens):
-            value = tokens[index + 1]
-        elif token.startswith("--config="):
-            value = token.split("=", 1)[1]
-        if value:
-            os.environ["ALPHA_CONFIG_FILE"] = os.path.abspath(os.path.expanduser(value))
-            return
+if TYPE_CHECKING:
+    from .config.application import ApplicationConfig
+    from .models.io_types import RunPaths
+    from .models.runtime_protocols import CleanRuntimeArgs
+    from .runtime.state import InitializedRunContext
 
 
-_bootstrap_config_environment()
+activate_config_from_argv()
 
 logger = logging.getLogger(__name__)
 
