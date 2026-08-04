@@ -184,18 +184,28 @@ def maybe_update_blacklist_incrementally(
     """Apply incremental blacklist side effects for one completed result if enabled."""
     if not auto_update_enabled:
         return
-    ledger = execution_state.result_ledger
-    if not execution_state.blacklist_runtime_stats and len(ledger.results) > 1:
-        execution_state.blacklist_runtime_stats = services.build_blacklist_runtime_stats(
-            ledger.results[:-1]
+    try:
+        ledger = execution_state.result_ledger
+        if not execution_state.blacklist_runtime_stats and len(ledger.results) > 1:
+            execution_state.blacklist_runtime_stats = services.build_blacklist_runtime_stats(
+                ledger.results[:-1]
+            )
+        services.auto_update_blacklist_incremental(
+            execution_state.blacklist_runtime_stats,
+            execution_state.blacklisted_template_keys,
+            result,
+            dataset_id,
+            update_mode=auto_update_mode,
         )
-    services.auto_update_blacklist_incremental(
-        execution_state.blacklist_runtime_stats,
-        execution_state.blacklisted_template_keys,
-        result,
-        dataset_id,
-        update_mode=auto_update_mode,
-    )
+    except Exception as exc:
+        logger.warning(
+            "[blacklist] incremental update failed for dataset=%s field=%s template=%s: %s",
+            dataset_id,
+            result.field_id,
+            result.template_name,
+            exc,
+            exc_info=True,
+        )
 
 
 def persist_incremental_result(
