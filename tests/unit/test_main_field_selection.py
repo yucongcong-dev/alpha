@@ -387,6 +387,56 @@ def test_limit_reserves_capacity_for_unexplored_fields() -> None:
     assert stats["selected_unexplored_count"] == 1
 
 
+def test_feedback_focus_keeps_field_family_diversity() -> None:
+    fields = [
+        {
+            "id": field_id,
+            "coverage": 1.0,
+            "dateCoverage": 1.0,
+            "alphaCount": 100,
+            "userCount": 20,
+            "themes": [],
+            "dateCreated": "2025-01-01",
+        }
+        for field_id in (
+            "call_breakeven_10",
+            "call_breakeven_20",
+            "call_breakeven_30",
+            "forward_price_10",
+        )
+    ]
+    history = HistoricalRunState(
+        field_feedback={
+            field_id: {"best_score": score, "attempted_templates": 4}
+            for field_id, score in (
+                ("call_breakeven_10", 0.90),
+                ("call_breakeven_20", 0.80),
+                ("call_breakeven_30", 0.70),
+                ("forward_price_10", 0.60),
+            )
+        }
+    )
+
+    selected, stats = prepare_fields_for_execution(
+        fields,
+        filters_dict=RunFilters(),
+        expression_policy=get_dataset_expression_policy("new_dataset"),
+        historical_state=history,
+        selection_options=FieldSelectionOptions(
+            limit=0,
+            offset=0,
+            top_fields_by_feedback=3,
+        ),
+    )
+
+    assert [row["id"] for row in selected] == [
+        "call_breakeven_10",
+        "call_breakeven_20",
+        "forward_price_10",
+    ]
+    assert stats["selected_family_count"] == 2
+
+
 def test_failed_feedback_does_not_consume_exploitation_budget() -> None:
     fields = [
         {

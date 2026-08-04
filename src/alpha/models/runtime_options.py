@@ -224,6 +224,7 @@ class RunConfigSnapshotOptions:
     sleep_between_fields: float = 0.0
     max_templates_per_field: int = 0
     max_templates_per_family: int = 0
+    max_total_simulations: int = 0
     field_template_batch_size: int = 0
     legacy_similarity_penalty: int = 0
     max_concurrent_simulations: int = 0
@@ -271,6 +272,7 @@ class RunConfigSnapshotOptions:
             sleep_between_fields=float(getattr(args, "sleep_between_fields", 0.0) or 0.0),
             max_templates_per_field=int(getattr(args, "max_templates_per_field", 0) or 0),
             max_templates_per_family=int(getattr(args, "max_templates_per_family", 0) or 0),
+            max_total_simulations=max(0, int(getattr(args, "max_total_simulations", 0) or 0)),
             field_template_batch_size=int(getattr(args, "field_template_batch_size", 0) or 0),
             legacy_similarity_penalty=int(getattr(args, "legacy_similarity_penalty", 0) or 0),
             max_concurrent_simulations=int(getattr(args, "max_concurrent_simulations", 0) or 0),
@@ -320,6 +322,7 @@ class SchedulerControlOptions:
     field_queue_busy_skip_after: int = 0
     sleep_between_fields: float = 0.0
     stop_after_submittable: int = 0
+    max_total_simulations: int = 0
 
     @classmethod
     def from_args(cls, args: SchedulerControlArgs) -> SchedulerControlOptions:
@@ -330,6 +333,7 @@ class SchedulerControlOptions:
             field_queue_busy_skip_after=int(getattr(args, "field_queue_busy_skip_after", 0) or 0),
             sleep_between_fields=float(getattr(args, "sleep_between_fields", 0.0) or 0.0),
             stop_after_submittable=int(getattr(args, "stop_after_submittable", 0) or 0),
+            max_total_simulations=max(0, int(getattr(args, "max_total_simulations", 0) or 0)),
         )
 
 

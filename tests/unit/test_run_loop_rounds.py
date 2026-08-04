@@ -334,3 +334,43 @@ def test_dispatch_honors_stop_capacity_and_success_paths() -> None:
     ):
         assert _dispatch_templates_for_field(**kwargs) is False
     mock_submit.assert_called_once()
+
+
+def test_dispatch_stops_at_total_simulation_budget_without_aborting_pending() -> None:
+    context = _build_context(field_template_batch_size=2)
+    context.scheduler_options = SchedulerControlOptions(max_total_simulations=1)
+    entries = [
+        PendingTemplateEntry(
+            template_name=f"template-{index}",
+            template_family="rank",
+            template_stage="first_order",
+            template_role="signal",
+            template_activation_scope="broad",
+            expression=f"rank(f1) + {index}",
+            priority=100 - index,
+            settings_variant=SettingsVariant(),
+            variant_fingerprint=f"settings-{index}",
+        )
+        for index in range(2)
+    ]
+
+    with (
+        context.executor,
+        patch("alpha.app.run_loop_rounds.maybe_restore_runtime_concurrency"),
+        patch("alpha.app.run_loop_rounds.drain_until_capacity", return_value=True),
+        patch("alpha.app.run_loop_rounds.throttle_before_submission"),
+        patch("alpha.app.run_loop_rounds.submit_template_future") as mock_submit,
+    ):
+        stopped = _dispatch_templates_for_field(
+            context=context,
+            field=context.fields[0],
+            field_id="f1",
+            field_name="f1",
+            field_type="MATRIX",
+            scheduled_templates=entries,
+        )
+
+    assert stopped is True
+    assert context.scheduled_simulations == 1
+    assert context.run_ctx.execution_state.future_queue.stop_signal.is_set() is False
+    mock_submit.assert_called_once()

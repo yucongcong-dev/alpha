@@ -101,6 +101,9 @@ DEFAULT_SETTINGS_VARIANT_BUDGET: int = _yaml_int(
 SMOKE_TEST_MAX_PENDING_CYCLES: int = _yaml_int("smoke_test", "max_pending_cycles", default=60)
 SMOKE_TEST_MAX_QUEUE_SECONDS: int = _yaml_int("smoke_test", "max_queue_seconds", default=300)
 
+# ---- Full run 安全边界 ----
+FULL_RUN_MAX_TOTAL_SIMULATIONS: int = _yaml_int("full_run", "max_total_simulations", default=500)
+
 # ---- 检查点 ----
 CHECKPOINT_RESUME_SAFETY_SECONDS: float = _yaml_float(
     "checkpoint", "resume_safety_seconds", default=30.0

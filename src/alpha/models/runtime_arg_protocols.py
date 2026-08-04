@@ -197,6 +197,9 @@ class PlanningRuntimeArgs(Protocol):
     def max_templates_per_family(self) -> int: ...
 
     @property
+    def max_total_simulations(self) -> int: ...
+
+    @property
     def field_template_batch_size(self) -> int: ...
 
     @property
@@ -277,6 +280,9 @@ class SchedulerControlArgs(Protocol):
 
     @property
     def sleep_between_fields(self) -> float: ...
+
+    @property
+    def max_total_simulations(self) -> int: ...
 
 
 class RuntimeModeArgs(Protocol):

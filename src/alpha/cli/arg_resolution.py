@@ -5,7 +5,11 @@ from __future__ import annotations
 import argparse
 from typing import cast
 
-from ..config.constants import SMOKE_TEST_MAX_PENDING_CYCLES, SMOKE_TEST_MAX_QUEUE_SECONDS
+from ..config.constants import (
+    FULL_RUN_MAX_TOTAL_SIMULATIONS,
+    SMOKE_TEST_MAX_PENDING_CYCLES,
+    SMOKE_TEST_MAX_QUEUE_SECONDS,
+)
 from ..config.defaults import apply_yaml_global_defaults
 from ..config.profiles import get_dataset_profile
 from ..config.strategy_profiles import (
@@ -49,7 +53,7 @@ def resolve_cli_args(
         yaml_config=yaml_config,
         explicit_cli_keys=explicit_cli_keys,
     )
-    apply_run_mode_overrides(args)
+    apply_run_mode_overrides(args, explicit_cli_keys=explicit_cli_keys)
     args._explicit_cli_keys = frozenset(explicit_cli_keys)
     return args
 
@@ -93,7 +97,11 @@ def apply_strategy_profile_defaults(
         setattr(args, key, value)
 
 
-def apply_run_mode_overrides(args: argparse.Namespace) -> None:
+def apply_run_mode_overrides(
+    args: argparse.Namespace,
+    *,
+    explicit_cli_keys: set[str] | None = None,
+) -> None:
     """Normalize run-mode flags into concrete concurrency and search limits."""
     if args.smoke_test:
         args.limit = 1
@@ -110,3 +118,8 @@ def apply_run_mode_overrides(args: argparse.Namespace) -> None:
     if args.full_run:
         args.limit = 0
         args.max_templates_per_field = 0
+        if (
+            "max_total_simulations" not in (explicit_cli_keys or set())
+            and args.max_total_simulations <= 0
+        ):
+            args.max_total_simulations = FULL_RUN_MAX_TOTAL_SIMULATIONS

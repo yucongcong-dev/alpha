@@ -106,7 +106,7 @@ def add_run_mode_arguments(parser: argparse.ArgumentParser) -> None:
         "--full-run",
         action="store_true",
         default=False,
-        help="运行全量测试（所有字段和所有模板），可能很慢",
+        help="运行全量字段/模板搜索；默认受 --max-total-simulations 安全预算限制",
     )
     parser.add_argument(
         "--no-smoke-test",
@@ -148,6 +148,12 @@ def add_search_arguments(parser: argparse.ArgumentParser) -> None:
         type=int,
         default=1,
         help="每个表达式家族保留的最大候选数；0 表示不限制",
+    )
+    parser.add_argument(
+        "--max-total-simulations",
+        type=int,
+        default=0,
+        help="本次启动最多调度的 simulation 数量；0 表示不限制",
     )
     parser.add_argument(
         "--field-template-batch-size",

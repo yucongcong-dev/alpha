@@ -92,6 +92,7 @@ class PlanningConfig:
     sleep_between_fields: float
     max_templates_per_field: int
     max_templates_per_family: int
+    max_total_simulations: int
     field_template_batch_size: int
     legacy_similarity_penalty: int
     top_fields_by_feedback: int
@@ -109,6 +110,7 @@ class PlanningConfig:
             sleep_between_fields=float(_value(args, "sleep_between_fields", 0.0) or 0.0),
             max_templates_per_field=int(_value(args, "max_templates_per_field", 0) or 0),
             max_templates_per_family=int(_value(args, "max_templates_per_family", 0) or 0),
+            max_total_simulations=max(0, int(_value(args, "max_total_simulations", 0) or 0)),
             field_template_batch_size=int(_value(args, "field_template_batch_size", 0) or 0),
             legacy_similarity_penalty=int(_value(args, "legacy_similarity_penalty", 0) or 0),
             top_fields_by_feedback=int(_value(args, "top_fields_by_feedback", 0) or 0),

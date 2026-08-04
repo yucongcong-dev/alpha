@@ -301,7 +301,7 @@ def rank_and_select_exploration_fields(
     ranked_fields = list(fields)
     rank_by_field_id = rank_by_id(ranked_fields)
     if top_fields_by_feedback > 0:
-        fields = [
+        feedback_fields = [
             field
             for field in fields
             if _feedback_priority(
@@ -310,7 +310,18 @@ def rank_and_select_exploration_fields(
                 expression_policy=expression_policy,
             )
             > -999.0
-        ][:top_fields_by_feedback]
+        ]
+        fields = cast(
+            list[TemplateField],
+            _select_diverse_fields(
+                feedback_fields,
+                target=top_fields_by_feedback,
+                max_per_family=expression_policy.field_max_per_family,
+                exploration_ratio=0.0,
+                historical_state=historical_state,
+                expression_policy=expression_policy,
+            ),
+        )
 
     ranked_field_count = len(fields)
     if limit > 0 and top_fields_by_feedback <= 0:

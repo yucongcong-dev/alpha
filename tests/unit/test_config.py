@@ -234,6 +234,7 @@ def test_strategy_profile_schemas_are_loaded_from_yaml() -> None:
         "limit",
         "max_templates_per_field",
         "max_templates_per_family",
+        "max_total_simulations",
         "field_template_batch_size",
     )
     assert "feedback_loop_policy" in schemas["refine"].tuning_keys["expression_policies"]

@@ -9,6 +9,7 @@ import pytest
 from alpha.cli.parser import parse_application_config, parse_args
 from alpha.cli.path_resolution import apply_run_paths, normalize_args_paths
 from alpha.config import get_yaml_config
+from alpha.config.constants import FULL_RUN_MAX_TOTAL_SIMULATIONS
 
 
 def clear_yaml_cache() -> None:
@@ -107,6 +108,30 @@ def test_cli_smoke_test_overrides_yaml_false(monkeypatch, tmp_path) -> None:
     assert args.max_concurrent_simulations == 1
     assert args.simulation_max_pending_cycles == 60
     assert args.simulation_max_queue_seconds == 300
+
+
+def test_full_run_applies_default_total_simulation_budget(monkeypatch) -> None:
+    clear_yaml_cache()
+    monkeypatch.setattr(sys, "argv", ["alpha", "--full-run"])
+
+    args = parse_args()
+
+    assert args.limit == 0
+    assert args.max_templates_per_field == 0
+    assert args.max_total_simulations == FULL_RUN_MAX_TOTAL_SIMULATIONS
+
+
+def test_full_run_allows_explicit_unlimited_total_simulation_budget(monkeypatch) -> None:
+    clear_yaml_cache()
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        ["alpha", "--full-run", "--max-total-simulations", "0"],
+    )
+
+    args = parse_args()
+
+    assert args.max_total_simulations == 0
 
 
 def test_yaml_can_enable_auto_update_blacklist(monkeypatch, tmp_path) -> None:

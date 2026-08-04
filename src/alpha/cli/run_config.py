@@ -40,6 +40,7 @@ def build_run_config_snapshot(
             "sleep_between_fields": options.sleep_between_fields,
             "max_templates_per_field": options.max_templates_per_field,
             "max_templates_per_family": options.max_templates_per_family,
+            "max_total_simulations": options.max_total_simulations,
             "field_template_batch_size": options.field_template_batch_size,
             "legacy_similarity_penalty": options.legacy_similarity_penalty,
         },

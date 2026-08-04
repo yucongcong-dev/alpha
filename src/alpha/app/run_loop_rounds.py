@@ -58,6 +58,12 @@ class ScheduleRoundContext:
     scheduler_options: SchedulerControlOptions = dataclass_field(
         default_factory=SchedulerControlOptions
     )
+    scheduled_simulations: int = 0
+
+    def reached_simulation_budget(self) -> bool:
+        """Return whether this process has dispatched its configured simulation budget."""
+        budget = self.scheduler_options.max_total_simulations
+        return budget > 0 and self.scheduled_simulations >= budget
 
 
 def execute_schedule_round(
@@ -86,6 +92,16 @@ def execute_schedule_round(
         )
 
     for field_index, field in enumerate(context.fields, start=1):
+        if context.reached_simulation_budget():
+            logger.info(
+                "[stop] 达到 max-total-simulations=%d",
+                scheduler_options.max_total_simulations,
+            )
+            return ScheduleRoundResult(
+                progressed=progressed_this_round,
+                stop_requested=True,
+                last_field_id=last_field_id,
+            )
         if result_ledger.reached_submittable_stop_threshold(
             scheduler_options.stop_after_submittable
         ):
@@ -239,6 +255,12 @@ def _dispatch_templates_for_field(
     result_ledger = execution_state.result_ledger
     runtime_state = run_ctx.runtime_state
     for template_index, entry in enumerate(scheduled_templates, start=1):
+        if context.reached_simulation_budget():
+            logger.info(
+                "[stop] 达到 max-total-simulations=%d",
+                scheduler_options.max_total_simulations,
+            )
+            return True
         if result_ledger.reached_submittable_stop_threshold(
             scheduler_options.stop_after_submittable
         ):
@@ -295,4 +317,5 @@ def _dispatch_templates_for_field(
             settings_variant=entry.settings_variant,
             variant_fingerprint=entry.variant_fingerprint,
         )
+        context.scheduled_simulations += 1
     return False

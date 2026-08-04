@@ -69,6 +69,7 @@ class ApplicationConfig:
     sleep_between_fields = SectionField[float]("planning")
     max_templates_per_field = SectionField[int]("planning")
     max_templates_per_family = SectionField[int]("planning")
+    max_total_simulations = SectionField[int]("planning")
     field_template_batch_size = SectionField[int]("planning")
     legacy_similarity_penalty = SectionField[int]("planning")
     top_fields_by_feedback = SectionField[int]("planning")

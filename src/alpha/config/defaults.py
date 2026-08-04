@@ -83,6 +83,7 @@ def apply_yaml_global_defaults(
             "sleep_between_fields",
             "max_templates_per_field",
             "max_templates_per_family",
+            "max_total_simulations",
             "field_template_batch_size",
             "legacy_similarity_penalty",
         },
