@@ -112,12 +112,37 @@ def test_cli_smoke_test_overrides_yaml_false(monkeypatch, tmp_path) -> None:
 
 def test_full_run_applies_default_total_simulation_budget(monkeypatch) -> None:
     clear_yaml_cache()
-    monkeypatch.setattr(sys, "argv", ["alpha", "--full-run"])
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "alpha",
+            "--strategy-profile",
+            "submit-focused",
+            "--full-run",
+            "--offset",
+            "7",
+            "--limit",
+            "4",
+            "--max-templates-per-field",
+            "3",
+            "--max-templates-per-family",
+            "1",
+            "--top-fields-by-feedback",
+            "5",
+            "--stop-after-submittable",
+            "2",
+        ],
+    )
 
     args = parse_args()
 
     assert args.limit == 0
+    assert args.offset == 0
     assert args.max_templates_per_field == 0
+    assert args.max_templates_per_family == 0
+    assert args.top_fields_by_feedback == 0
+    assert args.stop_after_submittable == 0
     assert args.max_total_simulations == FULL_RUN_MAX_TOTAL_SIMULATIONS
 
 
