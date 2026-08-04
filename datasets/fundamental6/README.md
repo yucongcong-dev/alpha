@@ -10,6 +10,9 @@
 - [cashflow_submit_core/template.json](presets/cashflow_submit_core/template.json)
 - [cashflow_submit_core/fields.txt](presets/cashflow_submit_core/fields.txt)
 - [cashflow_submit_core/templates.txt](presets/cashflow_submit_core/templates.txt)
+- [cashflow_dividends_refine/template.json](presets/cashflow_dividends_refine/template.json)
+- [cashflow_dividends_refine/fields.txt](presets/cashflow_dividends_refine/fields.txt)
+- [cashflow_dividends_refine/templates.txt](presets/cashflow_dividends_refine/templates.txt)
 
 其余历史、观察和单模板 preset 已删除；关键结论已经收录在本文，不再维护可执行副本。
 
@@ -45,6 +48,42 @@ group_rank(
 - 2026-07-24 真实复跑：`submittable=true`
 
 两条主线曾在同一次最小 core pack 复跑中同时通过，当前不需要再拆分成独立 preset。
+
+## cashflow_dividends 窄研究线
+
+2026-08-04 对 `cashflow_dividends` 做了 4 个结构变体的真实 simulation 和 Check
+Submission。唯一保留的近通过结构是：
+
+```text
+group_rank(
+  ts_delta(winsorize(ts_backfill(cashflow_dividends, 120), std=4) / cap, 63)
+  / ts_std_dev(winsorize(ts_backfill(cashflow_dividends, 120), std=4) / cap, 126),
+  subindustry
+)
+```
+
+- Alpha ID：`GrGAnPx3`
+- Sharpe 和 Fitness 检查通过
+- Self Correlation：`0.7113`，高于 `0.7` 上限，暂不可提交
+
+它说明字段仍有有效信号，但与已有 Alpha 边界过近。后续只允许围绕独立结构做少量研究，
+不再调整 Decay、Truncation 或相邻窗口。`assets` 分母、`enterprise_value` 分母和单纯
+`subindustry` 长期 zscore 在本轮明显降低 Sharpe/Fitness，已停止。
+
+显式复跑命令：
+
+```bash
+PYTHONPATH=src python3.10 -m alpha \
+  --dataset-id fundamental6 \
+  --strategy-profile refine \
+  --template-library-file datasets/fundamental6/presets/cashflow_dividends_refine/template.json \
+  --include-fields-file datasets/fundamental6/presets/cashflow_dividends_refine/fields.txt \
+  --include-templates-file datasets/fundamental6/presets/cashflow_dividends_refine/templates.txt \
+  --no-auto-update-blacklist \
+  --limit 1 \
+  --max-templates-per-field 1 \
+  --run-name verify-cashflow-dividends-refine
+```
 
 ## 推荐命令
 
