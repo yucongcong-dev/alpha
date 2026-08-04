@@ -22,10 +22,7 @@ from dataclasses import replace
 import logging
 
 from ..config.constants import DRY_RUN_SAMPLE_LIMIT, SENTINEL_UNKNOWN
-from ..generators.expression_builder import build_expression_candidates
 from ..generators.fields import choose_field_name
-from ..generators.payload import build_settings_fingerprint_from_payload
-from ..generators.variants import build_setting_variants
 from ..models.domain import FieldTestResult, TemplateCandidate, TemplateField, TemplateLibrary
 from ..models.io_types import RunFilters
 from ..models.runtime_options import TemplateBuildOptions
@@ -52,19 +49,11 @@ from .execution_filters import (
 from .template_planning import (
     TemplatePlanningServices,
     build_pending_template_variants,
+    build_template_planning_services,
     resolve_field_template_candidates,
 )
 
 logger = logging.getLogger(__name__)
-
-
-def build_executor_template_planning_services() -> TemplatePlanningServices:
-    """Build planning dependencies from current executor module overrides."""
-    return TemplatePlanningServices(
-        build_expression_candidates=build_expression_candidates,
-        build_setting_variants=build_setting_variants,
-        build_settings_fingerprint=build_settings_fingerprint_from_payload,
-    )
 
 
 # ============================================================================
@@ -88,13 +77,13 @@ def build_template_build_context(
         options,
         preset_mode=options.preset_mode
         or resolve_preset_mode(
-            template_library_file=str(args.template_library_file or ""),
+            template_library_file=options.template_library_file,
             include_fields=filters.include_fields,
         ),
     )
     template_build_ctx = TemplateBuildContext(
         options=options,
-        template_library_file=str(args.template_library_file or ""),
+        template_library_file=options.template_library_file,
         all_fields=fields,
         template_library=template_library,
         field_feedback=historical_state.field_feedback,
@@ -165,13 +154,12 @@ def build_pending_templates_for_field(
         - 模板按优先级降序排列
         - 已尝试的键会被跳过
     """
-    active_services = planning_services or build_executor_template_planning_services()
+    active_services = planning_services or build_template_planning_services()
     field_id = str(first_non_empty(field.get("id"), SENTINEL_UNKNOWN))
     field_name = choose_field_name(field)
     templates, field_feedback, expression_policy = resolve_field_template_candidates(
         build_ctx,
         field,
-        prior_results=prior_results,
         services=active_services,
     )
     # Exploration is intentionally cheap and independent of global failures:

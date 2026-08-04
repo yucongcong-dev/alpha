@@ -18,11 +18,11 @@ from alpha.policy.expression import get_dataset_expression_policy
 def test_build_pending_templates_skips_inflight_duplicate(monkeypatch) -> None:
     settings_payload = {"neutralization": "SUBINDUSTRY", "truncation": 0.08}
     monkeypatch.setattr(
-        "alpha.core.executor.build_setting_variants",
+        "alpha.core.template_planning.build_setting_variants",
         lambda *args, **kwargs: [settings_payload],
     )
     monkeypatch.setattr(
-        "alpha.core.executor.build_expression_candidates",
+        "alpha.core.template_planning.build_expression_candidates",
         lambda *args, **kwargs: [
             TemplateCandidate(
                 "model51_market_zscore_decay_63",
@@ -97,14 +97,14 @@ def test_build_pending_templates_uses_explicit_template_role(
     monkeypatch,
 ) -> None:
     monkeypatch.setattr(
-        "alpha.core.executor.build_setting_variants",
+        "alpha.core.template_planning.build_setting_variants",
         lambda *args, **kwargs: [
             {"neutralization": "SUBINDUSTRY", "truncation": 0.08, "decay": 4},
             {"neutralization": "SUBINDUSTRY", "truncation": 0.08, "decay": 8},
         ],
     )
     monkeypatch.setattr(
-        "alpha.core.executor.build_expression_candidates",
+        "alpha.core.template_planning.build_expression_candidates",
         lambda *args, **kwargs: [
             TemplateCandidate(
                 "strong_template",
@@ -160,11 +160,11 @@ def test_build_pending_templates_uses_explicit_template_role(
 
 def test_build_pending_templates_ignores_persisted_registry_recommendation(monkeypatch) -> None:
     monkeypatch.setattr(
-        "alpha.core.executor.build_setting_variants",
+        "alpha.core.template_planning.build_setting_variants",
         lambda *args, **kwargs: [{"neutralization": "SUBINDUSTRY", "truncation": 0.08}],
     )
     monkeypatch.setattr(
-        "alpha.core.executor.build_expression_candidates",
+        "alpha.core.template_planning.build_expression_candidates",
         lambda *args, **kwargs: [
             TemplateCandidate(
                 "persisted_core_template",
@@ -222,11 +222,11 @@ def test_build_pending_templates_dedupes_same_expression_variant_across_template
     monkeypatch,
 ) -> None:
     monkeypatch.setattr(
-        "alpha.core.executor.build_setting_variants",
+        "alpha.core.template_planning.build_setting_variants",
         lambda *args, **kwargs: [{"neutralization": "SUBINDUSTRY", "truncation": 0.08}],
     )
     monkeypatch.setattr(
-        "alpha.core.executor.build_expression_candidates",
+        "alpha.core.template_planning.build_expression_candidates",
         lambda *args, **kwargs: [
             TemplateCandidate(
                 "template_a",
@@ -295,11 +295,11 @@ def test_build_pending_templates_skips_attempted_expression_variant_across_templ
     monkeypatch,
 ) -> None:
     monkeypatch.setattr(
-        "alpha.core.executor.build_setting_variants",
+        "alpha.core.template_planning.build_setting_variants",
         lambda *args, **kwargs: [{"neutralization": "SUBINDUSTRY", "truncation": 0.08}],
     )
     monkeypatch.setattr(
-        "alpha.core.executor.build_expression_candidates",
+        "alpha.core.template_planning.build_expression_candidates",
         lambda *args, **kwargs: [
             TemplateCandidate(
                 "template_b",
@@ -365,11 +365,11 @@ def test_build_pending_templates_uses_template_metadata_without_registry_overrid
     monkeypatch,
 ) -> None:
     monkeypatch.setattr(
-        "alpha.core.executor.build_setting_variants",
+        "alpha.core.template_planning.build_setting_variants",
         lambda *args, **kwargs: [{"neutralization": "SUBINDUSTRY", "truncation": 0.08}],
     )
     monkeypatch.setattr(
-        "alpha.core.executor.build_expression_candidates",
+        "alpha.core.template_planning.build_expression_candidates",
         lambda *args, **kwargs: [
             TemplateCandidate(
                 "manual_override_template",
@@ -436,11 +436,11 @@ def test_build_pending_templates_uses_template_metadata_without_registry_overrid
 
 def test_event_field_exploration_uses_one_seed_template(monkeypatch) -> None:
     monkeypatch.setattr(
-        "alpha.core.executor.build_setting_variants",
+        "alpha.core.template_planning.build_setting_variants",
         lambda *args, **kwargs: [{"neutralization": "SUBINDUSTRY", "truncation": 0.08}],
     )
     monkeypatch.setattr(
-        "alpha.core.executor.build_expression_candidates",
+        "alpha.core.template_planning.build_expression_candidates",
         lambda *args, **kwargs: [
             TemplateCandidate(
                 "vec_avg_ts_rank_63",
@@ -512,11 +512,11 @@ def test_event_field_exploration_uses_one_seed_template(monkeypatch) -> None:
 
 def test_build_pending_templates_does_not_hard_demote_from_global_stats(monkeypatch) -> None:
     monkeypatch.setattr(
-        "alpha.core.executor.build_setting_variants",
+        "alpha.core.template_planning.build_setting_variants",
         lambda *args, **kwargs: [{"neutralization": "SUBINDUSTRY", "truncation": 0.08}],
     )
     monkeypatch.setattr(
-        "alpha.core.executor.build_expression_candidates",
+        "alpha.core.template_planning.build_expression_candidates",
         lambda *args, **kwargs: [
             TemplateCandidate(
                 "weak_template",

@@ -36,11 +36,11 @@ from ..generators.templates.metadata import (
 from ..generators.templates.priority import cap_templates_per_family
 from ..generators.variants import build_setting_variants
 from ..models.domain import (
-    FieldTestResult,
     SettingsVariant,
     TemplateCandidate,
     TemplateField,
 )
+from ..models.runtime_options import TemplateBuildOptions
 from ..models.runtime_protocols import SimulationSettingsArgs, TemplateFeedback
 from ..policy.expression import get_dataset_expression_policy, resolve_feedback_stage
 from ..runtime.contexts import PendingTemplateEntry, TemplateBuildContext
@@ -130,7 +130,7 @@ def _resolve_field_planning_policy(
 def _resolve_template_limits(
     *,
     field_name: str,
-    options,
+    options: TemplateBuildOptions,
     expression_policy: DatasetExpressionPolicy,
 ) -> tuple[int, int]:
     """Resolve the effective field/family template caps for one field."""
@@ -163,7 +163,6 @@ def resolve_field_template_candidates(
     build_ctx: TemplateBuildContext,
     field: TemplateField,
     *,
-    prior_results: Sequence[FieldTestResult],
     services: TemplatePlanningServices | None = None,
 ) -> tuple[list[TemplateCandidate], TemplateFeedback, DatasetExpressionPolicy]:
     """为单个字段解析模板候选、字段反馈和表达式策略。"""
@@ -178,7 +177,6 @@ def resolve_field_template_candidates(
         options=options,
         expression_policy=expression_policy,
     )
-    del prior_results
     templates = active_services.build_expression_candidates(
         field,
         build_ctx,

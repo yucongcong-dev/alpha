@@ -31,7 +31,7 @@ def test_scheduler_dump_results_shrinks_next_template_queue(monkeypatch, tmp_pat
     invalidate_blacklist_path_cache()
     monkeypatch.setattr("alpha.io.common.DATASETS_DIR", tmp_path / "datasets")
     monkeypatch.setattr(
-        "alpha.core.executor.build_setting_variants",
+        "alpha.core.template_planning.build_setting_variants",
         lambda *args, **kwargs: [{"neutralization": "SUBINDUSTRY", "truncation": 0.08}],
     )
 

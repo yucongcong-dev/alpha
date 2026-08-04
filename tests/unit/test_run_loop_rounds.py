@@ -572,8 +572,6 @@ def test_dispatch_stops_at_total_simulation_budget_without_aborting_pending() ->
 
     assert stopped is True
     assert context.scheduled_simulations == 1
-    assert (
-        context.run_ctx.execution_state.future_queue.scheduling_stop_signal.is_set() is False
-    )
+    assert context.run_ctx.execution_state.future_queue.scheduling_stop_signal.is_set() is False
     assert context.run_ctx.execution_state.future_queue.stop_signal.is_set() is False
     mock_submit.assert_called_once()

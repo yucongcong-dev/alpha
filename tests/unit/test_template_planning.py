@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from alpha.config.models import DatasetExpressionPolicy, FeedbackLoopPolicy, FeedbackPhasePolicy
-import alpha.core.executor as executor
 import alpha.core.template_planning as template_planning
 from alpha.core.template_planning import build_pending_template_variants
 from alpha.models.domain import TemplateCandidate
@@ -22,20 +21,6 @@ _DEFAULT_SIM_SETTINGS = {
     "nan_handling": "OFF",
     "language": "FASTEXPR",
 }
-
-
-def test_executor_planning_services_read_current_module_dependencies(monkeypatch) -> None:
-    """Executor-level monkeypatch/plugin overrides should remain late-bound."""
-
-    def variants(*_args, **_kwargs):
-        return []
-
-    monkeypatch.setattr(executor, "build_setting_variants", variants)
-
-    services = executor.build_executor_template_planning_services()
-
-    assert services.build_setting_variants is variants
-    assert services.build_expression_candidates is executor.build_expression_candidates
 
 
 def test_low_level_planning_services_read_current_module_dependencies(monkeypatch) -> None:
