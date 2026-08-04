@@ -13,9 +13,10 @@
 - 真实运行只属于 `src/alpha/app/bootstrap.py`、`src/alpha/app/run_loop.py` 和
   `src/alpha/app/finalize.py`。`run_loop.py` 不应包含 dry-run 行为。
 - dry-run 和真实 bootstrap 共用的本地支持资源加载入口是
-  `src/alpha/app/bootstrap.py` 里的 `load_supporting_resources()`；dry-run 从
-  `src/alpha/app/planning.py` 调用它时，差异必须通过参数显式表达，例如
-  `repair_corrupt_summary` 和黑名单日志。
+  `src/alpha/app/bootstrap_supporting_resources.py` 里的
+  `load_supporting_resources()`。dry-run 从 `src/alpha/app/planning.py` 直接调用；
+  真实 bootstrap 通过同模块的 `load_bootstrap_supporting_resources()` wrapper 调用。
+  两条路径的差异必须通过参数显式表达，例如 `repair_corrupt_summary` 和黑名单日志。
 
 ## 配置边界
 
