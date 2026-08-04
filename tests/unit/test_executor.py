@@ -41,6 +41,7 @@ def _args() -> SimpleNamespace:
         max_trade="OFF",
         max_templates_per_field=6,
         max_templates_per_family=2,
+        max_total_simulations=0,
         legacy_similarity_penalty=42,
         start_date=None,
         end_date=None,
@@ -283,6 +284,8 @@ def test_print_dry_run_plan_counts_only_actionable_fields(caplog) -> None:
         return [entry, entry], 1, 2
 
     caplog.set_level(logging.INFO)
+    args = _args()
+    args.max_total_simulations = 1
     with (
         patch("alpha.core.executor.build_template_build_context", return_value=object()),
         patch(
@@ -295,7 +298,7 @@ def test_print_dry_run_plan_counts_only_actionable_fields(caplog) -> None:
         ),
     ):
         print_dry_run_plan(
-            args=_args(),
+            args=args,
             fields=fields,
             filters=RunFilters(),
             template_library={},
@@ -307,11 +310,13 @@ def test_print_dry_run_plan_counts_only_actionable_fields(caplog) -> None:
 
     messages = [record.getMessage() for record in caplog.records]
     assert "[dry-run] planned_fields=1" in messages
-    assert "[dry-run] planned_simulations=2" in messages
+    assert "[dry-run] eligible_simulations=2" in messages
+    assert "[dry-run] scheduled_simulations=1" in messages
+    assert "[dry-run] budget_truncated=true" in messages
     assert "[dry-run] filtered_templates=1" in messages
     assert (
         "[dry-run] explain_summary fields_total=3 planned=1 skipped=1 "
-        "unactionable=1 templates_planned=2 templates_filtered=1"
+        "unactionable=1 templates_eligible=2 templates_scheduled=1 templates_filtered=1"
     ) in messages
     assert (
         "[dry-run] explain_fields skipped_queue=0 skipped_include=0 "

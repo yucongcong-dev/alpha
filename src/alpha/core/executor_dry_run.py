@@ -135,7 +135,7 @@ def print_dry_run_plan(
 ) -> None:
     """Print the planned field/template queue without creating simulations."""
     planned_fields = 0
-    planned_templates = 0
+    eligible_templates = 0
     filtered_templates = 0
     unactionable_fields = 0
     explain_counts: Counter[str] = Counter()
@@ -196,7 +196,7 @@ def print_dry_run_plan(
             continue
         planned_fields += 1
         explain_counts["field_planned"] += 1
-        planned_templates += len(pending_templates)
+        eligible_templates += len(pending_templates)
         filtered_templates += filtered_count
         for entry in pending_templates:
             if len(samples) >= sample_limit:
@@ -212,21 +212,31 @@ def print_dry_run_plan(
                 }
             )
 
+    simulation_budget = max(0, int(getattr(args, "max_total_simulations", 0) or 0))
+    scheduled_templates = (
+        min(eligible_templates, simulation_budget) if simulation_budget > 0 else eligible_templates
+    )
+    budget_truncated = scheduled_templates < eligible_templates
+
     log.info("[dry-run] simulation creation is disabled; this is a plan only")
     log.info("[dry-run] planned_fields=%d", planned_fields)
-    log.info("[dry-run] planned_simulations=%d", planned_templates)
+    log.info("[dry-run] eligible_simulations=%d", eligible_templates)
+    log.info("[dry-run] scheduled_simulations=%d", scheduled_templates)
+    log.info("[dry-run] budget_truncated=%s", str(budget_truncated).lower())
     log.info("[dry-run] filtered_templates=%d", filtered_templates)
     log.info("[dry-run] unactionable_fields=%d", unactionable_fields)
     log.info("[dry-run] existing_results=%d", len(execution_state.result_ledger.results))
     log.info("[dry-run] attempted_keys=%d", len(execution_state.attempted_keys))
     log.info(
         "[dry-run] explain_summary fields_total=%d planned=%d skipped=%d "
-        "unactionable=%d templates_planned=%d templates_filtered=%d",
+        "unactionable=%d templates_eligible=%d templates_scheduled=%d "
+        "templates_filtered=%d",
         len(fields),
         explain_counts["field_planned"],
         explain_counts["field_skipped"],
         explain_counts["field_unactionable"],
-        planned_templates,
+        eligible_templates,
+        scheduled_templates,
         explain_counts["templates_filtered"],
     )
     log.info(
