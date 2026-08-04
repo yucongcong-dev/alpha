@@ -91,7 +91,7 @@ expression_policies:
       resimulate:
         min_attempted_templates: 0
         min_best_score: -999.0
-        settings_variant_budget: 1
+        settings_variant_budget: 5
         enable_template_pruning: false
     account_template_boost: 0
     high_conviction_ratio_priority_boost: 0

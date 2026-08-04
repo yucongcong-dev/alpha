@@ -175,6 +175,8 @@ def test_fundamental6_default_policy_is_loaded_from_settings_yaml() -> None:
     assert policy.ratio_delta_rank_windows == ()
     assert policy.ratio_delta_over_std_windows == ()
     assert policy.ratio_partner_candidates == {}
+    assert policy.feedback_loop_policy.generate.settings_variant_budget == 1
+    assert policy.feedback_loop_policy.resimulate.settings_variant_budget == 5
     assert policy.ratio_keywords == {}
     assert policy.preferred_partner_score_bonuses == {}
     assert policy.preferred_field_order == {"cashflow_op": 0}
@@ -199,7 +201,6 @@ def test_fundamental6_default_policy_is_loaded_from_settings_yaml() -> None:
     )
     assert policy.template_priority_penalties == {}
     assert policy.template_prefix_penalties == {}
-    assert policy.feedback_loop_policy.resimulate.settings_variant_budget == 1
     assert policy.feedback_loop_policy.resimulate.enable_template_pruning is False
     assert policy.feedback_loop_policy.resimulate.preferred_template_stages == ()
 

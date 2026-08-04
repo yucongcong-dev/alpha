@@ -154,7 +154,7 @@ def test_build_pending_templates_uses_explicit_template_role(
 
     assert total == 1
     assert disabled == 0
-    assert len(pending) == 1
+    assert len(pending) == 2
     assert all(item.template_role == "default_seed" for item in pending)
 
 

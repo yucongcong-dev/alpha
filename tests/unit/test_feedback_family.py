@@ -92,7 +92,7 @@ def test_feedback_stage_and_settings_budget_advance_for_strong_history() -> None
 
     assert resolve_feedback_stage(feedback, policy.feedback_loop_policy) == "resimulate"
     assert choose_settings_variant_budget(None, expression_policy=policy) == 1
-    assert choose_settings_variant_budget(feedback, expression_policy=policy) == 1
+    assert choose_settings_variant_budget(feedback, expression_policy=policy) == 5
 
 
 def test_build_historical_run_state_uses_dataset_feedback_across_runs(tmp_path) -> None:
