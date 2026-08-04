@@ -210,12 +210,13 @@ def prepare_bootstrap_resources(
         effective_run_paths=effective_run_paths,
         services=supporting_services,
     )
+    existing_results = supporting_resources.historical_state.existing_results
     refreshed_results, refreshed_count = refresh_pending_check_results(
         bootstrap_client,
-        supporting_resources.historical_state.existing_results,
+        existing_results,
         retries=field_options.check_submission_retries,
     )
-    if refreshed_count:
+    if refreshed_results != existing_results:
         supporting_resources = replace(
             supporting_resources,
             historical_state=rebuild_historical_run_state(
@@ -224,10 +225,11 @@ def prepare_bootstrap_resources(
                 refresh_feedback=paths.feedback_output == paths.output_file,
             ),
         )
-        logger.info(
-            "[check-submission-resume] refreshed %d historical pending results",
-            refreshed_count,
-        )
+        if refreshed_count:
+            logger.info(
+                "[check-submission-resume] refreshed %d historical pending results",
+                refreshed_count,
+            )
     fields = load_bootstrap_fields(
         dataset_id=dataset_id,
         bootstrap_client=bootstrap_client,

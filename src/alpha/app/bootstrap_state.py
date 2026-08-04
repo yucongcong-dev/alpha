@@ -5,7 +5,9 @@ bootstrap 执行态与历史结果装配辅助模块。
 from __future__ import annotations
 
 from dataclasses import replace
+from datetime import datetime, timezone
 import logging
+import time
 
 from ..analysis.results_persistence import dump_results_incremental
 from ..api.client import BrainClient
@@ -23,6 +25,11 @@ from ..runtime.state import ExecutionState
 logger = logging.getLogger(__name__)
 
 DEFAULT_PENDING_CHECK_REFRESH_LIMIT = 20
+DEFAULT_PENDING_CHECK_REFRESH_MAX_SECONDS = 30.0
+
+
+def _utc_now_iso() -> str:
+    return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
 
 
 def create_execution_state(
@@ -97,19 +104,31 @@ def refresh_pending_check_results(
     *,
     retries: int,
     refresh_limit: int = DEFAULT_PENDING_CHECK_REFRESH_LIMIT,
+    max_refresh_seconds: float = DEFAULT_PENDING_CHECK_REFRESH_MAX_SECONDS,
 ) -> tuple[list[FieldTestResult], int]:
     """Resolve historical PENDING checks without recreating their simulations."""
     refreshed_results = list(results)
     refreshed_count = 0
     attempted_count = 0
-    deferred_count = 0
-    for index, result in enumerate(results):
-        if not has_pending_checks(result) or not result.alpha_id:
-            continue
+    started_at = time.monotonic()
+    pending_results = [
+        (index, result)
+        for index, result in enumerate(results)
+        if has_pending_checks(result) and result.alpha_id
+    ]
+    pending_results.sort(
+        key=lambda item: (
+            item[1].updated_at or item[1].created_at,
+            item[0],
+        )
+    )
+    for index, result in pending_results:
         if refresh_limit > 0 and attempted_count >= refresh_limit:
-            deferred_count += 1
-            continue
+            break
+        if max_refresh_seconds > 0 and time.monotonic() - started_at >= max_refresh_seconds:
+            break
         attempted_count += 1
+        checked_at = _utc_now_iso()
         try:
             submittable, message, failed_checks = check_submission_with_retry(
                 client,
@@ -124,7 +143,16 @@ def refresh_pending_check_results(
                 result.template_name,
                 exc,
             )
+            refreshed_results[index] = replace(result, updated_at=checked_at)
             continue
+        refreshed_results[index] = replace(
+            result,
+            submittable=submittable,
+            message=message,
+            failed_stage=None,
+            failed_checks=failed_checks,
+            updated_at=checked_at,
+        )
         if submittable is None:
             logger.info(
                 "[check-submission-resume] still pending alpha_id=%s field=%s template=%s",
@@ -133,13 +161,6 @@ def refresh_pending_check_results(
                 result.template_name,
             )
             continue
-        refreshed_results[index] = replace(
-            result,
-            submittable=submittable,
-            message=message,
-            failed_stage=None,
-            failed_checks=failed_checks,
-        )
         refreshed_count += 1
         logger.info(
             "[check-submission-resume] resolved alpha_id=%s field=%s template=%s submittable=%s",
@@ -148,10 +169,13 @@ def refresh_pending_check_results(
             result.template_name,
             submittable,
         )
+    deferred_count = len(pending_results) - attempted_count
     if deferred_count:
         logger.info(
-            "[check-submission-resume] deferred %d pending results after startup limit=%d",
+            "[check-submission-resume] deferred %d pending results after startup budget "
+            "limit=%d max_seconds=%.1f",
             deferred_count,
             refresh_limit,
+            max_refresh_seconds,
         )
     return refreshed_results, refreshed_count
