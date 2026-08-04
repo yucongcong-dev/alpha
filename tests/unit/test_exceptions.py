@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from alpha.exceptions import BrainAPIError, BrainQueueBusyError, BrainRateLimitError
+from alpha.exceptions import BrainAPIError, BrainHTTPError, BrainQueueBusyError, BrainRateLimitError
 
 
 class TestBrainAPIError:
@@ -51,6 +51,22 @@ class TestBrainRateLimitError:
 
     def test_is_brain_api_error(self) -> None:
         assert isinstance(BrainRateLimitError("x"), BrainAPIError)
+
+
+class TestBrainHTTPError:
+    def test_classifies_permanent_client_error(self) -> None:
+        error = BrainHTTPError("not found", status=404)
+
+        assert error.status == 404
+        assert error.is_permanent_client_error is True
+        assert error.is_transient is False
+
+    @pytest.mark.parametrize("status", [408, 409, 425, 429, 500, 503])
+    def test_classifies_transient_status(self, status: int) -> None:
+        error = BrainHTTPError("retry later", status=status)
+
+        assert error.is_transient is True
+        assert error.is_permanent_client_error is False
 
 
 class TestBrainQueueBusyError:

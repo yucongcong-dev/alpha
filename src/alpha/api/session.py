@@ -14,7 +14,7 @@ from ..config.constants import (
     DEFAULT_HEADERS,
 )
 from ..config.runtime_values import get_runtime_config
-from ..exceptions import BrainAPIError, BrainRateLimitError
+from ..exceptions import BrainAPIError, BrainHTTPError, BrainRateLimitError
 from .api_types import ApiParams
 from .http_backend import HttpBackend, response_header
 from .payloads import safe_json_bytes
@@ -120,7 +120,10 @@ class BrainSessionMixin:
                 int(retry_after_seconds),
             )
         detail = safe_json_bytes(content)
-        raise BrainAPIError(f"{method} {url} failed: {status} {detail}")
+        raise BrainHTTPError(
+            f"{method} {url} failed: {status} {detail}",
+            status=status,
+        )
 
     def raw_request(
         self,

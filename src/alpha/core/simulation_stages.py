@@ -19,7 +19,7 @@ from ..config.constants import (
     SIMULATION_RETRY_WAIT,
     STATUS_SKIPPED,
 )
-from ..exceptions import BrainAPIError, BrainStopRequested
+from ..exceptions import BrainAPIError, BrainHTTPError, BrainStopRequested
 from ..generators.payload import build_simulation_payload
 from ..models.domain import (
     FailedCheck,
@@ -139,6 +139,25 @@ def check_submission_with_retry(
             )
         except BrainStopRequested:
             raise
+        except BrainHTTPError as exc:
+            if exc.is_permanent_client_error:
+                raise
+            last_result = None, "checks unavailable", []
+            logger.warning(
+                "[check-submission] alpha_id=%s attempt=%d/%d unavailable http_status=%d: %s",
+                alpha_id,
+                attempt,
+                attempts,
+                exc.status,
+                exc,
+            )
+            if attempt < attempts:
+                wait_seconds(
+                    SIMULATION_RETRY_WAIT,
+                    f"waiting for submission checks for alpha {alpha_id}",
+                    verbose=False,
+                )
+            continue
         except BrainAPIError as exc:
             last_result = None, "checks unavailable", []
             logger.warning(

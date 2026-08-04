@@ -10,6 +10,7 @@ from alpha.api.client import BrainClient
 from alpha.api.retry import login_with_retry, retry_operation
 from alpha.exceptions import (
     BrainAPIError,
+    BrainHTTPError,
     BrainQueueBusyError,
     BrainRateLimitError,
     BrainStopRequested,
@@ -89,6 +90,21 @@ def test_request_retries_server_error_then_returns(monkeypatch) -> None:
     assert waits == ["server error 503"]
 
 
+def test_request_preserves_unexpected_http_status(monkeypatch) -> None:
+    client = BrainClient("user@example.com", "secret")
+    monkeypatch.setattr(
+        client,
+        "raw_request",
+        lambda *_args, **_kwargs: (404, {}, b'{"detail": "missing"}'),
+    )
+
+    with pytest.raises(BrainHTTPError) as exc_info:
+        client.request("GET", "https://example.test", expected={200}, retries=1)
+
+    assert exc_info.value.status == 404
+    assert exc_info.value.is_permanent_client_error is True
+
+
 def test_raw_request_encodes_query_and_non_byte_data() -> None:
     client = BrainClient("user@example.com", "secret")
     captured: dict[str, Any] = {}
@@ -151,6 +167,19 @@ def test_retry_operation_does_not_repeat_terminal_api_errors(error: BrainAPIErro
         retry_operation("operation", 4, operation, retry_wait_seconds=0)
 
     assert attempts == 1
+
+
+def test_retry_operation_preserves_http_error_status() -> None:
+    error = BrainHTTPError("missing", status=404)
+
+    def operation() -> None:
+        raise error
+
+    with pytest.raises(BrainHTTPError) as exc_info:
+        retry_operation("operation", 3, operation, retry_wait_seconds=0)
+
+    assert exc_info.value is error
+    assert exc_info.value.status == 404
 
 
 def test_retry_operation_retries_transient_api_errors(monkeypatch) -> None:

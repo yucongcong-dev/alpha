@@ -36,6 +36,25 @@ class BrainTransientError(BrainAPIError):
     """Temporary transport failure that is safe for the caller to retry."""
 
 
+class BrainHTTPError(BrainAPIError):
+    """Unexpected HTTP response with a status code available for classification."""
+
+    def __init__(self, message: str, *, status: int) -> None:
+        super().__init__(message)
+        self.status = int(status)
+
+    @property
+    def is_transient(self) -> bool:
+        return self.status in {408, 409, 425, 429} or 500 <= self.status < 600
+
+    @property
+    def is_permanent_client_error(self) -> bool:
+        return 400 <= self.status < 500 and not self.is_transient
+
+    def __repr__(self) -> str:
+        return f"BrainHTTPError({self.message!r}, status={self.status!r})"
+
+
 class BrainRateLimitError(BrainAPIError):
     """API 速率限制错误。携带建议的重试等待时间。
 

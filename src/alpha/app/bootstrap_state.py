@@ -11,7 +11,9 @@ import time
 
 from ..analysis.results_persistence import dump_results, dump_results_incremental
 from ..api.client import BrainClient
+from ..config.constants import STATUS_ERROR
 from ..core.simulation_stages import check_submission_with_retry
+from ..exceptions import BrainHTTPError
 from ..io.results_store import initialize_results_journal
 from ..models.domain import FieldTestResult
 from ..models.result_predicates import has_pending_checks
@@ -158,6 +160,28 @@ def refresh_pending_check_results(
                 alpha_id,
                 retries,
             )
+        except BrainHTTPError as exc:
+            if not exc.is_permanent_client_error:
+                raise
+            refreshed_results[index] = replace(
+                result,
+                status=STATUS_ERROR,
+                submittable=False,
+                message=f"permanent check submission error: {exc}",
+                failed_stage="check_submission",
+                failed_checks=[],
+                updated_at=checked_at,
+            )
+            refreshed_count += 1
+            logger.warning(
+                "[check-submission-resume] terminal HTTP error alpha_id=%s "
+                "field=%s template=%s status=%d",
+                alpha_id,
+                result.field_id,
+                result.template_name,
+                exc.status,
+            )
+            continue
         except Exception as exc:
             logger.warning(
                 "[check-submission-resume] failed alpha_id=%s field=%s template=%s: %s",

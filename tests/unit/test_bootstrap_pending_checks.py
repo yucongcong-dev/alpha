@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 from alpha.app.bootstrap_state import refresh_pending_check_results
+from alpha.config.constants import STATUS_ERROR
+from alpha.exceptions import BrainHTTPError
 from alpha.models.domain import FailedCheck, FieldTestResult
 
 
@@ -57,6 +59,25 @@ def test_refresh_pending_check_results_keeps_still_pending_result(monkeypatch) -
     assert count == 0
     assert refreshed[0].submittable is None
     assert refreshed[0].updated_at
+
+
+def test_refresh_pending_check_results_terminalizes_permanent_http_error(monkeypatch) -> None:
+    def _missing(*_args, **_kwargs):
+        raise BrainHTTPError("GET /alphas/missing/check failed: 404", status=404)
+
+    monkeypatch.setattr(
+        "alpha.app.bootstrap_state.check_submission_with_retry",
+        _missing,
+    )
+
+    refreshed, count = refresh_pending_check_results(object(), [_pending_result()], retries=2)
+
+    assert count == 1
+    assert refreshed[0].status == STATUS_ERROR
+    assert refreshed[0].submittable is False
+    assert refreshed[0].failed_stage == "check_submission"
+    assert refreshed[0].failed_checks == []
+    assert "404" in refreshed[0].message
 
 
 def test_refresh_pending_check_results_skips_rows_without_alpha_id(monkeypatch) -> None:

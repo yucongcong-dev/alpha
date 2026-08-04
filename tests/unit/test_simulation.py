@@ -36,7 +36,7 @@ from alpha.core.simulation_stages import (
     run_simulation_create_stage,
     run_simulation_poll_stage,
 )
-from alpha.exceptions import BrainStopRequested, BrainTransientError
+from alpha.exceptions import BrainHTTPError, BrainStopRequested, BrainTransientError
 from alpha.models.domain import (
     FailedCheck,
     FieldTestContext,
@@ -378,6 +378,30 @@ class TestCheckSubmissionWithRetry:
         assert result == (None, "checks unavailable", [])
         assert transport_attempts == [2, 2]
         assert waits == ["waiting for submission checks for alpha alpha_1"]
+
+    def test_permanent_http_failure_is_not_left_pending(self, monkeypatch) -> None:
+        def _retry(*_args, **_kwargs):
+            raise BrainHTTPError("GET /alphas/missing/check failed: 404", status=404)
+
+        monkeypatch.setattr("alpha.core.simulation_stages.retry_operation", _retry)
+
+        with pytest.raises(BrainHTTPError) as exc_info:
+            check_submission_with_retry(object(), "missing", retries=3)
+
+        assert exc_info.value.status == 404
+
+    def test_transient_http_failure_remains_unresolved(self, monkeypatch) -> None:
+        def _retry(*_args, **_kwargs):
+            raise BrainHTTPError("GET /alphas/a/check failed: 503", status=503)
+
+        monkeypatch.setattr("alpha.core.simulation_stages.retry_operation", _retry)
+        monkeypatch.setattr("alpha.core.simulation_stages.wait_seconds", lambda *_a, **_k: None)
+
+        assert check_submission_with_retry(object(), "a", retries=1) == (
+            None,
+            "checks unavailable",
+            [],
+        )
 
     def test_unavailable_checks_are_polled_until_available(self, monkeypatch) -> None:
         responses = iter(
