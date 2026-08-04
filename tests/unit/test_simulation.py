@@ -36,7 +36,7 @@ from alpha.core.simulation_stages import (
     run_simulation_create_stage,
     run_simulation_poll_stage,
 )
-from alpha.exceptions import BrainStopRequested
+from alpha.exceptions import BrainStopRequested, BrainTransientError
 from alpha.models.domain import (
     FailedCheck,
     FieldTestContext,
@@ -357,7 +357,27 @@ class TestCheckSubmissionWithRetry:
 
         assert result == (True, "checks passed", [])
         assert waits == ["waiting for submission checks for alpha alpha_1"]
-        assert transport_attempts == [1, 1]
+        assert transport_attempts == [2, 2]
+
+    def test_api_failure_remains_unresolved(self, monkeypatch) -> None:
+        transport_attempts: list[int] = []
+        waits: list[str] = []
+
+        def _retry(_name, attempts, _operation, **_kwargs):
+            transport_attempts.append(attempts)
+            raise BrainTransientError("network unavailable")
+
+        monkeypatch.setattr("alpha.core.simulation_stages.retry_operation", _retry)
+        monkeypatch.setattr(
+            "alpha.core.simulation_stages.wait_seconds",
+            lambda _seconds, reason, **_kwargs: waits.append(reason),
+        )
+
+        result = check_submission_with_retry(object(), "alpha_1", retries=2)
+
+        assert result == (None, "checks unavailable", [])
+        assert transport_attempts == [2, 2]
+        assert waits == ["waiting for submission checks for alpha alpha_1"]
 
     def test_unavailable_checks_are_polled_until_available(self, monkeypatch) -> None:
         responses = iter(

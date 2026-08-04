@@ -19,7 +19,7 @@ from ..config.constants import (
     SIMULATION_RETRY_WAIT,
     STATUS_SKIPPED,
 )
-from ..exceptions import BrainStopRequested
+from ..exceptions import BrainAPIError, BrainStopRequested
 from ..generators.payload import build_simulation_payload
 from ..models.domain import (
     FailedCheck,
@@ -45,6 +45,7 @@ from .simulation_results import handle_stage_error
 logger = logging.getLogger(__name__)
 
 _SIM_ID_REGEX: re.Pattern[str] = re.compile(r"/simulations/([^/]+)", re.IGNORECASE)
+_CHECK_SUBMISSION_TRANSPORT_RETRIES = 2
 
 
 def _int_arg(args: object, name: str, default: int = 0) -> int:
@@ -129,12 +130,31 @@ def check_submission_with_retry(
         [],
     )
     for attempt in range(1, attempts + 1):
-        submission_check = retry_operation(
-            "check submission",
-            1,
-            lambda: client.check_alpha_submission(alpha_id),
-            retry_wait_seconds=SIMULATION_RETRY_WAIT,
-        )
+        try:
+            submission_check = retry_operation(
+                "check submission",
+                _CHECK_SUBMISSION_TRANSPORT_RETRIES,
+                lambda: client.check_alpha_submission(alpha_id),
+                retry_wait_seconds=SIMULATION_RETRY_WAIT,
+            )
+        except BrainStopRequested:
+            raise
+        except BrainAPIError as exc:
+            last_result = None, "checks unavailable", []
+            logger.warning(
+                "[check-submission] alpha_id=%s attempt=%d/%d unavailable: %s",
+                alpha_id,
+                attempt,
+                attempts,
+                exc,
+            )
+            if attempt < attempts:
+                wait_seconds(
+                    SIMULATION_RETRY_WAIT,
+                    f"waiting for submission checks for alpha {alpha_id}",
+                    verbose=False,
+                )
+            continue
         checks = extract_checks(submission_check)
         submittable = is_submittable_from_checks(
             [parse_failed_check(c) for c in checks if isinstance(c, dict)]
