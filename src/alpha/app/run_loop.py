@@ -153,6 +153,19 @@ def run_field_test_loop(
             )
             raise
         except Exception:
+            execution_state.future_queue.stop_signal.set()
+            cancelled = cancel_unstarted_futures(execution_state)
+            executor.shutdown(wait=True, cancel_futures=True)
+            executor_shutdown = True
+            logger.warning(
+                "[abort] workers stopped after runtime exception cancelled=%d resumable=%d",
+                cancelled,
+                sum(
+                    1
+                    for pending in execution_state.future_queue.pending_futures.values()
+                    if pending.simulation_location
+                ),
+            )
             completed_field_index = (
                 0 if field_template_batch_size > 0 else field_resume_positions.get(last_field_id, 0)
             )
