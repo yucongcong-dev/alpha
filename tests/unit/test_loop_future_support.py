@@ -11,6 +11,7 @@ from alpha.app.loop_future_support import (
     cancel_unstarted_futures,
     submit_resumable_futures,
     submit_template_future,
+    wait_for_inflight_simulation_metadata,
 )
 from alpha.models.domain import FieldTestResult, SettingsVariant, TemplateField
 from alpha.models.runtime import ExecutionState, PendingFutureContext
@@ -63,6 +64,43 @@ def test_cancel_unstarted_futures_preserves_running_simulations() -> None:
     assert cancelled == 1
     assert queued.cancelled() is True
     assert execution_state.future_queue.pending_futures == {running: running_context}
+
+
+def test_wait_for_inflight_simulation_metadata_observes_created_location(monkeypatch) -> None:
+    execution_state = _execution_state()
+    running: Future[FieldTestResult] = Future()
+    assert running.set_running_or_notify_cancel() is True
+    context = PendingFutureContext(field_id="running")
+    execution_state.future_queue.pending_futures = {running: context}
+    monotonic_values = iter([0.0, 0.0, 0.1])
+
+    monkeypatch.setattr(
+        "alpha.app.loop_future_support.time.monotonic",
+        lambda: next(monotonic_values),
+    )
+    monkeypatch.setattr(
+        "alpha.app.loop_future_support.time.sleep",
+        lambda _seconds: setattr(context, "simulation_location", "/simulations/sim-1"),
+    )
+
+    assert wait_for_inflight_simulation_metadata(execution_state, timeout_seconds=1.0) == 0
+
+
+def test_wait_for_inflight_simulation_metadata_reports_timeout(monkeypatch) -> None:
+    execution_state = _execution_state()
+    running: Future[FieldTestResult] = Future()
+    assert running.set_running_or_notify_cancel() is True
+    context = PendingFutureContext(field_id="running")
+    execution_state.future_queue.pending_futures = {running: context}
+    monotonic_values = iter([0.0, 0.0, 1.0])
+
+    monkeypatch.setattr(
+        "alpha.app.loop_future_support.time.monotonic",
+        lambda: next(monotonic_values),
+    )
+    monkeypatch.setattr("alpha.app.loop_future_support.time.sleep", lambda _seconds: None)
+
+    assert wait_for_inflight_simulation_metadata(execution_state, timeout_seconds=0.5) == 1
 
 
 def test_submit_template_future_records_created_simulation_location() -> None:

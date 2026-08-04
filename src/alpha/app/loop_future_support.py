@@ -23,10 +23,34 @@ from .run_loop_resume import save_terminal_pipeline_state
 
 logger = logging.getLogger(__name__)
 
+INTERRUPT_METADATA_GRACE_SECONDS = 2.0
+INTERRUPT_METADATA_POLL_SECONDS = 0.05
+
 
 def cancel_unstarted_futures(execution_state: ExecutionState) -> int:
     """Cancel futures that have not started and remove their non-resumable metadata."""
     return execution_state.future_queue.cancel_unstarted()
+
+
+def wait_for_inflight_simulation_metadata(
+    execution_state: ExecutionState,
+    *,
+    timeout_seconds: float = INTERRUPT_METADATA_GRACE_SECONDS,
+) -> int:
+    """Briefly wait for running create requests to publish resumable metadata."""
+    deadline = time.monotonic() + max(0.0, timeout_seconds)
+    while True:
+        unresolved = [
+            (future, context)
+            for future, context in execution_state.future_queue.pending_futures.items()
+            if future.running() and not future.done() and not context.simulation_location
+        ]
+        if not unresolved:
+            return 0
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            return len(unresolved)
+        time.sleep(min(INTERRUPT_METADATA_POLL_SECONDS, remaining))
 
 
 def _drain_completed_cycle(

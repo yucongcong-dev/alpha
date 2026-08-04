@@ -12,6 +12,9 @@ from ..runtime.state import InitializedRunContext
 from .loop_future_support import cancel_unstarted_futures as cancel_unstarted_futures
 from .loop_future_support import drain_remaining_futures as drain_remaining_futures
 from .loop_future_support import submit_resumable_futures as submit_resumable_futures
+from .loop_future_support import (
+    wait_for_inflight_simulation_metadata as wait_for_inflight_simulation_metadata,
+)
 from .run_loop_feedback import refresh_runtime_feedback as refresh_runtime_feedback
 from .run_loop_paths import (
     create_template_build_context as create_template_build_context,
@@ -129,14 +132,16 @@ def run_field_test_loop(
             cancelled = cancel_unstarted_futures(execution_state)
             executor.shutdown(wait=False, cancel_futures=True)
             executor_shutdown = True
+            unresolved_metadata = wait_for_inflight_simulation_metadata(execution_state)
             logger.warning(
-                "[abort] stopping workers cancelled=%d resumable=%d",
+                "[abort] stopping workers cancelled=%d resumable=%d unresolved_metadata=%d",
                 cancelled,
                 sum(
                     1
                     for pending in execution_state.future_queue.pending_futures.values()
                     if pending.simulation_location
                 ),
+                unresolved_metadata,
             )
             save_runtime_checkpoint(
                 state_file=state_file,
