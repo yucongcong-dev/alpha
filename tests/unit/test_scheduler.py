@@ -531,7 +531,8 @@ def test_drain_completed_futures_sets_stop_signal_and_cancels_unstarted_future(t
                 runtime_state=RuntimeConcurrencyState(max_workers=1, runtime_max_workers=1),
             )
 
-        assert execution_state.future_queue.stop_signal.is_set() is True
+        assert execution_state.future_queue.scheduling_stop_signal.is_set() is True
+        assert execution_state.future_queue.stop_signal.is_set() is False
         assert queued_future not in execution_state.future_queue.pending_futures
         blocker.cancel()
 
@@ -595,6 +596,7 @@ def test_drain_completed_futures_ignores_historical_submittable_baseline() -> No
             runtime_state=RuntimeConcurrencyState(max_workers=1, runtime_max_workers=1),
         )
 
+    assert execution_state.future_queue.scheduling_stop_signal.is_set() is False
     assert execution_state.future_queue.stop_signal.is_set() is False
     assert queued_future in execution_state.future_queue.pending_futures
     assert queued_future.cancelled() is False

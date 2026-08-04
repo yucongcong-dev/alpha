@@ -48,7 +48,7 @@ def apply_drain_state_decision(
 ) -> None:
     """Apply a previously computed post-persistence scheduler decision."""
     if decision.activate_stop_signal:
-        execution_state.future_queue.stop_signal.set()
+        execution_state.future_queue.scheduling_stop_signal.set()
         cancel_unstarted_pending_futures(execution_state, log=log)
 
     _queue.apply_queue_busy_decision(

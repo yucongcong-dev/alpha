@@ -276,7 +276,8 @@ def test_stop_after_submittable_stops_before_next_field() -> None:
         result = execute_schedule_round(context, round_index=1)
 
     assert result.stop_requested is True
-    assert context.run_ctx.execution_state.future_queue.stop_signal.is_set()
+    assert context.run_ctx.execution_state.future_queue.scheduling_stop_signal.is_set()
+    assert context.run_ctx.execution_state.future_queue.stop_signal.is_set() is False
     mock_schedule.assert_not_called()
 
 
@@ -512,10 +513,11 @@ def test_dispatch_honors_stop_capacity_and_success_paths() -> None:
     )
 
     assert _dispatch_templates_for_field(**kwargs) is True
-    assert context.run_ctx.execution_state.future_queue.stop_signal.is_set()
+    assert context.run_ctx.execution_state.future_queue.scheduling_stop_signal.is_set()
+    assert context.run_ctx.execution_state.future_queue.stop_signal.is_set() is False
 
     context.scheduler_options = SchedulerControlOptions(stop_after_submittable=0)
-    context.run_ctx.execution_state.future_queue.stop_signal.clear()
+    context.run_ctx.execution_state.future_queue.scheduling_stop_signal.clear()
     with (
         patch("alpha.app.run_loop_rounds.maybe_restore_runtime_concurrency"),
         patch("alpha.app.run_loop_rounds.drain_until_capacity", return_value=False),
@@ -570,5 +572,8 @@ def test_dispatch_stops_at_total_simulation_budget_without_aborting_pending() ->
 
     assert stopped is True
     assert context.scheduled_simulations == 1
+    assert (
+        context.run_ctx.execution_state.future_queue.scheduling_stop_signal.is_set() is False
+    )
     assert context.run_ctx.execution_state.future_queue.stop_signal.is_set() is False
     mock_submit.assert_called_once()
