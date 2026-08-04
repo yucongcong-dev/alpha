@@ -86,6 +86,25 @@ def test_wait_for_inflight_simulation_metadata_observes_created_location(monkeyp
     assert wait_for_inflight_simulation_metadata(execution_state, timeout_seconds=1.0) == 0
 
 
+def test_wait_for_inflight_simulation_metadata_waits_without_default_timeout(monkeypatch) -> None:
+    execution_state = _execution_state()
+    running: Future[FieldTestResult] = Future()
+    assert running.set_running_or_notify_cancel() is True
+    context = PendingFutureContext(field_id="running")
+    execution_state.future_queue.pending_futures = {running: context}
+
+    monkeypatch.setattr(
+        "alpha.app.loop_future_support.time.monotonic",
+        lambda: (_ for _ in ()).throw(AssertionError("default wait must not create a deadline")),
+    )
+    monkeypatch.setattr(
+        "alpha.app.loop_future_support.time.sleep",
+        lambda _seconds: setattr(context, "simulation_location", "/simulations/sim-1"),
+    )
+
+    assert wait_for_inflight_simulation_metadata(execution_state) == 0
+
+
 def test_wait_for_inflight_simulation_metadata_reports_timeout(monkeypatch) -> None:
     execution_state = _execution_state()
     running: Future[FieldTestResult] = Future()

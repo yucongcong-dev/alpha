@@ -23,7 +23,6 @@ from .run_loop_resume import save_terminal_pipeline_state
 
 logger = logging.getLogger(__name__)
 
-INTERRUPT_METADATA_GRACE_SECONDS = 2.0
 INTERRUPT_METADATA_POLL_SECONDS = 0.05
 
 
@@ -35,10 +34,10 @@ def cancel_unstarted_futures(execution_state: ExecutionState) -> int:
 def wait_for_inflight_simulation_metadata(
     execution_state: ExecutionState,
     *,
-    timeout_seconds: float = INTERRUPT_METADATA_GRACE_SECONDS,
+    timeout_seconds: float | None = None,
 ) -> int:
-    """Briefly wait for running create requests to publish resumable metadata."""
-    deadline = time.monotonic() + max(0.0, timeout_seconds)
+    """Wait for running create requests to publish metadata or finish without creating."""
+    deadline = None if timeout_seconds is None else time.monotonic() + max(0.0, timeout_seconds)
     while True:
         unresolved = [
             (future, context)
@@ -47,6 +46,9 @@ def wait_for_inflight_simulation_metadata(
         ]
         if not unresolved:
             return 0
+        if deadline is None:
+            time.sleep(INTERRUPT_METADATA_POLL_SECONDS)
+            continue
         remaining = deadline - time.monotonic()
         if remaining <= 0:
             return len(unresolved)
