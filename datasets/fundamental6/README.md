@@ -105,8 +105,14 @@ trade_when(
 ## 运行边界
 
 `fundamental6` 不再配置默认 preset，并由 dataset profile 标记为 `paused`。普通
-`--dataset-id fundamental6` 会直接拒绝运行；只有显式传入模板或 include 文件时才允许开启
-新的专项研究。不要恢复 `cashflow_submit_core`，也不要继续微调上述历史表达式。
+`--dataset-id fundamental6` 会直接拒绝运行。以下两种显式研究入口可以解除暂停：
+
+- 传入模板库、字段 include 文件或模板 include 文件，开启边界明确的专项研究；
+- 同时传入 `--full-run` 和正数 `--max-total-simulations`，开启带硬预算的全量探索。
+
+`--full-run` 只写在 YAML 中、未显式提供总预算或将预算设为 `0`，都不会解除暂停。建议先使用
+相同参数运行 `--dry-run-plan`，确认字段、模板和预计 simulation 数量。不要恢复
+`cashflow_submit_core`，也不要继续微调上述历史表达式。
 
 ## 已停止方向
 

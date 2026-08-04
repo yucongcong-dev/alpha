@@ -86,12 +86,23 @@ def _validate_paused_dataset(args: argparse.Namespace) -> None:
     profile = get_dataset_profile(args.dataset_id, get_yaml_config())
     if not bool(profile.get("paused", False)):
         return
-    if _explicit_cli_keys(args) & PRESET_CONTROLLED_PATH_KEYS:
+    explicit_keys = _explicit_cli_keys(args)
+    if explicit_keys & PRESET_CONTROLLED_PATH_KEYS:
         return
 
+    if "full_run" in explicit_keys and bool(getattr(args, "full_run", False)):
+        budget_is_explicit = "max_total_simulations" in explicit_keys
+        budget = int(getattr(args, "max_total_simulations", 0) or 0)
+        if budget_is_explicit and budget > 0:
+            return
+        raise ValueError(
+            f"dataset {args.dataset_id} is paused; --full-run requires an explicit positive "
+            "--max-total-simulations budget"
+        )
+
     raise ValueError(
-        f"dataset {args.dataset_id} is paused; provide an explicit template or include file "
-        "to start a new research run"
+        f"dataset {args.dataset_id} is paused; provide an explicit template/include file, "
+        "or use --full-run with a positive --max-total-simulations budget"
     )
 
 

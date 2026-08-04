@@ -398,6 +398,118 @@ def test_explicit_template_path_allows_paused_fundamental6(monkeypatch, tmp_path
     assert paths.include_templates_file == ""
 
 
+def test_explicit_budgeted_full_run_allows_paused_fundamental6(monkeypatch, tmp_path) -> None:
+    clear_yaml_cache()
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "alpha",
+            "--dataset-id",
+            "fundamental6",
+            "--strategy-profile",
+            "explore",
+            "--full-run",
+            "--max-total-simulations",
+            "100",
+        ],
+    )
+
+    args = parse_args()
+    paths = normalize_args_paths(args)
+
+    assert args.full_run is True
+    assert args.max_total_simulations == 100
+    assert paths.template_library_file.replace("\\", "/").endswith(
+        "/datasets/fundamental6/template.json"
+    )
+
+
+def test_budgeted_full_run_dry_plan_allows_paused_fundamental6(monkeypatch, tmp_path) -> None:
+    clear_yaml_cache()
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "alpha",
+            "--dataset-id",
+            "fundamental6",
+            "--full-run",
+            "--max-total-simulations",
+            "25",
+            "--dry-run-plan",
+        ],
+    )
+
+    args = parse_args()
+    normalize_args_paths(args)
+
+    assert args.dry_run_plan is True
+    assert args.max_total_simulations == 25
+
+
+@pytest.mark.parametrize(
+    "extra_args",
+    [
+        ["--full-run"],
+        ["--full-run", "--max-total-simulations", "0"],
+    ],
+)
+def test_paused_full_run_requires_explicit_positive_budget(
+    monkeypatch,
+    tmp_path,
+    extra_args,
+) -> None:
+    clear_yaml_cache()
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        ["alpha", "--dataset-id", "fundamental6", *extra_args],
+    )
+
+    with pytest.raises(ValueError, match="requires an explicit positive"):
+        normalize_args_paths(parse_args())
+
+
+def test_yaml_full_run_does_not_unlock_paused_dataset(monkeypatch, tmp_path) -> None:
+    clear_yaml_cache()
+    monkeypatch.chdir(tmp_path)
+    config_path = tmp_path / "settings.yaml"
+    config_path.write_text(
+        """
+global:
+  limits:
+    max_total_simulations: 100
+  runtime:
+    full_run: true
+dataset_profiles:
+  fundamental6:
+    paused: true
+""".strip(),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "alpha",
+            "--config",
+            str(config_path),
+            "--dataset-id",
+            "fundamental6",
+        ],
+    )
+
+    args = parse_args()
+    assert args.full_run is True
+    assert args.max_total_simulations == 100
+    with pytest.raises(ValueError, match="dataset fundamental6 is paused"):
+        normalize_args_paths(args)
+
+
 def test_normalize_args_paths_does_not_mutate_original_args(monkeypatch, tmp_path) -> None:
     """Path normalization should return RunPaths without rewriting raw CLI attrs in-place."""
     clear_yaml_cache()
