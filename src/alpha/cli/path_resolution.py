@@ -78,8 +78,26 @@ def _default_dataset_preset_paths(
     return paths
 
 
+def _validate_paused_dataset(args: argparse.Namespace) -> None:
+    """Require an explicit research entry before running a paused dataset."""
+    if str(getattr(args, "command", "") or "") == "clean":
+        return
+
+    profile = get_dataset_profile(args.dataset_id, get_yaml_config())
+    if not bool(profile.get("paused", False)):
+        return
+    if _explicit_cli_keys(args) & PRESET_CONTROLLED_PATH_KEYS:
+        return
+
+    raise ValueError(
+        f"dataset {args.dataset_id} is paused; provide an explicit template or include file "
+        "to start a new research run"
+    )
+
+
 def normalize_args_paths(args: argparse.Namespace) -> RunPaths:
     """按 dataset 上下文解析运行文件路径，但不修改 args 本身。"""
+    _validate_paused_dataset(args)
     scoped_paths = build_dataset_scoped_paths(
         args.dataset_id,
         region=args.region,

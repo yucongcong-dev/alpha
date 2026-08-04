@@ -311,22 +311,30 @@ def test_normalize_args_paths_uses_dataset_scoped_defaults(monkeypatch, tmp_path
     assert paths.log_file.replace("\\", "/").endswith("/datasets/pv1/runs/default/run.log")
 
 
-def test_normalize_args_paths_applies_fundamental6_default_preset(monkeypatch, tmp_path) -> None:
+def test_normalize_args_paths_rejects_paused_fundamental6_without_explicit_entry(
+    monkeypatch, tmp_path
+) -> None:
     clear_yaml_cache()
     monkeypatch.chdir(tmp_path)
     monkeypatch.setattr(sys, "argv", ["alpha", "--dataset-id", "fundamental6"])
 
+    with pytest.raises(ValueError, match="dataset fundamental6 is paused"):
+        normalize_args_paths(parse_args())
+
+
+def test_normalize_args_paths_allows_clean_for_paused_fundamental6(monkeypatch, tmp_path) -> None:
+    clear_yaml_cache()
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(sys, "argv", ["alpha", "clean", "--dataset-id", "fundamental6"])
+
     paths = normalize_args_paths(parse_args())
 
-    preset_suffix = "/datasets/fundamental6/presets/cashflow_submit_core"
-    assert paths.template_library_file.replace("\\", "/").endswith(f"{preset_suffix}/template.json")
-    assert paths.include_fields_file.replace("\\", "/").endswith(f"{preset_suffix}/fields.txt")
-    assert paths.include_templates_file.replace("\\", "/").endswith(
-        f"{preset_suffix}/templates.txt"
+    assert paths.template_library_file.replace("\\", "/").endswith(
+        "/datasets/fundamental6/template.json"
     )
 
 
-def test_explicit_template_path_disables_fundamental6_default_preset(monkeypatch, tmp_path) -> None:
+def test_explicit_template_path_allows_paused_fundamental6(monkeypatch, tmp_path) -> None:
     clear_yaml_cache()
     monkeypatch.chdir(tmp_path)
     custom_template = tmp_path / "custom-template.json"

@@ -13,11 +13,12 @@
 #   simulation_max_queue_seconds  排队最大等待 (秒)
 #   queue_busy_cooldown_seconds   队列繁忙冷却 (秒)
 #   default_preset                未显式传入模板/过滤文件时使用的数据集 preset
+#   paused                        禁止无显式研究入口的普通运行
 # ============================================================================
 
 dataset_profiles:
   fundamental6:
-    default_preset: "cashflow_submit_core"
+    paused: true
     sleep_between_fields: 3.0
     max_concurrent_simulations: 3
     max_concurrent_creates: 1

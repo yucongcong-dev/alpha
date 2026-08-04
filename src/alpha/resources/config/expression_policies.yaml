@@ -47,8 +47,8 @@ expression_policies:
   # fundamental6 — 季度财报数据
   # --------------------------------------------------------------------------
   fundamental6:
-    # Maintenance pool: the active strategy lives in datasets/fundamental6/presets.
-    # Keep the default dataset library closed and do not auto-expand ratio/event neighbors.
+    # Paused pool: no active preset. Keep the default dataset library closed and do not
+    # auto-expand ratio/event neighbors until a new independent research hypothesis exists.
     use_curated_heuristics: false
     closed_default_template_library: true
     partner_limit: 0

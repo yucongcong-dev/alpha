@@ -2,18 +2,13 @@
 
 ## 当前状态
 
-`fundamental6` 是维护池，不再承担 broad-search 预算。现阶段只保留已经重复验证过的
-`cashflow_op / cap` 双主线，用于低频健康检查和提交前复跑。
-
-现役策略资产：
-
-- [cashflow_submit_core/template.json](presets/cashflow_submit_core/template.json)
-- [cashflow_submit_core/fields.txt](presets/cashflow_submit_core/fields.txt)
-- [cashflow_submit_core/templates.txt](presets/cashflow_submit_core/templates.txt)
+`fundamental6` 已暂停，不再承担 broad-search、维护复跑或提交预算。历史
+`cashflow_op / cap` 双主线的性能检查仍然通过，但当前 Self Correlation 已过高，
+不再作为可提交策略资产。
 
 其余历史、观察和单模板 preset 已删除；关键结论已经收录在本文，不再维护可执行副本。
 
-## 已验证双主线
+## 历史双主线
 
 字段：`cashflow_op`
 
@@ -44,7 +39,13 @@ group_rank(
 - Alpha ID：`A17weAVw`
 - 2026-07-24 真实复跑：`submittable=true`
 
-两条主线曾在同一次最小 core pack 复跑中同时通过，当前不需要再拆分成独立 preset。
+两条主线曾在同一次最小 core pack 复跑中同时通过。2026-08-04 使用真实 Check
+Submission 再次复跑时：
+
+- `3qe7krMQ`：仅 Self Correlation 失败，值为 `1.0`
+- `A17weAVw`：仅 Self Correlation 失败，值为 `0.8237`
+
+两条表达式的 Sharpe/Fitness 仍通过，但已经无法提供足够独立的新信号，因此提交主线关闭。
 
 ## 已关闭的 cashflow_dividends 研究线
 
@@ -101,25 +102,11 @@ trade_when(
 不再调整窗口、Decay、Truncation、Neutralization 或触发条件，也不保留可执行 preset。
 只有字段定义、平台数据状态或经济假设发生实质变化时才重新开启。
 
-## 推荐命令
+## 运行边界
 
-普通 `--dataset-id fundamental6` 运行会自动绑定 `cashflow_submit_core` preset。下面保留
-完整写法用于审计和显式复跑；只要显式传入模板或 include 文件，自动 preset 就不会介入。
-
-```bash
-PYTHONPATH=src python3.10 -m alpha \
-  --dataset-id fundamental6 \
-  --template-library-file datasets/fundamental6/presets/cashflow_submit_core/template.json \
-  --include-fields-file datasets/fundamental6/presets/cashflow_submit_core/fields.txt \
-  --include-templates-file datasets/fundamental6/presets/cashflow_submit_core/templates.txt \
-  --no-auto-update-blacklist \
-  --limit 1 \
-  --max-templates-per-field 2 \
-  --run-name verify-cashflow-core
-```
-
-先使用 `--dry-run-plan` 确认只出现两个现役模板名。已有 feedback 可能为每个模板展开
-少量 settings 变体，因此 simulation 数可以大于 2。程序只做 simulation/check，不自动提交 Alpha。
+`fundamental6` 不再配置默认 preset，并由 dataset profile 标记为 `paused`。普通
+`--dataset-id fundamental6` 会直接拒绝运行；只有显式传入模板或 include 文件时才允许开启
+新的专项研究。不要恢复 `cashflow_submit_core`，也不要继续微调上述历史表达式。
 
 ## 已停止方向
 

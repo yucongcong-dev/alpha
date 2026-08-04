@@ -29,7 +29,7 @@ datasets/<dataset_id>/
 
 | 数据集 | 状态 | 现役 preset |
 | --- | --- | --- |
-| `fundamental6` | 维护池 | `cashflow_submit_core` |
+| `fundamental6` | 暂停 | 无 |
 | `option8` | 基线保留 | `subindustry_refine` |
 | `model16` | 暂停 | 无 |
 | `model51` | 暂停 | 无 |
