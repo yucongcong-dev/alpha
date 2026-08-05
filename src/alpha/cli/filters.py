@@ -92,7 +92,12 @@ def load_run_filters_extended(run_paths: RunPaths) -> RunFilters:
     )
 
 
-def setup_runtime_logging(log_path: str) -> None:
+def setup_runtime_logging(
+    log_path: str,
+    *,
+    verbose: bool = False,
+    quiet: bool = False,
+) -> None:
     """设置运行时日志，同时输出到控制台（coloredlogs）和文件。
 
     Args:
@@ -107,8 +112,9 @@ def setup_runtime_logging(log_path: str) -> None:
         with suppress(Exception):
             handler.close()
 
+    level = "ERROR" if quiet else "DEBUG" if verbose else "INFO"
     coloredlogs.install(
-        level="INFO",
+        level=level,
         fmt="[%(asctime)s] %(levelname)-8s %(message)s",
         datefmt="%H:%M:%S",
     )
@@ -126,4 +132,8 @@ def setup_runtime_logging(log_path: str) -> None:
         file_handler.setFormatter(plain_fmt)
         root.addHandler(file_handler)
 
-    root.info(f"logging to {log_path}" if log_path else "logging to console only")
+    root.info(
+        "%s (level=%s)",
+        f"logging to {log_path}" if log_path else "logging to console only",
+        level,
+    )

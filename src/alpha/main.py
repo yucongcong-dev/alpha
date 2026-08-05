@@ -55,6 +55,18 @@ def run_blacklist_command(command: str, *, dataset_id: str, datasets_root: str) 
     return run(command, dataset_id=dataset_id, datasets_root=datasets_root)
 
 
+def configure_application_logging(config: ApplicationConfig) -> None:
+    """Configure console/file logging once after the CLI boundary is parsed."""
+    from .cli.filters import setup_runtime_logging
+
+    writes_runtime_log = config.command == "run" and not config.dry_run_plan
+    setup_runtime_logging(
+        config.log_file if writes_runtime_log else "",
+        verbose=config.verbose,
+        quiet=config.quiet,
+    )
+
+
 def initialize_run_context(
     config: ApplicationConfig, paths: RunPaths | None
 ) -> InitializedRunContext | None:
@@ -98,6 +110,7 @@ def main() -> int:
         int: 退出状态码（0=正常, 1=错误, 130=用户中断）。
     """
     config = parse_application_config()
+    configure_application_logging(config)
 
     if config.command == "clean":
         return clean_runtime_artifacts(config)
@@ -131,7 +144,11 @@ def run_cli_entry() -> int:
         logger.warning("[abort] 用户中断")
         return 130
     except Exception as exc:
-        logger.error("[error] %s", exc)
+        logger.error(
+            "[error] %s",
+            exc,
+            exc_info=logging.getLogger().isEnabledFor(logging.DEBUG),
+        )
         return 1
 
 

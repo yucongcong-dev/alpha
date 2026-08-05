@@ -410,7 +410,6 @@ def test_initialize_run_context_prefers_run_paths_for_cache_and_credentials(
     )
     captured: dict[str, str] = {}
 
-    monkeypatch.setattr("alpha.app.bootstrap.setup_runtime_logging", lambda *_args, **_kwargs: None)
     monkeypatch.setattr(
         "alpha.app.bootstrap.cleanup_legacy_sidecar_files", lambda *_args, **_kwargs: None
     )
@@ -508,7 +507,6 @@ def test_initialize_run_context_builds_fallback_run_paths_when_missing(
     args.exclude_templates_file = str(tmp_path / "exclude_templates.txt")
     captured: dict[str, object] = {}
 
-    monkeypatch.setattr("alpha.app.bootstrap.setup_runtime_logging", lambda *_args, **_kwargs: None)
     monkeypatch.setattr(
         "alpha.app.bootstrap.cleanup_legacy_sidecar_files", lambda *_args, **_kwargs: None
     )

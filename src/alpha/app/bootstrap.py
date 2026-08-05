@@ -18,7 +18,7 @@ from ..analysis.feedback_history import build_historical_run_state, rebuild_hist
 from ..analysis.feedback_run_index import persist_feedback_run_index
 from ..analysis.result_identity import result_identity
 from ..api.client import BrainClient, login_with_retry
-from ..cli.filters import load_run_filters_extended, setup_runtime_logging
+from ..cli.filters import load_run_filters_extended
 from ..cli.run_config import build_run_config_snapshot
 from ..config.application import ApplicationConfig
 from ..config.runtime_values import get_runtime_config
@@ -81,7 +81,6 @@ def build_bootstrap_services() -> BootstrapServices:
     """Build bootstrap dependencies dynamically so test/runtime overrides stay effective."""
     return BootstrapServices(
         runtime_outputs=RuntimeOutputServices(
-            setup_runtime_logging=setup_runtime_logging,
             cleanup_legacy_sidecar_files=cleanup_legacy_sidecar_files,
             ensure_analysis_synced=ensure_analysis_synced,
             build_run_config_snapshot=build_run_config_snapshot,

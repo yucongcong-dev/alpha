@@ -75,11 +75,11 @@ def test_setup_runtime_logging_closes_old_handlers_and_adds_rotating_file(tmp_pa
             return_value=new_handler,
         ) as handler_factory,
     ):
-        setup_runtime_logging(str(log_path))
+        setup_runtime_logging(str(log_path), verbose=True)
 
     root.removeHandler.assert_called_once_with(old_handler)
     old_handler.close.assert_called_once_with()
-    install.assert_called_once()
+    assert install.call_args.kwargs["level"] == "DEBUG"
     handler_factory.assert_called_once_with(
         str(log_path), when="midnight", backupCount=7, encoding="utf-8"
     )
@@ -97,8 +97,8 @@ def test_setup_runtime_logging_console_only_skips_file_handler() -> None:
         patch("coloredlogs.install"),
         patch("alpha.cli.filters.logging.handlers.TimedRotatingFileHandler") as handler_factory,
     ):
-        setup_runtime_logging("")
+        setup_runtime_logging("", quiet=True)
 
     handler_factory.assert_not_called()
     root.addHandler.assert_not_called()
-    root.info.assert_called_once_with("logging to console only")
+    root.info.assert_called_once_with("%s (level=%s)", "logging to console only", "ERROR")

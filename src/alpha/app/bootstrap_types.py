@@ -87,7 +87,6 @@ class BuildHistoricalRunState(Protocol):
 class RuntimeOutputServices:
     """Side-effecting services used to prepare runtime outputs."""
 
-    setup_runtime_logging: Callable[[str], None]
     cleanup_legacy_sidecar_files: CleanupLegacySidecarFiles
     ensure_analysis_synced: Callable[[str], None]
     build_run_config_snapshot: Callable[[RunConfigSnapshotOptions, RunPaths], RunConfig]

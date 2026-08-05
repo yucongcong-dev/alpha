@@ -79,8 +79,6 @@ def prepare_runtime_outputs(
 ) -> RunConfig:
     """Prepare logging/output side effects and capture the embedded run config."""
     effective_run_paths = build_effective_run_paths(path_options, paths, run_paths)
-    if paths.log_file:
-        services.setup_runtime_logging(paths.log_file)
     services.cleanup_legacy_sidecar_files(paths.output_file, verbose=True)
     services.ensure_analysis_synced(paths.output_file)
     run_config = services.build_run_config_snapshot(run_config_options, effective_run_paths)
