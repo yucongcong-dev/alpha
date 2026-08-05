@@ -5,6 +5,10 @@ from __future__ import annotations
 from argparse import Namespace
 
 from alpha.core.executor import build_pending_templates_for_field, inflight_template_keys
+from alpha.core.template_planning import (
+    TemplatePlanningServices,
+    resolve_field_template_candidates,
+)
 from alpha.generators.payload import build_settings_fingerprint_from_payload
 from alpha.models.domain import TemplateCandidate, TemplateLibraryItem
 from alpha.models.runtime import (
@@ -13,6 +17,56 @@ from alpha.models.runtime import (
     TemplateBuildOptions,
 )
 from alpha.policy.expression import get_dataset_expression_policy
+
+
+def test_exploration_candidate_pool_is_not_limited_before_seed_selection() -> None:
+    captured_limits: list[tuple[int, int]] = []
+
+    def build_candidates(
+        _field,
+        _build_ctx,
+        *,
+        max_templates_per_field,
+        max_templates_per_family,
+        **_kwargs,
+    ):
+        captured_limits.append((max_templates_per_field, max_templates_per_family))
+        return []
+
+    args = Namespace(
+        dataset_id="fundamental6",
+        max_templates_per_field=1,
+        max_templates_per_family=1,
+        legacy_similarity_penalty=0,
+        region="USA",
+        universe="TOP3000",
+        instrument_type="EQUITY",
+        delay=1,
+        decay=4,
+        neutralization="SUBINDUSTRY",
+        truncation=0.08,
+        pasteurization="ON",
+        unit_handling="VERIFY",
+        nan_handling="OFF",
+        language="FASTEXPR",
+    )
+    build_ctx = TemplateBuildContext(
+        options=TemplateBuildOptions.from_args(args),
+        expression_policy=get_dataset_expression_policy("fundamental6"),
+    )
+    services = TemplatePlanningServices(
+        build_expression_candidates=build_candidates,
+        build_setting_variants=lambda *_args, **_kwargs: [],
+        build_settings_fingerprint=lambda _payload: "fingerprint",
+    )
+
+    resolve_field_template_candidates(
+        build_ctx,
+        {"id": "new_signal", "type": "MATRIX", "name": "new_signal"},
+        services=services,
+    )
+
+    assert captured_limits == [(0, 0)]
 
 
 def test_build_pending_templates_skips_inflight_duplicate(monkeypatch) -> None:

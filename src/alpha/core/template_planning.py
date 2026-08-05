@@ -177,18 +177,21 @@ def resolve_field_template_candidates(
         options=options,
         expression_policy=expression_policy,
     )
+    is_exploration = not field_feedback and not options.preset_mode
+    build_max_templates_per_field = 0 if is_exploration else max_templates_per_field
+    build_max_templates_per_family = 0 if is_exploration else max_templates_per_family
     templates = active_services.build_expression_candidates(
         field,
         build_ctx,
-        max_templates_per_field=max_templates_per_field,
-        max_templates_per_family=max_templates_per_family,
+        max_templates_per_field=build_max_templates_per_field,
+        max_templates_per_family=build_max_templates_per_family,
         field_feedback=field_feedback,
         expression_policy=expression_policy,
     )
     templates = _limit_template_candidates(
         templates,
-        max_templates_per_family=max_templates_per_family,
-        max_templates_per_field=max_templates_per_field,
+        max_templates_per_family=build_max_templates_per_family,
+        max_templates_per_field=build_max_templates_per_field,
     )
     return templates, field_feedback or {}, expression_policy
 

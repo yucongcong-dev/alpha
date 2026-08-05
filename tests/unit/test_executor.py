@@ -116,6 +116,116 @@ def test_unexplored_field_gets_one_seed(monkeypatch) -> None:
     assert pending[0].template_name == "seed"
 
 
+def test_unexplored_field_prefers_explicit_seed_over_high_priority_refine(monkeypatch) -> None:
+    field = _field("new_signal")
+    refine = TemplateCandidate(
+        name="high_priority_refine",
+        expression="group_rank(new_signal, industry)",
+        priority=1200,
+        metadata={"role": "refine_neighbor", "activation_scope": "broad"},
+    )
+    seed = TemplateCandidate(
+        name="simple_seed",
+        expression="rank(ts_rank(new_signal, 120))",
+        priority=900,
+        metadata={"role": "default_seed", "activation_scope": "broad"},
+    )
+    context = TemplateBuildContext(
+        options=TemplateBuildOptions.from_args(_args()),
+        all_fields=[field],
+        expression_policy=get_dataset_expression_policy("model16"),
+    )
+    monkeypatch.setattr(
+        "alpha.core.executor.resolve_field_template_candidates",
+        lambda *_args, **_kwargs: (
+            [refine, seed],
+            {},
+            get_dataset_expression_policy("model16"),
+        ),
+    )
+
+    pending, _, _ = build_pending_templates_for_field(
+        context,
+        field,
+        attempted_keys=set(),
+        prior_results=[],
+    )
+
+    assert [item.template_name for item in pending] == ["simple_seed"]
+
+
+def test_unexplored_fields_rotate_across_explicit_seed_templates(monkeypatch) -> None:
+    seeds = [
+        TemplateCandidate(
+            name=f"seed_{index}",
+            expression=f"rank(signal) + {index}",
+            priority=1000 - index,
+            metadata={"role": "default_seed", "activation_scope": "broad"},
+        )
+        for index in range(3)
+    ]
+    context = TemplateBuildContext(
+        options=TemplateBuildOptions.from_args(_args()),
+        expression_policy=get_dataset_expression_policy("model16"),
+    )
+    monkeypatch.setattr(
+        "alpha.core.executor.resolve_field_template_candidates",
+        lambda *_args, **_kwargs: (
+            seeds,
+            {},
+            get_dataset_expression_policy("model16"),
+        ),
+    )
+
+    selected = set()
+    for index in range(12):
+        pending, _, _ = build_pending_templates_for_field(
+            context,
+            _field(f"field_{index}"),
+            attempted_keys=set(),
+            prior_results=[],
+        )
+        selected.add(pending[0].template_name)
+
+    assert selected == {"seed_0", "seed_1", "seed_2"}
+
+
+def test_unexplored_fields_rotate_across_fallback_templates(monkeypatch) -> None:
+    fallbacks = [
+        TemplateCandidate(
+            name=f"fallback_{index}",
+            expression=f"rank(signal) + {index}",
+            priority=1200 - index,
+            metadata={"role": "refine_neighbor", "activation_scope": "broad"},
+        )
+        for index in range(4)
+    ]
+    context = TemplateBuildContext(
+        options=TemplateBuildOptions.from_args(_args()),
+        expression_policy=get_dataset_expression_policy("model16"),
+    )
+    monkeypatch.setattr(
+        "alpha.core.executor.resolve_field_template_candidates",
+        lambda *_args, **_kwargs: (
+            fallbacks,
+            {},
+            get_dataset_expression_policy("model16"),
+        ),
+    )
+
+    selected = set()
+    for index in range(16):
+        pending, _, _ = build_pending_templates_for_field(
+            context,
+            _field(f"field_{index}"),
+            attempted_keys=set(),
+            prior_results=[],
+        )
+        selected.add(pending[0].template_name)
+
+    assert selected == {"fallback_0", "fallback_1", "fallback_2", "fallback_3"}
+
+
 def test_template_skip_reason_explains_name_filter() -> None:
     field = _field("signal")
     candidate = TemplateCandidate(

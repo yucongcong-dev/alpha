@@ -20,9 +20,11 @@ from collections.abc import Mapping, MutableMapping, Sequence
 from concurrent.futures import Future
 from dataclasses import replace
 import logging
+import zlib
 
 from ..config.constants import DRY_RUN_SAMPLE_LIMIT, SENTINEL_UNKNOWN
 from ..generators.fields import choose_field_name
+from ..generators.templates.metadata import normalize_template_role
 from ..models.domain import FieldTestResult, TemplateCandidate, TemplateField, TemplateLibrary
 from ..models.io_types import RunFilters
 from ..models.runtime_options import TemplateBuildOptions
@@ -59,6 +61,28 @@ logger = logging.getLogger(__name__)
 # ============================================================================
 # 模板队列构建函数
 # ============================================================================
+
+
+def _ordered_exploration_templates(
+    templates: Sequence[TemplateCandidate],
+    *,
+    field_id: str,
+) -> list[TemplateCandidate]:
+    """Put deterministic, field-distributed seeds before distributed fallbacks."""
+
+    def rotate(candidates: list[TemplateCandidate]) -> list[TemplateCandidate]:
+        if len(candidates) < 2:
+            return candidates
+        offset = zlib.crc32(field_id.encode("utf-8")) % len(candidates)
+        return [*candidates[offset:], *candidates[:offset]]
+
+    seeds = [
+        template
+        for template in templates
+        if normalize_template_role(template.metadata.get("role")) == "default_seed"
+    ]
+    fallback = [template for template in templates if template not in seeds]
+    return [*rotate(seeds), *rotate(fallback)]
 
 
 def build_template_build_context(
@@ -162,13 +186,17 @@ def build_pending_templates_for_field(
         field,
         services=active_services,
     )
-    # Exploration is intentionally cheap and independent of global failures:
-    # a new field gets one seed template, while exact historical combinations
-    # remain deduplicated below.  This avoids a separate fallback path when
-    # global template history has demoted every candidate.
+    # Exploration stays cheap at one candidate, but explicit seeds must be
+    # selected before priority-based refine candidates. Rotate both seed and
+    # fallback pools so blacklisted seeds cannot collapse broad coverage back
+    # onto one high-priority structure.
     planning_ctx = build_ctx
     is_exploration = not field_feedback and not planning_ctx.options.preset_mode
-    planning_templates = templates[:1] if is_exploration else templates
+    planning_templates = (
+        _ordered_exploration_templates(templates, field_id=field_id)
+        if is_exploration
+        else templates
+    )
     enabled_templates: list[TemplateCandidate] = []
     filtered_templates = 0
     for template in planning_templates:
@@ -189,6 +217,8 @@ def build_pending_templates_for_field(
             continue
         if skip_reason is None:
             enabled_templates.append(template)
+            if is_exploration:
+                break
         else:
             filtered_templates += 1
             if template_skip_reasons is not None:
