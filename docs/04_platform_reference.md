@@ -830,7 +830,8 @@ BRAIN Alpha 按日模拟、按日再平衡，不模拟高频或日内交易。�
 
 ## 13. 提交检查词典
 
-这一节不追求覆盖平台所有检查，而是优先解释本仓库最常遇到的几类。
+本节只记录页面语义、公式和带日期的常见门槛。诊断顺序和改进动作统一见
+[03 优化与提交](03_optimization_and_submission.md)。
 
 ### 常见硬门槛快照（2026-07-31）
 
@@ -839,166 +840,76 @@ BRAIN Alpha 按日模拟、按日再平衡，不模拟高频或日内交易。�
 | D1 Fitness | 严格 `> 1` |
 | D1 Sharpe | 严格 `> 1.25` |
 | Turnover | 严格 `> 1%` 且 `< 70%` |
-| 单只股票最大权重 | `< 10%`，同时还要满足有效的权重覆盖要求 |
-| Self-Correlation | 通常要求 `< 0.7`；高于该值时还存在官方定义的表现改善例外判断 |
-| Sub-Universe Sharpe | 按子 Universe 与原 Universe 的相对大小缩放，不是统一固定数值 |
+| 单只股票最大权重 | `< 10%`，并满足有效权重覆盖要求 |
+| Self-Correlation | 通常要求 `< 0.7`；超出时存在表现改善例外判断 |
+| Sub-Universe Sharpe | 按子 Universe 与原 Universe 的相对大小缩放 |
 
-使用这张表时要注意：
-
-- 页面指标可能经过四舍五入，`1.00` 或 `1.25` 的显示值不能证明底层值已经严格越过 `>` 门槛
-- 检查会因 Delay、Region、Universe、Alpha 类型和平台版本而变化；这里是带日期的常见 D1 快照，不应写死成永久全球规则
-- “研究目标留余量”（例如 Fitness 争取 `1.05+`）和“平台硬门槛”必须分开记录
+页面值可能经过四舍五入，显示为 `1.00` 或 `1.25` 不代表底层值已经严格越过门槛。
+检查也可能随 Delay、Region、Universe、Alpha 类型和平台版本变化，因此这张表不能当作
+永久全球规则。
 
 ### 13.1 `LOW_SHARPE`
 
-- 风险调整后的收益不够稳定
-- 更像“信号质量不够硬”，而不只是收益不够高
-
-本地通常优先检查：
-
-- 是否缺少标准化
-- 是否缺少 group-relative 结构
-- 是否没有做足够平滑
+表示风险调整后收益未达到当前 Alpha 类型对应的 Sharpe 门槛。
 
 ### 13.2 `LOW_FITNESS`
 
-官方公式是：
+表示 Fitness 未达到门槛。官方公式为：
 
-- `Fitness = Sharpe * sqrt(abs(Returns) / max(Turnover, 0.125))`
+```text
+Fitness = Sharpe * sqrt(abs(Returns) / max(Turnover, 0.125))
+```
 
-所以它不是独立问题，而是下面三者之一或组合：
-
-- `Sharpe` 不够
-- `Returns` 不够
-- `Turnover` 太高
+因此它由 Sharpe、Returns 和 Turnover 共同决定，不是独立统计量。
 
 ### 13.3 `HIGH_TURNOVER`
 
-- 代表信号变化太快
-- 真实交易成本压力通常也会更高
+表示 Turnover 超过当前检查上限。Turnover 描述组合在相邻日期之间的持仓变化程度；
+它是交易成本压力的 proxy，但模拟收益本身不直接扣除真实交易成本。
 
-在本仓库里更常见的修法是：
+### 13.4 `CONCENTRATED_WEIGHT` 与 `WEIGHT_COVERAGE`
 
-- 增加 `Decay`
-- 用 `trade_when`
-- 用更稳定的截面整形和 backfill
-
-### 13.4 `CONCENTRATED_WEIGHT`
-
-- 代表少数股票权重过大
-- 更接近“组合结构问题”，不只是表达式长得难看
-
-优先怀疑：
-
-- 极端值没处理
-- `truncation` 太松
-- 没有做 rank / group 处理
+前者表示单只或少数股票的权重过于集中；后者表示有效权重没有稳定覆盖足够多的
+Universe 成分。两者都属于组合权重分布检查。
 
 ### 13.5 `LOW_SUB_UNIVERSE_SHARPE`
 
-Glossary 把 robust performance 明确当成平台关心的方向（复核 2026-07-31）。
-
-对实战更好记的理解是：
-
-- 你的 Alpha 在更小、更液态的子宇宙里不够稳
-- 它提示的往往不是“再调一个窗口”，而是结构泛化能力不够
-
-它经常和社区里讨论的：
-
-- `robust universe sharpe`
-- `robust universe returns`
-
-属于同一类稳健性话题。
-
-更实用的理解是：
-
-- 平台不只想知道“你在大 Universe 里能不能跑起来”
-- 还想知道“收缩到更核心子集后，它是否仍然站得住”
-
-官网给出的检查线可以写成：
+表示 Alpha 在更小、更液态的子 Universe 中不够稳。官网给出的检查线为：
 
 ```text
 subuniverse_sharpe
 >= 0.75 * sqrt(subuniverse_size / alpha_universe_size) * alpha_sharpe
 ```
 
-这说明阈值会随子宇宙相对大小缩放，不是所有 Universe 都使用同一个固定 Sharpe 数字。
+阈值随子 Universe 相对大小变化，不是统一固定数值。
 
 ### 13.6 `SELF_CORRELATION`
 
-- 和你自己已有 Alpha 太像
-- 平台通常不会鼓励你反复提交同一个想法的近邻分支
+表示新 Alpha 与用户自己的已有 Alpha 过于相似。常见语义是：最大自相关高于 `0.7`
+时，如果新 Alpha 的表现没有比相关 Alpha 至少改善约 `10%`，检查可能失败。
 
-所以本地更推荐：
-
-- 换字段关系
-- 换模板家族
-- 换 grouping
-
-而不是只做：
-
-- `20 -> 22`
-- `60 -> 63`
-
-常见检查语义是：最大自相关高于 `0.7` 时，如果新 Alpha 的表现没有比相关 Alpha 至少改善约 `10%`，就可能失败（来源：[Self-correlation error message](https://support.worldquantbrain.com/hc/en-us/articles/6726867827991)，复核 2026-07-31）。因此 `0.7` 不是脱离表现比较的孤立硬线；本地仍应把高相关候选优先视为低增量分支。
+官方来源：[Self-correlation error message](https://support.worldquantbrain.com/hc/en-us/articles/6726867827991)
+（复核 2026-07-31）。
 
 ### 13.7 `PROD_CORRELATION`
 
-- 和平台已有已提交 Alpha 太像
-- 说明它缺少足够的独特性
+表示 Alpha 与平台已有生产 Alpha 的相关性过高，用于衡量候选是否具有足够增量价值。
 
-这类问题通常也更适合做结构替换，而不是参数微调。
+### 13.8 最不流动 50% 的 after-cost Sharpe
 
-### 13.8 `WEIGHT_COVERAGE`
+平台会检查原 Universe 中最不流动的 50% 股票在计入交易成本后的 Sharpe。官网示例要求
+该部分达到原 Universe after-cost Sharpe 的约 `52.5%`（复核 2026-07-31）。
 
-虽然它在不同页面或 FAQ 里展示口径可能略有不同，但核心都指向：
+### 13.9 `Alpha better suited for Delay 1`
 
-- 你的组合权重没有足够稳定、足够均匀地覆盖当前 Universe
+该 D0 提示表示同一 Alpha 在 D1 的 Sharpe 更高。官方来源：
+[Alpha better suited for Delay 1](https://support.worldquantbrain.com/hc/en-us/articles/19083452017559)
+（复核 2026-07-31）。
 
-本地最实用的检查方向通常是：
+### 13.10 `Max Trade`
 
-- 是否有大量 `NaN`
-- 是否 coverage 很低却没做 backfill
-- 是否某些极端值把权重挤到少数股票上
-
-### 13.9 最不流动 50% 的 after-cost Sharpe 检查
-
-平台会检查原 Universe 中最不流动的 50% 股票在计入交易成本后的 Sharpe。
-官网示例要求该部分达到原 Universe after-cost Sharpe 的约 `52.5%`（复核 2026-07-31）。
-
-这项检查回答的是：
-
-- Alpha 是否只在最液态股票上有效
-- 扩展到较不流动部分后，交易成本是否吃掉了信号
-- 是否存在明显的 size / liquidity 风险暴露
-
-常见处理方向：
-
-- 按流动性分组设置不同 Decay
-- 用 `cap` 或平均成交量构造 bucket
-- 用 `group_neutralize()` 处理 size / liquidity 分层
-- 有合适风险向量时使用 `vector_neut()`
-
-### 13.10 `Alpha better suited for Delay 1`
-
-该提示出现在 D0 Alpha 上，含义是：
-
-- 同一 Alpha 在 D1 的 Sharpe 高于 D0（来源：[Alpha better suited for Delay 1](https://support.worldquantbrain.com/hc/en-us/articles/19083452017559)，复核 2026-07-31）
-- 平台认为它更适合 Delay 1
-
-这种情况下通常应优先提交 D1，因为 D1 往往同时具有：
-
-- 更高表现
-- 更低换手
-- 更低交易成本压力
-
-它不是要求继续优化 D0，而是在提醒研究假设和 Delay 不匹配。
-
-### 13.11 `Max Trade`
-
-`Max Trade` 是模拟设置中的单票交易约束开关，可用于观察 Alpha 是否依赖少数股票上的大额交易。社区常把它作为稳健性压力测试：开启后若表现立即崩溃，应检查权重集中、极端值和流动性依赖。
-
-它不是文档已确认的固定 submission threshold。本仓库默认保持 `OFF`，只在最终候选验证或明确的流动性诊断中显式开启。
+`Max Trade` 是模拟设置中的单票交易约束开关，不是文档已确认的固定 submission
+threshold。本仓库默认保持 `OFF`，需要时显式开启。
 
 ---
 
@@ -1020,11 +931,7 @@ subuniverse_sharpe
 2. Alpha 值变化太快
 3. 单只股票权重过高
 
-常见修法：
-
-- `backfill`
-- `decay`
-- 更严格的 `truncation`
+具体诊断和改进动作见 [03 的 PnL 跳变章节](03_optimization_and_submission.md)。
 
 ---
 
