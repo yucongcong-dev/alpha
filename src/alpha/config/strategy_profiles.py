@@ -5,6 +5,10 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
+from .strategy_profile_schema import (
+    STRATEGY_PROFILE_CHOICES,
+    validate_runtime_defaults,
+)
 from .types import YamlConfig
 from .yaml import get_yaml_config
 
@@ -12,13 +16,6 @@ STRATEGY_PROFILE_EXPLORE = "explore"
 STRATEGY_PROFILE_REFINE = "refine"
 STRATEGY_PROFILE_SUBMIT_FOCUSED = "submit-focused"
 DEFAULT_STRATEGY_PROFILE = STRATEGY_PROFILE_EXPLORE
-
-STRATEGY_PROFILE_CHOICES = (
-    STRATEGY_PROFILE_EXPLORE,
-    STRATEGY_PROFILE_REFINE,
-    STRATEGY_PROFILE_SUBMIT_FOCUSED,
-)
-
 
 @dataclass(frozen=True, slots=True)
 class StrategyProfileSchema:
@@ -59,13 +56,17 @@ def load_strategy_profile_schemas(
     for raw_name, raw_profile in section.items():
         name = normalize_strategy_profile(raw_name)
         if not isinstance(raw_profile, dict):
-            continue
+            raise ValueError(f"strategy_profiles.{name} must be a mapping")
+        runtime_defaults = raw_profile.get("runtime_defaults", {})
+        runtime_default_errors = validate_runtime_defaults(name, runtime_defaults)
+        if runtime_default_errors:
+            raise ValueError("; ".join(runtime_default_errors))
         schemas[name] = StrategyProfileSchema(
             name=name,
             purpose=str(raw_profile.get("purpose", "") or ""),
             primary_goal=str(raw_profile.get("primary_goal", "") or ""),
             tuning_keys=_coerce_tuning_keys(raw_profile.get("tuning_keys", {})),
-            runtime_defaults=_coerce_runtime_defaults(raw_profile.get("runtime_defaults", {})),
+            runtime_defaults=_coerce_runtime_defaults(runtime_defaults),
             notes=tuple(str(item) for item in _list_like(raw_profile.get("notes", ()))),
         )
     return schemas

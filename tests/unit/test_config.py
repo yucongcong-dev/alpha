@@ -274,7 +274,53 @@ strategy_profiles:
 
     assert any("未知 profile 'aggressive'" in warning for warning in warnings)
     assert any("未知 section ['magic']" in warning for warning in warnings)
-    assert any("runtime_defaults 存在未知 section ['magic']" in warning for warning in warnings)
+    assert any("runtime_defaults 存在未知 section 'magic'" in warning for warning in warnings)
+
+
+def test_strategy_profile_schema_validates_keys_and_runtime_default_types(tmp_path) -> None:
+    config_path = tmp_path / "settings.yaml"
+    config_path.write_text(
+        """
+strategy_profiles:
+  explore:
+    purpose: 123
+    primary_goal: "bad defaults"
+    notes: "not-a-list"
+    tuning_keys:
+      limits:
+        - max_total_simluations
+    runtime_defaults:
+      limits:
+        max_total_simluations: 10
+        limit: "all"
+      runtime:
+        auto_update_blacklist: 1
+        auto_update_blacklist_mode: "invalid"
+""".strip(),
+        encoding="utf-8",
+    )
+
+    warnings = validate_yaml_config(str(config_path))
+
+    assert any("purpose 必须是字符串" in warning for warning in warnings)
+    assert any("notes 必须是字符串列表" in warning for warning in warnings)
+    assert any("max_total_simluations" in warning and "未知 key" in warning for warning in warnings)
+    assert any("limits.limit 必须是 integer" in warning for warning in warnings)
+    assert any("auto_update_blacklist 必须是 boolean" in warning for warning in warnings)
+    assert any("auto_update_blacklist_mode 必须是" in warning for warning in warnings)
+
+
+def test_strategy_profile_loader_rejects_invalid_runtime_defaults() -> None:
+    with pytest.raises(ValueError, match=r"limits\.limit 必须是 integer"):
+        load_strategy_profile_schemas(
+            {
+                "strategy_profiles": {
+                    "explore": {
+                        "runtime_defaults": {"limits": {"limit": "all"}},
+                    }
+                }
+            }
+        )
 
 
 def test_expression_policy_schema_keys_match_policy_fields() -> None:

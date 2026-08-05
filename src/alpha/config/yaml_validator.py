@@ -5,6 +5,13 @@ from __future__ import annotations
 import threading
 from typing import Any
 
+from .strategy_profile_schema import (
+    STRATEGY_PROFILE_CHOICES,
+    STRATEGY_PROFILE_SCHEMA_KEYS,
+    STRATEGY_PROFILE_TUNING_KEYS,
+    STRATEGY_PROFILE_TUNING_SECTIONS,
+    validate_runtime_defaults,
+)
 from .types import YamlConfig
 from .yaml_sources import DEFAULT_CONFIG_NAMES, load_default_yamls, load_yaml_file
 
@@ -23,26 +30,6 @@ GLOBAL_KNOWN_KEYS = {
     "feedback",
     "runtime",
 }
-
-STRATEGY_PROFILE_SCHEMA_KEYS = {
-    "purpose",
-    "primary_goal",
-    "tuning_keys",
-    "runtime_defaults",
-    "notes",
-}
-STRATEGY_PROFILE_CHOICES = ("explore", "refine", "submit-focused")
-STRATEGY_PROFILE_TUNING_SECTIONS = {
-    "limits",
-    "concurrency",
-    "filters",
-    "quality",
-    "feedback",
-    "runtime",
-    "expression_policies",
-    "dataset_profiles",
-}
-
 
 def clear_schema_cache() -> None:
     """Clear cached schema keys after YAML cache invalidation."""
@@ -239,6 +226,15 @@ def _validate_strategy_profiles_section(config: YamlConfig) -> list[str]:
                 f"已知 key: {sorted(STRATEGY_PROFILE_SCHEMA_KEYS)}"
             )
 
+        warnings.extend(
+            f"strategy_profiles.{profile_name}.{text_key} 必须是字符串。"
+            for text_key in ("purpose", "primary_goal")
+            if text_key in profile_data and not isinstance(profile_data[text_key], str)
+        )
+        notes = profile_data.get("notes", [])
+        if not isinstance(notes, list) or any(not isinstance(item, str) for item in notes):
+            warnings.append(f"strategy_profiles.{profile_name}.notes 必须是字符串列表。")
+
         tuning_keys = profile_data.get("tuning_keys", {})
         if not isinstance(tuning_keys, dict):
             warnings.append(f"strategy_profiles.{profile_name}.tuning_keys 必须是 mapping。")
@@ -257,25 +253,17 @@ def _validate_strategy_profiles_section(config: YamlConfig) -> list[str]:
                     f"strategy_profiles.{profile_name}.tuning_keys.{section_name} "
                     "必须是字符串列表。"
                 )
+                continue
+            known_keys = STRATEGY_PROFILE_TUNING_KEYS.get(section_name, set())
+            unknown_tuning_keys = set(keys) - known_keys
+            if unknown_tuning_keys:
+                warnings.append(
+                    f"strategy_profiles.{profile_name}.tuning_keys.{section_name} "
+                    f"存在未知 key {sorted(unknown_tuning_keys)}，已知 key: {sorted(known_keys)}"
+                )
 
         runtime_defaults = profile_data.get("runtime_defaults", {})
-        if runtime_defaults and not isinstance(runtime_defaults, dict):
-            warnings.append(f"strategy_profiles.{profile_name}.runtime_defaults 必须是 mapping。")
-            continue
-        if isinstance(runtime_defaults, dict):
-            unknown_default_sections = set(runtime_defaults) - STRATEGY_PROFILE_TUNING_SECTIONS
-            if unknown_default_sections:
-                warnings.append(
-                    f"strategy_profiles.{profile_name}.runtime_defaults 存在未知 section "
-                    f"{sorted(unknown_default_sections)}，已知 section: "
-                    f"{sorted(STRATEGY_PROFILE_TUNING_SECTIONS)}"
-                )
-            for section_name, defaults in runtime_defaults.items():
-                if not isinstance(defaults, dict):
-                    warnings.append(
-                        f"strategy_profiles.{profile_name}.runtime_defaults.{section_name} "
-                        "必须是 mapping。"
-                    )
+        warnings.extend(validate_runtime_defaults(profile_name, runtime_defaults))
 
     return warnings
 
