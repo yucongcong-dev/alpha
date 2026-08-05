@@ -186,7 +186,8 @@ broad search。
 - [03_optimization_and_submission.md](03_optimization_and_submission.md)
 
 > `neutralization` 设置与 `group_neutralize(...)` 算子的完整区分和实际选择见
-> [03 §23.1](03_optimization_and_submission.md) 和 [04 §14](04_platform_reference.md)。
+> [03 的 Neutralization 最终决策](03_optimization_and_submission.md)和
+> [04 的 Neutralization 页面语义](04_platform_reference.md)。
 
 ### 5.4 Truncation
 
@@ -411,7 +412,8 @@ is_nan(primary_signal) ? fallback_signal : primary_signal
 Arithmetic 算子的 `filter=true` 又是第三种行为：它只在该次加减乘运算中把 NaN
 当作 `0`，不会改变全局 `NaNHandling`。
 
-> 完整定义和 `NaNHandling` 的行为细节见 [04 §8.2, §8.6](04_platform_reference.md)。
+> 完整定义和 `NaNHandling` 的行为细节见
+> [04 的 NaN 与 Pasteurize 词典](04_platform_reference.md)。
 
 ---
 
@@ -441,7 +443,8 @@ Arithmetic 算子的 `filter=true` 又是第三种行为：它只在该次加减
 
 这不是异常，而是它的正常语义。
 
-> 更完整的 Pasteurize 语义和 Universe 边界交互见 [04 §8.4](04_platform_reference.md)。
+> 更完整的 Pasteurize 语义和 Universe 边界交互见
+> [04 的 NaN 与 Pasteurize 词典](04_platform_reference.md)。
 
 ### 9.1 `Unit Handling`
 
@@ -460,7 +463,8 @@ rank(close) + rank(adv20)
 
 不要为了消除警告机械地加 `rank()`；先确认两个量纲为什么应该被组合。
 
-> Unit Handling 的行为边界和平台语义见 [04 §8.7](04_platform_reference.md)。
+> Unit Handling 的行为边界和平台语义见
+> [04 的 NaN 与 Pasteurize 词典](04_platform_reference.md)。
 
 ---
 

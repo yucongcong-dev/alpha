@@ -254,7 +254,8 @@ ts_decay_linear(signal, 20)
 
 也可以用 `bucket()` 自造 group，然后配合 `densify()` 使用。
 
-> 字段类型的完整定义和平台语义见 [04 §10](04_platform_reference.md)。
+> 字段类型的完整定义和平台语义见
+> [04 的字段类型词典](04_platform_reference.md)。
 
 ---
 
@@ -331,7 +332,8 @@ X < scale_down(field) && scale_down(field) < Y
 
 - 判断分布是否偏斜、是否大量堆在边界附近
 
-> Coverage 的完整定义和平台语义见 [04 §12.1](04_platform_reference.md)。
+> Coverage 的完整定义和平台语义见
+> [04 的 Coverage 与 Alpha list 词典](04_platform_reference.md)。
 
 ---
 
@@ -417,7 +419,8 @@ X < scale_down(field) && scale_down(field) < Y
 2. 再看 coverage 和更新频率
 3. 最后用 `Value Score` 和拥挤度辅助排序
 
-> Dataset Value Score 和 Alpha list 的平台语义见 [04 §12.2.3](04_platform_reference.md)。
+> Dataset Value Score 和 Alpha list 的平台语义见
+> [04 的 Coverage 与 Alpha list 词典](04_platform_reference.md)。
 
 ### 8.1 Dataset Usage Management 的研究含义
 
@@ -441,7 +444,8 @@ FAQ 里的 Dataset Usage Management 主要是平台对部分数据集类别访�
 2. 将该数据集标记为暂不可用或降优先级
 3. 用同类 idea 在其他 dataset category 上找替代字段
 
-> Dataset Usage Management 的平台定义见 [04 §12.2.4](04_platform_reference.md)。
+> Dataset Usage Management 的平台定义见
+> [04 的 Coverage 与 Alpha list 词典](04_platform_reference.md)。
 
 ### 8.2 数据访问、外部工具与数据集退役
 
