@@ -115,9 +115,11 @@ def execute_schedule_round(
     for field_index, field in enumerate(context.fields, start=1):
         if context.reached_simulation_budget():
             logger.info(
-                "[stop] 达到 max-total-simulations=%d seed_fields_remaining=%d",
+                "[stop] 达到 max-total-simulations=%d seed_fields_unresolved=%d "
+                "seed_fields_inflight=%d",
                 scheduler_options.max_total_simulations,
                 context.seed_phase.remaining_count,
+                len(context.seed_phase.inflight_field_ids),
             )
             return ScheduleRoundResult(
                 progressed=progressed_this_round,
@@ -268,7 +270,7 @@ def schedule_field_round(
         template_queue=template_queue,
     )
     if seed_phase_active and len(template_queue.entries) < queue_count_before_dispatch:
-        context.seed_phase.resolve(field_id)
+        context.seed_phase.mark_inflight(field_id)
     persist_field_progress(
         state_file=context.state_file,
         field_id=field_id,

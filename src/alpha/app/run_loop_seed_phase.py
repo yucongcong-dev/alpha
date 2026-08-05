@@ -85,10 +85,19 @@ class SeedPhaseState:
             field_id in self.resolved_field_ids or field_id in self.inflight_field_ids
         )
 
+    def mark_inflight(self, field_id: str) -> bool:
+        """Mark a dispatched seed as inflight without claiming completed coverage."""
+        if not self.enabled or field_id not in self.target_field_ids:
+            return False
+        previous_count = len(self.inflight_field_ids)
+        self.inflight_field_ids.add(field_id)
+        return len(self.inflight_field_ids) > previous_count
+
     def resolve(self, field_id: str) -> bool:
         """Mark one field seeded or unactionable and report whether state advanced."""
         if not self.enabled or field_id not in self.target_field_ids:
             return False
         previous_count = len(self.resolved_field_ids)
+        self.inflight_field_ids.discard(field_id)
         self.resolved_field_ids.add(field_id)
         return len(self.resolved_field_ids) > previous_count

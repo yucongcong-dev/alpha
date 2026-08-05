@@ -36,3 +36,35 @@ def test_seed_phase_completion_transitions_to_refine() -> None:
     assert state.remaining_count == 0
     assert state.active is False
     assert state.phase_name == "refine"
+
+
+def test_seed_phase_dispatch_remains_inflight_until_attempt_is_persisted() -> None:
+    fields = [TemplateField("f1", "f1", "MATRIX")]
+    state = SeedPhaseState.create(fields, enabled=True)
+    execution_state = ExecutionState.create()
+
+    assert state.mark_inflight("f1") is True
+    assert state.resolved_field_ids == set()
+    assert state.inflight_field_ids == {"f1"}
+    assert state.active is True
+
+    execution_state.attempted_keys.add(("f1", "seed", "rank(f1)", "settings"))
+    state.sync(execution_state)
+
+    assert state.resolved_field_ids == {"f1"}
+    assert state.inflight_field_ids == set()
+    assert state.active is False
+
+
+def test_seed_phase_failed_inflight_returns_to_remaining_pool() -> None:
+    fields = [TemplateField("f1", "f1", "MATRIX")]
+    state = SeedPhaseState.create(fields, enabled=True)
+    execution_state = ExecutionState.create()
+
+    state.mark_inflight("f1")
+    state.sync(execution_state)
+
+    assert state.resolved_field_ids == set()
+    assert state.inflight_field_ids == set()
+    assert state.remaining_count == 1
+    assert state.should_wait_or_skip("f1") is False

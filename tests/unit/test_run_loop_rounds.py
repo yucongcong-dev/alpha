@@ -190,7 +190,15 @@ def test_full_run_seed_phase_covers_fields_before_refine() -> None:
         first_round = execute_schedule_round(context, round_index=1)
         assert first_round.progressed is True
         assert dispatched_batches == [("f1", 1), ("f2", 1)]
-        assert context.seed_phase.active is False
+        assert context.seed_phase.active is True
+        assert context.seed_phase.inflight_field_ids == {"f1", "f2"}
+
+        context.run_ctx.execution_state.attempted_keys.update(
+            {
+                ("f1", "seed", "rank(f1)", "settings-0"),
+                ("f2", "seed", "rank(f2)", "settings-0"),
+            }
+        )
 
         dispatched_batches.clear()
         second_round = execute_schedule_round(context, round_index=2)
@@ -306,7 +314,8 @@ def test_full_run_seed_phase_skips_historically_seeded_fields() -> None:
         execute_schedule_round(context, round_index=1)
 
     assert planned_field_ids == ["f2"]
-    assert context.seed_phase.active is False
+    assert context.seed_phase.active is True
+    assert context.seed_phase.inflight_field_ids == {"f2"}
 
 
 def test_full_run_seed_phase_skips_resumable_inflight_fields() -> None:
