@@ -66,6 +66,66 @@ def test_compile_template_registry_summary_reports_weak_template_stats() -> None
     assert row["low_fitness"] == 6
 
 
+def test_compile_template_stats_keeps_metadata_and_outcome_rules_separate() -> None:
+    stats = compile_template_stats(
+        [
+            FieldTestResult(
+                field_id="queue_field",
+                field_type="MATRIX",
+                field_name="queue_field",
+                template_name="tpl",
+                template_family="rank",
+                template_stage="first_order",
+                template_role="default_seed",
+                template_activation_scope="broad",
+                status="error",
+                failed_stage="simulation",
+                message="queued too long",
+            ),
+            FieldTestResult(
+                field_id="skipped_field",
+                field_type="MATRIX",
+                field_name="skipped_field",
+                template_name="tpl",
+                template_role="default_seed",
+                template_activation_scope="broad",
+                status="skipped",
+            ),
+            FieldTestResult(
+                field_id="simulated_field",
+                field_type="MATRIX",
+                field_name="simulated_field",
+                template_name="tpl",
+                template_role="promoted_core",
+                template_activation_scope="feedback_only",
+                status="simulated",
+                submittable=True,
+                submitted=True,
+                failed_checks=[
+                    FailedCheck(name="LOW_SHARPE"),
+                    FailedCheck(name="LOW_FITNESS"),
+                    FailedCheck(name="CONCENTRATED_WEIGHT"),
+                    FailedCheck(name="LOW_SUB_UNIVERSE_SHARPE"),
+                ],
+            ),
+        ]
+    )["tpl"]
+
+    assert stats["template_family"] == "rank"
+    assert stats["role_counts"] == {"default_seed": 2, "promoted_core": 1}
+    assert stats["scope_counts"] == {"broad": 2, "feedback_only": 1}
+    assert stats["attempted"] == 1
+    assert stats["simulated"] == 1
+    assert stats["submittable"] == 1
+    assert stats["submitted"] == 1
+    assert stats["errors"] == 0
+    assert stats["queue_timeouts"] == 1
+    assert stats["low_sharpe"] == 1
+    assert stats["low_fitness"] == 1
+    assert stats["concentrated_weight"] == 1
+    assert stats["low_sub_universe_sharpe"] == 1
+
+
 def test_ensure_analysis_synced_skips_invalid_main_summary_shape(tmp_path) -> None:
     """Analysis sync should gracefully skip a valid JSON file with the wrong top-level type."""
     output_path = tmp_path / "results.json"

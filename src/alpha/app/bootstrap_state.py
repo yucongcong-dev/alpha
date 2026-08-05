@@ -4,6 +4,7 @@ bootstrap 执行态与历史结果装配辅助模块。
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import replace
 from datetime import datetime, timezone
@@ -123,25 +124,9 @@ def persist_reconciled_historical_results(
         )
 
 
-def refresh_pending_check_results(
-    client: BrainClient | ClientFactoryLike,
+def _ordered_pending_check_results(
     results: list[FieldTestResult],
-    *,
-    retries: int,
-    refresh_limit: int = DEFAULT_PENDING_CHECK_REFRESH_LIMIT,
-    max_refresh_seconds: float = DEFAULT_PENDING_CHECK_REFRESH_MAX_SECONDS,
-    max_workers: int = 1,
-) -> tuple[list[FieldTestResult], int]:
-    """Resolve historical PENDING checks without recreating their simulations."""
-    refreshed_results = list(results)
-    refreshed_count = 0
-    attempted_count = 0
-    started_at = time.monotonic()
-    deadline = started_at + max_refresh_seconds if max_refresh_seconds > 0 else None
-
-    def _deadline_reached() -> bool:
-        return deadline is not None and time.monotonic() >= deadline
-
+) -> list[tuple[int, FieldTestResult]]:
     pending_results = [
         (index, result)
         for index, result in enumerate(results)
@@ -153,104 +138,166 @@ def refresh_pending_check_results(
             item[0],
         )
     )
-    if not pending_results:
-        return refreshed_results, refreshed_count
+    return pending_results
 
-    def _refresh_one(result: FieldTestResult) -> tuple[FieldTestResult, bool]:
-        alpha_id = result.alpha_id
-        if not alpha_id:
-            return result, False
-        checked_at = _utc_now_iso()
-        get_client = getattr(client, "get_client", None)
-        active_client = cast(BrainClient, get_client() if callable(get_client) else client)
-        try:
-            submittable, message, failed_checks = check_submission_with_retry(
-                active_client,
-                alpha_id,
-                retries,
-                should_abort=_deadline_reached if deadline is not None else None,
-            )
-        except BrainStopRequested:
-            logger.info(
-                "[check-submission-resume] startup deadline reached alpha_id=%s "
-                "field=%s template=%s",
-                alpha_id,
-                result.field_id,
-                result.template_name,
-            )
-            return result, False
-        except BrainHTTPError as exc:
-            if not exc.is_permanent_client_error:
-                raise
-            refreshed = replace(
-                result,
-                status=STATUS_ERROR,
-                submittable=False,
-                message=f"permanent check submission error: {exc}",
-                failed_stage="check_submission",
-                failed_checks=[],
-                updated_at=checked_at,
-            )
-            logger.warning(
-                "[check-submission-resume] terminal HTTP error alpha_id=%s "
-                "field=%s template=%s status=%d",
-                alpha_id,
-                result.field_id,
-                result.template_name,
-                exc.status,
-            )
-            return refreshed, True
-        except Exception as exc:
-            logger.warning(
-                "[check-submission-resume] failed alpha_id=%s field=%s template=%s: %s",
-                alpha_id,
-                result.field_id,
-                result.template_name,
-                exc,
-            )
-            return replace(result, updated_at=checked_at), False
-        refreshed = replace(
-            result,
-            submittable=submittable,
-            message=message,
-            failed_stage=None,
-            failed_checks=failed_checks,
-            updated_at=checked_at,
+
+def _refresh_client(client: BrainClient | ClientFactoryLike) -> BrainClient:
+    get_client = getattr(client, "get_client", None)
+    return cast(BrainClient, get_client() if callable(get_client) else client)
+
+
+def _refresh_pending_check_result(
+    client: BrainClient | ClientFactoryLike,
+    result: FieldTestResult,
+    *,
+    retries: int,
+    should_abort: Callable[[], bool] | None,
+) -> tuple[FieldTestResult, bool]:
+    alpha_id = result.alpha_id
+    if not alpha_id:
+        return result, False
+    checked_at = _utc_now_iso()
+    try:
+        submittable, message, failed_checks = check_submission_with_retry(
+            _refresh_client(client),
+            alpha_id,
+            retries,
+            should_abort=should_abort,
         )
-        if submittable is None:
-            logger.info(
-                "[check-submission-resume] still pending alpha_id=%s field=%s template=%s",
-                alpha_id,
-                result.field_id,
-                result.template_name,
-            )
-            return refreshed, False
+    except BrainStopRequested:
         logger.info(
-            "[check-submission-resume] resolved alpha_id=%s field=%s template=%s submittable=%s",
+            "[check-submission-resume] startup deadline reached alpha_id=%s field=%s template=%s",
             alpha_id,
             result.field_id,
             result.template_name,
-            submittable,
+        )
+        return result, False
+    except BrainHTTPError as exc:
+        if not exc.is_permanent_client_error:
+            raise
+        refreshed = replace(
+            result,
+            status=STATUS_ERROR,
+            submittable=False,
+            message=f"permanent check submission error: {exc}",
+            failed_stage="check_submission",
+            failed_checks=[],
+            updated_at=checked_at,
+        )
+        logger.warning(
+            "[check-submission-resume] terminal HTTP error alpha_id=%s "
+            "field=%s template=%s status=%d",
+            alpha_id,
+            result.field_id,
+            result.template_name,
+            exc.status,
         )
         return refreshed, True
+    except Exception as exc:
+        logger.warning(
+            "[check-submission-resume] failed alpha_id=%s field=%s template=%s: %s",
+            alpha_id,
+            result.field_id,
+            result.template_name,
+            exc,
+        )
+        return replace(result, updated_at=checked_at), False
 
-    selected_pending = pending_results
-    if refresh_limit > 0:
-        selected_pending = selected_pending[:refresh_limit]
+    refreshed = replace(
+        result,
+        submittable=submittable,
+        message=message,
+        failed_stage=None,
+        failed_checks=failed_checks,
+        updated_at=checked_at,
+    )
+    if submittable is None:
+        logger.info(
+            "[check-submission-resume] still pending alpha_id=%s field=%s template=%s",
+            alpha_id,
+            result.field_id,
+            result.template_name,
+        )
+        return refreshed, False
+    logger.info(
+        "[check-submission-resume] resolved alpha_id=%s field=%s template=%s submittable=%s",
+        alpha_id,
+        result.field_id,
+        result.template_name,
+        submittable,
+    )
+    return refreshed, True
+
+
+def _apply_pending_check_refreshes(
+    client: BrainClient | ClientFactoryLike,
+    selected_pending: list[tuple[int, FieldTestResult]],
+    refreshed_results: list[FieldTestResult],
+    *,
+    retries: int,
+    max_workers: int,
+    deadline: float | None,
+) -> tuple[int, int]:
     worker_count = min(len(selected_pending), max(1, int(max_workers or 1)))
+
+    def deadline_reached() -> bool:
+        return deadline is not None and time.monotonic() >= deadline
+
+    should_abort = deadline_reached if deadline is not None else None
+    refreshed_count = 0
+    attempted_count = 0
     cursor = 0
     with ThreadPoolExecutor(max_workers=worker_count) as executor:
         while cursor < len(selected_pending):
-            if _deadline_reached():
+            if deadline_reached():
                 break
             batch = selected_pending[cursor : cursor + worker_count]
-            futures = [executor.submit(_refresh_one, result) for _index, result in batch]
+            futures = [
+                executor.submit(
+                    _refresh_pending_check_result,
+                    client,
+                    result,
+                    retries=retries,
+                    should_abort=should_abort,
+                )
+                for _index, result in batch
+            ]
             for (index, _result), future in zip(batch, futures, strict=True):
                 refreshed, resolved = future.result()
                 refreshed_results[index] = refreshed
                 refreshed_count += int(resolved)
                 attempted_count += 1
             cursor += len(batch)
+    return refreshed_count, attempted_count
+
+
+def refresh_pending_check_results(
+    client: BrainClient | ClientFactoryLike,
+    results: list[FieldTestResult],
+    *,
+    retries: int,
+    refresh_limit: int = DEFAULT_PENDING_CHECK_REFRESH_LIMIT,
+    max_refresh_seconds: float = DEFAULT_PENDING_CHECK_REFRESH_MAX_SECONDS,
+    max_workers: int = 1,
+) -> tuple[list[FieldTestResult], int]:
+    """Resolve historical PENDING checks without recreating their simulations."""
+    refreshed_results = list(results)
+    deadline = time.monotonic() + max_refresh_seconds if max_refresh_seconds > 0 else None
+    pending_results = _ordered_pending_check_results(results)
+    if not pending_results:
+        return refreshed_results, 0
+
+    selected_pending = pending_results
+    if refresh_limit > 0:
+        selected_pending = selected_pending[:refresh_limit]
+    refreshed_count, attempted_count = _apply_pending_check_refreshes(
+        client,
+        selected_pending,
+        refreshed_results,
+        retries=retries,
+        max_workers=max_workers,
+        deadline=deadline,
+    )
     deferred_count = len(pending_results) - attempted_count
     if deferred_count:
         logger.info(

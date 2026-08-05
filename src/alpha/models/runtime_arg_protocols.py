@@ -163,41 +163,6 @@ class RunSettingsArgs(Protocol):
     def max_trade(self) -> str: ...
 
 
-class PlanningRuntimeArgs(Protocol):
-    @property
-    def limit(self) -> int: ...
-
-    @property
-    def offset(self) -> int: ...
-
-    @property
-    def page_size(self) -> int: ...
-
-    @property
-    def sleep_between_fields(self) -> float: ...
-
-    @property
-    def max_templates_per_field(self) -> int: ...
-
-    @property
-    def max_templates_per_family(self) -> int: ...
-
-    @property
-    def max_total_simulations(self) -> int: ...
-
-    @property
-    def field_template_batch_size(self) -> int: ...
-
-    @property
-    def legacy_similarity_penalty(self) -> int: ...
-
-    @property
-    def top_fields_by_feedback(self) -> int: ...
-
-    @property
-    def stop_after_submittable(self) -> int: ...
-
-
 class FieldSelectionArgs(Protocol):
     @property
     def top_fields_by_feedback(self) -> int: ...
@@ -271,61 +236,6 @@ class SchedulerControlArgs(Protocol):
     def max_total_simulations(self) -> int: ...
 
 
-class RuntimeModeArgs(Protocol):
-    @property
-    def strategy_profile(self) -> str: ...
-
-    @property
-    def auto_update_blacklist(self) -> bool: ...
-
-    @property
-    def smoke_test(self) -> bool: ...
-
-    @property
-    def dry_run_plan(self) -> bool: ...
-
-    @property
-    def full_run(self) -> bool: ...
-
-    @property
-    def verbose(self) -> bool: ...
-
-    @property
-    def quiet(self) -> bool: ...
-
-
-class BootstrapRuntimeArgs(
-    CredentialsArgs,
-    DatasetIdentityArgs,
-    SimulationSettingsArgs,
-    TemplateSelectionArgs,
-    PlanningRuntimeArgs,
-    RuntimeConcurrencyArgs,
-    SimulationRetryArgs,
-    SchedulerControlArgs,
-    ApiClientArgs,
-    RuntimeModeArgs,
-    Protocol,
-):
-    @property
-    def output(self) -> str: ...
-
-    @property
-    def fields_cache_file(self) -> str: ...
-
-    @property
-    def include_fields_file(self) -> str: ...
-
-    @property
-    def exclude_fields_file(self) -> str: ...
-
-    @property
-    def include_templates_file(self) -> str: ...
-
-    @property
-    def exclude_templates_file(self) -> str: ...
-
-
 class QualityThresholdArgs(Protocol):
     @property
     def min_sharpe(self) -> float: ...
@@ -362,19 +272,3 @@ class SchedulerRuntimeArgs(
 
     @property
     def auto_update_blacklist(self) -> bool: ...
-
-
-class RunLoopArgs(
-    TemplateBuildArgs,
-    SimulationStageArgs,
-    SchedulerRuntimeArgs,
-    Protocol,
-):
-    @property
-    def field_template_batch_size(self) -> int: ...
-
-    @property
-    def stop_after_submittable(self) -> int: ...
-
-    @property
-    def full_run(self) -> bool: ...

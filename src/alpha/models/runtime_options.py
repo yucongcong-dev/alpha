@@ -14,7 +14,6 @@ from .runtime_protocols import (
     BootstrapPathArgs,
     FieldFetchArgs,
     FieldSelectionArgs,
-    RunLoopArgs,
     SchedulerControlArgs,
     TemplateBuildArgs,
 )
@@ -357,23 +356,4 @@ class RunLoopOptions:
             scheduler=SchedulerControlOptions.from_args(config),
             field_template_batch_size=max(1, config.planning.field_template_batch_size),
             full_run=config.planning.full_run,
-        )
-
-    @classmethod
-    def from_args(cls, args: RunLoopArgs) -> RunLoopOptions:
-        """Build from the legacy flat runtime argument surface."""
-        return cls(
-            template_build=TemplateBuildOptions.from_args(args),
-            simulation_stage=SimulationStageConfig.from_stage_args(args),
-            result_write=ResultWriteOptions(
-                dataset_id=str(args.dataset_id or ""),
-                output_path=str(args.output or ""),
-                auto_update_blacklist=bool(getattr(args, "auto_update_blacklist", False)),
-            ),
-            scheduler=SchedulerControlOptions.from_args(args),
-            field_template_batch_size=max(
-                1,
-                int(getattr(args, "field_template_batch_size", 0) or 0),
-            ),
-            full_run=bool(getattr(args, "full_run", False)),
         )
