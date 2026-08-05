@@ -28,7 +28,8 @@ python -m alpha --dataset-id fundamental6 --full-run --max-total-simulations 100
 | 想解决的问题 | 位置 |
 |---|---|
 | 平台基础、指标、设置与表达式入门 | [01 入门](docs/01_beginner_guide.md) |
-| 字段研究、仓库运行、缓存、反馈与资产管理 | [02 数据研究与仓库实践](docs/02_research_and_data_guide.md) |
+| 字段研究、模板设计与研究流程 | [02 数据研究与仓库实践](docs/02_research_and_data_guide.md) |
+| CLI、字段调度、缓存、续跑、结果与配置 | [Runner Reference](docs/runner_reference.md) |
 | 根据回测和 submission check 优化 Alpha | [03 优化与提交](docs/03_optimization_and_submission.md) |
 | 查 IS/OS、Coverage、状态或平台术语 | [04 平台 Reference](docs/04_platform_reference.md) |
 | 顾问申请、Workday、银行、Referral 或账号问题 | [05 平台运营 Reference](docs/05_platform_operations_reference.md) |
@@ -42,7 +43,7 @@ alpha/
 ├── src/alpha/       # CLI、运行编排、模板生成、策略、API 与结果处理
 ├── config/          # 唯一可编辑的 YAML 配置源
 ├── datasets/        # 各数据集的模板、预设、黑名单、缓存与本地运行状态
-├── docs/            # 研究主文档、平台运营 reference 与索引
+├── docs/            # 研究主文档、平台与 runner reference、索引
 └── tests/           # unit / integration
 ```
 
@@ -53,7 +54,7 @@ alpha/
 - `blacklist.json`：长期排除规则；自动学习默认关闭，显式开启时直接更新此文件
 - `README.md`：该数据集的有效结论、当前策略与下一步
 
-`cache/`、`runs/`、`feedback/` 与 `.credentials/` 属于本地可重建或私密状态，不提交。详细目录、工作区、结果和清理规则见 [02](docs/02_research_and_data_guide.md)。
+`cache/`、`runs/`、`feedback/` 与 `.credentials/` 属于本地可重建或私密状态，不提交。详细目录、工作区、结果和清理规则见 [Runner Reference](docs/runner_reference.md)。
 
 ## 常用命令
 
@@ -73,7 +74,8 @@ python -m alpha clean
 
 ```
 
-完整的运行阶段、续跑、配置覆盖、缓存和结果文件说明统一在 [02](docs/02_research_and_data_guide.md)。
+完整的运行阶段、续跑、配置覆盖、缓存和结果文件说明统一在
+[Runner Reference](docs/runner_reference.md)。
 
 ## 开发检查
 

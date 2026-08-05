@@ -1,0 +1,138 @@
+# Alpha Runner 运行与本地资产 Reference
+
+> 负责 CLI 运行路径、字段调度、缓存、续跑、结果文件、配置和清理。字段研究方法仍见
+> [02 数据研究与仓库实践](02_research_and_data_guide.md)。
+
+以下命令默认在已激活的 Python 3.10+ 虚拟环境中运行，因此统一使用 `python`。
+macOS 也可以在未激活环境时显式使用 `python3.10`，Windows 可使用 `py -3.10`。
+
+本文说明仓库如何把研究计划变成可恢复的本地运行。默认流程只执行
+`simulation + Check Submission`，不会自动执行平台的正式 `submit`。
+
+## 1. 最小运行路径
+
+```bash
+# 需要登录：冒烟模式（1 字段/1 模板、并发 1）快速验证凭证、API 连通性和模拟创建
+python -m alpha --smoke-test
+
+# 离线只读：检查字段、模板和候选计划，不创建 simulation
+python -m alpha --dry-run-plan
+
+# fundamental6 广泛探索：首次会拉取字段缓存，且必须显式给出 simulation 硬预算
+python -m alpha --dataset-id fundamental6 --full-run --max-total-simulations 100
+
+# 聚焦历史上更有希望的字段
+python -m alpha --top-fields-by-feedback 10 --max-templates-per-field 15
+```
+
+不传参数时，运行器采用内置默认搜索预算。`--full-run` 会枚举更大的字段和模板空间，
+但仍保留 simulation 总预算。运行器先进入 Seed 阶段：历史上没有有效尝试的合格字段
+每个最多调度一个候选；只有所有字段都已获得种子尝试或被判定为不可执行后，才进入正常
+refine 轮次。默认最多调度 500 个 simulation；可用 `--max-total-simulations N` 调整，
+显式传入 `0` 才会取消总预算。若预算低于剩余 Seed 字段数，运行日志和 dry-run 会明确
+标记 partial seed coverage，并且本次不会提前进入 refine。全量模式只适合有足够时间、
+且明确希望从零开始验证时使用。日常研究应从 `--dry-run-plan` 开始。
+
+## 2. 字段选择如何落地
+
+首次真实运行会按 `dataset + region + universe + instrument_type + delay` 拉取字段，
+并缓存到：
+
+```text
+datasets/<dataset>/cache/<region>_<universe>_<instrument>_d<delay>.json
+```
+
+例如 `usa_top3000_equity_d1.json`。同一市场范围会复用缓存；缓存缺失或结构失效时，
+正常运行会重新拉取。`--dry-run-plan` 只使用本地缓存，不登录、不联网；没有匹配缓存时应先做一次正常运行。
+
+有限 `--limit` 下的候选保护机制：
+
+- 先按 `coverage`、`dateCoverage`、`alphaCount`、`userCount` 做质量与拥挤度筛选；少量历史使用可以证明字段可运行，超过拥挤起点后才逐步降权。
+- 字段指标缺失会保留候选、轻微降分并记录 `unknown_*`，不会与真实低覆盖或低验证样本混为同一过滤原因。
+- `_10 / _30 / _60 / _180_days` 等数字窗口会归并成字段族，即使后面还有标的后缀也会归并；每个字段族默认先取不超过 2 个代表字段。
+- 默认约 40% 名额保留给未探索字段；其余名额只给历史优质字段，普通失败记录不会挤占探索预算。
+- 任一通过 submission check 的 Alpha 会立即成为强正反馈；其他反馈还需满足最小尝试次数和结果时间衰减条件。
+- 新字段先以一个低成本种子模板探索；达到明确门槛后才进入 resimulate/refine，全局模板历史不会让未探索字段整体空跑。
+
+`--include-fields-file` 是人工明确指定的研究范围，因此跳过字段族配额和探索比例，但仍执行基础质量检查。
+`--dry-run-plan` 会输出字段分数、原始排名、字段族、入选原因、不可执行字段数和过滤统计，
+用于在真实运行前解释最终候选范围。
+
+## 3. 数据集资产与仓库边界
+
+每个数据集的长期、可审阅资产：
+
+| 路径 | 用途 | 是否提交 |
+|---|---|---|
+| `datasets/<id>/template.json` | 默认模板库 | 是 |
+| `datasets/<id>/presets/` | 专项模板、字段或模板筛选清单 | 是 |
+| `datasets/<id>/blacklist.json` | 长期排除规则 | 是 |
+| `datasets/<id>/README.md` | 当前策略、验证结论与下一步 | 是 |
+| `datasets/<id>/cache/` | 可重拉的字段缓存 | 否 |
+| `datasets/<id>/runs/` | 单次运行 journal、state、分析与日志 | 否 |
+| `datasets/<id>/feedback/<scope>/` | 跨 run 反馈、只读模板统计和去重索引 | 否 |
+
+`blacklist.json` 是唯一模板排除入口：`learned_templates` 保存学习或人工维护的条目，
+`expression_rules` 保存人工规则；规则可用 `target: expression` 匹配表达式，或用
+`target: template_name` 匹配模板名称。自动学习默认关闭；显式使用
+`--auto-update-blacklist` 时，达到学习门槛的条目会在事务锁内去重并直接写入
+`blacklist.json`，随后立即参与当前进程和后续运行的模板过滤。
+
+成熟结论必须从 `runs/` 或 `feedback/` 中沉淀到 `template.json`、`presets/` 或数据集 README；
+不要把长期人工决策留在临时文件名或 JSON 结果里。一次性实验输入放 `tmp/`，外部对照材料或手工草稿放 `scratch/`。
+模板的默认排序直接维护在 `template.json` 的 `priority`；不要再为单个历史模板名叠加 YAML 优先级惩罚。
+
+## 4. 续跑、反馈与结果
+
+每次运行默认是增量模式：已完成的“字段 + 模板 + 表达式 + settings”组合不会重复创建；
+中断时会保存 `state.json` 与 `interrupt_report.json`，再次运行自动恢复可轮询的远端 simulation。
+如需独立实验，优先使用新的 `--run-name`。
+
+运行结果目录：
+
+| 文件 | 含义 |
+|---|---|
+| `runs/<run>/results.jsonl` | 权威结果 journal；其他分析视图可由它重建 |
+| `runs/<run>/summary.json` | 当前 run 的轻量 summary 与 journal 指针 |
+| `runs/<run>/analysis.json` | near-pass、失败分布、模板和字段表现 |
+| `feedback/<scope>/results.jsonl` | 带来源和 revision 的跨 run 去重结果历史 |
+| `feedback/<scope>/run_index.json` | 已聚合 run 的轻量索引 |
+
+`submittable=true` 表示该 Alpha 通过本轮 submission check、具备人工提交价值；
+`submitted=false` 表示运行器没有替你正式提交。`PENDING` 结果以 `submittable=null` 保存，
+不会被当作通过、失败反馈或 near-pass，但会在后续启动时重新查询终态。
+
+## 5. 路径、配置与清理
+
+工作区按以下优先级选择：`ALPHA_WORKSPACE_ROOT`、源码仓库（或当前含 `datasets/` 与 `config/` 的目录）、`~/.alpha/`。
+相对路径参数按命令执行目录解析；`--output`、`--fields-cache-file`、`--include-fields-file` 和模板库路径都可显式覆盖默认值。
+
+可编辑配置的唯一来源是根目录 `config/*.yaml`。日常运行参数主要在 `settings.yaml`，
+运行策略 profile schema、数据集 profile、表达式策略、质量反馈和模板默认值分别按各自 YAML 维护；
+`src/alpha/resources/config/*.yaml` 是安装包镜像，不应直接修改。
+
+运行策略用 `global.runtime.strategy_profile` 或 `--strategy-profile` 显式标记，当前支持：
+
+- `explore`：广覆盖探索，优先发现字段/模板是否有基本信息量
+- `refine`：反馈邻域优化，优先围绕 near-pass 和已知有效结构做小范围变体
+- `submit-focused`：提交导向收敛，优先控制风险、相关性和可提交数量
+
+`config/strategy_profiles.yaml` 同时定义策略说明、常调参数边界和 `runtime_defaults`。
+当前 `refine` 会收窄字段与模板预算，`submit-focused` 还会聚焦历史反馈字段并设置
+`stop_after_submittable`；`explore` 不额外改写默认预算。显式 CLI 参数优先于 profile 默认值，
+dataset profile 先于 strategy profile 合并，`--smoke-test` / `--full-run` 最后按运行模式归一化
+搜索范围。具体生效值以 dry-run 输出和 run config snapshot 为准。
+
+```bash
+# YAML 改动后同步并检查
+make sync-config
+make check
+
+# 仅预览 / 执行可重建运行产物清理（默认保留 .credentials）
+python -m alpha clean --dry-run-clean
+python -m alpha clean
+```
+
+`alpha clean` 处理数据集的 `cache/`、`runs/` 和遗留运行产物；`make clean-dev` 处理 Python
+字节码、测试缓存、coverage 与开发安装元数据。只有明确传入 `--include-credentials` 才会清理本地加密凭证。
+
