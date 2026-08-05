@@ -42,7 +42,7 @@ def finalize_run(
 ) -> None:
     """写出最终结果并清理运行中间状态。"""
     execution_state = run_ctx.execution_state
-    write_options = ResultWriteOptions.from_args(args)
+    write_options = ResultWriteOptions.from_config(args)
     output_path = _run_path_value(run_paths, "output") or write_options.output_path
     feedback_output_path = _run_path_value(run_paths, "feedback_output")
     state_file = _run_path_value(run_paths, "state_file")

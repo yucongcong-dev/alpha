@@ -485,6 +485,11 @@ def test_drain_completed_futures_ignores_historical_submittable_baseline() -> No
             completed_futures=[done_future],
             execution_state=execution_state,
             args=args,
+            result_write_options=ResultWriteOptions(
+                dataset_id=args.dataset_id,
+                output_path=args.output,
+                auto_update_blacklist=args.auto_update_blacklist,
+            ),
             settings_fingerprint="settings-fp",
             template_library_fingerprint="templates-fp",
             run_config={},

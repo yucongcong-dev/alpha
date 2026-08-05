@@ -51,6 +51,15 @@ _DEFAULT_SIM_SETTINGS = {
     "language": "FASTEXPR",
 }
 
+
+def _result_write_options(args: MockArgs) -> ResultWriteOptions:
+    return ResultWriteOptions(
+        dataset_id=args.dataset_id,
+        output_path=args.output,
+        auto_update_blacklist=bool(getattr(args, "auto_update_blacklist", False)),
+    )
+
+
 # ============================================================================
 # simulation ↔ scheduler 拥塞信号传递测试
 # ============================================================================
@@ -88,7 +97,7 @@ class TestCongestionSignalPropagation:
             failed_stage="simulation",
         )
         completion_ctx = FutureCompletionContext(
-            result_write_options=ResultWriteOptions.from_args(scheduler_args),
+            result_write_options=_result_write_options(scheduler_args),
             settings_fingerprint="abc",
             template_library_fingerprint="def",
             run_config={"key": "val"},
@@ -142,7 +151,7 @@ class TestCongestionSignalPropagation:
         )
 
         completion_ctx = FutureCompletionContext(
-            result_write_options=ResultWriteOptions.from_args(scheduler_args),
+            result_write_options=_result_write_options(scheduler_args),
             settings_fingerprint="abc",
             template_library_fingerprint="def",
             run_config={"key": "val"},
@@ -356,6 +365,7 @@ class TestDrainCompletedFuturesFlow:
                 completed_futures=[future],
                 execution_state=empty_execution_state,
                 args=scheduler_args,
+                result_write_options=_result_write_options(scheduler_args),
                 settings_fingerprint="abc",
                 template_library_fingerprint="def",
                 run_config={"key": "val"},
@@ -406,6 +416,7 @@ class TestDrainCompletedFuturesFlow:
                 completed_futures=[future],
                 execution_state=empty_execution_state,
                 args=scheduler_args,
+                result_write_options=_result_write_options(scheduler_args),
                 settings_fingerprint="abc",
                 template_library_fingerprint="def",
                 run_config=None,
@@ -444,6 +455,7 @@ class TestDrainCompletedFuturesFlow:
                 completed_futures=[future],
                 execution_state=empty_execution_state,
                 args=scheduler_args,
+                result_write_options=_result_write_options(scheduler_args),
                 settings_fingerprint="abc",
                 template_library_fingerprint="def",
                 run_config=None,
@@ -504,7 +516,7 @@ class TestContextConsistency:
     ) -> None:
         """FutureCompletionContext 保持 fingerprints 不变。"""
         ctx = FutureCompletionContext(
-            result_write_options=ResultWriteOptions.from_args(scheduler_args),
+            result_write_options=_result_write_options(scheduler_args),
             settings_fingerprint="s_fp_001",
             template_library_fingerprint="tl_fp_001",
             run_config={"mode": "full"},

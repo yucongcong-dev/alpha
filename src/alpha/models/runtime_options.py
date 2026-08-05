@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
 
 from ..config.strategy_profiles import normalize_strategy_profile
 from ..runtime.preset_mode import resolve_preset_mode
@@ -13,11 +14,13 @@ from .runtime_protocols import (
     BootstrapPathArgs,
     FieldFetchArgs,
     FieldSelectionArgs,
-    ResultWriteArgs,
     RunLoopArgs,
     SchedulerControlArgs,
     TemplateBuildArgs,
 )
+
+if TYPE_CHECKING:
+    from ..config.application import ApplicationConfig
 
 
 @dataclass(frozen=True)
@@ -132,11 +135,12 @@ class ResultWriteOptions:
     auto_update_blacklist: bool = False
 
     @classmethod
-    def from_args(cls, args: ResultWriteArgs) -> ResultWriteOptions:
+    def from_config(cls, config: ApplicationConfig) -> ResultWriteOptions:
+        """Build result persistence options from canonical config sections."""
         return cls(
-            dataset_id=str(args.dataset_id or ""),
-            output_path=str(args.output or ""),
-            auto_update_blacklist=bool(getattr(args, "auto_update_blacklist", False)),
+            dataset_id=config.dataset.dataset_id,
+            output_path=config.paths.output,
+            auto_update_blacklist=config.runtime_flags.auto_update_blacklist,
         )
 
 
@@ -344,11 +348,28 @@ class RunLoopOptions:
     full_run: bool = False
 
     @classmethod
+    def from_config(cls, config: ApplicationConfig) -> RunLoopOptions:
+        """Build live-loop options while reading result settings canonically."""
+        return cls(
+            template_build=TemplateBuildOptions.from_args(config),
+            simulation_stage=SimulationStageConfig.from_stage_args(config),
+            result_write=ResultWriteOptions.from_config(config),
+            scheduler=SchedulerControlOptions.from_args(config),
+            field_template_batch_size=max(1, config.planning.field_template_batch_size),
+            full_run=config.planning.full_run,
+        )
+
+    @classmethod
     def from_args(cls, args: RunLoopArgs) -> RunLoopOptions:
+        """Build from the legacy flat runtime argument surface."""
         return cls(
             template_build=TemplateBuildOptions.from_args(args),
             simulation_stage=SimulationStageConfig.from_stage_args(args),
-            result_write=ResultWriteOptions.from_args(args),
+            result_write=ResultWriteOptions(
+                dataset_id=str(args.dataset_id or ""),
+                output_path=str(args.output or ""),
+                auto_update_blacklist=bool(getattr(args, "auto_update_blacklist", False)),
+            ),
             scheduler=SchedulerControlOptions.from_args(args),
             field_template_batch_size=max(
                 1,

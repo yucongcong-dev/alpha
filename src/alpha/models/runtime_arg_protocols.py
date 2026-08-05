@@ -90,17 +90,6 @@ class TemplateBuildArgs(
     pass
 
 
-class ResultWriteArgs(Protocol):
-    @property
-    def dataset_id(self) -> str: ...
-
-    @property
-    def output(self) -> str: ...
-
-    @property
-    def auto_update_blacklist(self) -> bool: ...
-
-
 class CleanRuntimeArgs(Protocol):
     @property
     def include_credentials(self) -> bool: ...

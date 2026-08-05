@@ -8,6 +8,7 @@ from threading import Semaphore
 from unittest.mock import patch
 
 from alpha.app.finalize import finalize_run
+from alpha.config.application import ApplicationConfig
 from alpha.models.domain import FieldTestResult
 from alpha.models.io_types import RunFilters, RunPaths
 from alpha.models.runtime import (
@@ -36,6 +37,10 @@ def _build_run_ctx(*, client_factory=None) -> InitializedRunContext:
     )
 
 
+def _build_config(args: argparse.Namespace, run_paths: RunPaths) -> ApplicationConfig:
+    return ApplicationConfig.from_args(args, run_paths)
+
+
 def test_finalize_run_prefers_run_paths_output(monkeypatch, tmp_path) -> None:
     """Final flush should honor normalized output paths over raw args.output."""
     args = argparse.Namespace(
@@ -56,7 +61,7 @@ def test_finalize_run_prefers_run_paths_output(monkeypatch, tmp_path) -> None:
         patch("alpha.app.finalize.dump_results") as mock_dump,
         patch("alpha.app.finalize.delete_pipeline_state") as mock_delete,
     ):
-        finalize_run(args, run_ctx, run_paths=run_paths)
+        finalize_run(_build_config(args, run_paths), run_ctx, run_paths=run_paths)
 
     assert mock_dump.call_args.args[0] == str(tmp_path / "normalized-results.json")
     assert mock_delete.call_args.args[0] == str(tmp_path / "state.json")
@@ -95,7 +100,7 @@ def test_finalize_run_updates_separate_feedback_output(tmp_path) -> None:
         patch("alpha.app.finalize.persist_feedback_run_index") as mock_persist_index,
         patch("alpha.app.finalize.delete_pipeline_state") as mock_delete,
     ):
-        finalize_run(args, run_ctx, run_paths=run_paths)
+        finalize_run(_build_config(args, run_paths), run_ctx, run_paths=run_paths)
 
     assert [call.args[0] for call in mock_dump.call_args_list] == [
         str(tmp_path / "results.json"),
@@ -154,7 +159,7 @@ def test_finalize_run_reconciles_pending_checks_before_persisting(tmp_path) -> N
         patch("alpha.app.finalize.dump_results") as mock_dump,
         patch("alpha.app.finalize.delete_pipeline_state"),
     ):
-        finalize_run(args, run_ctx, run_paths=run_paths)
+        finalize_run(_build_config(args, run_paths), run_ctx, run_paths=run_paths)
 
     mock_refresh.assert_called_once_with(
         client_factory,

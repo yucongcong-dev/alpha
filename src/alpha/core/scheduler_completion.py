@@ -6,7 +6,7 @@ from concurrent.futures import Future
 
 from ..models.domain import FieldTestResult
 from ..models.runtime_options import ResultWriteOptions
-from ..models.runtime_protocols import RunConfig, SchedulerRuntimeArgs
+from ..models.runtime_protocols import RunConfig
 from ..runtime.contexts import (
     FutureCompletionContext,
     PendingFutureContext,
@@ -25,15 +25,14 @@ def _context_value(
 
 def build_completion_context(
     *,
-    args: SchedulerRuntimeArgs,
-    result_write_options: ResultWriteOptions | None,
+    result_write_options: ResultWriteOptions,
     settings_fingerprint: str,
     template_library_fingerprint: str,
     run_config: RunConfig | None,
 ) -> FutureCompletionContext:
     """Build the immutable completion context shared by done futures."""
     return FutureCompletionContext(
-        result_write_options=result_write_options or ResultWriteOptions.from_args(args),
+        result_write_options=result_write_options,
         settings_fingerprint=settings_fingerprint,
         template_library_fingerprint=template_library_fingerprint,
         run_config=run_config,

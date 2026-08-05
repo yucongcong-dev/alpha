@@ -133,7 +133,7 @@ def drain_completed_futures(
     completed_futures: Sequence[Future[FieldTestResult]],
     execution_state: ExecutionState,
     args: SchedulerRuntimeArgs,
-    result_write_options: ResultWriteOptions | None = None,
+    result_write_options: ResultWriteOptions,
     settings_fingerprint: str,
     template_library_fingerprint: str,
     run_config: RunConfig | None,

@@ -10,7 +10,7 @@ from alpha.cli.parser import parse_application_config, parse_args
 from alpha.cli.path_resolution import normalize_args_paths
 from alpha.config import get_yaml_config
 from alpha.config.constants import FULL_RUN_MAX_TOTAL_SIMULATIONS
-from alpha.models.runtime_options import RunConfigSnapshotOptions
+from alpha.models.runtime_options import ResultWriteOptions, RunConfigSnapshotOptions
 
 
 def clear_yaml_cache() -> None:
@@ -658,6 +658,11 @@ def test_parse_application_config_is_immutable_and_uses_normalized_paths(
     assert config.planning.limit == config.limit
     assert config.execution.max_concurrent_simulations == config.max_concurrent_simulations
     assert config.quality.min_sharpe == config.min_sharpe
+    assert ResultWriteOptions.from_config(config) == ResultWriteOptions(
+        dataset_id="pv1",
+        output_path=config.paths.output,
+        auto_update_blacklist=False,
+    )
     assert not hasattr(config, "__dict__")
     with pytest.raises((AttributeError, TypeError)):
         config.limit = 999

@@ -25,6 +25,43 @@ logger = logging.getLogger(__name__)
 _T = TypeVar("_T")
 
 
+def _retry_disposition(error: Exception) -> tuple[str, bool]:
+    """Return the log label and whether one failure is retryable here."""
+    if isinstance(error, BrainRateLimitError):
+        return "rate limited", False
+    if isinstance(error, BrainQueueBusyError):
+        return "queue busy", False
+    if isinstance(error, BrainTransientError):
+        return "transport failure", True
+    if isinstance(error, BrainAPIError):
+        return "terminal API error", False
+    return "failed", True
+
+
+def _raise_if_aborted(name: str, should_abort: Callable[[], bool] | None) -> None:
+    if should_abort is not None and should_abort():
+        raise BrainStopRequested(f"{name} aborted because stop was requested")
+
+
+def _wait_before_retry(
+    name: str,
+    retry_wait_seconds: float,
+    should_abort: Callable[[], bool] | None,
+    *,
+    cause: Exception,
+) -> None:
+    if should_abort is not None and should_abort():
+        raise BrainStopRequested(f"{name} aborted because stop was requested") from cause
+    if should_abort is None:
+        wait_seconds(retry_wait_seconds, f"retry {name}")
+        return
+    wait_seconds(
+        retry_wait_seconds,
+        f"retry {name}",
+        should_abort=should_abort,
+    )
+
+
 def retry_operation(
     name: str,
     retries: int,
@@ -42,82 +79,30 @@ def retry_operation(
 
     for attempt in range(1, attempts + 1):
         last_attempt = attempt
-        if should_abort is not None and should_abort():
-            raise BrainStopRequested(f"{name} aborted because stop was requested")
+        _raise_if_aborted(name, should_abort)
         try:
             return func()
         except BrainStopRequested:
             raise
-        except BrainRateLimitError as exc:
-            last_error = exc
-            logger.warning(
-                "[retry] %s rate limited on attempt %d/%d: %s",
-                name,
-                attempt,
-                attempts,
-                exc,
-            )
-            break
-        except BrainQueueBusyError as exc:
-            last_error = exc
-            logger.warning(
-                "[retry] %s queue busy on attempt %d/%d: %s",
-                name,
-                attempt,
-                attempts,
-                exc,
-            )
-            break
-        except BrainTransientError as exc:
-            last_error = exc
-            logger.warning(
-                "[retry] %s transport failure on attempt %d/%d: %s",
-                name,
-                attempt,
-                attempts,
-                exc,
-            )
-            if attempt < attempts:
-                if should_abort is not None and should_abort():
-                    raise BrainStopRequested(f"{name} aborted because stop was requested") from exc
-                if should_abort is None:
-                    wait_seconds(retry_wait_seconds, f"retry {name}")
-                else:
-                    wait_seconds(
-                        retry_wait_seconds,
-                        f"retry {name}",
-                        should_abort=should_abort,
-                    )
-        except BrainAPIError as exc:
-            last_error = exc
-            logger.warning(
-                "[retry] %s terminal API error on attempt %d/%d: %s",
-                name,
-                attempt,
-                attempts,
-                exc,
-            )
-            break
         except Exception as exc:
             last_error = exc
+            disposition, retryable = _retry_disposition(exc)
             logger.warning(
-                "[retry] %s failed on attempt %d/%d: %s",
+                "[retry] %s %s on attempt %d/%d: %s",
                 name,
+                disposition,
                 attempt,
                 attempts,
                 exc,
             )
-            if attempt < attempts:
-                if should_abort is not None and should_abort():
-                    raise BrainStopRequested(f"{name} aborted because stop was requested") from exc
-                if should_abort is None:
-                    wait_seconds(retry_wait_seconds, f"retry {name}")
-                else:
-                    wait_seconds(
-                        retry_wait_seconds,
-                        f"retry {name}",
-                        should_abort=should_abort,
-                    )
+            if not retryable or attempt >= attempts:
+                break
+            _wait_before_retry(
+                name,
+                retry_wait_seconds,
+                should_abort,
+                cause=exc,
+            )
 
     if isinstance(last_error, BrainHTTPError):
         raise last_error

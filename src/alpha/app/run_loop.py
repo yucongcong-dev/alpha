@@ -58,7 +58,7 @@ def run_field_test_loop(
     fields = list(run_ctx.fields)
     original_fields = list(run_ctx.fields)
     max_workers = runtime_state.max_workers
-    run_loop_options = RunLoopOptions.from_args(args)
+    run_loop_options = RunLoopOptions.from_config(args)
     field_template_batch_size = run_loop_options.field_template_batch_size
     scheduler_options = run_loop_options.scheduler
     field_resume_positions = build_field_resume_positions(original_fields)

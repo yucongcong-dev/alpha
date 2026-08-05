@@ -22,7 +22,6 @@ from alpha.models.runtime_options import (
     BootstrapFieldOptions,
     FieldFetchOptions,
     FieldSelectionOptions,
-    ResultWriteOptions,
     RunConfigSnapshotOptions,
     RunLoopOptions,
     SchedulerControlOptions,
@@ -137,11 +136,6 @@ class TestRuntimeOptionBuilders:
             limit = "12"
             check_submission_retries = "4"
 
-        assert ResultWriteOptions.from_args(_Args()) == ResultWriteOptions(
-            dataset_id="model51",
-            output_path="results.json",
-            auto_update_blacklist=True,
-        )
         assert FieldFetchOptions.from_args(_Args()) == FieldFetchOptions(
             dataset_id="model51",
             page_size=100,

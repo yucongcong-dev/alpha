@@ -47,7 +47,7 @@ def drain_completed_futures(
     completed_futures: Sequence[Future[FieldTestResult]],
     execution_state: ExecutionState,
     args: SchedulerRuntimeArgs,
-    result_write_options: ResultWriteOptions | None = None,
+    result_write_options: ResultWriteOptions,
     settings_fingerprint: str,
     template_library_fingerprint: str,
     run_config: RunConfig | None,
@@ -57,7 +57,6 @@ def drain_completed_futures(
 ) -> TemplateStats:
     """Build completion context and consume completed worker futures."""
     completion_ctx = build_completion_context(
-        args=args,
         result_write_options=result_write_options,
         settings_fingerprint=settings_fingerprint,
         template_library_fingerprint=template_library_fingerprint,

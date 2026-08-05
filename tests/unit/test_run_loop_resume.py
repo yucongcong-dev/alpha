@@ -21,6 +21,7 @@ from alpha.app.run_loop import (
     run_field_test_loop,
 )
 from alpha.app.run_loop_resume import save_runtime_checkpoint, save_terminal_pipeline_state
+from alpha.config.application import ApplicationConfig
 from alpha.models.io_types import RunFilters, RunPaths
 from alpha.models.runtime import (
     ExecutionState,
@@ -55,7 +56,7 @@ def _build_run_ctx(fields: list[dict[str, str]]) -> InitializedRunContext:
     )
 
 
-def _build_run_loop_args(tmp_path, **overrides) -> argparse.Namespace:
+def _build_run_loop_args(tmp_path, **overrides) -> ApplicationConfig:
     values = {
         "field_template_batch_size": 0,
         "stop_after_submittable": 0,
@@ -99,7 +100,15 @@ def _build_run_loop_args(tmp_path, **overrides) -> argparse.Namespace:
         "sleep_between_fields": 0.0,
     }
     values.update(overrides)
-    return argparse.Namespace(**values)
+    args = argparse.Namespace(**values)
+    paths = RunPaths(
+        results_dir=str(tmp_path),
+        log_file=str(tmp_path / "run.log"),
+        state_file=str(tmp_path / "state.json"),
+        checkpoint_file=str(tmp_path / "checkpoint.json"),
+        output=str(tmp_path / "results.json"),
+    )
+    return ApplicationConfig.from_args(args, paths)
 
 
 def test_restore_fields_from_state_returns_empty_when_all_fields_completed(tmp_path) -> None:
@@ -527,7 +536,14 @@ def test_resolve_result_write_options_prefers_run_paths_output(tmp_path) -> None
         output=str(tmp_path / "normalized-results.json"),
     )
 
-    options = resolve_result_write_options(ResultWriteOptions.from_args(args), run_paths)
+    options = resolve_result_write_options(
+        ResultWriteOptions(
+            dataset_id=args.dataset_id,
+            output_path=args.output,
+            auto_update_blacklist=args.auto_update_blacklist,
+        ),
+        run_paths,
+    )
 
     assert options == ResultWriteOptions(
         dataset_id="fundamental6",

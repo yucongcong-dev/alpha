@@ -128,6 +128,88 @@ def _recover_results_from_journal(path: str) -> list[FieldTestResult]:
         raise ValueError(f"failed to recover results journal {journal_path}: {exc}") from exc
 
 
+def _handle_unusable_summary(
+    path: str,
+    *,
+    suffix: str,
+    detail: str,
+    repair_corrupt_summary: bool,
+) -> None:
+    """Quarantine an unusable summary, or only log during read-only planning."""
+    if not repair_corrupt_summary:
+        logger.warning(
+            "[recovery] read-only load ignored %s result file %s: %s",
+            suffix,
+            path,
+            detail,
+        )
+        return
+
+    backup_path = f"{path}.{suffix}.{int(time.time())}"
+    try:
+        os.rename(path, backup_path)
+        logger.warning(
+            "[recovery] renamed %s result file %s -> %s (%s)",
+            suffix,
+            path,
+            backup_path,
+            detail,
+        )
+    except OSError:
+        logger.warning(
+            "[recovery] failed to rename %s result file %s: %s",
+            suffix,
+            path,
+            detail,
+        )
+
+
+def _load_summary_payload(
+    path: str,
+    *,
+    repair_corrupt_summary: bool,
+) -> dict[str, Any] | None:
+    """Load a summary object, handling corrupt or invalid top-level content."""
+    try:
+        with open(path, encoding="utf-8") as handle:
+            payload = json.load(handle)
+    except Exception as exc:
+        _handle_unusable_summary(
+            path,
+            suffix="corrupted",
+            detail=f"error: {exc}",
+            repair_corrupt_summary=repair_corrupt_summary,
+        )
+        return None
+
+    if isinstance(payload, dict):
+        return payload
+    _handle_unusable_summary(
+        path,
+        suffix="invalid",
+        detail=f"unexpected JSON type: {type(payload).__name__}",
+        repair_corrupt_summary=repair_corrupt_summary,
+    )
+    return None
+
+
+def _load_results_from_summary(path: str, payload: dict[str, Any]) -> list[FieldTestResult]:
+    """Load authoritative journal rows, with embedded rows as a compatibility fallback."""
+    journal_path = _resolve_results_journal_path(path, payload.get("results_journal"))
+    if os.path.exists(journal_path):
+        try:
+            rows = _load_results_rows_from_journal(journal_path)
+            return _rows_to_results(rows, source=journal_path)
+        except Exception as exc:
+            logger.warning("[recovery] failed to read results journal %s: %s", journal_path, exc)
+
+    if payload.get("results_embedded", True):
+        payload_rows = payload.get("results")
+        if isinstance(payload_rows, list):
+            return _rows_to_results(payload_rows, source=f"{path}:results")
+    return []
+
+
 def load_existing_results(
     path: str,
     *,
@@ -144,68 +226,10 @@ def load_existing_results(
     if not os.path.exists(path):
         return _recover_results_from_journal(path)
 
-    try:
-        with open(path, encoding="utf-8") as handle:
-            payload = json.load(handle)
-    except Exception as exc:
-        if repair_corrupt_summary:
-            now = int(time.time())
-            backup_path = f"{path}.corrupted.{now}"
-            try:
-                os.rename(path, backup_path)
-                logger.warning(
-                    "[recovery] renamed corrupted result file %s -> %s (error: %s)",
-                    path,
-                    backup_path,
-                    exc,
-                )
-            except OSError:
-                logger.warning(
-                    "[recovery] failed to rename corrupted result file %s: %s", path, exc
-                )
-        else:
-            logger.warning(
-                "[recovery] read-only load ignored corrupted result file %s: %s",
-                path,
-                exc,
-            )
+    payload = _load_summary_payload(
+        path,
+        repair_corrupt_summary=repair_corrupt_summary,
+    )
+    if payload is None:
         return _recover_results_from_journal(path)
-
-    if not isinstance(payload, dict):
-        if repair_corrupt_summary:
-            now = int(time.time())
-            backup_path = f"{path}.invalid.{now}"
-            try:
-                os.rename(path, backup_path)
-                logger.warning(
-                    "[recovery] renamed invalid result file %s -> %s (unexpected JSON type: %s)",
-                    path,
-                    backup_path,
-                    type(payload).__name__,
-                )
-            except OSError:
-                logger.warning(
-                    "[recovery] failed to rename invalid result file %s (unexpected JSON type: %s)",
-                    path,
-                    type(payload).__name__,
-                )
-        else:
-            logger.warning(
-                "[recovery] read-only load ignored invalid result file %s (unexpected JSON type: %s)",
-                path,
-                type(payload).__name__,
-            )
-        return _recover_results_from_journal(path)
-
-    journal_path = _resolve_results_journal_path(path, payload.get("results_journal"))
-    if os.path.exists(journal_path):
-        try:
-            rows = _load_results_rows_from_journal(journal_path)
-            return _rows_to_results(rows, source=journal_path)
-        except Exception as exc:
-            logger.warning("[recovery] failed to read results journal %s: %s", journal_path, exc)
-    if payload.get("results_embedded", True):
-        payload_rows = payload.get("results")
-        if isinstance(payload_rows, list):
-            return _rows_to_results(payload_rows, source=f"{path}:results")
-    return []
+    return _load_results_from_summary(path, payload)
