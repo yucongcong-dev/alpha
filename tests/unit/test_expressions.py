@@ -308,19 +308,20 @@ def test_fundamental6_default_template_library_is_closed_for_vector_fields() -> 
     assert "event_trade_when_recent_change_zscore_60" in names
     assert "vec_avg_ts_rank_60" in names
     assert names <= {
-        "3layer_zscore_decay",
-        "ts_rank_120",
-        "ratio_cap_zscore_60",
-        "bucket_cap_ratio_zscore_60",
+        "seed_delta_over_std_63_126",
+        "seed_industry_zscore_120",
+        "seed_cap_bucket_ts_rank_120",
+        "seed_change_event_delta_over_std_20_120",
         "event_trade_when_recent_change_zscore_60",
         "vec_avg_ts_rank_60",
     }
     assert families <= {
-        "ts_rank",
-        "neutralize_decay",
-        "ratio_cap",
-        "bucket_ratio",
+        "delta_over_std",
+        "grouped_zscore",
+        "bucket_ts_rank",
+        "event_delta_over_std",
         "event_trade_when",
+        "ts_rank",
     }
     assert all("vec_avg(vec_avg(" not in item.expression for item in candidates)
 

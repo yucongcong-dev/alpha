@@ -339,6 +339,27 @@ def test_fundamental6_template_library_has_family_and_layer_metadata() -> None:
     assert missing == []
 
 
+def test_fundamental6_default_seeds_span_distinct_families() -> None:
+    template_file = (
+        Path(__file__).resolve().parents[2] / "datasets" / "fundamental6" / "template.json"
+    )
+    payload = json.loads(template_file.read_text(encoding="utf-8"))
+    default_seeds = [
+        item
+        for item in payload["default"]
+        if isinstance(item, dict) and item.get("role") == "default_seed"
+    ]
+
+    assert {item["name"] for item in default_seeds} == {
+        "seed_delta_over_std_63_126",
+        "seed_industry_zscore_120",
+        "seed_cap_bucket_ts_rank_120",
+        "seed_change_event_delta_over_std_20_120",
+    }
+    assert len({item["family"] for item in default_seeds}) == len(default_seeds)
+    assert all(item.get("activation_scope") == "broad" for item in default_seeds)
+
+
 def test_fundamental6_template_library_removes_known_weak_short_window_templates() -> None:
     template_file = (
         Path(__file__).resolve().parents[2] / "datasets" / "fundamental6" / "template.json"
