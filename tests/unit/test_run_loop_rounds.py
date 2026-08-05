@@ -194,6 +194,64 @@ def test_full_run_seed_phase_covers_fields_before_refine() -> None:
     assert dispatched_batches == [("f1", 2), ("f2", 2)]
 
 
+def test_full_run_seed_phase_prefers_default_seed_role() -> None:
+    context = _build_context(
+        field_template_batch_size=2,
+        seed_phase_enabled=True,
+    )
+    refine_entry = PendingTemplateEntry(
+        template_name="high-priority-refine",
+        template_family="ratio",
+        template_stage="group_second_order",
+        template_role="refine_neighbor",
+        template_activation_scope="broad",
+        expression="group_rank(f1, industry)",
+        priority=1200,
+        settings_variant=SettingsVariant(),
+        variant_fingerprint="refine-settings",
+    )
+    seed_entry = PendingTemplateEntry(
+        template_name="generic-seed",
+        template_family="rank",
+        template_stage="first_order",
+        template_role="default_seed",
+        template_activation_scope="broad",
+        expression="rank(f1)",
+        priority=900,
+        settings_variant=SettingsVariant(),
+        variant_fingerprint="seed-settings",
+    )
+    dispatched: list[str] = []
+
+    def _consume_dispatch(*, scheduled_templates, template_queue, **_kwargs):
+        dispatched.extend(entry.template_name for entry in scheduled_templates)
+        for entry in scheduled_templates:
+            template_queue.consume(entry)
+        return False
+
+    with (
+        context.executor,
+        patch(
+            "alpha.app.run_loop_rounds.refresh_runtime_feedback",
+            return_value=RuntimeFeedbackRefresh(feedback_changed=False),
+        ),
+        patch("alpha.app.run_loop_rounds.should_skip_field", return_value=False),
+        patch(
+            "alpha.app.run_loop_rounds.build_pending_templates_for_field",
+            return_value=([refine_entry, seed_entry], 0, 2),
+        ),
+        patch(
+            "alpha.app.run_loop_rounds._dispatch_templates_for_field",
+            side_effect=_consume_dispatch,
+        ),
+        patch("alpha.app.run_loop_rounds.persist_field_progress"),
+    ):
+        execute_schedule_round(context, round_index=1)
+
+    assert dispatched == ["generic-seed"]
+    assert list(context.field_template_queues["f1"].entries) == [refine_entry]
+
+
 def test_full_run_seed_phase_skips_historically_seeded_fields() -> None:
     context = _build_context(
         field_template_batch_size=2,

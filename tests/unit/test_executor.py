@@ -420,3 +420,51 @@ def test_print_dry_run_plan_reports_partial_full_run_seed_budget(caplog) -> None
     messages = [record.getMessage() for record in caplog.records]
     assert "[dry-run] full_run_seed resolved=0 remaining=2 budget_sufficient=false" in messages
     assert "[dry-run] full_run_schedule seed=1 refine=0" in messages
+
+
+def test_print_dry_run_plan_samples_explicit_default_seed(caplog) -> None:
+    field = _field("f1")
+    refine_entry = PendingTemplateEntry(
+        template_name="high-priority-refine",
+        template_family="ratio",
+        template_stage="group_second_order",
+        template_role="refine_neighbor",
+        template_activation_scope="broad",
+        expression="group_rank(f1, industry)",
+        priority=1200,
+        settings_variant=SettingsVariant(),
+        variant_fingerprint="refine-settings",
+    )
+    seed_entry = PendingTemplateEntry(
+        template_name="generic-seed",
+        template_family="rank",
+        template_stage="first_order",
+        template_role="default_seed",
+        template_activation_scope="broad",
+        expression="rank(f1)",
+        priority=900,
+        settings_variant=SettingsVariant(),
+        variant_fingerprint="seed-settings",
+    )
+    args = _args()
+    args.full_run = True
+    caplog.set_level(logging.INFO)
+
+    with patch(
+        "alpha.core.executor.build_pending_templates_for_field",
+        return_value=([refine_entry, seed_entry], 0, 2),
+    ):
+        print_dry_run_plan(
+            args=args,
+            fields=[field],
+            filters=RunFilters(),
+            template_library={},
+            historical_state=HistoricalRunState(),
+            execution_state=_execution_state(),
+            use_dataset_heuristics=False,
+            sample_limit=1,
+        )
+
+    messages = [record.getMessage() for record in caplog.records]
+    assert any("template=generic-seed" in message for message in messages)
+    assert not any("template=high-priority-refine" in message for message in messages)

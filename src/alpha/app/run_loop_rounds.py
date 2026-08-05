@@ -263,8 +263,10 @@ def schedule_field_round(
         template_queue.filtered_templates,
     )
 
-    scheduled_templates = template_queue.peek(
-        1 if seed_phase_active else context.field_template_batch_size
+    scheduled_templates = (
+        template_queue.peek_seed()
+        if seed_phase_active
+        else template_queue.peek(context.field_template_batch_size)
     )
     deferred_templates = max(0, pending_count - len(scheduled_templates))
     progressed = bool(scheduled_templates) or seed_resolution_progressed
@@ -400,6 +402,6 @@ def _dispatch_templates_for_field(
             variant_fingerprint=entry.variant_fingerprint,
         )
         if template_queue is not None:
-            template_queue.consume_one()
+            template_queue.consume(entry)
         context.scheduled_simulations += 1
     return False

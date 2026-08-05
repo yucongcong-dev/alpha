@@ -25,6 +25,7 @@ from ..runtime.contexts import (
     PendingTemplateEntry,
     TemplateBuildContext,
 )
+from ..runtime.field_template_queue import select_seed_candidate
 from ..runtime.state import ExecutionState
 from ..utils.helpers import first_non_empty
 
@@ -211,7 +212,8 @@ def print_dry_run_plan(
             else:
                 seed_fields_remaining += 1
         sample_is_seed = full_run and field_id not in attempted_field_ids
-        sample_entries = pending_templates[:1] if sample_is_seed else pending_templates
+        seed_entry = select_seed_candidate(pending_templates) if sample_is_seed else None
+        sample_entries = [seed_entry] if seed_entry is not None else pending_templates
         sample_target = seed_samples if sample_is_seed else refine_samples
         for entry in sample_entries:
             if len(sample_target) >= sample_limit:
