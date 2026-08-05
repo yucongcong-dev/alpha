@@ -31,7 +31,6 @@ global:
     strategy_profile: refine
     smoke_test: false
     auto_update_blacklist: true
-    auto_update_blacklist_mode: staging
 dataset_profiles:
   fundamental6:
     max_concurrent_simulations: 3
@@ -201,7 +200,6 @@ def test_yaml_can_enable_auto_update_blacklist(monkeypatch, tmp_path) -> None:
     args = parse_args()
 
     assert args.auto_update_blacklist is True
-    assert args.auto_update_blacklist_mode == "staging"
     assert args.strategy_profile == "refine"
 
 
@@ -224,7 +222,6 @@ def test_cli_strategy_profile_applies_runtime_defaults(monkeypatch, tmp_path) ->
     assert args.field_template_batch_size == 1
     assert args.top_fields_by_feedback == 20
     assert args.stop_after_submittable == 1
-    assert args.auto_update_blacklist_mode == "staging"
 
 
 def test_cli_normalizes_zero_field_template_batch_size(monkeypatch, tmp_path) -> None:
@@ -281,22 +278,6 @@ global:
     args = parse_args()
 
     assert args.auto_update_blacklist is True
-
-
-def test_cli_auto_update_blacklist_mode(monkeypatch, tmp_path) -> None:
-    """CLI can select the auto-learned blacklist write target."""
-    clear_yaml_cache()
-    config_path = tmp_path / "settings.yaml"
-    write_config(config_path)
-    monkeypatch.setattr(
-        sys,
-        "argv",
-        ["alpha", "--config", str(config_path), "--auto-update-blacklist-mode", "repository"],
-    )
-
-    args = parse_args()
-
-    assert args.auto_update_blacklist_mode == "repository"
 
 
 def test_cli_no_flag_overrides_yaml_true(monkeypatch, tmp_path) -> None:
@@ -372,20 +353,6 @@ def test_clean_command_parses(monkeypatch) -> None:
     assert args.dry_run_clean is True
 
 
-def test_blacklist_review_command_parses(monkeypatch) -> None:
-    clear_yaml_cache()
-    monkeypatch.setattr(
-        sys,
-        "argv",
-        ["alpha", "blacklist-review", "--dataset-id", "fundamental6"],
-    )
-
-    args = parse_args()
-
-    assert args.command == "blacklist-review"
-    assert args.dataset_id == "fundamental6"
-
-
 def test_normalize_args_paths_uses_dataset_scoped_defaults(monkeypatch, tmp_path) -> None:
     """Blank CLI path defaults should expand using the active dataset context."""
     clear_yaml_cache()
@@ -443,22 +410,6 @@ def test_normalize_args_paths_allows_clean_for_paused_fundamental6(monkeypatch, 
     assert paths.template_library_file.replace("\\", "/").endswith(
         "/datasets/fundamental6/template.json"
     )
-
-
-def test_normalize_args_paths_allows_blacklist_review_for_paused_dataset(
-    monkeypatch, tmp_path
-) -> None:
-    clear_yaml_cache()
-    monkeypatch.chdir(tmp_path)
-    monkeypatch.setattr(
-        sys,
-        "argv",
-        ["alpha", "blacklist-review", "--dataset-id", "fundamental6"],
-    )
-
-    paths = normalize_args_paths(parse_args())
-
-    assert paths.datasets_root.replace("\\", "/").endswith("/datasets")
 
 
 def test_explicit_template_path_allows_paused_fundamental6(monkeypatch, tmp_path) -> None:

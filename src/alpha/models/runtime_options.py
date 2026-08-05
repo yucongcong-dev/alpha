@@ -130,7 +130,6 @@ class ResultWriteOptions:
     dataset_id: str = ""
     output_path: str = ""
     auto_update_blacklist: bool = False
-    auto_update_blacklist_mode: str = "repository"
 
     @classmethod
     def from_args(cls, args: ResultWriteArgs) -> ResultWriteOptions:
@@ -138,9 +137,6 @@ class ResultWriteOptions:
             dataset_id=str(args.dataset_id or ""),
             output_path=str(args.output or ""),
             auto_update_blacklist=bool(getattr(args, "auto_update_blacklist", False)),
-            auto_update_blacklist_mode=str(
-                getattr(args, "auto_update_blacklist_mode", "repository") or "repository"
-            ),
         )
 
 
@@ -245,7 +241,6 @@ class RunConfigSnapshotOptions:
     stop_after_submittable: int = 0
     strategy_profile: str = "explore"
     auto_update_blacklist: bool = False
-    auto_update_blacklist_mode: str = "repository"
     smoke_test: bool = False
     dry_run_plan: bool = False
     full_run: bool = False
@@ -306,9 +301,6 @@ class RunConfigSnapshotOptions:
                 getattr(args, "strategy_profile", "explore")
             ),
             auto_update_blacklist=bool(getattr(args, "auto_update_blacklist", False)),
-            auto_update_blacklist_mode=str(
-                getattr(args, "auto_update_blacklist_mode", "repository") or "repository"
-            ),
             smoke_test=bool(getattr(args, "smoke_test", False)),
             dry_run_plan=bool(getattr(args, "dry_run_plan", False)),
             full_run=bool(getattr(args, "full_run", False)),

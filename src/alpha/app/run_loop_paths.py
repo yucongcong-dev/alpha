@@ -29,7 +29,6 @@ def resolve_result_write_options(
         dataset_id=options.dataset_id,
         output_path=output_path,
         auto_update_blacklist=options.auto_update_blacklist,
-        auto_update_blacklist_mode=options.auto_update_blacklist_mode,
     )
 
 

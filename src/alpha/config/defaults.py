@@ -169,7 +169,6 @@ def apply_yaml_global_defaults(
         {
             "strategy_profile",
             "auto_update_blacklist",
-            "auto_update_blacklist_mode",
             "smoke_test",
             "dry_run_plan",
             "full_run",

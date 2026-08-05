@@ -48,13 +48,6 @@ def clean_runtime_artifacts(config: CleanRuntimeArgs, *, project_root: Path | No
     return clean(config, project_root=project_root)
 
 
-def run_blacklist_command(command: str, *, dataset_id: str, datasets_root: str) -> int:
-    """Lazy local blacklist command dispatch."""
-    from .app.blacklist_commands import run_blacklist_command as run
-
-    return run(command, dataset_id=dataset_id, datasets_root=datasets_root)
-
-
 def configure_application_logging(config: ApplicationConfig) -> None:
     """Configure console/file logging once after the CLI boundary is parsed."""
     from .cli.filters import setup_runtime_logging
@@ -114,13 +107,6 @@ def main() -> int:
 
     if config.command == "clean":
         return clean_runtime_artifacts(config)
-    if config.command in {"blacklist-review", "blacklist-promote"}:
-        return run_blacklist_command(
-            config.command,
-            dataset_id=config.dataset_id,
-            datasets_root=config.paths.datasets_root,
-        )
-
     if config.dry_run_plan:
         return 0 if run_dry_run_plan(config, config.paths) else 1
 

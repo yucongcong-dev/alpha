@@ -66,8 +66,8 @@
   `src/alpha/resources/config/*.yaml`，修改后必须通过 `make sync-config` 或
   `make config-sync-check` 保持同步。
 - 数据集长期资产放在 `datasets/<dataset_id>/` 下。
-- `datasets/<dataset_id>/blacklist.json` 是长期策略资产；自动学习条目如果写到
-  `blacklist.staging.json`，表示待人工确认，不应和架构/代码提交混在一起。
+- `datasets/<dataset_id>/blacklist.json` 是长期策略资产；自动学习默认关闭，显式开启时
+  直接更新该文件，因此不要把自动学习与架构/代码改动混在同一个提交里。
 - `cache/`、`runs/`、`feedback/`、`.credentials/`、工具缓存和本地生成状态属于私密或可重建内容，不应提交。
 - 不要提交明文凭证、Authorization header 或平台密钥。`make scan-secrets` 会覆盖当前已知模式。
 

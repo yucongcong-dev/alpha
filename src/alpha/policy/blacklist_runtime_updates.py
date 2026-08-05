@@ -17,9 +17,7 @@ from .blacklist_store import (
     exclusive_blacklist_transaction,
     invalidate_blacklist_runtime_cache,
     read_blacklist_payload,
-    read_blacklist_staging_payload,
     write_blacklist_payload,
-    write_blacklist_staging_payload,
 )
 from .expression import get_dataset_expression_policy
 from .types import (
@@ -35,44 +33,6 @@ logger = logging.getLogger(__name__)
 
 _REGISTRY_SOFT_ROLES = {"promoted_core", "refine_neighbor"}
 _REGISTRY_SOFT_SCOPES = {"broad", "refine"}
-BLACKLIST_UPDATE_MODE_REPOSITORY = "repository"
-BLACKLIST_UPDATE_MODE_STAGING = "staging"
-
-
-def normalize_blacklist_update_mode(mode: str) -> str:
-    """Normalize auto-update persistence mode, preserving repository compatibility."""
-    normalized = str(mode or BLACKLIST_UPDATE_MODE_REPOSITORY).strip().lower()
-    if normalized in {BLACKLIST_UPDATE_MODE_REPOSITORY, BLACKLIST_UPDATE_MODE_STAGING}:
-        return normalized
-    logger.warning(
-        "[blacklist] unknown auto-update mode=%s; using %s",
-        mode,
-        BLACKLIST_UPDATE_MODE_REPOSITORY,
-    )
-    return BLACKLIST_UPDATE_MODE_REPOSITORY
-
-
-def _read_update_payload(
-    dataset_id: str,
-    *,
-    datasets_root: str,
-    update_mode: str,
-):
-    if update_mode == BLACKLIST_UPDATE_MODE_STAGING:
-        return read_blacklist_staging_payload(dataset_id, datasets_root=datasets_root)
-    return read_blacklist_payload(dataset_id, datasets_root=datasets_root)
-
-
-def _write_update_payload(
-    dataset_id: str,
-    payload,
-    *,
-    datasets_root: str,
-    update_mode: str,
-) -> str:
-    if update_mode == BLACKLIST_UPDATE_MODE_STAGING:
-        return write_blacklist_staging_payload(dataset_id, payload, datasets_root=datasets_root)
-    return write_blacklist_payload(dataset_id, payload, datasets_root=datasets_root)
 
 
 def _entry_key_from_payload(item: dict[str, object]) -> BlacklistEntryKey:
@@ -178,7 +138,6 @@ def auto_update_blacklist(
     min_fields_tested: int = 2,
     min_fail_checks: int = 2,
     expression_policy: DatasetExpressionPolicy | None = None,
-    update_mode: str = BLACKLIST_UPDATE_MODE_REPOSITORY,
 ) -> None:
     """Persist newly qualified learned blacklist entries from full results."""
     if not dataset_id or not results:
@@ -201,13 +160,8 @@ def auto_update_blacklist(
     if not new_entries:
         return
 
-    normalized_mode = normalize_blacklist_update_mode(update_mode)
     with exclusive_blacklist_transaction(dataset_id, datasets_root=datasets_root):
-        bl_data = _read_update_payload(
-            dataset_id,
-            datasets_root=datasets_root,
-            update_mode=normalized_mode,
-        )
+        bl_data = read_blacklist_payload(dataset_id, datasets_root=datasets_root)
         existing_keys = {
             _entry_key_from_payload(item)
             for item in bl_data[LEARNED_BLACKLIST_KEY]
@@ -229,18 +183,11 @@ def auto_update_blacklist(
             return
 
         bl_data["_updated"] = datetime.now().strftime(DATE_FORMAT_ISO_MINUTES)
-        blacklist_path = _write_update_payload(
-            dataset_id,
-            bl_data,
-            datasets_root=datasets_root,
-            update_mode=normalized_mode,
-        )
-    if normalized_mode == BLACKLIST_UPDATE_MODE_REPOSITORY:
-        invalidate_blacklist_runtime_cache(dataset_id)
+        blacklist_path = write_blacklist_payload(dataset_id, bl_data, datasets_root=datasets_root)
+    invalidate_blacklist_runtime_cache(dataset_id)
     logger.info(
-        "[blacklist] auto-updated %s mode=%s: added %d new entries (total=%d)",
+        "[blacklist] auto-updated %s: added %d new entries (total=%d)",
         blacklist_path,
-        normalized_mode,
         added,
         len(bl_data[LEARNED_BLACKLIST_KEY]),
     )
@@ -256,7 +203,6 @@ def auto_update_blacklist_incremental(
     min_fields_tested: int = 2,
     min_fail_checks: int = 2,
     expression_policy: DatasetExpressionPolicy | None = None,
-    update_mode: str = BLACKLIST_UPDATE_MODE_REPOSITORY,
 ) -> bool:
     """Incrementally persist one newly qualified learned blacklist entry."""
     if not dataset_id:
@@ -285,13 +231,8 @@ def auto_update_blacklist_incremental(
     )
     if entry is None:
         return False
-    normalized_mode = normalize_blacklist_update_mode(update_mode)
     with exclusive_blacklist_transaction(dataset_id, datasets_root=datasets_root):
-        bl_data = _read_update_payload(
-            dataset_id,
-            datasets_root=datasets_root,
-            update_mode=normalized_mode,
-        )
+        bl_data = read_blacklist_payload(dataset_id, datasets_root=datasets_root)
         existing_keys = {
             _entry_key_from_payload(item)
             for item in bl_data[LEARNED_BLACKLIST_KEY]
@@ -302,20 +243,13 @@ def auto_update_blacklist_incremental(
             return False
         bl_data[LEARNED_BLACKLIST_KEY].append(entry.to_dict())
         bl_data["_updated"] = datetime.now().strftime(DATE_FORMAT_ISO_MINUTES)
-        blacklist_path = _write_update_payload(
-            dataset_id,
-            bl_data,
-            datasets_root=datasets_root,
-            update_mode=normalized_mode,
-        )
-    if normalized_mode == BLACKLIST_UPDATE_MODE_REPOSITORY:
-        invalidate_blacklist_runtime_cache(dataset_id)
+        blacklist_path = write_blacklist_payload(dataset_id, bl_data, datasets_root=datasets_root)
+    invalidate_blacklist_runtime_cache(dataset_id)
     blacklisted_template_keys.add(entry_key)
     logger.info(
-        "[blacklist] incrementally added %s to %s mode=%s (total=%d)",
+        "[blacklist] incrementally added %s to %s (total=%d)",
         entry.name,
         blacklist_path,
-        normalized_mode,
         len(bl_data[LEARNED_BLACKLIST_KEY]),
     )
     return True

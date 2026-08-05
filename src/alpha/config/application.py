@@ -99,7 +99,6 @@ class ApplicationConfig:
 
     strategy_profile = SectionField[str]("runtime_flags")
     auto_update_blacklist = SectionField[bool]("runtime_flags")
-    auto_update_blacklist_mode = SectionField[str]("runtime_flags")
     verbose = SectionField[bool]("runtime_flags")
     quiet = SectionField[bool]("runtime_flags")
 

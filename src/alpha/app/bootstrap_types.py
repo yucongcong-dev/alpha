@@ -101,7 +101,6 @@ class SupportingResourceServices:
     ensure_template_blacklist_file: Callable[[str], str]
     load_template_library: Callable[[str], TemplateLibrary]
     read_blacklist_payload: Callable[[str], BlacklistPayload]
-    read_blacklist_staging_payload: Callable[[str], BlacklistPayload]
     summarize_blacklist_payload: Callable[[BlacklistPayload], tuple[int, int]]
     load_run_filters_extended: Callable[[RunPaths], RunFilters]
     get_dataset_expression_policy: Callable[[str], DatasetExpressionPolicy]

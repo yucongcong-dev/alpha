@@ -75,7 +75,6 @@ def build_run_config_snapshot(
         "runtime": {
             "strategy_profile": options.strategy_profile,
             "auto_update_blacklist": options.auto_update_blacklist,
-            "auto_update_blacklist_mode": options.auto_update_blacklist_mode,
             "smoke_test": options.smoke_test,
             "dry_run_plan": options.dry_run_plan,
             "full_run": options.full_run,

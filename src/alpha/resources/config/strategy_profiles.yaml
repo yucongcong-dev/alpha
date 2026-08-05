@@ -22,7 +22,6 @@ strategy_profiles:
         - top_fields_by_feedback
       runtime:
         - auto_update_blacklist
-        - auto_update_blacklist_mode
       expression_policies:
         - field_exploration_ratio
         - field_max_per_family
@@ -33,9 +32,7 @@ strategy_profiles:
     notes:
       - "适合新数据集、字段族覆盖尚不清楚、模板表现还没有稳定反馈时使用。"
       - "不应把 explore 调成提交收敛模式；提交门槛和黑名单提升应放到 submit-focused。"
-    runtime_defaults:
-      runtime:
-        auto_update_blacklist_mode: "staging"
+    runtime_defaults: {}
 
   refine:
     purpose: "反馈邻域优化，围绕 near-pass 和已知有效结构做小范围变体。"
@@ -68,8 +65,6 @@ strategy_profiles:
         limit: 80
         max_templates_per_field: 4
         field_template_batch_size: 2
-      runtime:
-        auto_update_blacklist_mode: "staging"
 
   submit-focused:
     purpose: "提交导向收敛，优先控制风险、相关性和可提交数量。"
@@ -86,7 +81,6 @@ strategy_profiles:
         - max_weight
       runtime:
         - auto_update_blacklist
-        - auto_update_blacklist_mode
       expression_policies:
         - blacklist_min_fields_for_nearpass
         - blacklist_protected_min_avg_sharpe
@@ -95,7 +89,7 @@ strategy_profiles:
         - protected_templates
     notes:
       - "适合候选池已经较清楚、目标是少量高质量提交前验证时使用。"
-      - "长期 blacklist.json 应保持人工确认边界，自动学习优先使用 staging。"
+      - "自动学习默认关闭；显式开启时直接更新长期 blacklist.json。"
     runtime_defaults:
       limits:
         limit: 30
@@ -104,5 +98,3 @@ strategy_profiles:
       filters:
         top_fields_by_feedback: 20
         stop_after_submittable: 1
-      runtime:
-        auto_update_blacklist_mode: "staging"

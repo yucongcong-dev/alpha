@@ -37,12 +37,9 @@ def add_base_arguments(parser: argparse.ArgumentParser) -> None:
     parser.add_argument(
         "command",
         nargs="?",
-        choices=("run", "clean", "blacklist-review", "blacklist-promote"),
+        choices=("run", "clean"),
         default="run",
-        help=(
-            "运行命令：run=执行 Alpha 流程（默认），clean=清理本地运行文件，"
-            "blacklist-review=查看待确认条目，blacklist-promote=提升为长期黑名单"
-        ),
+        help=("运行命令：run=执行 Alpha 流程（默认），clean=清理本地运行文件"),
     )
     parser.add_argument(
         "--config",
@@ -302,17 +299,8 @@ def add_output_logging_arguments(parser: argparse.ArgumentParser) -> None:
         parser,
         "--auto-update-blacklist",
         dest="auto_update_blacklist",
-        help_enable="根据本次结果自动学习低质量模板并写入配置的黑名单目标",
+        help_enable="根据本次结果自动学习低质量模板并写入长期 blacklist.json",
         help_disable="不自动更新模板黑名单（覆盖 YAML runtime.auto_update_blacklist=true）",
-    )
-    parser.add_argument(
-        "--auto-update-blacklist-mode",
-        choices=("repository", "staging"),
-        default="staging",
-        help=(
-            "自动黑名单写入目标：staging 持久化到 blacklist.staging.json 供人工确认；"
-            "repository 显式写入长期 blacklist.json"
-        ),
     )
     parser.add_argument(
         "--output", default="", help="结果 JSON 输出文件路径（留空则根据 dataset_id 自动生成）"

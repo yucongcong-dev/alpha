@@ -190,7 +190,6 @@ class QualityConfig:
 class RuntimeFlagsConfig:
     strategy_profile: str
     auto_update_blacklist: bool
-    auto_update_blacklist_mode: str
     verbose: bool
     quiet: bool
 
@@ -201,9 +200,6 @@ class RuntimeFlagsConfig:
                 _value(args, "strategy_profile", "explore")
             ),
             auto_update_blacklist=bool(_value(args, "auto_update_blacklist", False)),
-            auto_update_blacklist_mode=str(
-                _value(args, "auto_update_blacklist_mode", "repository") or "repository"
-            ),
             verbose=bool(_value(args, "verbose", False)),
             quiet=bool(_value(args, "quiet", False)),
         )

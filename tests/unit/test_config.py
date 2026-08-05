@@ -238,14 +238,10 @@ def test_strategy_profile_schemas_are_loaded_from_yaml() -> None:
         "field_template_batch_size",
     )
     assert "feedback_loop_policy" in schemas["refine"].tuning_keys["expression_policies"]
-    assert "auto_update_blacklist_mode" in schemas["explore"].tuning_keys["runtime"]
-    assert "auto_update_blacklist_mode" in schemas["submit-focused"].tuning_keys["runtime"]
+    assert "auto_update_blacklist" in schemas["explore"].tuning_keys["runtime"]
+    assert "auto_update_blacklist" in schemas["submit-focused"].tuning_keys["runtime"]
     assert "filters" not in schemas["refine"].runtime_defaults
-    assert schemas["explore"].runtime_defaults["runtime"]["auto_update_blacklist_mode"] == "staging"
-    assert (
-        schemas["submit-focused"].runtime_defaults["runtime"]["auto_update_blacklist_mode"]
-        == "staging"
-    )
+    assert schemas["explore"].runtime_defaults == {}
 
 
 def test_strategy_profile_schema_validation_reports_unknown_sections(tmp_path) -> None:
@@ -295,7 +291,6 @@ strategy_profiles:
         limit: "all"
       runtime:
         auto_update_blacklist: 1
-        auto_update_blacklist_mode: "invalid"
 """.strip(),
         encoding="utf-8",
     )
@@ -307,7 +302,6 @@ strategy_profiles:
     assert any("max_total_simluations" in warning and "未知 key" in warning for warning in warnings)
     assert any("limits.limit 必须是 integer" in warning for warning in warnings)
     assert any("auto_update_blacklist 必须是 boolean" in warning for warning in warnings)
-    assert any("auto_update_blacklist_mode 必须是" in warning for warning in warnings)
 
 
 def test_strategy_profile_loader_rejects_invalid_runtime_defaults() -> None:

@@ -88,7 +88,6 @@ def test_blacklist_write_failure_does_not_abort_completed_result(monkeypatch, tm
             dataset_id="fundamental6",
             output_path=str(tmp_path / "results.json"),
             auto_update_blacklist=True,
-            auto_update_blacklist_mode="staging",
         ),
         settings_fingerprint="settings",
         template_library_fingerprint="templates",

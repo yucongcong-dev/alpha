@@ -64,7 +64,6 @@ STRATEGY_PROFILE_RUNTIME_DEFAULT_TYPES: dict[str, dict[str, str]] = {
     },
     "runtime": {
         "auto_update_blacklist": _BOOL,
-        "auto_update_blacklist_mode": _STRING,
         "smoke_test": _BOOL,
         "dry_run_plan": _BOOL,
         "full_run": _BOOL,
@@ -73,9 +72,7 @@ STRATEGY_PROFILE_RUNTIME_DEFAULT_TYPES: dict[str, dict[str, str]] = {
     },
 }
 
-STRATEGY_PROFILE_RUNTIME_DEFAULT_CHOICES = {
-    ("runtime", "auto_update_blacklist_mode"): {"repository", "staging"},
-}
+STRATEGY_PROFILE_RUNTIME_DEFAULT_CHOICES: dict[tuple[str, str], frozenset[str]] = {}
 
 _FEEDBACK_TUNING_KEYS = {
     "feedback_mutation_highscore_threshold",

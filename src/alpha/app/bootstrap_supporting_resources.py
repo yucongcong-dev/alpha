@@ -76,17 +76,6 @@ def load_supporting_resources(
             learned_count,
             rule_count,
         )
-        staging_payload = services.read_blacklist_staging_payload(dataset_id)
-        staged_count, staged_rule_count = services.summarize_blacklist_payload(staging_payload)
-        if staged_count or staged_rule_count:
-            logger.warning(
-                "[blacklist] dataset=%s pending_review entries=%d rules=%d; "
-                "run blacklist-review then blacklist-promote after approval",
-                dataset_id,
-                staged_count,
-                staged_rule_count,
-            )
-
     return BootstrapLoadedResources(
         template_library=template_library,
         filters=services.load_run_filters_extended(effective_run_paths),

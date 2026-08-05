@@ -67,8 +67,6 @@ class IncrementalBlacklistUpdater(Protocol):
         blacklisted_template_keys: set[BlacklistEntryKey],
         result: FieldTestResult,
         dataset_id: str,
-        *,
-        update_mode: str = "repository",
     ) -> bool: ...
 
 
@@ -183,7 +181,6 @@ def maybe_update_blacklist_incrementally(
     execution_state: ExecutionState,
     dataset_id: str,
     auto_update_enabled: bool,
-    auto_update_mode: str,
     services: ResultProcessingServices,
 ) -> None:
     """Apply incremental blacklist side effects for one completed result if enabled."""
@@ -200,7 +197,6 @@ def maybe_update_blacklist_incrementally(
             execution_state.blacklisted_template_keys,
             result,
             dataset_id,
-            update_mode=auto_update_mode,
         )
     except Exception as exc:
         logger.warning(
@@ -293,7 +289,6 @@ def apply_completed_result(
         execution_state=execution_state,
         dataset_id=result_write_options.dataset_id,
         auto_update_enabled=result_write_options.auto_update_blacklist,
-        auto_update_mode=result_write_options.auto_update_blacklist_mode,
         services=active_services,
     )
 

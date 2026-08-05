@@ -670,23 +670,17 @@ datasets/<dataset>/cache/<region>_<universe>_<instrument>_d<delay>.json
 |---|---|---|
 | `datasets/<id>/template.json` | 默认模板库 | 是 |
 | `datasets/<id>/presets/` | 专项模板、字段或模板筛选清单 | 是 |
-| `datasets/<id>/blacklist.json` | 人工确认后的长期排除规则 | 是 |
-| `datasets/<id>/blacklist.staging.json` | 自动学习产生的待人工确认条目 | 否 |
+| `datasets/<id>/blacklist.json` | 长期排除规则 | 是 |
 | `datasets/<id>/README.md` | 当前策略、验证结论与下一步 | 是 |
 | `datasets/<id>/cache/` | 可重拉的字段缓存 | 否 |
 | `datasets/<id>/runs/` | 单次运行 journal、state、分析与日志 | 否 |
 | `datasets/<id>/feedback/<scope>/` | 跨 run 反馈、只读模板统计和去重索引 | 否 |
 
-`blacklist.json` 是唯一模板排除入口：`learned_templates` 保存已经人工确认的条目，
+`blacklist.json` 是唯一模板排除入口：`learned_templates` 保存学习或人工维护的条目，
 `expression_rules` 保存人工规则；规则可用 `target: expression` 匹配表达式，或用
-`target: template_name` 匹配模板名称。运行期间达到学习门槛的条目默认增量写入
-`blacklist.staging.json`，不会自动影响下一次筛选。先运行 `blacklist-review` 审核，确认后再用
-`blacklist-promote` 在事务锁内去重合并到长期资产：
-
-```bash
-python -m alpha blacklist-review --dataset-id fundamental6
-python -m alpha blacklist-promote --dataset-id fundamental6
-```
+`target: template_name` 匹配模板名称。自动学习默认关闭；显式使用
+`--auto-update-blacklist` 时，达到学习门槛的条目会在事务锁内去重并直接写入
+`blacklist.json`，随后立即参与当前进程和后续运行的模板过滤。
 
 成熟结论必须从 `runs/` 或 `feedback/` 中沉淀到 `template.json`、`presets/` 或数据集 README；
 不要把长期人工决策留在临时文件名或 JSON 结果里。一次性实验输入放 `tmp/`，外部对照材料或手工草稿放 `scratch/`。
