@@ -282,6 +282,7 @@ def build_expression_candidates(
             item.expression,
             template_metadata=_runtime_template_metadata(item),
             policy=policy,
+            field_type=field_type,
         )
     ]
     # Closed candidate libraries are expected to remain compact and explicit.

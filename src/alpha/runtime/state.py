@@ -34,7 +34,7 @@ class ExecutionState:
         default_factory=lambda: ResultLedgerState(results=[])
     )
     blacklist_runtime_stats: BlacklistRuntimeStats = field(default_factory=dict)
-    blacklisted_template_keys: set[tuple[str, str, str]] = field(default_factory=set)
+    blacklisted_template_keys: set[tuple[str, str, str, str]] = field(default_factory=set)
     last_submission_at: float = 0.0
 
     @classmethod

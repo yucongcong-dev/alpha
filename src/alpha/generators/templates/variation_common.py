@@ -15,6 +15,7 @@ def is_blacklisted_template(
     template_metadata: TemplateMetadata | None = None,
     dataset_id: str = "",
     policy: DatasetExpressionPolicy | None = None,
+    field_type: str = "",
 ) -> bool:
     """Check whether a generated variation is blocked by policy or dataset blacklist rules."""
     return _policy_is_blacklisted_template(
@@ -23,6 +24,7 @@ def is_blacklisted_template(
         template_metadata=template_metadata,
         dataset_id=dataset_id,
         policy=policy,
+        current_field_type=field_type,
         current_family=classify_expression_family(template_name, expression, template_metadata),
         current_stage=classify_template_stage(template_name, expression, template_metadata),
     )

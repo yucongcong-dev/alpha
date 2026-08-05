@@ -6,9 +6,40 @@ import json
 
 from alpha.generators.expression_builder import _is_blacklisted_template
 from alpha.models.domain import FailedCheck, FieldTestResult
+from alpha.policy.blacklist_runtime_stats import build_blacklist_runtime_stats
 from alpha.policy.blacklist_runtime_updates import auto_update_blacklist
 from alpha.policy.blacklist_store import ensure_template_blacklist_file
 from alpha.policy.template_blacklist import invalidate_blacklist_cache
+
+
+def test_blacklist_runtime_stats_separate_same_template_by_field_type() -> None:
+    results = [
+        FieldTestResult(
+            field_id="matrix_field",
+            field_type="MATRIX",
+            field_name="matrix_field",
+            template_name="shared_template",
+            template_family="ts_rank",
+            template_stage="first_order",
+            status="simulated",
+            failed_checks=[FailedCheck(name="LOW_SHARPE", value=0.1)],
+        ),
+        FieldTestResult(
+            field_id="vector_field",
+            field_type="VECTOR",
+            field_name="vector_field",
+            template_name="shared_template",
+            template_family="ts_rank",
+            template_stage="first_order",
+            status="simulated",
+            failed_checks=[FailedCheck(name="LOW_SHARPE", value=0.2)],
+        ),
+    ]
+
+    stats = build_blacklist_runtime_stats(results)
+
+    assert len(stats) == 2
+    assert {summary.field_type for summary in stats.values()} == {"MATRIX", "VECTOR"}
 
 
 def test_ensure_template_blacklist_file_creates_empty_dataset_file(tmp_path) -> None:
@@ -172,6 +203,17 @@ def test_auto_update_blacklist_is_visible_to_same_process(monkeypatch, tmp_path)
             "family": "group_vol_scaled_delta",
         },
         dataset_id="custom_ds",
+        field_type="MATRIX",
+    )
+    assert not _is_blacklisted_template(
+        "weak_template",
+        "group_rank(ts_zscore(close, 60), subindustry)",
+        template_metadata={
+            "stage": "group_second_order",
+            "family": "group_vol_scaled_delta",
+        },
+        dataset_id="custom_ds",
+        field_type="VECTOR",
     )
 
 

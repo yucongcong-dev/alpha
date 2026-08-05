@@ -79,6 +79,7 @@ def _entry_key_from_payload(item: dict[str, object]) -> BlacklistEntryKey:
     """Build a canonical identity key from a persisted blacklist entry."""
     return build_blacklist_entry_key(
         str(item.get("name", "")).strip(),
+        str(item.get("field_type", "")).strip(),
         str(item.get("template_stage", "")).strip(),
         str(item.get("template_family", "")).strip(),
     )
@@ -215,7 +216,10 @@ def auto_update_blacklist(
         added = 0
         for entry in new_entries:
             entry_key = build_blacklist_entry_key(
-                entry.name, entry.template_stage, entry.template_family
+                entry.name,
+                entry.field_type,
+                entry.template_stage,
+                entry.template_family,
             )
             if entry_key not in existing_keys:
                 bl_data[LEARNED_BLACKLIST_KEY].append(entry.to_dict())
@@ -266,6 +270,7 @@ def auto_update_blacklist_incremental(
     template_name = str(summary.template_name).strip()
     entry_key = build_blacklist_entry_key(
         template_name,
+        str(summary.field_type),
         str(summary.template_stage),
         str(summary.template_family),
     )

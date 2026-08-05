@@ -181,4 +181,5 @@ def test_scheduler_dump_results_shrinks_next_template_queue(monkeypatch, tmp_pat
         "rank(ts_backfill(sales, 240))",
         template_metadata={"family": "legacy_level", "stage": "first_order"},
         dataset_id="custom_ds",
+        field_type="MATRIX",
     )

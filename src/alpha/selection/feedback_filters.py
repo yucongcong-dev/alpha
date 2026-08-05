@@ -92,6 +92,7 @@ def should_skip_field_template_family(
     template_name: str,
     expression: str,
     *,
+    field_type: str = "",
     use_dataset_heuristics: bool | None = None,
     dataset_id: str = "",
     expression_policy: DatasetExpressionPolicy | None = None,
@@ -103,6 +104,7 @@ def should_skip_field_template_family(
             field_name,
             template_name,
             expression,
+            field_type=field_type,
             use_dataset_heuristics=use_dataset_heuristics,
             dataset_id=dataset_id,
             expression_policy=expression_policy,
@@ -117,6 +119,7 @@ def resolve_field_template_family_skip_reason(
     template_name: str,
     expression: str,
     *,
+    field_type: str = "",
     use_dataset_heuristics: bool | None = None,
     dataset_id: str = "",
     expression_policy: DatasetExpressionPolicy | None = None,
@@ -135,6 +138,7 @@ def resolve_field_template_family_skip_reason(
         expression,
         template_metadata=template_metadata,
         policy=policy,
+        field_type=field_type,
     ):
         return None
     template_family = classify_expression_family(template_name, expression, template_metadata)
@@ -145,6 +149,7 @@ def resolve_field_template_family_skip_reason(
             expression,
             template_metadata=template_metadata,
             policy=policy,
+            current_field_type=field_type,
             current_family=template_family,
             current_stage=template_stage,
         )

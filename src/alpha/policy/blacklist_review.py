@@ -56,9 +56,10 @@ def staged_blacklist_entries(
     )
 
 
-def _learned_entry_key(item: dict[str, Any]) -> tuple[str, str, str]:
+def _learned_entry_key(item: dict[str, Any]) -> tuple[str, str, str, str]:
     return build_blacklist_entry_key(
         str(item.get("name", "")),
+        str(item.get("field_type", "")),
         str(item.get("template_stage", "")),
         str(item.get("template_family", "")),
     )

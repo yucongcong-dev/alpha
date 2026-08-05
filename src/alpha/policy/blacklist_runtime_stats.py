@@ -9,7 +9,11 @@ from ..config.constants import (
 )
 from ..models.domain import FieldTestResult
 from ..models.result_predicates import is_informative_result
-from .types import BlacklistRuntimeStats, BlacklistRuntimeSummary
+from .types import (
+    BlacklistRuntimeStats,
+    BlacklistRuntimeSummary,
+    build_blacklist_entry_key,
+)
 
 
 def update_blacklist_runtime_stats_with_result(
@@ -20,8 +24,14 @@ def update_blacklist_runtime_stats_with_result(
     if not is_informative_result(result):
         return None
     template_name = result.template_name
-    if template_name not in stats:
-        stats[template_name] = BlacklistRuntimeSummary(
+    entry_key = build_blacklist_entry_key(
+        template_name,
+        result.field_type,
+        result.template_stage,
+        result.template_family,
+    )
+    if entry_key not in stats:
+        stats[entry_key] = BlacklistRuntimeSummary(
             template_name=template_name,
             field_type=result.field_type,
             template_family=result.template_family,
@@ -29,7 +39,7 @@ def update_blacklist_runtime_stats_with_result(
             template_role=str(result.template_role or "").strip().lower(),
             template_activation_scope=str(result.template_activation_scope or "").strip().lower(),
         )
-    summary = stats[template_name]
+    summary = stats[entry_key]
     if not summary.template_role and result.template_role:
         summary.template_role = str(result.template_role).strip().lower()
     if not summary.template_activation_scope and result.template_activation_scope:

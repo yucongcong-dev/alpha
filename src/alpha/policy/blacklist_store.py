@@ -226,6 +226,7 @@ def load_blacklisted_template_keys(
         keys.add(
             build_blacklist_entry_key(
                 name,
+                str(item.get("field_type", "")).strip(),
                 str(item.get("template_stage", "")).strip(),
                 str(item.get("template_family", "")).strip(),
             )

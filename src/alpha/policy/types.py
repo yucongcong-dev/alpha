@@ -14,17 +14,19 @@ from typing import Any, Protocol
 LEARNED_BLACKLIST_KEY = "learned_templates"
 PATTERN_RULES_KEY = "expression_rules"
 
-BlacklistEntryKey = tuple[str, str, str]
+BlacklistEntryKey = tuple[str, str, str, str]
 
 
 def build_blacklist_entry_key(
     name: str,
+    field_type: str = "",
     template_stage: str = "",
     template_family: str = "",
 ) -> BlacklistEntryKey:
     """Build the canonical identity key for a learned blacklist entry."""
     return (
         str(name).strip(),
+        str(field_type).strip().upper(),
         str(template_stage).strip().lower(),
         str(template_family).strip().lower(),
     )
@@ -79,8 +81,8 @@ class BlacklistRuntimeSummary:
         return getattr(self, key, default)
 
 
-BlacklistRuntimeStats = dict[str, BlacklistRuntimeSummary]
-"""按模板名聚合的运行期黑名单统计。"""
+BlacklistRuntimeStats = dict[BlacklistEntryKey, BlacklistRuntimeSummary]
+"""按模板名、字段类型、stage、family 聚合的运行期黑名单统计。"""
 
 
 @dataclass

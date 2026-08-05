@@ -23,7 +23,7 @@ import logging
 import zlib
 
 from ..config.constants import DRY_RUN_SAMPLE_LIMIT, SENTINEL_UNKNOWN
-from ..generators.fields import choose_field_name
+from ..generators.fields import choose_field_name, choose_field_type
 from ..generators.templates.metadata import normalize_template_role
 from ..models.domain import FieldTestResult, TemplateCandidate, TemplateField, TemplateLibrary
 from ..models.io_types import RunFilters
@@ -181,6 +181,7 @@ def build_pending_templates_for_field(
     active_services = planning_services or build_template_planning_services()
     field_id = str(first_non_empty(field.get("id"), SENTINEL_UNKNOWN))
     field_name = choose_field_name(field)
+    field_type = choose_field_type(field)
     templates, field_feedback, expression_policy = resolve_field_template_candidates(
         build_ctx,
         field,
@@ -205,6 +206,7 @@ def build_pending_templates_for_field(
             build_ctx=planning_ctx,
             field_id=field_id,
             field_name=field_name,
+            field_type=field_type,
             field_feedback=field_feedback,
             expression_policy=expression_policy,
             prior_results=prior_results,

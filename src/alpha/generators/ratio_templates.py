@@ -82,6 +82,7 @@ def build_high_conviction_ratio_templates(
             template.expression,
             template_metadata=template.metadata,
             policy=expression_policy,
+            field_type="MATRIX",
         ):
             templates.append(template)
     return templates
@@ -218,7 +219,12 @@ def _extend_ratio_delta_rank_templates(
     for delta, pri in expression_policy.ratio_delta_rank_windows:
         name = f"group_ratio_delta_rank_{delta}_{ratio_label}"
         expr = f"group_rank(ts_delta(rank({ratio_expr}), {delta}), subindustry)"
-        if not _is_blacklisted_template(name, expr, policy=expression_policy):
+        if not _is_blacklisted_template(
+            name,
+            expr,
+            policy=expression_policy,
+            field_type="MATRIX",
+        ):
             diversified.append(
                 _make_template_candidate(
                     name,

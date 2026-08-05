@@ -117,6 +117,7 @@ def _load_blacklist(dataset_id: str) -> None:
                     entries.append(
                         {
                             "name": str(item.get("name", "")).strip(),
+                            "field_type": str(item.get("field_type", "")).strip().upper(),
                             "template_stage": str(item.get("template_stage", "")).strip().lower(),
                             "template_family": str(item.get("template_family", "")).strip().lower(),
                         }
@@ -148,6 +149,7 @@ def runtime_blacklist_match_reason(
     template_metadata: TemplateMetadata | None = None,
     dataset_id: str = "",
     policy: BlacklistRuntimePolicy | None = None,
+    current_field_type: str = "",
     current_family: str = "",
     current_stage: str = "",
 ) -> str | None:
@@ -158,6 +160,7 @@ def runtime_blacklist_match_reason(
         template_name,
         expression,
         dataset_id=effective_dataset_id,
+        current_field_type=current_field_type,
         current_family=current_family,
         current_stage=current_stage,
         has_runtime_context=bool(template_metadata or expression),
@@ -172,6 +175,7 @@ def is_blacklisted_template(
     template_metadata: TemplateMetadata | None = None,
     dataset_id: str = "",
     policy: BlacklistRuntimePolicy | None = None,
+    current_field_type: str = "",
     current_family: str = "",
     current_stage: str = "",
 ) -> bool:
@@ -183,6 +187,7 @@ def is_blacklisted_template(
             template_metadata=template_metadata,
             dataset_id=dataset_id,
             policy=policy,
+            current_field_type=current_field_type,
             current_family=current_family,
             current_stage=current_stage,
         )
@@ -195,6 +200,7 @@ def blacklist_match_reason(
     expression: str,
     *,
     dataset_id: str,
+    current_field_type: str,
     current_family: str,
     current_stage: str,
     has_runtime_context: bool,
@@ -210,8 +216,13 @@ def blacklist_match_reason(
         for entry in cached.get("entries", []):
             if not isinstance(entry, dict) or entry.get("name") != template_name:
                 continue
+            entry_field_type = str(entry.get("field_type", "")).strip().upper()
             entry_stage = str(entry.get("template_stage", "")).strip().lower()
             entry_family = str(entry.get("template_family", "")).strip().lower()
+            if entry_field_type and (
+                not current_field_type or current_field_type.upper() != entry_field_type
+            ):
+                continue
             if entry_stage:
                 if current_stage != entry_stage:
                     continue
