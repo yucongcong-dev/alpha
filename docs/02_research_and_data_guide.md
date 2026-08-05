@@ -625,8 +625,8 @@ python -m alpha --smoke-test
 # 离线只读：检查字段、模板和候选计划，不创建 simulation
 python -m alpha --dry-run-plan
 
-# 广泛探索：首次会拉取当前市场范围的字段并写入缓存
-python -m alpha --dataset-id fundamental6
+# fundamental6 广泛探索：首次会拉取字段缓存，且必须显式给出 simulation 硬预算
+python -m alpha --dataset-id fundamental6 --full-run --max-total-simulations 100
 
 # 聚焦历史上更有希望的字段
 python -m alpha --top-fields-by-feedback 10 --max-templates-per-field 15
@@ -721,11 +721,11 @@ datasets/<dataset>/cache/<region>_<universe>_<instrument>_d<delay>.json
 - `refine`：反馈邻域优化，优先围绕 near-pass 和已知有效结构做小范围变体
 - `submit-focused`：提交导向收敛，优先控制风险、相关性和可提交数量
 
-这个字段目前只记录策略意图并进入 run config snapshot，不会隐式改写 `limit`、并发、模板预算或质量阈值。
-真正会改变运行规模的参数仍然要在 `limits`、`concurrency`、`quality`、`expression_policies`
-或 dataset profile 中显式配置。
-`config/strategy_profiles.yaml` 只维护这三种模式的说明性 schema 和常调参数清单，用来约束后续
-策略收敛，不参与运行时参数合并。
+`config/strategy_profiles.yaml` 同时定义策略说明、常调参数边界和 `runtime_defaults`。
+当前 `refine` 会收窄字段与模板预算，`submit-focused` 还会聚焦历史反馈字段并设置
+`stop_after_submittable`；`explore` 不额外改写默认预算。显式 CLI 参数优先于 profile 默认值，
+dataset profile 先于 strategy profile 合并，`--smoke-test` / `--full-run` 最后按运行模式归一化
+搜索范围。具体生效值以 dry-run 输出和 run config snapshot 为准。
 
 ```bash
 # YAML 改动后同步并检查

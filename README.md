@@ -14,8 +14,11 @@ make install-dev
 # 先确认本地候选计划；不会登录、联网或创建 simulation
 python -m alpha --dry-run-plan
 
-# 首次真实运行：登录、拉取字段缓存，并执行模拟与 check
-python -m alpha --dataset-id fundamental6
+# 首次真实运行：用默认数据集执行 1 字段 / 1 模板冒烟测试
+python -m alpha --smoke-test
+
+# fundamental6 已暂停普通运行；全量探索必须显式给出 simulation 硬预算
+python -m alpha --dataset-id fundamental6 --full-run --max-total-simulations 100
 ```
 
 也可以安装后使用 `alpha` 命令。误用低于 Python 3.10 的解释器时，入口会直接退出并提示版本问题。Makefile 会优先选择 Python 3.10：macOS/Linux 优先 `python3.10`，Windows 优先 `py -3.10`。需要手动覆盖时可以传入 `PYTHON`，例如 `make check PYTHON=python3.10` 或 `make check PYTHON="py -3.10"`。
