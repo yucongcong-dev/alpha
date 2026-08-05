@@ -13,6 +13,7 @@ import pytest
 
 from alpha.app.run_loop import (
     ScheduleRoundResult,
+    drain_next_completion,
     drain_remaining_futures,
     persist_field_progress,
     resolve_result_write_options,
@@ -196,6 +197,39 @@ def test_drain_remaining_futures_persists_total_field_count(tmp_path) -> None:
         )
 
     assert mock_save.call_args.kwargs["completed_field_index"] == 5
+
+
+def test_drain_next_completion_keeps_replanning_cursor_at_zero(tmp_path) -> None:
+    future = object()
+    execution_state = _build_execution_state()
+    execution_state.future_queue.pending_futures = {future: {"field_id": "f1"}}
+
+    def _drain(*, execution_state, **_kwargs):
+        execution_state.future_queue.pending_futures.clear()
+
+    with (
+        patch("alpha.app.loop_future_support.wait", return_value=({future}, set())),
+        patch(
+            "alpha.app.loop_future_support.drain_completed_futures_with_context", side_effect=_drain
+        ),
+        patch("alpha.app.loop_future_support.save_pipeline_state", return_value=True) as mock_save,
+    ):
+        assert (
+            drain_next_completion(
+                state_file=str(tmp_path / "state.json"),
+                total_fields=5,
+                last_field_id="f1",
+                execution_state=execution_state,
+                scheduler_options=SimpleNamespace(),
+                completion_ctx=FutureCompletionContext(
+                    result_write_options=ResultWriteOptions(),
+                ),
+                runtime_state=RuntimeConcurrencyState(max_workers=2, runtime_max_workers=2),
+            )
+            is True
+        )
+
+    assert mock_save.call_args.kwargs["completed_field_index"] == 0
 
 
 def test_run_field_test_loop_persists_progress_for_skipped_fields(tmp_path) -> None:

@@ -7,6 +7,7 @@ import dataclasses
 import logging
 import time
 
+from ..core.checkpoint import save_pipeline_state
 from ..core.scheduler import drain_completed_futures_with_context
 from ..core.simulation import resume_field_test_in_worker, run_field_test_in_worker
 from ..generators.payload import build_simulation_payload
@@ -86,8 +87,9 @@ def drain_next_completion(
     scheduler_options: SchedulerControlOptions,
     completion_ctx: FutureCompletionContext,
     runtime_state: RuntimeConcurrencyState,
+    planning_complete: bool = False,
 ) -> bool:
-    """Drain one completed future batch, persist state, and report whether work existed."""
+    """Drain one completion batch and persist a resumable scheduler cursor."""
     pending_futures = execution_state.future_queue.pending_futures
     if not pending_futures:
         return False
@@ -98,13 +100,24 @@ def drain_next_completion(
         completion_ctx=completion_ctx,
         runtime_state=runtime_state,
     )
-    save_terminal_pipeline_state(
-        state_file=state_file,
-        total_fields=total_fields,
-        last_field_id=last_field_id,
-        execution_state=execution_state,
-        runtime_state=runtime_state,
-    )
+    if planning_complete:
+        save_terminal_pipeline_state(
+            state_file=state_file,
+            total_fields=total_fields,
+            last_field_id=last_field_id,
+            execution_state=execution_state,
+            runtime_state=runtime_state,
+        )
+    elif state_file:
+        saved = save_pipeline_state(
+            state_file,
+            completed_field_index=0,
+            execution_state=execution_state,
+            runtime_state=runtime_state,
+            field_id=last_field_id,
+        )
+        if not saved:
+            raise RuntimeError(f"failed to save pipeline state: {state_file}")
     return True
 
 
@@ -259,4 +272,5 @@ def drain_remaining_futures(
             scheduler_options=scheduler_options,
             completion_ctx=completion_ctx,
             runtime_state=runtime_state,
+            planning_complete=True,
         )
