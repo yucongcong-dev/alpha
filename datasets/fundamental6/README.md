@@ -5,8 +5,8 @@
 `fundamental6` 的无边界 broad-search 仍然暂停。历史 `cashflow_op / cap` 双主线的性能
 检查仍然通过，但当前 Self Correlation 已过高，不再作为可提交策略资产。
 
-当前只重新开放 `fnd6_cicurr` 的小范围专项 refine；其余历史和观察性 preset 已删除，
-关键结论收录在本文，不再维护可执行副本。
+最近完成了 `fnd6_cicurr` 的一次小范围专项 refine；结果没有超过原始近通过候选，
+该研究线已经关闭。其余历史和观察性 preset 已删除，关键结论收录在本文。
 
 ## 当前 fnd6_cicurr 专项
 
@@ -40,7 +40,23 @@ group_rank(
 - `assets` 分母改为 `cap`
 - 长期水平异常度改为 `63/126` 变化强度
 
-先检查离线计划：
+2026-08-05 的真实 simulation 结果：
+
+| 结构 | Alpha ID | Sharpe | Fitness | Turnover | 结论 |
+|---|---|---:|---:|---:|---|
+| assets / subindustry | `E5GA7Xpm` | 1.36 | 0.77 | 0.0291 | Sharpe 通过，Fitness 低于原始候选 |
+| assets / cap bucket | `9qpQv0ax` | 1.17 | 0.61 | 0.0390 | Sharpe、Fitness 均失败 |
+| enterprise value / industry | `VkGo9gOb` | 0.40 | 0.14 | 0.0604 | 明显变弱 |
+| cap / industry | `2rpk0R0w` | 0.25 | 0.07 | 0.0616 | 明显变弱，Sub-universe 也失败 |
+| assets 变化强度 / industry | `blQ3ko6N` | 0.66 | 0.27 | 0.0713 | 变化结构没有保留原始优势 |
+
+5 条结果的 Self Correlation 在本轮结束时都仍为 `PENDING`。这不会改变研究决策：所有
+候选已经因 Fitness 或 Sharpe 失败，且没有一条超过原始候选的 Fitness `0.80`。
+`fnd6_cicurr` 的优势集中在 `assets / industry / 252-day zscore` 这一窄结构，替换分组、
+分母或改成变化强度都会削弱信号。不要再通过窗口、Decay、Truncation 或 Neutralization
+做密集微调；只有字段定义、数据覆盖或新的经济关系发生变化时才重新开启。
+
+保留以下命令仅用于复现实验或刷新尚未终态的 Check Submission。先检查离线计划：
 
 ```bash
 python -m alpha --dataset-id fundamental6 \
@@ -55,7 +71,8 @@ python -m alpha --dataset-id fundamental6 \
 ```
 
 确认计划为 1 个字段、5 个 simulation 后，移除 `--dry-run-plan` 并增加独立
-`--run-name` 运行。不要把该专项扩展成 100 字段 broad run。
+`--run-name` 运行。没有数据或假设变化时不要重复运行，也不要把该专项扩展成 100 字段
+broad run。
 
 ## 历史双主线
 
