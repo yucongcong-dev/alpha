@@ -2,11 +2,60 @@
 
 ## 当前状态
 
-`fundamental6` 已暂停，不再承担 broad-search、维护复跑或提交预算。历史
-`cashflow_op / cap` 双主线的性能检查仍然通过，但当前 Self Correlation 已过高，
-不再作为可提交策略资产。
+`fundamental6` 的无边界 broad-search 仍然暂停。历史 `cashflow_op / cap` 双主线的性能
+检查仍然通过，但当前 Self Correlation 已过高，不再作为可提交策略资产。
 
-其余历史、观察和单模板 preset 已删除；关键结论已经收录在本文，不再维护可执行副本。
+当前只重新开放 `fnd6_cicurr` 的小范围专项 refine；其余历史和观察性 preset 已删除，
+关键结论收录在本文，不再维护可执行副本。
+
+## 当前 fnd6_cicurr 专项
+
+2026-08-04 的全量探索中，`fnd6_cicurr`（Comp Inc - Currency Trans Adj）在以下结构上
+成为最佳近通过候选：
+
+```text
+group_rank(
+  ts_zscore(
+    winsorize(ts_backfill(fnd6_cicurr, 120), std=4)
+    / ts_backfill(assets, 504),
+    252
+  ),
+  industry
+)
+```
+
+- Alpha ID：`QPGLow8r`
+- Sharpe：`1.35`，通过
+- Fitness：`0.80`，低于 `1.0` 门槛
+- Turnover：`0.0328`
+- Returns：`0.0442`
+- Sub-universe Sharpe：`1.12`，通过
+- Self Correlation：截至 2026-08-05 仍为 `PENDING`，不能视为已通过
+
+专项 preset 位于 `presets/cicurr_refine/`，只包含 `fnd6_cicurr` 和 5 个结构变体，分别测试：
+
+- `industry` 改为 `subindustry`
+- 使用市值分桶分组
+- `assets` 分母改为 `enterprise_value`
+- `assets` 分母改为 `cap`
+- 长期水平异常度改为 `63/126` 变化强度
+
+先检查离线计划：
+
+```bash
+python -m alpha --dataset-id fundamental6 \
+  --strategy-profile refine \
+  --template-library-file datasets/fundamental6/presets/cicurr_refine/template.json \
+  --include-fields-file datasets/fundamental6/presets/cicurr_refine/fields.txt \
+  --include-templates-file datasets/fundamental6/presets/cicurr_refine/templates.txt \
+  --max-templates-per-field 5 \
+  --max-total-simulations 5 \
+  --no-auto-update-blacklist \
+  --dry-run-plan
+```
+
+确认计划为 1 个字段、5 个 simulation 后，移除 `--dry-run-plan` 并增加独立
+`--run-name` 运行。不要把该专项扩展成 100 字段 broad run。
 
 ## 历史双主线
 
@@ -104,7 +153,7 @@ trade_when(
 
 ## 运行边界
 
-`fundamental6` 不再配置默认 preset，并由 dataset profile 标记为 `paused`。普通
+`fundamental6` 不配置默认 preset，并由 dataset profile 标记为 `paused`。普通
 `--dataset-id fundamental6` 会直接拒绝运行。以下两种显式研究入口可以解除暂停：
 
 - 传入模板库、字段 include 文件或模板 include 文件，开启边界明确的专项研究；

@@ -1,0 +1,5 @@
+cicurr_assets_subindustry_zscore_252
+cicurr_assets_cap_bucket_zscore_252
+cicurr_enterprise_value_industry_zscore_252
+cicurr_cap_industry_zscore_252
+cicurr_assets_industry_delta_over_std_63_126

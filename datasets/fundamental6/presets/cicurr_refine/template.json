@@ -1,0 +1,59 @@
+{
+  "_comment": "fundamental6 fnd6_cicurr refine pack - QPGLow8r 仅 LOW_FITNESS 后，分别测试分组粒度、分母和变化强度；保留原始字段预处理与 252 日水平异常度作为对照主干。",
+  "_comment_placeholders": "{field}=字段名, {field_preprocessed}=winsorize(ts_backfill({field}, 120), std=4)",
+  "default": [
+    {
+      "name": "cicurr_assets_subindustry_zscore_252",
+      "expression": "group_rank(ts_zscore({field_preprocessed} / ts_backfill(assets, 504), 252), subindustry)",
+      "priority": 1000,
+      "family": "cicurr_grouping",
+      "layer": "account",
+      "stage": "group_second_order",
+      "role": "refine_neighbor",
+      "activation_scope": "refine"
+    },
+    {
+      "name": "cicurr_assets_cap_bucket_zscore_252",
+      "expression": "group_rank(ts_zscore({field_preprocessed} / ts_backfill(assets, 504), 252), densify(bucket(rank(cap), range='0.1, 1, 0.1')))",
+      "priority": 995,
+      "family": "cicurr_grouping",
+      "layer": "account",
+      "stage": "group_second_order",
+      "role": "refine_neighbor",
+      "activation_scope": "refine"
+    },
+    {
+      "name": "cicurr_enterprise_value_industry_zscore_252",
+      "expression": "group_rank(ts_zscore({field_preprocessed} / ts_backfill(enterprise_value, 504), 252), industry)",
+      "priority": 990,
+      "family": "cicurr_denominator",
+      "layer": "account",
+      "stage": "group_second_order",
+      "role": "refine_neighbor",
+      "activation_scope": "refine"
+    },
+    {
+      "name": "cicurr_cap_industry_zscore_252",
+      "expression": "group_rank(ts_zscore({field_preprocessed} / cap, 252), industry)",
+      "priority": 985,
+      "family": "cicurr_denominator",
+      "layer": "account",
+      "stage": "group_second_order",
+      "role": "refine_neighbor",
+      "activation_scope": "refine"
+    },
+    {
+      "name": "cicurr_assets_industry_delta_over_std_63_126",
+      "expression": "group_rank(ts_delta({field_preprocessed} / ts_backfill(assets, 504), 63) / ts_std_dev({field_preprocessed} / ts_backfill(assets, 504), 126), industry)",
+      "priority": 980,
+      "family": "cicurr_dynamics",
+      "layer": "account",
+      "stage": "group_second_order",
+      "role": "refine_neighbor",
+      "activation_scope": "refine"
+    }
+  ],
+  "VECTOR": [],
+  "GROUP": [],
+  "SET": []
+}
