@@ -56,12 +56,15 @@ def _load_results_rows_from_journal(journal_path: str) -> list[ResultRow]:
     return load_results_rows_from_journal(journal_path)
 
 
-def _rows_to_results(rows: list[Any]) -> list[FieldTestResult]:
+def _rows_to_results(rows: list[Any], *, source: str) -> list[FieldTestResult]:
     """把原始结果字典列表转换为 FieldTestResult 列表。"""
     results: list[FieldTestResult] = []
-    for row in rows:
+    for row_number, row in enumerate(rows, start=1):
         if not isinstance(row, dict):
-            continue
+            raise ValueError(
+                f"invalid result row at {source}:{row_number}; "
+                f"expected object, got {type(row).__name__}"
+            )
         try:
             results.append(
                 FieldTestResult(
@@ -108,24 +111,21 @@ def _rows_to_results(rows: list[Any]) -> list[FieldTestResult]:
                     else None,
                 )
             )
-        except Exception:
-            continue
+        except Exception as exc:
+            raise ValueError(f"invalid result row at {source}:{row_number}: {exc}") from exc
     return results
 
 
 def _recover_results_from_journal(path: str) -> list[FieldTestResult]:
-    """从默认 journal 恢复结果，失败时返回空列表。"""
+    """从默认 journal 恢复结果，损坏时明确失败以免重复运行。"""
     journal_path = _default_results_journal_path(path)
     if not os.path.exists(journal_path):
         return []
     try:
         rows = _load_results_rows_from_journal(journal_path)
+        return _rows_to_results(rows, source=journal_path)
     except Exception as exc:
-        logger.warning(
-            "[recovery] failed to read orphaned results journal %s: %s", journal_path, exc
-        )
-        return []
-    return _rows_to_results(rows)
+        raise ValueError(f"failed to recover results journal {journal_path}: {exc}") from exc
 
 
 def load_existing_results(
@@ -197,17 +197,15 @@ def load_existing_results(
             )
         return _recover_results_from_journal(path)
 
-    rows: list[Any] | None = None
     journal_path = _resolve_results_journal_path(path, payload.get("results_journal"))
     if os.path.exists(journal_path):
         try:
             rows = _load_results_rows_from_journal(journal_path)
+            return _rows_to_results(rows, source=journal_path)
         except Exception as exc:
             logger.warning("[recovery] failed to read results journal %s: %s", journal_path, exc)
-    if rows is None and payload.get("results_embedded", True):
+    if payload.get("results_embedded", True):
         payload_rows = payload.get("results")
         if isinstance(payload_rows, list):
-            rows = payload_rows
-    if rows is None:
-        return []
-    return _rows_to_results(rows)
+            return _rows_to_results(payload_rows, source=f"{path}:results")
+    return []

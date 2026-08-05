@@ -301,6 +301,14 @@ def test_journal_reader_rejects_unsupported_schema_version(tmp_path) -> None:
         load_results_rows_from_journal(str(journal_path))
 
 
+def test_journal_reader_rejects_non_object_row(tmp_path) -> None:
+    journal_path = tmp_path / "results.jsonl"
+    journal_path.write_text("[]\n", encoding="utf-8")
+
+    with pytest.raises(ValueError, match=r"results\.jsonl:1; expected object"):
+        load_results_rows_from_journal(str(journal_path))
+
+
 def test_journal_reader_ignores_only_an_incomplete_trailing_row(tmp_path) -> None:
     output_path = tmp_path / "results.json"
     initialize_results_journal(
@@ -415,6 +423,54 @@ def test_load_existing_results_prefers_journal_over_embedded_summary(tmp_path) -
     loaded = load_existing_results(str(output_path))
 
     assert [result.field_id for result in loaded] == ["journal_field"]
+
+
+def test_load_existing_results_falls_back_when_journal_row_is_invalid(tmp_path) -> None:
+    output_path = tmp_path / "results.json"
+    journal_path = tmp_path / "results_results.jsonl"
+    journal_path.write_text(
+        json.dumps({"field_id": "broken", "delay": "not-an-int"}) + "\n",
+        encoding="utf-8",
+    )
+    output_path.write_text(
+        json.dumps(
+            {
+                "results_journal": journal_path.name,
+                "results_embedded": True,
+                "results": [
+                    {
+                        "field_id": "embedded_field",
+                        "field_type": "MATRIX",
+                        "field_name": "embedded_field",
+                        "template_name": "tpl",
+                        "status": "simulated",
+                        "submittable": False,
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    loaded = load_existing_results(str(output_path))
+
+    assert [result.field_id for result in loaded] == ["embedded_field"]
+
+
+def test_load_existing_results_rejects_invalid_embedded_row(tmp_path) -> None:
+    output_path = tmp_path / "results.json"
+    output_path.write_text(
+        json.dumps(
+            {
+                "results_embedded": True,
+                "results": [{"field_id": "broken", "revision": "not-an-int"}],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match=r"results\.json:results:1"):
+        load_existing_results(str(output_path))
 
 
 def test_load_existing_results_preserves_template_role_metadata(tmp_path) -> None:

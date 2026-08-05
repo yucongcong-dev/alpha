@@ -171,9 +171,13 @@ def load_results_rows_from_journal(journal_path: str) -> list[dict[str, Any]]:
                     )
                     break
                 raise
-            if isinstance(row, dict):
-                _validate_journal_row(row, journal_path, line_number)
-                rows.append(row)
+            if not isinstance(row, dict):
+                raise ValueError(
+                    f"invalid results journal row at {journal_path}:{line_number}; "
+                    f"expected object, got {type(row).__name__}"
+                )
+            _validate_journal_row(row, journal_path, line_number)
+            rows.append(row)
     return rows
 
 
