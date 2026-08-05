@@ -344,127 +344,59 @@ winsorize(x / y, std=4)
 
 ## 7. Alpha 值怎样变成最终持仓
 
-官方给出的顺序可以简化成：
+表达式先为每只股票生成 Alpha value，平台再应用 neutralization、decay 等设置，最后按
+booksize 缩放为组合资金分配。因此表达式输出是持仓计算的起点，不是最终美元仓位。
 
-1. 先用表达式为每只股票生成 Alpha value
-2. 再按设置应用 `neutralization`、`decay` 等处理
-3. 最后把这些结果按 `booksize` 缩放成组合资金分配
-
-所以表达式输出不是“最后的美元仓位”，而是仓位分配的起点。
-
-这里还要补一个官方口径：
-
-- 平台使用固定 `booksize = $20 million`
-- 模拟利润不会自动复投
-- 模拟亏损会被现金注入补回
-
-这意味着：
-
-- PnL、回撤、资金分配都是在统一固定资金底座上计算
-- 不要把它想成“策略赚了以后下一天本金自动变大”
-
-这也是为什么：
-
-- 原始表达式值的分布
-- 是否有极端值
-- 是否有大量 NaN
-
-都会直接影响最终权重结构。
+平台使用固定 `booksize = $20 million`：模拟利润不自动复投，亏损会由现金补回。
+这保证不同 Alpha 在统一资金口径下比较；完整页面定义见
+[04 的 Universe、Weight、Booksize 词典](04_platform_reference.md)。
 
 ---
 
 ## 8. NaN 和 0 不是一回事
 
-官方这里讲得很重要：
+- `NaN` 表示该股票没有仓位。
+- `0` 是原始 Alpha value 为零，经过 decay 或 neutralization 后仍可能变成非零。
 
-- `NaN`：表示这个股票不持仓
-- `0`：不是“不持仓”，因为经过 `decay`、`neutralization` 等处理后仍可能变成非零
+所以不要用 `0` 机械替代缺失数据，否则会改变持仓和覆盖语义。
 
-因此在 BRAIN 里：
+### 8.1 `NaNHandling`
 
-- `Alpha = NaN`
-  和
-- `Alpha = 0`
+`NaNHandling=OFF` 保留缺失语义，也是本仓库默认值；需要补值时应在表达式里显式使用
+`ts_backfill()`、`is_nan()` 或有业务含义的 fallback。
 
-绝对不能混为一谈。
+`NaNHandling=ON` 会让平台自动处理部分缺失情形，可能提高 Coverage，但也可能混淆
+“真实零值”和“缺失后产生的零值”。算术算子的 `filter=true` 只影响该次运算，是另一种
+局部行为。
 
-这是很多新手第一次设计表达式时最容易忽略的底层语义。
-
-### 8.1 `NaNHandling` 和手动缺失值处理
-
-平台设置中的 `NaNHandling` 与表达式里的 `ts_backfill / is_nan` 不是一回事：
-
-- `OFF`：保留 NaN，由表达式显式处理；这是平台默认值
-- `ON`：平台按算子类型自动处理部分 NaN
-
-开启后可能出现：
-
-- 时间序列窗口全部是 NaN 时返回 `0`
-- 某些 Group 算子在单只股票输入为 NaN 时返回组统计值
-
-这样可以增加 Coverage，但会把“没有数据”和“真实值为 0”混在一起。因此本仓库
-默认使用 `OFF`，需要补值时优先写出明确的业务逻辑：
-
-```text
-is_nan(primary_signal) ? fallback_signal : primary_signal
-```
-
-Arithmetic 算子的 `filter=true` 又是第三种行为：它只在该次加减乘运算中把 NaN
-当作 `0`，不会改变全局 `NaNHandling`。
-
-> 完整定义和 `NaNHandling` 的行为细节见
-> [04 的 NaN 与 Pasteurize 词典](04_platform_reference.md)。
+完整边界见 [04 的 NaN 与 Pasteurize 词典](04_platform_reference.md)。
 
 ---
 
-## 9. Pasteurize 到底在做什么
+## 9. Pasteurize 与 Unit Handling
 
-官方给了两个关键作用：
+`Pasteurize` 主要做两件事：
 
-1. 把 `INF` 变成 `NaN`
-2. 把不在当前 Universe 里的 instrument 也设成 `NaN`
+1. 把 `INF` 转成 `NaN`。
+2. 把当前 Universe 外的 instrument 设成 `NaN`。
 
-所以它不只是“修异常值”，还会影响 Universe 边界和 group operator 的输入集合。
+因此它既处理非法值，也会影响 group operator 的输入集合和最终 Coverage。
 
-对实战最有用的理解是：
-
-- 当你的表达式可能出现极端值或非法值时，`pasteurize` 是安全阀
-- 当你在用 group operators 时，它也能帮助避免 Universe 外股票混进计算
-
-再补一个很实用的直觉：
-
-- `pasteurize` 不只是清洗脏值
-- 它也会改变“哪些股票还能继续参与后续运算”
-
-所以当你发现：
-
-- 开启 `pasteurize` 后
-- coverage、group 输入集合、甚至最终权重结构都有变化
-
-这不是异常，而是它的正常语义。
-
-> 更完整的 Pasteurize 语义和 Universe 边界交互见
-> [04 的 NaN 与 Pasteurize 词典](04_platform_reference.md)。
-
-### 9.1 `Unit Handling`
-
-`Unit Handling=VERIFY` 会在不兼容量纲参与算术运算时给出警告，例如：
+`Unit Handling=VERIFY` 用于发现不兼容量纲的算术组合，例如：
 
 ```text
 close + adv20
 ```
 
-这里一个是价格，一个是成交股数。该警告本身不会阻止提交，但通常说明表达式
-缺少经济解释。如果确实只想组合相对位置，可以先分别标准化：
+单位警告通常说明表达式缺少经济解释，但不会单独阻止提交。若研究的是相对位置，可以在有
+明确假设时分别标准化：
 
 ```text
 rank(close) + rank(adv20)
 ```
 
-不要为了消除警告机械地加 `rank()`；先确认两个量纲为什么应该被组合。
-
-> Unit Handling 的行为边界和平台语义见
-> [04 的 NaN 与 Pasteurize 词典](04_platform_reference.md)。
+不要为了消除警告机械加 `rank()`。完整定义见
+[04 的 NaN 与 Pasteurize 词典](04_platform_reference.md)。
 
 ---
 
