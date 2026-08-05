@@ -280,6 +280,19 @@ class TestCheckSubmissionWithRetry:
 
         assert result == (True, "checks passed", [])
 
+    def test_stop_request_aborts_before_remote_check(self) -> None:
+        class DummyClient:
+            def check_alpha_submission(self, _alpha_id: str) -> dict[str, object]:
+                raise AssertionError("remote check must not run after stop request")
+
+        with pytest.raises(BrainStopRequested, match="stop was requested"):
+            check_submission_with_retry(
+                DummyClient(),
+                "alpha_1",
+                retries=3,
+                should_abort=lambda: True,
+            )
+
     def test_checks_failed(self, monkeypatch) -> None:
         class DummyClient:
             def check_alpha_submission(self, _alpha_id: str) -> dict[str, object]:
@@ -833,6 +846,45 @@ def test_run_check_submission_stage_with_self_correlation_pending(monkeypatch) -
         None,
         "checks pending",
         [FailedCheck(name="SELF_CORRELATION", result="PENDING")],
+    )
+
+
+def test_run_check_submission_stage_skips_when_stop_is_requested() -> None:
+    ctx = FieldTestContext(
+        field_id="f1",
+        field_type="MATRIX",
+        field_name="f1",
+        template_name="t1",
+        expression="rank(f1)",
+        settings_fingerprint="s1",
+        template_library_fingerprint="tlib1",
+    )
+    client = object()
+
+    def should_abort() -> bool:
+        return True
+
+    with patch(
+        "alpha.core.submission_checks.check_submission_with_retry",
+        side_effect=BrainStopRequested("submission check stopped"),
+    ) as check_submission:
+        result = run_check_submission_stage(
+            ctx,
+            client,  # type: ignore[arg-type]
+            MockArgs(check_submission_retries=3),
+            alpha_id="alpha_1",
+            simulation_id="sim_1",
+            should_abort=should_abort,
+        )
+
+    assert isinstance(result, FieldTestResult)
+    assert result.status == STATUS_SKIPPED
+    assert result.failed_stage == "stopped"
+    check_submission.assert_called_once_with(
+        client,
+        "alpha_1",
+        3,
+        should_abort=should_abort,
     )
 
     def test_context_fields_independent(self) -> None:

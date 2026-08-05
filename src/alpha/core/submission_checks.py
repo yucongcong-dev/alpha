@@ -2,12 +2,13 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 import logging
 
 from ..api.api_types import SimulationPayload
 from ..api.client import BrainClient, retry_operation
 from ..api.timing import wait_seconds
-from ..config.constants import SIMULATION_RETRY_WAIT
+from ..config.constants import SIMULATION_RETRY_WAIT, STATUS_SKIPPED
 from ..exceptions import BrainAPIError, BrainHTTPError, BrainStopRequested
 from ..models.domain import FailedCheck, FieldTestContext, FieldTestResult
 from ..models.domain_parsers import parse_failed_check
@@ -38,6 +39,8 @@ def check_submission_with_retry(
     client: BrainClient,
     alpha_id: str,
     retries: int,
+    *,
+    should_abort: Callable[[], bool] | None = None,
 ) -> tuple[bool | None, str, list[FailedCheck]]:
     attempts = max(1, int(retries or 0))
     last_result: tuple[bool | None, str, list[FailedCheck]] = (
@@ -52,6 +55,7 @@ def check_submission_with_retry(
                 _CHECK_SUBMISSION_TRANSPORT_RETRIES,
                 lambda: client.check_alpha_submission(alpha_id),
                 retry_wait_seconds=SIMULATION_RETRY_WAIT,
+                should_abort=should_abort,
             )
         except BrainStopRequested:
             raise
@@ -72,6 +76,7 @@ def check_submission_with_retry(
                     SIMULATION_RETRY_WAIT,
                     f"waiting for submission checks for alpha {alpha_id}",
                     verbose=False,
+                    should_abort=should_abort,
                 )
             continue
         except BrainAPIError as exc:
@@ -88,6 +93,7 @@ def check_submission_with_retry(
                     SIMULATION_RETRY_WAIT,
                     f"waiting for submission checks for alpha {alpha_id}",
                     verbose=False,
+                    should_abort=should_abort,
                 )
             continue
         checks = extract_checks(submission_check)
@@ -124,6 +130,7 @@ def check_submission_with_retry(
                 SIMULATION_RETRY_WAIT,
                 f"waiting for submission checks for alpha {alpha_id}",
                 verbose=False,
+                should_abort=should_abort,
             )
     return last_result
 
@@ -136,6 +143,7 @@ def run_check_submission_stage(
     alpha_id: str,
     simulation_id: str,
     simulation_result: SimulationPayload | None = None,
+    should_abort: Callable[[], bool] | None = None,
 ) -> FieldTestResult | tuple[bool | None, str, list[FailedCheck]]:
     if simulation_result:
         precheck_config = PrecheckConfig.from_args(args)
@@ -160,6 +168,15 @@ def run_check_submission_stage(
             client,
             alpha_id,
             _int_arg(args, "check_submission_retries"),
+            should_abort=should_abort,
+        )
+    except BrainStopRequested as exc:
+        return ctx.failure(
+            failed_stage="stopped",
+            message=str(exc),
+            simulation_id=simulation_id,
+            alpha_id=alpha_id,
+            status=STATUS_SKIPPED,
         )
     except Exception as exc:
         return handle_stage_error(

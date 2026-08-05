@@ -72,6 +72,7 @@ def _complete_field_test_from_simulation(
         alpha_id=alpha_id,
         simulation_id=simulation_id,
         simulation_result=simulation_result,
+        should_abort=should_abort,
     )
     if isinstance(check_result, FieldTestResult):
         return check_result

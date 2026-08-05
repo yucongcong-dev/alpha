@@ -276,7 +276,7 @@ def test_check_submission_stage_precheck_failure_still_calls_remote_check() -> N
         "checks failed",
         [FailedCheck(name="LOW_SHARPE", result="FAIL")],
     )
-    check_submission.assert_called_once_with(client, "alpha-1", 3)
+    check_submission.assert_called_once_with(client, "alpha-1", 3, should_abort=None)
 
 
 def test_check_submission_stage_success_and_error() -> None:
@@ -293,7 +293,7 @@ def test_check_submission_stage_success_and_error() -> None:
             simulation_id="sim-1",
         )
     assert passed == (True, "checks passed", [])
-    check_submission.assert_called_once_with(client, "alpha-1", 2)
+    check_submission.assert_called_once_with(client, "alpha-1", 2, should_abort=None)
 
     with patch(
         "alpha.core.submission_checks.check_submission_with_retry",
