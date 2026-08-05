@@ -101,9 +101,6 @@ def drain_completed_futures_with_context(
             stop_threshold=_drain_state.stop_after_submittable_threshold(scheduler_options),
             current_submittable_count=current_submittable_count,
             congestion_detected=drain_result.congestion_detected,
-            queue_busy_field_id=None,
-            current_queue_busy_count=0,
-            queue_busy_skip_after=scheduler_options.field_queue_busy_skip_after,
         )
         _drain_state.apply_drain_state_decision(
             decision,

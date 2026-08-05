@@ -16,13 +16,11 @@ from alpha.core.scheduler import (
     apply_congestion_cooldown,
     drain_completed_futures,
     maybe_restore_runtime_concurrency,
-    register_queue_busy_field,
     register_queue_busy_template,
     throttle_before_submission,
 )
 from alpha.core.scheduler_decisions import (
     decide_drain_state_updates,
-    decide_queue_busy_update,
     should_restore_runtime_concurrency,
     submission_throttle_delay,
 )
@@ -36,28 +34,15 @@ from alpha.models.runtime import (
 from tests.conftest import MockArgs
 
 
-def test_drain_state_decision_combines_stop_queue_and_cooldown() -> None:
+def test_drain_state_decision_combines_stop_and_cooldown() -> None:
     decision = decide_drain_state_updates(
         stop_threshold=2,
         current_submittable_count=2,
         congestion_detected=True,
-        queue_busy_field_id="field_1",
-        current_queue_busy_count=1,
-        queue_busy_skip_after=2,
     )
 
     assert decision.activate_stop_signal is True
     assert decision.apply_congestion_cooldown is True
-    assert decision.queue_busy.field_id == "field_1"
-    assert decision.queue_busy.next_count == 2
-    assert decision.queue_busy.should_skip is True
-
-
-def test_queue_busy_decision_is_disabled_without_positive_threshold() -> None:
-    decision = decide_queue_busy_update("field_1", current_count=7, skip_after=0)
-
-    assert decision.should_register is False
-    assert decision.next_count == 0
 
 
 def test_submission_throttle_delay_is_deterministic_and_clamped() -> None:
@@ -190,102 +175,13 @@ class TestApplyCongestionCooldown:
         assert abs(runtime_state_max_workers_5.cooldown_until - now) < 0.5
 
 
-# ============================================================================
-# register_queue_busy_field 测试
-# ============================================================================
-
-
-class TestRegisterQueueBusyField:
-    """register_queue_busy_field 函数测试"""
-
-    def test_increments_count(
-        self, scheduler_args: MockArgs, empty_counts_and_skipped: tuple
-    ) -> None:
-        counts, skipped = empty_counts_and_skipped
-        register_queue_busy_field("field_1", scheduler_args, counts, skipped)
-        assert counts["field_1"] == 1
-
-    def test_multi_increment(
-        self, scheduler_args: MockArgs, empty_counts_and_skipped: tuple
-    ) -> None:
-        counts, skipped = empty_counts_and_skipped
-        for _ in range(3):
-            register_queue_busy_field("field_1", scheduler_args, counts, skipped)
-        assert counts["field_1"] == 3
-        assert "field_1" in skipped
-
-    def test_reaches_threshold(
-        self, scheduler_args: MockArgs, empty_counts_and_skipped: tuple
-    ) -> None:
-        scheduler_args.field_queue_busy_skip_after = 2
-        counts, skipped = empty_counts_and_skipped
-        register_queue_busy_field("field_1", scheduler_args, counts, skipped)
-        assert "field_1" not in skipped
-        register_queue_busy_field("field_1", scheduler_args, counts, skipped)
-        assert "field_1" in skipped
-
-    def test_exceeds_threshold_still_skipped(
-        self, scheduler_args: MockArgs, empty_counts_and_skipped: tuple
-    ) -> None:
-        scheduler_args.field_queue_busy_skip_after = 2
-        counts, skipped = empty_counts_and_skipped
-        for _ in range(5):
-            register_queue_busy_field("field_1", scheduler_args, counts, skipped)
-        assert "field_1" in skipped
-        assert counts["field_1"] == 5
-
-    def test_none_field_id_ignored(
-        self, scheduler_args: MockArgs, empty_counts_and_skipped: tuple
-    ) -> None:
-        counts, skipped = empty_counts_and_skipped
-        register_queue_busy_field(None, scheduler_args, counts, skipped)
-        assert counts == {}
-
-    def test_different_fields_independent(
-        self, scheduler_args: MockArgs, empty_counts_and_skipped: tuple
-    ) -> None:
-        scheduler_args.field_queue_busy_skip_after = 2
-        counts, skipped = empty_counts_and_skipped
-        register_queue_busy_field("field_1", scheduler_args, counts, skipped)
-        register_queue_busy_field("field_2", scheduler_args, counts, skipped)
-        assert counts["field_1"] == 1
-        assert counts["field_2"] == 1
-        assert "field_1" not in skipped
-        assert "field_2" not in skipped
-
-    def test_zero_skip_disabled(
-        self, scheduler_args: MockArgs, empty_counts_and_skipped: tuple
-    ) -> None:
-        scheduler_args.field_queue_busy_skip_after = 0
-        counts, skipped = empty_counts_and_skipped
-        for _ in range(10):
-            register_queue_busy_field("field_1", scheduler_args, counts, skipped)
-        assert "field_1" not in skipped
-
-    def test_negative_skip_disabled(
-        self, scheduler_args: MockArgs, empty_counts_and_skipped: tuple
-    ) -> None:
-        scheduler_args.field_queue_busy_skip_after = -1
-        counts, skipped = empty_counts_and_skipped
-        register_queue_busy_field("field_1", scheduler_args, counts, skipped)
-        assert "field_1" not in skipped
-
-    def test_empty_string_field_id_ignored(
-        self, scheduler_args: MockArgs, empty_counts_and_skipped: tuple
-    ) -> None:
-        """空字符串 field_id 被视为空值。"""
-        counts, skipped = empty_counts_and_skipped
-        register_queue_busy_field("", scheduler_args, counts, skipped)
-        assert counts == {}
-
-
 class TestRegisterQueueBusyTemplate:
     def test_exhausts_only_one_candidate_key(
         self,
         scheduler_args: MockArgs,
         empty_execution_state: ExecutionState,
     ) -> None:
-        scheduler_args.field_queue_busy_skip_after = 2
+        scheduler_args.queue_busy_retry_limit = 2
         first_key = ("field_1", "template_1", "rank(field_1)", "settings_1")
         second_key = ("field_1", "template_2", "rank(field_1)", "settings_1")
 
@@ -295,14 +191,13 @@ class TestRegisterQueueBusyTemplate:
         retry_state = empty_execution_state.queue_retry_state
         assert first_key in retry_state.exhausted_keys
         assert second_key not in retry_state.exhausted_keys
-        assert empty_execution_state.field_queue.skipped_fields == set()
 
     def test_zero_retry_limit_keeps_candidate_retryable(
         self,
         scheduler_args: MockArgs,
         empty_execution_state: ExecutionState,
     ) -> None:
-        scheduler_args.field_queue_busy_skip_after = 0
+        scheduler_args.queue_busy_retry_limit = 0
         key = ("field_1", "template_1", "rank(field_1)", "settings_1")
 
         for _ in range(3):
@@ -435,7 +330,7 @@ def test_drain_completed_futures_prefers_explicit_result_write_options(tmp_path)
         dataset_id="fundamental6",
         output="raw-results.json",
         auto_update_blacklist=False,
-        field_queue_busy_skip_after=0,
+        queue_busy_retry_limit=0,
         queue_busy_cooldown_seconds=0,
     )
     result_write_options = ResultWriteOptions(
@@ -495,7 +390,7 @@ def test_drain_completed_futures_sets_stop_signal_and_cancels_unstarted_future(t
             dataset_id="fundamental6",
             output="raw-results.json",
             auto_update_blacklist=False,
-            field_queue_busy_skip_after=0,
+            queue_busy_retry_limit=0,
             queue_busy_cooldown_seconds=0,
             stop_after_submittable=1,
         )
@@ -577,7 +472,7 @@ def test_drain_completed_futures_ignores_historical_submittable_baseline() -> No
         dataset_id="fundamental6",
         output="raw-results.json",
         auto_update_blacklist=False,
-        field_queue_busy_skip_after=0,
+        queue_busy_retry_limit=0,
         queue_busy_cooldown_seconds=0,
         stop_after_submittable=1,
     )

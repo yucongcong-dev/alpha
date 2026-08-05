@@ -187,7 +187,6 @@ def schedule_field_round(
         field_id,
         field_name,
         run_ctx.filters,
-        execution_state.field_queue.skipped_fields,
     ):
         seed_resolution_progressed = (
             context.seed_phase.resolve(field_id) if seed_phase_active else False

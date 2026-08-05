@@ -18,10 +18,8 @@ import pytest
 from alpha.core.execution_filters import resolve_field_skip_reason
 from alpha.core.executor import should_skip_expression_by_history, should_skip_field
 from alpha.core.scheduler import (
-    apply_congestion_cooldown,
     drain_completed_futures,
     handle_completed_future,
-    register_queue_busy_field,
 )
 from alpha.core.simulation_parsing import summarize_failure
 from alpha.core.simulation_results import build_failure_result
@@ -176,60 +174,6 @@ class TestCongestionSignalPropagation:
         assert len(execution_state.result_ledger.results) == 1
 
 
-class TestQueueBusyFieldRegistration:
-    """
-    测试队列拥塞字段的注册、跳过与 cooling 联动。
-
-    验证 register_queue_busy_field 和 apply_congestion_cooldown
-    在不同条件下的协作行为。
-    """
-
-    def test_register_and_cool_in_sequence(
-        self,
-        scheduler_args: MockArgs,
-        runtime_state_max_workers_5: RuntimeConcurrencyState,
-    ) -> None:
-        """字段反复拥塞 → 加入跳过集合 → 应用冷却。"""
-        counts: dict[str, int] = {}
-        skipped: set[str] = set()
-
-        # 反复注册同一字段
-        for _ in range(scheduler_args.field_queue_busy_skip_after):
-            register_queue_busy_field("busy_field", scheduler_args, counts, skipped)
-
-        assert "busy_field" in skipped
-        assert counts["busy_field"] == scheduler_args.field_queue_busy_skip_after
-
-        # 检测到拥塞后应用冷却
-        apply_congestion_cooldown(scheduler_args, runtime_state_max_workers_5)
-        assert runtime_state_max_workers_5.runtime_max_workers == 1
-        assert runtime_state_max_workers_5.is_cooling_down()
-
-    def test_different_fields_independent_skip(
-        self,
-        scheduler_args: MockArgs,
-    ) -> None:
-        """不同字段的拥塞计数互不影响。"""
-        counts: dict[str, int] = {}
-        skipped: set[str] = set()
-
-        args = MockArgs(
-            queue_busy_cooldown_seconds=180,
-            field_queue_busy_skip_after=2,
-            sleep_between_fields=2.0,
-        )
-
-        register_queue_busy_field("field_a", args, counts, skipped)
-        register_queue_busy_field("field_b", args, counts, skipped)
-        # field_a 再触发一次，应被跳过
-        register_queue_busy_field("field_a", args, counts, skipped)
-
-        assert "field_a" in skipped
-        assert "field_b" not in skipped
-        assert counts["field_a"] == 2
-        assert counts["field_b"] == 1
-
-
 # ============================================================================
 # executor ↔ simulation 历史跳过集成测试
 # ============================================================================
@@ -316,40 +260,33 @@ class TestFieldSkipIntegration:
     验证字段跳过逻辑在各种过滤条件下的行为。
     """
 
-    def test_skip_by_queue(self) -> None:
-        """因队列拥塞被跳过。"""
-        filters = RunFilters()
-        assert should_skip_field("field_1", "test", filters, {"field_1"})
-
     def test_skip_by_include_filter(self) -> None:
         """不在 include_fields 中被跳过。"""
         filters = RunFilters(include_fields={"allowed_field"})
-        assert should_skip_field("field_1", "test", filters, set())
+        assert should_skip_field("field_1", "test", filters)
 
     def test_skip_by_include_filter_matches_name(self) -> None:
         """字段名匹配 include_fields 时不被跳过。"""
         filters = RunFilters(include_fields={"test_name"})
-        assert not should_skip_field("field_1", "test_name", filters, set())
+        assert not should_skip_field("field_1", "test_name", filters)
 
     def test_skip_by_exclude_filter(self) -> None:
         """在 exclude_fields 中被跳过。"""
         filters = RunFilters(exclude_fields={"field_1"})
-        assert should_skip_field("field_1", "test", filters, set())
+        assert should_skip_field("field_1", "test", filters)
 
     def test_not_skipped_by_default(self) -> None:
         """默认过滤器不过滤任何字段。"""
         filters = RunFilters()
-        assert not should_skip_field("any_field", "any_name", filters, set())
+        assert not should_skip_field("any_field", "any_name", filters)
 
     def test_skip_reason_is_explainable(self) -> None:
         """字段跳过原因可被 dry-run explain 复用。"""
-        assert resolve_field_skip_reason("field_1", "test", RunFilters(), {"field_1"}) == "queue"
         assert (
             resolve_field_skip_reason(
                 "field_1",
                 "test",
                 RunFilters(include_fields={"allowed"}),
-                set(),
             )
             == "include"
         )
@@ -358,11 +295,10 @@ class TestFieldSkipIntegration:
                 "field_1",
                 "test",
                 RunFilters(exclude_fields={"field_1"}),
-                set(),
             )
             == "exclude"
         )
-        assert resolve_field_skip_reason("field_1", "test", RunFilters(), set()) is None
+        assert resolve_field_skip_reason("field_1", "test", RunFilters()) is None
 
 
 # ============================================================================

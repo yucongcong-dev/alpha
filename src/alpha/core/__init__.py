@@ -31,7 +31,6 @@ if TYPE_CHECKING:
         drain_completed_futures,
         handle_completed_future,
         maybe_restore_runtime_concurrency,
-        register_queue_busy_field,
         throttle_before_submission,
     )
     from .simulation import (
@@ -69,7 +68,6 @@ _EXPORT_MAP: ExportMap = {
     "drain_completed_futures": (".scheduler", "drain_completed_futures"),
     "handle_completed_future": (".scheduler", "handle_completed_future"),
     "maybe_restore_runtime_concurrency": (".scheduler", "maybe_restore_runtime_concurrency"),
-    "register_queue_busy_field": (".scheduler", "register_queue_busy_field"),
     "throttle_before_submission": (".scheduler", "throttle_before_submission"),
     "build_failure_result": (".simulation_results", "build_failure_result"),
     "create_simulation_with_retry": (".simulation_create", "create_simulation_with_retry"),

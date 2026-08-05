@@ -78,18 +78,9 @@ def should_skip_field(
     field_id: str,
     field_name: str,
     filters: RunFilters,
-    skipped_fields_due_to_queue: set[str],
 ) -> bool:
     """判断某个字段是否应在生成模板前被直接跳过。"""
-    skip_reason = resolve_field_skip_reason(
-        field_id,
-        field_name,
-        filters,
-        skipped_fields_due_to_queue,
-    )
-    if skip_reason == "queue":
-        logger.info("[skip] field=%s skipped after repeated queue-busy simulations", field_id)
-        return True
+    skip_reason = resolve_field_skip_reason(field_id, field_name, filters)
     if skip_reason == "include":
         logger.info("[skip] field=%s excluded by include-fields filter", field_id)
         return True
@@ -103,11 +94,8 @@ def resolve_field_skip_reason(
     field_id: str,
     field_name: str,
     filters: RunFilters,
-    skipped_fields_due_to_queue: set[str],
 ) -> str | None:
     """Return the field skip reason without emitting logs or mutating state."""
-    if field_id in skipped_fields_due_to_queue:
-        return "queue"
     if (
         filters.include_fields
         and field_id not in filters.include_fields

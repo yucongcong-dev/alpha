@@ -132,7 +132,7 @@ class ExecutionConfig:
     simulation_max_pending_cycles: int
     simulation_max_queue_seconds: float
     queue_busy_cooldown_seconds: float
-    field_queue_busy_skip_after: int
+    queue_busy_retry_limit: int
     check_submission_retries: int
 
     @classmethod
@@ -158,7 +158,7 @@ class ExecutionConfig:
             queue_busy_cooldown_seconds=float(
                 _value(args, "queue_busy_cooldown_seconds", 0.0) or 0.0
             ),
-            field_queue_busy_skip_after=int(_value(args, "field_queue_busy_skip_after", 0) or 0),
+            queue_busy_retry_limit=int(_value(args, "queue_busy_retry_limit", 0) or 0),
             check_submission_retries=int(_value(args, "check_submission_retries", 0) or 0),
         )
 

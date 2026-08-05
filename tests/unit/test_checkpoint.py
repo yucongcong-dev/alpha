@@ -98,8 +98,7 @@ def test_load_pipeline_state_restores_runtime_data_with_zero_cursor(tmp_path) ->
     )
 
     assert resumed == 0
-    assert execution_state.field_queue.busy_counts == {}
-    assert execution_state.field_queue.skipped_fields == set()
+    assert execution_state.queue_retry_state.retry_counts == {}
     assert execution_state.template_stats["base"]["attempted"] == 3
     assert execution_state.template_stats["base"]["submittable"] == 0
     assert execution_state.attempted_keys == set()
@@ -150,8 +149,7 @@ def test_load_pipeline_state_sanitizes_corrupt_runtime_collections(tmp_path) -> 
     )
 
     assert resumed == 0
-    assert execution_state.field_queue.busy_counts == {}
-    assert execution_state.field_queue.skipped_fields == set()
+    assert execution_state.queue_retry_state.retry_counts == {}
     assert set(execution_state.template_stats) == {"base"}
     assert execution_state.template_stats["base"]["attempted"] == 2
     assert execution_state.template_stats["base"]["submittable"] == 0
@@ -208,7 +206,7 @@ def test_load_pipeline_state_discards_non_finite_cooldown_and_counters(tmp_path)
         execution_state=execution_state,
     )
 
-    assert execution_state.field_queue.busy_counts == {}
+    assert execution_state.queue_retry_state.retry_counts == {}
     assert runtime_state.runtime_max_workers == 4
     assert runtime_state.cooldown_until == 0
 

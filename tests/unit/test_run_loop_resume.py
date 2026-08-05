@@ -95,7 +95,7 @@ def _build_run_loop_args(tmp_path, **overrides) -> argparse.Namespace:
         "include_fields_file": "",
         "include_templates_file": "",
         "queue_busy_cooldown_seconds": 0.0,
-        "field_queue_busy_skip_after": 0,
+        "queue_busy_retry_limit": 0,
         "sleep_between_fields": 0.0,
     }
     values.update(overrides)

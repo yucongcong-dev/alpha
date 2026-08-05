@@ -181,13 +181,13 @@ class TestRuntimeOptionBuilders:
     def test_scheduler_control_options_from_args(self) -> None:
         class _Args:
             queue_busy_cooldown_seconds = "5.5"
-            field_queue_busy_skip_after = "3"
+            queue_busy_retry_limit = "3"
             sleep_between_fields = "0.25"
             stop_after_submittable = "2"
 
         assert SchedulerControlOptions.from_args(_Args()) == SchedulerControlOptions(
             queue_busy_cooldown_seconds=5.5,
-            field_queue_busy_skip_after=3,
+            queue_busy_retry_limit=3,
             sleep_between_fields=0.25,
             stop_after_submittable=2,
         )
@@ -230,7 +230,7 @@ class TestRuntimeOptionBuilders:
             include_fields_file = ""
             include_templates_file = ""
             queue_busy_cooldown_seconds = 12
-            field_queue_busy_skip_after = 13
+            queue_busy_retry_limit = 13
             sleep_between_fields = 0.25
             stop_after_submittable = 14
             field_template_batch_size = "15"
@@ -260,8 +260,7 @@ class TestExecutionState:
         assert state.attempted_keys == set()
         assert state.template_stats == {}
         assert state.future_queue.pending_futures == {}
-        assert state.field_queue.busy_counts == {}
-        assert state.field_queue.skipped_fields == set()
+        assert state.queue_retry_state.retry_counts == {}
         assert state.last_submission_at == 0.0
 
     def test_custom_values(self) -> None:
@@ -277,15 +276,11 @@ class TestExecutionState:
             initial_results=[result],
             attempted_keys={attempted_key},
             template_stats={"tmpl": {"count": 1}},
-            field_queue_busy_counts={"f1": 2},
-            skipped_fields_due_to_queue={"f2"},
             last_submission_at=123.0,
         )
         assert len(state.result_ledger.results) == 1
         assert attempted_key in state.attempted_keys
         assert state.template_stats["tmpl"]["count"] == 1
-        assert state.field_queue.busy_counts["f1"] == 2
-        assert "f2" in state.field_queue.skipped_fields
         assert state.last_submission_at == 123.0
 
     def test_result_ledger_export_and_metrics(self) -> None:

@@ -8,7 +8,6 @@ from ..models.runtime_options import SchedulerControlOptions
 from ..runtime.concurrency import RuntimeConcurrencyState
 from ..runtime.state import ExecutionState
 from . import scheduler_concurrency as _concurrency
-from . import scheduler_queue as _queue
 from .scheduler_decisions import DrainStateDecision
 
 logger = logging.getLogger(__name__)
@@ -50,13 +49,6 @@ def apply_drain_state_decision(
     if decision.activate_stop_signal:
         execution_state.future_queue.scheduling_stop_signal.set()
         cancel_unstarted_pending_futures(execution_state, log=log)
-
-    _queue.apply_queue_busy_decision(
-        decision.queue_busy,
-        skip_after=scheduler_options.field_queue_busy_skip_after,
-        field_queue_busy_counts=execution_state.field_queue.busy_counts,
-        skipped_fields_due_to_queue=execution_state.field_queue.skipped_fields,
-    )
 
     if decision.apply_congestion_cooldown:
         _concurrency.apply_congestion_cooldown(scheduler_options, runtime_state, log=log)

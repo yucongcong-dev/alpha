@@ -17,7 +17,6 @@ from ..models.runtime_protocols import (
 from ..policy.types import BlacklistRuntimeStats
 from .concurrency import RuntimeConcurrencyState
 from .contexts import HistoricalRunState, PendingFutureContext
-from .field_queue import FieldQueueState
 from .future_queue import FutureQueueState
 from .queue_retry import QueueRetryState
 from .result_ledger import ResultLedgerState
@@ -30,7 +29,6 @@ class ExecutionState:
     attempted_keys: set[tuple[str, str, str, str]] = field(default_factory=set)
     template_stats: TemplateStats = field(default_factory=dict)
     future_queue_state: FutureQueueState = field(default_factory=FutureQueueState.create)
-    field_queue_state: FieldQueueState = field(default_factory=FieldQueueState)
     queue_retry_state: QueueRetryState = field(default_factory=QueueRetryState)
     result_ledger_state: ResultLedgerState = field(
         default_factory=lambda: ResultLedgerState(results=[])
@@ -47,8 +45,6 @@ class ExecutionState:
         attempted_keys: set[tuple[str, str, str, str]] | None = None,
         template_stats: TemplateStats | None = None,
         pending_futures: dict[Future[FieldTestResult], PendingFutureContext] | None = None,
-        field_queue_busy_counts: dict[str, int] | None = None,
-        skipped_fields_due_to_queue: set[str] | None = None,
         resumable_simulations: list[PendingFutureContext] | None = None,
         last_submission_at: float = 0.0,
     ) -> ExecutionState:
@@ -56,10 +52,6 @@ class ExecutionState:
         return cls(
             attempted_keys=set(attempted_keys or set()),
             template_stats=dict(template_stats or {}),
-            field_queue_state=FieldQueueState.create(
-                busy_counts=field_queue_busy_counts,
-                skipped_fields=skipped_fields_due_to_queue,
-            ),
             future_queue_state=FutureQueueState.create(
                 pending_futures=pending_futures,
                 resumable_simulations=resumable_simulations,
@@ -74,18 +66,12 @@ class ExecutionState:
         return self.future_queue_state
 
     @property
-    def field_queue(self) -> FieldQueueState:
-        """Return the authoritative field-level queue-state view."""
-        return self.field_queue_state
-
-    @property
     def result_ledger(self) -> ResultLedgerState:
         """Return the authoritative result-state view."""
         return self.result_ledger_state
 
     def reset_transient_queue_state(self) -> None:
         """Reset queue state that should not survive process restarts."""
-        self.field_queue.reset()
         self.queue_retry_state.reset()
 
 

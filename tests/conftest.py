@@ -66,7 +66,7 @@ def scheduler_args() -> MockArgs:
     """scheduler 测试的标准 mock args，包含拥塞/节流相关配置。"""
     return MockArgs(
         queue_busy_cooldown_seconds=DEFAULT_COOLDOWN_SECONDS,
-        field_queue_busy_skip_after=3,
+        queue_busy_retry_limit=3,
         sleep_between_fields=2.0,
         simulation_create_retries=3,
         simulation_poll_retries=3,
@@ -200,14 +200,3 @@ def failed_field_test_result() -> FieldTestResult:
             {"name": "LOW_FITNESS", "value": -0.2},
         ],
     )
-
-
-# ============================================================================
-# 计数/集合 fixtures
-# ============================================================================
-
-
-@pytest.fixture
-def empty_counts_and_skipped() -> tuple[dict[str, int], set[str]]:
-    """空的 field_queue_busy_counts 和 skipped_fields_due_to_queue。"""
-    return {}, set()

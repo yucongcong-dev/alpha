@@ -102,13 +102,7 @@ def test_queue_retry_state_owns_retry_budget() -> None:
     assert update.exhausted is True
     assert key in state.queue_retry_state.exhausted_keys
 
-    field_queue = state.field_queue
-    field_queue.busy_counts["field_1"] = 2
-    field_queue.skipped_fields.add("field_1")
     state.reset_transient_queue_state()
-    assert state.field_queue is field_queue
-    assert field_queue.busy_counts == {}
-    assert field_queue.skipped_fields == set()
     assert state.queue_retry_state.retry_counts == {}
     assert state.queue_retry_state.exhausted_keys == set()
 

@@ -265,10 +265,12 @@ def add_api_runtime_arguments(parser: argparse.ArgumentParser) -> None:
         help="队列拥塞后的冷却时间（秒，增大以避免重复触发限流）",
     )
     parser.add_argument(
+        "--queue-busy-retry-limit",
         "--field-queue-busy-skip-after",
+        dest="queue_busy_retry_limit",
         type=int,
         default=2,
-        help="单候选队列拥塞重试阈值（保留旧参数名）；0 表示不限制",
+        help="单候选队列拥塞重试上限；0 表示不限制（旧参数名仍兼容）",
     )
     parser.add_argument(
         "--check-submission-retries",

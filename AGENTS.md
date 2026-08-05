@@ -34,8 +34,8 @@
 - future 队列、可恢复 simulation 和 stop signal 属于 `FutureQueueState`，调用方应通过
   `ExecutionState.future_queue` 访问，不要在 `ExecutionState` 上增加
   `pending_futures`、`resumable_simulations` 或 `stop_signal` 影子字段。
-- 字段级 queue-busy 计数与跳过集合属于 `FieldQueueState`，调用方应通过
-  `ExecutionState.field_queue` 访问，不要在 `ExecutionState` 上增加影子字段。
+- queue-busy 重试只作用于候选键，统一由 `QueueRetryState` 管理；不要因为单个模板拥塞
+  跳过整个字段，也不要重新引入字段级拥塞计数或跳过集合。
 - 运行时 worker 上限与拥塞冷却属于 `RuntimeConcurrencyState`；内部代码从
   `alpha.runtime.concurrency` 导入，不要把并发字段并入 `ExecutionState`。
 - checkpoint 恢复时，应通过 `ExecutionState.reset_transient_queue_state()` 重置瞬时队列状态，不要直接逐个赋值内部集合。

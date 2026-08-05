@@ -236,7 +236,7 @@ class RunConfigSnapshotOptions:
     simulation_max_pending_cycles: int = 0
     simulation_max_queue_seconds: float = 0.0
     queue_busy_cooldown_seconds: float = 0.0
-    field_queue_busy_skip_after: int = 0
+    queue_busy_retry_limit: int = 0
     check_submission_retries: int = 0
     rate_limit_max_retries: int = 0
     login_retries: int = 0
@@ -295,7 +295,7 @@ class RunConfigSnapshotOptions:
             queue_busy_cooldown_seconds=float(
                 getattr(args, "queue_busy_cooldown_seconds", 0.0) or 0.0
             ),
-            field_queue_busy_skip_after=int(getattr(args, "field_queue_busy_skip_after", 0) or 0),
+            queue_busy_retry_limit=int(getattr(args, "queue_busy_retry_limit", 0) or 0),
             check_submission_retries=int(getattr(args, "check_submission_retries", 0) or 0),
             rate_limit_max_retries=int(getattr(args, "rate_limit_max_retries", 0) or 0),
             login_retries=int(getattr(args, "login_retries", 0) or 0),
@@ -322,7 +322,7 @@ class SchedulerControlOptions:
     """Queue cooldown, throttling, and stop-condition knobs for scheduling."""
 
     queue_busy_cooldown_seconds: float = 0.0
-    field_queue_busy_skip_after: int = 0
+    queue_busy_retry_limit: int = 0
     sleep_between_fields: float = 0.0
     stop_after_submittable: int = 0
     max_total_simulations: int = 0
@@ -333,7 +333,7 @@ class SchedulerControlOptions:
             queue_busy_cooldown_seconds=float(
                 getattr(args, "queue_busy_cooldown_seconds", 0.0) or 0.0
             ),
-            field_queue_busy_skip_after=int(getattr(args, "field_queue_busy_skip_after", 0) or 0),
+            queue_busy_retry_limit=int(getattr(args, "queue_busy_retry_limit", 0) or 0),
             sleep_between_fields=float(getattr(args, "sleep_between_fields", 0.0) or 0.0),
             stop_after_submittable=int(getattr(args, "stop_after_submittable", 0) or 0),
             max_total_simulations=max(0, int(getattr(args, "max_total_simulations", 0) or 0)),

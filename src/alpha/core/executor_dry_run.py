@@ -63,8 +63,8 @@ class FieldPendingTemplateBuilder(Protocol):
     ) -> tuple[list[PendingTemplateEntry], int, int]: ...
 
 
-FieldSkipPredicate = Callable[[str, str, RunFilters, set[str]], bool]
-FieldSkipReasonResolver = Callable[[str, str, RunFilters, set[str]], str | None]
+FieldSkipPredicate = Callable[[str, str, RunFilters], bool]
+FieldSkipReasonResolver = Callable[[str, str, RunFilters], str | None]
 
 
 def _record_feedback_explain_counts(
@@ -165,7 +165,6 @@ def print_dry_run_plan(
             field_id,
             field_name,
             filters,
-            execution_state.field_queue.skipped_fields,
         ):
             explain_counts["field_skipped"] += 1
             skip_reason = (
@@ -173,7 +172,6 @@ def print_dry_run_plan(
                     field_id,
                     field_name,
                     filters,
-                    execution_state.field_queue.skipped_fields,
                 )
                 if resolve_skip_reason is not None
                 else None

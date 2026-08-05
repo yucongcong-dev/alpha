@@ -37,7 +37,6 @@ __all__ = [
     "drain_completed_futures_with_context",
     "handle_completed_future",
     "maybe_restore_runtime_concurrency",
-    "register_queue_busy_field",
     "register_queue_busy_template",
     "throttle_before_submission",
 ]
@@ -45,7 +44,6 @@ __all__ = [
 logger = logging.getLogger(__name__)
 
 _scheduler_control_options = _queue.scheduler_control_options
-register_queue_busy_field = _queue.register_queue_busy_field
 register_queue_busy_template = _queue.register_queue_busy_template
 
 
