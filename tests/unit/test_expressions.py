@@ -75,6 +75,10 @@ class TestClassifyExpressionFamily:
         family = classify_expression_family("test", "ts_mean(sales, 5) - ts_mean(sales, 20)")
         assert family == "mean_spread"
 
+    def test_rank_spread(self) -> None:
+        family = classify_expression_family("test", "ts_rank(sales, 5) - ts_rank(sales, 20)")
+        assert family == "rank_spread"
+
     # ---- 补充边界测试 ----
     def test_unknown_template_falls_back(self) -> None:
         """未知模板名回退到表达式分类。"""

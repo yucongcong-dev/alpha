@@ -62,14 +62,14 @@ def classify_expression_family(
         return "neutralize_decay"
     if "ts_decay_linear" in lower_expr and "ts_delta" not in lower_expr and "/" not in lower_expr:
         return "decay_level"
-    if "ts_rank" in lower_expr:
-        return "ts_rank"
     if "ts_delta" in lower_expr and "ts_std_dev" in lower_expr:
         return "vol_scaled_delta"
     if "ts_mean" in lower_expr and "-" in lower_expr:
         return "mean_spread"
     if "ts_rank" in lower_expr and "-" in lower_expr:
         return "rank_spread"
+    if "ts_rank" in lower_expr:
+        return "ts_rank"
     if "ts_zscore" in lower_expr:
         return "zscore_time"
     if "ts_decay_linear" in lower_expr and "ts_delta" in lower_expr:
