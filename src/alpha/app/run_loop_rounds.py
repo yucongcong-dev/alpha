@@ -29,6 +29,7 @@ from ..utils.helpers import first_non_empty
 from .loop_future_support import drain_until_capacity, submit_template_future
 from .run_loop_feedback import RuntimeFeedbackRefresh, refresh_runtime_feedback
 from .run_loop_resume import persist_field_progress
+from .run_loop_seed_phase import SeedPhaseState
 
 logger = logging.getLogger(__name__)
 
@@ -61,66 +62,16 @@ class ScheduleRoundContext:
     )
     scheduled_simulations: int = 0
     field_template_queues: dict[str, FieldTemplateQueue] = dataclass_field(default_factory=dict)
-    seed_phase_enabled: bool = False
-    seed_resolved_field_ids: set[str] = dataclass_field(default_factory=set)
-    seed_inflight_field_ids: set[str] = dataclass_field(default_factory=set)
-    seed_target_field_ids: set[str] = dataclass_field(init=False, default_factory=set)
+    seed_phase: SeedPhaseState = dataclass_field(default_factory=SeedPhaseState)
 
     def __post_init__(self) -> None:
         self.field_template_batch_size = max(1, int(self.field_template_batch_size or 0))
-        self.seed_target_field_ids = {
-            str(first_non_empty(field.get("id"), SENTINEL_UNKNOWN)) for field in self.fields
-        }
-        self.seed_resolved_field_ids.intersection_update(self.seed_target_field_ids)
-        self.seed_inflight_field_ids.intersection_update(self.seed_target_field_ids)
-        self.sync_seed_progress()
+        self.seed_phase.sync(self.run_ctx.execution_state)
 
     def reached_simulation_budget(self) -> bool:
         """Return whether this process has dispatched its configured simulation budget."""
         budget = self.scheduler_options.max_total_simulations
         return budget > 0 and self.scheduled_simulations >= budget
-
-    def remaining_seed_field_count(self) -> int:
-        """Return how many selected fields still need a first actionable attempt."""
-        if not self.seed_phase_enabled:
-            return 0
-        return len(self.seed_target_field_ids - self.seed_resolved_field_ids)
-
-    def seed_phase_active(self) -> bool:
-        """Return whether full-run must keep prioritizing one seed per field."""
-        return self.seed_phase_enabled and self.remaining_seed_field_count() > 0
-
-    def sync_seed_progress(self) -> None:
-        """Reconcile completed and restored seed work with the live future queue."""
-        if not self.seed_phase_enabled:
-            return
-        execution_state = self.run_ctx.execution_state
-        attempted_field_ids = {
-            field_id
-            for field_id, _template, _expression, _settings in execution_state.attempted_keys
-        }
-        self.seed_resolved_field_ids.update(attempted_field_ids & self.seed_target_field_ids)
-        active_field_ids = {
-            pending.field_id
-            for pending in (
-                *execution_state.future_queue.resumable_simulations,
-                *execution_state.future_queue.pending_futures.values(),
-            )
-            if pending.field_id
-        }
-        self.seed_inflight_field_ids.intersection_update(active_field_ids)
-        self.seed_inflight_field_ids.update(
-            (active_field_ids & self.seed_target_field_ids) - self.seed_resolved_field_ids
-        )
-
-    def resolve_seed_field(self, field_id: str) -> bool:
-        """Mark one field as seeded or unactionable and report whether state advanced."""
-        if not self.seed_phase_enabled or field_id not in self.seed_target_field_ids:
-            return False
-        previous_count = len(self.seed_resolved_field_ids)
-        self.seed_resolved_field_ids.add(field_id)
-        return len(self.seed_resolved_field_ids) > previous_count
-
 
 def _apply_feedback_refresh(
     context: ScheduleRoundContext,
@@ -145,7 +96,7 @@ def execute_schedule_round(
     result_ledger = execution_state.result_ledger
     progressed_this_round = False
     last_field_id = ""
-    context.sync_seed_progress()
+    context.seed_phase.sync(execution_state)
     if execution_state.future_queue.should_stop_scheduling():
         return ScheduleRoundResult(
             progressed=False,
@@ -155,7 +106,7 @@ def execute_schedule_round(
     logger.info(
         "[schedule] round=%d phase=%s breadth-first batch_size=%d fields=%d",
         round_index,
-        "seed" if context.seed_phase_active() else "refine",
+        context.seed_phase.phase_name,
         context.field_template_batch_size,
         len(context.fields),
     )
@@ -165,7 +116,7 @@ def execute_schedule_round(
             logger.info(
                 "[stop] 达到 max-total-simulations=%d seed_fields_remaining=%d",
                 scheduler_options.max_total_simulations,
-                context.remaining_seed_field_count(),
+                context.seed_phase.remaining_count,
             )
             return ScheduleRoundResult(
                 progressed=progressed_this_round,
@@ -225,10 +176,8 @@ def schedule_field_round(
     field_id = str(first_non_empty(field.get("id"), SENTINEL_UNKNOWN))
     field_name = choose_field_name(field)
     field_type = choose_field_type(field)
-    seed_phase_active = context.seed_phase_active()
-    if seed_phase_active and field_id in context.seed_resolved_field_ids:
-        return ScheduleRoundResult(progressed=False, stop_requested=False, last_field_id=field_id)
-    if seed_phase_active and field_id in context.seed_inflight_field_ids:
+    seed_phase_active = context.seed_phase.active
+    if context.seed_phase.should_wait_or_skip(field_id):
         return ScheduleRoundResult(progressed=False, stop_requested=False, last_field_id=field_id)
     feedback_refresh = refresh_runtime_feedback(context.template_build_ctx, result_ledger.results)
     _apply_feedback_refresh(context, feedback_refresh)
@@ -240,7 +189,7 @@ def schedule_field_round(
         execution_state.field_queue.skipped_fields,
     ):
         seed_resolution_progressed = (
-            context.resolve_seed_field(field_id) if seed_phase_active else False
+            context.seed_phase.resolve(field_id) if seed_phase_active else False
         )
         persist_field_progress(
             state_file=context.state_file,
@@ -281,7 +230,7 @@ def schedule_field_round(
     pending_count = len(template_queue.entries)
     seed_resolution_progressed = False
     if seed_phase_active and pending_count == 0:
-        seed_resolution_progressed = context.resolve_seed_field(field_id)
+        seed_resolution_progressed = context.seed_phase.resolve(field_id)
     logger.debug(
         "[progress] 字段 %d/%d field_id=%s templates=%d pending=%d filtered=%d",
         field_index,
@@ -319,7 +268,7 @@ def schedule_field_round(
         template_queue=template_queue,
     )
     if seed_phase_active and len(template_queue.entries) < queue_count_before_dispatch:
-        context.resolve_seed_field(field_id)
+        context.seed_phase.resolve(field_id)
     persist_field_progress(
         state_file=context.state_file,
         field_id=field_id,

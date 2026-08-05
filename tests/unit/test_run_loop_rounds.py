@@ -15,6 +15,7 @@ from alpha.app.run_loop_rounds import (
     execute_schedule_round,
     schedule_field_round,
 )
+from alpha.app.run_loop_seed_phase import SeedPhaseState
 from alpha.models.domain import FieldTestResult, SettingsVariant, TemplateField
 from alpha.models.io_types import RunFilters
 from alpha.models.runtime import (
@@ -68,8 +69,11 @@ def _build_context(
         completion_ctx=FutureCompletionContext(),
         state_file=state_file,
         field_template_batch_size=field_template_batch_size,
-        seed_phase_enabled=seed_phase_enabled,
-        seed_resolved_field_ids=set(seed_resolved_field_ids or set()),
+        seed_phase=SeedPhaseState.create(
+            fields,
+            enabled=seed_phase_enabled,
+            resolved_field_ids=seed_resolved_field_ids,
+        ),
     )
 
 
@@ -186,7 +190,7 @@ def test_full_run_seed_phase_covers_fields_before_refine() -> None:
         first_round = execute_schedule_round(context, round_index=1)
         assert first_round.progressed is True
         assert dispatched_batches == [("f1", 1), ("f2", 1)]
-        assert context.seed_phase_active() is False
+        assert context.seed_phase.active is False
 
         dispatched_batches.clear()
         second_round = execute_schedule_round(context, round_index=2)
@@ -302,7 +306,7 @@ def test_full_run_seed_phase_skips_historically_seeded_fields() -> None:
         execute_schedule_round(context, round_index=1)
 
     assert planned_field_ids == ["f2"]
-    assert context.seed_phase_active() is False
+    assert context.seed_phase.active is False
 
 
 def test_full_run_seed_phase_skips_resumable_inflight_fields() -> None:
@@ -314,7 +318,7 @@ def test_full_run_seed_phase_skips_resumable_inflight_fields() -> None:
     context.run_ctx.execution_state.future_queue.replace_resumable_batch(
         [PendingFutureContext(field_id="f1", simulation_location="/simulations/sim-1")]
     )
-    context.sync_seed_progress()
+    context.seed_phase.sync(context.run_ctx.execution_state)
     planned_field_ids: list[str] = []
 
     def _pending_for_field(_ctx, field, **_kwargs):
@@ -338,8 +342,8 @@ def test_full_run_seed_phase_skips_resumable_inflight_fields() -> None:
 
     assert planned_field_ids == ["f2"]
     assert result.progressed is True
-    assert context.seed_phase_active() is True
-    assert context.seed_inflight_field_ids == {"f1"}
+    assert context.seed_phase.active is True
+    assert context.seed_phase.inflight_field_ids == {"f1"}
 
 
 def test_full_run_seed_inflight_completion_becomes_resolved() -> None:
@@ -352,16 +356,16 @@ def test_full_run_seed_inflight_completion_becomes_resolved() -> None:
         completed_future,
         PendingFutureContext(field_id="f1", simulation_location="/simulations/sim-1"),
     )
-    context.sync_seed_progress()
-    assert context.seed_inflight_field_ids == {"f1"}
+    context.seed_phase.sync(context.run_ctx.execution_state)
+    assert context.seed_phase.inflight_field_ids == {"f1"}
 
     context.run_ctx.execution_state.future_queue.pop_completed(completed_future)
     context.run_ctx.execution_state.attempted_keys.add(("f1", "seed", "rank(f1)", "settings"))
-    context.sync_seed_progress()
+    context.seed_phase.sync(context.run_ctx.execution_state)
 
-    assert context.seed_inflight_field_ids == set()
-    assert context.seed_resolved_field_ids == {"f1"}
-    assert context.seed_phase_active() is False
+    assert context.seed_phase.inflight_field_ids == set()
+    assert context.seed_phase.resolved_field_ids == {"f1"}
+    assert context.seed_phase.active is False
 
 
 def test_full_run_all_remaining_seeds_inflight_does_not_enter_refine() -> None:
@@ -382,7 +386,7 @@ def test_full_run_all_remaining_seeds_inflight_does_not_enter_refine() -> None:
 
     assert result.progressed is False
     assert result.stop_requested is False
-    assert context.seed_phase_active() is True
+    assert context.seed_phase.active is True
     mock_build.assert_not_called()
 
 
@@ -442,7 +446,7 @@ def test_full_run_unactionable_seed_fields_advance_to_refine() -> None:
     ):
         seed_round = execute_schedule_round(context, round_index=1)
         assert seed_round.progressed is True
-        assert context.seed_phase_active() is False
+        assert context.seed_phase.active is False
 
         refine_round = execute_schedule_round(context, round_index=2)
 

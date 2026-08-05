@@ -38,6 +38,7 @@ from .run_loop_resume import save_runtime_checkpoint as save_runtime_checkpoint
 from .run_loop_rounds import ScheduleRoundContext
 from .run_loop_rounds import ScheduleRoundResult as ScheduleRoundResult
 from .run_loop_rounds import execute_schedule_round as execute_schedule_round
+from .run_loop_seed_phase import SeedPhaseState
 
 logger = logging.getLogger(__name__)
 
@@ -93,18 +94,21 @@ def run_field_test_loop(
             state_file=state_file,
             field_template_batch_size=field_template_batch_size,
             scheduler_options=scheduler_options,
-            seed_phase_enabled=run_loop_options.full_run,
-            seed_resolved_field_ids={
-                field_id
-                for field_id, _template, _expression, _settings in execution_state.attempted_keys
-            },
+            seed_phase=SeedPhaseState.create(
+                fields,
+                enabled=run_loop_options.full_run,
+                resolved_field_ids={
+                    field_id
+                    for field_id, _template, _expression, _settings in execution_state.attempted_keys
+                },
+            ),
         )
-        if schedule_context.seed_phase_enabled:
-            remaining_seed_fields = schedule_context.remaining_seed_field_count()
+        if schedule_context.seed_phase.enabled:
+            remaining_seed_fields = schedule_context.seed_phase.remaining_count
             logger.info(
                 "[full-run] seed phase fields=%d already_resolved=%d remaining=%d",
-                len(schedule_context.seed_target_field_ids),
-                len(schedule_context.seed_target_field_ids) - remaining_seed_fields,
+                schedule_context.seed_phase.total_count,
+                schedule_context.seed_phase.resolved_count,
                 remaining_seed_fields,
             )
             if (
