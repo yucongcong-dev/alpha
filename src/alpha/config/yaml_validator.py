@@ -31,6 +31,7 @@ GLOBAL_KNOWN_KEYS = {
     "runtime",
 }
 
+
 def clear_schema_cache() -> None:
     """Clear cached schema keys after YAML cache invalidation."""
     global _schema_keys_cache

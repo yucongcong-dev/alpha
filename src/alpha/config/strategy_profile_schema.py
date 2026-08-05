@@ -138,9 +138,7 @@ def validate_runtime_defaults(profile_name: str, value: object) -> list[str]:
             expected = section_schema.get(key)
             item_path = f"{prefix}.{section_name}.{key}"
             if expected is None:
-                errors.append(
-                    f"{item_path} 是未知 key，已知 key: {sorted(section_schema)}"
-                )
+                errors.append(f"{item_path} 是未知 key，已知 key: {sorted(section_schema)}")
                 continue
             if not _matches_type(item, expected):
                 errors.append(f"{item_path} 必须是 {expected}，当前为 {type(item).__name__}。")

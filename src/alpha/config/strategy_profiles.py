@@ -17,6 +17,7 @@ STRATEGY_PROFILE_REFINE = "refine"
 STRATEGY_PROFILE_SUBMIT_FOCUSED = "submit-focused"
 DEFAULT_STRATEGY_PROFILE = STRATEGY_PROFILE_EXPLORE
 
+
 @dataclass(frozen=True, slots=True)
 class StrategyProfileSchema:
     """Descriptive schema for one named strategy profile."""
