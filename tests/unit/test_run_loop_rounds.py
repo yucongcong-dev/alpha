@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import argparse
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import Future, ThreadPoolExecutor
 from threading import Semaphore
 from unittest.mock import MagicMock, patch
 
@@ -22,6 +22,7 @@ from alpha.models.runtime import (
     FutureCompletionContext,
     HistoricalRunState,
     InitializedRunContext,
+    PendingFutureContext,
     PendingTemplateEntry,
     RuntimeConcurrencyState,
     TemplateBuildContext,
@@ -302,6 +303,87 @@ def test_full_run_seed_phase_skips_historically_seeded_fields() -> None:
 
     assert planned_field_ids == ["f2"]
     assert context.seed_phase_active() is False
+
+
+def test_full_run_seed_phase_skips_resumable_inflight_fields() -> None:
+    context = _build_context(
+        field_template_batch_size=1,
+        field_ids=("f1", "f2"),
+        seed_phase_enabled=True,
+    )
+    context.run_ctx.execution_state.future_queue.replace_resumable_batch(
+        [PendingFutureContext(field_id="f1", simulation_location="/simulations/sim-1")]
+    )
+    context.sync_seed_progress()
+    planned_field_ids: list[str] = []
+
+    def _pending_for_field(_ctx, field, **_kwargs):
+        planned_field_ids.append(field.field_id)
+        return [], 0, 0
+
+    with (
+        context.executor,
+        patch(
+            "alpha.app.run_loop_rounds.refresh_runtime_feedback",
+            return_value=RuntimeFeedbackRefresh(feedback_changed=False),
+        ),
+        patch("alpha.app.run_loop_rounds.should_skip_field", return_value=False),
+        patch(
+            "alpha.app.run_loop_rounds.build_pending_templates_for_field",
+            side_effect=_pending_for_field,
+        ),
+        patch("alpha.app.run_loop_rounds.persist_field_progress"),
+    ):
+        result = execute_schedule_round(context, round_index=1)
+
+    assert planned_field_ids == ["f2"]
+    assert result.progressed is True
+    assert context.seed_phase_active() is True
+    assert context.seed_inflight_field_ids == {"f1"}
+
+
+def test_full_run_seed_inflight_completion_becomes_resolved() -> None:
+    context = _build_context(
+        field_template_batch_size=1,
+        seed_phase_enabled=True,
+    )
+    completed_future: Future[FieldTestResult] = Future()
+    context.run_ctx.execution_state.future_queue.register(
+        completed_future,
+        PendingFutureContext(field_id="f1", simulation_location="/simulations/sim-1"),
+    )
+    context.sync_seed_progress()
+    assert context.seed_inflight_field_ids == {"f1"}
+
+    context.run_ctx.execution_state.future_queue.pop_completed(completed_future)
+    context.run_ctx.execution_state.attempted_keys.add(("f1", "seed", "rank(f1)", "settings"))
+    context.sync_seed_progress()
+
+    assert context.seed_inflight_field_ids == set()
+    assert context.seed_resolved_field_ids == {"f1"}
+    assert context.seed_phase_active() is False
+
+
+def test_full_run_all_remaining_seeds_inflight_does_not_enter_refine() -> None:
+    context = _build_context(
+        field_template_batch_size=1,
+        field_ids=("f1",),
+        seed_phase_enabled=True,
+    )
+    context.run_ctx.execution_state.future_queue.replace_resumable_batch(
+        [PendingFutureContext(field_id="f1", simulation_location="/simulations/sim-1")]
+    )
+
+    with (
+        context.executor,
+        patch("alpha.app.run_loop_rounds.build_pending_templates_for_field") as mock_build,
+    ):
+        result = execute_schedule_round(context, round_index=1)
+
+    assert result.progressed is False
+    assert result.stop_requested is False
+    assert context.seed_phase_active() is True
+    mock_build.assert_not_called()
 
 
 def test_full_run_unactionable_seed_fields_advance_to_refine() -> None:

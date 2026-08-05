@@ -63,6 +63,7 @@ class ScheduleRoundContext:
     field_template_queues: dict[str, FieldTemplateQueue] = dataclass_field(default_factory=dict)
     seed_phase_enabled: bool = False
     seed_resolved_field_ids: set[str] = dataclass_field(default_factory=set)
+    seed_inflight_field_ids: set[str] = dataclass_field(default_factory=set)
     seed_target_field_ids: set[str] = dataclass_field(init=False, default_factory=set)
 
     def __post_init__(self) -> None:
@@ -71,6 +72,8 @@ class ScheduleRoundContext:
             str(first_non_empty(field.get("id"), SENTINEL_UNKNOWN)) for field in self.fields
         }
         self.seed_resolved_field_ids.intersection_update(self.seed_target_field_ids)
+        self.seed_inflight_field_ids.intersection_update(self.seed_target_field_ids)
+        self.sync_seed_progress()
 
     def reached_simulation_budget(self) -> bool:
         """Return whether this process has dispatched its configured simulation budget."""
@@ -86,6 +89,28 @@ class ScheduleRoundContext:
     def seed_phase_active(self) -> bool:
         """Return whether full-run must keep prioritizing one seed per field."""
         return self.seed_phase_enabled and self.remaining_seed_field_count() > 0
+
+    def sync_seed_progress(self) -> None:
+        """Reconcile completed and restored seed work with the live future queue."""
+        if not self.seed_phase_enabled:
+            return
+        execution_state = self.run_ctx.execution_state
+        attempted_field_ids = {
+            field_id for field_id, _template, _expression, _settings in execution_state.attempted_keys
+        }
+        self.seed_resolved_field_ids.update(attempted_field_ids & self.seed_target_field_ids)
+        active_field_ids = {
+            pending.field_id
+            for pending in (
+                *execution_state.future_queue.resumable_simulations,
+                *execution_state.future_queue.pending_futures.values(),
+            )
+            if pending.field_id
+        }
+        self.seed_inflight_field_ids.intersection_update(active_field_ids)
+        self.seed_inflight_field_ids.update(
+            (active_field_ids & self.seed_target_field_ids) - self.seed_resolved_field_ids
+        )
 
     def resolve_seed_field(self, field_id: str) -> bool:
         """Mark one field as seeded or unactionable and report whether state advanced."""
@@ -119,6 +144,7 @@ def execute_schedule_round(
     result_ledger = execution_state.result_ledger
     progressed_this_round = False
     last_field_id = ""
+    context.sync_seed_progress()
     if execution_state.future_queue.should_stop_scheduling():
         return ScheduleRoundResult(
             progressed=False,
@@ -200,6 +226,8 @@ def schedule_field_round(
     field_type = choose_field_type(field)
     seed_phase_active = context.seed_phase_active()
     if seed_phase_active and field_id in context.seed_resolved_field_ids:
+        return ScheduleRoundResult(progressed=False, stop_requested=False, last_field_id=field_id)
+    if seed_phase_active and field_id in context.seed_inflight_field_ids:
         return ScheduleRoundResult(progressed=False, stop_requested=False, last_field_id=field_id)
     feedback_refresh = refresh_runtime_feedback(context.template_build_ctx, result_ledger.results)
     _apply_feedback_refresh(context, feedback_refresh)
