@@ -752,7 +752,7 @@ threshold。本仓库默认保持 `OFF`，需要时显式开启。
 所以 neutralization 在平台中是“组合层面的结构变换”，不是简单注释项。
 
 不同数据类别怎样选择 neutralization，以及应该放在 settings 还是表达式中，见
-[03 的最终决策章节](03_optimization_and_submission.md#231-neutralization-的最终决策)。
+[03 的最终决策章节](03_optimization_and_submission.md#221-neutralization-的最终决策)。
 
 ---
 

@@ -549,28 +549,20 @@ Test Period 可以更具体地按下面方式使用：
 
 ---
 
-## 21. 优化时最容易犯的错
+## 21. 优化纪律速查
 
-- 把“多跑”当优化
-- 把“调参数”当研究
-- 把“收益高”当“质量高”
-- 在同一模板族里做过密近邻搜索
-- 不分 `Simulate` 和 `Check submission`
-
----
-
-## 22. 优化阶段最该记住的几句话
-
-- 先分清 IS 和 OS
-- 先拆原因，再做动作
-- 先改结构，再调参数
-- 相关性优先靠结构替换解决
-- Fitness 先回公式，不要当黑盒
-- 模板数量不是研究质量
+| 错误倾向 | 正确原则 |
+|---|---|
+| 把“多跑”或模板数量当成优化 | 先写清假设和主失败项，再决定是否增加实验 |
+| 把调参数和同模板族的密集近邻搜索当成研究 | 先改字段、结构或 grouping，再做小范围参数扰动 |
+| 把高 Returns 当成高质量 | 同时检查 Sharpe、Fitness、Turnover、Drawdown 和稳健性 |
+| 把 Fitness 当成独立黑盒 | 回到公式拆分 Sharpe、Returns 和 Turnover |
+| 用窗口微调解决相关性 | 优先替换字段族、算子族、grouping 或研究假设 |
+| 混淆 IS、OS、Simulate 和 Check Submission | 先确认结果阶段，再解释失败项和采取动作 |
 
 ---
 
-## 23. 提交前统一收口
+## 22. 提交前统一收口
 
 优化结束不等于可以提交。最终候选应按固定顺序复查：
 
@@ -588,7 +580,7 @@ Test Period 可以更具体地按下面方式使用：
 - 第一层检查收益质量、成本和可实现性
 - 第二层检查独特性、稳健性和是否值得加入现有 Alpha 池
 
-### 23.1 Neutralization 的最终决策
+### 22.1 Neutralization 的最终决策
 
 表达式里的 `group_neutralize(x, group)` 与回测设置的 Neutralization 都会改变持仓结构，但作用范围不同：前者只处理表达式中传入的局部值，Simulation Settings 的 Neutralization 则在平台操作链最后对整个 Alpha 起作用。
 
@@ -603,12 +595,12 @@ Test Period 可以更具体地按下面方式使用：
 - Option：`Market` 或 `Sector`
 - Price Volume / Macro：`Market`、`Sector`，必要时再试 `Industry`
 
-### 23.2 D0 的提交判断
+### 22.2 D0 的提交判断
 
 D0 应当作为独立研究分支。除更高换手和成本压力外，还要验证同一逻辑在 D1 上
 是否保留合理表现。如果 D1 明显更强，不应为了 D0 标签继续强行调参。
 
-### 23.3 社区压力测试与平台硬门槛要分开
+### 22.3 社区压力测试与平台硬门槛要分开
 
 Rank/Binary、Train/Test、参数扰动、Sub/Super Universe 和 Max Trade 挑战用于提高
 研究置信度；它们不应被描述成平台统一硬门槛。文档和结果记录中应明确区分：
@@ -618,7 +610,7 @@ Rank/Binary、Train/Test、参数扰动、Sub/Super Universe 和 Max Trade 挑�
 
 ---
 
-## 24. 官方来源
+## 23. 官方来源
 
 - [Understanding Data in BRAIN: Key Concepts and Tips](https://platform.worldquantbrain.com/learn/documentation/understanding-data/data)
 - [How to use the Data Explorer](https://platform.worldquantbrain.com/learn/documentation/understanding-data/how-use-data-explorer)
