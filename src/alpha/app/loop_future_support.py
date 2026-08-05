@@ -77,6 +77,37 @@ def _drain_completed_cycle(
     )
 
 
+def drain_next_completion(
+    *,
+    state_file: str,
+    total_fields: int,
+    last_field_id: str,
+    execution_state: ExecutionState,
+    scheduler_options: SchedulerControlOptions,
+    completion_ctx: FutureCompletionContext,
+    runtime_state: RuntimeConcurrencyState,
+) -> bool:
+    """Drain one completed future batch, persist state, and report whether work existed."""
+    pending_futures = execution_state.future_queue.pending_futures
+    if not pending_futures:
+        return False
+    _drain_completed_cycle(
+        pending_futures=pending_futures,
+        execution_state=execution_state,
+        scheduler_options=scheduler_options,
+        completion_ctx=completion_ctx,
+        runtime_state=runtime_state,
+    )
+    save_terminal_pipeline_state(
+        state_file=state_file,
+        total_fields=total_fields,
+        last_field_id=last_field_id,
+        execution_state=execution_state,
+        runtime_state=runtime_state,
+    )
+    return True
+
+
 def drain_until_capacity(
     *,
     executor_state: ExecutionState,
@@ -220,17 +251,12 @@ def drain_remaining_futures(
     scheduler_options = scheduler_options or SchedulerControlOptions.from_args(args)
     future_queue = execution_state.future_queue
     while future_queue.pending_futures:
-        _drain_completed_cycle(
-            pending_futures=future_queue.pending_futures,
-            execution_state=execution_state,
-            scheduler_options=scheduler_options,
-            completion_ctx=completion_ctx,
-            runtime_state=runtime_state,
-        )
-        save_terminal_pipeline_state(
+        drain_next_completion(
             state_file=state_file,
             total_fields=total_fields,
             last_field_id=last_field_id,
             execution_state=execution_state,
+            scheduler_options=scheduler_options,
+            completion_ctx=completion_ctx,
             runtime_state=runtime_state,
         )

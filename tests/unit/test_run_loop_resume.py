@@ -225,6 +225,7 @@ def test_run_field_test_loop_persists_progress_for_skipped_fields(tmp_path) -> N
             ),
         ) as mock_round,
         patch("alpha.app.run_loop.submit_resumable_futures") as mock_resume,
+        patch("alpha.app.run_loop.drain_next_completion", return_value=False),
         patch("alpha.app.run_loop.drain_remaining_futures"),
     ):
         run_field_test_loop(
@@ -238,6 +239,59 @@ def test_run_field_test_loop_persists_progress_for_skipped_fields(tmp_path) -> N
 
     assert mock_resume.call_count == 1
     assert mock_round.call_count == 1
+
+
+def test_run_field_test_loop_replans_after_pending_seed_completion(tmp_path) -> None:
+    fields = [{"id": "f1", "type": "MATRIX", "name": "f1"}]
+    run_ctx = _build_run_ctx(fields)
+    args = _build_run_loop_args(tmp_path)
+    pending_future = Future()
+
+    def _submit_resumable(**_kwargs) -> int:
+        run_ctx.execution_state.future_queue.pending_futures[pending_future] = SimpleNamespace(
+            field_id="f1"
+        )
+        return 1
+
+    def _drain_next(**_kwargs) -> bool:
+        if not run_ctx.execution_state.future_queue.pending_futures:
+            return False
+        run_ctx.execution_state.future_queue.pending_futures.clear()
+        run_ctx.execution_state.attempted_keys.add(("f1", "seed", "rank(f1)", "settings"))
+        return True
+
+    with (
+        patch("alpha.app.run_loop.restore_fields_from_state", return_value=(fields, 0)),
+        patch(
+            "alpha.app.run_loop.create_template_build_context",
+            return_value=SimpleNamespace(
+                field_feedback={},
+                global_failed_check_counts={},
+                feedback_result_count=0,
+            ),
+        ),
+        patch(
+            "alpha.app.run_loop.execute_schedule_round",
+            side_effect=[
+                ScheduleRoundResult(False, False, "f1"),
+                ScheduleRoundResult(False, False, "f1"),
+            ],
+        ) as mock_round,
+        patch("alpha.app.run_loop.submit_resumable_futures", side_effect=_submit_resumable),
+        patch("alpha.app.run_loop.drain_next_completion", side_effect=_drain_next) as mock_drain,
+        patch("alpha.app.run_loop.drain_remaining_futures"),
+    ):
+        run_field_test_loop(
+            args,
+            run_ctx,
+            run_paths=argparse.Namespace(
+                state_file=str(tmp_path / "state.json"),
+                checkpoint_file="",
+            ),
+        )
+
+    assert mock_drain.call_count == 2
+    assert mock_round.call_count == 2
 
 
 def test_run_field_test_loop_interrupts_workers_without_waiting(tmp_path) -> None:

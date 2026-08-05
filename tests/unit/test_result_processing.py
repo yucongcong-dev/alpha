@@ -139,7 +139,7 @@ def test_worker_failure_is_persisted_without_marking_candidate_attempted(monkeyp
     )
     monkeypatch.setattr(results_persistence, "dump_results_incremental", lambda *_a, **_k: 1)
 
-    result_processing.apply_completed_result(
+    _template_stats, _congestion_detected, retry_key = result_processing.apply_completed_result(
         result,
         completion_ctx=context,
         execution_state=state,
@@ -147,3 +147,4 @@ def test_worker_failure_is_persisted_without_marking_candidate_attempted(monkeyp
 
     assert state.result_ledger.results == [result]
     assert state.attempted_keys == set()
+    assert retry_key == result_processing.result_identity(result)

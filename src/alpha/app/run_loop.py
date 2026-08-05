@@ -10,6 +10,7 @@ from ..models.io_types import RunPaths
 from ..models.runtime_options import RunLoopOptions
 from ..runtime.state import InitializedRunContext
 from .loop_future_support import cancel_unstarted_futures as cancel_unstarted_futures
+from .loop_future_support import drain_next_completion as drain_next_completion
 from .loop_future_support import drain_remaining_futures as drain_remaining_futures
 from .loop_future_support import submit_resumable_futures as submit_resumable_futures
 from .loop_future_support import (
@@ -135,6 +136,20 @@ def run_field_test_loop(
                 if round_result.stop_requested:
                     break
                 if not round_result.progressed:
+                    if drain_next_completion(
+                        state_file=state_file,
+                        total_fields=len(original_fields),
+                        last_field_id=last_field_id,
+                        execution_state=execution_state,
+                        scheduler_options=scheduler_options,
+                        completion_ctx=completion_ctx,
+                        runtime_state=runtime_state,
+                    ):
+                        logger.info(
+                            "[schedule] completed pending work after round=%d; replanning",
+                            round_index,
+                        )
+                        continue
                     logger.info(
                         "[schedule] no pending templates remain after round=%d", round_index
                     )

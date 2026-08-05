@@ -17,7 +17,10 @@ from ..analysis.result_identity import result_identity
 from ..analysis.template_stats import update_template_stats_with_result
 from ..config.constants import STATUS_ERROR, STATUS_SKIPPED
 from ..models.domain import FieldTestResult
-from ..models.result_predicates import is_attempted_result
+from ..models.result_predicates import (
+    is_attempted_result,
+    is_retryable_infrastructure_result,
+)
 from ..models.runtime_protocols import TemplateStats
 from ..policy.blacklist_runtime_stats import build_blacklist_runtime_stats
 from ..policy.blacklist_runtime_updates import auto_update_blacklist_incremental
@@ -115,6 +118,8 @@ def detect_result_congestion(
         lowered = result.message.lower()
         if "queued too long" in lowered or "queue budget" in lowered:
             queue_busy_key = result_identity(result)
+    if is_retryable_infrastructure_result(result):
+        queue_busy_key = result_identity(result)
     return congestion_detected, queue_busy_key
 
 
