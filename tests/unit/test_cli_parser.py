@@ -341,6 +341,20 @@ def test_clean_command_parses(monkeypatch) -> None:
     assert args.dry_run_clean is True
 
 
+def test_blacklist_review_command_parses(monkeypatch) -> None:
+    clear_yaml_cache()
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        ["alpha", "blacklist-review", "--dataset-id", "fundamental6"],
+    )
+
+    args = parse_args()
+
+    assert args.command == "blacklist-review"
+    assert args.dataset_id == "fundamental6"
+
+
 def test_normalize_args_paths_uses_dataset_scoped_defaults(monkeypatch, tmp_path) -> None:
     """Blank CLI path defaults should expand using the active dataset context."""
     clear_yaml_cache()
@@ -398,6 +412,22 @@ def test_normalize_args_paths_allows_clean_for_paused_fundamental6(monkeypatch, 
     assert paths.template_library_file.replace("\\", "/").endswith(
         "/datasets/fundamental6/template.json"
     )
+
+
+def test_normalize_args_paths_allows_blacklist_review_for_paused_dataset(
+    monkeypatch, tmp_path
+) -> None:
+    clear_yaml_cache()
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        ["alpha", "blacklist-review", "--dataset-id", "fundamental6"],
+    )
+
+    paths = normalize_args_paths(parse_args())
+
+    assert paths.datasets_root.replace("\\", "/").endswith("/datasets")
 
 
 def test_explicit_template_path_allows_paused_fundamental6(monkeypatch, tmp_path) -> None:

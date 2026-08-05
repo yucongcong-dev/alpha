@@ -85,7 +85,7 @@ def _default_dataset_preset_paths(
 
 def _validate_paused_dataset(args: argparse.Namespace) -> None:
     """Require an explicit research entry before running a paused dataset."""
-    if str(getattr(args, "command", "") or "") == "clean":
+    if str(getattr(args, "command", "") or "") != "run":
         return
 
     profile = get_dataset_profile(args.dataset_id, get_yaml_config())
@@ -130,7 +130,10 @@ def normalize_args_paths(args: argparse.Namespace) -> RunPaths:
         run_name=str(getattr(args, "run_name", "default") or "default"),
     )
     datasets_root = scoped_paths["datasets_root"] or str(resolve_datasets_root())
-    preset_paths = _default_dataset_preset_paths(args, datasets_root=datasets_root)
+    is_run_command = str(getattr(args, "command", "run") or "run") == "run"
+    preset_paths = (
+        _default_dataset_preset_paths(args, datasets_root=datasets_root) if is_run_command else {}
+    )
 
     template_library_file = (
         resolve_cli_path(args.template_library_file, base_dir=os.getcwd())
@@ -158,15 +161,16 @@ def normalize_args_paths(args: argparse.Namespace) -> RunPaths:
         args.include_templates_file, base_dir=os.getcwd()
     ) or preset_paths.get("include_templates_file", "")
     exclude_templates_file = resolve_cli_path(args.exclude_templates_file, base_dir=os.getcwd())
-    _validate_explicit_filter_files(
-        args,
-        {
-            "include_fields_file": include_fields_file,
-            "exclude_fields_file": exclude_fields_file,
-            "include_templates_file": include_templates_file,
-            "exclude_templates_file": exclude_templates_file,
-        },
-    )
+    if is_run_command:
+        _validate_explicit_filter_files(
+            args,
+            {
+                "include_fields_file": include_fields_file,
+                "exclude_fields_file": exclude_fields_file,
+                "include_templates_file": include_templates_file,
+                "exclude_templates_file": exclude_templates_file,
+            },
+        )
 
     sidecar_paths = build_output_sidecar_paths(output_file)
     log_file = resolve_cli_path(args.log_file, base_dir=os.getcwd()) or sidecar_paths["run_log"]

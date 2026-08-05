@@ -19,6 +19,7 @@ from ..policy.blacklist_context import set_active_datasets_root
 from ..policy.blacklist_store import (
     ensure_template_blacklist_file,
     read_blacklist_payload,
+    read_blacklist_staging_payload,
     summarize_blacklist_payload,
 )
 from ..policy.expression import get_dataset_expression_policy
@@ -39,6 +40,7 @@ def build_planning_supporting_services() -> SupportingResourceServices:
         ensure_template_blacklist_file=ensure_template_blacklist_file,
         load_template_library=load_template_library,
         read_blacklist_payload=read_blacklist_payload,
+        read_blacklist_staging_payload=read_blacklist_staging_payload,
         summarize_blacklist_payload=summarize_blacklist_payload,
         load_run_filters_extended=load_run_filters_extended,
         get_dataset_expression_policy=get_dataset_expression_policy,

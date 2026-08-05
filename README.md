@@ -47,7 +47,8 @@ alpha/
 
 - `template.json`：默认模板库
 - `presets/`：专项模板、字段与模板筛选清单
-- `blacklist.json`：自动或人工维护的排除规则
+- `blacklist.json`：人工确认后的长期排除规则
+- `blacklist.staging.json`：自动学习产生的待审核条目
 - `README.md`：该数据集的有效结论、当前策略与下一步
 
 `cache/`、`runs/`、`feedback/` 与 `.credentials/` 属于本地可重建或私密状态，不提交。详细目录、工作区、结果和清理规则见 [02](docs/02_research_and_data_guide.md)。
@@ -67,6 +68,10 @@ python -m alpha --top-fields-by-feedback 10 --max-templates-per-field 15
 # 预览 / 执行本地运行产物清理
 python -m alpha clean --dry-run-clean
 python -m alpha clean
+
+# 查看并提升自动学习的待审核黑名单
+python -m alpha blacklist-review --dataset-id fundamental6
+python -m alpha blacklist-promote --dataset-id fundamental6
 ```
 
 完整的运行阶段、续跑、配置覆盖、缓存和结果文件说明统一在 [02](docs/02_research_and_data_guide.md)。

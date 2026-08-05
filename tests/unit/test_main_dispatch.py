@@ -56,6 +56,33 @@ def test_main_routes_dry_run_around_runtime_bootstrap_and_finalize(monkeypatch) 
     assert main_module.main() == 0
 
 
+def test_main_routes_blacklist_command_without_runtime_bootstrap(monkeypatch) -> None:
+    datasets_root = "datasets"
+    config = SimpleNamespace(
+        command="blacklist-review",
+        dataset_id="fundamental6",
+        paths=SimpleNamespace(datasets_root=datasets_root),
+    )
+    calls: list[tuple[str, str, str]] = []
+    monkeypatch.setattr(main_module, "parse_application_config", lambda: config)
+    monkeypatch.setattr(
+        main_module,
+        "run_blacklist_command",
+        lambda command, *, dataset_id, datasets_root: calls.append(
+            (command, dataset_id, datasets_root)
+        )
+        or 0,
+    )
+
+    def _unexpected(*_args, **_kwargs):
+        raise AssertionError("blacklist commands must not start runtime bootstrap")
+
+    monkeypatch.setattr(main_module, "initialize_run_context", _unexpected)
+
+    assert main_module.main() == 0
+    assert calls == [("blacklist-review", "fundamental6", datasets_root)]
+
+
 def test_main_runs_runtime_pipeline_and_closes_client_factory(monkeypatch) -> None:
     paths = object()
     config = SimpleNamespace(command="run", dry_run_plan=False, paths=paths)

@@ -37,9 +37,12 @@ def add_base_arguments(parser: argparse.ArgumentParser) -> None:
     parser.add_argument(
         "command",
         nargs="?",
-        choices=("run", "clean"),
+        choices=("run", "clean", "blacklist-review", "blacklist-promote"),
         default="run",
-        help="运行命令：run=执行 Alpha 流程（默认），clean=清理本地运行文件",
+        help=(
+            "运行命令：run=执行 Alpha 流程（默认），clean=清理本地运行文件，"
+            "blacklist-review=查看待确认条目，blacklist-promote=提升为长期黑名单"
+        ),
     )
     parser.add_argument(
         "--config",
