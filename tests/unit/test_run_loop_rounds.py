@@ -777,7 +777,10 @@ def test_feedback_change_invalidates_cached_field_template_queue() -> None:
         refresh_calls += 1
         if refresh_calls == 2:
             template_build_ctx.feedback_result_count = 1
-            return RuntimeFeedbackRefresh(feedback_changed=True)
+            return RuntimeFeedbackRefresh(
+                feedback_changed=True,
+                changed_field_ids=frozenset({"f1"}),
+            )
         return RuntimeFeedbackRefresh(feedback_changed=False)
 
     with (
@@ -875,7 +878,7 @@ def test_dispatch_honors_stop_capacity_and_success_paths() -> None:
 
 
 def test_dispatch_replans_when_capacity_drain_changes_feedback() -> None:
-    context = _build_context(field_template_batch_size=2)
+    context = _build_context(field_template_batch_size=2, field_ids=("f1", "f2"))
     entries = [
         PendingTemplateEntry(
             template_name=f"template-{index}",
@@ -895,13 +898,18 @@ def test_dispatch_replans_when_capacity_drain_changes_feedback() -> None:
         filtered_templates=0,
         template_count=2,
     )
+    context.field_template_queues["f2"] = FieldTemplateQueue.create(
+        entries,
+        filtered_templates=0,
+        template_count=2,
+    )
 
     def _drain_with_result(**_kwargs) -> bool:
         context.run_ctx.execution_state.result_ledger.append(
             FieldTestResult(
-                field_id="completed",
+                field_id="f1",
                 field_type="MATRIX",
-                field_name="completed",
+                field_name="f1",
                 template_name="prior",
                 status="simulated",
             )
@@ -916,7 +924,10 @@ def test_dispatch_replans_when_capacity_drain_changes_feedback() -> None:
         ),
         patch(
             "alpha.app.run_loop_rounds.refresh_runtime_feedback",
-            return_value=RuntimeFeedbackRefresh(feedback_changed=True),
+            return_value=RuntimeFeedbackRefresh(
+                feedback_changed=True,
+                changed_field_ids=frozenset({"f1"}),
+            ),
         ),
         patch("alpha.app.run_loop_rounds.submit_template_future") as mock_submit,
     ):
@@ -931,7 +942,7 @@ def test_dispatch_replans_when_capacity_drain_changes_feedback() -> None:
         )
 
     assert stopped is False
-    assert context.field_template_queues == {}
+    assert set(context.field_template_queues) == {"f2"}
     mock_submit.assert_not_called()
 
 

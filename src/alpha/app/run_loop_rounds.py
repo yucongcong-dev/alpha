@@ -79,11 +79,12 @@ def _apply_feedback_refresh(
     feedback_refresh: RuntimeFeedbackRefresh,
 ) -> None:
     """Invalidate cached field queues affected by newly consumed runtime feedback."""
-    if feedback_refresh.feedback_changed:
+    if feedback_refresh.invalidate_all:
         context.field_template_queues.clear()
         return
-    for retry_field_id in feedback_refresh.retry_field_ids:
-        context.field_template_queues.pop(retry_field_id, None)
+    invalidated_field_ids = feedback_refresh.changed_field_ids | feedback_refresh.retry_field_ids
+    for field_id in invalidated_field_ids:
+        context.field_template_queues.pop(field_id, None)
 
 
 def execute_schedule_round(
@@ -343,7 +344,9 @@ def _dispatch_templates_for_field(
                 result_ledger.results,
             )
             _apply_feedback_refresh(context, feedback_refresh)
-            if feedback_refresh.feedback_changed or field_id in feedback_refresh.retry_field_ids:
+            if feedback_refresh.invalidate_all or field_id in (
+                feedback_refresh.changed_field_ids | feedback_refresh.retry_field_ids
+            ):
                 logger.debug(
                     "[schedule] field=%s queue invalidated after completed results; replanning",
                     field_id,

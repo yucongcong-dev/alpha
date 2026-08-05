@@ -26,7 +26,9 @@ class RuntimeFeedbackRefresh:
     """Describe which cached template queues must be rebuilt after new results."""
 
     feedback_changed: bool
+    changed_field_ids: frozenset[str] = frozenset()
     retry_field_ids: frozenset[str] = frozenset()
+    invalidate_all: bool = False
 
 
 def refresh_runtime_feedback(
@@ -45,7 +47,7 @@ def refresh_runtime_feedback(
             compile_failed_check_counts_by_field_type(results)
         )
         template_build_ctx.feedback_result_count = result_count
-        return RuntimeFeedbackRefresh(feedback_changed=True)
+        return RuntimeFeedbackRefresh(feedback_changed=True, invalidate_all=True)
     if cached_count == result_count:
         return RuntimeFeedbackRefresh(feedback_changed=False)
     if cached_count is None or cached_count > result_count:
@@ -55,11 +57,12 @@ def refresh_runtime_feedback(
             compile_failed_check_counts_by_field_type(results)
         )
         template_build_ctx.feedback_result_count = result_count
-        return RuntimeFeedbackRefresh(feedback_changed=True)
-    feedback_changed = False
+        return RuntimeFeedbackRefresh(feedback_changed=True, invalidate_all=True)
+    changed_field_ids: set[str] = set()
     retry_field_ids: set[str] = set()
     for result in results[cached_count:]:
-        feedback_changed = feedback_changed or is_feedback_eligible_result(result)
+        if is_feedback_eligible_result(result):
+            changed_field_ids.add(result.field_id)
         if is_queue_timeout_result(result) or is_retryable_infrastructure_result(result):
             retry_field_ids.add(result.field_id)
         update_field_feedback_with_result(template_build_ctx.field_feedback, result)
@@ -73,6 +76,7 @@ def refresh_runtime_feedback(
         )
     template_build_ctx.feedback_result_count = result_count
     return RuntimeFeedbackRefresh(
-        feedback_changed=feedback_changed,
+        feedback_changed=bool(changed_field_ids),
+        changed_field_ids=frozenset(changed_field_ids),
         retry_field_ids=frozenset(retry_field_ids),
     )

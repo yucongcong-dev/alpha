@@ -675,6 +675,7 @@ def test_refresh_runtime_feedback_rebuilds_feedback_from_current_results() -> No
     refresh = refresh_runtime_feedback(build_ctx, results, force=True)
 
     assert refresh.feedback_changed is True
+    assert refresh.invalidate_all is True
     assert build_ctx.field_feedback["cash_st"]["attempted_templates"] == 1
     assert build_ctx.field_feedback["cash_st"]["best_template_stage"] == "group_second_order"
     assert build_ctx.global_failed_check_counts["LOW_SHARPE"] == 1
@@ -723,7 +724,9 @@ def test_refresh_runtime_feedback_preserves_seed_feedback_and_only_adds_new_resu
         ),
     ]
 
-    assert refresh_runtime_feedback(build_ctx, results).feedback_changed is True
+    refresh = refresh_runtime_feedback(build_ctx, results)
+    assert refresh.feedback_changed is True
+    assert refresh.changed_field_ids == frozenset({"new_field"})
     assert refresh_runtime_feedback(build_ctx, results).feedback_changed is False
 
     assert build_ctx.field_feedback["seed_field"]["attempted_templates"] == 3
@@ -751,6 +754,7 @@ def test_refresh_runtime_feedback_invalidates_retry_field_for_queue_timeout() ->
     refresh = refresh_runtime_feedback(build_ctx, results)
 
     assert refresh.feedback_changed is False
+    assert refresh.changed_field_ids == frozenset()
     assert refresh.retry_field_ids == frozenset({"queued_field"})
     assert build_ctx.feedback_result_count == 1
     assert build_ctx.field_feedback == {}
@@ -775,6 +779,7 @@ def test_refresh_runtime_feedback_invalidates_retry_field_for_worker_failure() -
     refresh = refresh_runtime_feedback(build_ctx, results)
 
     assert refresh.feedback_changed is False
+    assert refresh.changed_field_ids == frozenset()
     assert refresh.retry_field_ids == frozenset({"failed_field"})
     assert build_ctx.field_feedback == {}
 
