@@ -471,28 +471,16 @@ Test Period 可以更具体地按下面方式使用：
 
 官方来源：[Does changing the decay value from 1 to 5 for the same expression mean overfitting?](https://support.worldquantbrain.com/hc/en-us/articles/5970380583191-Does-changing-the-decay-value-from-1-to-5-for-the-same-expression-mean-overfitting)
 
-## 17. 算子顺序和线性组合
+## 17. 算子改动的 A/B 与线性组合
 
-算子顺序会改变比较对象和最终权重。例如：
-
-- `rank(ts_rank(field, 60))`：先看每只股票自身历史位置，再做当日截面排序
-- `ts_rank(rank(field), 60)`：先做每日截面排序，再看该截面名次的历史位置
-
-比率的稳健化顺序也会改变处理对象：
-
-```text
-winsorize(x, std=4) / y
-winsorize(x / y, std=4)
-```
-
-第一条只处理分子异常值，第二条处理最终 ratio 异常值。“ratio 后 winsorize”只是一个有明确语义的候选实验，
-不是官方保证提高 Fitness 的万能规则。类似地，`ts_backfill(cap, 504)` 改成 `252` 只会缩短缺失值搜索窗口；
-如果 `cap` 没有缺失，两条表达式可能完全相同。
+算子顺序的基础含义见 [01 的入门例子](01_beginner_guide.md#62-算子顺序和-backfill-窗口不要望文生义)，
+时序、截面和分组顺序对应的研究语义见
+[02 的模板设计说明](02_research_and_data_guide.md#114-算子顺序就是研究语义)。本节只说明优化阶段怎样验证改动。
 
 设置层 `Decay` 与表达式层 `ts_decay_linear(...)` 会叠加。为了让结果可解释，推荐按下面顺序做干净 A/B：
 
 1. 原始版本
-2. 只改成 ratio 后 winsorize
+2. 只修改一个算子顺序
 3. 回到原始或当前最佳版本，只实验 simulation setting 的 `Decay`
 4. 有字段缺失或明确平滑假设时，再分别实验 backfill 窗口或表达式层 decay
 
