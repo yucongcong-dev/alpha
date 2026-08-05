@@ -241,7 +241,8 @@ def prepare_bootstrap_resources(
             result_identity(result): result for result in refreshed_feedback_results
         }
         refreshed_existing_results = [
-            refreshed_by_identity.get(result_identity(result), result) for result in existing_results
+            refreshed_by_identity.get(result_identity(result), result)
+            for result in existing_results
         ]
         refreshed_state = replace(
             historical_state,

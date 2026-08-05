@@ -96,7 +96,8 @@ class ScheduleRoundContext:
             return
         execution_state = self.run_ctx.execution_state
         attempted_field_ids = {
-            field_id for field_id, _template, _expression, _settings in execution_state.attempted_keys
+            field_id
+            for field_id, _template, _expression, _settings in execution_state.attempted_keys
         }
         self.seed_resolved_field_ids.update(attempted_field_ids & self.seed_target_field_ids)
         active_field_ids = {

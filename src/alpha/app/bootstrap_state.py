@@ -148,6 +148,7 @@ def refresh_pending_check_results(
     )
     if not pending_results:
         return refreshed_results, refreshed_count
+
     def _refresh_one(result: FieldTestResult) -> tuple[FieldTestResult, bool]:
         alpha_id = result.alpha_id
         if not alpha_id:
