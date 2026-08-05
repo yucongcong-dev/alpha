@@ -138,8 +138,15 @@ def print_dry_run_plan(
     eligible_templates = 0
     filtered_templates = 0
     unactionable_fields = 0
+    full_run = bool(getattr(args, "full_run", False))
+    attempted_field_ids = {
+        field_id for field_id, _template, _expression, _settings in execution_state.attempted_keys
+    }
+    seed_fields_remaining = 0
+    seed_fields_resolved = 0
     explain_counts: Counter[str] = Counter()
-    samples: list[dict[str, object]] = []
+    seed_samples: list[dict[str, object]] = []
+    refine_samples: list[dict[str, object]] = []
     build_ctx = build_context(
         args=args,
         fields=fields,
@@ -198,10 +205,18 @@ def print_dry_run_plan(
         explain_counts["field_planned"] += 1
         eligible_templates += len(pending_templates)
         filtered_templates += filtered_count
-        for entry in pending_templates:
-            if len(samples) >= sample_limit:
+        if full_run:
+            if field_id in attempted_field_ids:
+                seed_fields_resolved += 1
+            else:
+                seed_fields_remaining += 1
+        sample_is_seed = full_run and field_id not in attempted_field_ids
+        sample_entries = pending_templates[:1] if sample_is_seed else pending_templates
+        sample_target = seed_samples if sample_is_seed else refine_samples
+        for entry in sample_entries:
+            if len(sample_target) >= sample_limit:
                 break
-            samples.append(
+            sample_target.append(
                 {
                     "field_id": field_id,
                     "field_name": field_name,
@@ -212,17 +227,38 @@ def print_dry_run_plan(
                 }
             )
 
+    samples = (
+        (seed_samples + refine_samples)[:sample_limit]
+        if full_run
+        else refine_samples[:sample_limit]
+    )
+
     simulation_budget = max(0, int(getattr(args, "max_total_simulations", 0) or 0))
     scheduled_templates = (
         min(eligible_templates, simulation_budget) if simulation_budget > 0 else eligible_templates
     )
     budget_truncated = scheduled_templates < eligible_templates
+    seed_budget_sufficient = simulation_budget <= 0 or simulation_budget >= seed_fields_remaining
 
     log.info("[dry-run] simulation creation is disabled; this is a plan only")
     log.info("[dry-run] planned_fields=%d", planned_fields)
     log.info("[dry-run] eligible_simulations=%d", eligible_templates)
     log.info("[dry-run] scheduled_simulations=%d", scheduled_templates)
     log.info("[dry-run] budget_truncated=%s", str(budget_truncated).lower())
+    if full_run:
+        seed_scheduled = min(seed_fields_remaining, scheduled_templates)
+        refine_scheduled = max(0, scheduled_templates - seed_scheduled)
+        log.info(
+            "[dry-run] full_run_seed resolved=%d remaining=%d budget_sufficient=%s",
+            seed_fields_resolved,
+            seed_fields_remaining,
+            str(seed_budget_sufficient).lower(),
+        )
+        log.info(
+            "[dry-run] full_run_schedule seed=%d refine=%d",
+            seed_scheduled,
+            refine_scheduled,
+        )
     log.info("[dry-run] filtered_templates=%d", filtered_templates)
     log.info("[dry-run] unactionable_fields=%d", unactionable_fields)
     log.info("[dry-run] existing_results=%d", len(execution_state.result_ledger.results))

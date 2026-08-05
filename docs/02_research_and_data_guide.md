@@ -633,9 +633,12 @@ python -m alpha --top-fields-by-feedback 10 --max-templates-per-field 15
 ```
 
 不传参数时，运行器采用内置默认搜索预算。`--full-run` 会枚举更大的字段和模板空间，
-但默认最多调度 500 个 simulation；可用 `--max-total-simulations N` 调整，显式传入 `0`
-才会取消总预算。全量模式只适合有足够时间、且明确希望从零开始验证时使用。日常研究应从
-`--dry-run-plan` 开始。
+但仍保留 simulation 总预算。运行器先进入 Seed 阶段：历史上没有有效尝试的合格字段
+每个最多调度一个候选；只有所有字段都已获得种子尝试或被判定为不可执行后，才进入正常
+refine 轮次。默认最多调度 500 个 simulation；可用 `--max-total-simulations N` 调整，
+显式传入 `0` 才会取消总预算。若预算低于剩余 Seed 字段数，运行日志和 dry-run 会明确
+标记 partial seed coverage，并且本次不会提前进入 refine。全量模式只适合有足够时间、
+且明确希望从零开始验证时使用。日常研究应从 `--dry-run-plan` 开始。
 
 ### 12.2 字段选择如何落地
 

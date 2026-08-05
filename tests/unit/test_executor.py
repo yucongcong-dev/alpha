@@ -382,3 +382,41 @@ def test_print_dry_run_plan_explains_feedback_stage_reasons(caplog) -> None:
         "[dry-run] explain_feedback generate_no_feedback=1 generate_attempts=1 "
         "generate_score=1 generate_other=0 resimulate=1 settings_budget=6"
     ) in messages
+
+
+def test_print_dry_run_plan_reports_partial_full_run_seed_budget(caplog) -> None:
+    fields = [_field("f1"), _field("f2")]
+    entry = PendingTemplateEntry(
+        template_name="seed",
+        template_family="rank",
+        template_stage="first_order",
+        template_role="core",
+        template_activation_scope="broad",
+        expression="rank(field)",
+        priority=100,
+        settings_variant=SettingsVariant(),
+        variant_fingerprint="settings",
+    )
+    args = _args()
+    args.full_run = True
+    args.max_total_simulations = 1
+    caplog.set_level(logging.INFO)
+
+    with patch(
+        "alpha.core.executor.build_pending_templates_for_field",
+        return_value=([entry], 0, 1),
+    ):
+        print_dry_run_plan(
+            args=args,
+            fields=fields,
+            filters=RunFilters(),
+            template_library={},
+            historical_state=HistoricalRunState(),
+            execution_state=_execution_state(),
+            use_dataset_heuristics=False,
+            sample_limit=1,
+        )
+
+    messages = [record.getMessage() for record in caplog.records]
+    assert "[dry-run] full_run_seed resolved=0 remaining=2 budget_sufficient=false" in messages
+    assert "[dry-run] full_run_schedule seed=1 refine=0" in messages

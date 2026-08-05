@@ -349,6 +349,7 @@ class RunLoopOptions:
     result_write: ResultWriteOptions
     scheduler: SchedulerControlOptions
     field_template_batch_size: int = 0
+    full_run: bool = False
 
     @classmethod
     def from_args(cls, args: RunLoopArgs) -> RunLoopOptions:
@@ -361,4 +362,5 @@ class RunLoopOptions:
                 1,
                 int(getattr(args, "field_template_batch_size", 0) or 0),
             ),
+            full_run=bool(getattr(args, "full_run", False)),
         )

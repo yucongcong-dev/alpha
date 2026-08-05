@@ -92,7 +92,30 @@ def run_field_test_loop(
             state_file=state_file,
             field_template_batch_size=field_template_batch_size,
             scheduler_options=scheduler_options,
+            seed_phase_enabled=run_loop_options.full_run,
+            seed_resolved_field_ids={
+                field_id
+                for field_id, _template, _expression, _settings in execution_state.attempted_keys
+            },
         )
+        if schedule_context.seed_phase_enabled:
+            remaining_seed_fields = schedule_context.remaining_seed_field_count()
+            logger.info(
+                "[full-run] seed phase fields=%d already_resolved=%d remaining=%d",
+                len(schedule_context.seed_target_field_ids),
+                len(schedule_context.seed_target_field_ids) - remaining_seed_fields,
+                remaining_seed_fields,
+            )
+            if (
+                scheduler_options.max_total_simulations > 0
+                and scheduler_options.max_total_simulations < remaining_seed_fields
+            ):
+                logger.warning(
+                    "[full-run] simulation budget=%d is below remaining seed fields=%d; "
+                    "this run will provide partial seed coverage and will not enter refine",
+                    scheduler_options.max_total_simulations,
+                    remaining_seed_fields,
+                )
         last_field_id = ""
         try:
             submit_resumable_futures(

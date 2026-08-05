@@ -177,8 +177,9 @@ trade_when(
 - 同时传入 `--full-run` 和正数 `--max-total-simulations`，开启带硬预算的全量探索。
 
 `--full-run` 只写在 YAML 中、未显式提供总预算或将预算设为 `0`，都不会解除暂停。建议先使用
-相同参数运行 `--dry-run-plan`，确认字段、模板和预计 simulation 数量。不要恢复
-`cashflow_submit_core`，也不要继续微调上述历史表达式。
+相同参数运行 `--dry-run-plan`，确认 `full_run_seed` 中的剩余字段数和预算是否充足。
+全量运行会先给历史上未尝试的合格字段各调度一个 Seed；Seed 覆盖完成前，不会让已有反馈
+字段提前进入 refine。不要恢复 `cashflow_submit_core`，也不要继续微调上述历史表达式。
 
 ## 已停止方向
 

@@ -234,6 +234,7 @@ class TestRuntimeOptionBuilders:
             sleep_between_fields = 0.25
             stop_after_submittable = 14
             field_template_batch_size = "15"
+            full_run = True
 
         options = RunLoopOptions.from_args(_Args())
 
@@ -242,6 +243,7 @@ class TestRuntimeOptionBuilders:
         assert options.simulation_stage.check_submission_retries == 8
         assert options.result_write.output_path == "results.json"
         assert options.scheduler.stop_after_submittable == 14
+        assert options.full_run is True
 
 
 # ============================================================================

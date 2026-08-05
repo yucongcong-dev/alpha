@@ -395,3 +395,6 @@ class RunLoopArgs(
 
     @property
     def stop_after_submittable(self) -> int: ...
+
+    @property
+    def full_run(self) -> bool: ...

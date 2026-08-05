@@ -61,14 +61,39 @@ class ScheduleRoundContext:
     )
     scheduled_simulations: int = 0
     field_template_queues: dict[str, FieldTemplateQueue] = dataclass_field(default_factory=dict)
+    seed_phase_enabled: bool = False
+    seed_resolved_field_ids: set[str] = dataclass_field(default_factory=set)
+    seed_target_field_ids: set[str] = dataclass_field(init=False, default_factory=set)
 
     def __post_init__(self) -> None:
         self.field_template_batch_size = max(1, int(self.field_template_batch_size or 0))
+        self.seed_target_field_ids = {
+            str(first_non_empty(field.get("id"), SENTINEL_UNKNOWN)) for field in self.fields
+        }
+        self.seed_resolved_field_ids.intersection_update(self.seed_target_field_ids)
 
     def reached_simulation_budget(self) -> bool:
         """Return whether this process has dispatched its configured simulation budget."""
         budget = self.scheduler_options.max_total_simulations
         return budget > 0 and self.scheduled_simulations >= budget
+
+    def remaining_seed_field_count(self) -> int:
+        """Return how many selected fields still need a first actionable attempt."""
+        if not self.seed_phase_enabled:
+            return 0
+        return len(self.seed_target_field_ids - self.seed_resolved_field_ids)
+
+    def seed_phase_active(self) -> bool:
+        """Return whether full-run must keep prioritizing one seed per field."""
+        return self.seed_phase_enabled and self.remaining_seed_field_count() > 0
+
+    def resolve_seed_field(self, field_id: str) -> bool:
+        """Mark one field as seeded or unactionable and report whether state advanced."""
+        if not self.seed_phase_enabled or field_id not in self.seed_target_field_ids:
+            return False
+        previous_count = len(self.seed_resolved_field_ids)
+        self.seed_resolved_field_ids.add(field_id)
+        return len(self.seed_resolved_field_ids) > previous_count
 
 
 def _apply_feedback_refresh(
@@ -101,8 +126,9 @@ def execute_schedule_round(
             last_field_id="",
         )
     logger.info(
-        "[schedule] round=%d breadth-first batch_size=%d fields=%d",
+        "[schedule] round=%d phase=%s breadth-first batch_size=%d fields=%d",
         round_index,
+        "seed" if context.seed_phase_active() else "refine",
         context.field_template_batch_size,
         len(context.fields),
     )
@@ -110,8 +136,9 @@ def execute_schedule_round(
     for field_index, field in enumerate(context.fields, start=1):
         if context.reached_simulation_budget():
             logger.info(
-                "[stop] 达到 max-total-simulations=%d",
+                "[stop] 达到 max-total-simulations=%d seed_fields_remaining=%d",
                 scheduler_options.max_total_simulations,
+                context.remaining_seed_field_count(),
             )
             return ScheduleRoundResult(
                 progressed=progressed_this_round,
@@ -171,6 +198,9 @@ def schedule_field_round(
     field_id = str(first_non_empty(field.get("id"), SENTINEL_UNKNOWN))
     field_name = choose_field_name(field)
     field_type = choose_field_type(field)
+    seed_phase_active = context.seed_phase_active()
+    if seed_phase_active and field_id in context.seed_resolved_field_ids:
+        return ScheduleRoundResult(progressed=False, stop_requested=False, last_field_id=field_id)
     feedback_refresh = refresh_runtime_feedback(context.template_build_ctx, result_ledger.results)
     _apply_feedback_refresh(context, feedback_refresh)
 
@@ -180,6 +210,9 @@ def schedule_field_round(
         run_ctx.filters,
         execution_state.field_queue.skipped_fields,
     ):
+        seed_resolution_progressed = (
+            context.resolve_seed_field(field_id) if seed_phase_active else False
+        )
         persist_field_progress(
             state_file=context.state_file,
             field_id=field_id,
@@ -190,7 +223,11 @@ def schedule_field_round(
             runtime_state=runtime_state,
             completed_field_index_override=0,
         )
-        return ScheduleRoundResult(progressed=False, stop_requested=False, last_field_id=field_id)
+        return ScheduleRoundResult(
+            progressed=seed_resolution_progressed,
+            stop_requested=False,
+            last_field_id=field_id,
+        )
 
     template_queue = context.field_template_queues.get(field_id)
     if template_queue is None:
@@ -213,6 +250,9 @@ def schedule_field_round(
         )
         context.field_template_queues[field_id] = template_queue
     pending_count = len(template_queue.entries)
+    seed_resolution_progressed = False
+    if seed_phase_active and pending_count == 0:
+        seed_resolution_progressed = context.resolve_seed_field(field_id)
     logger.debug(
         "[progress] 字段 %d/%d field_id=%s templates=%d pending=%d filtered=%d",
         field_index,
@@ -223,9 +263,11 @@ def schedule_field_round(
         template_queue.filtered_templates,
     )
 
-    scheduled_templates = template_queue.peek(context.field_template_batch_size)
+    scheduled_templates = template_queue.peek(
+        1 if seed_phase_active else context.field_template_batch_size
+    )
     deferred_templates = max(0, pending_count - len(scheduled_templates))
-    progressed = bool(scheduled_templates)
+    progressed = bool(scheduled_templates) or seed_resolution_progressed
     if deferred_templates > 0:
         logger.debug(
             "[schedule] field=%s round=%d dispatch=%d deferred=%d",
@@ -235,6 +277,7 @@ def schedule_field_round(
             deferred_templates,
         )
 
+    queue_count_before_dispatch = len(template_queue.entries)
     stop_requested = _dispatch_templates_for_field(
         context=context,
         field=field,
@@ -244,6 +287,8 @@ def schedule_field_round(
         scheduled_templates=scheduled_templates,
         template_queue=template_queue,
     )
+    if seed_phase_active and len(template_queue.entries) < queue_count_before_dispatch:
+        context.resolve_seed_field(field_id)
     persist_field_progress(
         state_file=context.state_file,
         field_id=field_id,
