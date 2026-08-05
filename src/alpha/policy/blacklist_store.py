@@ -4,6 +4,8 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterator
+from contextlib import contextmanager
 import json
 import logging
 import os
@@ -16,6 +18,7 @@ from ..io.common import (
     atomic_write_json,
     sanitize_dataset_id_for_filename,
 )
+from ..io.file_lock import exclusive_file_lock
 from .blacklist_context import get_active_datasets_root, set_active_datasets_root
 from .types import (
     LEARNED_BLACKLIST_KEY,
@@ -58,6 +61,19 @@ def resolve_blacklist_staging_path(dataset_id: str, *, datasets_root: str = "") 
     """Resolve the review/staging blacklist path for auto-learned entries."""
     dataset_key = sanitize_dataset_id_for_filename(dataset_id)
     return str(Path(_resolve_datasets_root(datasets_root)) / dataset_key / "blacklist.staging.json")
+
+
+@contextmanager
+def exclusive_blacklist_transaction(
+    dataset_id: str,
+    *,
+    datasets_root: str = "",
+) -> Iterator[None]:
+    """Serialize all blacklist read-merge-write operations for one dataset."""
+    blacklist_path = Path(resolve_blacklist_path(dataset_id, datasets_root=datasets_root))
+    lock_path = blacklist_path.parent / ".blacklist.transaction.lock"
+    with exclusive_file_lock(str(lock_path)):
+        yield
 
 
 def invalidate_blacklist_path_cache(dataset_id: str = "", *, datasets_root: str = "") -> None:
@@ -228,10 +244,11 @@ def summarize_blacklist_payload(payload: BlacklistPayload) -> tuple[int, int]:
 
 def ensure_template_blacklist_file(dataset_id: str, *, datasets_root: str = "") -> str:
     blacklist_path = resolve_blacklist_path(dataset_id, datasets_root=datasets_root)
-    if os.path.isfile(blacklist_path):
-        return blacklist_path
-    write_blacklist_payload(
-        dataset_id, build_default_blacklist(dataset_id), datasets_root=datasets_root
-    )
+    with exclusive_blacklist_transaction(dataset_id, datasets_root=datasets_root):
+        if os.path.isfile(blacklist_path):
+            return blacklist_path
+        write_blacklist_payload(
+            dataset_id, build_default_blacklist(dataset_id), datasets_root=datasets_root
+        )
     logger.info("[blacklist] created dataset blacklist file: %s", blacklist_path)
     return blacklist_path

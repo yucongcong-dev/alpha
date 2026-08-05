@@ -14,6 +14,7 @@ from .blacklist_runtime_stats import (
 )
 from .blacklist_store import (
     activate_datasets_root,
+    exclusive_blacklist_transaction,
     invalidate_blacklist_runtime_cache,
     read_blacklist_payload,
     read_blacklist_staging_payload,
@@ -200,35 +201,36 @@ def auto_update_blacklist(
         return
 
     normalized_mode = normalize_blacklist_update_mode(update_mode)
-    bl_data = _read_update_payload(
-        dataset_id,
-        datasets_root=datasets_root,
-        update_mode=normalized_mode,
-    )
-    existing_keys = {
-        _entry_key_from_payload(item)
-        for item in bl_data[LEARNED_BLACKLIST_KEY]
-        if isinstance(item, dict) and item.get("name")
-    }
-    added = 0
-    for entry in new_entries:
-        entry_key = build_blacklist_entry_key(
-            entry.name, entry.template_stage, entry.template_family
+    with exclusive_blacklist_transaction(dataset_id, datasets_root=datasets_root):
+        bl_data = _read_update_payload(
+            dataset_id,
+            datasets_root=datasets_root,
+            update_mode=normalized_mode,
         )
-        if entry_key not in existing_keys:
-            bl_data[LEARNED_BLACKLIST_KEY].append(entry.to_dict())
-            existing_keys.add(entry_key)
-            added += 1
-    if added == 0:
-        return
+        existing_keys = {
+            _entry_key_from_payload(item)
+            for item in bl_data[LEARNED_BLACKLIST_KEY]
+            if isinstance(item, dict) and item.get("name")
+        }
+        added = 0
+        for entry in new_entries:
+            entry_key = build_blacklist_entry_key(
+                entry.name, entry.template_stage, entry.template_family
+            )
+            if entry_key not in existing_keys:
+                bl_data[LEARNED_BLACKLIST_KEY].append(entry.to_dict())
+                existing_keys.add(entry_key)
+                added += 1
+        if added == 0:
+            return
 
-    bl_data["_updated"] = datetime.now().strftime(DATE_FORMAT_ISO_MINUTES)
-    blacklist_path = _write_update_payload(
-        dataset_id,
-        bl_data,
-        datasets_root=datasets_root,
-        update_mode=normalized_mode,
-    )
+        bl_data["_updated"] = datetime.now().strftime(DATE_FORMAT_ISO_MINUTES)
+        blacklist_path = _write_update_payload(
+            dataset_id,
+            bl_data,
+            datasets_root=datasets_root,
+            update_mode=normalized_mode,
+        )
     if normalized_mode == BLACKLIST_UPDATE_MODE_REPOSITORY:
         invalidate_blacklist_runtime_cache(dataset_id)
     logger.info(
@@ -279,27 +281,28 @@ def auto_update_blacklist_incremental(
     if entry is None:
         return False
     normalized_mode = normalize_blacklist_update_mode(update_mode)
-    bl_data = _read_update_payload(
-        dataset_id,
-        datasets_root=datasets_root,
-        update_mode=normalized_mode,
-    )
-    existing_keys = {
-        _entry_key_from_payload(item)
-        for item in bl_data[LEARNED_BLACKLIST_KEY]
-        if isinstance(item, dict) and item.get("name")
-    }
-    if entry_key in existing_keys:
-        blacklisted_template_keys.add(entry_key)
-        return False
-    bl_data[LEARNED_BLACKLIST_KEY].append(entry.to_dict())
-    bl_data["_updated"] = datetime.now().strftime(DATE_FORMAT_ISO_MINUTES)
-    blacklist_path = _write_update_payload(
-        dataset_id,
-        bl_data,
-        datasets_root=datasets_root,
-        update_mode=normalized_mode,
-    )
+    with exclusive_blacklist_transaction(dataset_id, datasets_root=datasets_root):
+        bl_data = _read_update_payload(
+            dataset_id,
+            datasets_root=datasets_root,
+            update_mode=normalized_mode,
+        )
+        existing_keys = {
+            _entry_key_from_payload(item)
+            for item in bl_data[LEARNED_BLACKLIST_KEY]
+            if isinstance(item, dict) and item.get("name")
+        }
+        if entry_key in existing_keys:
+            blacklisted_template_keys.add(entry_key)
+            return False
+        bl_data[LEARNED_BLACKLIST_KEY].append(entry.to_dict())
+        bl_data["_updated"] = datetime.now().strftime(DATE_FORMAT_ISO_MINUTES)
+        blacklist_path = _write_update_payload(
+            dataset_id,
+            bl_data,
+            datasets_root=datasets_root,
+            update_mode=normalized_mode,
+        )
     if normalized_mode == BLACKLIST_UPDATE_MODE_REPOSITORY:
         invalidate_blacklist_runtime_cache(dataset_id)
     blacklisted_template_keys.add(entry_key)

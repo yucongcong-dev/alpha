@@ -22,6 +22,7 @@ results/
 datasets/*/cache/
 datasets/*/feedback/
 datasets/*/runs/
+datasets/*/*.lock
 tmp/
 scratch/
 tmp_*.txt
