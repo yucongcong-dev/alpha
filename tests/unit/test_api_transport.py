@@ -169,7 +169,7 @@ class _FieldClient(BrainFieldsMixin):
         return 200, {}, b'{"results": [{"id": "field1"}]}'
 
 
-def test_field_query_falls_back_to_supported_parameter_shape() -> None:
+def test_field_query_fallback_preserves_requested_scope() -> None:
     client = _FieldClient(failures=2)
 
     payload = client._fetch_dataset_fields_page(
@@ -184,11 +184,16 @@ def test_field_query_falls_back_to_supported_parameter_shape() -> None:
 
     assert payload["results"] == [{"id": "field1"}]
     assert len(client.params) == 3
-    assert "delay" not in client.params[-1]
+    for params in client.params:
+        assert params["dataset.id"] == "model51"
+        assert params["region"] == "USA"
+        assert params["universe"] == "TOP3000"
+        assert params["delay"] == "1"
+        assert "EQUITY" in params.values()
 
 
 def test_field_query_reports_failure_after_all_parameter_shapes() -> None:
-    client = _FieldClient(failures=5)
+    client = _FieldClient(failures=3)
 
     with pytest.raises(BrainAPIError, match="Unable to fetch dataset fields for model51"):
         client._fetch_dataset_fields_page(

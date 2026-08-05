@@ -112,40 +112,17 @@ class BrainFieldsMixin:
     ) -> ApiPayload:
         """获取一页字段元数据，并尝试几种已知可行的查询参数形态。"""
         last_error: Exception | None = None
+        common_params = {
+            "dataset.id": dataset_id,
+            "region": region,
+            "delay": str(delay),
+            "universe": universe,
+            "limit": limit,
+            "offset": offset,
+        }
         candidate_params = [
-            {
-                "dataset.id": dataset_id,
-                "region": region,
-                "delay": str(delay),
-                "universe": universe,
-                "instrumentType": instrument_type,
-                "limit": limit,
-                "offset": offset,
-            },
-            {
-                "dataset.id": dataset_id,
-                "region": region,
-                "delay": str(delay),
-                "universe": universe,
-                "limit": limit,
-                "offset": offset,
-            },
-            {
-                "dataset.id": dataset_id,
-                "region": region,
-                "instrumentType": instrument_type,
-                "limit": limit,
-                "offset": offset,
-            },
-            {
-                "dataset.id": dataset_id,
-                "region": region,
-                "delay": str(delay),
-                "instrumentType": instrument_type,
-                "limit": limit,
-                "offset": offset,
-            },
-            {"dataset.id": dataset_id, "limit": limit, "offset": offset},
+            {**common_params, instrument_key: instrument_type}
+            for instrument_key in ("instrumentType", "instrument-type", "instrument_type")
         ]
 
         for params in candidate_params:
