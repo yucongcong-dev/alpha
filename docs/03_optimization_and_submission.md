@@ -73,12 +73,7 @@ simulation 或 Check Submission 结果的候选。
 ## 4. 当 `LOW_FITNESS` 出现时
 
 不要把 `LOW_FITNESS` 当成独立问题。
-
-永远先回到公式：
-
-`Fitness = Sharpe * sqrt(abs(Returns) / max(Turnover, 0.125))`
-
-然后拆成 3 个方向：
+先按 Fitness 公式拆成 3 个方向：
 
 - `Sharpe` 太低？
 - `Returns` 太低？
@@ -89,13 +84,9 @@ simulation 或 Check Submission 结果的候选。
 具体优化顺序见[提升 Fitness 的更合理顺序](#12-提升-fitness-的更合理顺序)，
 不要把三个分量同时调参。
 
-还要区分“显示值”和“严格检查值”：
-
-- 当前 D1 submission check 要求 `Fitness > 1`，不是 `Fitness >= 1`
-- 页面显示通常经过四舍五入；显示为 `1.00` 不代表底层未舍入值一定严格大于 `1`
-- 实际研究可把 `1.05+` 当作留有舍入和波动余量的目标，但它不是平台公布的新硬门槛
-
-> LOW_FITNESS 的平台语义和公式见 [04 的提交检查词典](04_platform_reference.md#13-提交检查词典)。
+公式、当前门槛和页面舍入风险统一见
+[04 的提交检查词典](04_platform_reference.md#13-提交检查词典)。优化时不要围绕页面显示的
+临界值做密集微调，应给候选保留稳定余量。
 
 ---
 
@@ -285,36 +276,16 @@ subuniverse_sharpe
 
 ---
 
-## 10. 交易成本要怎么理解
+## 10. 交易成本与 Margin 如何影响优化
 
-官方这里给了两个非常容易被忽略的点：
+交易成本、Turnover、Margin 的平台定义和带日期门槛统一见
+[04 的交易成本章节](04_platform_reference.md#9-交易成本turnovermargin)与
+[提交检查词典](04_platform_reference.md#13-提交检查词典)。优化阶段只需抓住这些动作：
 
-- 普通模拟结果展示的 Returns **不直接扣除** 真实交易成本
-- `Turnover` 是判断交易成本压力的一个好 proxy
-- 部分提交检查会另外计算 `after-cost Sharpe`
-
-所以优化时不要误以为：
-
-- 回测里的 Returns 已经自动扣掉了真实交易成本
-
-更接近官方的理解是：
-
-- Turnover 越高，真实交易成本压力通常越大
-- 因此高 Turnover Alpha 要更谨慎地看待
-
-### 10.1 Margin 与 Turnover 目标
-
-官方定义是：
-
-```text
-Margin = PnL / total dollars traded
-```
-
-因此 Margin 低，不能只看成“换手太高”。更直接的优化方向是提高信号带来的 Returns / PnL，同时减少没有信息增量的交易，并把 Turnover、after-cost 表现和可交易性一起看。平台没有把某一个 Margin 数字解释成适用于所有设置的统一硬门槛。
-
-官方资料把 Turnover 低于 `40%` 作为更理想的可交易性建议，但它不是所有 Alpha、Region、Delay 和评估阶段共用的统一硬门槛。当前本地带日期的 submission check 快照另记录了 D1 Turnover 严格 `<70%`，两者不能混写：前者是经验目标，后者是特定快照中的检查条件。
-
-官方来源：[How to improve margins in simulation results](https://support.worldquantbrain.com/hc/en-us/articles/20311116434839-How-to-improve-margins-in-simulation-results)；[Is it necessary to have turnover < 40% for the Alpha to be evaluated?](https://support.worldquantbrain.com/hc/en-us/articles/5969425740823-Is-it-necessary-to-have-turnover-40-for-the-Alpha-to-be-evaluated)
+- 不要把普通模拟 Returns 当成已经扣除真实交易成本的结果
+- Turnover 较高时，同时检查 Margin、after-cost 表现和信号质量
+- Margin 较低时，优先提高有效 PnL，或减少没有信息增量的交易
+- 区分经验目标与平台硬检查，不要把某个 Turnover 建议值当成永久统一门槛
 
 ---
 

@@ -778,6 +778,8 @@ threshold。本仓库默认保持 `OFF`，需要时显式开启。
 - [Could you please throw some light on meta score and meta alpha count?](https://api.worldquantbrain.com/faqs/meta-score-count)
 - [What is transaction cost? And is it important?](https://api.worldquantbrain.com/faqs/transaction-cost)
 - [Does the simulation include trading costs?](https://api.worldquantbrain.com/faqs/trading-costs)
+- [How to improve margins in simulation results](https://support.worldquantbrain.com/hc/en-us/articles/20311116434839-How-to-improve-margins-in-simulation-results)
+- [Is it necessary to have turnover below 40% for the Alpha to be evaluated?](https://support.worldquantbrain.com/hc/en-us/articles/5969425740823-Is-it-necessary-to-have-turnover-40-for-the-Alpha-to-be-evaluated)
 - [Can you please explain Universes top 2000, top 500, etc.?](https://api.worldquantbrain.com/faqs/universe-explanation)
 - [Even after searching a lot, I am unable to find out more information about stock weights](https://api.worldquantbrain.com/faqs/info-about-stock-weight)
 - [What does NaN mean? Is it equal to zero?](https://api.worldquantbrain.com/faqs/nan-zero)
