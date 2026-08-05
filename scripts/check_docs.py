@@ -27,7 +27,7 @@ def documentation_files() -> list[Path]:
     return [
         ROOT / "README.md",
         *sorted((ROOT / "docs").glob("*.md")),
-        *sorted((ROOT / "datasets").glob("**/README.md")),
+        *sorted((ROOT / "datasets").glob("**/*.md")),
     ]
 
 

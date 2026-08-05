@@ -5,6 +5,8 @@ from __future__ import annotations
 import importlib.util
 from pathlib import Path
 
+import pytest
+
 
 def _load_check_docs_module():
     script_path = Path(__file__).resolve().parents[2] / "scripts" / "check_docs.py"
@@ -16,6 +18,30 @@ def _load_check_docs_module():
 
 
 check_docs = _load_check_docs_module()
+
+
+def test_documentation_files_include_dataset_markdown(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    (tmp_path / "README.md").write_text("# Root\n", encoding="utf-8")
+    docs_dir = tmp_path / "docs"
+    docs_dir.mkdir()
+    (docs_dir / "guide.md").write_text("# Guide\n", encoding="utf-8")
+    dataset_dir = tmp_path / "datasets" / "demo"
+    dataset_dir.mkdir(parents=True)
+    (dataset_dir / "README.md").write_text("# Demo\n", encoding="utf-8")
+    (dataset_dir / "research_history.md").write_text("# History\n", encoding="utf-8")
+    monkeypatch.setattr(check_docs, "ROOT", tmp_path)
+
+    paths = {path.relative_to(tmp_path).as_posix() for path in check_docs.documentation_files()}
+
+    assert paths == {
+        "README.md",
+        "datasets/demo/README.md",
+        "datasets/demo/research_history.md",
+        "docs/guide.md",
+    }
 
 
 def _check(tmp_path: Path, text: str, *, flags: set[str] | None = None) -> list[str]:

@@ -5,6 +5,7 @@
 `news18` 由 dataset profile 标记为 `paused`，当前没有现役 preset 或可提交候选。
 2026-08-04 在 USA TOP3000、EQUITY、Delay 1 下获取到 121 个字段：71 个 MATRIX、
 50 个 VECTOR。已测试的单字段情绪、新颖度和事件聚合结构均未形成正向基线。
+完整字段元数据、表达式和逐 Alpha 结果见 [research_history.md](research_history.md)。
 
 ## 关键证据
 

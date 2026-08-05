@@ -8,6 +8,7 @@ preset。普通 `--dataset-id fundamental6` 会拒绝运行；这不是永久禁
 
 当前结论：历史 `cashflow_op` 主线性能仍过线，但 Self Correlation 过高；
 `fnd6_cicurr` 和 `cashflow_dividends` 的近通过候选都没有形成新的提交入口。
+完整表达式、settings 和历史变体结果见 [research_history.md](research_history.md)。
 
 ## 关键证据
 
