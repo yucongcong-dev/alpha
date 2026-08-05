@@ -23,7 +23,7 @@ from .feedback_run_index import (
 )
 from .feedback_stats import compile_field_feedback, compile_global_failed_check_counts
 from .field_stats import current_submittable_count
-from .result_identity import attempted_template_keys, merge_results_by_identity
+from .result_identity import attempted_template_keys, merge_latest_results_by_identity
 from .result_provenance import enrich_results_provenance
 from .results_loader import load_existing_results
 from .template_stats import compile_template_stats
@@ -105,7 +105,7 @@ def build_historical_run_state(
         current_output_path=output_path,
         use_run_index=bool(feedback_results),
     )
-    feedback_results = merge_results_by_identity(
+    feedback_results = merge_latest_results_by_identity(
         feedback_results,
         discovered_run_results,
         existing_results,
@@ -129,7 +129,7 @@ def rebuild_historical_run_state(
     existing_results: list[FieldTestResult],
 ) -> HistoricalRunState:
     """Recompute derived history after in-memory result reconciliation."""
-    feedback_results = merge_results_by_identity(state.feedback_results, existing_results)
+    feedback_results = merge_latest_results_by_identity(state.feedback_results, existing_results)
     template_stats = compile_template_stats(feedback_results)
     return replace(
         state,

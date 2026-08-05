@@ -12,7 +12,7 @@ from __future__ import annotations
 import logging
 
 from ..analysis.feedback_run_index import persist_feedback_run_index
-from ..analysis.result_identity import merge_results_for_update
+from ..analysis.result_identity import merge_latest_results_by_identity, merge_results_for_update
 from ..analysis.result_provenance import enrich_results_provenance
 from ..analysis.results_loader import load_existing_results
 from ..analysis.results_persistence import dump_results
@@ -88,7 +88,7 @@ def finalize_run(
     )
     if feedback_output_path and feedback_output_path != output_path:
         with exclusive_results_transaction(feedback_output_path):
-            feedback_results = merge_results_for_update(
+            feedback_results = merge_latest_results_by_identity(
                 load_existing_results(feedback_output_path),
                 run_ctx.historical_state.feedback_results,
             )

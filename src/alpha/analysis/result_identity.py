@@ -13,6 +13,7 @@ from datetime import datetime
 from ..models.domain import FieldTestResult
 from ..models.result_predicates import (
     is_attempted_result,
+    is_retryable_infrastructure_result,
 )
 from ..models.result_predicates import (
     is_informative_result as is_informative_result,
@@ -40,13 +41,20 @@ def attempted_template_keys(results: Sequence[FieldTestResult]) -> set[tuple[str
 def merge_results_by_identity(
     *result_groups: Sequence[FieldTestResult],
 ) -> list[FieldTestResult]:
-    """Merge histories using terminal state, revision and timestamps."""
+    """Compatibility wrapper for latest-authoritative history merging."""
+    return merge_latest_results_by_identity(*result_groups)
+
+
+def merge_latest_results_by_identity(
+    *result_groups: Sequence[FieldTestResult],
+) -> list[FieldTestResult]:
+    """Merge histories using the latest authoritative observation per identity."""
     merged: dict[tuple[str, str, str, str], FieldTestResult] = {}
     for group in result_groups:
         for result in group:
             identity = result_identity(result)
             existing = merged.get(identity)
-            if existing is None or _result_preference(result) >= _result_preference(existing):
+            if existing is None or _should_replace_with_observation(existing, result):
                 merged[identity] = result
     return list(merged.values())
 
@@ -63,11 +71,14 @@ def merge_results_for_update(
         if existing is None:
             merged[identity] = update
             continue
-        if _result_preference(update) >= _result_preference(existing):
-            merged[identity] = replace(
-                update,
-                revision=max(update.revision, existing.revision + 1),
-            )
+        if is_retryable_infrastructure_result(update) and not is_retryable_infrastructure_result(
+            existing
+        ):
+            continue
+        merged[identity] = replace(
+            update,
+            revision=max(update.revision, existing.revision + 1),
+        )
     return list(merged.values())
 
 
@@ -98,10 +109,20 @@ def _terminal_rank(result: FieldTestResult) -> int:
     return 10
 
 
-def _result_preference(result: FieldTestResult) -> tuple[int, int, float, float]:
+def _observation_preference(result: FieldTestResult) -> tuple[float, int, int]:
     return (
-        _terminal_rank(result),
+        max(_parse_timestamp(result.updated_at), _parse_timestamp(result.created_at)),
         max(1, int(result.revision or 1)),
-        _parse_timestamp(result.updated_at),
-        _parse_timestamp(result.created_at),
+        _terminal_rank(result),
     )
+
+
+def _should_replace_with_observation(
+    existing: FieldTestResult,
+    candidate: FieldTestResult,
+) -> bool:
+    existing_retryable = is_retryable_infrastructure_result(existing)
+    candidate_retryable = is_retryable_infrastructure_result(candidate)
+    if candidate_retryable != existing_retryable:
+        return not candidate_retryable
+    return _observation_preference(candidate) >= _observation_preference(existing)

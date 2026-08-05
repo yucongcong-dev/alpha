@@ -25,7 +25,7 @@ def _result(**overrides: object) -> FieldTestResult:
     return FieldTestResult(**values)  # type: ignore[arg-type]
 
 
-def test_merge_preserves_terminal_success_over_later_error() -> None:
+def test_merge_preserves_terminal_success_over_later_retryable_error() -> None:
     successful = _result(
         status="simulated",
         submittable=True,
@@ -34,10 +34,28 @@ def test_merge_preserves_terminal_success_over_later_error() -> None:
     later_error = _result(
         status="error",
         submittable=False,
+        failed_stage="worker",
         updated_at="2026-02-01T00:00:00Z",
     )
 
     assert merge_results_by_identity([successful], [later_error]) == [successful]
+
+
+def test_merge_uses_newer_submission_check_outcome() -> None:
+    successful = _result(
+        status="simulated",
+        submittable=True,
+        revision=5,
+        updated_at="2026-01-01T00:00:00Z",
+    )
+    later_failure = _result(
+        status="simulated",
+        submittable=False,
+        revision=1,
+        updated_at="2026-02-01T00:00:00Z",
+    )
+
+    assert merge_results_by_identity([successful], [later_failure]) == [later_failure]
 
 
 def test_merge_uses_timestamp_for_equal_terminal_states() -> None:
