@@ -15,7 +15,7 @@ from ..analysis.results_persistence import dump_results, dump_results_incrementa
 from ..api.client import BrainClient
 from ..config.constants import STATUS_ERROR
 from ..core.submission_checks import check_submission_with_retry
-from ..exceptions import BrainHTTPError
+from ..exceptions import BrainHTTPError, BrainStopRequested
 from ..io.results_store import exclusive_results_transaction, initialize_results_journal
 from ..models.domain import FieldTestResult
 from ..models.result_predicates import has_pending_checks
@@ -137,6 +137,11 @@ def refresh_pending_check_results(
     refreshed_count = 0
     attempted_count = 0
     started_at = time.monotonic()
+    deadline = started_at + max_refresh_seconds if max_refresh_seconds > 0 else None
+
+    def _deadline_reached() -> bool:
+        return deadline is not None and time.monotonic() >= deadline
+
     pending_results = [
         (index, result)
         for index, result in enumerate(results)
@@ -163,7 +168,17 @@ def refresh_pending_check_results(
                 active_client,
                 alpha_id,
                 retries,
+                should_abort=_deadline_reached if deadline is not None else None,
             )
+        except BrainStopRequested:
+            logger.info(
+                "[check-submission-resume] startup deadline reached alpha_id=%s "
+                "field=%s template=%s",
+                alpha_id,
+                result.field_id,
+                result.template_name,
+            )
+            return result, False
         except BrainHTTPError as exc:
             if not exc.is_permanent_client_error:
                 raise
@@ -226,7 +241,7 @@ def refresh_pending_check_results(
     cursor = 0
     with ThreadPoolExecutor(max_workers=worker_count) as executor:
         while cursor < len(selected_pending):
-            if max_refresh_seconds > 0 and time.monotonic() - started_at >= max_refresh_seconds:
+            if _deadline_reached():
                 break
             batch = selected_pending[cursor : cursor + worker_count]
             futures = [executor.submit(_refresh_one, result) for _index, result in batch]

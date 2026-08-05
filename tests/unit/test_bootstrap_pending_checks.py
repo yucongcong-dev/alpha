@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from alpha.app.bootstrap_state import refresh_pending_check_results
 from alpha.config.constants import STATUS_ERROR
-from alpha.exceptions import BrainHTTPError
+from alpha.exceptions import BrainHTTPError, BrainStopRequested
 from alpha.models.domain import FailedCheck, FieldTestResult
 
 
@@ -144,7 +144,7 @@ def test_refresh_pending_check_results_respects_startup_budget(monkeypatch) -> N
 def test_refresh_pending_check_results_rotates_oldest_attempts(monkeypatch) -> None:
     checked_alpha_ids: list[str] = []
 
-    def _pending(_client, alpha_id, _retries):
+    def _pending(_client, alpha_id, _retries, **_kwargs):
         checked_alpha_ids.append(alpha_id)
         return None, "checks pending", [FailedCheck(name="SELF_CORRELATION", result="PENDING")]
 
@@ -204,6 +204,39 @@ def test_refresh_pending_check_results_respects_total_time_budget(monkeypatch) -
     assert refreshed[1].updated_at == ""
 
 
+def test_refresh_pending_check_results_aborts_retry_at_deadline(monkeypatch) -> None:
+    clock = {"now": 0.0}
+    callbacks = []
+    original = _pending_result()
+
+    def _deadline_abort(_client, _alpha_id, _retries, *, should_abort=None):
+        callbacks.append(should_abort)
+        clock["now"] = 31.0
+        assert should_abort is not None and should_abort()
+        raise BrainStopRequested("startup refresh deadline reached")
+
+    monkeypatch.setattr(
+        "alpha.app.bootstrap_state.check_submission_with_retry",
+        _deadline_abort,
+    )
+    monkeypatch.setattr(
+        "alpha.app.bootstrap_state.time.monotonic",
+        lambda: clock["now"],
+    )
+
+    refreshed, count = refresh_pending_check_results(
+        object(),
+        [original],
+        retries=3,
+        max_refresh_seconds=30.0,
+    )
+
+    assert len(callbacks) == 1
+    assert count == 0
+    assert refreshed == [original]
+    assert refreshed[0].updated_at == ""
+
+
 def test_refresh_pending_check_results_uses_worker_factory_for_parallel_checks(monkeypatch) -> None:
     clients: list[object] = []
 
@@ -215,7 +248,7 @@ def test_refresh_pending_check_results_uses_worker_factory_for_parallel_checks(m
 
     checked_clients: list[object] = []
 
-    def _resolve(client, _alpha_id, _retries):
+    def _resolve(client, _alpha_id, _retries, **_kwargs):
         checked_clients.append(client)
         return True, "checks passed", []
 
