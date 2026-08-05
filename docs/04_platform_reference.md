@@ -743,16 +743,6 @@ threshold。本仓库默认保持 `OFF`，需要时显式开启。
 
 ## 15. `Neutralization` 的页面语义
 
-如果你不只是想查页面语义，而是想进一步理解：
-
-- 为什么不同数据类别会偏向不同 neutralization
-- 什么时候该放在 settings，什么时候该写进表达式
-- `D0` 和提交门槛为什么要一起看
-
-继续看：
-
-- [03_optimization_and_submission.md](03_optimization_and_submission.md)
-
 平台语义里：
 
 - 先有表达式原始值
@@ -761,58 +751,24 @@ threshold。本仓库默认保持 `OFF`，需要时显式开启。
 
 所以 neutralization 在平台中是“组合层面的结构变换”，不是简单注释项。
 
+不同数据类别怎样选择 neutralization，以及应该放在 settings 还是表达式中，见
+[03 的最终决策章节](03_optimization_and_submission.md#231-neutralization-的最终决策)。
+
 ---
 
 ## 16. 最常见的误读速查
 
-### 16.1 `N/A = 异常`
-
-不一定。  
-很多时候只是 OS 样本还没积累够。
-
-### 16.2 `0 = 不持仓`
-
-不对。  
-`NaN` 才更接近“不持仓”。
-
-### 16.3 `模拟结果已经扣了真实交易成本`
-
-不对。  
-官方说模拟结果不直接包含交易成本，Turnover 只是 proxy。
-
-### 16.4 `提交更多同类 Alpha 一定更好`
-
-不对。  
-官方 `Meta Score` 明确看组合相关性与池子质量。
-
-### 16.5 `OS 只是 IS 的重复显示`
-
-不对。  
-OS 是提交之后逐步积累出来的样本外表现。
-
-### 16.6 `FAQ 全部都应该进研究文档`
-
-不对。
-FAQ 里有大量顾问申请、Workday、银行账户、Referral、账号和竞赛运营信息。它们是平台使用资料，
-但不是本仓库 alpha 生成和提交策略的核心知识。能影响研究流程、页面状态、错误码或指标解释的内容，
-进入 01-04；纯平台运营内容进入 [05_platform_operations_reference.md](05_platform_operations_reference.md)。
+| 常见误读 | 正确理解 |
+|---|---|
+| `N/A` 就是异常 | OS 样本未积累完成时也可能显示 `N/A` |
+| `0` 表示不持仓 | `NaN` 才更接近不持仓；`0` 仍是有效信号值 |
+| 模拟结果已扣除真实交易成本 | 模拟不直接包含交易成本，Turnover 只是 proxy |
+| 提交更多同类 Alpha 一定更好 | Meta Score 同时关注相关性和候选池质量 |
+| OS 只是 IS 的重复显示 | OS 是提交后逐步积累的样本外表现 |
 
 ---
 
-## 17. 建议怎样配合其他文档使用
-
-- 想理解平台在做什么：
-  看 [01_beginner_guide.md](01_beginner_guide.md)
-- 想理解失败项和优化动作：
-  看 [03_optimization_and_submission.md](03_optimization_and_submission.md)
-- 想理解这些术语在页面和状态里是什么意思：
-  看这篇
-- 想把平台逻辑落到本仓库：
-  看 [02_research_and_data_guide.md](02_research_and_data_guide.md)
-
----
-
-## 18. 官方来源
+## 17. 官方来源
 
 本篇主要整理自这些官方 FAQ：
 
