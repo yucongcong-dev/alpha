@@ -567,167 +567,70 @@ Operators 的精确定义、参数和分类以平台当前可见页面/API 为�
 
 ## 12. Coverage、Alpha list、Correlation 工具
 
-### 12.1 `Coverage`
+本节只解释页面指标和工具。字段筛选顺序、体检方法和仓库策略见
+[02 数据研究与仓库实践](02_research_and_data_guide.md)。
 
-官方 Glossary 的定义是：
+### 12.1 `Coverage` 与 `dateCoverage`
 
-- `Coverage` 指在当前 Universe 里
-- 某个 data field 有定义值的 instrument 占比
+`Coverage` 表示当前 Universe 中，某个 data field 有定义值的 instrument 占比；
+它更接近横截面覆盖率。
 
-这对研究的直接意义是：
+`dateCoverage` 表示字段在历史时间轴上的可用跨度。例如：
 
-- coverage 低，不代表字段一定不能用
-- 但通常需要配合 `ts_backfill`、`kth_element`、`group_backfill` 之类方法处理缺失
+- `coverage = 0.5`：某个时点平均约一半 instrument 有值。
+- `dateCoverage = 1.0`：字段在整个历史区间基本持续存在。
 
-所以在本仓库里看到 `coverage / dateCoverage` 过滤时，可以把它理解成：
-
-- 先验质量信号
-- 不是绝对真理
-
-一个非常实用的联合理解是：
-
-- `coverage = 0.5`
-  - 更接近“横截面覆盖率”
-  - 代表在当前 Universe 里，平均只有大约一半股票在某个时点上有这个字段值
-- `dateCoverage = 1.0`
-  - 更接近“时间跨度覆盖率”
-  - 代表这条字段在整个历史时间轴上基本一直存在，不是某几年整段缺失
-
-所以如果你同时看到：
-
-- `coverage = 0.5`
-- `dateCoverage = 1.0`
-
-不要把它理解成矛盾，而应该理解成：
-
-- 历史跨度是完整的
-- 但单日横截面覆盖并不满
-
-对实战最重要的启示是：
-
-- 这类字段往往不是“没有历史”，而是“每天只有部分股票有值”
-- 更需要：
-  - `ts_backfill`
-  - 必要时的 group/backfill 思路
-  - 更稳的平滑和预处理
-- 不太适合直接套短窗、高敏感、依赖满覆盖的模板
-
-换句话说：
-
-- `dateCoverage` 更回答“这条字段历史上在不在”
-- `coverage` 更回答“这条字段每天覆盖了多少股票”
+两者不矛盾：字段可以覆盖完整历史年份，但每天只覆盖部分股票。
 
 ### 12.2 `Alpha list`
 
-官方 Glossary 里把 `Alpha list` 定义成：
+Alpha list 用于比较多条 Alpha 的表现和彼此相关性。它展示汇总指标，不提供完整 Alpha
+output vector 或每只股票的逐日权重明细。
 
-- 用来比较多条 Alpha
-- 以及查看它们彼此相关性的工具
+### 12.3 `alphaCount` 与 `userCount`
 
-对本地工作流最有用的启发是：
+- `alphaCount`：使用过该字段的 Alpha 数量。
+- `userCount`：使用过该字段的用户数量。
 
-- 不要只盯单条 Alpha
-- 也要看一组 Alpha 是否只是高相关的小变体
+它们描述字段使用度和拥挤程度，不直接表示字段质量。较低数值只说明使用较少，不保证信号更强。
 
-### 12.2.1 `alphaCount` / `userCount` 怎么看
+### 12.4 `Dataset Value Score`
 
-这两个指标更适合被理解成：
+Dataset Value Score 描述数据集“未被充分使用”的程度，目前主要面向 Consultant。
+它不是传统 Value Factor，也不是数据质量分数；动态口径以平台当前页面为准。
 
-- `alphaCount`
-  - 有多少条 Alpha 用过这个字段
-- `userCount`
-  - 有多少个用户用过这个字段
+### 12.5 `Dataset Usage Management`
 
-所以它们本质上在描述：
+Dataset Usage Management 是平台对特定 dataset category 的访问和使用阈值管理。
+它与 coverage、更新频率等字段质量指标不是同一概念；访问受限也不等于字段本身失效。
 
-- 这个字段拥不拥挤
-- 常不常见
-- 是否容易撞到大众表达式
+### 12.6 `Correlation`
 
-实战里可以先这样读：
+Correlation 用于衡量 Alpha 的独特性：
 
-- 高 `alphaCount` / 高 `userCount`
-  - 不是不能用
-  - 但通常不能“普通地用”
-  - 更适合做字段关系、grouped structure、特殊预处理、或跨字段组合
-- 低 `alphaCount` / 低 `userCount`
-  - 不代表一定更强
-  - 只代表它没那么拥挤，更可能带来独特性
+- `SELF_CORRELATION` 比较用户自己的 Alpha。
+- `PROD_CORRELATION` 比较平台已有生产 Alpha。
 
-比如在 `fundamental6` 上：
+具体 submission check 语义见下一章；降低相关性的研究动作见
+[03 优化与提交](03_optimization_and_submission.md)。
 
-- 很多经典 `MATRIX` 字段很拥挤
-  - 例如 `assets`、`debt`、`capex`、`cashflow_op`
-- 而 `VECTOR/event` 分支整体更不拥挤
+### 12.7 Alpha 页面操作
 
-所以更好的默认研究动作通常是：
+Alpha 页面支持筛选、排序、增删列和重命名。隐藏的 Alpha 可通过 `Hidden` filter 找回；
+当前没有删除 Alpha 的功能，未重命名时可能显示为 `anonymous`。
 
-- 对拥挤的经典字段，少做最直白的单字段模板堆叠
-- 对相对不拥挤的分支，优先考虑专项模板和结构差异
+官方来源：[How to view your Alphas](https://support.worldquantbrain.com/hc/en-us/articles/24439802248471-How-to-view-your-Alphas)；
+[How do I delete my Alphas?](https://support.worldquantbrain.com/hc/en-us/articles/5971823272215-How-do-I-delete-my-Alphas)；
+[Can I give meaningful names to my Alphas?](https://support.worldquantbrain.com/hc/en-us/articles/5969975774103-Can-I-give-meaningful-names-to-my-Alphas)；
+[Can I see the Alpha output vector?](https://support.worldquantbrain.com/hc/en-us/articles/5969712153239-Can-I-see-the-Alpha-output-vector)
 
-### 12.2.2 放到 `fundamental6` 上该怎么整体理解
+### 12.8 Simulation 的频率与取消
 
-> 以 fundamental6 为例的详细分析已移至
-> [datasets/fundamental6/README.md](../datasets/fundamental6/README.md)。
+BRAIN Alpha 按日模拟和再平衡，不模拟高频或日内交易。正在运行的 simulation 可以使用
+`Cancel simulation` 中止。
 
-### 12.2.3 `Dataset Value Score`
-
-官网把 Dataset Value Score 定义为数据集“未被充分使用”的程度，该指标目前主要
-面向 Consultant。它不是传统意义上的 Value Factor，也不等于数据质量分数。
-
-更合适的理解是：
-
-- 分数较高：平台更鼓励探索，通常代表相对没被充分利用
-- 分数较低：不代表数据差，但可能已经更拥挤
-
-因此筛选数据集时应把它和 `coverage / alphaCount / userCount` 一起看，不能只按
-Value Score 排序就直接投入大量仿真预算。
-
-### 12.2.4 `Dataset Usage Management`
-
-Dataset Usage Management 是平台对某些 dataset category 使用权限和使用阈值的管理机制。
-它和字段本身的统计质量不是同一个概念。
-
-实战上要分清：
-
-- 字段质量差：coverage、dateCoverage、分布、更新频率或历史结果不好
-- 数据集受管理：平台权限或阈值限制导致某类 dataset 暂时不能继续正常使用
-
-所以在本仓库里不应把“访问受限”自动写成字段 blacklist。更稳妥的处理是：
-
-- 保留历史结果
-- 在数据集 README 或运行总结中记录访问状态
-- 给同类 idea 寻找替代 dataset category
-- 等平台访问恢复后再重新验证
-
-### 12.3 `Correlation`
-
-官方 Glossary 直接把 Correlation 解释成：
-
-- 衡量 Alpha 独特性的指标
-
-这和本地研究流程是直接对应的：
-
-- `SELF_CORRELATION` 更像“和自己池子太像”
-- `PROD_CORRELATION` 更像“和平台已有池子太像”
-
-所以相关性问题本质上不是“结果页面的小红字”，而是平台在判断：
-
-- 这条 Alpha 有没有增量价值
-
-### 12.4 Alpha 页面与 Alpha List 操作
-
-官网 Alpha 页面支持筛选、排序以及增删列；隐藏的 Alpha 可以通过 `Hidden` filter 找回。当前没有删除 Alpha 的功能，但可以重命名，未重命名时可能显示为 `anonymous`。`Alpha list` 用于把多条 Alpha 放在一起比较表现和相关性。
-
-页面不提供完整 Alpha output vector，也不提供每只股票逐日权重明细；研究时不要把页面可见的汇总指标误认为底层持仓明细。
-
-官方来源：[How to view your Alphas](https://support.worldquantbrain.com/hc/en-us/articles/24439802248471-How-to-view-your-Alphas)；[How do I delete my Alphas?](https://support.worldquantbrain.com/hc/en-us/articles/5971823272215-How-do-I-delete-my-Alphas)；[Can I give meaningful names to my Alphas?](https://support.worldquantbrain.com/hc/en-us/articles/5969975774103-Can-I-give-meaningful-names-to-my-Alphas)；[Can I see the Alpha output vector?](https://support.worldquantbrain.com/hc/en-us/articles/5969712153239-Can-I-see-the-Alpha-output-vector)
-
-### 12.5 Simulation 的频率与取消
-
-BRAIN Alpha 按日模拟、按日再平衡，不模拟高频或日内交易。正在运行的 simulation 可以使用 `Cancel simulation` 中止。
-
-官方来源：[Does BRAIN platform simulate high frequency trade and intraday trade?](https://support.worldquantbrain.com/hc/en-us/articles/5971017679639-Does-BRAIN-platform-simulate-high-frequency-trade-and-intraday-trade)；[Is it possible to abort a running simulation?](https://support.worldquantbrain.com/hc/en-us/articles/5971303624471-Is-it-possible-to-abort-a-running-simulation)
+官方来源：[Does BRAIN platform simulate high frequency trade and intraday trade?](https://support.worldquantbrain.com/hc/en-us/articles/5971017679639-Does-BRAIN-platform-simulate-high-frequency-trade-and-intraday-trade)；
+[Is it possible to abort a running simulation?](https://support.worldquantbrain.com/hc/en-us/articles/5971303624471-Is-it-possible-to-abort-a-running-simulation)
 
 ---
 
