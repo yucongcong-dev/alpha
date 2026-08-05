@@ -2,237 +2,44 @@
 
 ## 当前状态
 
-`news18` 已暂停。2026-08-04 在 USA TOP3000、EQUITY、Delay 1 下获取到 121 个字段，
-其中 71 个 MATRIX、50 个 VECTOR。
+`news18` 由 dataset profile 标记为 `paused`，当前没有现役 preset 或可提交候选。
+2026-08-04 在 USA TOP3000、EQUITY、Delay 1 下获取到 121 个字段：71 个 MATRIX、
+50 个 VECTOR。已测试的单字段情绪、新颖度和事件聚合结构均未形成正向基线。
 
-dataset profile 标记为 `paused`，普通 `--dataset-id news18` 会拒绝运行。当前没有现役
-preset，也不再继续单字段枚举、窗口调整或 settings 变体。
+## 关键证据
 
-## 字段选择原则
+| 字段 | 类型 | Alpha ID | 最佳 Sharpe | 最佳 Fitness | 决策 |
+|---|---|---|---:|---:|---|
+| `mean_composite_sentiment_score` | MATRIX | `A1GZVjjW` | -0.17 | -0.01 | 短窗变化率为负且 Turnover `0.7518` |
+| `mean_corporate_action_sentiment` | MATRIX | `E5GW6wMm` / `qMNrL6Nv` | -0.45 | -0.08 | 慢频与事件结构都为负 |
+| `mean_event_novelty_score` | MATRIX | `qMNrVZEZ` | -0.47 | -0.07 | 新颖度没有稳定收益方向 |
+| `mean_event_sentiment_score` | MATRIX | `9qp1kml9` / `2rpzexAw` | -0.38 | -0.08 | 两种结构及 Sub-universe 均为负 |
+| `mean_earnings_evaluation_sentiment` | MATRIX | `58p0dvw1` / `LLGaYkxv` | -0.27 | -0.04 | 专项情绪替换没有改善 |
+| `nws18_bee_fast_d1` | VECTOR | `78zbPqg8` / `WjAQrK2Z` | 0.06 | 0.00 | 事件持仓仅改善到零附近 |
+| `nws18_qmb_fast_d1` | VECTOR | `KPGdoqG1` / `kqPrw1VP` | -0.08 | 约 0 | 两条结构低于停止线 |
 
-- 优先 MATRIX，先验证清晰的经济方向，再单独研究 VECTOR 聚合方式。
-- coverage 和 dateCoverage 优先接近 `1.0`。
-- 优先低 alphaCount、低 userCount 的专项情绪、事件新颖度和新闻影响字段。
-- 不使用 5/20 短窗变化率作为默认种子；首个自动基线出现高换手且表现为负。
-- 一个字段的两条独立结构都明显为负时立即停止，不调整 Decay、Truncation 或邻近窗口。
-- VECTOR 分区模板使用 `{field}`，生成器会自动展开为单层 `vec_avg(field)`；不要手动重复聚合。
+除首个自动基线外，上述重点字段的 coverage 与 dateCoverage 均为 `1.0`。结果说明当前瓶颈
+不是缺失覆盖，而是单字段假设与模板没有产生有效收益方向。
 
-## 已停止字段
+## 研究与运行边界
 
-### mean_composite_sentiment_score
+- MATRIX 与 VECTOR 必须分区研究；VECTOR 模板使用 `{field}`，生成器负责展开单层
+  `vec_avg(field)`，不要手动重复聚合。
+- 不再用 `5/20` 短窗变化率作为默认种子，也不通过反转符号、邻近窗口或 settings 变体
+  延长明显为负的研究线。
+- 一个字段的两条独立结构都明显为负时停止；新的研究应来自多字段关系或新的经济假设。
 
-字段发现阶段的自动基线：
+普通 `--dataset-id news18` 会拒绝运行。重新探索必须显式传入研究文件，或使用带正数预算的
+`--full-run`；执行前先加 `--dry-run-plan` 检查字段、模板和 simulation 数量。
 
-```text
-group_rank(
-  ts_delta(ts_backfill(mean_composite_sentiment_score, 504), 5)
-  / ts_std_dev(ts_backfill(mean_composite_sentiment_score, 504), 20),
-  subindustry
-)
-```
+## 已停止方向
 
-- Alpha ID：`A1GZVjjW`
-- Sharpe：`-0.17`
-- Fitness：`-0.01`
-- Turnover：`0.7518`
-
-该结构同时存在负表现和高换手，不继续研究综合情绪短窗变化率。
-
-### mean_corporate_action_sentiment
-
-元数据：MATRIX，coverage `1.0`，dateCoverage `1.0`，alphaCount `50`，userCount `38`。
-
-60 日情绪异常度：
-
-```text
-group_rank(
-  ts_zscore(ts_backfill(mean_corporate_action_sentiment, 20), 60),
-  subindustry
-)
-```
-
-- Alpha ID：`E5GW6wMm`
-- Sharpe：`-0.55`
-- Fitness：`-0.08`
-
-公司行动新闻更新时刷新持仓：
-
-```text
-trade_when(
-  days_from_last_change(mean_corporate_action_sentiment) <= 5,
-  group_rank(ts_backfill(mean_corporate_action_sentiment, 5), subindustry),
-  -1
-)
-```
-
-- Alpha ID：`qMNrL6Nv`
-- Sharpe：`-0.45`
-- Fitness：`-0.08`
-
-两条独立结构都明显为负，该字段已停止，不保留可执行 preset。
-
-### mean_event_novelty_score
-
-元数据：MATRIX，coverage `1.0`，dateCoverage `1.0`，alphaCount `64`，userCount `55`。
-
-慢频新颖度异常：
-
-```text
-group_rank(
-  ts_zscore(ts_backfill(mean_event_novelty_score, 20), 60),
-  subindustry
-)
-```
-
-- Alpha ID：`qMNrVZEZ`
-- Sharpe：`-0.47`
-- Fitness：`-0.07`
-- Sub-universe Sharpe：`-0.74`
-
-新颖度本身没有明确的收益方向，结果也明显为负。该字段已停止，不再测试事件持仓版本，
-也不通过反转符号或调整窗口继续搜索。
-
-### mean_event_sentiment_score
-
-元数据：MATRIX，coverage `1.0`，dateCoverage `1.0`，alphaCount `59`，userCount `46`。
-
-慢频情绪异常：
-
-```text
-group_rank(
-  ts_zscore(ts_backfill(mean_event_sentiment_score, 20), 60),
-  subindustry
-)
-```
-
-- Alpha ID：`9qp1kml9`
-- Sharpe：`-0.80`
-- Fitness：`-0.16`
-- Sub-universe Sharpe：`-0.61`
-
-事件更新持仓：
-
-```text
-trade_when(
-  days_from_last_change(mean_event_sentiment_score) <= 5,
-  group_rank(ts_backfill(mean_event_sentiment_score, 5), subindustry),
-  -1
-)
-```
-
-- Alpha ID：`2rpzexAw`
-- Sharpe：`-0.38`
-- Fitness：`-0.08`
-- Sub-universe Sharpe：`-0.52`
-
-两条结构和 Sub-universe 表现均为负，Fitness 绝对值最高仅 `0.16`。该字段已停止，
-不再通过反转符号、窗口或 settings 变体继续搜索。
-
-### mean_earnings_evaluation_sentiment
-
-元数据：MATRIX，coverage `1.0`，dateCoverage `1.0`，alphaCount `83`，userCount `68`。
-
-慢频盈利评价情绪异常：
-
-```text
-group_rank(
-  ts_zscore(ts_backfill(mean_earnings_evaluation_sentiment, 20), 60),
-  subindustry
-)
-```
-
-- Alpha ID：`58p0dvw1`
-- Sharpe：`-0.92`
-- Fitness：`-0.19`
-- Sub-universe Sharpe：`-0.50`
-
-盈利评价新闻更新时刷新持仓：
-
-```text
-trade_when(
-  days_from_last_change(mean_earnings_evaluation_sentiment) <= 5,
-  group_rank(ts_backfill(mean_earnings_evaluation_sentiment, 5), subindustry),
-  -1
-)
-```
-
-- Alpha ID：`LLGaYkxv`
-- Sharpe：`-0.27`
-- Fitness：`-0.04`
-
-两条结构均为负。结合公司行动情绪和宽泛事件情绪的结果，日均情绪 MATRIX 的单字段路径
-已停止，不再继续替换专项情绪字段复用相同模板。
-
-### nws18_bee_fast_d1
-
-元数据：VECTOR，coverage `1.0`，dateCoverage `1.0`，alphaCount `16`，userCount `13`。
-
-聚合后的慢频盈利评价异常：
-
-```text
-group_rank(
-  ts_zscore(ts_backfill(vec_avg(nws18_bee_fast_d1), 20), 60),
-  subindustry
-)
-```
-
-- Alpha ID：`78zbPqg8`
-- Sharpe：`-0.38`
-- Fitness：`-0.05`
-
-聚合后的事件更新持仓：
-
-```text
-trade_when(
-  days_from_last_change(vec_avg(nws18_bee_fast_d1)) <= 5,
-  group_rank(ts_backfill(vec_avg(nws18_bee_fast_d1), 5), subindustry),
-  -1
-)
-```
-
-- Alpha ID：`WjAQrK2Z`
-- Sharpe：`0.06`
-- Fitness：`0.00`
-
-事件持仓只把结果从负值改善到接近零，没有形成可研究基线。该字段已停止，不保留 preset。
-
-### nws18_qmb_fast_d1
-
-元数据：VECTOR，coverage `1.0`，dateCoverage `1.0`，alphaCount `12`，userCount `8`。
-
-聚合后的慢频编辑评论异常：
-
-```text
-group_rank(
-  ts_zscore(ts_backfill(vec_avg(nws18_qmb_fast_d1), 20), 60),
-  subindustry
-)
-```
-
-- Alpha ID：`KPGdoqG1`
-- Sharpe：`-0.51`
-- Fitness：`-0.07`
-- Turnover：`0.7005`
-- Sub-universe Sharpe：`-0.63`
-
-聚合后的事件更新持仓：
-
-```text
-trade_when(
-  days_from_last_change(vec_avg(nws18_qmb_fast_d1)) <= 5,
-  group_rank(ts_backfill(vec_avg(nws18_qmb_fast_d1), 5), subindustry),
-  -1
-)
-```
-
-- Alpha ID：`kqPrw1VP`
-- Sharpe：`-0.08`
-- Fitness：约 `0`
-- Sub-universe Sharpe：`-0.44`
-
-两条结构都低于 Sharpe `0.5` 停止线，该字段和整个 `news18` 单字段研究已关闭。
+- 日均综合情绪、公司行动情绪、事件情绪和盈利评价情绪的单字段 zscore / event-hold 路径。
+- `mean_event_novelty_score` 的符号反转和窗口搜索。
+- `nws18_bee_fast_d1`、`nws18_qmb_fast_d1` 的单字段 VECTOR 聚合邻域。
+- 用相同两套模板继续枚举相似 sentiment 字段。
 
 ## 重新开启条件
 
-只有出现新的经济假设、平台数据定义变化，或明确需要验证的多字段关系时才重新开启。
-不要继续替换相似情绪字段复用同一组模板。仓库下一候选转为 `fundamental2`。
+只有出现新的经济假设、平台字段定义变化、明确的多字段关系，或需要补齐尚未覆盖的独立字段族
+时才重新开启。重新运行时建立边界明确的 preset；不要直接恢复无预算的单字段枚举。
