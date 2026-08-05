@@ -4,7 +4,9 @@ from __future__ import annotations
 
 import json
 
-from alpha.generators.expression_builder import _is_blacklisted_template
+from alpha.generators.templates.variation_common import (
+    is_blacklisted_template as _is_blacklisted_template,
+)
 from alpha.models.domain import FailedCheck, FieldTestResult
 from alpha.policy.blacklist_runtime_stats import build_blacklist_runtime_stats
 from alpha.policy.blacklist_runtime_updates import auto_update_blacklist

@@ -157,6 +157,7 @@ def print_dry_run_plan(
         use_dataset_heuristics=use_dataset_heuristics,
         existing_results_count=len(execution_state.result_ledger.results),
     )
+    build_ctx.candidate_filter_counts = explain_counts
 
     for field in fields:
         field_id = str(first_non_empty(field.get("id"), SENTINEL_UNKNOWN))

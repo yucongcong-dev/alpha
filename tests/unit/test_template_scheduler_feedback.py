@@ -6,7 +6,9 @@ from argparse import Namespace
 
 from alpha.core.executor import build_pending_templates_for_field
 from alpha.core.scheduler import handle_completed_future
-from alpha.generators.expression_builder import _is_blacklisted_template
+from alpha.generators.templates.variation_common import (
+    is_blacklisted_template as _is_blacklisted_template,
+)
 from alpha.models.domain import (
     FailedCheck,
     FieldTestResult,

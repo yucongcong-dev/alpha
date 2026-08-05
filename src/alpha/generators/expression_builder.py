@@ -26,6 +26,7 @@ from ..generators.field_transforms import build_field_view
 from ..models.domain import FieldView, TemplateCandidate, TemplateField, TemplateLibraryItem
 from ..models.runtime_protocols import TemplateFeedback
 from ..policy.expression import get_dataset_expression_policy, resolve_feedback_stage
+from ..policy.template_blacklist import runtime_blacklist_match_reason
 from ..runtime.contexts import TemplateBuildContext
 from ..runtime.preset_mode import (
     is_explicit_template_preset,
@@ -44,10 +45,63 @@ from .templates.priority import (
     apply_similarity_penalty,
     cap_templates_per_family,
 )
-from .templates.variation_common import is_blacklisted_template as _is_blacklisted_template
 
 logger = logging.getLogger(__name__)
 _KNOWN_GROUPING_FIELDS = frozenset({"subindustry", "industry", "sector"})
+
+
+def _record_candidate_blacklist_filter(
+    build_ctx: TemplateBuildContext,
+    reason: str,
+) -> None:
+    counts = build_ctx.candidate_filter_counts
+    if counts is None:
+        return
+    normalized = reason.strip().lower().replace("+", "_").replace(":", "_").replace("-", "_")
+    key = f"template_filtered_blacklist_{normalized or 'unknown'}"
+    counts[key] = counts.get(key, 0) + 1
+
+
+def _build_library_candidates(
+    raw_templates: Sequence[TemplateLibraryItem],
+    *,
+    build_ctx: TemplateBuildContext,
+    field_view: FieldView,
+    field_type: str,
+    policy: DatasetExpressionPolicy,
+    backfill_window: int,
+) -> list[TemplateCandidate]:
+    candidates: list[TemplateCandidate] = []
+    for item in raw_templates:
+        metadata = _runtime_template_metadata(item)
+        reason = runtime_blacklist_match_reason(
+            item.name,
+            item.expression,
+            template_metadata=metadata,
+            policy=policy,
+            current_field_type=field_type,
+            current_family=classify_expression_family(item.name, item.expression, metadata),
+            current_stage=classify_template_stage(item.name, item.expression, metadata),
+        )
+        if reason is not None:
+            _record_candidate_blacklist_filter(build_ctx, reason)
+            continue
+        candidates.append(
+            _make_template_candidate(
+                item.name,
+                item.expression.format(
+                    field=field_view.raw_expression,
+                    field_preprocessed=field_view.preprocessed_expression,
+                    field_groupfill=field_view.groupfill_expression,
+                    ratio_numerator=field_view.ratio_numerator_expression,
+                    ratio_denominator=field_view.ratio_denominator_expression,
+                    backfill_window=backfill_window,
+                ),
+                item.priority + _policy_template_priority_adjustment(item.name, policy),
+                metadata=metadata,
+            )
+        )
+    return candidates
 
 
 def _policy_template_priority_adjustment(
@@ -261,30 +315,14 @@ def build_expression_candidates(
     raw_templates = _select_template_items(
         build_ctx.template_library, field_type, policy.dataset_id
     )
-    templates = [
-        _make_template_candidate(
-            item.name,
-            item.expression.format(
-                field=field_view.raw_expression,
-                field_preprocessed=field_view.preprocessed_expression,
-                field_groupfill=field_view.groupfill_expression,
-                ratio_numerator=field_view.ratio_numerator_expression,
-                ratio_denominator=field_view.ratio_denominator_expression,
-                backfill_window=backfill_window,
-            ),
-            item.priority + _policy_template_priority_adjustment(item.name, policy),
-            metadata=_runtime_template_metadata(item),
-        )
-        for item in raw_templates
-        if isinstance(item, TemplateLibraryItem)
-        and not _is_blacklisted_template(
-            item.name,
-            item.expression,
-            template_metadata=_runtime_template_metadata(item),
-            policy=policy,
-            field_type=field_type,
-        )
-    ]
+    templates = _build_library_candidates(
+        [item for item in raw_templates if isinstance(item, TemplateLibraryItem)],
+        build_ctx=build_ctx,
+        field_view=field_view,
+        field_type=field_type,
+        policy=policy,
+        backfill_window=backfill_window,
+    )
     # Closed candidate libraries are expected to remain compact and explicit.
     # Do not silently re-expand them with auto-generated MATRIX neighbors.
     if field_type == "MATRIX" and not closed_candidate_library:

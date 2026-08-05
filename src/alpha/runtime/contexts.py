@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import MutableMapping, Sequence
 from dataclasses import dataclass, field
 
 from ..config.models import DatasetExpressionPolicy
@@ -69,6 +69,7 @@ class TemplateBuildContext:
     use_dataset_heuristics: bool = False
     expression_policy: DatasetExpressionPolicy | None = None
     feedback_result_count: int | None = None
+    candidate_filter_counts: MutableMapping[str, int] | None = None
 
 
 @dataclass

@@ -190,6 +190,52 @@ def test_preset_mode_uses_template_library_as_closed_candidate_set() -> None:
     assert "raw_field" not in {item.name for item in candidates}
 
 
+def test_candidate_generation_records_blacklist_reason(monkeypatch) -> None:
+    policy = get_dataset_expression_policy("fundamental6")
+    field = {"id": "cashflow_op", "type": "MATRIX"}
+    filter_counts: dict[str, int] = {}
+    template_library = {
+        "default": [
+            TemplateLibraryItem(
+                name="blocked_seed",
+                expression="rank({field_preprocessed})",
+                priority=1000,
+            ),
+            TemplateLibraryItem(
+                name="allowed_seed",
+                expression="ts_rank({field_preprocessed}, 120)",
+                priority=900,
+            ),
+        ]
+    }
+    build_ctx = TemplateBuildContext(
+        options=TemplateBuildOptions(
+            **_DEFAULT_SIM_SETTINGS,
+            dataset_id="fundamental6",
+            legacy_similarity_penalty=0,
+            preset_mode=True,
+        ),
+        all_fields=[field],
+        template_library=template_library,
+        candidate_filter_counts=filter_counts,
+    )
+    monkeypatch.setattr(
+        "alpha.generators.expression_builder.runtime_blacklist_match_reason",
+        lambda name, *_args, **_kwargs: "name+stage" if name == "blocked_seed" else None,
+    )
+
+    candidates = build_expression_candidates(
+        field,
+        build_ctx,
+        max_templates_per_field=0,
+        max_templates_per_family=0,
+        expression_policy=policy,
+    )
+
+    assert [item.name for item in candidates] == ["allowed_seed"]
+    assert filter_counts == {"template_filtered_blacklist_name_stage": 1}
+
+
 def test_build_expression_candidates_skip_unsupported_grouping_fields() -> None:
     policy = replace(
         get_dataset_expression_policy("fundamental6"),

@@ -397,7 +397,10 @@ def test_print_dry_run_plan_counts_only_actionable_fields(caplog) -> None:
     args = _args()
     args.max_total_simulations = 1
     with (
-        patch("alpha.core.executor.build_template_build_context", return_value=object()),
+        patch(
+            "alpha.core.executor.build_template_build_context",
+            return_value=TemplateBuildContext(options=TemplateBuildOptions.from_args(args)),
+        ),
         patch(
             "alpha.core.executor.should_skip_field",
             side_effect=lambda field_id, *_args: field_id == "skip",
