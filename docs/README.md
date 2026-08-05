@@ -1,151 +1,48 @@
-# Docs Index
+# 文档索引
 
-`docs/` 收敛为四篇研究主文档和一篇平台运营 reference。每个主题只保留一个主要解释位置，其他文档只做简短引用。
-官网 Documentation、Courses、FAQ 和 Community 内容按主题吸收：研究相关内容进入 01-04，
-平台运营内容进入 05；不做官网全文镜像，也不为每个 FAQ 分类新增平行摘录页。
+`docs/` 只维护一条研究主线和两类 reference。每个主题保留一个主要解释位置，
+其他文档只链接，不复制同一套定义或操作步骤。
 
-## 官网知识审阅快照
+## 阅读顺序
 
-`2026-08-04` 使用已登录的 WorldQuant BRAIN 官网会话完成增量复核：
+1. [01 入门](01_beginner_guide.md)：先理解 Alpha、模拟设置、核心指标和 Fast Expression。
+2. [02 数据研究与仓库实践](02_research_and_data_guide.md)：从字段理解、模板设计走到本地运行与反馈。
+3. [03 优化与提交](03_optimization_and_submission.md)：诊断失败项、验证稳健性并完成提交前检查。
 
-- Documentation：仍为 `24` 篇，当前 section 数量为 Discover BRAIN `6`、Create Alphas `5`、Examples `3`、Interpret Results `2`、Understanding Data `5`、Advanced Topics `3`
-- `Introduction to BRAIN Expression Language` 已从 Discover BRAIN 移到 Create Alphas；24 篇正文与 `2026-08-03` 基线相比没有实质变化
-- Operators：仍为 `7` 个分类、当前账号可见 `66` 个 `base` 算子；签名和页面说明没有变化
-- 本轮目录和差异记录位于 [source_snapshots/worldquant_review_2026-08-04](source_snapshots/worldquant_review_2026-08-04/README.md)
+遇到术语、页面状态或平台规则时查 [04 平台 Reference](04_platform_reference.md)；
+遇到顾问申请、Workday、付款、Referral 或账号支持时查
+[05 平台运营 Reference](05_platform_operations_reference.md)。
 
-`2026-08-03` 完成的系统审阅继续作为完整正文和 FAQ 基线：
+## 文档职责
 
-- Documentation：`24` 篇，覆盖 Discover BRAIN、Create Alphas、Examples、Interpret Results、Understanding Data、Advanced Topics；原始快照位于 [source_snapshots/worldquant_official_2026-08-03](source_snapshots/worldquant_official_2026-08-03)
-- Courses：`10` 门课程、`46` 个视频课时；已审阅课程目录和课时主题，没有复制或伪造视频逐字稿
-- Operators：`7` 个分类、当前账号可见 `66` 个 `base` 算子；原始快照位于 [source_snapshots/worldquant_operators_2026-08-03](source_snapshots/worldquant_operators_2026-08-03/README.md)
-- Must-read：重点核对 Sharpe、Returns、Correlation、`trade_when`、PnL 平滑、抗过拟合 `6` 个主题
-- Help Center：`7` 个一级分类；已展开隐藏的 `See all` 入口
-- Research FAQ：`14` 个 section、当前账号可见 `123` 篇独立文章
-- 其他 FAQ：`23` 个 section、去重后 `166` 篇文章；合计逐篇读取 `289` 篇 Help Center 正文
+| 文档 | 负责内容 | 不负责内容 |
+|---|---|---|
+| [01](01_beginner_guide.md) | 新手所需的概念、指标、设置与表达式基础 | 完整平台查表、仓库运行细节 |
+| [02](02_research_and_data_guide.md) | 数据类型、字段研究、模板、缓存、反馈和运行器操作 | 逐项 submission check 优化 |
+| [03](03_optimization_and_submission.md) | 诊断顺序、改进动作、抗过拟合和提交清单 | 平台术语的完整定义 |
+| [04](04_platform_reference.md) | IS/OS、页面字段、状态、公式、算子与带日期规则 | 具体 Alpha 优化方案 |
+| [05](05_platform_operations_reference.md) | 顾问流程、账户、付款和平台支持 | Alpha 研究与 runner 逻辑 |
 
-知识库采用“按主题吸收”而不是“逐页镜像”：
+根 [README](../README.md) 只提供项目入口和常用命令；
+`datasets/<dataset_id>/README.md` 只记录该数据集当前有效证据、运行边界和下一步。
 
-- 官方 Documentation 和 Help Center 主文用于确认定义、流程和检查语义
-- Community 评论只作为次级经验，不覆盖官方正文和平台实际检查结果
-- 不复制官网全文，也不把课程视频目录冒充完整视频内容
-- 本轮 FAQ 复核覆盖 Research、General、Getting Started、Consultant、Glossary、WQ Challenge Country、IQC 2026；动态赛事、支付和地区规则仍只保留原则，不写死为永久规则
-- 课程、算子和门槛可能随账号等级与平台版本变化；动态数量和阈值必须附核对日期
+## 官方证据
 
-## 推荐阅读顺序
+`source_snapshots/` 保存官网原始证据和带日期的审阅记录，不属于日常维护文档：
 
-1. [01_beginner_guide.md](01_beginner_guide.md)
-2. [02_research_and_data_guide.md](02_research_and_data_guide.md)
-3. [03_optimization_and_submission.md](03_optimization_and_submission.md)
+- [2026-08-03 Documentation 快照](source_snapshots/worldquant_official_2026-08-03)
+- [2026-08-03 Operators 快照](source_snapshots/worldquant_operators_2026-08-03/README.md)
+- [2026-08-04 增量复核](source_snapshots/worldquant_review_2026-08-04/README.md)
 
-阅读过程中遇到平台术语、页面字段或状态时，随时查：
+动态数量、阈值和平台规则必须附核对日期。Community 经验只能作为补充，不能覆盖官方正文
+或实际 Check Submission 结果。
 
-- [04_platform_reference.md](04_platform_reference.md)
+## 新知识归属
 
-遇到顾问申请、Workday、银行账户、背景调查、Referral、账号支持等平台运营问题时，查：
+- 基础概念放 01；数据、示例、课程地图和仓库研究方法放 02。
+- 诊断、稳健性和提交动作放 03；纯定义、状态和公式放 04。
+- 顾问、付款、Referral 和账号支持放 05。
+- 数据集专属结论放对应 README、`template.json` 或 `presets/`。
+- `runs/`、`feedback/` 和缓存是可重建运行状态，不作为长期知识库。
 
-- [05_platform_operations_reference.md](05_platform_operations_reference.md)
-
-## 文档边界
-
-### 01 入门
-
-[01_beginner_guide.md](01_beginner_guide.md) 负责建立基础直觉：
-
-- Alpha、Simulate、Check submission、Submit
-- Sharpe、Fitness、Turnover、Drawdown
-- Delay、Decay、Neutralization、Truncation、Universe
-- Fast Expression 基础语法
-- NaN、Pasteurize、Unit Handling
-- Starter Pack / 10 Steps / Learn2Quant 里适合新手先建立的学习路径
-
-这里只讲第一次学习所需的最小知识；平台状态的完整定义放在 Reference。
-
-### 02 数据研究与仓库实践
-
-[02_research_and_data_guide.md](02_research_and_data_guide.md) 负责从想法到实验：
-
-- Beginners / Bronze / Silver 示例
-- Learn/Courses 课程地图
-- Operators 分类和本地官方快照入口
-- MATRIX、VECTOR、GROUP
-- Data Explorer 和字段体检
-- Dataset Usage Management 与数据集优先级
-- 专题数据集研究方法
-- Broad search、Local refine、模板库设计
-- 本地运行、缓存、反馈、结果与配置资产管理
-- 仓库知识边界和候选池视角
-
-### 03 优化与提交
-
-[03_optimization_and_submission.md](03_optimization_and_submission.md) 负责研究后半程：
-
-- `LOW_SHARPE / LOW_FITNESS / HIGH_TURNOVER`
-- 权重、Sub-Universe、相关性和成本问题
-- Research FAQ 里的常见诊断顺序
-- 抗过拟合与稳定性验证
-- Neutralization 和 D0 的最终决策
-- 提交前统一检查顺序
-
-### 04 平台 Reference
-
-[04_platform_reference.md](04_platform_reference.md) 是查表文档：
-
-- IS、Semi-OS、OS 与状态生命周期
-- 页面字段、评分、Universe、Weight、Booksize
-- NaN、Pasteurize、Coverage、Correlation
-- Operators 官方分类和签名快照
-- IQC / Challenge-Country / Dataset Usage Management 等平台状态边界
-- submission check 名称和页面语义
-
-Reference 主要回答“这个词是什么意思”；具体怎么优化，回到 03。
-
-### 05 平台运营 Reference
-
-[05_platform_operations_reference.md](05_platform_operations_reference.md) 负责平台运营类 FAQ：
-
-- Research Consultant 机会和 onboarding
-- Workday、背景调查、协议和 conditional consultant
-- 银行账户、earnings、payment 和 referral
-- Account、登录、技术支持和 submit request
-
-这篇不参与 Alpha 研究方法和本地 runner 逻辑，只作为平台使用参考。
-
-## 按问题快速定位
-
-| 问题 | 文档 |
-|---|---|
-| Alpha、基础指标和设置是什么？ | [01](01_beginner_guide.md) |
-| 如何理解 Fast Expression 和基本算子？ | [01](01_beginner_guide.md) |
-| 官网 Alpha examples 应该怎么学？ | [02](02_research_and_data_guide.md) |
-| Learn 页课程应该按什么地图理解？ | [02](02_research_and_data_guide.md) |
-| MATRIX、VECTOR、GROUP 如何分流？ | [02](02_research_and_data_guide.md) |
-| Data Explorer 怎么搜，字段怎么体检？ | [02](02_research_and_data_guide.md) |
-| 仓库里 Broad search 和 Local refine 怎么安排？ | [02](02_research_and_data_guide.md) |
-| 如何运行、续跑、清理缓存或理解本地结果？ | [02](02_research_and_data_guide.md) |
-| LOW_SHARPE、LOW_FITNESS 怎么处理？ | [03](03_optimization_and_submission.md) |
-| Turnover、Sub-Universe、相关性怎么优化？ | [03](03_optimization_and_submission.md) |
-| D0、Neutralization、提交前检查怎么串起来？ | [03](03_optimization_and_submission.md) |
-| IS、Semi-OS、OS、OSTEST 状态是什么意思？ | [04](04_platform_reference.md) |
-| 页面上的 N/A、Booksize、Coverage 是什么？ | [04](04_platform_reference.md) |
-| 某个 submission check 名称是什么意思？ | [04](04_platform_reference.md) |
-| 顾问申请、Workday、银行、Referral 或账号问题看哪里？ | [05](05_platform_operations_reference.md) |
-
-## 仓库文档分层
-
-- `docs/`：通用学习路径、研究方法、优化流程、平台查表和运营参考
-- 根 [README.md](../README.md)：快速启动、项目入口和文档导航
-- `datasets/<dataset_id>/README.md`：具体数据集策略与本地经验
-- `datasets/<dataset_id>/runs/`：运行产物，不作为长期知识库
-- `datasets/<dataset_id>/feedback/<market_scope>/`：按市场范围隔离、跨 run 自动积累的本地反馈状态，可由运行结果重建，不进仓
-
-新增知识前先判断归属：
-
-- 基础概念放 01
-- 数据、示例、课程地图和仓库研究方法放 02
-- 诊断、稳健性和提交方法放 03
-- 纯定义、状态和错误码放 04
-- 顾问申请、Workday、银行、Referral、账号支持放 05
-- 数据集专属经验放对应 dataset 的 README、template.json 或 presets
-
-原则上不再新增与研究主线平行的 FAQ 或专题摘录页。顾问申请、Workday、银行信息、
-账号支持、Referral、IQC 具体日期和付款规则这类内容，只进入 05，不进入 Alpha 研究主线。
+原则上不再新增与 01-05 平行的 FAQ 或专题摘录页；新增内容前先更新其唯一归属文档。
