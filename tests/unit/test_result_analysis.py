@@ -1,0 +1,110 @@
+"""Derived result analysis tests."""
+
+from __future__ import annotations
+
+from alpha.analysis.analysis_sync import ensure_analysis_synced
+from alpha.analysis.results_persistence import dump_results
+from alpha.analysis.template_registry_rules import compile_template_registry_summary
+from alpha.analysis.template_stats import compile_template_stats
+from alpha.models.domain import FailedCheck, FieldTestResult
+
+
+def test_compile_template_stats_excludes_self_correlation_pending_results() -> None:
+    stats = compile_template_stats(
+        [
+            FieldTestResult(
+                field_id="field_pending",
+                field_type="MATRIX",
+                field_name="field_pending",
+                template_name="tpl",
+                status="simulated",
+                submittable=True,
+                expression="rank(field_pending)",
+                failed_checks=[
+                    {"name": "SELF_CORRELATION", "result": "PENDING", "value": None, "limit": None}
+                ],
+            )
+        ]
+    )
+
+    assert stats == {}
+
+
+def test_compile_template_registry_summary_reports_weak_template_stats() -> None:
+    stats = compile_template_stats(
+        [
+            FieldTestResult(
+                field_id=f"field_{idx}",
+                field_type="MATRIX",
+                field_name=f"field_{idx}",
+                template_name="weak_template",
+                template_family="mean_spread",
+                template_stage="first_order",
+                template_role="default_seed",
+                template_activation_scope="broad",
+                status="simulated",
+                submittable=False,
+                expression=f"rank(ts_mean(field_{idx}, 20))",
+                failed_checks=[
+                    FailedCheck(name="LOW_SHARPE", value=0.1),
+                    FailedCheck(name="LOW_FITNESS", value=0.2),
+                ],
+            )
+            for idx in range(6)
+        ]
+    )
+
+    summary = compile_template_registry_summary(stats)
+    row = next(item for item in summary if item["template_name"] == "weak_template")
+
+    assert row["activation_scope"] == "broad"
+    assert row["template_role"] == "default_seed"
+    assert row["attempted"] == 6
+    assert row["simulated"] == 6
+    assert row["submittable"] == 0
+    assert row["low_sharpe"] == 6
+    assert row["low_fitness"] == 6
+
+
+def test_ensure_analysis_synced_skips_invalid_main_summary_shape(tmp_path) -> None:
+    """Analysis sync should gracefully skip a valid JSON file with the wrong top-level type."""
+    output_path = tmp_path / "results.json"
+    output_path.write_text("[]", encoding="utf-8")
+
+    ensure_analysis_synced(str(output_path))
+
+    assert output_path.read_text(encoding="utf-8") == "[]"
+    assert not (tmp_path / "results_analysis.json").exists()
+
+
+def test_ensure_analysis_synced_only_rebuilds_derived_sidecars(tmp_path) -> None:
+    """Startup repair must not rewrite the authoritative journal or main summary."""
+    output_path = tmp_path / "results.json"
+    dump_results(
+        str(output_path),
+        "fundamental6",
+        [
+            FieldTestResult(
+                field_id="field_derived",
+                field_type="MATRIX",
+                field_name="field_derived",
+                template_name="tpl",
+                status="simulated",
+                submittable=False,
+                expression="rank(field_derived)",
+            )
+        ],
+        settings_fingerprint="settings",
+        template_library_fingerprint="templates",
+        include_analysis=False,
+    )
+    journal_path = tmp_path / "results_results.jsonl"
+    summary_before = output_path.read_bytes()
+    journal_before = journal_path.read_bytes()
+
+    ensure_analysis_synced(str(output_path))
+
+    assert output_path.read_bytes() == summary_before
+    assert journal_path.read_bytes() == journal_before
+    assert (tmp_path / "results_analysis.json").exists()
+    assert (tmp_path / "results_template_registry.json").exists()
