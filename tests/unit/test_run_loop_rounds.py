@@ -7,11 +7,11 @@ from concurrent.futures import Future, ThreadPoolExecutor
 from threading import Semaphore
 from unittest.mock import MagicMock, patch
 
+from alpha.app.run_loop_dispatch import dispatch_templates_for_field
 from alpha.app.run_loop_feedback import RuntimeFeedbackRefresh
 from alpha.app.run_loop_rounds import (
     ScheduleRoundContext,
     ScheduleRoundResult,
-    _dispatch_templates_for_field,
     execute_schedule_round,
     schedule_field_round,
 )
@@ -95,7 +95,7 @@ def test_breadth_first_field_progress_keeps_resume_cursor_at_start(tmp_path) -> 
             "alpha.app.run_loop_rounds.build_pending_templates_for_field",
             return_value=([], 0, 0),
         ),
-        patch("alpha.app.run_loop_rounds._dispatch_templates_for_field", return_value=False),
+        patch("alpha.app.run_loop_rounds.dispatch_templates_for_field", return_value=False),
         patch("alpha.app.run_loop_rounds.persist_field_progress") as mock_persist,
     ):
         schedule_field_round(
@@ -125,7 +125,7 @@ def test_zero_batch_size_is_normalized_to_breadth_first() -> None:
             "alpha.app.run_loop_rounds.build_pending_templates_for_field",
             return_value=([], 0, 0),
         ),
-        patch("alpha.app.run_loop_rounds._dispatch_templates_for_field", return_value=False),
+        patch("alpha.app.run_loop_rounds.dispatch_templates_for_field", return_value=False),
         patch("alpha.app.run_loop_rounds.persist_field_progress") as mock_persist,
     ):
         schedule_field_round(
@@ -182,7 +182,7 @@ def test_full_run_seed_phase_covers_fields_before_refine() -> None:
             side_effect=_pending_for_field,
         ),
         patch(
-            "alpha.app.run_loop_rounds._dispatch_templates_for_field",
+            "alpha.app.run_loop_rounds.dispatch_templates_for_field",
             side_effect=_consume_dispatch,
         ),
         patch("alpha.app.run_loop_rounds.persist_field_progress"),
@@ -254,7 +254,7 @@ def test_full_run_seed_phase_prefers_default_seed_role() -> None:
             return_value=([refine_entry, seed_entry], 0, 2),
         ),
         patch(
-            "alpha.app.run_loop_rounds._dispatch_templates_for_field",
+            "alpha.app.run_loop_rounds.dispatch_templates_for_field",
             side_effect=_consume_dispatch,
         ),
         patch("alpha.app.run_loop_rounds.persist_field_progress"),
@@ -306,7 +306,7 @@ def test_full_run_seed_phase_skips_historically_seeded_fields() -> None:
             side_effect=_pending_for_field,
         ),
         patch(
-            "alpha.app.run_loop_rounds._dispatch_templates_for_field",
+            "alpha.app.run_loop_rounds.dispatch_templates_for_field",
             side_effect=_consume_dispatch,
         ),
         patch("alpha.app.run_loop_rounds.persist_field_progress"),
@@ -448,7 +448,7 @@ def test_full_run_unactionable_seed_fields_advance_to_refine() -> None:
             side_effect=_pending_for_field,
         ),
         patch(
-            "alpha.app.run_loop_rounds._dispatch_templates_for_field",
+            "alpha.app.run_loop_rounds.dispatch_templates_for_field",
             side_effect=_consume_dispatch,
         ),
         patch("alpha.app.run_loop_rounds.persist_field_progress"),
@@ -485,7 +485,7 @@ def test_queue_exhausted_candidate_is_excluded_from_next_round() -> None:
             "alpha.app.run_loop_rounds.build_pending_templates_for_field",
             side_effect=_capture_pending,
         ),
-        patch("alpha.app.run_loop_rounds._dispatch_templates_for_field", return_value=False),
+        patch("alpha.app.run_loop_rounds.dispatch_templates_for_field", return_value=False),
         patch("alpha.app.run_loop_rounds.persist_field_progress"),
     ):
         schedule_field_round(
@@ -539,7 +539,7 @@ def test_queue_timeout_invalidates_only_retry_field_template_queue() -> None:
             "alpha.app.run_loop_rounds.build_pending_templates_for_field",
             return_value=([], 0, 1),
         ) as mock_build,
-        patch("alpha.app.run_loop_rounds._dispatch_templates_for_field", return_value=False),
+        patch("alpha.app.run_loop_rounds.dispatch_templates_for_field", return_value=False),
         patch("alpha.app.run_loop_rounds.persist_field_progress"),
     ):
         schedule_field_round(
@@ -674,7 +674,7 @@ def test_breadth_first_round_dispatches_only_configured_batch() -> None:
             return_value=(entries, 0, 2),
         ),
         patch(
-            "alpha.app.run_loop_rounds._dispatch_templates_for_field", return_value=False
+            "alpha.app.run_loop_rounds.dispatch_templates_for_field", return_value=False
         ) as dispatch,
         patch("alpha.app.run_loop_rounds.persist_field_progress"),
     ):
@@ -719,10 +719,10 @@ def test_breadth_first_reuses_cached_field_template_queue() -> None:
             "alpha.app.run_loop_rounds.build_pending_templates_for_field",
             return_value=(entries, 0, 2),
         ) as mock_build,
-        patch("alpha.app.run_loop_rounds.maybe_restore_runtime_concurrency"),
-        patch("alpha.app.run_loop_rounds.drain_until_capacity", return_value=True),
-        patch("alpha.app.run_loop_rounds.throttle_before_submission"),
-        patch("alpha.app.run_loop_rounds.submit_template_future") as mock_submit,
+        patch("alpha.app.run_loop_dispatch.maybe_restore_runtime_concurrency"),
+        patch("alpha.app.run_loop_dispatch.drain_until_capacity", return_value=True),
+        patch("alpha.app.run_loop_dispatch.throttle_before_submission"),
+        patch("alpha.app.run_loop_dispatch.submit_template_future") as mock_submit,
         patch("alpha.app.run_loop_rounds.persist_field_progress"),
     ):
         for round_index in (1, 2):
@@ -797,10 +797,10 @@ def test_feedback_change_invalidates_cached_field_template_queue() -> None:
                 ([refreshed_entry], 0, 1),
             ],
         ) as mock_build,
-        patch("alpha.app.run_loop_rounds.maybe_restore_runtime_concurrency"),
-        patch("alpha.app.run_loop_rounds.drain_until_capacity", return_value=True),
-        patch("alpha.app.run_loop_rounds.throttle_before_submission"),
-        patch("alpha.app.run_loop_rounds.submit_template_future") as mock_submit,
+        patch("alpha.app.run_loop_dispatch.maybe_restore_runtime_concurrency"),
+        patch("alpha.app.run_loop_dispatch.drain_until_capacity", return_value=True),
+        patch("alpha.app.run_loop_dispatch.throttle_before_submission"),
+        patch("alpha.app.run_loop_dispatch.submit_template_future") as mock_submit,
         patch("alpha.app.run_loop_rounds.persist_field_progress"),
     ):
         for round_index in (1, 2):
@@ -853,27 +853,27 @@ def test_dispatch_honors_stop_capacity_and_success_paths() -> None:
         )
     )
 
-    assert _dispatch_templates_for_field(**kwargs) is True
+    assert dispatch_templates_for_field(**kwargs) is True
     assert context.run_ctx.execution_state.future_queue.scheduling_stop_signal.is_set()
     assert context.run_ctx.execution_state.future_queue.stop_signal.is_set() is False
 
     context.scheduler_options = SchedulerControlOptions(stop_after_submittable=0)
     context.run_ctx.execution_state.future_queue.scheduling_stop_signal.clear()
     with (
-        patch("alpha.app.run_loop_rounds.maybe_restore_runtime_concurrency"),
-        patch("alpha.app.run_loop_rounds.drain_until_capacity", return_value=False),
-        patch("alpha.app.run_loop_rounds.submit_template_future") as mock_submit,
+        patch("alpha.app.run_loop_dispatch.maybe_restore_runtime_concurrency"),
+        patch("alpha.app.run_loop_dispatch.drain_until_capacity", return_value=False),
+        patch("alpha.app.run_loop_dispatch.submit_template_future") as mock_submit,
     ):
-        assert _dispatch_templates_for_field(**kwargs) is False
+        assert dispatch_templates_for_field(**kwargs) is False
     mock_submit.assert_not_called()
 
     with (
-        patch("alpha.app.run_loop_rounds.maybe_restore_runtime_concurrency"),
-        patch("alpha.app.run_loop_rounds.drain_until_capacity", return_value=True),
-        patch("alpha.app.run_loop_rounds.throttle_before_submission"),
-        patch("alpha.app.run_loop_rounds.submit_template_future") as mock_submit,
+        patch("alpha.app.run_loop_dispatch.maybe_restore_runtime_concurrency"),
+        patch("alpha.app.run_loop_dispatch.drain_until_capacity", return_value=True),
+        patch("alpha.app.run_loop_dispatch.throttle_before_submission"),
+        patch("alpha.app.run_loop_dispatch.submit_template_future") as mock_submit,
     ):
-        assert _dispatch_templates_for_field(**kwargs) is False
+        assert dispatch_templates_for_field(**kwargs) is False
     mock_submit.assert_called_once()
 
 
@@ -917,21 +917,21 @@ def test_dispatch_replans_when_capacity_drain_changes_feedback() -> None:
         return True
 
     with (
-        patch("alpha.app.run_loop_rounds.maybe_restore_runtime_concurrency"),
+        patch("alpha.app.run_loop_dispatch.maybe_restore_runtime_concurrency"),
         patch(
-            "alpha.app.run_loop_rounds.drain_until_capacity",
+            "alpha.app.run_loop_dispatch.drain_until_capacity",
             side_effect=_drain_with_result,
         ),
         patch(
-            "alpha.app.run_loop_rounds.refresh_runtime_feedback",
+            "alpha.app.run_loop_dispatch.refresh_runtime_feedback",
             return_value=RuntimeFeedbackRefresh(
                 feedback_changed=True,
                 changed_field_ids=frozenset({"f1"}),
             ),
         ),
-        patch("alpha.app.run_loop_rounds.submit_template_future") as mock_submit,
+        patch("alpha.app.run_loop_dispatch.submit_template_future") as mock_submit,
     ):
-        stopped = _dispatch_templates_for_field(
+        stopped = dispatch_templates_for_field(
             context=context,
             field=context.fields[0],
             field_id="f1",
@@ -966,12 +966,12 @@ def test_dispatch_stops_at_total_simulation_budget_without_aborting_pending() ->
 
     with (
         context.executor,
-        patch("alpha.app.run_loop_rounds.maybe_restore_runtime_concurrency"),
-        patch("alpha.app.run_loop_rounds.drain_until_capacity", return_value=True),
-        patch("alpha.app.run_loop_rounds.throttle_before_submission"),
-        patch("alpha.app.run_loop_rounds.submit_template_future") as mock_submit,
+        patch("alpha.app.run_loop_dispatch.maybe_restore_runtime_concurrency"),
+        patch("alpha.app.run_loop_dispatch.drain_until_capacity", return_value=True),
+        patch("alpha.app.run_loop_dispatch.throttle_before_submission"),
+        patch("alpha.app.run_loop_dispatch.submit_template_future") as mock_submit,
     ):
-        stopped = _dispatch_templates_for_field(
+        stopped = dispatch_templates_for_field(
             context=context,
             field=context.fields[0],
             field_id="f1",

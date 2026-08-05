@@ -13,21 +13,19 @@ from ..core.executor import (
     inflight_template_keys,
     should_skip_field,
 )
-from ..core.scheduler import maybe_restore_runtime_concurrency, throttle_before_submission
 from ..generators.fields import choose_field_name, choose_field_type
 from ..models.domain import TemplateField
 from ..models.runtime_options import SchedulerControlOptions
 from ..models.runtime_protocols import SimulationStageArgs
 from ..runtime.contexts import (
     FutureCompletionContext,
-    PendingTemplateEntry,
     TemplateBuildContext,
 )
 from ..runtime.field_template_queue import FieldTemplateQueue
 from ..runtime.state import InitializedRunContext
 from ..utils.helpers import first_non_empty
-from .loop_future_support import drain_until_capacity, submit_template_future
-from .run_loop_feedback import RuntimeFeedbackRefresh, refresh_runtime_feedback
+from .run_loop_dispatch import apply_feedback_refresh, dispatch_templates_for_field
+from .run_loop_feedback import refresh_runtime_feedback
 from .run_loop_resume import persist_field_progress
 from .run_loop_seed_phase import SeedPhaseState
 
@@ -72,19 +70,6 @@ class ScheduleRoundContext:
         """Return whether this process has dispatched its configured simulation budget."""
         budget = self.scheduler_options.max_total_simulations
         return budget > 0 and self.scheduled_simulations >= budget
-
-
-def _apply_feedback_refresh(
-    context: ScheduleRoundContext,
-    feedback_refresh: RuntimeFeedbackRefresh,
-) -> None:
-    """Invalidate cached field queues affected by newly consumed runtime feedback."""
-    if feedback_refresh.invalidate_all:
-        context.field_template_queues.clear()
-        return
-    invalidated_field_ids = feedback_refresh.changed_field_ids | feedback_refresh.retry_field_ids
-    for field_id in invalidated_field_ids:
-        context.field_template_queues.pop(field_id, None)
 
 
 def execute_schedule_round(
@@ -184,7 +169,7 @@ def schedule_field_round(
     if context.seed_phase.should_wait_or_skip(field_id):
         return ScheduleRoundResult(progressed=False, stop_requested=False, last_field_id=field_id)
     feedback_refresh = refresh_runtime_feedback(context.template_build_ctx, result_ledger.results)
-    _apply_feedback_refresh(context, feedback_refresh)
+    apply_feedback_refresh(context, feedback_refresh)
 
     if should_skip_field(
         field_id,
@@ -261,7 +246,7 @@ def schedule_field_round(
         )
 
     queue_count_before_dispatch = len(template_queue.entries)
-    stop_requested = _dispatch_templates_for_field(
+    stop_requested = dispatch_templates_for_field(
         context=context,
         field=field,
         field_id=field_id,
@@ -287,104 +272,3 @@ def schedule_field_round(
         stop_requested=stop_requested,
         last_field_id=field_id,
     )
-
-
-def _dispatch_templates_for_field(
-    *,
-    context: ScheduleRoundContext,
-    field: TemplateField,
-    field_id: str,
-    field_name: str,
-    field_type: str,
-    scheduled_templates: list[PendingTemplateEntry],
-    template_queue: FieldTemplateQueue | None = None,
-) -> bool:
-    """Dispatch scheduled templates for a single field; return whether a stop was requested."""
-    args = context.args
-    scheduler_options = context.scheduler_options
-    run_ctx = context.run_ctx
-    execution_state = run_ctx.execution_state
-    result_ledger = execution_state.result_ledger
-    runtime_state = run_ctx.runtime_state
-    for template_index, entry in enumerate(scheduled_templates, start=1):
-        if context.reached_simulation_budget():
-            logger.info(
-                "[stop] 达到 max-total-simulations=%d",
-                scheduler_options.max_total_simulations,
-            )
-            return True
-        if result_ledger.reached_submittable_stop_threshold(
-            scheduler_options.stop_after_submittable
-        ):
-            execution_state.future_queue.scheduling_stop_signal.set()
-            logger.info(
-                "[stop] 达到 stop-after-submittable=%d",
-                scheduler_options.stop_after_submittable,
-            )
-            return True
-
-        if execution_state.future_queue.should_stop_scheduling():
-            return True
-
-        maybe_restore_runtime_concurrency(runtime_state)
-        result_count_before_drain = len(result_ledger.results)
-        if not drain_until_capacity(
-            executor_state=execution_state,
-            runtime_state=runtime_state,
-            scheduler_options=scheduler_options,
-            completion_ctx=context.completion_ctx,
-            field_id=field_id,
-        ):
-            return False
-        if execution_state.future_queue.should_stop_scheduling():
-            return True
-        if len(result_ledger.results) != result_count_before_drain:
-            feedback_refresh = refresh_runtime_feedback(
-                context.template_build_ctx,
-                result_ledger.results,
-            )
-            _apply_feedback_refresh(context, feedback_refresh)
-            if feedback_refresh.invalidate_all or field_id in (
-                feedback_refresh.changed_field_ids | feedback_refresh.retry_field_ids
-            ):
-                logger.debug(
-                    "[schedule] field=%s queue invalidated after completed results; replanning",
-                    field_id,
-                )
-                return False
-
-        logger.debug(
-            "[progress] field=%s template %d/%d name=%s priority=%d queued=%d/%d settings=%s",
-            field_id,
-            template_index,
-            len(scheduled_templates),
-            entry.template_name,
-            entry.priority,
-            len(execution_state.future_queue.pending_futures) + 1,
-            runtime_state.runtime_max_workers,
-            entry.variant_fingerprint,
-        )
-        throttle_before_submission(scheduler_options, execution_state)
-        submit_template_future(
-            executor=context.executor,
-            run_ctx=run_ctx,
-            execution_state=execution_state,
-            args=args,
-            field=field,
-            field_id=field_id,
-            field_name=field_name,
-            field_type=field_type,
-            template_name=entry.template_name,
-            template_family=entry.template_family,
-            template_stage=entry.template_stage,
-            template_role=entry.template_role,
-            template_activation_scope=entry.template_activation_scope,
-            policy_version=entry.policy_version,
-            expression=entry.expression,
-            settings_variant=entry.settings_variant,
-            variant_fingerprint=entry.variant_fingerprint,
-        )
-        if template_queue is not None:
-            template_queue.consume(entry)
-        context.scheduled_simulations += 1
-    return False
