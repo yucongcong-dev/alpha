@@ -10,6 +10,7 @@ from alpha.cli.parser import parse_application_config, parse_args
 from alpha.cli.path_resolution import normalize_args_paths
 from alpha.config import get_yaml_config
 from alpha.config.constants import FULL_RUN_MAX_TOTAL_SIMULATIONS
+from alpha.models.runtime_options import RunConfigSnapshotOptions
 
 
 def clear_yaml_cache() -> None:
@@ -650,6 +651,25 @@ def test_parse_application_config_is_immutable_and_uses_normalized_paths(
         config.limit = 999
     with pytest.raises((AttributeError, TypeError)):
         config.dataset.delay = 0
+
+
+def test_parse_application_config_preserves_named_run_in_snapshot(monkeypatch, tmp_path) -> None:
+    clear_yaml_cache()
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        ["alpha", "--dataset-id", "pv1", "--run-name", "named-run"],
+    )
+
+    config = parse_application_config()
+    snapshot = RunConfigSnapshotOptions.from_args(config)
+
+    assert config.run_name == "named-run"
+    assert snapshot.run_name == "named-run"
+    assert config.paths.output.replace("\\", "/").endswith(
+        "/datasets/pv1/runs/named-run/summary.json"
+    )
 
 
 def test_normalize_args_paths_resolves_relative_files_from_cwd(monkeypatch, tmp_path) -> None:

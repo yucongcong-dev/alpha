@@ -29,6 +29,7 @@ class ApplicationConfig:
     paths: RunPaths
     command: str
     config: str
+    run_name: str
     credentials: CredentialsConfig
     dataset: DatasetConfig
     simulation: SimulationConfig
@@ -124,6 +125,7 @@ class ApplicationConfig:
             paths=paths,
             command=str(getattr(args, "command", "run")),
             config=str(getattr(args, "config", "") or ""),
+            run_name=str(getattr(args, "run_name", "default") or "default"),
             credentials=CredentialsConfig.from_args(args),
             dataset=DatasetConfig.from_args(args),
             simulation=SimulationConfig.from_args(args),
