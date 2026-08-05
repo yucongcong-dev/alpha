@@ -39,12 +39,40 @@ def test_test_task_uses_current_python_module_entry() -> None:
     assert commands["test"][0].argv == ("python-command", "-m", "pytest", "-q")
 
 
+def test_ruff_task_falls_back_to_current_python_module_when_no_executable(monkeypatch) -> None:
+    module = _load_check_all_module()
+    monkeypatch.delenv("RUFF", raising=False)
+    monkeypatch.setattr(module.shutil, "which", lambda _name: None)
+
+    commands = module.build_task_commands("python-command")
+
+    assert commands["ruff"][0].argv == ("python-command", "-m", "ruff", "check", ".")
+
+
 def test_ruff_task_accepts_standalone_executable() -> None:
     module = _load_check_all_module()
 
     commands = module.build_task_commands("python-command", ruff_executable="ruff-command")
 
     assert commands["ruff"][0].argv == ("ruff-command", "check", ".")
+
+
+def test_ruff_task_accepts_environment_command(monkeypatch) -> None:
+    module = _load_check_all_module()
+    monkeypatch.setenv("RUFF", "python -m ruff")
+
+    commands = module.build_task_commands("python-command")
+
+    assert commands["format"][0].argv == (
+        "python",
+        "-m",
+        "ruff",
+        "format",
+        "--check",
+        "src",
+        "tests",
+        "scripts",
+    )
 
 
 def test_main_without_tasks_runs_full_suite(monkeypatch) -> None:

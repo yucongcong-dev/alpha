@@ -6,6 +6,7 @@ import argparse
 from dataclasses import dataclass
 import os
 from pathlib import Path
+import shlex
 import shutil
 import subprocess
 import sys
@@ -44,8 +45,12 @@ def build_task_commands(
     ruff_executable: str | None = None,
 ) -> dict[str, tuple[CheckCommand, ...]]:
     py = (python,)
-    resolved_ruff = ruff_executable or shutil.which("ruff")
-    ruff = (resolved_ruff,) if resolved_ruff else (*py, "-m", "ruff")
+    resolved_ruff = ruff_executable or os.environ.get("RUFF", "")
+    if resolved_ruff:
+        ruff = tuple(shlex.split(resolved_ruff))
+    else:
+        standalone_ruff = shutil.which("ruff")
+        ruff = (standalone_ruff,) if standalone_ruff else (*py, "-m", "ruff")
     return {
         "python-version": (CheckCommand((*py, "scripts/check_python_version.py")),),
         "test": (CheckCommand((*py, "-m", "pytest", "-q")),),
