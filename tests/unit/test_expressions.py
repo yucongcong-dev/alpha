@@ -220,7 +220,7 @@ def test_candidate_generation_records_blacklist_reason(monkeypatch) -> None:
         candidate_filter_counts=filter_counts,
     )
     monkeypatch.setattr(
-        "alpha.generators.expression_builder.runtime_blacklist_match_reason",
+        "alpha.generators.templates.library_candidates.runtime_blacklist_match_reason",
         lambda name, *_args, **_kwargs: "name+stage" if name == "blocked_seed" else None,
     )
 

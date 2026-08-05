@@ -26,7 +26,6 @@ from ..generators.field_transforms import build_field_view
 from ..models.domain import FieldView, TemplateCandidate, TemplateField, TemplateLibraryItem
 from ..models.runtime_protocols import TemplateFeedback
 from ..policy.expression import get_dataset_expression_policy, resolve_feedback_stage
-from ..policy.template_blacklist import runtime_blacklist_match_reason
 from ..runtime.contexts import TemplateBuildContext
 from ..runtime.preset_mode import (
     is_explicit_template_preset,
@@ -37,10 +36,10 @@ from .fields import choose_field_name, choose_field_type
 from .matrix_templates import build_matrix_templates
 from .templates.candidates import (
     _coerce_template_candidate,
-    _make_template_candidate,
 )
 from .templates.classification import classify_expression_family, classify_template_stage
-from .templates.metadata import _runtime_template_metadata, _select_template_items
+from .templates.library_candidates import build_library_candidates
+from .templates.metadata import _select_template_items
 from .templates.priority import (
     apply_similarity_penalty,
     cap_templates_per_family,
@@ -48,77 +47,6 @@ from .templates.priority import (
 
 logger = logging.getLogger(__name__)
 _KNOWN_GROUPING_FIELDS = frozenset({"subindustry", "industry", "sector"})
-
-
-def _record_candidate_blacklist_filter(
-    build_ctx: TemplateBuildContext,
-    reason: str,
-) -> None:
-    counts = build_ctx.candidate_filter_counts
-    if counts is None:
-        return
-    normalized = reason.strip().lower().replace("+", "_").replace(":", "_").replace("-", "_")
-    key = f"template_filtered_blacklist_{normalized or 'unknown'}"
-    counts[key] = counts.get(key, 0) + 1
-
-
-def _build_library_candidates(
-    raw_templates: Sequence[TemplateLibraryItem],
-    *,
-    build_ctx: TemplateBuildContext,
-    field_view: FieldView,
-    field_type: str,
-    policy: DatasetExpressionPolicy,
-    backfill_window: int,
-) -> list[TemplateCandidate]:
-    candidates: list[TemplateCandidate] = []
-    for item in raw_templates:
-        metadata = _runtime_template_metadata(item)
-        reason = runtime_blacklist_match_reason(
-            item.name,
-            item.expression,
-            template_metadata=metadata,
-            policy=policy,
-            current_field_type=field_type,
-            current_family=classify_expression_family(item.name, item.expression, metadata),
-            current_stage=classify_template_stage(item.name, item.expression, metadata),
-        )
-        if reason is not None:
-            _record_candidate_blacklist_filter(build_ctx, reason)
-            continue
-        candidates.append(
-            _make_template_candidate(
-                item.name,
-                item.expression.format(
-                    field=field_view.raw_expression,
-                    field_preprocessed=field_view.preprocessed_expression,
-                    field_groupfill=field_view.groupfill_expression,
-                    ratio_numerator=field_view.ratio_numerator_expression,
-                    ratio_denominator=field_view.ratio_denominator_expression,
-                    backfill_window=backfill_window,
-                ),
-                item.priority + _policy_template_priority_adjustment(item.name, policy),
-                metadata=metadata,
-            )
-        )
-    return candidates
-
-
-def _policy_template_priority_adjustment(
-    template_name: str,
-    policy: DatasetExpressionPolicy,
-) -> int:
-    """按数据集策略调整模板优先级。"""
-    lower_name = template_name.lower()
-    adjustment = policy.account_template_boost if lower_name.startswith("account_") else 0
-    if lower_name in policy.template_priority_penalties:
-        adjustment += policy.template_priority_penalties[lower_name]
-        return adjustment
-    for prefixes, penalty in policy.template_prefix_penalties.items():
-        if lower_name.startswith(prefixes):
-            adjustment += penalty
-            return adjustment
-    return adjustment
 
 
 def _is_event_field(field_name: str, policy: DatasetExpressionPolicy) -> bool:
@@ -315,7 +243,7 @@ def build_expression_candidates(
     raw_templates = _select_template_items(
         build_ctx.template_library, field_type, policy.dataset_id
     )
-    templates = _build_library_candidates(
+    templates = build_library_candidates(
         [item for item in raw_templates if isinstance(item, TemplateLibraryItem)],
         build_ctx=build_ctx,
         field_view=field_view,
