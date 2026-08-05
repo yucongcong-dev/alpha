@@ -42,32 +42,15 @@ FAQ 里大多数优化建议可以归成下面这张表。它比逐篇记 FAQ �
 
 ---
 
-## 2. 先分清 IS、OS 和状态
+## 2. 优化前确认结果阶段
 
-官方语义里：
+开始处理失败项前，先确认当前看到的是 simulation 的 IS 结果、Check Submission 状态，
+还是提交后逐步积累的 OS 指标。OS 页面上的 `N/A` 可能只是样本尚未积累完成，不应当作
+表达式失败直接进入 refine。
 
-- `IS`：历史回测阶段，也就是你在 `Simulate` 时直接看到的结果
-- `OS`：提交之后、随时间滚动形成的“真实世界”表现
-
-几个最常见状态至少要分清：
-
-- `IS-FAIL`
-  连基础 Sharpe 门槛都没过，不进入 OS
-- `OSTEST-PENDING`
-  进入了 OS，但部分测试或统计还没完成
-- `OSTEST-PASS`
-  OS 测试通过
-- `OSTEST-FAIL`
-  OS 测试失败
-- `OSTEST-DECM`
-  官方说明这是已经失败且不再继续测试的状态
-
-还要知道一件事：
-
-- OS 页面出现 `N/A` 不一定是异常
-- 很多统计项要等足够多交易日过去才会逐步填满
-
-比如官方明确说，像 `Sharpe125` 这种字段要等 125 个交易日之后才会有值。
+IS、Semi-OS、OS、OSTEST 生命周期和 N/A 条件统一见
+[04 平台术语与状态 Reference](04_platform_reference.md)。下文默认讨论已经取得明确
+simulation 或 Check Submission 结果的候选。
 
 ---
 
