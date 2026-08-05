@@ -20,6 +20,7 @@ from alpha.core.simulation import (
     run_field_test,
     run_field_test_in_worker,
 )
+from alpha.core.simulation_create import run_simulation_create_stage
 from alpha.core.simulation_parsing import (
     extract_alpha_id,
     extract_checks,
@@ -28,14 +29,10 @@ from alpha.core.simulation_parsing import (
     is_submittable_from_checks,
     summarize_failure,
 )
+from alpha.core.simulation_poll import run_simulation_poll_stage
 from alpha.core.simulation_precheck import PrecheckConfig, precheck_simulation_metrics
 from alpha.core.simulation_results import build_failure_result
-from alpha.core.simulation_stages import (
-    check_submission_with_retry,
-    run_check_submission_stage,
-    run_simulation_create_stage,
-    run_simulation_poll_stage,
-)
+from alpha.core.submission_checks import check_submission_with_retry, run_check_submission_stage
 from alpha.exceptions import BrainHTTPError, BrainStopRequested, BrainTransientError
 from alpha.models.domain import (
     FailedCheck,
@@ -273,7 +270,7 @@ class TestCheckSubmissionWithRetry:
             def check_alpha_submission(self, _alpha_id: str) -> dict[str, object]:
                 return {"is": {"checks": [{"name": "LOW_SHARPE", "result": "PASS"}]}}
 
-        monkeypatch.setattr("alpha.core.simulation_stages.retry_operation", lambda *a, **k: a[2]())
+        monkeypatch.setattr("alpha.core.submission_checks.retry_operation", lambda *a, **k: a[2]())
 
         result = check_submission_with_retry(
             DummyClient(),
@@ -299,7 +296,7 @@ class TestCheckSubmissionWithRetry:
                     }
                 }
 
-        monkeypatch.setattr("alpha.core.simulation_stages.retry_operation", lambda *a, **k: a[2]())
+        monkeypatch.setattr("alpha.core.submission_checks.retry_operation", lambda *a, **k: a[2]())
 
         result = check_submission_with_retry(
             DummyClient(),
@@ -334,8 +331,8 @@ class TestCheckSubmissionWithRetry:
                     }
                 }
 
-        monkeypatch.setattr("alpha.core.simulation_stages.retry_operation", lambda *a, **k: a[2]())
-        monkeypatch.setattr("alpha.core.simulation_stages.wait_seconds", lambda *_a, **_k: None)
+        monkeypatch.setattr("alpha.core.submission_checks.retry_operation", lambda *a, **k: a[2]())
+        monkeypatch.setattr("alpha.core.submission_checks.wait_seconds", lambda *_a, **_k: None)
 
         result = check_submission_with_retry(DummyClient(), "alpha_1", retries=3)
 
@@ -367,9 +364,9 @@ class TestCheckSubmissionWithRetry:
             transport_attempts.append(attempts)
             return operation()
 
-        monkeypatch.setattr("alpha.core.simulation_stages.retry_operation", _retry)
+        monkeypatch.setattr("alpha.core.submission_checks.retry_operation", _retry)
         monkeypatch.setattr(
-            "alpha.core.simulation_stages.wait_seconds",
+            "alpha.core.submission_checks.wait_seconds",
             lambda _seconds, reason, **_kwargs: waits.append(reason),
         )
 
@@ -387,9 +384,9 @@ class TestCheckSubmissionWithRetry:
             transport_attempts.append(attempts)
             raise BrainTransientError("network unavailable")
 
-        monkeypatch.setattr("alpha.core.simulation_stages.retry_operation", _retry)
+        monkeypatch.setattr("alpha.core.submission_checks.retry_operation", _retry)
         monkeypatch.setattr(
-            "alpha.core.simulation_stages.wait_seconds",
+            "alpha.core.submission_checks.wait_seconds",
             lambda _seconds, reason, **_kwargs: waits.append(reason),
         )
 
@@ -403,7 +400,7 @@ class TestCheckSubmissionWithRetry:
         def _retry(*_args, **_kwargs):
             raise BrainHTTPError("GET /alphas/missing/check failed: 404", status=404)
 
-        monkeypatch.setattr("alpha.core.simulation_stages.retry_operation", _retry)
+        monkeypatch.setattr("alpha.core.submission_checks.retry_operation", _retry)
 
         with pytest.raises(BrainHTTPError) as exc_info:
             check_submission_with_retry(object(), "missing", retries=3)
@@ -414,8 +411,8 @@ class TestCheckSubmissionWithRetry:
         def _retry(*_args, **_kwargs):
             raise BrainHTTPError("GET /alphas/a/check failed: 503", status=503)
 
-        monkeypatch.setattr("alpha.core.simulation_stages.retry_operation", _retry)
-        monkeypatch.setattr("alpha.core.simulation_stages.wait_seconds", lambda *_a, **_k: None)
+        monkeypatch.setattr("alpha.core.submission_checks.retry_operation", _retry)
+        monkeypatch.setattr("alpha.core.submission_checks.wait_seconds", lambda *_a, **_k: None)
 
         assert check_submission_with_retry(object(), "a", retries=1) == (
             None,
@@ -436,9 +433,9 @@ class TestCheckSubmissionWithRetry:
             def check_alpha_submission(self, _alpha_id: str) -> dict[str, object]:
                 return next(responses)
 
-        monkeypatch.setattr("alpha.core.simulation_stages.retry_operation", lambda *a, **k: a[2]())
+        monkeypatch.setattr("alpha.core.submission_checks.retry_operation", lambda *a, **k: a[2]())
         monkeypatch.setattr(
-            "alpha.core.simulation_stages.wait_seconds",
+            "alpha.core.submission_checks.wait_seconds",
             lambda _seconds, reason, **_kwargs: waits.append(reason),
         )
 
@@ -456,8 +453,8 @@ class TestCheckSubmissionWithRetry:
                 calls += 1
                 return {}
 
-        monkeypatch.setattr("alpha.core.simulation_stages.retry_operation", lambda *a, **k: a[2]())
-        monkeypatch.setattr("alpha.core.simulation_stages.wait_seconds", lambda *_a, **_k: None)
+        monkeypatch.setattr("alpha.core.submission_checks.retry_operation", lambda *a, **k: a[2]())
+        monkeypatch.setattr("alpha.core.submission_checks.wait_seconds", lambda *_a, **_k: None)
 
         result = check_submission_with_retry(DummyClient(), "alpha_1", retries=2)
 
@@ -473,8 +470,8 @@ class TestCheckSubmissionWithRetry:
                 calls += 1
                 return {"is": {"checks": [{"name": "SELF_CORRELATION", "result": "PENDING"}]}}
 
-        monkeypatch.setattr("alpha.core.simulation_stages.retry_operation", lambda *a, **k: a[2]())
-        monkeypatch.setattr("alpha.core.simulation_stages.wait_seconds", lambda *_a, **_k: None)
+        monkeypatch.setattr("alpha.core.submission_checks.retry_operation", lambda *a, **k: a[2]())
+        monkeypatch.setattr("alpha.core.submission_checks.wait_seconds", lambda *_a, **_k: None)
 
         result = check_submission_with_retry(DummyClient(), "alpha_1", retries=2)
 
@@ -821,7 +818,7 @@ def test_run_check_submission_stage_with_self_correlation_pending(monkeypatch) -
         def check_alpha_submission(self, _alpha_id: str) -> dict[str, object]:
             return {"is": {"checks": [{"name": "SELF_CORRELATION", "result": "PENDING"}]}}
 
-    monkeypatch.setattr("alpha.core.simulation_stages.retry_operation", lambda *a, **k: a[2]())
+    monkeypatch.setattr("alpha.core.submission_checks.retry_operation", lambda *a, **k: a[2]())
 
     result = run_check_submission_stage(
         ctx,
@@ -906,7 +903,7 @@ def test_run_simulation_create_stage_merges_dict_settings_with_baseline(monkeypa
             captured["payload"] = payload
             return "/simulations/sim_123"
 
-    monkeypatch.setattr("alpha.core.simulation_stages.retry_operation", lambda *a, **k: a[2]())
+    monkeypatch.setattr("alpha.core.simulation_create.retry_operation", lambda *a, **k: a[2]())
 
     result = run_simulation_create_stage(
         ctx,
@@ -974,7 +971,7 @@ def test_run_simulation_create_stage_merges_settings_variant_with_baseline(monke
             captured["payload"] = payload
             return "/simulations/sim_456"
 
-    monkeypatch.setattr("alpha.core.simulation_stages.retry_operation", lambda *a, **k: a[2]())
+    monkeypatch.setattr("alpha.core.simulation_create.retry_operation", lambda *a, **k: a[2]())
 
     result = run_simulation_create_stage(
         ctx,
@@ -1032,7 +1029,7 @@ def test_run_simulation_poll_stage_skips_when_stop_is_requested() -> None:
 
     with (
         patch(
-            "alpha.core.simulation_stages.SimulationStageConfig.from_stage_args",
+            "alpha.core.simulation_poll.SimulationStageConfig.from_stage_args",
             return_value=SimpleNamespace(
                 simulation_poll_retries=3,
                 simulation_max_polls=10,
@@ -1042,7 +1039,7 @@ def test_run_simulation_poll_stage_skips_when_stop_is_requested() -> None:
             ),
         ),
         patch(
-            "alpha.core.simulation_stages.poll_simulation_with_retry",
+            "alpha.core.simulation_poll.poll_simulation_with_retry",
             side_effect=BrainStopRequested("polling stopped"),
         ),
     ):

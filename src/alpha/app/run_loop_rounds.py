@@ -73,6 +73,7 @@ class ScheduleRoundContext:
         budget = self.scheduler_options.max_total_simulations
         return budget > 0 and self.scheduled_simulations >= budget
 
+
 def _apply_feedback_refresh(
     context: ScheduleRoundContext,
     feedback_refresh: RuntimeFeedbackRefresh,

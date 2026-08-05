@@ -14,7 +14,7 @@ from typing import cast
 from ..analysis.results_persistence import dump_results, dump_results_incremental
 from ..api.client import BrainClient
 from ..config.constants import STATUS_ERROR
-from ..core.simulation_stages import check_submission_with_retry
+from ..core.submission_checks import check_submission_with_retry
 from ..exceptions import BrainHTTPError
 from ..io.results_store import exclusive_results_transaction, initialize_results_journal
 from ..models.domain import FieldTestResult

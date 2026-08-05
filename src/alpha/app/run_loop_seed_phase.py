@@ -28,9 +28,7 @@ class SeedPhaseState:
         resolved_field_ids: set[str] | None = None,
     ) -> SeedPhaseState:
         """Build seed state for the selected field set."""
-        targets = {
-            str(first_non_empty(item.get("id"), SENTINEL_UNKNOWN)) for item in fields
-        }
+        targets = {str(first_non_empty(item.get("id"), SENTINEL_UNKNOWN)) for item in fields}
         return cls(
             enabled=enabled,
             target_field_ids=targets,
@@ -64,7 +62,8 @@ class SeedPhaseState:
         if not self.enabled:
             return
         attempted_field_ids = {
-            field_id for field_id, _template, _expression, _settings in execution_state.attempted_keys
+            field_id
+            for field_id, _template, _expression, _settings in execution_state.attempted_keys
         }
         self.resolved_field_ids.update(attempted_field_ids & self.target_field_ids)
         active_field_ids = {

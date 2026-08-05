@@ -30,4 +30,5 @@ def test_main_accepts_windows_coverage_paths(tmp_path: Path, monkeypatch, capsys
     monkeypatch.setattr(sys, "argv", ["check_critical_coverage.py", str(report_path)])
 
     assert check_critical_coverage.main() == 0
-    assert "validated 21 critical module floors" in capsys.readouterr().out
+    expected_count = len(check_critical_coverage.CRITICAL_COVERAGE_FLOORS)
+    assert f"validated {expected_count} critical module floors" in capsys.readouterr().out

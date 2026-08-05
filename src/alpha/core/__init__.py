@@ -46,7 +46,8 @@ if TYPE_CHECKING:
         summarize_failure,
     )
     from .simulation_results import build_failure_result
-    from .simulation_stages import create_simulation_with_retry, poll_simulation_with_retry
+    from .simulation_create import create_simulation_with_retry
+    from .simulation_poll import poll_simulation_with_retry
     from .template_planning import (
         build_pending_template_variants,
         resolve_field_template_candidates,
@@ -71,12 +72,12 @@ _EXPORT_MAP: ExportMap = {
     "register_queue_busy_field": (".scheduler", "register_queue_busy_field"),
     "throttle_before_submission": (".scheduler", "throttle_before_submission"),
     "build_failure_result": (".simulation_results", "build_failure_result"),
-    "create_simulation_with_retry": (".simulation_stages", "create_simulation_with_retry"),
+    "create_simulation_with_retry": (".simulation_create", "create_simulation_with_retry"),
     "extract_alpha_id": (".simulation_parsing", "extract_alpha_id"),
     "extract_checks": (".simulation_parsing", "extract_checks"),
     "extract_failed_checks": (".simulation_parsing", "extract_failed_checks"),
     "is_submittable_from_checks": (".simulation_parsing", "is_submittable_from_checks"),
-    "poll_simulation_with_retry": (".simulation_stages", "poll_simulation_with_retry"),
+    "poll_simulation_with_retry": (".simulation_poll", "poll_simulation_with_retry"),
     "run_field_test": (".simulation", "run_field_test"),
     "run_field_test_in_worker": (".simulation", "run_field_test_in_worker"),
     "summarize_failure": (".simulation_parsing", "summarize_failure"),
