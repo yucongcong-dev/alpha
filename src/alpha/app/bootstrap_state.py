@@ -9,15 +9,17 @@ from dataclasses import replace
 from datetime import datetime, timezone
 import logging
 import time
+from typing import cast
 
 from ..analysis.results_persistence import dump_results, dump_results_incremental
+from ..api.client import BrainClient
 from ..config.constants import STATUS_ERROR
 from ..core.simulation_stages import check_submission_with_retry
 from ..exceptions import BrainHTTPError
 from ..io.results_store import exclusive_results_transaction, initialize_results_journal
 from ..models.domain import FieldTestResult
 from ..models.result_predicates import has_pending_checks
-from ..models.runtime_protocols import RunConfig
+from ..models.runtime_protocols import ClientFactoryLike, RunConfig
 from ..policy.blacklist_context import set_active_datasets_root
 from ..policy.blacklist_runtime_stats import build_blacklist_runtime_stats
 from ..policy.blacklist_store import load_blacklisted_template_keys
@@ -122,7 +124,7 @@ def persist_reconciled_historical_results(
 
 
 def refresh_pending_check_results(
-    client: object,
+    client: BrainClient | ClientFactoryLike,
     results: list[FieldTestResult],
     *,
     retries: int,
@@ -155,7 +157,7 @@ def refresh_pending_check_results(
             return result, False
         checked_at = _utc_now_iso()
         get_client = getattr(client, "get_client", None)
-        active_client = get_client() if callable(get_client) else client
+        active_client = cast(BrainClient, get_client() if callable(get_client) else client)
         try:
             submittable, message, failed_checks = check_submission_with_retry(
                 active_client,
