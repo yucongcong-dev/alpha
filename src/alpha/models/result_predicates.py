@@ -42,7 +42,9 @@ def is_attempted_result(result: FieldTestResult) -> bool:
 
 def is_informative_result(result: FieldTestResult) -> bool:
     """判断结果是否应参与模板/字段质量学习。"""
-    return result.status not in {STATUS_ERROR, STATUS_SKIPPED} and not is_queue_timeout_result(result)
+    return result.status not in {STATUS_ERROR, STATUS_SKIPPED} and not is_queue_timeout_result(
+        result
+    )
 
 
 def is_feedback_eligible_result(result: FieldTestResult) -> bool:

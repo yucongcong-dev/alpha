@@ -108,10 +108,9 @@ def test_main_routes_blacklist_command_without_runtime_bootstrap(monkeypatch) ->
     monkeypatch.setattr(
         main_module,
         "run_blacklist_command",
-        lambda command, *, dataset_id, datasets_root: calls.append(
-            (command, dataset_id, datasets_root)
-        )
-        or 0,
+        lambda command, *, dataset_id, datasets_root: (
+            calls.append((command, dataset_id, datasets_root)) or 0
+        ),
     )
 
     def _unexpected(*_args, **_kwargs):

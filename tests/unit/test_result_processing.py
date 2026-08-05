@@ -116,7 +116,9 @@ def test_blacklist_write_failure_does_not_abort_completed_result(monkeypatch, tm
     assert state.attempted_keys == {result_processing.result_identity(result)}
 
 
-def test_worker_failure_is_persisted_without_marking_candidate_attempted(monkeypatch, tmp_path) -> None:
+def test_worker_failure_is_persisted_without_marking_candidate_attempted(
+    monkeypatch, tmp_path
+) -> None:
     result = FieldTestResult(
         field_id="field_1",
         field_type="MATRIX",
