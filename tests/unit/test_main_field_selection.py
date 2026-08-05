@@ -756,6 +756,29 @@ def test_refresh_runtime_feedback_invalidates_retry_field_for_queue_timeout() ->
     assert build_ctx.field_feedback == {}
 
 
+def test_refresh_runtime_feedback_invalidates_retry_field_for_worker_failure() -> None:
+    build_ctx = TemplateBuildContext(options=TemplateBuildOptions(**_DEFAULT_SIM_SETTINGS))
+    build_ctx.feedback_result_count = 0
+    results = [
+        FieldTestResult(
+            field_id="failed_field",
+            field_type="MATRIX",
+            field_name="failed_field",
+            template_name="seed",
+            status="error",
+            failed_stage="worker",
+            message="connection reset",
+            expression="rank(failed_field)",
+        )
+    ]
+
+    refresh = refresh_runtime_feedback(build_ctx, results)
+
+    assert refresh.feedback_changed is False
+    assert refresh.retry_field_ids == frozenset({"failed_field"})
+    assert build_ctx.field_feedback == {}
+
+
 def test_build_field_resume_positions_tracks_original_order() -> None:
     """Resume positions should remain tied to the original field ordering."""
     positions = build_field_resume_positions(

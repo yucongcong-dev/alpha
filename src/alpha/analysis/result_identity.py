@@ -12,7 +12,10 @@ from datetime import datetime
 
 from ..models.domain import FieldTestResult
 from ..models.result_predicates import (
-    is_informative_result,
+    is_attempted_result,
+)
+from ..models.result_predicates import (
+    is_informative_result as is_informative_result,
 )
 from ..models.result_predicates import (
     is_queue_timeout_result as is_queue_timeout_result,
@@ -31,7 +34,7 @@ def result_identity(result: FieldTestResult) -> tuple[str, str, str, str]:
 
 def attempted_template_keys(results: Sequence[FieldTestResult]) -> set[tuple[str, str, str, str]]:
     """收集已经持久化记录过的模板尝试键集合。"""
-    return {result_identity(result) for result in results if is_informative_result(result)}
+    return {result_identity(result) for result in results if is_attempted_result(result)}
 
 
 def merge_results_by_identity(

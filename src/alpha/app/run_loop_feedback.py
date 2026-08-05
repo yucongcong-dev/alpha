@@ -13,7 +13,11 @@ from ..analysis.feedback_stats import (
     update_global_failed_check_counts_with_result,
 )
 from ..models.domain import FieldTestResult
-from ..models.result_predicates import is_feedback_eligible_result, is_queue_timeout_result
+from ..models.result_predicates import (
+    is_feedback_eligible_result,
+    is_queue_timeout_result,
+    is_retryable_infrastructure_result,
+)
 from ..runtime.contexts import TemplateBuildContext
 
 
@@ -56,7 +60,7 @@ def refresh_runtime_feedback(
     retry_field_ids: set[str] = set()
     for result in results[cached_count:]:
         feedback_changed = feedback_changed or is_feedback_eligible_result(result)
-        if is_queue_timeout_result(result):
+        if is_queue_timeout_result(result) or is_retryable_infrastructure_result(result):
             retry_field_ids.add(result.field_id)
         update_field_feedback_with_result(template_build_ctx.field_feedback, result)
         update_global_failed_check_counts_with_result(

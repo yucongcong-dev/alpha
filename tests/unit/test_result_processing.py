@@ -11,18 +11,18 @@ from alpha.models.runtime import ExecutionState, FutureCompletionContext, Result
 def test_build_result_processing_services_reads_current_dependencies(monkeypatch) -> None:
     """Late test/plugin overrides should be captured for each processing call."""
 
-    def informative(_result) -> bool:
+    def attempted(_result) -> bool:
         return False
 
     def writer(*_args, **_kwargs) -> int:
         return 7
 
-    monkeypatch.setattr(result_processing, "is_informative_result", informative)
+    monkeypatch.setattr(result_processing, "is_attempted_result", attempted)
     monkeypatch.setattr(results_persistence, "dump_results_incremental", writer)
 
     services = result_processing.build_result_processing_services()
 
-    assert services.is_informative_result is informative
+    assert services.is_attempted_result is attempted
     assert services.dump_results_incremental is writer
     assert services.result_identity is result_processing.result_identity
 
@@ -114,3 +114,36 @@ def test_blacklist_write_failure_does_not_abort_completed_result(monkeypatch, tm
     assert state.result_ledger.results == [result]
     assert state.result_ledger.persisted_result_count == 1
     assert state.attempted_keys == {result_processing.result_identity(result)}
+
+
+def test_worker_failure_is_persisted_without_marking_candidate_attempted(monkeypatch, tmp_path) -> None:
+    result = FieldTestResult(
+        field_id="field_1",
+        field_type="MATRIX",
+        field_name="field_1",
+        template_name="tpl",
+        expression="rank(field_1)",
+        settings_fingerprint="settings",
+        status="error",
+        failed_stage="worker",
+        message="connection reset",
+    )
+    state = ExecutionState.create()
+    context = FutureCompletionContext(
+        result_write_options=ResultWriteOptions(
+            dataset_id="fundamental6",
+            output_path=str(tmp_path / "results.json"),
+        ),
+        settings_fingerprint="settings",
+        template_library_fingerprint="templates",
+    )
+    monkeypatch.setattr(results_persistence, "dump_results_incremental", lambda *_a, **_k: 1)
+
+    result_processing.apply_completed_result(
+        result,
+        completion_ctx=context,
+        execution_state=state,
+    )
+
+    assert state.result_ledger.results == [result]
+    assert state.attempted_keys == set()

@@ -2,7 +2,12 @@
 
 from __future__ import annotations
 
-from alpha.analysis.result_identity import merge_results_by_identity, merge_results_for_update
+from alpha.analysis.result_identity import (
+    attempted_template_keys,
+    merge_results_by_identity,
+    merge_results_for_update,
+    result_identity,
+)
 from alpha.analysis.result_provenance import enrich_results_provenance
 from alpha.models.domain import FieldTestResult
 
@@ -58,6 +63,21 @@ def test_persistence_update_advances_revision() -> None:
 
     assert merged[0].submittable is True
     assert merged[0].revision == 4
+
+
+def test_attempted_keys_exclude_retryable_worker_failure() -> None:
+    worker_failure = _result(status="error", failed_stage="worker")
+    terminal_check_error = _result(
+        template_name="check",
+        expression="rank(-f1)",
+        status="error",
+        failed_stage="check_submission",
+    )
+
+    attempted = attempted_template_keys([worker_failure, terminal_check_error])
+
+    assert result_identity(worker_failure) not in attempted
+    assert result_identity(terminal_check_error) in attempted
 
 
 def test_enrich_results_provenance_fills_scope_and_portable_source(tmp_path) -> None:

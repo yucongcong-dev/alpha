@@ -17,7 +17,7 @@ from ..analysis.result_identity import result_identity
 from ..analysis.template_stats import update_template_stats_with_result
 from ..config.constants import STATUS_ERROR, STATUS_SKIPPED
 from ..models.domain import FieldTestResult
-from ..models.result_predicates import is_informative_result
+from ..models.result_predicates import is_attempted_result
 from ..models.runtime_protocols import TemplateStats
 from ..policy.blacklist_runtime_stats import build_blacklist_runtime_stats
 from ..policy.blacklist_runtime_updates import auto_update_blacklist_incremental
@@ -73,7 +73,7 @@ class IncrementalBlacklistUpdater(Protocol):
 class ResultProcessingServices:
     """Typed dependencies for state updates, policy effects, and persistence."""
 
-    is_informative_result: Callable[[FieldTestResult], bool]
+    is_attempted_result: Callable[[FieldTestResult], bool]
     result_identity: Callable[[FieldTestResult], ResultIdentity]
     update_template_stats_with_result: Callable[[TemplateStats, FieldTestResult], TemplateStats]
     build_blacklist_runtime_stats: Callable[[list[FieldTestResult]], BlacklistRuntimeStats]
@@ -86,7 +86,7 @@ def build_result_processing_services() -> ResultProcessingServices:
     from ..analysis.results_persistence import dump_results_incremental
 
     return ResultProcessingServices(
-        is_informative_result=is_informative_result,
+        is_attempted_result=is_attempted_result,
         result_identity=result_identity,
         update_template_stats_with_result=update_template_stats_with_result,
         build_blacklist_runtime_stats=build_blacklist_runtime_stats,
@@ -129,7 +129,7 @@ def apply_result_state_updates(
     """Commit one result after its durable write has completed."""
     execution_state.result_ledger.append(result)
     execution_state.result_ledger.persisted_result_count = persisted_result_count
-    if services.is_informative_result(result):
+    if services.is_attempted_result(result):
         execution_state.attempted_keys.add(services.result_identity(result))
     execution_state.template_stats = template_stats
     return template_stats
