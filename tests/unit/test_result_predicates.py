@@ -18,7 +18,7 @@ def test_checks_unavailable_remain_resumable() -> None:
     assert has_pending_checks(result) is True
 
 
-def test_terminal_result_ignores_stale_pending_check() -> None:
+def test_pending_check_remains_resumable_even_with_terminal_flag() -> None:
     result = FieldTestResult(
         field_id="cashflow_op",
         field_type="MATRIX",
@@ -30,4 +30,4 @@ def test_terminal_result_ignores_stale_pending_check() -> None:
         failed_checks=[FailedCheck(name="SELF_CORRELATION", result="PENDING")],
     )
 
-    assert has_pending_checks(result) is False
+    assert has_pending_checks(result) is True

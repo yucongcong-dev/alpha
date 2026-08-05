@@ -253,6 +253,17 @@ class TestIsSubmittableFromChecks:
             is None
         )
 
+    def test_pending_takes_precedence_over_failure(self) -> None:
+        assert (
+            is_submittable_from_checks(
+                [
+                    FailedCheck(name="LOW_FITNESS", result="FAIL"),
+                    FailedCheck(name="SELF_CORRELATION", result="PENDING"),
+                ]
+            )
+            is None
+        )
+
 
 class TestCheckSubmissionWithRetry:
     """check_submission_with_retry 测试"""
@@ -302,9 +313,13 @@ class TestCheckSubmissionWithRetry:
             [FailedCheck(name="SELF_CORRELATION", result="FAIL", value=0.91, limit=0.7)],
         )
 
-    def test_terminal_failure_drops_unrelated_pending_checks(self, monkeypatch) -> None:
+    def test_failure_waits_for_unrelated_pending_checks(self, monkeypatch) -> None:
+        calls = 0
+
         class DummyClient:
             def check_alpha_submission(self, _alpha_id: str) -> dict[str, object]:
+                nonlocal calls
+                calls += 1
                 return {
                     "is": {
                         "checks": [
@@ -320,13 +335,18 @@ class TestCheckSubmissionWithRetry:
                 }
 
         monkeypatch.setattr("alpha.core.simulation_stages.retry_operation", lambda *a, **k: a[2]())
+        monkeypatch.setattr("alpha.core.simulation_stages.wait_seconds", lambda *_a, **_k: None)
 
         result = check_submission_with_retry(DummyClient(), "alpha_1", retries=3)
 
+        assert calls == 3
         assert result == (
-            False,
-            "checks failed",
-            [FailedCheck(name="LOW_FITNESS", result="FAIL", value=0.9, limit=1.0)],
+            None,
+            "checks pending",
+            [
+                FailedCheck(name="LOW_FITNESS", result="FAIL", value=0.9, limit=1.0),
+                FailedCheck(name="SELF_CORRELATION", result="PENDING"),
+            ],
         )
 
     def test_pending_checks_are_polled_until_terminal(self, monkeypatch) -> None:

@@ -99,20 +99,19 @@ def test_refresh_pending_check_results_skips_rows_without_alpha_id(monkeypatch) 
     assert refreshed[0].alpha_id is None
 
 
-def test_refresh_pending_check_results_skips_terminal_failure(monkeypatch) -> None:
-    def _unexpected(*_args, **_kwargs):
-        raise AssertionError("check_submission should not be called")
-
+def test_refresh_pending_check_results_recovers_stale_terminal_flag(monkeypatch) -> None:
     monkeypatch.setattr(
         "alpha.app.bootstrap_state.check_submission_with_retry",
-        _unexpected,
+        lambda *_args, **_kwargs: (True, "checks passed", []),
     )
 
     original = _pending_result(submittable=False)
     refreshed, count = refresh_pending_check_results(object(), [original], retries=2)
 
-    assert count == 0
-    assert refreshed[0] is original
+    assert count == 1
+    assert refreshed[0].submittable is True
+    assert refreshed[0].message == "checks passed"
+    assert refreshed[0].failed_checks == []
 
 
 def test_refresh_pending_check_results_respects_startup_budget(monkeypatch) -> None:

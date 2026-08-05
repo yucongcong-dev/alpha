@@ -180,7 +180,9 @@ def check_submission_with_retry(
         )
         failed_checks = extract_failed_checks(submission_check)
         pending_checks = extract_pending_checks(submission_check)
-        unresolved_checks = pending_checks if submittable is None else failed_checks
+        unresolved_checks = (
+            [*failed_checks, *pending_checks] if submittable is None else failed_checks
+        )
         message = (
             "checks unavailable"
             if submittable is None and not unresolved_checks

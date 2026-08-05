@@ -54,7 +54,7 @@ def test_execution_metrics_follow_results_without_manual_refresh() -> None:
     assert ledger.unique_field_ids == {"field_2"}
 
 
-def test_terminal_failed_result_is_not_counted_as_pending() -> None:
+def test_pending_check_is_counted_despite_stale_terminal_flag() -> None:
     state = _state()
     state.result_ledger.append(
         FieldTestResult(
@@ -69,7 +69,7 @@ def test_terminal_failed_result_is_not_counted_as_pending() -> None:
         )
     )
 
-    assert state.result_ledger.pending_check_count == 0
+    assert state.result_ledger.pending_check_count == 1
 
     state.result_ledger.append(
         FieldTestResult(
@@ -84,7 +84,7 @@ def test_terminal_failed_result_is_not_counted_as_pending() -> None:
         )
     )
 
-    assert state.result_ledger.pending_check_count == 1
+    assert state.result_ledger.pending_check_count == 2
 
 
 def test_queue_retry_state_owns_retry_budget() -> None:
