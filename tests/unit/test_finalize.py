@@ -18,9 +18,9 @@ from alpha.models.runtime import (
 )
 
 
-def _build_run_ctx() -> InitializedRunContext:
+def _build_run_ctx(*, client_factory=None) -> InitializedRunContext:
     return InitializedRunContext(
-        client_factory=None,
+        client_factory=client_factory,
         template_library={},
         filters=RunFilters(),
         expression_policy=None,
@@ -104,3 +104,65 @@ def test_finalize_run_updates_separate_feedback_output(tmp_path) -> None:
     assert mock_dump.call_args_list[-1].args[2] == [result]
     mock_persist_index.assert_called_once_with(str(tmp_path / "feedback.json"))
     mock_delete.assert_called_once_with(str(tmp_path / "state.json"))
+
+
+def test_finalize_run_reconciles_pending_checks_before_persisting(tmp_path) -> None:
+    pending = FieldTestResult(
+        field_id="field_1",
+        field_type="MATRIX",
+        field_name="field_1",
+        template_name="template_1",
+        alpha_id="alpha_1",
+        status="simulated",
+        submittable=None,
+        message="checks pending",
+        expression="rank(field_1)",
+    )
+    resolved = FieldTestResult(
+        field_id="field_1",
+        field_type="MATRIX",
+        field_name="field_1",
+        template_name="template_1",
+        alpha_id="alpha_1",
+        status="simulated",
+        submittable=True,
+        message="checks passed",
+        expression="rank(field_1)",
+    )
+    client_factory = object()
+    run_ctx = _build_run_ctx(client_factory=client_factory)
+    run_ctx.execution_state.result_ledger.append(pending)
+    args = argparse.Namespace(
+        output=str(tmp_path / "raw-results.json"),
+        dataset_id="fundamental6",
+        auto_update_blacklist=False,
+        check_submission_retries=3,
+    )
+    run_paths = RunPaths(
+        results_dir=str(tmp_path),
+        log_file=str(tmp_path / "run.log"),
+        checkpoint_file=str(tmp_path / "checkpoint.json"),
+        output=str(tmp_path / "results.json"),
+        state_file=str(tmp_path / "state.json"),
+    )
+
+    with (
+        patch(
+            "alpha.app.finalize.refresh_pending_check_results",
+            return_value=([resolved], 1),
+        ) as mock_refresh,
+        patch("alpha.app.finalize.dump_results") as mock_dump,
+        patch("alpha.app.finalize.delete_pipeline_state"),
+    ):
+        finalize_run(args, run_ctx, run_paths=run_paths)
+
+    mock_refresh.assert_called_once_with(
+        client_factory,
+        [pending],
+        retries=3,
+        refresh_limit=0,
+        max_refresh_seconds=0,
+        max_workers=1,
+    )
+    assert mock_dump.call_args.args[2] == [resolved]
+    assert run_ctx.execution_state.result_ledger.pending_check_count == 0

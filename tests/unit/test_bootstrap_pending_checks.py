@@ -202,3 +202,38 @@ def test_refresh_pending_check_results_respects_total_time_budget(monkeypatch) -
     assert count == 0
     assert refreshed[0].updated_at
     assert refreshed[1].updated_at == ""
+
+
+def test_refresh_pending_check_results_uses_worker_factory_for_parallel_checks(monkeypatch) -> None:
+    clients: list[object] = []
+
+    class _Factory:
+        def get_client(self):
+            client = object()
+            clients.append(client)
+            return client
+
+    checked_clients: list[object] = []
+
+    def _resolve(client, _alpha_id, _retries):
+        checked_clients.append(client)
+        return True, "checks passed", []
+
+    monkeypatch.setattr(
+        "alpha.app.bootstrap_state.check_submission_with_retry",
+        _resolve,
+    )
+
+    refreshed, count = refresh_pending_check_results(
+        _Factory(),
+        [_pending_result(alpha_id="alpha_0"), _pending_result(alpha_id="alpha_1")],
+        retries=1,
+        refresh_limit=0,
+        max_refresh_seconds=0,
+        max_workers=2,
+    )
+
+    assert count == 2
+    assert all(result.submittable is True for result in refreshed)
+    assert len(clients) == 2
+    assert set(checked_clients) == set(clients)

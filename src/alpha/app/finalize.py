@@ -22,6 +22,7 @@ from ..io.results_store import exclusive_results_transaction
 from ..models.io_types import RunPaths
 from ..models.runtime_options import ResultWriteOptions
 from ..runtime.state import InitializedRunContext
+from .bootstrap_state import refresh_pending_check_results
 
 logger = logging.getLogger(__name__)
 
@@ -47,6 +48,24 @@ def finalize_run(
     state_file = _run_path_value(run_paths, "state_file")
     result_ledger = execution_state.result_ledger
     results = result_ledger.results
+    pending_before = result_ledger.pending_check_count
+    if pending_before:
+        refreshed_results, resolved_count = refresh_pending_check_results(
+            run_ctx.client_factory,
+            list(results),
+            retries=args.check_submission_retries,
+            refresh_limit=0,
+            max_refresh_seconds=0,
+            max_workers=run_ctx.runtime_state.max_workers,
+        )
+        results[:] = refreshed_results
+        result_ledger.refresh_metrics()
+        logger.info(
+            "[check-submission-finalize] attempted=%d resolved=%d remaining=%d",
+            pending_before,
+            resolved_count,
+            result_ledger.pending_check_count,
+        )
     enrich_results_provenance(
         results,
         output_path=output_path,

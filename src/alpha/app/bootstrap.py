@@ -15,6 +15,8 @@ import logging
 
 from ..analysis.analysis_sync import ensure_analysis_synced
 from ..analysis.feedback_history import build_historical_run_state, rebuild_historical_run_state
+from ..analysis.feedback_run_index import persist_feedback_run_index
+from ..analysis.result_identity import result_identity
 from ..api.client import BrainClient, login_with_retry
 from ..cli.filters import load_run_filters_extended, setup_runtime_logging
 from ..cli.run_config import build_run_config_snapshot
@@ -226,28 +228,52 @@ def prepare_bootstrap_resources(
         supporting_resources.template_library
     )
     settings_fingerprint = supporting_services.build_settings_fingerprint(template_options)
-    existing_results = supporting_resources.historical_state.existing_results
-    refreshed_results, refreshed_count = refresh_pending_check_results(
+    historical_state = supporting_resources.historical_state
+    existing_results = historical_state.existing_results
+    feedback_results = historical_state.feedback_results
+    refreshed_feedback_results, refreshed_count = refresh_pending_check_results(
         bootstrap_client,
-        existing_results,
+        feedback_results,
         retries=field_options.check_submission_retries,
     )
-    if refreshed_results != existing_results:
+    if refreshed_feedback_results != feedback_results:
+        refreshed_by_identity = {
+            result_identity(result): result for result in refreshed_feedback_results
+        }
+        refreshed_existing_results = [
+            refreshed_by_identity.get(result_identity(result), result) for result in existing_results
+        ]
+        refreshed_state = replace(
+            historical_state,
+            feedback_results=refreshed_feedback_results,
+        )
         supporting_resources = replace(
             supporting_resources,
             historical_state=rebuild_historical_run_state(
-                supporting_resources.historical_state,
-                refreshed_results,
+                refreshed_state,
+                refreshed_existing_results,
             ),
         )
-        persist_reconciled_historical_results(
-            output_file=paths.output_file,
-            dataset_id=dataset_id,
-            results=refreshed_results,
-            settings_fingerprint=settings_fingerprint,
-            template_library_fingerprint=template_library_fingerprint,
-            run_config=effective_run_config,
-        )
+        if refreshed_existing_results != existing_results:
+            persist_reconciled_historical_results(
+                output_file=paths.output_file,
+                dataset_id=dataset_id,
+                results=refreshed_existing_results,
+                settings_fingerprint=settings_fingerprint,
+                template_library_fingerprint=template_library_fingerprint,
+                run_config=effective_run_config,
+            )
+        feedback_output = str(getattr(paths, "feedback_output", "") or "")
+        if feedback_output and feedback_output != paths.output_file:
+            persist_reconciled_historical_results(
+                output_file=feedback_output,
+                dataset_id=dataset_id,
+                results=refreshed_feedback_results,
+                settings_fingerprint=settings_fingerprint,
+                template_library_fingerprint=template_library_fingerprint,
+                run_config=effective_run_config,
+            )
+            persist_feedback_run_index(feedback_output)
         if refreshed_count:
             logger.info(
                 "[check-submission-resume] refreshed %d historical pending results",

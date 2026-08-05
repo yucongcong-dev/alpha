@@ -4,17 +4,17 @@ bootstrap 执行态与历史结果装配辅助模块。
 
 from __future__ import annotations
 
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import replace
 from datetime import datetime, timezone
 import logging
 import time
 
 from ..analysis.results_persistence import dump_results, dump_results_incremental
-from ..api.client import BrainClient
 from ..config.constants import STATUS_ERROR
 from ..core.simulation_stages import check_submission_with_retry
 from ..exceptions import BrainHTTPError
-from ..io.results_store import initialize_results_journal
+from ..io.results_store import exclusive_results_transaction, initialize_results_journal
 from ..models.domain import FieldTestResult
 from ..models.result_predicates import has_pending_checks
 from ..models.runtime_protocols import RunConfig
@@ -110,23 +110,25 @@ def persist_reconciled_historical_results(
     run_config: RunConfig,
 ) -> None:
     """Persist startup reconciliation before later bootstrap stages may return early."""
-    dump_results(
-        output_file,
-        dataset_id,
-        results,
-        settings_fingerprint=settings_fingerprint,
-        template_library_fingerprint=template_library_fingerprint,
-        run_config=run_config,
-    )
+    with exclusive_results_transaction(output_file):
+        dump_results(
+            output_file,
+            dataset_id,
+            results,
+            settings_fingerprint=settings_fingerprint,
+            template_library_fingerprint=template_library_fingerprint,
+            run_config=run_config,
+        )
 
 
 def refresh_pending_check_results(
-    client: BrainClient,
+    client: object,
     results: list[FieldTestResult],
     *,
     retries: int,
     refresh_limit: int = DEFAULT_PENDING_CHECK_REFRESH_LIMIT,
     max_refresh_seconds: float = DEFAULT_PENDING_CHECK_REFRESH_MAX_SECONDS,
+    max_workers: int = 1,
 ) -> tuple[list[FieldTestResult], int]:
     """Resolve historical PENDING checks without recreating their simulations."""
     refreshed_results = list(results)
@@ -144,26 +146,25 @@ def refresh_pending_check_results(
             item[0],
         )
     )
-    for index, result in pending_results:
+    if not pending_results:
+        return refreshed_results, refreshed_count
+    def _refresh_one(result: FieldTestResult) -> tuple[FieldTestResult, bool]:
         alpha_id = result.alpha_id
         if not alpha_id:
-            continue
-        if refresh_limit > 0 and attempted_count >= refresh_limit:
-            break
-        if max_refresh_seconds > 0 and time.monotonic() - started_at >= max_refresh_seconds:
-            break
-        attempted_count += 1
+            return result, False
         checked_at = _utc_now_iso()
+        get_client = getattr(client, "get_client", None)
+        active_client = get_client() if callable(get_client) else client
         try:
             submittable, message, failed_checks = check_submission_with_retry(
-                client,
+                active_client,
                 alpha_id,
                 retries,
             )
         except BrainHTTPError as exc:
             if not exc.is_permanent_client_error:
                 raise
-            refreshed_results[index] = replace(
+            refreshed = replace(
                 result,
                 status=STATUS_ERROR,
                 submittable=False,
@@ -172,7 +173,6 @@ def refresh_pending_check_results(
                 failed_checks=[],
                 updated_at=checked_at,
             )
-            refreshed_count += 1
             logger.warning(
                 "[check-submission-resume] terminal HTTP error alpha_id=%s "
                 "field=%s template=%s status=%d",
@@ -181,7 +181,7 @@ def refresh_pending_check_results(
                 result.template_name,
                 exc.status,
             )
-            continue
+            return refreshed, True
         except Exception as exc:
             logger.warning(
                 "[check-submission-resume] failed alpha_id=%s field=%s template=%s: %s",
@@ -190,9 +190,8 @@ def refresh_pending_check_results(
                 result.template_name,
                 exc,
             )
-            refreshed_results[index] = replace(result, updated_at=checked_at)
-            continue
-        refreshed_results[index] = replace(
+            return replace(result, updated_at=checked_at), False
+        refreshed = replace(
             result,
             submittable=submittable,
             message=message,
@@ -207,8 +206,7 @@ def refresh_pending_check_results(
                 result.field_id,
                 result.template_name,
             )
-            continue
-        refreshed_count += 1
+            return refreshed, False
         logger.info(
             "[check-submission-resume] resolved alpha_id=%s field=%s template=%s submittable=%s",
             alpha_id,
@@ -216,6 +214,25 @@ def refresh_pending_check_results(
             result.template_name,
             submittable,
         )
+        return refreshed, True
+
+    selected_pending = pending_results
+    if refresh_limit > 0:
+        selected_pending = selected_pending[:refresh_limit]
+    worker_count = min(len(selected_pending), max(1, int(max_workers or 1)))
+    cursor = 0
+    with ThreadPoolExecutor(max_workers=worker_count) as executor:
+        while cursor < len(selected_pending):
+            if max_refresh_seconds > 0 and time.monotonic() - started_at >= max_refresh_seconds:
+                break
+            batch = selected_pending[cursor : cursor + worker_count]
+            futures = [executor.submit(_refresh_one, result) for _index, result in batch]
+            for (index, _result), future in zip(batch, futures, strict=True):
+                refreshed, resolved = future.result()
+                refreshed_results[index] = refreshed
+                refreshed_count += int(resolved)
+                attempted_count += 1
+            cursor += len(batch)
     deferred_count = len(pending_results) - attempted_count
     if deferred_count:
         logger.info(

@@ -296,6 +296,100 @@ def test_prepare_bootstrap_resources_persists_pending_refresh_before_empty_field
     }
 
 
+def test_prepare_bootstrap_resources_refreshes_cross_run_feedback_pending(
+    monkeypatch,
+) -> None:
+    original = FieldTestResult(
+        field_id="f1",
+        field_type="MATRIX",
+        field_name="f1",
+        template_name="t1",
+        alpha_id="alpha_1",
+        status="simulated",
+        submittable=None,
+        message="checks pending",
+        expression="rank(f1)",
+        settings_fingerprint="settings",
+    )
+    refreshed = FieldTestResult(
+        field_id="f1",
+        field_type="MATRIX",
+        field_name="f1",
+        template_name="t1",
+        alpha_id="alpha_1",
+        status="simulated",
+        submittable=True,
+        message="checks passed",
+        expression="rank(f1)",
+        settings_fingerprint="settings",
+    )
+    historical_state = HistoricalRunState(
+        existing_results=[],
+        feedback_results=[original],
+    )
+    expression_policy = SimpleNamespace(
+        policy_version="policy-v1",
+        feedback_scope="field_type",
+        use_curated_heuristics=True,
+    )
+    supporting_resources = BootstrapLoadedResources(
+        historical_state=historical_state,
+        expression_policy=expression_policy,
+        template_library={"MATRIX": []},
+        filters={},
+    )
+    persisted: list[dict[str, object]] = []
+    indexed_feedback_paths: list[str] = []
+
+    monkeypatch.setattr(
+        bootstrap_module,
+        "build_effective_run_paths",
+        lambda *_args: SimpleNamespace(),
+    )
+    monkeypatch.setattr(
+        bootstrap_module,
+        "load_bootstrap_supporting_resources",
+        lambda **_kwargs: supporting_resources,
+    )
+    monkeypatch.setattr(
+        bootstrap_module,
+        "refresh_pending_check_results",
+        lambda *_args, **_kwargs: ([refreshed], 1),
+    )
+    monkeypatch.setattr(
+        bootstrap_module,
+        "persist_reconciled_historical_results",
+        lambda **kwargs: persisted.append(kwargs),
+    )
+    monkeypatch.setattr(
+        bootstrap_module,
+        "persist_feedback_run_index",
+        indexed_feedback_paths.append,
+    )
+    monkeypatch.setattr(bootstrap_module, "load_bootstrap_fields", lambda **_kwargs: [])
+
+    result = prepare_bootstrap_resources(
+        SimpleNamespace(),
+        SimpleNamespace(dataset_id="fundamental6", check_submission_retries=1, fetch=None),
+        SimpleNamespace(),
+        SimpleNamespace(output_file="run.json", feedback_output="feedback.json"),
+        object(),
+        run_config={"run_name": "test"},
+        run_paths=None,
+        supporting_services=SimpleNamespace(
+            stable_fingerprint=lambda _value: "templates-fp",
+            build_settings_fingerprint=lambda _value: "settings-fp",
+        ),
+        field_services=SimpleNamespace(),
+    )
+
+    assert result is None
+    assert len(persisted) == 1
+    assert persisted[0]["output_file"] == "feedback.json"
+    assert persisted[0]["results"] == [refreshed]
+    assert indexed_feedback_paths == ["feedback.json"]
+
+
 def test_initialize_run_context_prefers_run_paths_for_cache_and_credentials(
     monkeypatch, tmp_path
 ) -> None:
