@@ -480,156 +480,59 @@ Margin = PnL / total dollars traded
 
 ## 10. 字段类型词典
 
-这一节主要解释字段右侧常见的 `type`，尤其是：
-
-- `MATRIX`
-- `VECTOR`
-- `GROUP`
-- `SET`
-
-它们不是“质量评级”，而是字段的数据形态。
+字段右侧的 `type` 描述数据形态，不是质量评级。具体怎样分流研究和模板，见
+[02 的 MATRIX、VECTOR、GROUP 研究分工](02_research_and_data_guide.md)。
 
 ### 10.1 `MATRIX`
 
-可以把 `MATRIX` 理解成：
+每个 `date × instrument` 通常只有一个值，是最常见的标量字段形态，例如
+`assets`、`debt` 和 `cashflow_op`。
 
-- 普通单值型字段
-- 对每个股票、每个日期，通常对应一个数
-
-典型例子：
-
-- `assets`
-- `cash_st`
-- `debt`
-- `cashflow_op`
-
-这类字段通常最适合直接进入普通标量模板，例如：
-
-- `rank(...)`
-- `ts_rank(...)`
-- `ts_zscore(...)`
-- `ts_decay_linear(...)`
-
-对研究流程的直接意义是：
-
-- 如果你看到字段类型是 `MATRIX`，默认先按“普通基本面/标量字段”处理
-- 它通常适合做慢频稳定化、cross-field ratio、group relative 结构
+这类字段可以直接进入普通截面和时间序列算子，例如 `rank()`、`ts_rank()`、
+`ts_zscore()` 和 `group_rank()`。
 
 ### 10.2 `VECTOR`
 
-可以把 `VECTOR` 理解成：
+每个 `date × instrument` 可以包含数量不固定的一组值，常见于事件或明细集合。
+它不能直接当作单值标量使用，通常要先经过 `vec_*` 聚合算子，例如：
 
-- 向量型字段
-- 对每个股票、每个日期，不一定是一个单独的数，更像一组值、事件集合，或需要先聚合的内容
+- `vec_count()`
+- `vec_avg()`
+- `vec_max()`
+- `vec_stddev()`
+- `vec_skewness()`
 
-在表达式里，这类字段通常不适合直接像标量一样硬套普通模板，而更常见的第一步是：
-
-- `vec_avg(...)`
-- `vec_sum(...)`
-
-比如本仓库在 `fundamental6` 里保留过这类结构：
-
-- `rank(ts_rank(vec_avg({field}), 60))`
-- `rank(ts_rank(vec_sum({field}), 60))`
-
-对研究流程的直接意义是：
-
-- `VECTOR` 更适合单独作为 event/vector 专项分支
-- 不建议和普通 `MATRIX` 字段放进同一个 broad-search 池里无差别扫
-- 它往往更依赖：
-  - 先聚合
-  - 再平滑
-  - 再决定是否需要事件触发
+聚合后得到 MATRIX 形态的单值，才能继续进入普通时序或截面算子。
 
 ### 10.3 `GROUP`
 
-可以把 `GROUP` 理解成：
+GROUP 字段表示 instrument 所属的类别或分组，例如 `sector`、`industry`、
+`subindustry` 和 `exchange`。它通常作为 group operator 的分组输入，而不是方向信号：
 
-- 组结构字段
-- 它更像“某个对象属于哪个组”或“某种分组语义”
-
-这类字段常见的用途不是直接拿去做普通时间序列变换，而是参与：
-
-- `group_rank`
-- `group_neutralize`
-- `group_backfill`
-- bucket/group 相关结构
-
-在本仓库的模板语境里，`GROUP` 分支经常意味着：
-
-- 先把字段转成适合组内比较的结构
-- 再做 rank / zscore / decay
-
-更实用的记法是：
-
-- `MATRIX` 更像“数值本身”
-- `GROUP` 更像“分组语义”
+- `group_rank(x, group)`
+- `group_zscore(x, group)`
+- `group_neutralize(x, group)`
+- `group_backfill(x, group, d)`
 
 ### 10.4 `SET`
 
-可以把 `SET` 理解成：
+SET 是集合型非标量字段。具体可用算子取决于平台当前字段和 operator 签名；不要在没有
+聚合或转换的情况下把它当作 MATRIX 使用。精确签名应查 Operators 页面或本地官方快照。
 
-- 集合型字段
-- 它和 `VECTOR` 一样，都不是最朴素的单值标量
+### 10.5 `bucket()` 与 `densify()`
 
-在实战里，`SET` 和 `VECTOR` 往往都不适合直接按普通标量字段粗暴处理，通常更适合：
-
-- 单独分支
-- 保留更窄的默认模板主干
-- 先做聚合或结构转换，再进入时序/截面模板
-
-如果当前没有平台级更细的字段释义，研究时可以先把它当作：
-
-- “需要额外结构处理的非标量字段”
-
-而不是：
-
-- “直接可和 `assets`、`debt` 一样处理的字段”
-
-### 10.5 一个够用的实战记忆法
-
-如果只想快速判断研究路线，可以先这样记：
-
-- `MATRIX`：普通单值字段
-  - 默认走标量主干模板
-- `VECTOR`：向量/事件型字段
-  - 默认先 `vec_avg / vec_sum`
-- `GROUP`：分组语义字段
-  - 默认考虑 group 相关结构
-- `SET`：集合型字段
-  - 默认单独处理，不和普通标量字段混扫
-
-对 `fundamental6` 这种数据集，这个区分尤其重要：
-
-- `MATRIX` 适合作为基本面主干
-- `VECTOR` 更适合作为事件/向量专项支路
-- `GROUP / SET` 不该简单混回普通标量模板池
-
-### 10.6 `GROUP` 字段、`bucket()` 和 `densify()`
-
-官网对 Group Data Field 的定位是：它描述股票属于哪个组，主要作为 group operator
-的第二个输入。除了 `sector / industry / subindustry / exchange`，还可以用普通数值字段
-动态创建分组：
+除了使用已有 GROUP 字段，还可以从普通数值动态创建分组：
 
 ```text
 asset_group = bucket(rank(assets), range="0.1, 1, 0.1");
 group_zscore(alpha, densify(asset_group))
 ```
 
-这里：
+- `bucket()` 按数值区间生成组。
+- `densify()` 去掉空组并压紧组编号。
+- group operator 只在同组 instrument 之间计算。
 
-- `bucket()` 根据数值区间生成自定义组
-- `densify()` 去掉空组并重新压紧组编号
-- `group_rank / group_zscore / group_neutralize` 只在组内比较股票
-
-所以 `bucket()` 不是普通的数值离散化装饰。它改变了 Alpha 的比较范围，适合用于：
-
-- 市值分层
-- 流动性分层
-- 波动率分层
-- 基本面规模分层
-
-自定义组过细会导致每组股票太少。Universe 越小，越要控制 bucket 数量。
+分组过细会让每组样本过少；Universe 越小，越应控制 bucket 数量。
 
 ---
 
