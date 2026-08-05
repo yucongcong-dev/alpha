@@ -238,8 +238,13 @@ def test_strategy_profile_schemas_are_loaded_from_yaml() -> None:
         "field_template_batch_size",
     )
     assert "feedback_loop_policy" in schemas["refine"].tuning_keys["expression_policies"]
+    assert "auto_update_blacklist_mode" in schemas["explore"].tuning_keys["runtime"]
     assert "auto_update_blacklist_mode" in schemas["submit-focused"].tuning_keys["runtime"]
     assert "filters" not in schemas["refine"].runtime_defaults
+    assert (
+        schemas["explore"].runtime_defaults["runtime"]["auto_update_blacklist_mode"]
+        == "staging"
+    )
     assert (
         schemas["submit-focused"].runtime_defaults["runtime"]["auto_update_blacklist_mode"]
         == "staging"

@@ -297,16 +297,16 @@ def add_output_logging_arguments(parser: argparse.ArgumentParser) -> None:
         parser,
         "--auto-update-blacklist",
         dest="auto_update_blacklist",
-        help_enable="根据本次结果自动追加低质量模板到 datasets/<dataset>/blacklist.json",
+        help_enable="根据本次结果自动学习低质量模板并写入配置的黑名单目标",
         help_disable="不自动更新模板黑名单（覆盖 YAML runtime.auto_update_blacklist=true）",
     )
     parser.add_argument(
         "--auto-update-blacklist-mode",
         choices=("repository", "staging"),
-        default="repository",
+        default="staging",
         help=(
-            "自动黑名单写入目标：repository 写 datasets/<dataset>/blacklist.json；"
-            "staging 写 blacklist.staging.json 供人工确认"
+            "自动黑名单写入目标：staging 持久化到 blacklist.staging.json 供人工确认；"
+            "repository 显式写入长期 blacklist.json"
         ),
     )
     parser.add_argument(

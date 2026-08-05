@@ -193,9 +193,9 @@ global:
   # 运行时开关 —— 对应 CLI --smoke-test / --dry-run-plan / --full-run / --verbose / --quiet
   # --------------------------------------------------------------------------
   runtime:
-    strategy_profile: explore  # explore=广覆盖；refine=反馈邻域；submit-focused=提交导向。refine/submit-focused 会应用 profile 默认运行参数
+    strategy_profile: explore  # explore=广覆盖；refine=反馈邻域；submit-focused=提交导向；各 profile 会应用对应默认运行参数
     auto_update_blacklist: true   # 自动追加低质量模板；写入目标由 auto_update_blacklist_mode 控制
-    auto_update_blacklist_mode: repository # repository=写 blacklist.json；staging=写 blacklist.staging.json 供人工确认
+    auto_update_blacklist_mode: staging # staging=持久化到待确认文件；repository=显式写入长期 blacklist.json
     smoke_test: false      # 冒烟测试模式 (1字段/1模板，快速验证)
     dry_run_plan: false    # 干运行模式 (仅打印计划，不创建模拟)
     full_run: false        # 全量字段/模板搜索；默认受 max_total_simulations 安全预算限制
