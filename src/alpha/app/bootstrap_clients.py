@@ -2,18 +2,18 @@
 
 from __future__ import annotations
 
-from ..api.client import BrainClient, WorkerClientFactory
+from ..api.client import BrainClient, WorkerClientFactory, login_with_retry
+from ..config.runtime_values import get_runtime_config
+from ..io.credentials import load_credentials
 from ..models.runtime_options import ApiClientOptions
-from .bootstrap_types import ApiClientServices, CredentialServices, ResolvedCredentials
+from .bootstrap_types import ResolvedCredentials
 
 
 def resolve_credentials(
     credentials: ResolvedCredentials,
-    *,
-    services: CredentialServices,
 ) -> tuple[str, str]:
     """Resolve credentials without mutating the runtime args object."""
-    email, password = services.load_credentials(credentials)
+    email, password = load_credentials(credentials)
     return str(email or ""), str(password or "")
 
 
@@ -21,11 +21,9 @@ def create_and_login_client(
     email: str,
     password: str,
     client_options: ApiClientOptions,
-    *,
-    services: ApiClientServices,
 ) -> tuple[BrainClient, WorkerClientFactory]:
     """创建 Brain API 客户端并完成登录，同时创建工作线程客户端工厂。"""
-    http_backend = services.get_runtime_config().http.backend
+    http_backend = get_runtime_config().http.backend
     bootstrap_client = BrainClient(
         email,
         password,
@@ -34,7 +32,7 @@ def create_and_login_client(
         http_backend=http_backend,
     )
     try:
-        services.login_with_retry(bootstrap_client, client_options.login_retries)
+        login_with_retry(bootstrap_client, client_options.login_retries)
         client_factory = WorkerClientFactory(
             client_options,
             email,

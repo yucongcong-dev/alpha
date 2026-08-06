@@ -48,17 +48,22 @@ def _config(paths: RunPaths) -> ApplicationConfig:
 
 def _patch_local_resources(monkeypatch, historical_state: HistoricalRunState) -> None:
     monkeypatch.setattr(
-        "alpha.app.planning.ensure_dataset_template_library",
+        "alpha.app.bootstrap_supporting_resources.ensure_dataset_template_library",
         lambda path, _dataset_id: path,
     )
-    monkeypatch.setattr("alpha.app.planning.load_template_library", lambda _path: {})
-    monkeypatch.setattr("alpha.app.planning.load_run_filters_extended", lambda _paths: RunFilters())
     monkeypatch.setattr(
-        "alpha.app.planning.get_dataset_expression_policy",
+        "alpha.app.bootstrap_supporting_resources.load_template_library", lambda _path: {}
+    )
+    monkeypatch.setattr(
+        "alpha.app.bootstrap_supporting_resources.load_run_filters_extended",
+        lambda _paths: RunFilters(),
+    )
+    monkeypatch.setattr(
+        "alpha.app.bootstrap_supporting_resources.get_dataset_expression_policy",
         lambda _dataset_id: DatasetExpressionPolicy(dataset_id="fundamental6"),
     )
     monkeypatch.setattr(
-        "alpha.app.planning.build_historical_run_state",
+        "alpha.app.bootstrap_supporting_resources.build_historical_run_state",
         lambda *_args, **_kwargs: historical_state,
     )
 
@@ -75,7 +80,9 @@ def test_dry_run_plan_uses_local_cache_without_runtime_writes(monkeypatch, tmp_p
         captured["repair_corrupt_summary"] = repair_corrupt_summary
         return historical_state
 
-    monkeypatch.setattr("alpha.app.planning.build_historical_run_state", _load_history)
+    monkeypatch.setattr(
+        "alpha.app.bootstrap_supporting_resources.build_historical_run_state", _load_history
+    )
 
     def _load_cache(cache_path, **kwargs):
         captured["cache_path"] = cache_path

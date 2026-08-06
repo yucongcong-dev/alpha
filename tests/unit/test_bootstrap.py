@@ -109,39 +109,6 @@ def test_field_selection_log_describes_selected_execution_fields(caplog) -> None
     assert "从数据集 fundamental6 获取 1 个字段" not in caplog.text
 
 
-def test_build_bootstrap_services_reads_current_module_dependencies(monkeypatch) -> None:
-    """Service assembly should preserve late monkeypatch/plugin overrides."""
-
-    def first_fingerprint(_payload) -> str:
-        return "first"
-
-    def second_fingerprint(_payload) -> str:
-        return "second"
-
-    def replacement_login(_client, _retries) -> None:
-        return None
-
-    monkeypatch.setattr(bootstrap_module, "stable_fingerprint", first_fingerprint)
-    first_services = bootstrap_module.build_bootstrap_services()
-
-    monkeypatch.setattr(bootstrap_module, "stable_fingerprint", second_fingerprint)
-    monkeypatch.setattr(bootstrap_module, "login_with_retry", replacement_login)
-    second_services = bootstrap_module.build_bootstrap_services()
-
-    assert first_services.supporting_resources.stable_fingerprint is first_fingerprint
-    assert second_services.supporting_resources.stable_fingerprint is second_fingerprint
-    assert (
-        second_services.runtime_outputs.cleanup_legacy_sidecar_files
-        is bootstrap_module.cleanup_legacy_sidecar_files
-    )
-    assert (
-        second_services.field_loading.prepare_fields_for_execution
-        is bootstrap_module.prepare_fields_for_execution
-    )
-    assert second_services.credentials.load_credentials is bootstrap_module.load_credentials
-    assert second_services.api_client.login_with_retry is replacement_login
-
-
 def test_initialize_run_context_closes_clients_when_resources_are_unavailable(
     monkeypatch,
 ) -> None:
@@ -275,6 +242,10 @@ def test_prepare_bootstrap_resources_persists_pending_refresh_before_empty_field
         ),
     )
     monkeypatch.setattr(bootstrap_module, "load_bootstrap_fields", lambda **_kwargs: [])
+    monkeypatch.setattr(bootstrap_module, "stable_fingerprint", lambda _value: "templates-fp")
+    monkeypatch.setattr(
+        bootstrap_module, "build_settings_fingerprint", lambda _value: "settings-fp"
+    )
 
     result = prepare_bootstrap_resources(
         SimpleNamespace(),
@@ -284,11 +255,6 @@ def test_prepare_bootstrap_resources_persists_pending_refresh_before_empty_field
         object(),
         run_config={"run_name": "test"},
         run_paths=None,
-        supporting_services=SimpleNamespace(
-            stable_fingerprint=lambda _value: "templates-fp",
-            build_settings_fingerprint=lambda _value: "settings-fp",
-        ),
-        field_services=SimpleNamespace(),
     )
 
     assert result is None
@@ -368,6 +334,10 @@ def test_prepare_bootstrap_resources_refreshes_cross_run_feedback_pending(
         ),
     )
     monkeypatch.setattr(bootstrap_module, "load_bootstrap_fields", lambda **_kwargs: [])
+    monkeypatch.setattr(bootstrap_module, "stable_fingerprint", lambda _value: "templates-fp")
+    monkeypatch.setattr(
+        bootstrap_module, "build_settings_fingerprint", lambda _value: "settings-fp"
+    )
 
     result = prepare_bootstrap_resources(
         SimpleNamespace(),
@@ -377,11 +347,6 @@ def test_prepare_bootstrap_resources_refreshes_cross_run_feedback_pending(
         object(),
         run_config={"run_name": "test"},
         run_paths=None,
-        supporting_services=SimpleNamespace(
-            stable_fingerprint=lambda _value: "templates-fp",
-            build_settings_fingerprint=lambda _value: "settings-fp",
-        ),
-        field_services=SimpleNamespace(),
     )
 
     assert result is None
@@ -410,20 +375,24 @@ def test_initialize_run_context_prefers_run_paths_for_cache_and_credentials(
     captured: dict[str, str] = {}
 
     monkeypatch.setattr(
-        "alpha.app.bootstrap.cleanup_legacy_sidecar_files", lambda *_args, **_kwargs: None
+        "alpha.app.bootstrap_runtime_outputs.cleanup_legacy_sidecar_files",
+        lambda *_args, **_kwargs: None,
     )
     monkeypatch.setattr(
-        "alpha.app.bootstrap.ensure_analysis_synced", lambda *_args, **_kwargs: None
+        "alpha.app.bootstrap_runtime_outputs.ensure_analysis_synced",
+        lambda *_args, **_kwargs: None,
     )
     monkeypatch.setattr(
-        "alpha.app.bootstrap.build_run_config_snapshot", lambda *_args, **_kwargs: {}
+        "alpha.app.bootstrap_runtime_outputs.build_run_config_snapshot",
+        lambda *_args, **_kwargs: {},
     )
     monkeypatch.setattr(
-        "alpha.app.bootstrap.ensure_dataset_template_library",
+        "alpha.app.bootstrap_supporting_resources.ensure_dataset_template_library",
         lambda template_library_file, _dataset_id: template_library_file,
     )
     monkeypatch.setattr(
-        "alpha.app.bootstrap.ensure_template_blacklist_file", lambda *_args, **_kwargs: None
+        "alpha.app.bootstrap_supporting_resources.ensure_template_blacklist_file",
+        lambda *_args, **_kwargs: None,
     )
 
     def _capture_credentials(passed_args):
@@ -431,17 +400,21 @@ def test_initialize_run_context_prefers_run_paths_for_cache_and_credentials(
         captured["creds_key_file"] = passed_args.creds_key_file
         return "user@example.com", "secret"
 
-    monkeypatch.setattr("alpha.app.bootstrap.load_credentials", _capture_credentials)
+    monkeypatch.setattr("alpha.app.bootstrap_clients.load_credentials", _capture_credentials)
     monkeypatch.setattr(
         "alpha.app.bootstrap.create_and_login_client",
         lambda *_args, **_kwargs: ("bootstrap-client", "worker-factory"),
     )
-    monkeypatch.setattr("alpha.app.bootstrap.load_template_library", lambda *_args, **_kwargs: {})
     monkeypatch.setattr(
-        "alpha.app.bootstrap.load_run_filters_extended", lambda *_args, **_kwargs: RunFilters()
+        "alpha.app.bootstrap_supporting_resources.load_template_library",
+        lambda *_args, **_kwargs: {},
     )
     monkeypatch.setattr(
-        "alpha.app.bootstrap.get_dataset_expression_policy",
+        "alpha.app.bootstrap_supporting_resources.load_run_filters_extended",
+        lambda *_args, **_kwargs: RunFilters(),
+    )
+    monkeypatch.setattr(
+        "alpha.app.bootstrap_supporting_resources.get_dataset_expression_policy",
         lambda *_args, **_kwargs: type("Policy", (), {"use_curated_heuristics": False})(),
     )
     monkeypatch.setattr(
@@ -451,7 +424,7 @@ def test_initialize_run_context_prefers_run_paths_for_cache_and_credentials(
         "alpha.app.bootstrap.build_settings_fingerprint", lambda *_args, **_kwargs: "settings-fp"
     )
     monkeypatch.setattr(
-        "alpha.app.bootstrap.build_historical_run_state",
+        "alpha.app.bootstrap_supporting_resources.build_historical_run_state",
         lambda *_args, **_kwargs: HistoricalRunState(),
     )
 
@@ -459,9 +432,9 @@ def test_initialize_run_context_prefers_run_paths_for_cache_and_credentials(
         captured["fields_cache_file"] = cache_path
         return []
 
-    monkeypatch.setattr("alpha.app.bootstrap.load_fields_cache", _capture_cache_path)
+    monkeypatch.setattr("alpha.app.bootstrap_field_resources.load_fields_cache", _capture_cache_path)
     monkeypatch.setattr(
-        "alpha.app.bootstrap.fetch_fields_with_cache",
+        "alpha.app.bootstrap_field_resources.fetch_fields_with_cache",
         lambda *_args, **_kwargs: [{"id": "field_1", "type": "MATRIX", "name": "field_1"}],
     )
     monkeypatch.setattr(
@@ -508,41 +481,51 @@ def test_initialize_run_context_builds_fallback_run_paths_when_missing(
     captured: dict[str, object] = {}
 
     monkeypatch.setattr(
-        "alpha.app.bootstrap.cleanup_legacy_sidecar_files", lambda *_args, **_kwargs: None
+        "alpha.app.bootstrap_runtime_outputs.cleanup_legacy_sidecar_files",
+        lambda *_args, **_kwargs: None,
     )
     monkeypatch.setattr(
-        "alpha.app.bootstrap.ensure_analysis_synced", lambda *_args, **_kwargs: None
+        "alpha.app.bootstrap_runtime_outputs.ensure_analysis_synced",
+        lambda *_args, **_kwargs: None,
     )
 
     def _capture_run_config(_args, run_paths):
         captured["run_paths"] = run_paths
         return {"paths": {"output": run_paths.output}}
 
-    monkeypatch.setattr("alpha.app.bootstrap.build_run_config_snapshot", _capture_run_config)
     monkeypatch.setattr(
-        "alpha.app.bootstrap.ensure_dataset_template_library",
+        "alpha.app.bootstrap_runtime_outputs.build_run_config_snapshot", _capture_run_config
+    )
+    monkeypatch.setattr(
+        "alpha.app.bootstrap_supporting_resources.ensure_dataset_template_library",
         lambda template_library_file, _dataset_id: template_library_file,
     )
     monkeypatch.setattr(
-        "alpha.app.bootstrap.ensure_template_blacklist_file", lambda *_args, **_kwargs: None
+        "alpha.app.bootstrap_supporting_resources.ensure_template_blacklist_file",
+        lambda *_args, **_kwargs: None,
     )
     monkeypatch.setattr(
-        "alpha.app.bootstrap.load_credentials",
+        "alpha.app.bootstrap_clients.load_credentials",
         lambda *_args, **_kwargs: ("user@example.com", "secret"),
     )
     monkeypatch.setattr(
         "alpha.app.bootstrap.create_and_login_client",
         lambda *_args, **_kwargs: ("bootstrap-client", "worker-factory"),
     )
-    monkeypatch.setattr("alpha.app.bootstrap.load_template_library", lambda *_args, **_kwargs: {})
+    monkeypatch.setattr(
+        "alpha.app.bootstrap_supporting_resources.load_template_library",
+        lambda *_args, **_kwargs: {},
+    )
 
     def _capture_filters(run_paths):
         captured["filter_paths"] = run_paths
         return RunFilters()
 
-    monkeypatch.setattr("alpha.app.bootstrap.load_run_filters_extended", _capture_filters)
     monkeypatch.setattr(
-        "alpha.app.bootstrap.get_dataset_expression_policy",
+        "alpha.app.bootstrap_supporting_resources.load_run_filters_extended", _capture_filters
+    )
+    monkeypatch.setattr(
+        "alpha.app.bootstrap_supporting_resources.get_dataset_expression_policy",
         lambda *_args, **_kwargs: type("Policy", (), {"use_curated_heuristics": False})(),
     )
     monkeypatch.setattr(
@@ -552,12 +535,14 @@ def test_initialize_run_context_builds_fallback_run_paths_when_missing(
         "alpha.app.bootstrap.build_settings_fingerprint", lambda *_args, **_kwargs: "settings-fp"
     )
     monkeypatch.setattr(
-        "alpha.app.bootstrap.build_historical_run_state",
+        "alpha.app.bootstrap_supporting_resources.build_historical_run_state",
         lambda *_args, **_kwargs: HistoricalRunState(),
     )
-    monkeypatch.setattr("alpha.app.bootstrap.load_fields_cache", lambda *_args, **_kwargs: [])
     monkeypatch.setattr(
-        "alpha.app.bootstrap.fetch_fields_with_cache",
+        "alpha.app.bootstrap_field_resources.load_fields_cache", lambda *_args, **_kwargs: []
+    )
+    monkeypatch.setattr(
+        "alpha.app.bootstrap_field_resources.fetch_fields_with_cache",
         lambda *_args, **_kwargs: [{"id": "field_1", "type": "MATRIX", "name": "field_1"}],
     )
     monkeypatch.setattr(

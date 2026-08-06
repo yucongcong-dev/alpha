@@ -4,11 +4,14 @@ from __future__ import annotations
 
 import logging
 
+from ..analysis.analysis_sync import ensure_analysis_synced
+from ..cli.run_config import build_run_config_snapshot
 from ..io.common import resolve_datasets_root
+from ..io.output_paths import cleanup_legacy_sidecar_files
 from ..models.io_types import RunPaths
 from ..models.runtime_options import BootstrapPathOptions, RunConfigSnapshotOptions
 from ..models.runtime_protocols import RunConfig
-from .bootstrap_types import BootstrapPaths, RuntimeOutputServices
+from .bootstrap_types import BootstrapPaths
 
 logger = logging.getLogger(__name__)
 
@@ -74,13 +77,11 @@ def prepare_runtime_outputs(
     path_options: BootstrapPathOptions,
     run_paths: RunPaths | None,
     paths: BootstrapPaths,
-    *,
-    services: RuntimeOutputServices,
 ) -> RunConfig:
     """Prepare logging/output side effects and capture the embedded run config."""
     effective_run_paths = build_effective_run_paths(path_options, paths, run_paths)
-    services.cleanup_legacy_sidecar_files(paths.output_file, verbose=True)
-    services.ensure_analysis_synced(paths.output_file)
-    run_config = services.build_run_config_snapshot(run_config_options, effective_run_paths)
+    cleanup_legacy_sidecar_files(paths.output_file, verbose=True)
+    ensure_analysis_synced(paths.output_file)
+    run_config = build_run_config_snapshot(run_config_options, effective_run_paths)
     logger.info("[config] 运行配置将嵌入主结果文件")
     return run_config

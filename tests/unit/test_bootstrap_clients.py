@@ -24,10 +24,12 @@ def test_create_and_login_client_closes_client_when_login_fails(monkeypatch) -> 
         raise RuntimeError("login failed")
 
     monkeypatch.setattr(bootstrap_clients, "BrainClient", FakeClient)
-    services = SimpleNamespace(
-        get_runtime_config=lambda: SimpleNamespace(http=SimpleNamespace(backend="urllib")),
-        login_with_retry=_fail_login,
+    monkeypatch.setattr(
+        bootstrap_clients,
+        "get_runtime_config",
+        lambda: SimpleNamespace(http=SimpleNamespace(backend="urllib")),
     )
+    monkeypatch.setattr(bootstrap_clients, "login_with_retry", _fail_login)
     options = ApiClientOptions(
         min_request_interval=0.0,
         rate_limit_max_retries=1,
@@ -39,7 +41,6 @@ def test_create_and_login_client_closes_client_when_login_fails(monkeypatch) -> 
             "user@example.com",
             "secret",
             options,
-            services=services,
         )
 
     assert closed == [True]

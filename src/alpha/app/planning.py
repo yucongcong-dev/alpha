@@ -4,48 +4,17 @@ from __future__ import annotations
 
 import logging
 
-from ..analysis.feedback_history import build_historical_run_state
-from ..cli.filters import load_run_filters_extended
 from ..config.application import ApplicationConfig
 from ..core.executor import print_dry_run_plan
 from ..generators.fields import load_fields_cache
-from ..generators.fingerprint import stable_fingerprint
-from ..generators.payload import build_settings_fingerprint
-from ..generators.templates.library_loader import load_template_library
-from ..generators.templates.library_store import ensure_dataset_template_library
 from ..models.io_types import RunPaths
 from ..models.runtime_options import BootstrapFieldOptions, BootstrapPathOptions
-from ..policy.blacklist_context import set_active_datasets_root
-from ..policy.blacklist_store import (
-    ensure_template_blacklist_file,
-    read_blacklist_payload,
-    summarize_blacklist_payload,
-)
-from ..policy.expression import get_dataset_expression_policy
 from .bootstrap_fields import prepare_fields_for_execution
 from .bootstrap_runtime_outputs import build_effective_run_paths, resolve_bootstrap_paths
 from .bootstrap_state import create_execution_state
 from .bootstrap_supporting_resources import load_supporting_resources
-from .bootstrap_types import SupportingResourceServices
 
 logger = logging.getLogger(__name__)
-
-
-def build_planning_supporting_services() -> SupportingResourceServices:
-    """Build local-resource dependencies so tests/runtime overrides stay effective."""
-    return SupportingResourceServices(
-        set_active_datasets_root=set_active_datasets_root,
-        ensure_dataset_template_library=ensure_dataset_template_library,
-        ensure_template_blacklist_file=ensure_template_blacklist_file,
-        load_template_library=load_template_library,
-        read_blacklist_payload=read_blacklist_payload,
-        summarize_blacklist_payload=summarize_blacklist_payload,
-        load_run_filters_extended=load_run_filters_extended,
-        get_dataset_expression_policy=get_dataset_expression_policy,
-        stable_fingerprint=stable_fingerprint,
-        build_settings_fingerprint=build_settings_fingerprint,
-        build_historical_run_state=build_historical_run_state,
-    )
 
 
 def run_dry_run_plan(args: ApplicationConfig, run_paths: RunPaths | None) -> bool:
@@ -60,7 +29,6 @@ def run_dry_run_plan(args: ApplicationConfig, run_paths: RunPaths | None) -> boo
         dataset_id=dataset_id,
         paths=paths,
         effective_run_paths=effective_run_paths,
-        services=build_planning_supporting_services(),
         repair_corrupt_summary=False,
         log_blacklist=False,
     )
