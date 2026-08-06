@@ -98,9 +98,9 @@ def test_build_payload_and_settings_fingerprint_use_resolved_values() -> None:
     assert payload["regular"] == "rank(field)"
     assert payload["settings"]["decay"] == 8
     assert payload["settings"]["startDate"] == "2021-01-01"
-    assert payload_module.build_settings_fingerprint(
-        settings
-    ) == payload_module.stable_fingerprint(payload["settings"])
+    assert payload_module.build_settings_fingerprint(settings) == payload_module.stable_fingerprint(
+        payload["settings"]
+    )
     assert payload_module.stable_fingerprint(
         payload["settings"]
     ) == payload_module.stable_fingerprint(other["settings"])
