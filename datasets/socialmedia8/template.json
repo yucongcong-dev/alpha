@@ -1,5 +1,5 @@
 {
-  "_comment": "socialmedia8 baseline library; active research uses the bounded sentiment_attention_seed preset.",
+  "_comment": "socialmedia8 baseline library; research is paused after fast D1 sentiment and volume hypotheses failed.",
   "_comment_placeholders": "{field}=field name",
   "_dataset_id": "socialmedia8",
   "default": [],

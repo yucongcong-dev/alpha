@@ -2,12 +2,13 @@
 
 ## 当前状态
 
-`socialmedia8` 是当前现役 explore 数据集。WorldQuant BRAIN 在 USA / TOP3000 / Delay 1 下
+`socialmedia8` 当前已暂停。WorldQuant BRAIN 在 USA / TOP3000 / Delay 1 下
 将其显示为 `Social Media Data for Equity`：数据集 Coverage `99.99%`、Date Coverage
 `100%`，共 4 个 MATRIX 字段，最近更新于 2026-03。
 
-当前入口是 [sentiment_attention_seed](presets/sentiment_attention_seed/)，只测试 fast D1
-社交情绪水平，以及情绪变化与社交关注度的组合，不运行更拥挤的普通版本。
+fast D1 社交情绪和独立社交关注度均未形成正向基线，结果见
+[research_history.md](research_history.md)。既定停止条件已经满足，因此当前没有默认运行入口，
+也不运行更拥挤的普通版本。
 
 ## 官网筛选依据
 
@@ -23,23 +24,9 @@
 fast D1 字段与普通字段表达同一底层信号，但 Alpha Count 低约 75%，因此只使用 fast D1
 版本作为初始入口。
 
-## 运行入口
+## 当前边界
 
-```bash
-PYTHONPATH=src python3.10 -m alpha \
-  --dataset-id socialmedia8 \
-  --strategy-profile explore \
-  --max-total-simulations 2 \
-  --run-name socialmedia8-sentiment-attention-seed \
-  --dry-run-plan
-```
-
-首次没有字段缓存时，离线计划会提示先执行一次认证运行。确认计划后移除
-`--dry-run-plan`。程序只做 simulation 和 Check Submission，正式提交由人工决定。
-
-## 停止与扩展规则
-
-- 任一结构形成正向基线时，只围绕该结构做 4-6 个具有新经济含义的局部变体。
-- 两条结构均明显失败时，暂停 `socialmedia8`，不继续测试普通版本。
+- 暂停 `socialmedia8`，不再运行已完成的 sentiment 或 volume preset。
+- 不测试同源且更拥挤的普通版本。
 - 不做相邻窗口、Decay、Truncation 或机械符号 sweep。
-- 初始阶段最多 2 次 simulation，不扩大到其他社交媒体字段。
+- 只有出现新的独立经济假设或字段发生实质更新时才重新评估。
