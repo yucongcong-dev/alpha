@@ -14,9 +14,7 @@ from dataclasses import replace
 import logging
 
 from ..analysis.analysis_sync import ensure_analysis_synced
-from ..analysis.feedback_history import build_historical_run_state, rebuild_historical_run_state
-from ..analysis.feedback_run_index import persist_feedback_run_index
-from ..analysis.result_identity import result_identity
+from ..analysis.feedback_history import build_historical_run_state
 from ..api.client import BrainClient, login_with_retry
 from ..cli.filters import load_run_filters_extended
 from ..cli.run_config import build_run_config_snapshot
@@ -31,6 +29,7 @@ from ..io.credentials import load_credentials
 from ..io.output_paths import cleanup_legacy_sidecar_files
 from ..models.io_types import RunPaths
 from ..models.runtime_options import (
+    ApiClientOptions,
     BootstrapFieldOptions,
     BootstrapPathOptions,
     RunConfigSnapshotOptions,
@@ -57,8 +56,7 @@ from .bootstrap_runtime_outputs import (
 )
 from .bootstrap_state import (
     build_execution_state,
-    persist_reconciled_historical_results,
-    refresh_pending_check_results,
+    reconcile_pending_check_results,
 )
 from .bootstrap_supporting_resources import load_bootstrap_supporting_resources
 from .bootstrap_types import (
@@ -116,10 +114,11 @@ def initialize_run_context(
 ) -> InitializedRunContext | None:
     """执行主流程的初始化阶段，返回结构化运行上下文。"""
     services = build_bootstrap_services()
-    path_options = BootstrapPathOptions.from_args(args)
-    field_options = BootstrapFieldOptions.from_args(args)
-    run_config_options = RunConfigSnapshotOptions.from_args(args)
-    template_options = TemplateBuildOptions.from_args(args)
+    api_client_options = ApiClientOptions.from_config(args)
+    path_options = BootstrapPathOptions.from_config(args)
+    field_options = BootstrapFieldOptions.from_config(args)
+    run_config_options = RunConfigSnapshotOptions.from_config(args)
+    template_options = TemplateBuildOptions.from_config(args)
     paths = resolve_bootstrap_paths(path_options, run_paths)
     run_config = prepare_runtime_outputs(
         run_config_options,
@@ -144,7 +143,7 @@ def initialize_run_context(
     bootstrap_client, client_factory = create_and_login_client(
         email,
         password,
-        args,
+        api_client_options,
         services=services.api_client,
     )
     run_context: InitializedRunContext | None = None
@@ -228,57 +227,22 @@ def prepare_bootstrap_resources(
     )
     settings_fingerprint = supporting_services.build_settings_fingerprint(template_options)
     historical_state = supporting_resources.historical_state
-    existing_results = historical_state.existing_results
-    feedback_results = historical_state.feedback_results
-    refreshed_feedback_results, refreshed_count = refresh_pending_check_results(
+    reconciled_historical_state = reconcile_pending_check_results(
         bootstrap_client,
-        feedback_results,
+        historical_state,
         retries=field_options.check_submission_retries,
+        output_file=paths.output_file,
+        feedback_output=str(getattr(paths, "feedback_output", "") or ""),
+        dataset_id=dataset_id,
+        settings_fingerprint=settings_fingerprint,
+        template_library_fingerprint=template_library_fingerprint,
+        run_config=effective_run_config,
     )
-    if refreshed_feedback_results != feedback_results:
-        refreshed_by_identity = {
-            result_identity(result): result for result in refreshed_feedback_results
-        }
-        refreshed_existing_results = [
-            refreshed_by_identity.get(result_identity(result), result)
-            for result in existing_results
-        ]
-        refreshed_state = replace(
-            historical_state,
-            feedback_results=refreshed_feedback_results,
-        )
+    if reconciled_historical_state is not historical_state:
         supporting_resources = replace(
             supporting_resources,
-            historical_state=rebuild_historical_run_state(
-                refreshed_state,
-                refreshed_existing_results,
-            ),
+            historical_state=reconciled_historical_state,
         )
-        if refreshed_existing_results != existing_results:
-            persist_reconciled_historical_results(
-                output_file=paths.output_file,
-                dataset_id=dataset_id,
-                results=refreshed_existing_results,
-                settings_fingerprint=settings_fingerprint,
-                template_library_fingerprint=template_library_fingerprint,
-                run_config=effective_run_config,
-            )
-        feedback_output = str(getattr(paths, "feedback_output", "") or "")
-        if feedback_output and feedback_output != paths.output_file:
-            persist_reconciled_historical_results(
-                output_file=feedback_output,
-                dataset_id=dataset_id,
-                results=refreshed_feedback_results,
-                settings_fingerprint=settings_fingerprint,
-                template_library_fingerprint=template_library_fingerprint,
-                run_config=effective_run_config,
-            )
-            persist_feedback_run_index(feedback_output)
-        if refreshed_count:
-            logger.info(
-                "[check-submission-resume] refreshed %d historical pending results",
-                refreshed_count,
-            )
     fields = load_bootstrap_fields(
         dataset_id=dataset_id,
         bootstrap_client=bootstrap_client,

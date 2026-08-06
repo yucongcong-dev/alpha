@@ -5,6 +5,7 @@ from __future__ import annotations
 from types import SimpleNamespace
 
 from alpha.app.planning import run_dry_run_plan
+from alpha.config.application import ApplicationConfig
 from alpha.config.models import DatasetExpressionPolicy
 from alpha.models.io_types import RunFilters, RunPaths
 from alpha.runtime.contexts import HistoricalRunState
@@ -24,8 +25,8 @@ def _paths(tmp_path) -> RunPaths:
     )
 
 
-def _args(paths: RunPaths) -> SimpleNamespace:
-    return SimpleNamespace(
+def _config(paths: RunPaths) -> ApplicationConfig:
+    args = SimpleNamespace(
         output=paths.output,
         template_library_file=paths.template_library_file,
         fields_cache_file=paths.fields_cache_file,
@@ -42,6 +43,7 @@ def _args(paths: RunPaths) -> SimpleNamespace:
         delay=1,
         page_size=50,
     )
+    return ApplicationConfig.from_args(args, paths)
 
 
 def _patch_local_resources(monkeypatch, historical_state: HistoricalRunState) -> None:
@@ -63,7 +65,7 @@ def _patch_local_resources(monkeypatch, historical_state: HistoricalRunState) ->
 
 def test_dry_run_plan_uses_local_cache_without_runtime_writes(monkeypatch, tmp_path) -> None:
     paths = _paths(tmp_path)
-    args = _args(paths)
+    args = _config(paths)
     historical_state = HistoricalRunState()
     captured: dict[str, object] = {}
     _patch_local_resources(monkeypatch, historical_state)
@@ -110,7 +112,7 @@ def test_dry_run_plan_uses_local_cache_without_runtime_writes(monkeypatch, tmp_p
 
 def test_dry_run_plan_fails_without_matching_local_cache(monkeypatch, tmp_path) -> None:
     paths = _paths(tmp_path)
-    args = _args(paths)
+    args = _config(paths)
     _patch_local_resources(monkeypatch, HistoricalRunState())
     monkeypatch.setattr("alpha.app.planning.load_fields_cache", lambda *_args, **_kwargs: [])
 

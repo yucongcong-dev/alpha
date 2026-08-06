@@ -34,6 +34,7 @@ from alpha.models.runtime import (
     TemplateBuildContext,
     TemplateBuildOptions,
 )
+from alpha.models.runtime_options import SchedulerControlOptions
 from alpha.utils.helpers import first_non_empty
 from tests.conftest import MockArgs
 
@@ -57,6 +58,14 @@ def _result_write_options(args: MockArgs) -> ResultWriteOptions:
         dataset_id=args.dataset_id,
         output_path=args.output,
         auto_update_blacklist=bool(getattr(args, "auto_update_blacklist", False)),
+    )
+
+
+def _scheduler_options(args: MockArgs) -> SchedulerControlOptions:
+    return SchedulerControlOptions(
+        queue_busy_cooldown_seconds=args.queue_busy_cooldown_seconds,
+        queue_busy_retry_limit=args.queue_busy_retry_limit,
+        sleep_between_fields=args.sleep_between_fields,
     )
 
 
@@ -364,7 +373,7 @@ class TestDrainCompletedFuturesFlow:
             _stats = drain_completed_futures(
                 completed_futures=[future],
                 execution_state=empty_execution_state,
-                args=scheduler_args,
+                scheduler_options=_scheduler_options(scheduler_args),
                 result_write_options=_result_write_options(scheduler_args),
                 settings_fingerprint="abc",
                 template_library_fingerprint="def",
@@ -415,7 +424,7 @@ class TestDrainCompletedFuturesFlow:
             drain_completed_futures(
                 completed_futures=[future],
                 execution_state=empty_execution_state,
-                args=scheduler_args,
+                scheduler_options=_scheduler_options(scheduler_args),
                 result_write_options=_result_write_options(scheduler_args),
                 settings_fingerprint="abc",
                 template_library_fingerprint="def",
@@ -454,7 +463,7 @@ class TestDrainCompletedFuturesFlow:
             drain_completed_futures(
                 completed_futures=[future],
                 execution_state=empty_execution_state,
-                args=scheduler_args,
+                scheduler_options=_scheduler_options(scheduler_args),
                 result_write_options=_result_write_options(scheduler_args),
                 settings_fingerprint="abc",
                 template_library_fingerprint="def",

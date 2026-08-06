@@ -15,11 +15,11 @@ from .blacklist_runtime_stats import (
 from .blacklist_store import (
     activate_datasets_root,
     exclusive_blacklist_transaction,
-    invalidate_blacklist_runtime_cache,
     read_blacklist_payload,
     write_blacklist_payload,
 )
 from .expression import get_dataset_expression_policy
+from .template_blacklist import invalidate_blacklist_cache
 from .types import (
     LEARNED_BLACKLIST_KEY,
     BlacklistEntryKey,
@@ -184,7 +184,7 @@ def auto_update_blacklist(
 
         bl_data["_updated"] = datetime.now().strftime(DATE_FORMAT_ISO_MINUTES)
         blacklist_path = write_blacklist_payload(dataset_id, bl_data, datasets_root=datasets_root)
-    invalidate_blacklist_runtime_cache(dataset_id)
+    invalidate_blacklist_cache(dataset_id)
     logger.info(
         "[blacklist] auto-updated %s: added %d new entries (total=%d)",
         blacklist_path,
@@ -244,7 +244,7 @@ def auto_update_blacklist_incremental(
         bl_data[LEARNED_BLACKLIST_KEY].append(entry.to_dict())
         bl_data["_updated"] = datetime.now().strftime(DATE_FORMAT_ISO_MINUTES)
         blacklist_path = write_blacklist_payload(dataset_id, bl_data, datasets_root=datasets_root)
-    invalidate_blacklist_runtime_cache(dataset_id)
+    invalidate_blacklist_cache(dataset_id)
     blacklisted_template_keys.add(entry_key)
     logger.info(
         "[blacklist] incrementally added %s to %s (total=%d)",

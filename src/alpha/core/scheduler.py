@@ -21,7 +21,7 @@ import logging
 from ..api.timing import wait_seconds
 from ..models.domain import FieldTestResult
 from ..models.runtime_options import ResultWriteOptions, SchedulerControlOptions
-from ..models.runtime_protocols import RunConfig, SchedulerRuntimeArgs, TemplateStats
+from ..models.runtime_protocols import RunConfig, TemplateStats
 from ..runtime.concurrency import RuntimeConcurrencyState
 from ..runtime.contexts import FutureCompletionContext
 from ..runtime.state import ExecutionState
@@ -43,7 +43,6 @@ __all__ = [
 
 logger = logging.getLogger(__name__)
 
-_scheduler_control_options = _queue.scheduler_control_options
 register_queue_busy_template = _queue.register_queue_busy_template
 
 
@@ -58,20 +57,18 @@ def maybe_restore_runtime_concurrency(state: RuntimeConcurrencyState) -> None:
 
 
 def apply_congestion_cooldown(
-    args: SchedulerRuntimeArgs | SchedulerControlOptions,
+    options: SchedulerControlOptions,
     state: RuntimeConcurrencyState,
 ) -> None:
     """检测到拥塞后，临时切换到单 worker 运行模式。"""
-    options = _scheduler_control_options(args)
     _concurrency.apply_congestion_cooldown(options, state, log=logger)
 
 
 def throttle_before_submission(
-    args: SchedulerRuntimeArgs | SchedulerControlOptions,
+    options: SchedulerControlOptions,
     execution_state: ExecutionState,
 ) -> None:
     """在提交新任务前控制节奏，避免阻塞已完成任务处理。"""
-    options = _scheduler_control_options(args)
     _concurrency.throttle_before_submission(options, execution_state, wait=wait_seconds)
 
 
@@ -132,7 +129,7 @@ def drain_completed_futures(
     *,
     completed_futures: Sequence[Future[FieldTestResult]],
     execution_state: ExecutionState,
-    args: SchedulerRuntimeArgs,
+    scheduler_options: SchedulerControlOptions,
     result_write_options: ResultWriteOptions,
     settings_fingerprint: str,
     template_library_fingerprint: str,
@@ -164,7 +161,7 @@ def drain_completed_futures(
     return _draining.drain_completed_futures(
         completed_futures=completed_futures,
         execution_state=execution_state,
-        args=args,
+        scheduler_options=scheduler_options,
         result_write_options=result_write_options,
         settings_fingerprint=settings_fingerprint,
         template_library_fingerprint=template_library_fingerprint,
@@ -179,7 +176,7 @@ def drain_completed_futures_with_context(
     *,
     completed_futures: Sequence[Future[FieldTestResult]],
     execution_state: ExecutionState,
-    args: SchedulerRuntimeArgs | SchedulerControlOptions,
+    scheduler_options: SchedulerControlOptions,
     completion_ctx: FutureCompletionContext,
     runtime_state: RuntimeConcurrencyState,
 ) -> TemplateStats:
@@ -187,7 +184,7 @@ def drain_completed_futures_with_context(
     return _draining.drain_completed_futures_with_context(
         completed_futures=completed_futures,
         execution_state=execution_state,
-        args=args,
+        scheduler_options=scheduler_options,
         completion_ctx=completion_ctx,
         runtime_state=runtime_state,
         handle_completed=handle_completed_future,

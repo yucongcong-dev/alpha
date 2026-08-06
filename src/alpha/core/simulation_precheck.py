@@ -71,6 +71,89 @@ def build_default_submit_precheck_config() -> PrecheckConfig:
     )
 
 
+def _resolve_precheck_config(
+    *,
+    min_sharpe: float | None,
+    min_fitness: float | None,
+    min_turnover: float | None,
+    max_turnover: float | None,
+    max_weight: float | None,
+) -> PrecheckConfig:
+    if all(
+        value is not None
+        for value in (min_sharpe, min_fitness, min_turnover, max_turnover, max_weight)
+    ):
+        assert min_sharpe is not None
+        assert min_fitness is not None
+        assert min_turnover is not None
+        assert max_turnover is not None
+        assert max_weight is not None
+        return PrecheckConfig(
+            min_sharpe=min_sharpe,
+            min_fitness=min_fitness,
+            min_turnover=min_turnover,
+            max_turnover=max_turnover,
+            max_weight=max_weight,
+        )
+    defaults = build_default_submit_precheck_config()
+    return PrecheckConfig(
+        min_sharpe=defaults.min_sharpe if min_sharpe is None else min_sharpe,
+        min_fitness=defaults.min_fitness if min_fitness is None else min_fitness,
+        min_turnover=defaults.min_turnover if min_turnover is None else min_turnover,
+        max_turnover=defaults.max_turnover if max_turnover is None else max_turnover,
+        max_weight=defaults.max_weight if max_weight is None else max_weight,
+    )
+
+
+def _metric_failures(
+    is_section: dict[str, object],
+    config: PrecheckConfig,
+) -> list[CheckResultDict]:
+    failures: list[CheckResultDict] = []
+
+    def add_failure(check_name: str, value: int | float, limit: float) -> None:
+        failures.append(
+            {
+                "name": check_name,
+                "result": _RESULT_FAIL,
+                "value": float(value),
+                "limit": limit,
+            }
+        )
+
+    sharpe = is_section.get(_KEY_SHARPE)
+    fitness = is_section.get(_KEY_FITNESS)
+    turnover = is_section.get(_KEY_TURNOVER)
+    max_stock_weight = (
+        is_section.get(_KEY_MAX_WEIGHT)
+        or is_section.get(_KEY_MAX_WEIGHT_ALT)
+        or is_section.get(_KEY_CONCENTRATED_WEIGHT)
+    )
+    if isinstance(sharpe, (int, float)) and sharpe < config.min_sharpe:
+        add_failure(CHECK_LOW_SHARPE, sharpe, config.min_sharpe)
+    if isinstance(fitness, (int, float)) and fitness < config.min_fitness:
+        add_failure(CHECK_LOW_FITNESS, fitness, config.min_fitness)
+    if isinstance(turnover, (int, float)):
+        if turnover < config.min_turnover:
+            add_failure(CHECK_LOW_TURNOVER, turnover, config.min_turnover)
+        elif turnover > config.max_turnover:
+            add_failure(CHECK_HIGH_TURNOVER, turnover, config.max_turnover)
+    if isinstance(max_stock_weight, (int, float)) and max_stock_weight > config.max_weight:
+        add_failure(CHECK_CONCENTRATED_WEIGHT, max_stock_weight, config.max_weight)
+    return failures
+
+
+def _format_failure_reason(failures: list[CheckResultDict]) -> str:
+    reason_parts = []
+    for failure in failures:
+        value = failure.get("value")
+        formatted_value = f"{value:.4f}" if isinstance(value, (int, float)) else "unknown"
+        reason_parts.append(
+            f"{failure['name'].lower()}: {formatted_value} vs limit {failure.get('limit')}"
+        )
+    return "; ".join(reason_parts)
+
+
 def precheck_simulation_metrics(
     simulation_result: SimulationPayload,
     *,
@@ -81,66 +164,17 @@ def precheck_simulation_metrics(
     max_weight: float | None = None,
 ) -> tuple[bool, str, list[CheckResultDict]]:
     """Run local metric checks before calling Check Submission."""
-    if any(
-        value is None for value in (min_sharpe, min_fitness, min_turnover, max_turnover, max_weight)
-    ):
-        default_config = build_default_submit_precheck_config()
-        min_sharpe = default_config.min_sharpe if min_sharpe is None else min_sharpe
-        min_fitness = default_config.min_fitness if min_fitness is None else min_fitness
-        min_turnover = default_config.min_turnover if min_turnover is None else min_turnover
-        max_turnover = default_config.max_turnover if max_turnover is None else max_turnover
-        max_weight = default_config.max_weight if max_weight is None else max_weight
-    assert min_sharpe is not None
-    assert min_fitness is not None
-    assert min_turnover is not None
-    assert max_turnover is not None
-    assert max_weight is not None
-
     is_section = simulation_result.get(_KEY_IS)
     if not isinstance(is_section, dict):
         return True, "", []
-
-    sharpe = is_section.get(_KEY_SHARPE)
-    fitness = is_section.get(_KEY_FITNESS)
-    turnover = is_section.get(_KEY_TURNOVER)
-    max_stock_weight = (
-        is_section.get(_KEY_MAX_WEIGHT)
-        or is_section.get(_KEY_MAX_WEIGHT_ALT)
-        or is_section.get(_KEY_CONCENTRATED_WEIGHT)
+    config = _resolve_precheck_config(
+        min_sharpe=min_sharpe,
+        min_fitness=min_fitness,
+        min_turnover=min_turnover,
+        max_turnover=max_turnover,
+        max_weight=max_weight,
     )
-
-    failures: list[CheckResultDict] = []
-
-    def _add_failure(check_name: str, v: int | float, limit: float) -> None:
-        failures.append(
-            {
-                "name": check_name,
-                "result": _RESULT_FAIL,
-                "value": float(v),
-                "limit": limit,
-            }
-        )
-
-    if isinstance(sharpe, (int, float)) and sharpe < min_sharpe:
-        _add_failure(CHECK_LOW_SHARPE, sharpe, min_sharpe)
-    if isinstance(fitness, (int, float)) and fitness < min_fitness:
-        _add_failure(CHECK_LOW_FITNESS, fitness, min_fitness)
-    if isinstance(turnover, (int, float)):
-        if turnover < min_turnover:
-            _add_failure(CHECK_LOW_TURNOVER, turnover, min_turnover)
-        elif turnover > max_turnover:
-            _add_failure(CHECK_HIGH_TURNOVER, turnover, max_turnover)
-    if isinstance(max_stock_weight, (int, float)) and max_stock_weight > max_weight:
-        _add_failure(CHECK_CONCENTRATED_WEIGHT, max_stock_weight, max_weight)
-
+    failures = _metric_failures(is_section, config)
     if not failures:
         return True, "", []
-
-    reason_parts = []
-    for failure in failures:
-        value = failure.get("value")
-        formatted_value = f"{value:.4f}" if isinstance(value, (int, float)) else "unknown"
-        reason_parts.append(
-            f"{failure['name'].lower()}: {formatted_value} vs limit {failure.get('limit')}"
-        )
-    return False, "; ".join(reason_parts), failures
+    return False, _format_failure_reason(failures), failures

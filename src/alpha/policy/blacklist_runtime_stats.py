@@ -16,6 +16,48 @@ from .types import (
 )
 
 
+def _get_runtime_summary(
+    stats: BlacklistRuntimeStats,
+    result: FieldTestResult,
+) -> BlacklistRuntimeSummary:
+    entry_key = build_blacklist_entry_key(
+        result.template_name,
+        result.field_type,
+        result.template_stage,
+        result.template_family,
+    )
+    if entry_key not in stats:
+        stats[entry_key] = BlacklistRuntimeSummary(
+            template_name=result.template_name,
+            field_type=result.field_type,
+            template_family=result.template_family,
+            template_stage=result.template_stage,
+            template_role=str(result.template_role or "").strip().lower(),
+            template_activation_scope=str(result.template_activation_scope or "").strip().lower(),
+        )
+    return stats[entry_key]
+
+
+def _record_failed_check(summary: BlacklistRuntimeSummary, check: object) -> None:
+    get_value = getattr(check, "get", None)
+    if not callable(get_value):
+        return
+    name = str(get_value("name", ""))
+    value = get_value("value", None)
+    if name == CHECK_LOW_SHARPE:
+        summary.low_sharpe += 1
+        if isinstance(value, (int, float)):
+            summary.sharpe_sum += float(value)
+            summary.sharpe_count += 1
+    elif name == CHECK_LOW_FITNESS:
+        summary.low_fitness += 1
+        if isinstance(value, (int, float)):
+            summary.fitness_sum += float(value)
+            summary.fitness_count += 1
+    elif name == CHECK_CONCENTRATED_WEIGHT:
+        summary.concentrated_weight += 1
+
+
 def update_blacklist_runtime_stats_with_result(
     stats: BlacklistRuntimeStats,
     result: FieldTestResult,
@@ -23,23 +65,7 @@ def update_blacklist_runtime_stats_with_result(
     """Merge one informative result into runtime blacklist summary stats."""
     if not is_informative_result(result):
         return None
-    template_name = result.template_name
-    entry_key = build_blacklist_entry_key(
-        template_name,
-        result.field_type,
-        result.template_stage,
-        result.template_family,
-    )
-    if entry_key not in stats:
-        stats[entry_key] = BlacklistRuntimeSummary(
-            template_name=template_name,
-            field_type=result.field_type,
-            template_family=result.template_family,
-            template_stage=result.template_stage,
-            template_role=str(result.template_role or "").strip().lower(),
-            template_activation_scope=str(result.template_activation_scope or "").strip().lower(),
-        )
-    summary = stats[entry_key]
+    summary = _get_runtime_summary(stats, result)
     if not summary.template_role and result.template_role:
         summary.template_role = str(result.template_role).strip().lower()
     if not summary.template_activation_scope and result.template_activation_scope:
@@ -51,20 +77,7 @@ def update_blacklist_runtime_stats_with_result(
     if result.submittable:
         summary.submittable += 1
     for check in result.failed_checks or []:
-        name = str(check.get("name", "")) if isinstance(check, dict) else str(check.name)
-        value = check.get("value") if isinstance(check, dict) else check.value
-        if name == CHECK_LOW_SHARPE:
-            summary.low_sharpe += 1
-            if isinstance(value, (int, float)):
-                summary.sharpe_sum += float(value)
-                summary.sharpe_count += 1
-        elif name == CHECK_LOW_FITNESS:
-            summary.low_fitness += 1
-            if isinstance(value, (int, float)):
-                summary.fitness_sum += float(value)
-                summary.fitness_count += 1
-        elif name == CHECK_CONCENTRATED_WEIGHT:
-            summary.concentrated_weight += 1
+        _record_failed_check(summary, check)
     return summary
 
 

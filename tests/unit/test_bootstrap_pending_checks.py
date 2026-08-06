@@ -2,10 +2,16 @@
 
 from __future__ import annotations
 
-from alpha.app.bootstrap_state import refresh_pending_check_results
+from dataclasses import replace
+
+from alpha.app.bootstrap_state import (
+    reconcile_pending_check_results,
+    refresh_pending_check_results,
+)
 from alpha.config.constants import STATUS_ERROR
 from alpha.exceptions import BrainHTTPError, BrainStopRequested
 from alpha.models.domain import FailedCheck, FieldTestResult
+from alpha.runtime.contexts import HistoricalRunState
 
 
 def _pending_result(
@@ -27,6 +33,77 @@ def _pending_result(
         template_library_fingerprint="library",
         failed_checks=[FailedCheck(name="SELF_CORRELATION", result="PENDING")],
     )
+
+
+def test_reconcile_pending_check_results_returns_original_state_when_unchanged(
+    monkeypatch,
+) -> None:
+    state = HistoricalRunState(feedback_results=[_pending_result()])
+    monkeypatch.setattr(
+        "alpha.app.bootstrap_state.refresh_pending_check_results",
+        lambda *_args, **_kwargs: (list(state.feedback_results), 0),
+    )
+
+    reconciled = reconcile_pending_check_results(
+        object(),
+        state,
+        retries=2,
+        output_file="run.json",
+        feedback_output="feedback.json",
+        dataset_id="fundamental6",
+        settings_fingerprint="settings",
+        template_library_fingerprint="library",
+        run_config={},
+    )
+
+    assert reconciled is state
+
+
+def test_reconcile_pending_check_results_persists_run_and_feedback_views(monkeypatch) -> None:
+    original = _pending_result()
+    refreshed = replace(
+        original,
+        submittable=True,
+        message="checks passed",
+        failed_checks=[],
+        updated_at="2026-08-06T00:00:00Z",
+    )
+    state = HistoricalRunState(
+        existing_results=[original],
+        feedback_results=[original],
+    )
+    persisted: list[dict[str, object]] = []
+    indexed: list[str] = []
+    monkeypatch.setattr(
+        "alpha.app.bootstrap_state.refresh_pending_check_results",
+        lambda *_args, **_kwargs: ([refreshed], 1),
+    )
+    monkeypatch.setattr(
+        "alpha.app.bootstrap_state.persist_reconciled_historical_results",
+        lambda **kwargs: persisted.append(kwargs),
+    )
+    monkeypatch.setattr(
+        "alpha.app.bootstrap_state.persist_feedback_run_index",
+        indexed.append,
+    )
+
+    reconciled = reconcile_pending_check_results(
+        object(),
+        state,
+        retries=2,
+        output_file="run.json",
+        feedback_output="feedback.json",
+        dataset_id="fundamental6",
+        settings_fingerprint="settings",
+        template_library_fingerprint="library",
+        run_config={"run": {"name": "test"}},
+    )
+
+    assert reconciled.existing_results == [refreshed]
+    assert reconciled.feedback_results == [refreshed]
+    assert [entry["output_file"] for entry in persisted] == ["run.json", "feedback.json"]
+    assert all(entry["settings_fingerprint"] == "settings" for entry in persisted)
+    assert indexed == ["feedback.json"]
 
 
 def test_refresh_pending_check_results_replaces_terminal_result(monkeypatch) -> None:

@@ -153,12 +153,6 @@ def write_blacklist_payload(
     return blacklist_path
 
 
-def invalidate_blacklist_runtime_cache(dataset_id: str) -> None:
-    from .template_blacklist import invalidate_blacklist_cache
-
-    invalidate_blacklist_cache(dataset_id)
-
-
 def load_blacklisted_template_names(dataset_id: str, *, datasets_root: str = "") -> set[str]:
     payload = read_blacklist_payload(dataset_id, datasets_root=datasets_root)
     entries = payload.get(LEARNED_BLACKLIST_KEY, [])

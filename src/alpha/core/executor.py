@@ -87,7 +87,7 @@ def _ordered_exploration_templates(
 
 def build_template_build_context(
     *,
-    args: TemplateBuildArgs,
+    options: TemplateBuildOptions,
     fields: Sequence[TemplateField],
     template_library: TemplateLibrary,
     historical_state: HistoricalRunState,
@@ -96,7 +96,6 @@ def build_template_build_context(
     existing_results_count: int,
 ) -> TemplateBuildContext:
     """Construct the shared template build context for dry-run and live execution."""
-    options = TemplateBuildOptions.from_args(args)
     options = replace(
         options,
         preset_mode=options.preset_mode

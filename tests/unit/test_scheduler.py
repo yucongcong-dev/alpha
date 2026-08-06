@@ -31,7 +31,18 @@ from alpha.models.runtime import (
     ResultWriteOptions,
     RuntimeConcurrencyState,
 )
+from alpha.models.runtime_options import SchedulerControlOptions
 from tests.conftest import MockArgs
+
+
+def _scheduler_options(args: object) -> SchedulerControlOptions:
+    return SchedulerControlOptions(
+        queue_busy_cooldown_seconds=float(getattr(args, "queue_busy_cooldown_seconds", 0.0)),
+        queue_busy_retry_limit=int(getattr(args, "queue_busy_retry_limit", 0)),
+        sleep_between_fields=float(getattr(args, "sleep_between_fields", 0.0)),
+        stop_after_submittable=int(getattr(args, "stop_after_submittable", 0)),
+        max_total_simulations=int(getattr(args, "max_total_simulations", 0)),
+    )
 
 
 def test_drain_state_decision_combines_stop_and_cooldown() -> None:
@@ -138,7 +149,7 @@ class TestApplyCongestionCooldown:
         scheduler_args: MockArgs,
         runtime_state_max_workers_5: RuntimeConcurrencyState,
     ) -> None:
-        apply_congestion_cooldown(scheduler_args, runtime_state_max_workers_5)
+        apply_congestion_cooldown(_scheduler_options(scheduler_args), runtime_state_max_workers_5)
         assert runtime_state_max_workers_5.runtime_max_workers == 1
         assert runtime_state_max_workers_5.cooldown_until > time.monotonic()
 
@@ -149,7 +160,7 @@ class TestApplyCongestionCooldown:
     ) -> None:
         scheduler_args.queue_busy_cooldown_seconds = 60
         now = time.monotonic()
-        apply_congestion_cooldown(scheduler_args, runtime_state_max_workers_5)
+        apply_congestion_cooldown(_scheduler_options(scheduler_args), runtime_state_max_workers_5)
         expected_cooldown = now + 60
         assert abs(runtime_state_max_workers_5.cooldown_until - expected_cooldown) < 0.5
 
@@ -159,7 +170,7 @@ class TestApplyCongestionCooldown:
         runtime_state_max_workers_5: RuntimeConcurrencyState,
     ) -> None:
         scheduler_args.queue_busy_cooldown_seconds = -10
-        apply_congestion_cooldown(scheduler_args, runtime_state_max_workers_5)
+        apply_congestion_cooldown(_scheduler_options(scheduler_args), runtime_state_max_workers_5)
         assert runtime_state_max_workers_5.runtime_max_workers == 1
         # cooldown 应该被 clamp 到当前时间附近
         assert runtime_state_max_workers_5.cooldown_until <= time.monotonic() + 0.5
@@ -171,7 +182,7 @@ class TestApplyCongestionCooldown:
     ) -> None:
         scheduler_args.queue_busy_cooldown_seconds = 0
         now = time.monotonic()
-        apply_congestion_cooldown(scheduler_args, runtime_state_max_workers_5)
+        apply_congestion_cooldown(_scheduler_options(scheduler_args), runtime_state_max_workers_5)
         assert abs(runtime_state_max_workers_5.cooldown_until - now) < 0.5
 
 
@@ -185,8 +196,12 @@ class TestRegisterQueueBusyTemplate:
         first_key = ("field_1", "template_1", "rank(field_1)", "settings_1")
         second_key = ("field_1", "template_2", "rank(field_1)", "settings_1")
 
-        register_queue_busy_template(first_key, scheduler_args, empty_execution_state)
-        register_queue_busy_template(first_key, scheduler_args, empty_execution_state)
+        register_queue_busy_template(
+            first_key, _scheduler_options(scheduler_args), empty_execution_state
+        )
+        register_queue_busy_template(
+            first_key, _scheduler_options(scheduler_args), empty_execution_state
+        )
 
         retry_state = empty_execution_state.queue_retry_state
         assert first_key in retry_state.exhausted_keys
@@ -201,7 +216,9 @@ class TestRegisterQueueBusyTemplate:
         key = ("field_1", "template_1", "rank(field_1)", "settings_1")
 
         for _ in range(3):
-            register_queue_busy_template(key, scheduler_args, empty_execution_state)
+            register_queue_busy_template(
+                key, _scheduler_options(scheduler_args), empty_execution_state
+            )
 
         retry_state = empty_execution_state.queue_retry_state
         assert retry_state.retry_counts[key] == 3
@@ -223,7 +240,7 @@ class TestThrottleBeforeSubmission:
     ) -> None:
         scheduler_args.sleep_between_fields = 0
         with patch("alpha.core.scheduler.wait_seconds") as mock_wait:
-            throttle_before_submission(scheduler_args, empty_execution_state)
+            throttle_before_submission(_scheduler_options(scheduler_args), empty_execution_state)
             mock_wait.assert_not_called()
 
     def test_no_sleep_on_first_submission(
@@ -232,7 +249,7 @@ class TestThrottleBeforeSubmission:
         empty_execution_state: ExecutionState,
     ) -> None:
         with patch("alpha.core.scheduler.wait_seconds") as mock_wait:
-            throttle_before_submission(scheduler_args, empty_execution_state)
+            throttle_before_submission(_scheduler_options(scheduler_args), empty_execution_state)
             mock_wait.assert_not_called()
 
     def test_sleeps_when_too_soon(
@@ -241,7 +258,9 @@ class TestThrottleBeforeSubmission:
         execution_state_after_submit: ExecutionState,
     ) -> None:
         with patch("alpha.core.scheduler.wait_seconds") as mock_wait:
-            throttle_before_submission(scheduler_args, execution_state_after_submit)
+            throttle_before_submission(
+                _scheduler_options(scheduler_args), execution_state_after_submit
+            )
             mock_wait.assert_called_once()
 
     def test_no_sleep_when_enough_elapsed(
@@ -250,7 +269,9 @@ class TestThrottleBeforeSubmission:
         execution_state_long_ago_submit: ExecutionState,
     ) -> None:
         with patch("alpha.core.scheduler.wait_seconds") as mock_wait:
-            throttle_before_submission(scheduler_args, execution_state_long_ago_submit)
+            throttle_before_submission(
+                _scheduler_options(scheduler_args), execution_state_long_ago_submit
+            )
             mock_wait.assert_not_called()
 
     def test_zero_sleep_between_fields_never_waits(self) -> None:
@@ -260,7 +281,7 @@ class TestThrottleBeforeSubmission:
         )
         args = MockArgs(sleep_between_fields=0)
         with patch("alpha.core.scheduler.wait_seconds") as mock_wait:
-            throttle_before_submission(args, state)
+            throttle_before_submission(_scheduler_options(args), state)
             mock_wait.assert_not_called()
 
 
@@ -345,7 +366,7 @@ def test_drain_completed_futures_prefers_explicit_result_write_options(tmp_path)
         drain_completed_futures(
             completed_futures=[future],
             execution_state=execution_state,
-            args=args,
+            scheduler_options=_scheduler_options(args),
             result_write_options=result_write_options,
             settings_fingerprint="settings-fp",
             template_library_fingerprint="templates-fp",
@@ -418,7 +439,7 @@ def test_drain_completed_futures_sets_stop_signal_and_cancels_unstarted_future(t
             drain_completed_futures(
                 completed_futures=[done_future],
                 execution_state=execution_state,
-                args=args,
+                scheduler_options=_scheduler_options(args),
                 result_write_options=result_write_options,
                 settings_fingerprint="settings-fp",
                 template_library_fingerprint="templates-fp",
@@ -484,7 +505,7 @@ def test_drain_completed_futures_ignores_historical_submittable_baseline() -> No
         drain_completed_futures(
             completed_futures=[done_future],
             execution_state=execution_state,
-            args=args,
+            scheduler_options=_scheduler_options(args),
             result_write_options=ResultWriteOptions(
                 dataset_id=args.dataset_id,
                 output_path=args.output,

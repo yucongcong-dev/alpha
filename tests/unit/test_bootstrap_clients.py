@@ -7,6 +7,7 @@ from types import SimpleNamespace
 import pytest
 
 import alpha.app.bootstrap_clients as bootstrap_clients
+from alpha.models.runtime_options import ApiClientOptions
 
 
 def test_create_and_login_client_closes_client_when_login_fails(monkeypatch) -> None:
@@ -27,7 +28,7 @@ def test_create_and_login_client_closes_client_when_login_fails(monkeypatch) -> 
         get_runtime_config=lambda: SimpleNamespace(http=SimpleNamespace(backend="urllib")),
         login_with_retry=_fail_login,
     )
-    args = SimpleNamespace(
+    options = ApiClientOptions(
         min_request_interval=0.0,
         rate_limit_max_retries=1,
         login_retries=1,
@@ -37,7 +38,7 @@ def test_create_and_login_client_closes_client_when_login_fails(monkeypatch) -> 
         bootstrap_clients.create_and_login_client(
             "user@example.com",
             "secret",
-            args,
+            options,
             services=services,
         )
 

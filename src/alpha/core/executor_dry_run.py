@@ -18,6 +18,7 @@ from ..config.constants import (
 from ..generators.fields import choose_field_name
 from ..models.domain import FieldTestResult, TemplateField, TemplateLibrary
 from ..models.io_types import RunFilters
+from ..models.runtime_options import TemplateBuildOptions
 from ..models.runtime_protocols import TemplateBuildArgs
 from ..policy.expression import get_dataset_expression_policy, resolve_feedback_stage
 from ..runtime.contexts import (
@@ -38,7 +39,7 @@ class TemplateBuildContextBuilder(Protocol):
     def __call__(
         self,
         *,
-        args: TemplateBuildArgs,
+        options: TemplateBuildOptions,
         fields: Sequence[TemplateField],
         template_library: TemplateLibrary,
         historical_state: HistoricalRunState,
@@ -149,7 +150,7 @@ def print_dry_run_plan(
     seed_samples: list[dict[str, object]] = []
     refine_samples: list[dict[str, object]] = []
     build_ctx = build_context(
-        args=args,
+        options=TemplateBuildOptions.from_args(args),
         fields=fields,
         template_library=template_library,
         historical_state=historical_state,

@@ -73,7 +73,7 @@ def run_field_test_loop(
     )
 
     template_build_ctx = create_template_build_context(
-        args=run_loop_options.template_build,
+        options=run_loop_options.template_build,
         run_ctx=run_ctx,
         fields=fields,
         existing_results_count=len(execution_state.result_ledger.results),
@@ -165,7 +165,6 @@ def run_field_test_loop(
                 last_field_id=last_field_id,
                 execution_state=execution_state,
                 runtime_state=runtime_state,
-                args=run_loop_options.scheduler,
                 scheduler_options=scheduler_options,
                 completion_ctx=completion_ctx,
             )

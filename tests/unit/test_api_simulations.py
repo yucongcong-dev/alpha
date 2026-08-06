@@ -81,6 +81,31 @@ def test_poll_simulation_ignores_retry_after_for_terminal_state(monkeypatch) -> 
     assert payload["status"] == "FAILED"
 
 
+def test_poll_simulation_treats_empty_status_with_retry_after_as_pending(monkeypatch) -> None:
+    client = FakeSimulationClient(
+        [
+            (200, {"Retry-After": "2"}, b"{}"),
+            (200, {}, b'{"status": "COMPLETED", "alpha": "a1"}'),
+        ]
+    )
+    waits: list[float] = []
+    monkeypatch.setattr(
+        "alpha.api.simulations.wait_seconds",
+        lambda seconds, *_args, **_kwargs: waits.append(seconds),
+    )
+
+    payload = client.poll_simulation(
+        "/simulations/123",
+        max_polls=2,
+        max_wait_seconds=60,
+        max_pending_cycles=1,
+        max_queue_seconds=60,
+    )
+
+    assert payload["status"] == "COMPLETED"
+    assert waits == [3.0]
+
+
 def test_poll_simulation_enforces_pending_cycle_budget(monkeypatch) -> None:
     client = FakeSimulationClient(
         [

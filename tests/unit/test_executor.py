@@ -69,7 +69,7 @@ def test_build_template_context_copies_narrow_options_and_feedback() -> None:
     )
 
     context = build_template_build_context(
-        args=_args(),
+        options=TemplateBuildOptions.from_args(_args()),
         fields=[_field("f1")],
         template_library={},
         historical_state=history,

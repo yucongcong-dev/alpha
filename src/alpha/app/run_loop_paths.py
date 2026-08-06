@@ -5,8 +5,7 @@ from __future__ import annotations
 from ..core.executor import build_template_build_context
 from ..models.domain import TemplateField
 from ..models.io_types import RunPaths
-from ..models.runtime_options import ResultWriteOptions
-from ..models.runtime_protocols import TemplateBuildArgs
+from ..models.runtime_options import ResultWriteOptions, TemplateBuildOptions
 from ..runtime.contexts import FutureCompletionContext, TemplateBuildContext
 from ..runtime.state import InitializedRunContext
 
@@ -47,14 +46,14 @@ def resolve_future_completion_context(
 
 def create_template_build_context(
     *,
-    args: TemplateBuildArgs,
+    options: TemplateBuildOptions,
     run_ctx: InitializedRunContext,
     fields: list[TemplateField],
     existing_results_count: int,
 ) -> TemplateBuildContext:
     """Construct the template build context and seed its feedback cache count."""
     template_build_ctx = build_template_build_context(
-        args=args,
+        options=options,
         fields=fields,
         template_library=run_ctx.template_library,
         historical_state=run_ctx.historical_state,

@@ -47,7 +47,6 @@ if TYPE_CHECKING:
     from .io_types import RunFilters, RunPaths
     from .result_predicates import is_informative_result, is_queue_timeout_result
     from .runtime import (
-        ApiClientArgs,
         ApiClientOptions,
         CleanRuntimeArgs,
         ClientFactoryLike,
@@ -64,7 +63,6 @@ if TYPE_CHECKING:
         RunConfigSnapshotOptions,
         RuntimeConcurrencyArgs,
         RuntimeConcurrencyState,
-        SchedulerRuntimeArgs,
         SemaphoreLike,
         SimulationSettingsArgs,
         SimulationStageArgs,
@@ -104,7 +102,6 @@ _EXPORT_MAP: ExportMap = {
     "RunPaths": (".io_types", "RunPaths"),
     "is_informative_result": (".result_predicates", "is_informative_result"),
     "is_queue_timeout_result": (".result_predicates", "is_queue_timeout_result"),
-    "ApiClientArgs": (".runtime", "ApiClientArgs"),
     "ApiClientOptions": (".runtime", "ApiClientOptions"),
     "CleanRuntimeArgs": (".runtime", "CleanRuntimeArgs"),
     "ClientFactoryLike": (".runtime", "ClientFactoryLike"),
@@ -121,7 +118,6 @@ _EXPORT_MAP: ExportMap = {
     "RunConfigSnapshotOptions": (".runtime", "RunConfigSnapshotOptions"),
     "RuntimeConcurrencyArgs": (".runtime", "RuntimeConcurrencyArgs"),
     "RuntimeConcurrencyState": (".runtime", "RuntimeConcurrencyState"),
-    "SchedulerRuntimeArgs": (".runtime", "SchedulerRuntimeArgs"),
     "SemaphoreLike": (".runtime", "SemaphoreLike"),
     "SimulationSettingsArgs": (".runtime", "SimulationSettingsArgs"),
     "SimulationStageArgs": (".runtime", "SimulationStageArgs"),

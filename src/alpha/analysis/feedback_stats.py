@@ -44,6 +44,44 @@ def compile_field_feedback(results: Sequence[FieldTestResult]) -> FieldFeedbackM
     return feedback
 
 
+def _update_latest_result_timestamp(summary: dict[str, Any], result: FieldTestResult) -> None:
+    observed = _result_timestamp(result)
+    if observed is None:
+        return
+    current_latest = summary.get("latest_result_at", "")
+    current_timestamp: float | None = None
+    if current_latest:
+        try:
+            parsed = datetime.fromisoformat(str(current_latest).replace("Z", "+00:00"))
+            if parsed.tzinfo is None:
+                parsed = parsed.replace(tzinfo=timezone.utc)
+            current_timestamp = parsed.timestamp()
+        except (TypeError, ValueError):
+            current_timestamp = None
+    if current_timestamp is None or observed[0] >= current_timestamp:
+        summary["latest_result_at"] = observed[1]
+
+
+def _increment_failed_check_counts(summary: dict[str, Any], result: FieldTestResult) -> None:
+    counts = summary[STAT_FIELD_FAILED_CHECK_COUNTS]
+    for check in result.failed_checks or []:
+        name = str(check.get("name", SENTINEL_UNKNOWN_CHECK))
+        counts[name] = int(counts.get(name, 0) or 0) + 1
+
+
+def _record_best_template(
+    summary: dict[str, Any],
+    result: FieldTestResult,
+    *,
+    score: float,
+) -> None:
+    summary["best_score"] = score
+    summary["best_expression"] = result.expression
+    summary["best_template_name"] = result.template_name
+    summary["best_template_family"] = result.template_family
+    summary["best_template_stage"] = result.template_stage
+
+
 def update_field_feedback_with_result(
     feedback: FieldFeedbackMap,
     result: FieldTestResult,
@@ -67,42 +105,18 @@ def update_field_feedback_with_result(
     )
     current_attempted = summary.get(STAT_FIELD_ATTEMPTED_TEMPLATES, 0)
     summary[STAT_FIELD_ATTEMPTED_TEMPLATES] = int(current_attempted or 0) + 1
-    observed = _result_timestamp(result)
-    if observed is not None:
-        current_latest = summary.get("latest_result_at", "")
-        current_observed: tuple[float, str] | None = None
-        if current_latest:
-            try:
-                parsed = datetime.fromisoformat(str(current_latest).replace("Z", "+00:00"))
-                if parsed.tzinfo is None:
-                    parsed = parsed.replace(tzinfo=timezone.utc)
-                current_observed = (parsed.timestamp(), str(current_latest))
-            except (TypeError, ValueError):
-                current_observed = None
-        if current_observed is None or observed[0] >= current_observed[0]:
-            summary["latest_result_at"] = observed[1]
-    for check in result.failed_checks or []:
-        name = str(check.get("name", SENTINEL_UNKNOWN_CHECK))
-        current_count = summary[STAT_FIELD_FAILED_CHECK_COUNTS].get(name, 0)
-        summary[STAT_FIELD_FAILED_CHECK_COUNTS][name] = int(current_count or 0) + 1
+    _update_latest_result_timestamp(summary, result)
+    _increment_failed_check_counts(summary, result)
     if result.submittable is True:
         summary["submittable_templates"] = int(summary.get("submittable_templates", 0) or 0) + 1
         if summary["best_score"] <= _PASSED_FEEDBACK_SCORE:
-            summary["best_score"] = _PASSED_FEEDBACK_SCORE
-            summary["best_expression"] = result.expression
-            summary["best_template_name"] = result.template_name
-            summary["best_template_family"] = result.template_family
-            summary["best_template_stage"] = result.template_stage
+            _record_best_template(summary, result, score=_PASSED_FEEDBACK_SCORE)
         return feedback
     if result.status != STATUS_SIMULATED or not result.failed_checks:
         return feedback
     score = score_failed_checks(result.failed_checks)
     if score > summary["best_score"]:
-        summary["best_score"] = score
-        summary["best_expression"] = result.expression
-        summary["best_template_name"] = result.template_name
-        summary["best_template_family"] = result.template_family
-        summary["best_template_stage"] = result.template_stage
+        _record_best_template(summary, result, score=score)
     return feedback
 
 

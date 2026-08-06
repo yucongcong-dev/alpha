@@ -4,12 +4,14 @@ from __future__ import annotations
 
 from dataclasses import FrozenInstanceError
 import time
+from types import SimpleNamespace
 
 import pytest
 
+from alpha.config.application import ApplicationConfig
 from alpha.models.domain import FieldTestContext, FieldTestResult
 from alpha.models.domain_serializers import serialize_field_test_result
-from alpha.models.io_types import RunFilters
+from alpha.models.io_types import RunFilters, RunPaths
 from alpha.models.runtime import (
     ExecutionMetrics,
     ExecutionState,
@@ -26,6 +28,27 @@ from alpha.models.runtime_options import (
     SchedulerControlOptions,
     TemplateBuildOptions,
 )
+
+
+def _application_config(**overrides: object) -> ApplicationConfig:
+    args = SimpleNamespace(**overrides)
+    paths = RunPaths(
+        results_dir="runs",
+        log_file="run.log",
+        state_file="state.json",
+        checkpoint_file="interrupt.json",
+        output=str(overrides.get("output", "")),
+        template_library_file=str(overrides.get("template_library_file", "")),
+        fields_cache_file=str(overrides.get("fields_cache_file", "")),
+        creds_file=str(overrides.get("creds_file", "")),
+        creds_key_file=str(overrides.get("creds_key_file", "")),
+        include_fields_file=str(overrides.get("include_fields_file", "")),
+        exclude_fields_file=str(overrides.get("exclude_fields_file", "")),
+        include_templates_file=str(overrides.get("include_templates_file", "")),
+        exclude_templates_file=str(overrides.get("exclude_templates_file", "")),
+    )
+    return ApplicationConfig.from_args(args, paths)
+
 
 # ============================================================================
 # RuntimeConcurrencyState 测试
@@ -76,15 +99,15 @@ class TestRuntimeConcurrencyState:
 
 
 class TestRuntimeOptionBuilders:
-    """测试从 args-like 对象提取窄配置。"""
+    """测试从权威 ApplicationConfig 提取窄配置。"""
 
-    def test_api_client_options_from_args(self) -> None:
-        class _Args:
-            min_request_interval = "0.25"
-            rate_limit_max_retries = "7"
-            login_retries = 3
-
-        assert ApiClientOptions.from_args(_Args()) == ApiClientOptions(
+    def test_api_client_options_from_config(self) -> None:
+        config = _application_config(
+            min_request_interval="0.25",
+            rate_limit_max_retries="7",
+            login_retries=3,
+        )
+        assert ApiClientOptions.from_config(config) == ApiClientOptions(
             min_request_interval=0.25,
             rate_limit_max_retries=7,
             login_retries=3,
@@ -119,23 +142,23 @@ class TestRuntimeOptionBuilders:
         assert options.start_date == "2020-01-01"
         assert options.end_date == "2020-12-31"
 
-    def test_result_write_and_field_fetch_options_from_args(self) -> None:
-        class _Args:
-            dataset_id = "model51"
-            output = "results.json"
-            auto_update_blacklist = True
-            strategy_profile = "refine"
-            page_size = "100"
-            region = "USA"
-            universe = "TOP1000"
-            instrument_type = "EQUITY"
-            delay = 2
-            top_fields_by_feedback = "7"
-            offset = "3"
-            limit = "12"
-            check_submission_retries = "4"
-
-        assert FieldFetchOptions.from_args(_Args()) == FieldFetchOptions(
+    def test_result_write_and_field_fetch_options_from_config(self) -> None:
+        config = _application_config(
+            dataset_id="model51",
+            output="results.json",
+            auto_update_blacklist=True,
+            strategy_profile="refine",
+            page_size="100",
+            region="USA",
+            universe="TOP1000",
+            instrument_type="EQUITY",
+            delay=2,
+            top_fields_by_feedback="7",
+            offset="3",
+            limit="12",
+            check_submission_retries="4",
+        )
+        assert FieldFetchOptions.from_config(config) == FieldFetchOptions(
             dataset_id="model51",
             page_size=100,
             region="USA",
@@ -143,7 +166,7 @@ class TestRuntimeOptionBuilders:
             instrument_type="EQUITY",
             delay=2,
         )
-        assert BootstrapFieldOptions.from_args(_Args()) == BootstrapFieldOptions(
+        assert BootstrapFieldOptions.from_config(config) == BootstrapFieldOptions(
             dataset_id="model51",
             check_submission_retries=4,
             fetch=FieldFetchOptions(
@@ -160,7 +183,7 @@ class TestRuntimeOptionBuilders:
                 limit=12,
             ),
         )
-        snapshot_options = RunConfigSnapshotOptions.from_args(_Args())
+        snapshot_options = RunConfigSnapshotOptions.from_config(config)
         assert snapshot_options.run_name == "default"
         assert snapshot_options.dataset_id == "model51"
         assert snapshot_options.page_size == 100
@@ -168,14 +191,14 @@ class TestRuntimeOptionBuilders:
         assert snapshot_options.auto_update_blacklist is True
         assert snapshot_options.strategy_profile == "refine"
 
-    def test_scheduler_control_options_from_args(self) -> None:
-        class _Args:
-            queue_busy_cooldown_seconds = "5.5"
-            queue_busy_retry_limit = "3"
-            sleep_between_fields = "0.25"
-            stop_after_submittable = "2"
-
-        assert SchedulerControlOptions.from_args(_Args()) == SchedulerControlOptions(
+    def test_scheduler_control_options_from_config(self) -> None:
+        config = _application_config(
+            queue_busy_cooldown_seconds="5.5",
+            queue_busy_retry_limit="3",
+            sleep_between_fields="0.25",
+            stop_after_submittable="2",
+        )
+        assert SchedulerControlOptions.from_config(config) == SchedulerControlOptions(
             queue_busy_cooldown_seconds=5.5,
             queue_busy_retry_limit=3,
             sleep_between_fields=0.25,

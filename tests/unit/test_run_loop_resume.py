@@ -31,6 +31,7 @@ from alpha.models.runtime import (
     ResultWriteOptions,
     RuntimeConcurrencyState,
 )
+from alpha.models.runtime_options import SchedulerControlOptions
 
 
 def _build_execution_state() -> ExecutionState:
@@ -199,7 +200,7 @@ def test_drain_remaining_futures_persists_total_field_count(tmp_path) -> None:
             last_field_id="f5",
             execution_state=execution_state,
             runtime_state=RuntimeConcurrencyState(max_workers=2, runtime_max_workers=2),
-            args=argparse.Namespace(),
+            scheduler_options=SchedulerControlOptions(),
             completion_ctx=FutureCompletionContext(
                 result_write_options=ResultWriteOptions(),
             ),

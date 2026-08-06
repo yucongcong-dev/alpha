@@ -12,52 +12,71 @@ import alpha.app.bootstrap as bootstrap_module
 from alpha.app.bootstrap import initialize_run_context, prepare_bootstrap_resources
 from alpha.app.bootstrap_field_resources import log_field_selection_stats
 from alpha.app.bootstrap_supporting_resources import BootstrapLoadedResources
+from alpha.config.application import ApplicationConfig
 from alpha.models.domain import FieldTestResult, TemplateField
 from alpha.models.io_types import RunFilters, RunPaths
 from alpha.models.runtime import ExecutionState, HistoricalRunState
 from alpha.models.runtime_options import FieldSelectionOptions
 
 
-def _build_args() -> argparse.Namespace:
-    return argparse.Namespace(
-        output="",
-        log_file="",
-        template_library_file="",
-        fields_cache_file="raw-cache.json",
-        creds_file="raw-creds.json",
-        creds_key_file="raw-creds.key",
-        email=None,
-        password=None,
-        dataset_id="fundamental6",
-        region="USA",
-        universe="TOP3000",
-        instrument_type="EQUITY",
-        delay=1,
-        decay=4,
-        neutralization="SUBINDUSTRY",
-        truncation=0.08,
-        pasteurization="ON",
-        unit_handling="VERIFY",
-        nan_handling="OFF",
-        max_trade="OFF",
-        language="FASTEXPR",
-        start_date=None,
-        end_date=None,
-        page_size=50,
-        max_concurrent_simulations=1,
-        max_concurrent_creates=1,
-        simulation_max_pending_cycles=10,
-        offset=0,
-        limit=10,
-        top_fields_by_feedback=0,
-        max_templates_per_field=0,
-        max_templates_per_family=0,
-        legacy_similarity_penalty=0,
-        include_fields_file="",
-        exclude_fields_file="",
-        include_templates_file="",
-        exclude_templates_file="",
+def _build_config(**overrides: object) -> ApplicationConfig:
+    values: dict[str, object] = {
+        "output": "",
+        "log_file": "",
+        "template_library_file": "",
+        "fields_cache_file": "raw-cache.json",
+        "creds_file": "raw-creds.json",
+        "creds_key_file": "raw-creds.key",
+        "email": None,
+        "password": None,
+        "dataset_id": "fundamental6",
+        "region": "USA",
+        "universe": "TOP3000",
+        "instrument_type": "EQUITY",
+        "delay": 1,
+        "decay": 4,
+        "neutralization": "SUBINDUSTRY",
+        "truncation": 0.08,
+        "pasteurization": "ON",
+        "unit_handling": "VERIFY",
+        "nan_handling": "OFF",
+        "max_trade": "OFF",
+        "language": "FASTEXPR",
+        "start_date": None,
+        "end_date": None,
+        "page_size": 50,
+        "max_concurrent_simulations": 1,
+        "max_concurrent_creates": 1,
+        "simulation_max_pending_cycles": 10,
+        "offset": 0,
+        "limit": 10,
+        "top_fields_by_feedback": 0,
+        "max_templates_per_field": 0,
+        "max_templates_per_family": 0,
+        "legacy_similarity_penalty": 0,
+        "include_fields_file": "",
+        "exclude_fields_file": "",
+        "include_templates_file": "",
+        "exclude_templates_file": "",
+    }
+    values.update(overrides)
+    args = argparse.Namespace(**values)
+    paths = RunPaths(
+        results_dir="runs",
+        log_file=str(values["log_file"]),
+        state_file="state.json",
+        checkpoint_file="interrupt.json",
+        output=str(values["output"]),
+        template_library_file=str(values["template_library_file"]),
+        fields_cache_file=str(values["fields_cache_file"]),
+        creds_file=str(values["creds_file"]),
+        creds_key_file=str(values["creds_key_file"]),
+        include_fields_file=str(values["include_fields_file"]),
+        exclude_fields_file=str(values["exclude_fields_file"]),
+        include_templates_file=str(values["include_templates_file"]),
+        exclude_templates_file=str(values["exclude_templates_file"]),
     )
+    return ApplicationConfig.from_args(args, paths)
 
 
 def test_field_selection_log_describes_selected_execution_fields(caplog) -> None:
@@ -126,7 +145,7 @@ def test_build_bootstrap_services_reads_current_module_dependencies(monkeypatch)
 def test_initialize_run_context_closes_clients_when_resources_are_unavailable(
     monkeypatch,
 ) -> None:
-    args = _build_args()
+    args = _build_config()
     paths = SimpleNamespace(
         creds_file="creds.json",
         creds_key_file="creds.key",
@@ -158,7 +177,7 @@ def test_initialize_run_context_closes_clients_when_resources_are_unavailable(
 
 
 def test_initialize_run_context_closes_factory_when_state_build_fails(monkeypatch) -> None:
-    args = _build_args()
+    args = _build_config()
     paths = SimpleNamespace(
         creds_file="creds.json",
         creds_key_file="creds.key",
@@ -236,7 +255,7 @@ def test_prepare_bootstrap_resources_persists_pending_refresh_before_empty_field
         template_library={"MATRIX": []},
         filters={},
     )
-    persisted: dict[str, object] = {}
+    reconciliation: dict[str, object] = {}
 
     monkeypatch.setattr(
         bootstrap_module,
@@ -250,18 +269,10 @@ def test_prepare_bootstrap_resources_persists_pending_refresh_before_empty_field
     )
     monkeypatch.setattr(
         bootstrap_module,
-        "refresh_pending_check_results",
-        lambda *_args, **_kwargs: ([refreshed], 1),
-    )
-    monkeypatch.setattr(
-        bootstrap_module,
-        "rebuild_historical_run_state",
-        lambda _state, results: HistoricalRunState(existing_results=list(results)),
-    )
-    monkeypatch.setattr(
-        bootstrap_module,
-        "persist_reconciled_historical_results",
-        lambda **kwargs: persisted.update(kwargs),
+        "reconcile_pending_check_results",
+        lambda *_args, **kwargs: (
+            reconciliation.update(kwargs) or HistoricalRunState(existing_results=[refreshed])
+        ),
     )
     monkeypatch.setattr(bootstrap_module, "load_bootstrap_fields", lambda **_kwargs: [])
 
@@ -281,11 +292,10 @@ def test_prepare_bootstrap_resources_persists_pending_refresh_before_empty_field
     )
 
     assert result is None
-    assert persisted["results"] == [refreshed]
-    assert persisted["output_file"] == "results.json"
-    assert persisted["settings_fingerprint"] == "settings-fp"
-    assert persisted["template_library_fingerprint"] == "templates-fp"
-    assert persisted["run_config"] == {
+    assert reconciliation["output_file"] == "results.json"
+    assert reconciliation["settings_fingerprint"] == "settings-fp"
+    assert reconciliation["template_library_fingerprint"] == "templates-fp"
+    assert reconciliation["run_config"] == {
         "run_name": "test",
         "heuristic_policy": {
             "dataset_id": "fundamental6",
@@ -338,8 +348,7 @@ def test_prepare_bootstrap_resources_refreshes_cross_run_feedback_pending(
         template_library={"MATRIX": []},
         filters={},
     )
-    persisted: list[dict[str, object]] = []
-    indexed_feedback_paths: list[str] = []
+    reconciliation: dict[str, object] = {}
 
     monkeypatch.setattr(
         bootstrap_module,
@@ -353,18 +362,10 @@ def test_prepare_bootstrap_resources_refreshes_cross_run_feedback_pending(
     )
     monkeypatch.setattr(
         bootstrap_module,
-        "refresh_pending_check_results",
-        lambda *_args, **_kwargs: ([refreshed], 1),
-    )
-    monkeypatch.setattr(
-        bootstrap_module,
-        "persist_reconciled_historical_results",
-        lambda **kwargs: persisted.append(kwargs),
-    )
-    monkeypatch.setattr(
-        bootstrap_module,
-        "persist_feedback_run_index",
-        indexed_feedback_paths.append,
+        "reconcile_pending_check_results",
+        lambda *_args, **kwargs: (
+            reconciliation.update(kwargs) or HistoricalRunState(feedback_results=[refreshed])
+        ),
     )
     monkeypatch.setattr(bootstrap_module, "load_bootstrap_fields", lambda **_kwargs: [])
 
@@ -384,17 +385,15 @@ def test_prepare_bootstrap_resources_refreshes_cross_run_feedback_pending(
     )
 
     assert result is None
-    assert len(persisted) == 1
-    assert persisted[0]["output_file"] == "feedback.json"
-    assert persisted[0]["results"] == [refreshed]
-    assert indexed_feedback_paths == ["feedback.json"]
+    assert reconciliation["output_file"] == "run.json"
+    assert reconciliation["feedback_output"] == "feedback.json"
 
 
 def test_initialize_run_context_prefers_run_paths_for_cache_and_credentials(
     monkeypatch, tmp_path
 ) -> None:
     """Runtime initialization should honor normalized run_paths before raw args paths."""
-    args = _build_args()
+    args = _build_config()
     run_paths = RunPaths(
         results_dir=str(tmp_path / "results"),
         log_file=str(tmp_path / "run.log"),
@@ -500,11 +499,12 @@ def test_initialize_run_context_builds_fallback_run_paths_when_missing(
     monkeypatch, tmp_path
 ) -> None:
     """Initialization should build a minimal RunPaths snapshot when no normalized paths are passed."""
-    args = _build_args()
-    args.output = str(tmp_path / "raw-output.json")
-    args.template_library_file = str(tmp_path / "raw-templates.json")
-    args.include_fields_file = str(tmp_path / "include_fields.txt")
-    args.exclude_templates_file = str(tmp_path / "exclude_templates.txt")
+    args = _build_config(
+        output=str(tmp_path / "raw-output.json"),
+        template_library_file=str(tmp_path / "raw-templates.json"),
+        include_fields_file=str(tmp_path / "include_fields.txt"),
+        exclude_templates_file=str(tmp_path / "exclude_templates.txt"),
+    )
     captured: dict[str, object] = {}
 
     monkeypatch.setattr(

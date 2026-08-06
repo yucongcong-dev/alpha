@@ -9,12 +9,6 @@ from ..config.strategy_profiles import normalize_strategy_profile
 from ..runtime.preset_mode import resolve_preset_mode
 from .runtime_config import SimulationStageConfig
 from .runtime_protocols import (
-    ApiClientArgs,
-    BootstrapFieldArgs,
-    BootstrapPathArgs,
-    FieldFetchArgs,
-    FieldSelectionArgs,
-    SchedulerControlArgs,
     TemplateBuildArgs,
 )
 
@@ -31,11 +25,11 @@ class ApiClientOptions:
     login_retries: int = 0
 
     @classmethod
-    def from_args(cls, args: ApiClientArgs) -> ApiClientOptions:
+    def from_config(cls, config: ApplicationConfig) -> ApiClientOptions:
         return cls(
-            min_request_interval=float(args.min_request_interval or 0.0),
-            rate_limit_max_retries=int(args.rate_limit_max_retries or 0),
-            login_retries=int(args.login_retries or 0),
+            min_request_interval=config.execution.min_request_interval,
+            rate_limit_max_retries=config.execution.rate_limit_max_retries,
+            login_retries=config.execution.login_retries,
         )
 
 
@@ -54,17 +48,18 @@ class BootstrapPathOptions:
     exclude_templates_file: str = ""
 
     @classmethod
-    def from_args(cls, args: BootstrapPathArgs) -> BootstrapPathOptions:
+    def from_config(cls, config: ApplicationConfig) -> BootstrapPathOptions:
+        paths = config.paths
         return cls(
-            output=str(args.output or ""),
-            template_library_file=str(args.template_library_file or ""),
-            fields_cache_file=str(args.fields_cache_file or ""),
-            creds_file=str(args.creds_file or ""),
-            creds_key_file=str(args.creds_key_file or ""),
-            include_fields_file=str(args.include_fields_file or ""),
-            exclude_fields_file=str(args.exclude_fields_file or ""),
-            include_templates_file=str(args.include_templates_file or ""),
-            exclude_templates_file=str(args.exclude_templates_file or ""),
+            output=paths.output,
+            template_library_file=paths.template_library_file,
+            fields_cache_file=paths.fields_cache_file,
+            creds_file=paths.creds_file,
+            creds_key_file=paths.creds_key_file,
+            include_fields_file=paths.include_fields_file,
+            exclude_fields_file=paths.exclude_fields_file,
+            include_templates_file=paths.include_templates_file,
+            exclude_templates_file=paths.exclude_templates_file,
         )
 
 
@@ -124,6 +119,39 @@ class TemplateBuildOptions:
             ),
         )
 
+    @classmethod
+    def from_config(cls, config: ApplicationConfig) -> TemplateBuildOptions:
+        dataset = config.dataset
+        simulation = config.simulation
+        planning = config.planning
+        paths = config.paths
+        return cls(
+            region=dataset.region,
+            universe=dataset.universe,
+            instrument_type=dataset.instrument_type,
+            delay=dataset.delay,
+            decay=simulation.decay,
+            neutralization=simulation.neutralization,
+            truncation=simulation.truncation,
+            pasteurization=simulation.pasteurization,
+            unit_handling=simulation.unit_handling,
+            nan_handling=simulation.nan_handling,
+            language=simulation.language,
+            max_trade=simulation.max_trade,
+            dataset_id=dataset.dataset_id,
+            max_templates_per_field=planning.max_templates_per_field,
+            max_templates_per_family=planning.max_templates_per_family,
+            legacy_similarity_penalty=planning.legacy_similarity_penalty,
+            template_library_file=paths.template_library_file,
+            start_date=simulation.start_date,
+            end_date=simulation.end_date,
+            preset_mode=resolve_preset_mode(
+                template_library_file=paths.template_library_file,
+                include_fields_file=paths.include_fields_file,
+                include_templates_file=paths.include_templates_file,
+            ),
+        )
+
 
 @dataclass(frozen=True)
 class ResultWriteOptions:
@@ -155,14 +183,14 @@ class FieldFetchOptions:
     page_size: int = 0
 
     @classmethod
-    def from_args(cls, args: FieldFetchArgs) -> FieldFetchOptions:
+    def from_config(cls, config: ApplicationConfig) -> FieldFetchOptions:
         return cls(
-            region=args.region,
-            universe=args.universe,
-            instrument_type=args.instrument_type,
-            delay=args.delay,
-            dataset_id=args.dataset_id,
-            page_size=int(args.page_size or 0),
+            region=config.dataset.region,
+            universe=config.dataset.universe,
+            instrument_type=config.dataset.instrument_type,
+            delay=config.dataset.delay,
+            dataset_id=config.dataset.dataset_id,
+            page_size=config.planning.page_size,
         )
 
 
@@ -175,11 +203,11 @@ class FieldSelectionOptions:
     limit: int = 0
 
     @classmethod
-    def from_args(cls, args: FieldSelectionArgs) -> FieldSelectionOptions:
+    def from_config(cls, config: ApplicationConfig) -> FieldSelectionOptions:
         return cls(
-            top_fields_by_feedback=int(getattr(args, "top_fields_by_feedback", 0) or 0),
-            offset=int(getattr(args, "offset", 0) or 0),
-            limit=int(getattr(args, "limit", 0) or 0),
+            top_fields_by_feedback=config.planning.top_fields_by_feedback,
+            offset=config.planning.offset,
+            limit=config.planning.limit,
         )
 
 
@@ -193,12 +221,12 @@ class BootstrapFieldOptions:
     selection: FieldSelectionOptions
 
     @classmethod
-    def from_args(cls, args: BootstrapFieldArgs) -> BootstrapFieldOptions:
+    def from_config(cls, config: ApplicationConfig) -> BootstrapFieldOptions:
         return cls(
-            dataset_id=str(args.dataset_id or ""),
-            check_submission_retries=int(getattr(args, "check_submission_retries", 1) or 1),
-            fetch=FieldFetchOptions.from_args(args),
-            selection=FieldSelectionOptions.from_args(args),
+            dataset_id=config.dataset.dataset_id,
+            check_submission_retries=max(1, config.execution.check_submission_retries),
+            fetch=FieldFetchOptions.from_config(config),
+            selection=FieldSelectionOptions.from_config(config),
         )
 
 
@@ -251,64 +279,56 @@ class RunConfigSnapshotOptions:
     quiet: bool = False
 
     @classmethod
-    def from_args(cls, args: object) -> RunConfigSnapshotOptions:
+    def from_config(cls, config: ApplicationConfig) -> RunConfigSnapshotOptions:
+        dataset = config.dataset
+        simulation = config.simulation
+        planning = config.planning
+        execution = config.execution
+        flags = config.runtime_flags
         return cls(
-            run_name=str(getattr(args, "run_name", "default") or "default"),
-            dataset_id=str(getattr(args, "dataset_id", "") or ""),
-            region=str(getattr(args, "region", "") or ""),
-            universe=str(getattr(args, "universe", "") or ""),
-            instrument_type=str(getattr(args, "instrument_type", "") or ""),
-            delay=int(getattr(args, "delay", 0) or 0),
-            decay=int(getattr(args, "decay", 0) or 0),
-            neutralization=str(getattr(args, "neutralization", "") or ""),
-            truncation=float(getattr(args, "truncation", 0.0) or 0.0),
-            nan_handling=str(getattr(args, "nan_handling", "") or ""),
-            max_trade=str(getattr(args, "max_trade", "OFF") or "OFF"),
-            limit=int(getattr(args, "limit", 0) or 0),
-            offset=int(getattr(args, "offset", 0) or 0),
-            page_size=int(getattr(args, "page_size", 0) or 0),
-            sleep_between_fields=float(getattr(args, "sleep_between_fields", 0.0) or 0.0),
-            max_templates_per_field=int(getattr(args, "max_templates_per_field", 0) or 0),
-            max_templates_per_family=int(getattr(args, "max_templates_per_family", 0) or 0),
-            max_total_simulations=max(0, int(getattr(args, "max_total_simulations", 0) or 0)),
-            field_template_batch_size=max(
-                1,
-                int(getattr(args, "field_template_batch_size", 0) or 0),
-            ),
-            legacy_similarity_penalty=int(getattr(args, "legacy_similarity_penalty", 0) or 0),
-            max_concurrent_simulations=int(getattr(args, "max_concurrent_simulations", 0) or 0),
-            max_concurrent_creates=int(getattr(args, "max_concurrent_creates", 0) or 0),
-            simulation_create_retries=int(getattr(args, "simulation_create_retries", 0) or 0),
-            simulation_poll_retries=int(getattr(args, "simulation_poll_retries", 0) or 0),
-            simulation_max_polls=int(getattr(args, "simulation_max_polls", 0) or 0),
-            simulation_max_wait_seconds=float(
-                getattr(args, "simulation_max_wait_seconds", 0.0) or 0.0
-            ),
-            simulation_max_pending_cycles=int(
-                getattr(args, "simulation_max_pending_cycles", 0) or 0
-            ),
-            simulation_max_queue_seconds=float(
-                getattr(args, "simulation_max_queue_seconds", 0.0) or 0.0
-            ),
-            queue_busy_cooldown_seconds=float(
-                getattr(args, "queue_busy_cooldown_seconds", 0.0) or 0.0
-            ),
-            queue_busy_retry_limit=int(getattr(args, "queue_busy_retry_limit", 0) or 0),
-            check_submission_retries=int(getattr(args, "check_submission_retries", 0) or 0),
-            rate_limit_max_retries=int(getattr(args, "rate_limit_max_retries", 0) or 0),
-            login_retries=int(getattr(args, "login_retries", 0) or 0),
-            min_request_interval=float(getattr(args, "min_request_interval", 0.0) or 0.0),
-            top_fields_by_feedback=int(getattr(args, "top_fields_by_feedback", 0) or 0),
-            stop_after_submittable=int(getattr(args, "stop_after_submittable", 0) or 0),
-            strategy_profile=normalize_strategy_profile(
-                getattr(args, "strategy_profile", "explore")
-            ),
-            auto_update_blacklist=bool(getattr(args, "auto_update_blacklist", False)),
-            smoke_test=bool(getattr(args, "smoke_test", False)),
-            dry_run_plan=bool(getattr(args, "dry_run_plan", False)),
-            full_run=bool(getattr(args, "full_run", False)),
-            verbose=bool(getattr(args, "verbose", False)),
-            quiet=bool(getattr(args, "quiet", False)),
+            run_name=config.run_name,
+            dataset_id=dataset.dataset_id,
+            region=dataset.region,
+            universe=dataset.universe,
+            instrument_type=dataset.instrument_type,
+            delay=dataset.delay,
+            decay=simulation.decay,
+            neutralization=simulation.neutralization,
+            truncation=simulation.truncation,
+            nan_handling=simulation.nan_handling,
+            max_trade=simulation.max_trade,
+            limit=planning.limit,
+            offset=planning.offset,
+            page_size=planning.page_size,
+            sleep_between_fields=planning.sleep_between_fields,
+            max_templates_per_field=planning.max_templates_per_field,
+            max_templates_per_family=planning.max_templates_per_family,
+            max_total_simulations=planning.max_total_simulations,
+            field_template_batch_size=max(1, planning.field_template_batch_size),
+            legacy_similarity_penalty=planning.legacy_similarity_penalty,
+            max_concurrent_simulations=execution.max_concurrent_simulations,
+            max_concurrent_creates=execution.max_concurrent_creates,
+            simulation_create_retries=execution.simulation_create_retries,
+            simulation_poll_retries=execution.simulation_poll_retries,
+            simulation_max_polls=execution.simulation_max_polls,
+            simulation_max_wait_seconds=execution.simulation_max_wait_seconds,
+            simulation_max_pending_cycles=execution.simulation_max_pending_cycles,
+            simulation_max_queue_seconds=execution.simulation_max_queue_seconds,
+            queue_busy_cooldown_seconds=execution.queue_busy_cooldown_seconds,
+            queue_busy_retry_limit=execution.queue_busy_retry_limit,
+            check_submission_retries=execution.check_submission_retries,
+            rate_limit_max_retries=execution.rate_limit_max_retries,
+            login_retries=execution.login_retries,
+            min_request_interval=execution.min_request_interval,
+            top_fields_by_feedback=planning.top_fields_by_feedback,
+            stop_after_submittable=planning.stop_after_submittable,
+            strategy_profile=normalize_strategy_profile(flags.strategy_profile),
+            auto_update_blacklist=flags.auto_update_blacklist,
+            smoke_test=planning.smoke_test,
+            dry_run_plan=planning.dry_run_plan,
+            full_run=planning.full_run,
+            verbose=flags.verbose,
+            quiet=flags.quiet,
         )
 
 
@@ -323,15 +343,13 @@ class SchedulerControlOptions:
     max_total_simulations: int = 0
 
     @classmethod
-    def from_args(cls, args: SchedulerControlArgs) -> SchedulerControlOptions:
+    def from_config(cls, config: ApplicationConfig) -> SchedulerControlOptions:
         return cls(
-            queue_busy_cooldown_seconds=float(
-                getattr(args, "queue_busy_cooldown_seconds", 0.0) or 0.0
-            ),
-            queue_busy_retry_limit=int(getattr(args, "queue_busy_retry_limit", 0) or 0),
-            sleep_between_fields=float(getattr(args, "sleep_between_fields", 0.0) or 0.0),
-            stop_after_submittable=int(getattr(args, "stop_after_submittable", 0) or 0),
-            max_total_simulations=max(0, int(getattr(args, "max_total_simulations", 0) or 0)),
+            queue_busy_cooldown_seconds=config.execution.queue_busy_cooldown_seconds,
+            queue_busy_retry_limit=config.execution.queue_busy_retry_limit,
+            sleep_between_fields=config.planning.sleep_between_fields,
+            stop_after_submittable=config.planning.stop_after_submittable,
+            max_total_simulations=config.planning.max_total_simulations,
         )
 
 
@@ -350,10 +368,10 @@ class RunLoopOptions:
     def from_config(cls, config: ApplicationConfig) -> RunLoopOptions:
         """Build live-loop options while reading result settings canonically."""
         return cls(
-            template_build=TemplateBuildOptions.from_args(config),
+            template_build=TemplateBuildOptions.from_config(config),
             simulation_stage=SimulationStageConfig.from_stage_args(config),
             result_write=ResultWriteOptions.from_config(config),
-            scheduler=SchedulerControlOptions.from_args(config),
+            scheduler=SchedulerControlOptions.from_config(config),
             field_template_batch_size=max(1, config.planning.field_template_batch_size),
             full_run=config.planning.full_run,
         )

@@ -13,7 +13,7 @@ from ..core.simulation import resume_field_test_in_worker, run_field_test_in_wor
 from ..generators.payload import build_simulation_payload
 from ..models.domain import FieldTestResult, SettingsVariant, TemplateField
 from ..models.runtime_options import SchedulerControlOptions
-from ..models.runtime_protocols import SchedulerRuntimeArgs, SimulationStageArgs
+from ..models.runtime_protocols import SimulationStageArgs
 from ..runtime.concurrency import RuntimeConcurrencyState
 from ..runtime.contexts import (
     FutureCompletionContext,
@@ -72,7 +72,7 @@ def _drain_completed_cycle(
     drain_completed_futures_with_context(
         completed_futures=list(done),
         execution_state=execution_state,
-        args=scheduler_options,
+        scheduler_options=scheduler_options,
         completion_ctx=completion_ctx,
         runtime_state=runtime_state,
     )
@@ -254,12 +254,10 @@ def drain_remaining_futures(
     last_field_id: str,
     execution_state: ExecutionState,
     runtime_state: RuntimeConcurrencyState,
-    args: SchedulerRuntimeArgs | SchedulerControlOptions,
-    scheduler_options: SchedulerControlOptions | None = None,
+    scheduler_options: SchedulerControlOptions,
     completion_ctx: FutureCompletionContext,
 ) -> None:
     """Drain all remaining futures and persist terminal pipeline state when needed."""
-    scheduler_options = scheduler_options or SchedulerControlOptions.from_args(args)
     future_queue = execution_state.future_queue
     while future_queue.pending_futures:
         drain_next_completion(

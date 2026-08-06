@@ -9,7 +9,7 @@ from typing import NamedTuple, Protocol
 
 from ..models.domain import FieldTestResult
 from ..models.runtime_options import ResultWriteOptions, SchedulerControlOptions
-from ..models.runtime_protocols import RunConfig, SchedulerRuntimeArgs, TemplateStats
+from ..models.runtime_protocols import RunConfig, TemplateStats
 from ..runtime.concurrency import RuntimeConcurrencyState
 from ..runtime.contexts import FutureCompletionContext
 from ..runtime.queue_retry import QueueRetryKey
@@ -46,7 +46,7 @@ def drain_completed_futures(
     *,
     completed_futures: Sequence[Future[FieldTestResult]],
     execution_state: ExecutionState,
-    args: SchedulerRuntimeArgs,
+    scheduler_options: SchedulerControlOptions,
     result_write_options: ResultWriteOptions,
     settings_fingerprint: str,
     template_library_fingerprint: str,
@@ -62,11 +62,10 @@ def drain_completed_futures(
         template_library_fingerprint=template_library_fingerprint,
         run_config=run_config,
     )
-    scheduler_options = SchedulerControlOptions.from_args(args)
     return drain_completed_futures_with_context(
         completed_futures=completed_futures,
         execution_state=execution_state,
-        args=scheduler_options,
+        scheduler_options=scheduler_options,
         completion_ctx=completion_ctx,
         runtime_state=runtime_state,
         handle_completed=handle_completed,
@@ -78,14 +77,13 @@ def drain_completed_futures_with_context(
     *,
     completed_futures: Sequence[Future[FieldTestResult]],
     execution_state: ExecutionState,
-    args: SchedulerRuntimeArgs | SchedulerControlOptions,
+    scheduler_options: SchedulerControlOptions,
     completion_ctx: FutureCompletionContext,
     runtime_state: RuntimeConcurrencyState,
     handle_completed: CompletedFutureHandler,
     log: logging.Logger = logger,
 ) -> TemplateStats:
     """Consume completed futures using a prebuilt immutable completion context."""
-    scheduler_options = _queue.scheduler_control_options(args)
     for done_future in completed_futures:
         drain_result = handle_completed(
             done_future,

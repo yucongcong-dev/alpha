@@ -24,17 +24,6 @@ class MarketScopeArgs(Protocol):
     def delay(self) -> int: ...
 
 
-class ApiClientArgs(Protocol):
-    @property
-    def min_request_interval(self) -> float: ...
-
-    @property
-    def rate_limit_max_retries(self) -> int: ...
-
-    @property
-    def login_retries(self) -> int: ...
-
-
 class TemplateSelectionArgs(Protocol):
     @property
     def max_templates_per_field(self) -> int: ...
@@ -112,40 +101,6 @@ class CredentialsArgs(Protocol):
     def creds_key_file(self) -> str: ...
 
 
-class BootstrapPathArgs(Protocol):
-    @property
-    def output(self) -> str: ...
-
-    @property
-    def template_library_file(self) -> str: ...
-
-    @property
-    def fields_cache_file(self) -> str: ...
-
-    @property
-    def creds_file(self) -> str: ...
-
-    @property
-    def creds_key_file(self) -> str: ...
-
-    @property
-    def include_fields_file(self) -> str: ...
-
-    @property
-    def exclude_fields_file(self) -> str: ...
-
-    @property
-    def include_templates_file(self) -> str: ...
-
-    @property
-    def exclude_templates_file(self) -> str: ...
-
-
-class FieldFetchArgs(DatasetIdentityArgs, MarketScopeArgs, Protocol):
-    @property
-    def page_size(self) -> int: ...
-
-
 class RunSettingsArgs(Protocol):
     @property
     def decay(self) -> int: ...
@@ -161,31 +116,6 @@ class RunSettingsArgs(Protocol):
 
     @property
     def max_trade(self) -> str: ...
-
-
-class FieldSelectionArgs(Protocol):
-    @property
-    def top_fields_by_feedback(self) -> int: ...
-
-    @property
-    def offset(self) -> int: ...
-
-    @property
-    def limit(self) -> int: ...
-
-
-class CheckSubmissionRetryArgs(Protocol):
-    @property
-    def check_submission_retries(self) -> int: ...
-
-
-class BootstrapFieldArgs(
-    FieldFetchArgs,
-    FieldSelectionArgs,
-    CheckSubmissionRetryArgs,
-    Protocol,
-):
-    pass
 
 
 class RuntimeConcurrencyArgs(Protocol):
@@ -222,20 +152,6 @@ class SimulationRetryArgs(Protocol):
     def check_submission_retries(self) -> int: ...
 
 
-class SchedulerControlArgs(Protocol):
-    @property
-    def queue_busy_cooldown_seconds(self) -> float: ...
-
-    @property
-    def queue_busy_retry_limit(self) -> int: ...
-
-    @property
-    def sleep_between_fields(self) -> float: ...
-
-    @property
-    def max_total_simulations(self) -> int: ...
-
-
 class QualityThresholdArgs(Protocol):
     @property
     def min_sharpe(self) -> float: ...
@@ -260,15 +176,3 @@ class SimulationStageArgs(
     Protocol,
 ):
     pass
-
-
-class SchedulerRuntimeArgs(
-    DatasetIdentityArgs,
-    SchedulerControlArgs,
-    Protocol,
-):
-    @property
-    def output(self) -> str: ...
-
-    @property
-    def auto_update_blacklist(self) -> bool: ...

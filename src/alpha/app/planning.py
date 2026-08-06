@@ -50,8 +50,8 @@ def build_planning_supporting_services() -> SupportingResourceServices:
 
 def run_dry_run_plan(args: ApplicationConfig, run_paths: RunPaths | None) -> bool:
     """Print a plan from local resources without authentication or filesystem writes."""
-    path_options = BootstrapPathOptions.from_args(args)
-    field_options = BootstrapFieldOptions.from_args(args)
+    path_options = BootstrapPathOptions.from_config(args)
+    field_options = BootstrapFieldOptions.from_config(args)
     paths = resolve_bootstrap_paths(path_options, run_paths)
     effective_run_paths = build_effective_run_paths(path_options, paths, run_paths)
     dataset_id = field_options.dataset_id
