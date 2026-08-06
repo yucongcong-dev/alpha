@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 from ..runtime.preset_mode import resolve_preset_mode
-from .runtime_config import SimulationStageConfig
+from .runtime_config import SimulationSettingsConfig, SimulationStageConfig
 
 if TYPE_CHECKING:
     from ..config.application import ApplicationConfig
@@ -29,29 +29,15 @@ class ApiClientOptions:
         )
 
 
-@dataclass(frozen=True)
-class TemplateBuildOptions:
+@dataclass(frozen=True, kw_only=True)
+class TemplateBuildOptions(SimulationSettingsConfig):
     """模板选择、反馈回路与 settings 变体展开所需的窄配置。"""
 
-    region: str
-    universe: str
-    instrument_type: str
-    delay: int
-    decay: int
-    neutralization: str
-    truncation: float
-    pasteurization: str
-    unit_handling: str
-    nan_handling: str
-    language: str
-    max_trade: str = "OFF"
     dataset_id: str = ""
     max_templates_per_field: int = 0
     max_templates_per_family: int = 0
     legacy_similarity_penalty: int = 0
     template_library_file: str = ""
-    start_date: str | None = None
-    end_date: str | None = None
     preset_mode: bool = False
 
     @classmethod

@@ -5,52 +5,6 @@ from __future__ import annotations
 from typing import Protocol
 
 
-class MarketScopeArgs(Protocol):
-    @property
-    def region(self) -> str: ...
-
-    @property
-    def universe(self) -> str: ...
-
-    @property
-    def instrument_type(self) -> str: ...
-
-    @property
-    def delay(self) -> int: ...
-
-
-class SimulationSettingsArgs(MarketScopeArgs, Protocol):
-    @property
-    def decay(self) -> int: ...
-
-    @property
-    def neutralization(self) -> str: ...
-
-    @property
-    def truncation(self) -> float: ...
-
-    @property
-    def pasteurization(self) -> str: ...
-
-    @property
-    def unit_handling(self) -> str: ...
-
-    @property
-    def nan_handling(self) -> str: ...
-
-    @property
-    def max_trade(self) -> str: ...
-
-    @property
-    def language(self) -> str: ...
-
-    @property
-    def start_date(self) -> str | None: ...
-
-    @property
-    def end_date(self) -> str | None: ...
-
-
 class CleanRuntimeArgs(Protocol):
     @property
     def include_credentials(self) -> bool: ...
@@ -72,19 +26,3 @@ class CredentialsArgs(Protocol):
     @property
     def creds_key_file(self) -> str: ...
 
-
-class RunSettingsArgs(Protocol):
-    @property
-    def decay(self) -> int: ...
-
-    @property
-    def neutralization(self) -> str: ...
-
-    @property
-    def truncation(self) -> float: ...
-
-    @property
-    def nan_handling(self) -> str: ...
-
-    @property
-    def max_trade(self) -> str: ...

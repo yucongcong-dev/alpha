@@ -15,12 +15,12 @@ from ..config.constants import (
     TRUNCATION_WEB_DEFAULT,
 )
 from ..models.domain import SettingsVariant
-from ..models.runtime_protocols import SimulationSettingsArgs
+from ..models.runtime_options import TemplateBuildOptions
 from .payload import build_simulation_payload
 
 
 def build_setting_variants(
-    args: SimulationSettingsArgs,
+    args: TemplateBuildOptions,
     template_name: str,
     expression: str,
     *,

@@ -41,7 +41,7 @@ from ..models.domain import (
     TemplateField,
 )
 from ..models.runtime_options import TemplateBuildOptions
-from ..models.runtime_protocols import SimulationSettingsArgs, TemplateFeedback
+from ..models.runtime_protocols import TemplateFeedback
 from ..policy.expression import get_dataset_expression_policy, resolve_feedback_stage
 from ..runtime.contexts import PendingTemplateEntry, TemplateBuildContext
 from ..utils.helpers import first_non_empty, is_event_field_name
@@ -67,7 +67,7 @@ class SettingVariantsBuilder(Protocol):
 
     def __call__(
         self,
-        args: SimulationSettingsArgs,
+        args: TemplateBuildOptions,
         template_name: str,
         expression: str,
         *,
