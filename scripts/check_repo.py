@@ -122,6 +122,9 @@ def removed_compat_file_check(root: Path) -> list[str]:
     simulation_stages = root / "src" / "alpha" / "core" / "simulation_stages.py"
     if simulation_stages.is_file():
         removed.append(simulation_stages)
+    domain_conversion = root / "src" / "alpha" / "models" / "domain_conversion.py"
+    if domain_conversion.is_file():
+        removed.append(domain_conversion)
     if removed:
         return [
             "[check] compatibility aggregate files were removed; import concrete modules",
