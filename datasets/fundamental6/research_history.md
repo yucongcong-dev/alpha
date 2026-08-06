@@ -56,7 +56,6 @@ python -m alpha --dataset-id fundamental6 \
   --include-templates-file datasets/fundamental6/presets/cicurr_refine/templates.txt \
   --max-templates-per-field 5 \
   --max-total-simulations 5 \
-  --no-auto-update-blacklist \
   --dry-run-plan
 ```
 

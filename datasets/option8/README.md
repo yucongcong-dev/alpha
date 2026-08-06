@@ -54,7 +54,6 @@ PYTHONPATH=src python3.10 -m alpha \
   --dataset-id option8 \
   --template-library-file datasets/option8/presets/subindustry_refine/template.json \
   --include-fields-file datasets/option8/presets/subindustry_refine/fields.txt \
-  --no-auto-update-blacklist \
   --limit 1 \
   --max-templates-per-field 1 \
   --run-name verify-option8-subindustry
