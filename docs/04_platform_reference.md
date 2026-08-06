@@ -483,6 +483,11 @@ Margin = PnL / total dollars traded
 
 聚合后得到 MATRIX 形态的单值，才能继续进入普通时序或截面算子。
 
+上面是 Learn 的 Vector Data Fields 教程用于说明聚合语义的例子，不等于当前账号一定能在
+Operators 页面看到全部算子。`2026-08-03` 当前账号的 Operators API 快照只返回
+`vec_avg()` 和 `vec_sum()` 两个 Vector 算子。使用其他 `vec_*` 前应先查询当前 Operators
+页面/API；runner 和模板资产只能自动生成已经在账号可见快照或实际模拟中验证过的算子。
+
 ### 10.3 `GROUP`
 
 GROUP 字段表示 instrument 所属的类别或分组，例如 `sector`、`industry`、
@@ -528,6 +533,8 @@ Operators 的精确定义、参数和分类以平台当前可见页面/API 为�
 使用时要注意两个边界：
 
 - 这是一份带日期的账号可见快照，不表示所有账号、所有等级、所有时间都看到相同算子。
+- Learn Documentation 与 Operators API 是两个官方来源；教程可能介绍当前账号 API 没有返回的
+  算子，实际可执行性以当前账号的 Operators 页面/API 和模拟结果为准。
 - 分类数量、逐个算子的签名、说明和例子只在快照索引维护，主文档不再复制。
 
 ---
