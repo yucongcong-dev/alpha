@@ -13,19 +13,20 @@ macOS 也可以在未激活环境时显式使用 `python3.10`，Windows 可使�
 
 ```bash
 # 需要登录：冒烟模式（1 字段/1 模板、并发 1）快速验证凭证、API 连通性和模拟创建
-python -m alpha --smoke-test
+python -m alpha --dataset-id fundamental2 --smoke-test
 
 # 离线只读：检查字段、模板和候选计划，不创建 simulation
-python -m alpha --dry-run-plan
+python -m alpha --dataset-id fundamental2 --dry-run-plan
 
 # fundamental6 广泛探索：首次会拉取字段缓存，且必须显式给出 simulation 硬预算
 python -m alpha --dataset-id fundamental6 --full-run --max-total-simulations 100
 
 # 聚焦历史上更有希望的字段
-python -m alpha --top-fields-by-feedback 10 --max-templates-per-field 15
+python -m alpha --dataset-id fundamental2 --top-fields-by-feedback 10 --max-templates-per-field 15
 ```
 
-不传参数时，运行器采用内置默认搜索预算。`--full-run` 会枚举更大的字段和模板空间，
+`run` 和 `clean` 都必须显式传入 `--dataset-id`，避免误跑或误清理历史数据集。选择数据集后，
+运行器采用内置默认搜索预算。`--full-run` 会枚举更大的字段和模板空间，
 但仍保留 simulation 总预算。运行器先进入 Seed 阶段：历史上没有有效尝试的合格字段
 每个最多调度一个候选；只有所有字段都已获得种子尝试或被判定为不可执行后，才进入正常
 refine 轮次。full-run 默认预算由 `config/constants_defaults.yaml` 的
@@ -131,8 +132,8 @@ make sync-config
 make check
 
 # 仅预览 / 执行可重建运行产物清理（默认保留 .credentials）
-python -m alpha clean --dry-run-clean
-python -m alpha clean
+python -m alpha clean --dataset-id fundamental2 --dry-run-clean
+python -m alpha clean --dataset-id fundamental2
 ```
 
 `alpha clean` 处理数据集的 `cache/`、`runs/` 和遗留运行产物；`make clean-dev` 处理 Python

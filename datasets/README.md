@@ -29,6 +29,7 @@ datasets/<dataset_id>/
 
 | 数据集 | 状态 | 现役 preset |
 | --- | --- | --- |
+| `fundamental2` | 探索 | `tax_quality_seed` |
 | `fundamental6` | 暂停 | 无 |
 | `option8` | 基线保留 | `subindustry_refine` |
 | `model16` | 暂停 | 无 |
@@ -37,5 +38,5 @@ datasets/<dataset_id>/
 | `option9` | 暂停 | 无 |
 | `news18` | 暂停 | 无 |
 
-`news18` 的 MATRIX 与 VECTOR 单字段路径均未形成正向基线，当前已暂停。下一候选是
-`fundamental2`，仍从 1 个字段、2 条独立结构开始。
+`fundamental2` 是当前唯一现役 explore 数据集，从 1 个低拥挤字段和 2 条独立税务质量结构
+开始。没有初步正向证据前，不扩大到完整 766 字段池。

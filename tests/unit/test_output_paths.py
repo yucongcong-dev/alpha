@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from alpha.io.common import sanitize_dataset_id_for_filename
 from alpha.io.output_paths import (
     build_dataset_scoped_paths,
     build_fields_cache_scope_key,
@@ -18,6 +19,10 @@ def test_resolve_cli_path_uses_cwd_for_relative_paths(monkeypatch, tmp_path) -> 
     resolved = resolve_cli_path("nested/config.json")
 
     assert resolved == str((tmp_path / "nested" / "config.json").resolve())
+
+
+def test_empty_dataset_id_uses_neutral_filename_fallback() -> None:
+    assert sanitize_dataset_id_for_filename("") == "unknown"
 
 
 def test_build_dataset_scoped_paths_includes_runtime_context_in_cache_path() -> None:

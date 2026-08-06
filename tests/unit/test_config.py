@@ -59,7 +59,7 @@ class TestConfigConstants:
         assert AUTH_URL.startswith(API_BASE)
 
     def test_default_dataset_id(self) -> None:
-        assert DEFAULT_DATASET_ID == "model51"
+        assert DEFAULT_DATASET_ID == ""
 
     def test_version_header_format(self) -> None:
         assert isinstance(VERSION_HEADER, dict)
@@ -414,6 +414,21 @@ def test_model51_policy_uses_risk_metric_winsorize_and_bucket_templates() -> Non
     assert "model51_bucket_cap_ratio_zscore_60" in policy.protected_templates
     assert "model51_ratio_cap_zscore_60" in policy.protected_templates
     assert "model51_group_zscore_subindustry_120" in policy.protected_templates
+
+
+def test_fundamental2_policy_keeps_seed_search_bounded() -> None:
+    policy = get_dataset_expression_policy("fundamental2")
+
+    assert policy.closed_default_template_library is True
+    assert policy.partner_limit == 0
+    assert policy.field_min_coverage == 0.70
+    assert policy.field_min_date_coverage == 0.99
+    assert policy.field_max_alpha_count == 50
+    assert policy.field_exploration_ratio == 0.0
+    assert policy.protected_templates == {
+        "fundamental2_current_tax_assets_zscore_252",
+        "fundamental2_current_minus_deferred_tax_assets_zscore_252",
+    }
 
 
 def test_get_yaml_config_reloads_when_file_changes(tmp_path) -> None:

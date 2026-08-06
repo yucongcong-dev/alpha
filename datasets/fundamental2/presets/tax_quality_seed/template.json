@@ -1,0 +1,30 @@
+{
+  "_comment": "fundamental2 tax-quality seed - compare current tax level with current-versus-deferred tax composition.",
+  "_comment_placeholders": "{field}=field name, {field_preprocessed}=winsorize(ts_backfill({field}, 120), std=4)",
+  "_dataset_id": "fundamental2",
+  "default": [
+    {
+      "name": "fundamental2_current_tax_assets_zscore_252",
+      "expression": "group_rank(ts_zscore({field_preprocessed} / ts_backfill(assets, 504), 252), subindustry)",
+      "priority": 1000,
+      "family": "tax_level",
+      "layer": "account",
+      "stage": "group_second_order",
+      "dataset_tags": ["fundamental2", "tax_quality", "tax_quality_seed"],
+      "role": "default_seed",
+      "activation_scope": "broad"
+    },
+    {
+      "name": "fundamental2_current_minus_deferred_tax_assets_zscore_252",
+      "expression": "group_rank(ts_zscore(({field_preprocessed} - winsorize(ts_backfill(annual_deferred_income_tax_expense, 120), std=4)) / ts_backfill(assets, 504), 252), subindustry)",
+      "priority": 990,
+      "family": "tax_composition",
+      "layer": "account",
+      "stage": "group_second_order",
+      "dataset_tags": ["fundamental2", "tax_quality", "tax_quality_seed"],
+      "role": "default_seed",
+      "activation_scope": "broad"
+    }
+  ],
+  "VECTOR": []
+}

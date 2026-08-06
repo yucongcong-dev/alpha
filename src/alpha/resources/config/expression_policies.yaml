@@ -44,6 +44,53 @@ expression_policies:
       small_penalty: -180         # 极轻降权
 
   # --------------------------------------------------------------------------
+  # fundamental2 — newly added report-footnote fundamentals
+  # --------------------------------------------------------------------------
+  fundamental2:
+    use_curated_heuristics: false
+    closed_default_template_library: true
+    partner_limit: 0
+    default_field_transform:
+      stages: []
+      backfill_window: 0
+    matrix_field_transform:
+      stages:
+        - kind: "backfill"
+          window: 120
+        - kind: "winsorize"
+          std: 4
+      backfill_window: 120
+    vector_field_transform:
+      stages: []
+      backfill_window: 0
+    ratio_numerator_transform:
+      stages:
+        - kind: "backfill"
+          window: 120
+        - kind: "winsorize"
+          std: 4
+      backfill_window: 120
+    ratio_denominator_transform:
+      stages:
+        - kind: "backfill"
+          window: 120
+        - kind: "winsorize"
+          std: 4
+      backfill_window: 120
+    protected_templates:
+      - "fundamental2_current_tax_assets_zscore_252"
+      - "fundamental2_current_minus_deferred_tax_assets_zscore_252"
+    field_min_coverage: 0.70
+    field_min_date_coverage: 0.99
+    field_min_alpha_count: 0
+    field_min_user_count: 0
+    field_max_alpha_count: 50
+    field_max_user_count: 0
+    field_exploration_ratio: 0.0
+    preferred_field_order:
+      current_income_tax_expense_amount: 0
+
+  # --------------------------------------------------------------------------
   # fundamental6 — 季度财报数据
   # --------------------------------------------------------------------------
   fundamental6:

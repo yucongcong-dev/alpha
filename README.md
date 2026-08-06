@@ -12,10 +12,10 @@
 make install-dev
 
 # 先确认本地候选计划；不会登录、联网或创建 simulation
-python -m alpha --dry-run-plan
+python -m alpha --dataset-id fundamental2 --dry-run-plan
 
-# 首次真实运行：用默认数据集执行 1 字段 / 1 模板冒烟测试
-python -m alpha --smoke-test
+# 首次真实运行：显式选择数据集，执行 1 字段 / 1 模板冒烟测试
+python -m alpha --dataset-id fundamental2 --smoke-test
 
 # fundamental6 已暂停普通运行；全量探索必须显式给出 simulation 硬预算
 python -m alpha --dataset-id fundamental6 --full-run --max-total-simulations 100
@@ -60,11 +60,11 @@ alpha/
 
 ```bash
 # 聚焦历史高反馈字段
-python -m alpha --top-fields-by-feedback 10 --max-templates-per-field 15
+python -m alpha --dataset-id fundamental2 --top-fields-by-feedback 10 --max-templates-per-field 15
 
 # 预览 / 执行本地运行产物清理
-python -m alpha clean --dry-run-clean
-python -m alpha clean
+python -m alpha clean --dataset-id fundamental2 --dry-run-clean
+python -m alpha clean --dataset-id fundamental2
 ```
 
 完整的运行阶段、续跑、配置覆盖、缓存和结果文件说明统一在

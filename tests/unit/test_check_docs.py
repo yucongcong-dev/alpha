@@ -79,3 +79,44 @@ def test_accepts_known_cli_options_and_placeholders(tmp_path: Path) -> None:
         flags={"--help"},
     )
     assert errors == []
+
+
+def test_dataset_strategy_rejects_documented_pause_without_profile_pause(tmp_path: Path) -> None:
+    datasets_dir = tmp_path / "datasets"
+    datasets_dir.mkdir()
+    (datasets_dir / "README.md").write_text(
+        "| 数据集 | 状态 | 现役 preset |\n| --- | --- | --- |\n| `demo` | 暂停 | 无 |\n",
+        encoding="utf-8",
+    )
+    config_dir = tmp_path / "config"
+    config_dir.mkdir()
+    (config_dir / "dataset_profiles.yaml").write_text(
+        "dataset_profiles:\n  demo:\n    paused: false\n",
+        encoding="utf-8",
+    )
+
+    errors = check_docs.check_dataset_strategy_consistency(root=tmp_path)
+
+    assert any("demo is not paused" in error for error in errors)
+
+
+def test_dataset_strategy_requires_complete_default_explore_preset(tmp_path: Path) -> None:
+    datasets_dir = tmp_path / "datasets"
+    datasets_dir.mkdir()
+    (datasets_dir / "README.md").write_text(
+        "| 数据集 | 状态 | 现役 preset |\n| --- | --- | --- |\n| `demo` | 探索 | `seed` |\n",
+        encoding="utf-8",
+    )
+    config_dir = tmp_path / "config"
+    config_dir.mkdir()
+    (config_dir / "dataset_profiles.yaml").write_text(
+        "dataset_profiles:\n  demo:\n    default_preset: seed\n",
+        encoding="utf-8",
+    )
+    preset_dir = datasets_dir / "demo" / "presets" / "seed"
+    preset_dir.mkdir(parents=True)
+    (preset_dir / "template.json").write_text("{}", encoding="utf-8")
+
+    errors = check_docs.check_dataset_strategy_consistency(root=tmp_path)
+
+    assert any("fields.txt, templates.txt" in error for error in errors)

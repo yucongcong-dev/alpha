@@ -8,6 +8,8 @@
 - [subindustry_refine/fields.txt](presets/subindustry_refine/fields.txt)
 
 历史 phase、窗口、Decay 和 `trade_when` 实验文件已清理。
+数据集 profile 已标记为 `paused`；普通 `--dataset-id option8` 会被拒绝，必须显式使用下方
+preset 文件，避免重新运行已关闭的 diagnostic 模板。
 
 ## 当前最佳 Alpha
 

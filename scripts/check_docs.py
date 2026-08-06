@@ -20,6 +20,7 @@ ABSOLUTE_LOCAL_PATH_PATTERN = re.compile(
 )
 CONCRETE_RUN_PATH_PATTERN = re.compile(r"datasets/(?!<)[A-Za-z0-9._-]+/runs/[A-Za-z0-9._/-]+")
 PLACEHOLDER_MARKERS = ("<", ">", "*", "$", "{")
+DATASET_STATUS_PATTERN = re.compile(r"\|\s*`([^`]+)`\s*\|\s*([^|]+?)\s*\|")
 
 
 def documentation_files() -> list[Path]:
@@ -135,6 +136,57 @@ def check_document(
     return errors
 
 
+def check_dataset_strategy_consistency(*, root: Path = ROOT) -> list[str]:
+    """Keep the dataset status table aligned with runtime profiles and presets."""
+    import yaml
+
+    status_path = root / "datasets" / "README.md"
+    profile_path = root / "config" / "dataset_profiles.yaml"
+    if not status_path.is_file() or not profile_path.is_file():
+        return []
+
+    profile_data = yaml.safe_load(profile_path.read_text(encoding="utf-8")) or {}
+    profiles = profile_data.get("dataset_profiles", {})
+    errors: list[str] = []
+    for dataset_id, raw_status in DATASET_STATUS_PATTERN.findall(
+        status_path.read_text(encoding="utf-8")
+    ):
+        status = raw_status.strip()
+        profile = profiles.get(dataset_id, {}) if isinstance(profiles, dict) else {}
+        if status in {"暂停", "基线保留"} and not bool(profile.get("paused", False)):
+            errors.append(
+                f"datasets/README.md: non-active dataset {dataset_id} is not paused in "
+                "config/dataset_profiles.yaml"
+            )
+        if status != "探索":
+            continue
+        if bool(profile.get("paused", False)):
+            errors.append(
+                f"datasets/README.md: explore dataset {dataset_id} is paused in "
+                "config/dataset_profiles.yaml"
+            )
+        preset_name = str(profile.get("default_preset", "") or "").strip()
+        if not preset_name:
+            errors.append(f"datasets/README.md: explore dataset {dataset_id} has no default_preset")
+            continue
+        preset_dir = root / "datasets" / dataset_id / "presets" / preset_name
+        missing = [
+            path.name
+            for path in (
+                preset_dir / "template.json",
+                preset_dir / "fields.txt",
+                preset_dir / "templates.txt",
+            )
+            if not path.is_file()
+        ]
+        if missing:
+            errors.append(
+                f"datasets/README.md: explore dataset {dataset_id} preset {preset_name} "
+                f"is incomplete: {', '.join(missing)}"
+            )
+    return errors
+
+
 def main() -> int:
     """Validate all maintained Markdown files."""
     valid_cli_flags = documented_cli_flags()
@@ -143,6 +195,7 @@ def main() -> int:
         for path in documentation_files()
         for error in check_document(path, valid_cli_flags=valid_cli_flags)
     ]
+    errors.extend(check_dataset_strategy_consistency())
     if errors:
         print("\n".join(errors))
         return 1

@@ -15,7 +15,6 @@ from pathlib import Path
 import tempfile
 from typing import Any
 
-from ..config.constants import DEFAULT_DATASET_ID
 from ..workspace import DEFAULT_WORKSPACE
 
 PROJECT_ROOT = DEFAULT_WORKSPACE.root
@@ -44,7 +43,7 @@ def sanitize_dataset_id_for_filename(dataset_id: str) -> str:
     import re
 
     sanitized = re.sub(r"[^A-Za-z0-9._-]+", "_", dataset_id.strip()).strip(".")
-    return sanitized or DEFAULT_DATASET_ID
+    return sanitized or "unknown"
 
 
 def resolve_datasets_root(datasets_root: str = "") -> Path:

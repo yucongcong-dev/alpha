@@ -30,7 +30,7 @@ api:
 # simulation — 模拟默认值、状态码、中性化策略
 # ---------------------------------------------------------------------------
 simulation:
-  default_dataset_id: "model51"
+  default_dataset_id: ""
   default_start_date: "2020-01-01"
   default_end_date: "2025-12-31"
   states:

@@ -118,8 +118,15 @@ def _validate_paused_dataset(args: argparse.Namespace) -> None:
     )
 
 
+def _validate_dataset_selection(args: argparse.Namespace) -> None:
+    """Reject dataset-scoped commands without an explicit dataset selection."""
+    if not str(getattr(args, "dataset_id", "") or "").strip():
+        raise ValueError("--dataset-id is required for run and clean commands")
+
+
 def normalize_args_paths(args: argparse.Namespace) -> RunPaths:
     """按 dataset 上下文解析运行文件路径，但不修改 args 本身。"""
+    _validate_dataset_selection(args)
     _validate_paused_dataset(args)
     scoped_paths = build_dataset_scoped_paths(
         args.dataset_id,

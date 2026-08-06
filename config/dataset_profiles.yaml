@@ -17,6 +17,16 @@
 # ============================================================================
 
 dataset_profiles:
+  fundamental2:
+    default_preset: "tax_quality_seed"
+    sleep_between_fields: 3.0
+    max_concurrent_simulations: 2
+    max_concurrent_creates: 1
+    max_templates_per_field: 2
+    field_template_batch_size: 1
+    simulation_max_wait_seconds: 900
+    simulation_max_queue_seconds: 600
+    queue_busy_cooldown_seconds: 60
   fundamental6:
     paused: true
     sleep_between_fields: 3.0
@@ -27,6 +37,7 @@ dataset_profiles:
     simulation_max_queue_seconds: 600
     queue_busy_cooldown_seconds: 60
   model16:
+    paused: true
     sleep_between_fields: 3.0
     max_concurrent_simulations: 3
     max_concurrent_creates: 1
@@ -35,6 +46,7 @@ dataset_profiles:
     simulation_max_queue_seconds: 600
     queue_busy_cooldown_seconds: 60
   model51:
+    paused: true
     sleep_between_fields: 3.0
     max_concurrent_simulations: 3
     max_concurrent_creates: 1
@@ -43,6 +55,7 @@ dataset_profiles:
     simulation_max_queue_seconds: 600
     queue_busy_cooldown_seconds: 60
   option8:
+    paused: true
     sleep_between_fields: 3.0
     max_concurrent_simulations: 3
     max_concurrent_creates: 1
@@ -51,6 +64,24 @@ dataset_profiles:
     simulation_max_queue_seconds: 600
     queue_busy_cooldown_seconds: 60
   news18:
+    paused: true
+    sleep_between_fields: 3.0
+    max_concurrent_simulations: 3
+    max_concurrent_creates: 1
+    max_templates_per_field: 2
+    simulation_max_wait_seconds: 900
+    simulation_max_queue_seconds: 600
+    queue_busy_cooldown_seconds: 60
+  option9:
+    paused: true
+    sleep_between_fields: 3.0
+    max_concurrent_simulations: 3
+    max_concurrent_creates: 1
+    max_templates_per_field: 2
+    simulation_max_wait_seconds: 900
+    simulation_max_queue_seconds: 600
+    queue_busy_cooldown_seconds: 60
+  socialmedia12:
     paused: true
     sleep_between_fields: 3.0
     max_concurrent_simulations: 3

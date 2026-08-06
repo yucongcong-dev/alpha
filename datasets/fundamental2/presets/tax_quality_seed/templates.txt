@@ -1,0 +1,2 @@
+fundamental2_current_tax_assets_zscore_252
+fundamental2_current_minus_deferred_tax_assets_zscore_252

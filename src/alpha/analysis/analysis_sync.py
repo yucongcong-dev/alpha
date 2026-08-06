@@ -12,7 +12,6 @@ import logging
 import os
 from pathlib import Path
 
-from ..config.constants import DEFAULT_DATASET_ID
 from ..io.common import atomic_write_json
 from ..io.output_paths import build_output_sidecar_paths
 from .report_builder import build_analysis_payload, build_results_summary_payload
@@ -64,7 +63,7 @@ def ensure_analysis_synced(output_path: str) -> None:
 
     results = load_existing_results(output_path)
     derived_summary, analysis_inputs = build_results_summary_payload(
-        str(summary.get("dataset_id", DEFAULT_DATASET_ID)),
+        str(summary.get("dataset_id", "unknown") or "unknown"),
         results,
         settings_fingerprint=str(summary.get("settings_fingerprint", "")),
         template_library_fingerprint=str(summary.get("template_library_fingerprint", "")),

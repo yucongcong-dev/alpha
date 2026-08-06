@@ -1,0 +1,9 @@
+{
+  "_version": "v2",
+  "_comment": "Template blacklist for fundamental2. Add learned exclusions only after the bounded seed has real feedback.",
+  "_created": "2026-08-06",
+  "_updated": "2026-08-06",
+  "dataset_id": "fundamental2",
+  "learned_templates": [],
+  "expression_rules": []
+}

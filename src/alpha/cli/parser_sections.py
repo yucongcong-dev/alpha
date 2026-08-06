@@ -62,7 +62,11 @@ def add_credentials_arguments(parser: argparse.ArgumentParser) -> None:
 
 def add_dataset_arguments(parser: argparse.ArgumentParser) -> None:
     """Add dataset and simulation settings arguments."""
-    parser.add_argument("--dataset-id", default=DEFAULT_DATASET_ID, help="数据集 ID")
+    parser.add_argument(
+        "--dataset-id",
+        default=DEFAULT_DATASET_ID,
+        help="数据集 ID；run/clean 命令必须显式指定",
+    )
     parser.add_argument("--region", default=None, help="地区代码")
     parser.add_argument("--universe", default=None, help="宇宙代码")
     parser.add_argument("--instrument-type", default=None, help="工具类型")

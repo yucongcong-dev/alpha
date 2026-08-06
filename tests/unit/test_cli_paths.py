@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 import sys
 
 import pytest
@@ -27,6 +28,17 @@ def test_clean_command_parses(monkeypatch) -> None:
 
     assert args.command == "clean"
     assert args.dry_run_clean is True
+
+
+@pytest.mark.parametrize("command", ["run", "clean"])
+def test_normalize_args_paths_requires_dataset_id(monkeypatch, tmp_path, command) -> None:
+    clear_yaml_cache()
+    monkeypatch.chdir(tmp_path)
+    argv = ["alpha"] if command == "run" else ["alpha", "clean"]
+    monkeypatch.setattr(sys, "argv", argv)
+
+    with pytest.raises(ValueError, match="--dataset-id is required"):
+        normalize_args_paths(parse_args())
 
 
 def test_normalize_args_paths_uses_dataset_scoped_defaults(monkeypatch, tmp_path) -> None:
@@ -85,6 +97,63 @@ def test_normalize_args_paths_allows_clean_for_paused_fundamental6(monkeypatch, 
 
     assert paths.template_library_file.replace("\\", "/").endswith(
         "/datasets/fundamental6/template.json"
+    )
+
+
+@pytest.mark.parametrize(
+    "dataset_id",
+    ["model16", "model51", "option8", "option9", "socialmedia12", "news18"],
+)
+def test_documented_paused_dataset_rejects_plain_run(monkeypatch, tmp_path, dataset_id) -> None:
+    clear_yaml_cache()
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(sys, "argv", ["alpha", "--dataset-id", dataset_id])
+
+    with pytest.raises(ValueError, match=f"dataset {dataset_id} is paused"):
+        normalize_args_paths(parse_args())
+
+
+def test_option8_explicit_active_preset_is_allowed(monkeypatch, tmp_path) -> None:
+    clear_yaml_cache()
+    monkeypatch.chdir(tmp_path)
+    root = Path(__file__).resolve().parents[2]
+    preset_dir = root / "datasets" / "option8" / "presets" / "subindustry_refine"
+    template_path = preset_dir / "template.json"
+    fields_path = preset_dir / "fields.txt"
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "alpha",
+            "--dataset-id",
+            "option8",
+            "--template-library-file",
+            str(template_path),
+            "--include-fields-file",
+            str(fields_path),
+        ],
+    )
+
+    paths = normalize_args_paths(parse_args())
+
+    assert paths.template_library_file == str(template_path)
+    assert paths.include_fields_file == str(fields_path)
+
+
+def test_fundamental2_uses_default_tax_quality_preset(monkeypatch) -> None:
+    clear_yaml_cache()
+    monkeypatch.setattr(sys, "argv", ["alpha", "--dataset-id", "fundamental2"])
+
+    paths = normalize_args_paths(parse_args())
+
+    assert paths.template_library_file.replace("\\", "/").endswith(
+        "/datasets/fundamental2/presets/tax_quality_seed/template.json"
+    )
+    assert paths.include_fields_file.replace("\\", "/").endswith(
+        "/datasets/fundamental2/presets/tax_quality_seed/fields.txt"
+    )
+    assert paths.include_templates_file.replace("\\", "/").endswith(
+        "/datasets/fundamental2/presets/tax_quality_seed/templates.txt"
     )
 
 
@@ -375,6 +444,8 @@ def test_normalize_args_paths_resolves_relative_files_from_cwd(monkeypatch, tmp_
         "argv",
         [
             "alpha",
+            "--dataset-id",
+            "pv1",
             "--include-fields-file",
             "tmp_priority_fields_round1.txt",
         ],
@@ -395,6 +466,8 @@ def test_normalize_args_paths_rejects_missing_explicit_filter_file(monkeypatch, 
         "argv",
         [
             "alpha",
+            "--dataset-id",
+            "pv1",
             "--include-fields-file",
             "missing_fields.txt",
         ],
