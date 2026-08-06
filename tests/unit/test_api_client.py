@@ -14,6 +14,7 @@ from alpha.api.http_backend import (
     UrllibHttpBackend,
     create_http_backend,
 )
+from alpha.exceptions import BrainHTTPError
 from alpha.models.runtime_options import ApiClientOptions
 
 
@@ -114,6 +115,38 @@ def test_fetch_dataset_fields_logs_progress_with_total(monkeypatch, caplog) -> N
     assert [row["id"] for row in rows] == ["a", "b", "c"]
     assert "fetched 2/3 fields" in caplog.text
     assert "fetched 3/3 fields" in caplog.text
+
+
+def test_fetch_dataset_fields_reduces_page_size_after_transient_failure(monkeypatch) -> None:
+    client = BrainClient("user@example.com", "password")
+    requested_page_sizes: list[int] = []
+
+    def fake_fetch_page(
+        _dataset_id: str,
+        limit: int,
+        _offset: int,
+        **_kwargs: object,
+    ) -> dict[str, object]:
+        requested_page_sizes.append(limit)
+        if limit == 50:
+            raise BrainHTTPError("field page failed", status=500)
+        return {"results": [{"id": "a"}], "count": 1}
+
+    monkeypatch.setattr(client, "_fetch_dataset_fields_page", fake_fetch_page)
+
+    rows = client.fetch_dataset_fields(
+        "analyst4",
+        limit=0,
+        offset=950,
+        page_size=50,
+        region="USA",
+        universe="TOP3000",
+        instrument_type="EQUITY",
+        delay=1,
+    )
+
+    assert [row["id"] for row in rows] == ["a"]
+    assert requested_page_sizes == [50, 20]
 
 
 def test_httpx_backend_syncs_cookies_in_both_directions() -> None:

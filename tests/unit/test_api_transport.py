@@ -19,7 +19,7 @@ from alpha.api.timing import (
     polling_retry_after,
     wait_seconds,
 )
-from alpha.exceptions import BrainAPIError, BrainStopRequested
+from alpha.exceptions import BrainAPIError, BrainHTTPError, BrainStopRequested
 
 
 class _Response:
@@ -165,7 +165,7 @@ class _FieldClient(BrainFieldsMixin):
     def request(self, *_args: Any, **kwargs: Any):
         self.params.append(kwargs["params"])
         if len(self.params) <= self.failures:
-            raise BrainAPIError("unsupported query")
+            raise BrainHTTPError("unsupported query", status=400)
         return 200, {}, b'{"results": [{"id": "field1"}]}'
 
 
@@ -205,6 +205,31 @@ def test_field_query_reports_failure_after_all_parameter_shapes() -> None:
             instrument_type="EQUITY",
             delay=1,
         )
+
+
+def test_field_query_does_not_hide_transient_primary_error() -> None:
+    client = _FieldClient(failures=0)
+
+    def fail_with_server_error(*_args: Any, **kwargs: Any):
+        client.params.append(kwargs["params"])
+        raise BrainHTTPError("server failed", status=500)
+
+    client.request = fail_with_server_error  # type: ignore[method-assign]
+
+    with pytest.raises(BrainHTTPError) as exc_info:
+        client._fetch_dataset_fields_page(
+            "analyst4",
+            50,
+            950,
+            region="USA",
+            universe="TOP3000",
+            instrument_type="EQUITY",
+            delay=1,
+        )
+
+    assert exc_info.value.status == 500
+    assert len(client.params) == 1
+    assert client.params[0]["instrumentType"] == "EQUITY"
 
 
 class _AlphaClient(BrainAlphasMixin):

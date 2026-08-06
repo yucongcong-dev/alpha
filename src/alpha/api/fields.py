@@ -6,11 +6,13 @@ import logging
 from typing import cast
 
 from ..config.constants import DATA_FIELDS_URL, VERSION_HEADER
-from ..exceptions import BrainAPIError
+from ..exceptions import BrainAPIError, BrainHTTPError
 from .api_types import ApiPayload, FieldInfoDict
 from .payloads import extract_total, normalize_results, safe_json_bytes
 
 logger = logging.getLogger(__name__)
+
+_TRANSIENT_PAGE_SIZE_FALLBACK = 20
 
 
 class BrainFieldsMixin:
@@ -32,24 +34,38 @@ class BrainFieldsMixin:
         fields: list[FieldInfoDict] = []
         current_offset = offset
         announced_total: int | None = None
+        active_page_size = max(1, page_size)
 
         while True:
-            batch_size = page_size
+            batch_size = active_page_size
             if limit > 0:
                 remaining = limit - len(fields)
                 if remaining <= 0:
                     break
                 batch_size = min(batch_size, remaining)
 
-            payload = self._fetch_dataset_fields_page(
-                dataset_id,
-                batch_size,
-                current_offset,
-                region=region,
-                universe=universe,
-                instrument_type=instrument_type,
-                delay=delay,
-            )
+            try:
+                payload = self._fetch_dataset_fields_page(
+                    dataset_id,
+                    batch_size,
+                    current_offset,
+                    region=region,
+                    universe=universe,
+                    instrument_type=instrument_type,
+                    delay=delay,
+                )
+            except BrainHTTPError as exc:
+                if exc.is_transient and batch_size > _TRANSIENT_PAGE_SIZE_FALLBACK:
+                    active_page_size = _TRANSIENT_PAGE_SIZE_FALLBACK
+                    logger.warning(
+                        "[data] transient field-page failure at offset=%d with limit=%d; "
+                        "retrying with limit=%d",
+                        current_offset,
+                        batch_size,
+                        active_page_size,
+                    )
+                    continue
+                raise
 
             batch = normalize_results(payload)
             if not batch:
@@ -136,8 +152,15 @@ class BrainFieldsMixin:
                 )
                 logger.info("[data] data-fields query accepted: %s", params)
                 return safe_json_bytes(content)
-            except BrainAPIError as exc:
+            except BrainHTTPError as exc:
                 last_error = exc
                 logger.warning("[data] data-fields query rejected: %s -> %s", params, exc)
+                if exc.status != 400:
+                    raise
+            except BrainAPIError as exc:
+                logger.warning("[data] data-fields query failed: %s -> %s", params, exc)
+                raise
 
-        raise BrainAPIError(f"Unable to fetch dataset fields for {dataset_id}: {last_error}")
+        raise BrainAPIError(
+            f"Unable to fetch dataset fields for {dataset_id}: {last_error}"
+        ) from last_error
