@@ -22,7 +22,6 @@ _HTTP_DEFAULTS = {
     "login_retry_wait": 3.0,
     "simulation_retry_wait": 3.0,
     "polling_retry_buffer": 0.5,
-    "backend": "urllib",
 }
 _FEEDBACK_TEMPLATE_MIN_PRIORITY_DEFAULT = 105
 _QUALITY_DEFAULTS = {
@@ -32,9 +31,6 @@ _QUALITY_DEFAULTS = {
     "max_turnover": 0.70,
     "max_weight": 0.10,
 }
-
-_SUPPORTED_HTTP_BACKENDS = {"urllib", "httpx"}
-
 
 def _validate_non_negative(name: str, value: float) -> None:
     if value < 0:
@@ -74,14 +70,8 @@ class HttpRuntimeConfig:
     login_retry_wait: float
     simulation_retry_wait: float
     polling_retry_buffer: float
-    backend: str = "urllib"
 
     def __post_init__(self) -> None:
-        backend = self.backend.strip().lower()
-        if backend not in _SUPPORTED_HTTP_BACKENDS:
-            supported = ", ".join(sorted(_SUPPORTED_HTTP_BACKENDS))
-            raise ValueError(f"http.backend must be one of: {supported}; got {self.backend!r}")
-        object.__setattr__(self, "backend", backend)
         _validate_positive("http.request_timeout", self.request_timeout)
         _validate_non_negative("http.rate_limit_default_wait", self.rate_limit_default_wait)
         _validate_non_negative("http.polling_default_wait", self.polling_default_wait)
@@ -161,7 +151,6 @@ def load_http_runtime_config() -> HttpRuntimeConfig:
         polling_retry_buffer=float(
             section.get("polling_retry_buffer", _HTTP_DEFAULTS["polling_retry_buffer"])
         ),
-        backend=str(section.get("backend", _HTTP_DEFAULTS["backend"])),
     )
 
 

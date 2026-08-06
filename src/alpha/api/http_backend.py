@@ -1,24 +1,12 @@
-"""HTTP 后端抽象层，消除对 urllib/httpx 的硬编码依赖。
-
-本模块定义 HttpBackend 协议和两个内置实现：
-  - UrllibHttpBackend：基于 urllib.request 的兼容后端（默认）
-  - HttpxHttpBackend：基于 httpx 的现代后端（连接池、HTTP/2）
-
-通过 config/settings.yaml global.http.backend 选择后端：
-  http:
-    backend: "httpx"  # 或 "urllib"（默认）
-"""
+"""Standard-library HTTP transport used by the BRAIN client."""
 
 from __future__ import annotations
 
 from collections.abc import Mapping
 from http.cookiejar import Cookie, CookieJar
-import logging
-from typing import Any, Protocol
+from typing import Protocol
 from urllib.request import HTTPCookieProcessor, ProxyHandler, build_opener
 from urllib.request import Request as UrllibRequest
-
-logger = logging.getLogger(__name__)
 
 
 def response_header(headers: Mapping[str, str], name: str) -> str | None:
@@ -97,127 +85,3 @@ class UrllibHttpBackend:
     def close(self) -> None:
         """urllib keeps no explicit connection pool to close."""
 
-
-class HttpxHttpBackend:
-    """基于 httpx 的现代 HTTP 后端（连接池、Keep-Alive、HTTP/2 支持）。"""
-
-    def __init__(self) -> None:
-        self._cookies = CookieJar()
-        self._client: Any = None
-
-    def _get_client(self) -> Any:
-        """懒加载 httpx.Client，自动配置连接池、超时和重定向。"""
-        if self._client is not None:
-            return self._client
-        try:
-            import httpx
-
-            self._client = httpx.Client(
-                timeout=httpx.Timeout(90.0, connect=15.0),
-                limits=httpx.Limits(max_keepalive_connections=10, max_connections=20),
-                follow_redirects=True,
-                http2=True,
-                trust_env=False,
-            )
-            return self._client
-        except ImportError as exc:
-            raise ImportError(
-                "httpx 后端需要安装项目的 HTTP/2 可选依赖: pip install -e '.[httpx]'"
-            ) from exc
-
-    def _sync_cookies_to_client(self) -> None:
-        """Copy CookieJar state into the lazy httpx client before a request."""
-        client = self._client
-        if client is None:
-            return
-        for cookie in self._cookies:
-            client.cookies.set(
-                cookie.name,
-                cookie.value,
-                domain=cookie.domain or None,
-                path=cookie.path or "/",
-            )
-
-    def _sync_cookies_from_client(self) -> None:
-        """Copy cookies learned by httpx back into the backend CookieJar."""
-        client = self._client
-        if client is None:
-            return
-        jar = getattr(client.cookies, "jar", None)
-        if jar is None:
-            return
-        for cookie in jar:
-            if isinstance(cookie, Cookie):
-                self._cookies.set_cookie(cookie)
-
-    def request(
-        self,
-        method: str,
-        url: str,
-        *,
-        headers: dict[str, str] | None = None,
-        data: bytes | None = None,
-        timeout: float = 90.0,
-    ) -> tuple[int, dict[str, str], bytes]:
-        client = self._get_client()
-        try:
-            self._sync_cookies_to_client()
-            response = client.request(
-                method=method,
-                url=url,
-                headers=headers,
-                content=data,
-                timeout=timeout,
-            )
-            response_headers = dict(response.headers.items())
-            self._sync_cookies_from_client()
-            return response.status_code, response_headers, response.content
-        except Exception as exc:
-            from ..exceptions import BrainAPIError, BrainTransientError
-
-            try:
-                import httpx
-            except ImportError:
-                pass
-            else:
-                if isinstance(exc, httpx.TransportError):
-                    raise BrainTransientError(f"{method} {url} failed: {exc}") from exc
-            raise BrainAPIError(f"{method} {url} failed: {exc}") from exc
-
-    def set_cookie(self, cookie: Cookie) -> None:
-        self._cookies.set_cookie(cookie)
-        self._sync_cookies_to_client()
-
-    def load_cookies(self, cookies: CookieJar) -> None:
-        for cookie in cookies:
-            self._cookies.set_cookie(cookie)
-        self._sync_cookies_to_client()
-
-    def close(self) -> None:
-        """Close the optional httpx connection pool and allow later recreation."""
-        client = self._client
-        self._client = None
-        if client is not None:
-            client.close()
-
-
-def create_http_backend(backend_name: str = "") -> HttpBackend:
-    """根据配置名称创建 HTTP 后端实例。
-
-    Args:
-        backend_name: "httpx" 或 "urllib"（默认）。
-
-    Returns:
-        HttpBackend 实例。
-
-    Raises:
-        ImportError: 当指定的后端所需的包未安装时。
-    """
-    name = (backend_name or "urllib").strip().lower()
-    if name == "httpx":
-        logger.info("[http] 使用 httpx 后端 (连接池 + HTTP/2)")
-        return HttpxHttpBackend()
-    if name == "urllib":
-        logger.info("[http] 使用 urllib 后端 (标准库)")
-        return UrllibHttpBackend()
-    raise ValueError(f"Unsupported HTTP backend {backend_name!r}; expected one of: httpx, urllib")

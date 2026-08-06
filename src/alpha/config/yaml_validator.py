@@ -134,9 +134,6 @@ def _validate_cross_consistency(
             "feedback_mutation_highscore_threshold": "mutation_highscore_threshold",
             "feedback_template_min_priority": "template_min_priority",
         },
-        "http": {
-            "backend": "@settings_only",
-        },
     }
 
     warnings: list[str] = []

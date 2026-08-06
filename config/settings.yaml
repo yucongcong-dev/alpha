@@ -155,9 +155,6 @@ global:
   # --------------------------------------------------------------------------
   # 控制底层 HTTP 请求的超时、退避和等待策略。仅在客户端模块使用。
   http:
-    # backend: "urllib" (默认) 使用标准库，无需额外依赖。
-    # backend: "httpx" 使用可选依赖 (pip install -e ".[httpx]")，支持连接池、HTTP/2、Keep-Alive。
-    backend: "urllib"
     request_timeout: 90.0               # HTTP 请求默认超时 (秒)
     rate_limit_default_wait: 10.0       # 限流触发后默认等待 (秒)
     polling_default_wait: 5.0           # 轮询默认间隔 (秒)

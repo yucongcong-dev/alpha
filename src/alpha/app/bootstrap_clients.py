@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from ..api.client import BrainClient, WorkerClientFactory, login_with_retry
-from ..config.runtime_values import get_runtime_config
 from ..io.credentials import load_credentials
 from ..models.runtime_options import ApiClientOptions, CredentialLoadOptions
 
@@ -22,13 +21,11 @@ def create_and_login_client(
     client_options: ApiClientOptions,
 ) -> tuple[BrainClient, WorkerClientFactory]:
     """创建 Brain API 客户端并完成登录，同时创建工作线程客户端工厂。"""
-    http_backend = get_runtime_config().http.backend
     bootstrap_client = BrainClient(
         email,
         password,
         min_request_interval=client_options.min_request_interval,
         rate_limit_max_retries=client_options.rate_limit_max_retries,
-        http_backend=http_backend,
     )
     try:
         login_with_retry(bootstrap_client, client_options.login_retries)
@@ -36,7 +33,6 @@ def create_and_login_client(
             client_options,
             email,
             password,
-            http_backend=http_backend,
         )
     except BaseException:
         bootstrap_client.close()

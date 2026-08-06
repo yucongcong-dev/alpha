@@ -562,17 +562,6 @@ def test_load_feedback_template_min_priority_reads_yaml_globals(monkeypatch) -> 
     assert load_feedback_template_min_priority() == 175
 
 
-def test_load_http_runtime_config_normalizes_backend(monkeypatch) -> None:
-    monkeypatch.setattr(
-        "alpha.config.runtime_values.get_yaml_config",
-        lambda config_path="": {"global": {"http": {"backend": " HTTPX "}}},
-    )
-
-    http = load_http_runtime_config()
-
-    assert http.backend == "httpx"
-
-
 def test_load_http_runtime_config_rejects_invalid_waits(monkeypatch) -> None:
     monkeypatch.setattr(
         "alpha.config.runtime_values.get_yaml_config",
@@ -580,16 +569,6 @@ def test_load_http_runtime_config_rejects_invalid_waits(monkeypatch) -> None:
     )
 
     with pytest.raises(ValueError, match=r"http\.request_timeout"):
-        load_http_runtime_config()
-
-
-def test_load_http_runtime_config_rejects_unknown_backend(monkeypatch) -> None:
-    monkeypatch.setattr(
-        "alpha.config.runtime_values.get_yaml_config",
-        lambda config_path="": {"global": {"http": {"backend": "requests"}}},
-    )
-
-    with pytest.raises(ValueError, match=r"http\.backend"):
         load_http_runtime_config()
 
 

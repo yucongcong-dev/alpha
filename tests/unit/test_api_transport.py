@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from email.message import Message
 from io import BytesIO
-import sys
 from typing import Any
 from urllib.error import HTTPError, URLError
 
@@ -12,7 +11,7 @@ import pytest
 
 from alpha.api.alphas import BrainAlphasMixin
 from alpha.api.fields import BrainFieldsMixin
-from alpha.api.http_backend import HttpxHttpBackend, UrllibHttpBackend, response_header
+from alpha.api.http_backend import UrllibHttpBackend, response_header
 from alpha.api.timing import (
     doubled_retry_after,
     extract_retry_after,
@@ -83,34 +82,6 @@ def test_urllib_backend_wraps_network_errors() -> None:
 
     with pytest.raises(BrainAPIError, match="offline"):
         backend.request("GET", "https://example.test")
-
-
-def test_httpx_backend_explains_missing_optional_dependency(monkeypatch) -> None:
-    backend = HttpxHttpBackend()
-    monkeypatch.setitem(sys.modules, "httpx", None)
-
-    with pytest.raises(ImportError, match=r"pip install -e '\.\[httpx\]'"):
-        backend._get_client()
-
-
-def test_httpx_backend_wraps_client_errors() -> None:
-    class FakeCookies:
-        jar = None
-
-        def set(self, *_args: Any, **_kwargs: Any) -> None:
-            return None
-
-    class FailingClient:
-        cookies = FakeCookies()
-
-        def request(self, **_kwargs: Any) -> None:
-            raise RuntimeError("connection reset")
-
-    backend = HttpxHttpBackend()
-    backend._client = FailingClient()
-
-    with pytest.raises(BrainAPIError, match="connection reset"):
-        backend.request("POST", "https://example.test", data=b"{}")
 
 
 def test_response_header_matches_names_case_insensitively() -> None:

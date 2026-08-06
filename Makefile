@@ -10,7 +10,7 @@ python-version-check:
 	$(PYTHON) scripts/check_all.py python-version
 
 install-dev: python-version-check
-	$(PYTHON) -m pip install -e ".[dev,httpx]"
+	$(PYTHON) -m pip install -e ".[dev]"
 
 test: python-version-check
 	$(PYTHON) scripts/check_all.py test

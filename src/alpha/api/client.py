@@ -17,7 +17,7 @@ from ..exceptions import BrainAPIError
 from ..models.runtime_options import ApiClientOptions
 from .alphas import BrainAlphasMixin
 from .fields import BrainFieldsMixin
-from .http_backend import create_http_backend
+from .http_backend import UrllibHttpBackend
 from .retry import (
     is_invalid_credentials_error,
     login_with_retry,
@@ -38,12 +38,7 @@ __all__ = [
 
 
 class BrainClient(BrainSessionMixin, BrainFieldsMixin, BrainSimulationsMixin, BrainAlphasMixin):
-    """面向 WorldQuant Brain 认证与 Alpha 接口的轻量 HTTP 客户端。
-
-    支持通过 http_backend 参数选择 HTTP 后端：
-      - "urllib"（默认）：基于标准库 urllib.request
-      - "httpx"：基于 httpx（连接池、HTTP/2、Keep-Alive）
-    """
+    """面向 WorldQuant Brain 认证与 Alpha 接口的轻量 urllib 客户端。"""
 
     def __init__(
         self,
@@ -51,8 +46,6 @@ class BrainClient(BrainSessionMixin, BrainFieldsMixin, BrainSimulationsMixin, Br
         password: str,
         min_request_interval: float = 0.0,
         rate_limit_max_retries: int = DEFAULT_RATE_LIMIT_MAX_RETRIES,
-        *,
-        http_backend: str = "",
     ) -> None:
         """初始化客户端凭证、节流参数与 HTTP 后端。"""
         if not email or not password:
@@ -63,10 +56,10 @@ class BrainClient(BrainSessionMixin, BrainFieldsMixin, BrainSimulationsMixin, Br
         self.password = password
         self.min_request_interval = max(min_request_interval, 0.0)
         self.rate_limit_max_retries = max(rate_limit_max_retries, 1)
-        self._http_backend = create_http_backend(http_backend)
+        self._http_backend = UrllibHttpBackend()
 
     def close(self) -> None:
-        """Release resources held by the selected HTTP backend."""
+        """Release resources held by the HTTP backend."""
         self._http_backend.close()
 
     def __enter__(self) -> BrainClient:
@@ -79,14 +72,11 @@ class BrainClient(BrainSessionMixin, BrainFieldsMixin, BrainSimulationsMixin, Br
 class WorkerClientFactory:
     """为每个工作线程提供独立且已认证的 BrainClient。"""
 
-    def __init__(
-        self, options: ApiClientOptions, email: str, password: str, *, http_backend: str = ""
-    ) -> None:
+    def __init__(self, options: ApiClientOptions, email: str, password: str) -> None:
         """记录线程级客户端创建所需的参数与凭证。"""
         self.options = options
         self.email = email
         self.password = password
-        self._http_backend = http_backend
         self._local = threading.local()
         self._clients: list[BrainClient] = []
         self._clients_lock = threading.Lock()
@@ -103,7 +93,6 @@ class WorkerClientFactory:
             self.password,
             min_request_interval=self.options.min_request_interval,
             rate_limit_max_retries=self.options.rate_limit_max_retries,
-            http_backend=self._http_backend,
         )
         try:
             login_with_retry(client, self.options.login_retries)
