@@ -731,13 +731,8 @@ threshold。本仓库默认保持 `OFF`，需要时显式开启。
 
 ### 14.3 PnL 为什么会突然跳
 
-官方给出的常见原因主要有：
-
-1. `NaN` 和非 `NaN` 频繁切换
-2. Alpha 值变化太快
-3. 单只股票权重过高
-
-具体诊断和改进动作见 [03 的 PnL 跳变章节](03_optimization_and_submission.md)。
+PnL 跳变属于表达式和持仓结构诊断问题，具体原因与改进动作统一见
+[03 的 PnL 跳变章节](03_optimization_and_submission.md#18-pnl-曲线突然跳变时先查什么)。
 
 ---
 
