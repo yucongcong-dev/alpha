@@ -166,6 +166,8 @@ def test_non_force_refuses_existing_snapshot_before_fetching(
     with pytest.raises(RuntimeError, match="Refusing to overwrite"):
         capture.capture_snapshots(
             baseline_manifest=baseline,
+            browser_fallback_root=tmp_path / "browser-fallback",
+            operators_fallback=tmp_path / "operators-fallback.json",
             catalog_manifest=None,
             output_root=tmp_path,
             captured="2026-08-06",
@@ -195,6 +197,8 @@ def test_force_failure_preserves_old_snapshots_and_cleans_staging(
     with pytest.raises(RuntimeError, match="operator failure"):
         capture.capture_snapshots(
             baseline_manifest=baseline,
+            browser_fallback_root=tmp_path / "browser-fallback",
+            operators_fallback=tmp_path / "operators-fallback.json",
             catalog_manifest=None,
             output_root=tmp_path,
             captured="2026-08-06",
@@ -222,6 +226,8 @@ def test_successful_capture_replaces_pair_and_records_honest_manifest(
 
     docs_dir, operators_dir = capture.capture_snapshots(
         baseline_manifest=baseline,
+        browser_fallback_root=tmp_path / "browser-fallback",
+        operators_fallback=tmp_path / "operators-fallback.json",
         catalog_manifest=catalog,
         output_root=tmp_path,
         captured="2026-08-06",

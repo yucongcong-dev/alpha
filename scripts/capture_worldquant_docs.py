@@ -608,9 +608,9 @@ def validate_documentation_snapshot(output_dir: Path) -> None:
     count = manifest.get("count")
     if count != len(pages) or manifest.get("captured_count") != len(pages):
         raise RuntimeError(f"Documentation snapshot count mismatch in {manifest_path}")
-    if manifest.get("api_captured_count", 0) + manifest.get(
-        "browser_captured_count", 0
-    ) != len(pages):
+    if manifest.get("api_captured_count", 0) + manifest.get("browser_captured_count", 0) != len(
+        pages
+    ):
         raise RuntimeError(f"Documentation capture-source count mismatch in {manifest_path}")
     for position, raw_page in enumerate(pages, start=1):
         page = _mapping(raw_page, f"snapshot manifest {manifest_path}.pages[{position}]")
@@ -744,9 +744,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--operators-fallback",
         type=Path,
-        default=Path(
-            "docs/source_snapshots/worldquant_operators_2026-08-06/operators.json"
-        ),
+        default=Path("docs/source_snapshots/worldquant_operators_2026-08-06/operators.json"),
         help="Known official operator snapshot used only when the current API returns 401",
     )
     parser.add_argument(
