@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from ..config.constants import SENTINEL_UNKNOWN
+from ..config._constants_strings import SENTINEL_UNKNOWN
 from ..models.domain import TemplateField
 from ..runtime.state import ExecutionState
 from ..utils.helpers import first_non_empty

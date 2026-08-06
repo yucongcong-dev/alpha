@@ -6,7 +6,10 @@
 
 from __future__ import annotations
 
-from ..config.constants import STATUS_ERROR, STATUS_SKIPPED
+from ..config._constants_strings import (
+    STATUS_ERROR,
+    STATUS_SKIPPED,
+)
 from .domain import FieldTestResult
 
 

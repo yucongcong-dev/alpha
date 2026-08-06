@@ -7,11 +7,7 @@ from datetime import datetime, timezone
 from math import pow
 from typing import Any
 
-from ..config.constants import (
-    FIELD_PRIORITY_ATTEMPTED_HIGH,
-    FIELD_PRIORITY_ATTEMPTED_LOW,
-    FIELD_PRIORITY_SCORE_HIGH,
-    FIELD_PRIORITY_SCORE_LOW,
+from ..config._constants_strings import (
     SENTINEL_UNKNOWN_CHECK,
     STAT_FIELD_ATTEMPTED_TEMPLATES,
     STAT_FIELD_ERRORS,
@@ -22,10 +18,16 @@ from ..config.constants import (
     STAT_FIELD_QUEUE_TIMEOUTS,
     STAT_FIELD_SUBMITTABLE,
     STAT_FIELD_TOP_FAILED_CHECKS,
-    STATS_DEFAULT_SCORE,
-    STATS_PERFORMANCE_TOP_N,
     STATUS_ERROR,
     STATUS_SKIPPED,
+)
+from ..config._constants_thresholds import (
+    FIELD_PRIORITY_ATTEMPTED_HIGH,
+    FIELD_PRIORITY_ATTEMPTED_LOW,
+    FIELD_PRIORITY_SCORE_HIGH,
+    FIELD_PRIORITY_SCORE_LOW,
+    STATS_DEFAULT_SCORE,
+    STATS_PERFORMANCE_TOP_N,
 )
 from ..models.domain import FieldFeedbackMap, FieldTestResult
 from ..models.result_predicates import has_pending_checks, is_queue_timeout_result

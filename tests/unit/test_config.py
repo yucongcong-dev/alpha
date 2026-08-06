@@ -14,13 +14,13 @@ import time
 
 import pytest
 
-from alpha.config.constants import (
+from alpha.config._constants_api import (
     API_BASE,
     AUTH_URL,
-    DEFAULT_DATASET_ID,
     SIM_ACCEPT_HEADER,
     VERSION_HEADER,
 )
+from alpha.config._constants_thresholds import DEFAULT_DATASET_ID
 from alpha.config.expression_policy_coercion import coerce_expression_policy_override
 from alpha.config.expression_policy_merging import (
     expression_policy_overrides_for_dataset,
@@ -482,7 +482,7 @@ def test_cli_config_is_bound_before_yaml_backed_constants_import(tmp_path) -> No
 import sys
 sys.argv = ["alpha", "--config", sys.argv[1]]
 import alpha.main
-from alpha.config.constants import HTTP_REQUEST_TIMEOUT
+from alpha.config._constants_api import HTTP_REQUEST_TIMEOUT
 from alpha.config.runtime_values import get_runtime_config
 assert HTTP_REQUEST_TIMEOUT == 12.5
 assert get_runtime_config().http.request_timeout == 12.5

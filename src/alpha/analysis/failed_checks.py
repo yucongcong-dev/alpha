@@ -5,7 +5,8 @@ from __future__ import annotations
 from collections.abc import Sequence
 from typing import Any
 
-from ..config.constants import (
+from ..config._constants_strings import SENTINEL_UNKNOWN_CHECK
+from ..config._constants_thresholds import (
     CHECK_CONCENTRATED_WEIGHT,
     CHECK_HIGH_TURNOVER,
     CHECK_LOW_FITNESS,
@@ -15,7 +16,6 @@ from ..config.constants import (
     FAILED_CHECK_EPSILON,
     FAILED_CHECK_MAX_EXAMPLE_IDS,
     OPTIMIZATION_HINT_TOP_N,
-    SENTINEL_UNKNOWN_CHECK,
     STATS_DEFAULT_SCORE,
     STATS_FAILED_CHECK_DEFAULT_SCORE,
     STATS_NEARPASS_SUMMARY_LIMIT,

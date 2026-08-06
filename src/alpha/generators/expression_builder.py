@@ -19,7 +19,10 @@ from pathlib import Path
 import re
 
 from ..analysis.field_stats import decay_field_feedback
-from ..config.constants import FEEDBACK_STAGE_GENERATE, FEEDBACK_STAGE_RESIMULATE
+from ..config._constants_strings import (
+    FEEDBACK_STAGE_GENERATE,
+    FEEDBACK_STAGE_RESIMULATE,
+)
 from ..config.models import DatasetExpressionPolicy
 from ..generators.field_transforms import build_field_view
 from ..models.domain import FieldView, TemplateCandidate, TemplateField, TemplateLibraryItem

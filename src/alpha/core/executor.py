@@ -22,7 +22,8 @@ from dataclasses import replace
 import logging
 import zlib
 
-from ..config.constants import DRY_RUN_SAMPLE_LIMIT, SENTINEL_UNKNOWN
+from ..config._constants_strings import SENTINEL_UNKNOWN
+from ..config._constants_thresholds import DRY_RUN_SAMPLE_LIMIT
 from ..generators.fields import choose_field_name, choose_field_type
 from ..generators.templates.metadata import normalize_template_role
 from ..models.domain import FieldTestResult, TemplateCandidate, TemplateField, TemplateLibrary

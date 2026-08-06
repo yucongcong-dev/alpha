@@ -6,7 +6,8 @@ from collections.abc import Sequence
 from typing import Any
 
 from ..analysis.field_stats import decay_field_feedback, field_priority
-from ..config.constants import SENTINEL_UNKNOWN, STATS_DEFAULT_SCORE
+from ..config._constants_strings import SENTINEL_UNKNOWN
+from ..config._constants_thresholds import STATS_DEFAULT_SCORE
 from ..config.models import DatasetExpressionPolicy
 from ..models.domain import TemplateField
 from ..runtime.contexts import HistoricalRunState

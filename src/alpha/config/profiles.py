@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from typing import cast
 
-from .constants import (
+from ._constants_thresholds import (
     DEFAULT_FIELD_TEMPLATE_BATCH_SIZE,
     DEFAULT_MAX_CONCURRENT_CREATES,
     DEFAULT_MAX_CONCURRENT_SIMULATIONS,

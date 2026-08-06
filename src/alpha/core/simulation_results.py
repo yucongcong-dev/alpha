@@ -7,7 +7,7 @@ from __future__ import annotations
 from collections.abc import Sequence
 from typing import Any
 
-from ..config.constants import STATUS_ERROR
+from ..config._constants_strings import STATUS_ERROR
 from ..models.domain import FailedCheck, FieldTestContext, FieldTestResult, coerce_failed_checks
 
 

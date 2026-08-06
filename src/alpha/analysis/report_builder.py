@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from ..config.constants import STATUS_ERROR
+from ..config._constants_strings import STATUS_ERROR
 from ..models.domain import (
     AnalysisInputs,
     AnalysisPayload,

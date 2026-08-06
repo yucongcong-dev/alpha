@@ -7,7 +7,7 @@ import sys
 import pytest
 
 from alpha.cli.parser import parse_args
-from alpha.config.constants import FULL_RUN_MAX_TOTAL_SIMULATIONS
+from alpha.config._constants_thresholds import FULL_RUN_MAX_TOTAL_SIMULATIONS
 from alpha.config.yaml import get_yaml_config
 
 

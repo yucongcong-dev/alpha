@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from unittest.mock import patch
 
-from alpha.config.constants import STATUS_SKIPPED
+from alpha.config._constants_strings import STATUS_SKIPPED
 from alpha.core.simulation_parsing import (
     extract_alpha_id,
     summarize_failure,

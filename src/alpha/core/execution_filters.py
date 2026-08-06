@@ -10,7 +10,7 @@ from __future__ import annotations
 from collections.abc import Sequence
 import logging
 
-from ..config.constants import (
+from ..config._constants_thresholds import (
     CHECK_CONCENTRATED_WEIGHT,
     CHECK_LOW_FITNESS,
     CHECK_LOW_SHARPE,

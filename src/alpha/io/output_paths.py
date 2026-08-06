@@ -8,7 +8,7 @@ import logging
 from pathlib import Path
 import time
 
-from ..config.constants import DATE_FORMAT_ISO
+from ..config._constants_strings import DATE_FORMAT_ISO
 from ..io.common import (
     DATASETS_DIR,
     sanitize_dataset_id_for_filename,

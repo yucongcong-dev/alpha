@@ -3,11 +3,11 @@
 from __future__ import annotations
 
 from ..analysis.feedback_stats import dominant_failed_check_names
-from ..config.constants import (
+from ..config._constants_strings import FEEDBACK_STAGE_RESIMULATE
+from ..config._constants_thresholds import (
     CHECK_CONCENTRATED_WEIGHT,
     CHECK_HIGH_TURNOVER,
     CHECK_LOW_TURNOVER,
-    FEEDBACK_STAGE_RESIMULATE,
 )
 from ..config.models import DatasetExpressionPolicy
 from ..config.runtime_values import get_runtime_config

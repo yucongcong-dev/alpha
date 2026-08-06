@@ -5,7 +5,11 @@ from __future__ import annotations
 from collections.abc import Sequence
 from typing import Any
 
-from ..config.constants import PREFERRED_FIELD_RANK_SENTINEL, SENTINEL_UNKNOWN, STATS_DEFAULT_SCORE
+from ..config._constants_strings import SENTINEL_UNKNOWN
+from ..config._constants_thresholds import (
+    PREFERRED_FIELD_RANK_SENTINEL,
+    STATS_DEFAULT_SCORE,
+)
 from ..config.models import DatasetExpressionPolicy
 from ..generators.fields import choose_field_name
 from ..models.domain import TemplateField

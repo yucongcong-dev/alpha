@@ -7,11 +7,11 @@ import logging
 
 from ..api.api_types import SimulationPayload
 from ..api.client import BrainClient, retry_operation
-from ..config.constants import (
+from ..config._constants_api import SIMULATION_RETRY_WAIT
+from ..config._constants_strings import (
     API_KEY_PROGRESS,
     API_KEY_STATE,
     API_KEY_STATUS,
-    SIMULATION_RETRY_WAIT,
     STATUS_SKIPPED,
 )
 from ..exceptions import BrainStopRequested

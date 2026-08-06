@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from dataclasses import field as dataclass_field
 import logging
 
-from ..config.constants import SENTINEL_UNKNOWN
+from ..config._constants_strings import SENTINEL_UNKNOWN
 from ..core.executor import (
     build_pending_templates_for_field,
     inflight_template_keys,

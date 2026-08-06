@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from ..api.api_types import CheckResultDict, SimulationPayload
-from ..config.constants import (
+from ..config._constants_thresholds import (
     CHECK_CONCENTRATED_WEIGHT,
     CHECK_HIGH_TURNOVER,
     CHECK_LOW_FITNESS,

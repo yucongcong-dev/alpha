@@ -4,11 +4,9 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 
-from ..config.constants import (
-    ALLOWED_EXTERNAL_RATIO_PARTNERS,
-    DELTA_STD_PRIORITY_BOOST,
-    TEMPLATE_STAGE_GROUP_SECOND_ORDER,
-)
+from ..config._constants_strings import TEMPLATE_STAGE_GROUP_SECOND_ORDER
+from ..config._constants_templates import ALLOWED_EXTERNAL_RATIO_PARTNERS
+from ..config._constants_thresholds import DELTA_STD_PRIORITY_BOOST
 from ..config.models import DatasetExpressionPolicy
 from ..generators.field_transforms import build_field_view, build_ratio_expression
 from ..models.domain import FieldView, TemplateCandidate, TemplateField

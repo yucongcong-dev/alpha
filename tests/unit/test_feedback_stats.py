@@ -11,7 +11,7 @@ from alpha.analysis.feedback_stats import (
     update_global_failed_check_counts_with_result,
 )
 from alpha.analysis.field_stats import decay_field_feedback, field_priority
-from alpha.config.constants import STATS_DEFAULT_SCORE
+from alpha.config._constants_thresholds import STATS_DEFAULT_SCORE
 from alpha.models.domain import FieldTestResult
 
 

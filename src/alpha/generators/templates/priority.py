@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 
-from ...config.constants import (
+from ...config._constants_templates import (
     SIMILARITY_PENALTY_OFFSET_GROUP_RATIO_LEVEL,
     SIMILARITY_PENALTY_OFFSET_LEGACY_GROUP_LEVEL,
     SIMILARITY_PENALTY_OFFSET_LEGACY_LEVEL,

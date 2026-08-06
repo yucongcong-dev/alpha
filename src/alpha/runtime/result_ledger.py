@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from ..config.constants import STATUS_ERROR
+from ..config._constants_strings import STATUS_ERROR
 from ..models.domain import FieldTestResult
 from ..models.result_predicates import has_pending_checks, is_queue_timeout_result
 

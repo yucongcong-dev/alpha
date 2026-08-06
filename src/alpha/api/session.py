@@ -9,7 +9,7 @@ import time
 from typing import Any
 from urllib.parse import urlencode
 
-from ..config.constants import (
+from ..config._constants_api import (
     AUTH_URL,
     DEFAULT_HEADERS,
 )

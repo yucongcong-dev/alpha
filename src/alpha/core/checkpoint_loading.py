@@ -8,7 +8,7 @@ import logging
 import math
 from typing import Any
 
-from ..config.constants import CHECKPOINT_RESUME_SAFETY_SECONDS
+from ..config._constants_thresholds import CHECKPOINT_RESUME_SAFETY_SECONDS
 from ..runtime.concurrency import RuntimeConcurrencyState
 from ..runtime.state import ExecutionState
 from . import checkpoint_payloads as _payloads

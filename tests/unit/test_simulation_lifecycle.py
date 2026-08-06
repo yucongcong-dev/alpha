@@ -8,7 +8,7 @@ from unittest.mock import patch
 
 import pytest
 
-from alpha.config.constants import STATUS_SKIPPED
+from alpha.config._constants_strings import STATUS_SKIPPED
 from alpha.core.simulation import (
     resume_field_test,
     resume_field_test_in_worker,

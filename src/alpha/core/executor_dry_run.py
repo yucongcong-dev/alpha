@@ -8,11 +8,13 @@ import logging
 from typing import Protocol
 
 from ..analysis.field_stats import decay_field_feedback
-from ..config.constants import (
-    DRY_RUN_SAMPLE_LIMIT,
+from ..config._constants_strings import (
     FEEDBACK_STAGE_RESIMULATE,
     SENTINEL_UNKNOWN,
     STAT_FIELD_ATTEMPTED_TEMPLATES,
+)
+from ..config._constants_thresholds import (
+    DRY_RUN_SAMPLE_LIMIT,
     STATS_DEFAULT_SCORE,
 )
 from ..generators.fields import choose_field_name

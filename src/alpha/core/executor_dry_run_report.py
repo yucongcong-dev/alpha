@@ -6,7 +6,7 @@ from collections import Counter
 from dataclasses import dataclass
 import logging
 
-from ..config.constants import SENTINEL_UNKNOWN
+from ..config._constants_strings import SENTINEL_UNKNOWN
 from ..models.domain import TemplateField
 from ..utils.helpers import first_non_empty
 

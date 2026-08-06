@@ -15,7 +15,7 @@ from ..analysis.feedback_run_index import persist_feedback_run_index
 from ..analysis.result_identity import result_identity
 from ..analysis.results_persistence import dump_results
 from ..api.client import BrainClient
-from ..config.constants import STATUS_ERROR
+from ..config._constants_strings import STATUS_ERROR
 from ..core.submission_checks import check_submission_with_retry
 from ..exceptions import BrainHTTPError, BrainStopRequested
 from ..io.results_store import exclusive_results_transaction

@@ -11,7 +11,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass, field
 from typing import Any
 
-from ..config.constants import STATUS_ERROR
+from ..config._constants_strings import STATUS_ERROR
 from .domain_codecs import (
     failed_check_values,
     serialize_field_test_result,

@@ -8,12 +8,12 @@ import logging
 import time
 from typing import cast
 
-from ..config.constants import (
+from ..config._constants_api import (
     API_BASE,
     SIM_ACCEPT_HEADER,
-    SIM_TERMINAL_STATES,
     SIMULATIONS_URL,
 )
+from ..config._constants_strings import SIM_TERMINAL_STATES
 from ..config.runtime_values import get_runtime_config
 from ..exceptions import BrainAPIError, BrainQueueBusyError, BrainStopRequested
 from ..utils.helpers import first_non_empty

@@ -7,7 +7,7 @@ from __future__ import annotations
 import json
 from typing import Any
 
-from ..config.constants import (
+from ..config._constants_strings import (
     PAYLOAD_TEXT_TRUNCATION_LIMIT,
     SIM_ACTIVE_STATES,
 )

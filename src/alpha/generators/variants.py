@@ -4,11 +4,13 @@ from __future__ import annotations
 
 from typing import Any
 
-from ..config.constants import (
+from ..config._constants_strings import (
     GROUP_NAME_SUBINDUSTRY,
     NEUTRALIZATION_INDUSTRY,
     NEUTRALIZATION_MARKET,
     NEUTRALIZATION_NONE,
+)
+from ..config._constants_thresholds import (
     SETTINGS_VARIANT_DECAY_FAST,
     SETTINGS_VARIANT_DECAY_SLOW,
     TRUNCATION_TIGHTER_MAX,

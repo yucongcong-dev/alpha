@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import threading
 
-from ..config.constants import DEFAULT_RATE_LIMIT_MAX_RETRIES
+from ..config._constants_api import DEFAULT_RATE_LIMIT_MAX_RETRIES
 from ..exceptions import BrainAPIError
 from ..models.runtime_options import ApiClientOptions
 from .alphas import BrainAlphasMixin

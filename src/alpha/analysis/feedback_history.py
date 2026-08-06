@@ -6,7 +6,7 @@ from dataclasses import replace
 from datetime import datetime, timezone
 from pathlib import Path
 
-from ..config.constants import FEEDBACK_STAGE_RESIMULATE
+from ..config._constants_strings import FEEDBACK_STAGE_RESIMULATE
 from ..config.models import DatasetExpressionPolicy
 from ..models.domain import FieldTestResult
 from ..models.domain_types import FieldFeedbackSummary

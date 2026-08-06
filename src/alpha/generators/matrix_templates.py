@@ -14,8 +14,11 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 
-from ..config.constants import (
-    DELTA_STD_PRIORITY_BOOST,
+from ..config._constants_strings import (
+    TEMPLATE_STAGE_FIRST_ORDER,
+    TEMPLATE_STAGE_GROUP_SECOND_ORDER,
+)
+from ..config._constants_templates import (
     LEGACY_MATRIX_GROUP_RANK_INDUSTRY_PRIORITY,
     LEGACY_MATRIX_GROUP_RANK_SUBINDUSTRY_PRIORITY,
     LEGACY_MATRIX_NEG_DEFAULT_PRIORITY,
@@ -23,9 +26,8 @@ from ..config.constants import (
     LEGACY_MATRIX_NEG_POSITIVE_RAW_PRIORITY,
     LEGACY_MATRIX_RANK_RAW_FIELD_PRIORITY,
     LEGACY_MATRIX_RAW_FIELD_PRIORITY,
-    TEMPLATE_STAGE_FIRST_ORDER,
-    TEMPLATE_STAGE_GROUP_SECOND_ORDER,
 )
+from ..config._constants_thresholds import DELTA_STD_PRIORITY_BOOST
 from ..config.models import DatasetExpressionPolicy
 from ..models.domain import FieldView, TemplateCandidate, TemplateField
 from .ratio_templates import extend_ratio_templates

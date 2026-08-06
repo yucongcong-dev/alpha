@@ -5,7 +5,7 @@ from __future__ import annotations
 import argparse
 import os
 
-from ..config.constants import DEFAULT_DATASET_ID
+from ..config._constants_thresholds import DEFAULT_DATASET_ID
 from ..config.strategy_profiles import STRATEGY_PROFILE_CHOICES
 from .constants import DEFAULT_CREDS_FILE, DEFAULT_CREDS_KEY_FILE
 

@@ -5,7 +5,7 @@ from __future__ import annotations
 import argparse
 from typing import cast
 
-from ..config.constants import (
+from ..config._constants_thresholds import (
     FULL_RUN_MAX_TOTAL_SIMULATIONS,
     SMOKE_TEST_MAX_PENDING_CYCLES,
     SMOKE_TEST_MAX_QUEUE_SECONDS,

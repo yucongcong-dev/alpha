@@ -9,7 +9,7 @@ from pathlib import Path
 import time
 from typing import Any
 
-from ..config.constants import (
+from ..config._constants_strings import (
     API_KEY_MESSAGE,
     API_KEY_STATUS,
     SENTINEL_UNKNOWN,

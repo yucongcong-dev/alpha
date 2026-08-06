@@ -8,7 +8,8 @@ import logging
 from ..api.api_types import SimulationPayload
 from ..api.client import BrainClient, retry_operation
 from ..api.timing import wait_seconds
-from ..config.constants import SIMULATION_RETRY_WAIT, STATUS_SKIPPED
+from ..config._constants_api import SIMULATION_RETRY_WAIT
+from ..config._constants_strings import STATUS_SKIPPED
 from ..exceptions import BrainAPIError, BrainHTTPError, BrainStopRequested
 from ..models.domain import FailedCheck, FieldTestContext, FieldTestResult
 from ..models.domain_parsers import parse_failed_check

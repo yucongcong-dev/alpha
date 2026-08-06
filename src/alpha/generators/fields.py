@@ -22,7 +22,8 @@ import os
 import time
 from typing import Any, Protocol
 
-from ..config.constants import FIELDS_CACHE_TTL_HOURS, SENTINEL_UNKNOWN
+from ..config._constants_strings import SENTINEL_UNKNOWN
+from ..config._constants_thresholds import FIELDS_CACHE_TTL_HOURS
 from ..io.common import atomic_write_json
 from ..models.domain import TemplateField
 from ..models.domain_parsers import parse_template_field

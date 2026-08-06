@@ -131,6 +131,9 @@ def removed_compat_file_check(root: Path) -> list[str]:
     facade_helper = root / "src" / "alpha" / "_facade.py"
     if facade_helper.is_file():
         removed.append(facade_helper)
+    constants_facade = root / "src" / "alpha" / "config" / "constants.py"
+    if constants_facade.is_file():
+        removed.append(constants_facade)
     if removed:
         return [
             "[check] compatibility aggregate files were removed; import concrete modules",
@@ -196,6 +199,25 @@ def compat_import_check(root: Path) -> list[str]:
     errors.extend(
         f"[check] internal config modules should import config.yaml instead of package facade\n{match}"
         for match in _line_matches(root, config_files, config_pattern)
+    )
+    constants_pattern = re.compile(
+        r"from alpha\.config\.constants import|from \.{1,3}config\.constants import"
+    )
+    errors.extend(
+        f"[check] import concrete _constants_* modules instead of constants facade\n{match}"
+        for match in _line_matches(
+            root,
+            (*_iter_files(root, "src/alpha"), *_iter_files(root, "tests")),
+            constants_pattern,
+        )
+    )
+    errors.extend(
+        f"[check] import concrete _constants_* modules instead of constants facade\n{match}"
+        for match in _line_matches(
+            root,
+            _iter_files(root, "src/alpha/config"),
+            re.compile(r"from \.constants import"),
+        )
     )
     return errors
 

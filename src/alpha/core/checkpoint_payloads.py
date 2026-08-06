@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from ..config.constants import SENTINEL_UNKNOWN
+from ..config._constants_strings import SENTINEL_UNKNOWN
 from ..runtime.contexts import PendingFutureContext
 from ..runtime.state import ExecutionState
 

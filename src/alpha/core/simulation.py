@@ -11,7 +11,10 @@ from collections.abc import Callable
 import logging
 
 from ..api.client import BrainClient
-from ..config.constants import SENTINEL_UNKNOWN, STATUS_SKIPPED
+from ..config._constants_strings import (
+    SENTINEL_UNKNOWN,
+    STATUS_SKIPPED,
+)
 from ..generators.fields import choose_field_type
 from ..models.domain import (
     FieldTestContext,

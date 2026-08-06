@@ -9,13 +9,15 @@ import re
 from typing import Any
 
 from ..api.api_types import ApiPayload, CheckResultDict
-from ..config.constants import (
+from ..config._constants_strings import (
     API_KEY_DETAIL,
     API_KEY_ERROR,
     API_KEY_MESSAGE,
+    SENTINEL_UNKNOWN_CHECK,
+)
+from ..config._constants_thresholds import (
     FAILURE_SUMMARY_MAX_LEN,
     MAX_FAILED_CHECK_NAMES,
-    SENTINEL_UNKNOWN_CHECK,
 )
 from ..models.domain import FailedCheck
 from ..utils.helpers import first_non_empty

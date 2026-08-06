@@ -4,7 +4,10 @@ from __future__ import annotations
 
 import logging
 
-from ..config.constants import ALPHAS_URL, SIM_ACCEPT_HEADER
+from ..config._constants_api import (
+    ALPHAS_URL,
+    SIM_ACCEPT_HEADER,
+)
 from .api_types import ApiPayload
 from .payloads import safe_json_bytes
 

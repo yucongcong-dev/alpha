@@ -6,14 +6,14 @@ from collections.abc import Sequence
 from datetime import datetime, timezone
 from typing import Any
 
-from ..config.constants import (
+from ..config._constants_strings import (
     SENTINEL_UNKNOWN_CHECK,
     STAT_FIELD_ATTEMPTED_TEMPLATES,
     STAT_FIELD_FAILED_CHECK_COUNTS,
     STAT_FIELD_FIELD_NAME,
-    STATS_DEFAULT_SCORE,
     STATUS_SIMULATED,
 )
+from ..config._constants_thresholds import STATS_DEFAULT_SCORE
 from ..models.domain import FieldFeedbackMap, FieldTestResult
 from ..models.result_predicates import is_feedback_eligible_result
 from .failed_checks import score_failed_checks

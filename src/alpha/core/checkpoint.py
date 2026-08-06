@@ -17,7 +17,7 @@ import logging
 import time
 from typing import Any
 
-from ..config.constants import CHECKPOINT_PENDING_FUTURES_LIMIT
+from ..config._constants_thresholds import CHECKPOINT_PENDING_FUTURES_LIMIT
 from ..runtime.concurrency import RuntimeConcurrencyState
 from ..runtime.state import ExecutionState
 from . import checkpoint_files as _files

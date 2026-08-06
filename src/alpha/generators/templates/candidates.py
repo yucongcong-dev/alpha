@@ -10,7 +10,7 @@ from __future__ import annotations
 from collections.abc import Sequence
 from typing import Any
 
-from ...config.constants import (
+from ...config._constants_strings import (
     TEMPLATE_STAGE_EVENT_CONDITIONED,
     TEMPLATE_STAGE_GROUP_SECOND_ORDER,
 )

@@ -5,7 +5,10 @@ from __future__ import annotations
 import logging
 from typing import cast
 
-from ..config.constants import DATA_FIELDS_URL, VERSION_HEADER
+from ..config._constants_api import (
+    DATA_FIELDS_URL,
+    VERSION_HEADER,
+)
 from ..exceptions import BrainAPIError, BrainHTTPError
 from .api_types import ApiPayload, FieldInfoDict
 from .payloads import extract_total, normalize_results, safe_json_bytes

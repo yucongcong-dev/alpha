@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import re
 
-from ..config.constants import PREFERRED_FIELD_RANK_SENTINEL
+from ..config._constants_thresholds import PREFERRED_FIELD_RANK_SENTINEL
 
 _FIELD_ALL_SUFFIX = re.compile(r"_all$")
 _FIELD_WINDOW_TOKEN = re.compile(r"_(?:last_)?\d+(?:_days?)?(?=_|$)")

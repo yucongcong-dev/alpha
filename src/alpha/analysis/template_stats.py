@@ -5,11 +5,7 @@ from __future__ import annotations
 from collections.abc import Sequence
 from typing import Any
 
-from ..config.constants import (
-    CHECK_CONCENTRATED_WEIGHT,
-    CHECK_LOW_FITNESS,
-    CHECK_LOW_SHARPE,
-    CHECK_LOW_SUB_UNIVERSE_SHARPE,
+from ..config._constants_strings import (
     SENTINEL_UNKNOWN_CHECK,
     STAT_FIELD_ATTEMPTED,
     STAT_FIELD_CONCENTRATED_WEIGHT,
@@ -23,10 +19,16 @@ from ..config.constants import (
     STAT_FIELD_SUBMITTABLE,
     STAT_FIELD_TEMPLATE_NAME,
     STAT_FIELD_TOP_FAILED_CHECKS,
-    STATS_PERFORMANCE_TOP_N,
     STATUS_ERROR,
     STATUS_SIMULATED,
     STATUS_SKIPPED,
+)
+from ..config._constants_thresholds import (
+    CHECK_CONCENTRATED_WEIGHT,
+    CHECK_LOW_FITNESS,
+    CHECK_LOW_SHARPE,
+    CHECK_LOW_SUB_UNIVERSE_SHARPE,
+    STATS_PERFORMANCE_TOP_N,
 )
 from ..models.domain import FieldTestResult
 from ..models.result_predicates import has_pending_checks, is_queue_timeout_result

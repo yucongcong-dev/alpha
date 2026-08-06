@@ -10,7 +10,7 @@ import logging
 import threading
 from typing import Any
 
-_log = logging.getLogger("alpha.config.constants")
+_log = logging.getLogger("alpha.config")
 
 # 线程安全的缺失 key 警告记录，防止重复日志 + 无限增长
 _MISSING_KEY_LOCK: threading.Lock = threading.Lock()

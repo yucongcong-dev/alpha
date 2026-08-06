@@ -8,7 +8,7 @@ from alpha.app.bootstrap_pending_checks import (
     reconcile_pending_check_results,
     refresh_pending_check_results,
 )
-from alpha.config.constants import STATUS_ERROR
+from alpha.config._constants_strings import STATUS_ERROR
 from alpha.exceptions import BrainHTTPError, BrainStopRequested
 from alpha.models.domain import FailedCheck, FieldTestResult
 from alpha.runtime.contexts import HistoricalRunState

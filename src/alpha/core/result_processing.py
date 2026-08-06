@@ -15,7 +15,10 @@ from typing import Any, Protocol
 
 from ..analysis.result_identity import result_identity
 from ..analysis.template_stats import update_template_stats_with_result
-from ..config.constants import STATUS_ERROR, STATUS_SKIPPED
+from ..config._constants_strings import (
+    STATUS_ERROR,
+    STATUS_SKIPPED,
+)
 from ..models.domain import FieldTestResult
 from ..models.result_predicates import (
     is_attempted_result,

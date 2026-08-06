@@ -72,7 +72,9 @@ def test_main_activates_custom_config_before_yaml_backed_constants(tmp_path) -> 
         [
             sys.executable,
             "-c",
-            "import alpha.main; from alpha.config.constants import STATUS_ERROR; print(STATUS_ERROR)",
+            "import alpha.main; "
+            "from alpha.config._constants_strings import STATUS_ERROR; "
+            "print(STATUS_ERROR)",
             "--config",
             str(config_path),
         ],

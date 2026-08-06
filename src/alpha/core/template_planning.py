@@ -13,7 +13,7 @@ from typing import Protocol
 
 from ..analysis.feedback_history import choose_settings_variant_budget
 from ..analysis.field_stats import decay_field_feedback
-from ..config.constants import (
+from ..config._constants_strings import (
     FEEDBACK_STAGE_RESIMULATE,
     SENTINEL_UNKNOWN,
 )

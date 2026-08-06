@@ -4,7 +4,10 @@ from __future__ import annotations
 
 from typing import Any
 
-from .constants import DEFAULT_SETTINGS_VARIANT_BUDGET, STATS_DEFAULT_SCORE
+from ._constants_thresholds import (
+    DEFAULT_SETTINGS_VARIANT_BUDGET,
+    STATS_DEFAULT_SCORE,
+)
 from .models import FeedbackLoopPolicy, FeedbackPhasePolicy, FieldTransformSpec, FieldTransformStage
 
 

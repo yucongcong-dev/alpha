@@ -8,7 +8,8 @@ from typing import Any
 
 from ..api.api_types import SimulationPayload
 from ..api.client import BrainClient, retry_operation
-from ..config.constants import SIMULATION_RETRY_WAIT, STATUS_SKIPPED
+from ..config._constants_api import SIMULATION_RETRY_WAIT
+from ..config._constants_strings import STATUS_SKIPPED
 from ..exceptions import BrainStopRequested
 from ..generators.payload import build_simulation_payload
 from ..models.domain import FieldTestContext, FieldTestResult, SettingsVariant

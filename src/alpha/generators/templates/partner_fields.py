@@ -10,8 +10,8 @@ from __future__ import annotations
 from collections.abc import Sequence
 import re
 
-from ...config.constants import (
-    ALLOWED_EXTERNAL_RATIO_PARTNERS,
+from ...config._constants_templates import ALLOWED_EXTERNAL_RATIO_PARTNERS
+from ...config._constants_thresholds import (
     PARTNER_KEYWORD_MATCH_SCORE,
     PARTNER_PREFERRED_BASE_SCORE,
     PARTNER_RANK_MAX_SCORE,
