@@ -1,0 +1,2 @@
+socialmedia8_sentiment_level_zscore_60
+socialmedia8_sentiment_change_attention_5

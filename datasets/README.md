@@ -36,9 +36,10 @@ datasets/<dataset_id>/
 | `model16` | 暂停 | 无 |
 | `model51` | 暂停 | 无 |
 | `socialmedia12` | 暂停 | 无 |
+| `socialmedia8` | 探索 | `sentiment_attention_seed` |
 | `option9` | 暂停 | 无 |
 | `news18` | 暂停 | 无 |
 
-当前没有现役 explore 数据集。`analyst4` 的 EPS surprise、revision、dispersion、销售指引
-和销售预期修正均已关闭；完整依据见其 `research_history.md`。下一轮研究应先筛选新的数据集，
-再建立小范围 preset，不直接恢复已失败方向或扫描完整字段池。
+`socialmedia8` 是当前唯一现役 explore 数据集，只验证低拥挤的 fast D1 情绪与关注度方向，
+总预算为 2 次 simulation。其他数据集维持现有暂停或基线状态，不恢复已失败方向，也不扫描
+完整字段池。
