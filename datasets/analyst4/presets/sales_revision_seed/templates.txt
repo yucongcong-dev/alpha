@@ -1,2 +1,0 @@
-analyst4_sales_revision_zscore_126
-analyst4_sales_revision_delta_over_std_20_126

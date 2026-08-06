@@ -5,13 +5,13 @@
 
 ## 公共环境
 
-2026-08-06 的 EPS surprise 实验使用 FASTEXPR、USA TOP3000、EQUITY、Delay 1，回测区间
+2026-08-06 的实验使用 FASTEXPR、USA TOP3000、EQUITY、Delay 1，回测区间
 为 2025-08-06 至 2026-08-06。Neutralization 为 SUBINDUSTRY，Decay 为 `4`，
 Truncation 为 `0.08`，Pasteurization ON、Unit Handling VERIFY、NaN Handling OFF、
 Max Trade OFF。
 
-字段缓存包含 1324 个字段。该实验只验证一个季度 reported EPS 与匹配预期中位数的关系，
-不代表完整字段池已经探索。
+字段缓存包含 1324 个字段。所有实验均围绕明确字段和两条种子结构进行，不代表完整字段池
+已经遍历。
 
 ## Quarterly reported EPS surprise
 
@@ -54,9 +54,37 @@ Decay 或 Truncation sweep。
 两条结构虽为正值，但距离 Sharpe `1.25` 和 Fitness `1.0` 的要求较远，不属于 near-pass。
 EPS dispersion 方向关闭，原 `eps_dispersion_seed` preset 已删除，不做局部窗口或参数变体。
 
-## 后续边界
+## Annual sales guidance range
 
-已关闭的 surprise、revision 和 dispersion 都属于 EPS 研究，不能外推为整个 `analyst4`
-失败。下一条独立假设是公司销售指引区间，仅允许 `sales_guidance_seed` 的两次 simulation；
-若失败，再运行 `sales_revision_seed` 的两次 simulation。两个销售方向都没有形成正向基线
-后暂停 `analyst4`，不研究 recommendation，也不扩大到完整 1324 字段池。
+该实验比较公司年度销售指引上界
+`anl4_fs_guidances_basic_af_nd_sales_maxguidance` 与下界
+`anl4_fs_guidances_basic_af_nd_sales_minguidance`。两个字段的 Coverage 和 Date Coverage
+均为 `100%`，Alpha Count 分别为 `1` 和 `17`。
+
+| 结构 | Alpha ID | Sharpe | Fitness | 其他检查 |
+|---|---|---:|---:|---|
+| guidance range 的 252 日 zscore | `E5GYYr8m` | 未触发 LOW_SHARPE | 0.98 | Sub-universe -0.25；Self Correlation PENDING |
+| guidance range 的 63/126 变化率 | `3qp33n86` | 0.19 | 0.05 | Sub-universe -0.21；Self Correlation PENDING |
+
+第一条 Fitness 接近阈值，但 Sub-universe 明显为负，不能作为稳健正向基线；第二条整体明显
+失败。销售指引区间方向关闭，不继续做局部参数变体。
+
+## Event-level sales estimate revision
+
+该实验使用 VECTOR 字段 `sales_estimate_value` 与 `sales_previous_estimate_value`，比较当前
+事件级销售预期与上次预期。两个字段当时的 Coverage 分别为 `99.3%` 和 `98.7%`，
+Alpha Count 分别为 `59` 和 `39`。
+
+| 结构 | Alpha ID | Sharpe | Fitness | 其他检查 |
+|---|---|---:|---:|---|
+| sales revision spread 的 126 日 zscore | `e73gKw16` | -0.72 | -0.22 | Sub-universe -0.70；Self Correlation PENDING |
+| sales revision spread 的 20/126 变化率 | `9qpbKQno` | -0.70 | -0.17 | Self Correlation PENDING |
+
+两条结构均明显失败。即使翻转符号，Sharpe 绝对值仍仅约 `0.7`，不具备继续做窗口或参数
+sweep 的价值。销售预期修正方向关闭。
+
+## 当前结论
+
+EPS 与销售两类独立假设均未形成正向基线，既定停止条件已经满足。`analyst4` 暂停，不研究
+recommendation 邻域，也不扩大到完整 1324 字段池。只有出现新的独立经济假设或字段发生
+实质更新时才重新评估。

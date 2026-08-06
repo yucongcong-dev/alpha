@@ -29,7 +29,7 @@ datasets/<dataset_id>/
 
 | 数据集 | 状态 | 现役 preset |
 | --- | --- | --- |
-| `analyst4` | 探索 | `sales_guidance_seed` |
+| `analyst4` | 暂停 | 无 |
 | `fundamental2` | 暂停 | 无 |
 | `fundamental6` | 暂停 | 无 |
 | `option8` | 基线保留 | `subindustry_refine` |
@@ -39,6 +39,6 @@ datasets/<dataset_id>/
 | `option9` | 暂停 | 无 |
 | `news18` | 暂停 | 无 |
 
-`analyst4` 是当前唯一现役 explore 数据集。EPS surprise、revision 和 dispersion 均已关闭，
-当前验证公司销售指引区间；若失败，再验证销售预期修正。新增总预算最多 4 次，不直接扫描
-完整 1324 字段池。
+当前没有现役 explore 数据集。`analyst4` 的 EPS surprise、revision、dispersion、销售指引
+和销售预期修正均已关闭；完整依据见其 `research_history.md`。下一轮研究应先筛选新的数据集，
+再建立小范围 preset，不直接恢复已失败方向或扫描完整字段池。

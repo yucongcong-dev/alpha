@@ -104,6 +104,7 @@ def test_normalize_args_paths_allows_clean_for_paused_fundamental6(monkeypatch, 
 @pytest.mark.parametrize(
     "dataset_id",
     [
+        "analyst4",
         "fundamental2",
         "model16",
         "model51",
@@ -147,23 +148,6 @@ def test_option8_explicit_active_preset_is_allowed(monkeypatch, tmp_path) -> Non
 
     assert paths.template_library_file == str(template_path)
     assert paths.include_fields_file == str(fields_path)
-
-
-def test_analyst4_uses_default_sales_guidance_preset(monkeypatch) -> None:
-    clear_yaml_cache()
-    monkeypatch.setattr(sys, "argv", ["alpha", "--dataset-id", "analyst4"])
-
-    paths = normalize_args_paths(parse_args())
-
-    assert paths.template_library_file.replace("\\", "/").endswith(
-        "/datasets/analyst4/presets/sales_guidance_seed/template.json"
-    )
-    assert paths.include_fields_file.replace("\\", "/").endswith(
-        "/datasets/analyst4/presets/sales_guidance_seed/fields.txt"
-    )
-    assert paths.include_templates_file.replace("\\", "/").endswith(
-        "/datasets/analyst4/presets/sales_guidance_seed/templates.txt"
-    )
 
 
 def test_explicit_template_path_allows_paused_fundamental6(monkeypatch, tmp_path) -> None:

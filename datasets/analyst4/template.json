@@ -1,5 +1,5 @@
 {
-  "_comment": "analyst4 baseline library; active research uses bounded sales guidance and sales revision presets.",
+  "_comment": "analyst4 baseline library; research is paused after bounded EPS and sales hypotheses failed.",
   "_comment_placeholders": "{field}=field name",
   "_dataset_id": "analyst4",
   "default": [],
