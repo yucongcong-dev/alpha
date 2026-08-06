@@ -27,12 +27,6 @@ from .run_loop_paths import (
     resolve_result_write_options as resolve_result_write_options,
 )
 from .run_loop_paths import run_path_value as run_path_value
-from .run_loop_resume import (
-    build_field_resume_positions as build_field_resume_positions,
-)
-from .run_loop_resume import clamp_resume_index as clamp_resume_index
-from .run_loop_resume import normalize_resume_index as normalize_resume_index
-from .run_loop_resume import persist_field_progress as persist_field_progress
 from .run_loop_resume import restore_fields_from_state as restore_fields_from_state
 from .run_loop_resume import save_runtime_checkpoint as save_runtime_checkpoint
 from .run_loop_rounds import ScheduleRoundContext
@@ -56,16 +50,15 @@ def run_field_test_loop(
     runtime_state = run_ctx.runtime_state
     execution_state = run_ctx.execution_state
     fields = list(run_ctx.fields)
-    original_fields = list(run_ctx.fields)
+    total_field_count = len(fields)
     max_workers = runtime_state.max_workers
     run_loop_options = RunLoopOptions.from_config(args)
     field_template_batch_size = run_loop_options.field_template_batch_size
     scheduler_options = run_loop_options.scheduler
-    field_resume_positions = build_field_resume_positions(original_fields)
     result_write_options = resolve_result_write_options(run_loop_options.result_write, run_paths)
     completion_ctx = resolve_future_completion_context(run_ctx, result_write_options)
 
-    fields, _resumed_index = restore_fields_from_state(
+    fields = restore_fields_from_state(
         fields=fields,
         state_file=state_file,
         runtime_state=runtime_state,
@@ -88,8 +81,6 @@ def run_field_test_loop(
             executor=executor,
             template_build_ctx=template_build_ctx,
             fields=fields,
-            original_fields=original_fields,
-            field_resume_positions=field_resume_positions,
             completion_ctx=completion_ctx,
             state_file=state_file,
             field_template_batch_size=field_template_batch_size,
@@ -142,7 +133,7 @@ def run_field_test_loop(
                 if not round_result.progressed:
                     if drain_next_completion(
                         state_file=state_file,
-                        total_fields=len(original_fields),
+                        total_fields=total_field_count,
                         last_field_id=last_field_id,
                         execution_state=execution_state,
                         scheduler_options=scheduler_options,
@@ -161,7 +152,7 @@ def run_field_test_loop(
 
             drain_remaining_futures(
                 state_file=state_file,
-                total_fields=len(original_fields),
+                total_fields=total_field_count,
                 last_field_id=last_field_id,
                 execution_state=execution_state,
                 runtime_state=runtime_state,

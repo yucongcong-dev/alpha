@@ -26,7 +26,7 @@ from ..runtime.state import InitializedRunContext
 from ..utils.helpers import first_non_empty
 from .run_loop_dispatch import apply_feedback_refresh, dispatch_templates_for_field
 from .run_loop_feedback import refresh_runtime_feedback
-from .run_loop_resume import persist_field_progress
+from .run_loop_resume import persist_replanning_checkpoint
 from .run_loop_seed_phase import SeedPhaseState
 
 logger = logging.getLogger(__name__)
@@ -50,8 +50,6 @@ class ScheduleRoundContext:
     executor: ThreadPoolExecutor
     template_build_ctx: TemplateBuildContext
     fields: list[TemplateField]
-    original_fields: list[TemplateField]
-    field_resume_positions: dict[str, int]
     completion_ctx: FutureCompletionContext
     state_file: str
     field_template_batch_size: int
@@ -164,15 +162,11 @@ def schedule_field_round(
         seed_resolution_progressed = (
             context.seed_phase.resolve(field_id) if seed_phase_active else False
         )
-        persist_field_progress(
+        persist_replanning_checkpoint(
             state_file=context.state_file,
             field_id=field_id,
-            field_index=field_index,
-            original_fields=context.original_fields,
-            field_resume_positions=context.field_resume_positions,
             execution_state=execution_state,
             runtime_state=runtime_state,
-            completed_field_index_override=0,
         )
         return ScheduleRoundResult(
             progressed=seed_resolution_progressed,
@@ -242,15 +236,11 @@ def schedule_field_round(
     )
     if seed_phase_active and len(template_queue.entries) < queue_count_before_dispatch:
         context.seed_phase.mark_inflight(field_id)
-    persist_field_progress(
+    persist_replanning_checkpoint(
         state_file=context.state_file,
         field_id=field_id,
-        field_index=field_index,
-        original_fields=context.original_fields,
-        field_resume_positions=context.field_resume_positions,
         execution_state=execution_state,
         runtime_state=runtime_state,
-        completed_field_index_override=0,
     )
     return ScheduleRoundResult(
         progressed=progressed,

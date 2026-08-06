@@ -58,7 +58,7 @@ def test_full_run_seed_phase_covers_fields_before_refine() -> None:
             "alpha.app.run_loop_rounds.dispatch_templates_for_field",
             side_effect=_consume_dispatch,
         ),
-        patch("alpha.app.run_loop_rounds.persist_field_progress"),
+        patch("alpha.app.run_loop_rounds.persist_replanning_checkpoint"),
     ):
         first_round = execute_schedule_round(context, round_index=1)
         assert first_round.progressed is True
@@ -130,7 +130,7 @@ def test_full_run_seed_phase_prefers_default_seed_role() -> None:
             "alpha.app.run_loop_rounds.dispatch_templates_for_field",
             side_effect=_consume_dispatch,
         ),
-        patch("alpha.app.run_loop_rounds.persist_field_progress"),
+        patch("alpha.app.run_loop_rounds.persist_replanning_checkpoint"),
     ):
         execute_schedule_round(context, round_index=1)
 
@@ -182,7 +182,7 @@ def test_full_run_seed_phase_skips_historically_seeded_fields() -> None:
             "alpha.app.run_loop_rounds.dispatch_templates_for_field",
             side_effect=_consume_dispatch,
         ),
-        patch("alpha.app.run_loop_rounds.persist_field_progress"),
+        patch("alpha.app.run_loop_rounds.persist_replanning_checkpoint"),
     ):
         execute_schedule_round(context, round_index=1)
 
@@ -218,7 +218,7 @@ def test_full_run_seed_phase_skips_resumable_inflight_fields() -> None:
             "alpha.app.run_loop_rounds.build_pending_templates_for_field",
             side_effect=_pending_for_field,
         ),
-        patch("alpha.app.run_loop_rounds.persist_field_progress"),
+        patch("alpha.app.run_loop_rounds.persist_replanning_checkpoint"),
     ):
         result = execute_schedule_round(context, round_index=1)
 
@@ -324,7 +324,7 @@ def test_full_run_unactionable_seed_fields_advance_to_refine() -> None:
             "alpha.app.run_loop_rounds.dispatch_templates_for_field",
             side_effect=_consume_dispatch,
         ),
-        patch("alpha.app.run_loop_rounds.persist_field_progress"),
+        patch("alpha.app.run_loop_rounds.persist_replanning_checkpoint"),
     ):
         seed_round = execute_schedule_round(context, round_index=1)
         assert seed_round.progressed is True

@@ -1,9 +1,8 @@
-"""Runtime feedback refresh and resume-position tests."""
+"""Runtime feedback refresh tests."""
 
 from __future__ import annotations
 
 from alpha.app.run_loop_feedback import refresh_runtime_feedback
-from alpha.app.run_loop_resume import build_field_resume_positions, normalize_resume_index
 from alpha.models.domain import FieldTestResult
 from alpha.models.runtime import TemplateBuildContext, TemplateBuildOptions
 
@@ -150,23 +149,3 @@ def test_refresh_runtime_feedback_invalidates_retry_field_for_worker_failure() -
     assert refresh.changed_field_ids == frozenset()
     assert refresh.retry_field_ids == frozenset({"failed_field"})
     assert build_ctx.field_feedback == {}
-
-
-def test_build_field_resume_positions_tracks_original_order() -> None:
-    """Resume positions should remain tied to the original field ordering."""
-    positions = build_field_resume_positions(
-        [
-            {"id": "field_a"},
-            {"id": "field_b"},
-            {"id": "field_c"},
-        ]
-    )
-
-    assert positions == {"field_a": 1, "field_b": 2, "field_c": 3}
-
-
-def test_normalize_resume_index_wraps_large_saved_cursor() -> None:
-    """Saved cursors from prior resumes should wrap into the current field range."""
-    assert normalize_resume_index(6, 4) == 2
-    assert normalize_resume_index(4, 4) == 0
-    assert normalize_resume_index(0, 0) == 0

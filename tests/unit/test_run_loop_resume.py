@@ -15,12 +15,15 @@ from alpha.app.run_loop import (
     ScheduleRoundResult,
     drain_next_completion,
     drain_remaining_futures,
-    persist_field_progress,
     resolve_result_write_options,
     restore_fields_from_state,
     run_field_test_loop,
 )
-from alpha.app.run_loop_resume import save_runtime_checkpoint, save_terminal_pipeline_state
+from alpha.app.run_loop_resume import (
+    persist_replanning_checkpoint,
+    save_runtime_checkpoint,
+    save_terminal_pipeline_state,
+)
 from alpha.config.application import ApplicationConfig
 from alpha.models.io_types import RunFilters, RunPaths
 from alpha.models.runtime import (
@@ -119,7 +122,7 @@ def test_restore_fields_from_state_returns_empty_when_all_fields_completed(tmp_p
     )
     fields = [{"id": "f1"}, {"id": "f2"}]
 
-    restored_fields, resumed_index = restore_fields_from_state(
+    restored_fields = restore_fields_from_state(
         fields=fields,
         state_file=str(state_file),
         runtime_state=RuntimeConcurrencyState(max_workers=2, runtime_max_workers=2),
@@ -127,52 +130,47 @@ def test_restore_fields_from_state_returns_empty_when_all_fields_completed(tmp_p
     )
 
     assert restored_fields == []
-    assert resumed_index == 2
 
 
-def test_persist_field_progress_keeps_terminal_index(tmp_path) -> None:
-    with patch("alpha.app.run_loop_resume.save_pipeline_state") as mock_save:
-        persist_field_progress(
-            state_file=str(tmp_path / "state.json"),
-            field_id="f3",
-            field_index=3,
-            original_fields=[{"id": "f1"}, {"id": "f2"}, {"id": "f3"}],
-            field_resume_positions={"f1": 1, "f2": 2, "f3": 3},
-            execution_state=_build_execution_state(),
-            runtime_state=RuntimeConcurrencyState(max_workers=2, runtime_max_workers=2),
-        )
+def test_restore_fields_from_state_ignores_legacy_partial_cursor(tmp_path) -> None:
+    state_file = tmp_path / "state.json"
+    state_file.write_text(
+        json.dumps({"version": 1, "completed_field_index": 1}),
+        encoding="utf-8",
+    )
+    fields = [{"id": "f1"}, {"id": "f2"}]
 
-    assert mock_save.call_args.kwargs["completed_field_index"] == 3
+    restored_fields = restore_fields_from_state(
+        fields=fields,
+        state_file=str(state_file),
+        runtime_state=RuntimeConcurrencyState(max_workers=2, runtime_max_workers=2),
+        execution_state=_build_execution_state(),
+    )
+
+    assert restored_fields == fields
 
 
-def test_persist_field_progress_allows_resuming_from_first_field(tmp_path) -> None:
+def test_persist_replanning_checkpoint_keeps_cursor_at_zero(tmp_path) -> None:
     """Breadth-first rounds must not mark partially processed fields complete."""
     with patch("alpha.app.run_loop_resume.save_pipeline_state") as mock_save:
-        persist_field_progress(
+        persist_replanning_checkpoint(
             state_file=str(tmp_path / "state.json"),
             field_id="f3",
-            field_index=3,
-            original_fields=[{"id": "f1"}, {"id": "f2"}, {"id": "f3"}],
-            field_resume_positions={"f1": 1, "f2": 2, "f3": 3},
             execution_state=_build_execution_state(),
             runtime_state=RuntimeConcurrencyState(max_workers=2, runtime_max_workers=2),
-            completed_field_index_override=0,
         )
 
     assert mock_save.call_args.kwargs["completed_field_index"] == 0
 
 
-def test_persist_field_progress_raises_when_checkpoint_write_fails(tmp_path) -> None:
+def test_persist_replanning_checkpoint_raises_when_write_fails(tmp_path) -> None:
     with (
         patch("alpha.app.run_loop_resume.save_pipeline_state", return_value=False),
         pytest.raises(RuntimeError, match="failed to save pipeline state"),
     ):
-        persist_field_progress(
+        persist_replanning_checkpoint(
             state_file=str(tmp_path / "state.json"),
             field_id="f1",
-            field_index=1,
-            original_fields=[{"id": "f1"}],
-            field_resume_positions={"f1": 1},
             execution_state=_build_execution_state(),
             runtime_state=RuntimeConcurrencyState(max_workers=1, runtime_max_workers=1),
         )
@@ -250,7 +248,7 @@ def test_run_field_test_loop_persists_progress_for_skipped_fields(tmp_path) -> N
     args = _build_run_loop_args(tmp_path)
 
     with (
-        patch("alpha.app.run_loop.restore_fields_from_state", return_value=(fields, 0)),
+        patch("alpha.app.run_loop.restore_fields_from_state", return_value=fields),
         patch(
             "alpha.app.run_loop.create_template_build_context",
             return_value=SimpleNamespace(
@@ -304,7 +302,7 @@ def test_run_field_test_loop_replans_after_pending_seed_completion(tmp_path) -> 
         return True
 
     with (
-        patch("alpha.app.run_loop.restore_fields_from_state", return_value=(fields, 0)),
+        patch("alpha.app.run_loop.restore_fields_from_state", return_value=fields),
         patch(
             "alpha.app.run_loop.create_template_build_context",
             return_value=SimpleNamespace(
@@ -365,7 +363,7 @@ def test_run_field_test_loop_interrupts_workers_without_waiting(tmp_path) -> Non
 
     with (
         patch("alpha.app.run_loop.ThreadPoolExecutor", return_value=executor),
-        patch("alpha.app.run_loop.restore_fields_from_state", return_value=(fields, 0)),
+        patch("alpha.app.run_loop.restore_fields_from_state", return_value=fields),
         patch(
             "alpha.app.run_loop.create_template_build_context",
             return_value=SimpleNamespace(
@@ -426,7 +424,7 @@ def test_run_field_test_loop_waits_for_worker_metadata_before_interrupt_checkpoi
 
     with (
         patch("alpha.app.run_loop.ThreadPoolExecutor", return_value=FakeExecutor()),
-        patch("alpha.app.run_loop.restore_fields_from_state", return_value=(fields, 0)),
+        patch("alpha.app.run_loop.restore_fields_from_state", return_value=fields),
         patch(
             "alpha.app.run_loop.create_template_build_context",
             return_value=SimpleNamespace(
@@ -490,7 +488,7 @@ def test_run_field_test_loop_waits_for_worker_metadata_before_exception_checkpoi
 
     with (
         patch("alpha.app.run_loop.ThreadPoolExecutor", return_value=executor),
-        patch("alpha.app.run_loop.restore_fields_from_state", return_value=(fields, 0)),
+        patch("alpha.app.run_loop.restore_fields_from_state", return_value=fields),
         patch(
             "alpha.app.run_loop.create_template_build_context",
             return_value=SimpleNamespace(

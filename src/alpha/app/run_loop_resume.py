@@ -4,36 +4,12 @@ from __future__ import annotations
 
 import logging
 
-from ..config.constants import SENTINEL_UNKNOWN
 from ..core.checkpoint import load_pipeline_state, save_interrupt_report, save_pipeline_state
 from ..models.domain import TemplateField
 from ..runtime.concurrency import RuntimeConcurrencyState
 from ..runtime.state import ExecutionState
-from ..utils.helpers import first_non_empty
 
 logger = logging.getLogger(__name__)
-
-
-def build_field_resume_positions(fields: list[TemplateField]) -> dict[str, int]:
-    """Build stable original-order resume positions for each field id."""
-    return {
-        str(first_non_empty(field.get("id"), SENTINEL_UNKNOWN)): (index + 1)
-        for index, field in enumerate(fields)
-    }
-
-
-def clamp_resume_index(resume_index: int, total_fields: int) -> int:
-    """Clamp resume index into the current field range while preserving terminal completion."""
-    if total_fields <= 0:
-        return 0
-    return max(0, min(resume_index, total_fields))
-
-
-def normalize_resume_index(resume_index: int, total_fields: int) -> int:
-    """Normalize resume index modulo current field count for legacy callers."""
-    if total_fields <= 0:
-        return 0
-    return resume_index % total_fields
 
 
 def restore_fields_from_state(
@@ -42,56 +18,42 @@ def restore_fields_from_state(
     state_file: str,
     runtime_state: RuntimeConcurrencyState,
     execution_state: ExecutionState,
-) -> tuple[list[TemplateField], int]:
-    """Restore field start position from pipeline state and rotate field order accordingly."""
-    resumed_index = 0
+) -> list[TemplateField]:
+    """Restore runtime state while keeping breadth-first field order stable."""
     if not state_file:
-        return fields, resumed_index
-    resumed_index = load_pipeline_state(
+        return fields
+    legacy_completed_index = load_pipeline_state(
         state_file,
         runtime_state=runtime_state,
         execution_state=execution_state,
     )
-    if resumed_index <= 0:
-        return fields, resumed_index
-    resumed_index = clamp_resume_index(resumed_index, len(fields))
-    if resumed_index >= len(fields):
+    if fields and legacy_completed_index >= len(fields):
         logger.info(
             "[resume] state_file 记录的字段进度已覆盖全部 %d 个字段，直接进入收尾阶段",
             len(fields),
         )
-        return [], resumed_index
-    logger.info(
-        "[resume] 从字段索引 %d/%d 附近继续 (优先从该位置恢复，但不会丢掉更早字段)",
-        resumed_index + 1,
-        len(fields),
-    )
-    return fields[resumed_index:] + fields[:resumed_index], resumed_index
+        return []
+    if legacy_completed_index > 0:
+        logger.info(
+            "[resume] 忽略旧字段游标 %d；breadth-first 调度由历史结果和待恢复 simulation 去重",
+            legacy_completed_index,
+        )
+    return fields
 
 
-def persist_field_progress(
+def persist_replanning_checkpoint(
     *,
     state_file: str,
     field_id: str,
-    field_index: int,
-    original_fields: list[TemplateField],
-    field_resume_positions: dict[str, int],
     execution_state: ExecutionState,
     runtime_state: RuntimeConcurrencyState,
-    completed_field_index_override: int | None = None,
 ) -> None:
-    """Persist pipeline state after completing one field."""
+    """Persist an in-progress breadth-first checkpoint without advancing a field cursor."""
     if not state_file:
         return
-    completed_index = (
-        field_resume_positions.get(field_id, field_index)
-        if completed_field_index_override is None
-        else completed_field_index_override
-    )
-    completed_index = max(0, min(completed_index, len(original_fields)))
     saved = save_pipeline_state(
         state_file,
-        completed_field_index=completed_index,
+        completed_field_index=0,
         execution_state=execution_state,
         runtime_state=runtime_state,
         field_id=field_id,

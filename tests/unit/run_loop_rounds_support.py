@@ -53,8 +53,6 @@ def build_round_context(
         executor=ThreadPoolExecutor(max_workers=1),
         template_build_ctx=MagicMock(spec=TemplateBuildContext),
         fields=fields,
-        original_fields=fields,
-        field_resume_positions={field.field_id: index for index, field in enumerate(fields, 1)},
         completion_ctx=FutureCompletionContext(),
         state_file=state_file,
         field_template_batch_size=field_template_batch_size,

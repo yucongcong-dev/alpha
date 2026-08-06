@@ -40,7 +40,7 @@ def test_breadth_first_field_progress_keeps_resume_cursor_at_start(tmp_path) -> 
             return_value=([], 0, 0),
         ),
         patch("alpha.app.run_loop_rounds.dispatch_templates_for_field", return_value=False),
-        patch("alpha.app.run_loop_rounds.persist_field_progress") as mock_persist,
+        patch("alpha.app.run_loop_rounds.persist_replanning_checkpoint") as mock_persist,
     ):
         schedule_field_round(
             context=context,
@@ -50,7 +50,12 @@ def test_breadth_first_field_progress_keeps_resume_cursor_at_start(tmp_path) -> 
             round_index=1,
         )
 
-    assert mock_persist.call_args.kwargs["completed_field_index_override"] == 0
+    assert mock_persist.call_args.kwargs == {
+        "state_file": str(tmp_path / "state.json"),
+        "field_id": "f1",
+        "execution_state": context.run_ctx.execution_state,
+        "runtime_state": context.run_ctx.runtime_state,
+    }
 
 
 def test_zero_batch_size_is_normalized_to_breadth_first() -> None:
@@ -70,7 +75,7 @@ def test_zero_batch_size_is_normalized_to_breadth_first() -> None:
             return_value=([], 0, 0),
         ),
         patch("alpha.app.run_loop_rounds.dispatch_templates_for_field", return_value=False),
-        patch("alpha.app.run_loop_rounds.persist_field_progress") as mock_persist,
+        patch("alpha.app.run_loop_rounds.persist_replanning_checkpoint") as mock_persist,
     ):
         schedule_field_round(
             context=context,
@@ -80,7 +85,7 @@ def test_zero_batch_size_is_normalized_to_breadth_first() -> None:
             round_index=1,
         )
 
-    assert mock_persist.call_args.kwargs["completed_field_index_override"] == 0
+    assert mock_persist.call_args.kwargs["field_id"] == "f1"
 
 
 def test_queue_exhausted_candidate_is_excluded_from_next_round() -> None:
@@ -105,7 +110,7 @@ def test_queue_exhausted_candidate_is_excluded_from_next_round() -> None:
             side_effect=_capture_pending,
         ),
         patch("alpha.app.run_loop_rounds.dispatch_templates_for_field", return_value=False),
-        patch("alpha.app.run_loop_rounds.persist_field_progress"),
+        patch("alpha.app.run_loop_rounds.persist_replanning_checkpoint"),
     ):
         schedule_field_round(
             context=context,
@@ -159,7 +164,7 @@ def test_queue_timeout_invalidates_only_retry_field_template_queue() -> None:
             return_value=([], 0, 1),
         ) as mock_build,
         patch("alpha.app.run_loop_rounds.dispatch_templates_for_field", return_value=False),
-        patch("alpha.app.run_loop_rounds.persist_field_progress"),
+        patch("alpha.app.run_loop_rounds.persist_replanning_checkpoint"),
     ):
         schedule_field_round(
             context=context,
@@ -224,7 +229,7 @@ def test_skipped_field_persists_progress_without_building_templates() -> None:
         ),
         patch("alpha.app.run_loop_rounds.should_skip_field", return_value=True),
         patch("alpha.app.run_loop_rounds.build_pending_templates_for_field") as mock_build,
-        patch("alpha.app.run_loop_rounds.persist_field_progress") as mock_persist,
+        patch("alpha.app.run_loop_rounds.persist_replanning_checkpoint") as mock_persist,
     ):
         result = schedule_field_round(
             context=context,
@@ -236,7 +241,7 @@ def test_skipped_field_persists_progress_without_building_templates() -> None:
 
     assert result == ScheduleRoundResult(False, False, "f1")
     mock_build.assert_not_called()
-    assert mock_persist.call_args.kwargs["completed_field_index_override"] == 0
+    assert mock_persist.call_args.kwargs["field_id"] == "f1"
 
 
 def test_breadth_first_round_dispatches_only_configured_batch() -> None:
@@ -270,7 +275,7 @@ def test_breadth_first_round_dispatches_only_configured_batch() -> None:
         patch(
             "alpha.app.run_loop_rounds.dispatch_templates_for_field", return_value=False
         ) as dispatch,
-        patch("alpha.app.run_loop_rounds.persist_field_progress"),
+        patch("alpha.app.run_loop_rounds.persist_replanning_checkpoint"),
     ):
         result = schedule_field_round(
             context=context,
@@ -317,7 +322,7 @@ def test_breadth_first_reuses_cached_field_template_queue() -> None:
         patch("alpha.app.run_loop_dispatch.drain_until_capacity"),
         patch("alpha.app.run_loop_dispatch.throttle_before_submission"),
         patch("alpha.app.run_loop_dispatch.submit_template_future") as mock_submit,
-        patch("alpha.app.run_loop_rounds.persist_field_progress"),
+        patch("alpha.app.run_loop_rounds.persist_replanning_checkpoint"),
     ):
         for round_index in (1, 2):
             schedule_field_round(
@@ -395,7 +400,7 @@ def test_feedback_change_invalidates_cached_field_template_queue() -> None:
         patch("alpha.app.run_loop_dispatch.drain_until_capacity"),
         patch("alpha.app.run_loop_dispatch.throttle_before_submission"),
         patch("alpha.app.run_loop_dispatch.submit_template_future") as mock_submit,
-        patch("alpha.app.run_loop_rounds.persist_field_progress"),
+        patch("alpha.app.run_loop_rounds.persist_replanning_checkpoint"),
     ):
         for round_index in (1, 2):
             schedule_field_round(
