@@ -8,7 +8,7 @@ import logging
 from ..config.application import ApplicationConfig
 from ..models.runtime_options import RunLoopOptions
 from ..runtime.state import InitializedRunContext
-from . import loop_future_support, run_loop_paths, run_loop_resume, run_loop_rounds
+from . import loop_future_support, run_loop_contexts, run_loop_resume, run_loop_rounds
 from .run_loop_seed_phase import SeedPhaseState
 
 logger = logging.getLogger(__name__)
@@ -33,7 +33,9 @@ def run_field_test_loop(
     field_template_batch_size = run_loop_options.field_template_batch_size
     scheduler_options = run_loop_options.scheduler
     result_write_options = run_loop_options.result_write
-    completion_ctx = run_loop_paths.resolve_future_completion_context(run_ctx, result_write_options)
+    completion_ctx = run_loop_contexts.resolve_future_completion_context(
+        run_ctx, result_write_options
+    )
 
     fields = run_loop_resume.restore_fields_from_state(
         fields=fields,
@@ -42,7 +44,7 @@ def run_field_test_loop(
         execution_state=execution_state,
     )
 
-    template_build_ctx = run_loop_paths.create_template_build_context(
+    template_build_ctx = run_loop_contexts.create_template_build_context(
         options=run_loop_options.template_build,
         run_ctx=run_ctx,
         fields=fields,

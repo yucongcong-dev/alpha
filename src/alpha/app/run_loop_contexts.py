@@ -1,4 +1,4 @@
-"""Path and context helpers for the run loop."""
+"""Context construction helpers for the run loop."""
 
 from __future__ import annotations
 
