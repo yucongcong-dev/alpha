@@ -409,7 +409,7 @@ def test_initialize_run_context_uses_application_paths_for_cache_and_credentials
     )
     monkeypatch.setattr(
         "alpha.app.bootstrap_field_resources.fetch_fields_with_cache",
-        lambda *_args, **_kwargs: [{"id": "field_1", "type": "MATRIX", "name": "field_1"}],
+        lambda *_args, **_kwargs: [TemplateField("field_1", "field_1", "MATRIX")],
     )
     monkeypatch.setattr(
         "alpha.app.bootstrap.prepare_fields_for_execution",
@@ -516,7 +516,7 @@ def test_initialize_run_context_shares_application_paths_with_resource_loaders(
     )
     monkeypatch.setattr(
         "alpha.app.bootstrap_field_resources.fetch_fields_with_cache",
-        lambda *_args, **_kwargs: [{"id": "field_1", "type": "MATRIX", "name": "field_1"}],
+        lambda *_args, **_kwargs: [TemplateField("field_1", "field_1", "MATRIX")],
     )
     monkeypatch.setattr(
         "alpha.app.bootstrap.prepare_fields_for_execution",

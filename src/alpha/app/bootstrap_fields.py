@@ -3,16 +3,12 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
-from typing import Any, cast
 
-from ..config.constants import SENTINEL_UNKNOWN
 from ..config.models import DatasetExpressionPolicy
-from ..generators.fields import choose_field_name
 from ..models.domain import TemplateField
 from ..models.io_types import RunFilters
 from ..models.runtime_options import FieldSelectionOptions
 from ..runtime.contexts import HistoricalRunState
-from ..utils.helpers import first_non_empty
 from .bootstrap_field_quality import (
     field_with_runtime_metadata,
     metadata_values,
@@ -36,11 +32,8 @@ __all__ = [
 ]
 
 
-def field_identity(field: TemplateField | dict[str, Any]) -> tuple[str, str]:
-    return (
-        str(first_non_empty(field.get("id"), SENTINEL_UNKNOWN)),
-        choose_field_name(field),
-    )
+def field_identity(field: TemplateField) -> tuple[str, str]:
+    return field.field_id, field.field_name
 
 
 def base_field_stats(cached_field_count: int) -> dict[str, int]:
@@ -74,9 +67,9 @@ def _is_explicitly_included(field_id: str, field_name: str, filters_dict: RunFil
 def _finish_field_stats(
     stats: dict[str, int],
     *,
-    filtered_fields: Sequence[TemplateField | dict[str, Any]],
+    filtered_fields: Sequence[TemplateField],
     ranked_field_count: int,
-    selected_fields: Sequence[TemplateField | dict[str, Any]],
+    selected_fields: Sequence[TemplateField],
 ) -> dict[str, int]:
     stats["filtered_field_count"] = len(filtered_fields)
     stats["ranked_field_count"] = ranked_field_count
@@ -102,7 +95,7 @@ def _prepare_explicit_fields_for_execution(
 ) -> tuple[list[TemplateField], dict[str, int]]:
     """Prepare an explicit include-fields run without metadata or feedback ranking."""
     stats = base_field_stats(len(fields))
-    filtered_fields: list[TemplateField | dict[str, Any]] = []
+    filtered_fields: list[TemplateField] = []
     for field in fields:
         field_id, field_name = field_identity(field)
         values = metadata_values(field)
@@ -178,13 +171,10 @@ def prepare_fields_for_execution(
         ):
             continue
         filtered_fields.append(
-            cast(
-                TemplateField,
-                field_with_runtime_metadata(
-                    field,
-                    expression_policy=expression_policy,
-                    coverage=values.coverage_for_tags,
-                ),
+            field_with_runtime_metadata(
+                field,
+                expression_policy=expression_policy,
+                coverage=values.coverage_for_tags,
             )
         )
 

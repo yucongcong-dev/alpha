@@ -7,6 +7,7 @@ from types import SimpleNamespace
 from alpha.app.planning import run_dry_run_plan
 from alpha.config.application import ApplicationConfig
 from alpha.config.models import DatasetExpressionPolicy
+from alpha.models.domain import TemplateField
 from alpha.models.io_types import RunFilters, RunPaths
 from alpha.runtime.contexts import HistoricalRunState
 
@@ -87,7 +88,7 @@ def test_dry_run_plan_uses_local_cache_without_runtime_writes(monkeypatch, tmp_p
     def _load_cache(cache_path, **kwargs):
         captured["cache_path"] = cache_path
         captured["cache_ttl_hours"] = kwargs["cache_ttl_hours"]
-        return [{"id": "field_1", "name": "field_1", "type": "MATRIX"}]
+        return [TemplateField("field_1", "field_1", "MATRIX")]
 
     monkeypatch.setattr("alpha.app.planning.load_fields_cache", _load_cache)
     monkeypatch.setattr(
@@ -114,7 +115,7 @@ def test_dry_run_plan_uses_local_cache_without_runtime_writes(monkeypatch, tmp_p
     assert captured["cache_path"] == paths.fields_cache_file
     assert captured["cache_ttl_hours"] == 0
     assert captured["repair_corrupt_summary"] is False
-    assert captured["planned_fields"] == [{"id": "field_1", "name": "field_1", "type": "MATRIX"}]
+    assert captured["planned_fields"] == [TemplateField("field_1", "field_1", "MATRIX")]
 
 
 def test_dry_run_plan_fails_without_matching_local_cache(monkeypatch, tmp_path) -> None:

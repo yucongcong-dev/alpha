@@ -3,10 +3,16 @@
 from __future__ import annotations
 
 from alpha.app.bootstrap_fields import prepare_fields_for_execution
+from alpha.models.domain import TemplateField
+from alpha.models.domain_parsers import parse_template_field
 from alpha.models.io_types import RunFilters
 from alpha.models.runtime import HistoricalRunState
 from alpha.models.runtime_options import FieldSelectionOptions
 from alpha.policy.expression import get_dataset_expression_policy
+
+
+def _domain_fields(rows: list[dict[str, object]]) -> list[TemplateField]:
+    return [parse_template_field(row) for row in rows]
 
 
 def test_limit_diversifies_numeric_tenor_families() -> None:
@@ -30,14 +36,14 @@ def test_limit_diversifies_numeric_tenor_families() -> None:
     args = FieldSelectionOptions(limit=3, offset=0, top_fields_by_feedback=0)
 
     selected, stats = prepare_fields_for_execution(
-        fields,
+        _domain_fields(fields),
         filters_dict=RunFilters(),
         expression_policy=get_dataset_expression_policy("new_dataset"),
         historical_state=HistoricalRunState(field_feedback={}),
         selection_options=args,
     )
 
-    assert [row["id"] for row in selected] == [
+    assert [row.field_id for row in selected] == [
         "call_breakeven_30",
         "call_breakeven_20",
         "forward_price_10",
@@ -71,14 +77,14 @@ def test_limit_reserves_capacity_for_unexplored_fields() -> None:
     args = FieldSelectionOptions(limit=2, offset=0, top_fields_by_feedback=0)
 
     selected, stats = prepare_fields_for_execution(
-        fields,
+        _domain_fields(fields),
         filters_dict=RunFilters(),
         expression_policy=get_dataset_expression_policy("new_dataset"),
         historical_state=history,
         selection_options=args,
     )
 
-    assert [row["id"] for row in selected] == ["known_signal_a", "new_signal"]
+    assert [row.field_id for row in selected] == ["known_signal_a", "new_signal"]
     assert stats["selected_unexplored_count"] == 1
 
 
@@ -113,7 +119,7 @@ def test_feedback_focus_keeps_field_family_diversity() -> None:
     )
 
     selected, stats = prepare_fields_for_execution(
-        fields,
+        _domain_fields(fields),
         filters_dict=RunFilters(),
         expression_policy=get_dataset_expression_policy("new_dataset"),
         historical_state=history,
@@ -124,7 +130,7 @@ def test_feedback_focus_keeps_field_family_diversity() -> None:
         ),
     )
 
-    assert [row["id"] for row in selected] == [
+    assert [row.field_id for row in selected] == [
         "call_breakeven_10",
         "call_breakeven_20",
         "forward_price_10",
@@ -146,7 +152,7 @@ def test_failed_feedback_does_not_consume_exploitation_budget() -> None:
         for field_id in ("failed_signal", "new_signal_a", "new_signal_b")
     ]
     selected, stats = prepare_fields_for_execution(
-        fields,
+        _domain_fields(fields),
         filters_dict=RunFilters(),
         expression_policy=get_dataset_expression_policy("new_dataset"),
         historical_state=HistoricalRunState(
@@ -155,7 +161,7 @@ def test_failed_feedback_does_not_consume_exploitation_budget() -> None:
         selection_options=FieldSelectionOptions(limit=2, offset=0, top_fields_by_feedback=0),
     )
 
-    assert [row["id"] for row in selected] == ["new_signal_a", "new_signal_b"]
+    assert [row.field_id for row in selected] == ["new_signal_a", "new_signal_b"]
     assert stats["selected_unexplored_count"] == 2
 
 
@@ -172,7 +178,7 @@ def test_submittable_feedback_is_promising_even_after_single_attempt() -> None:
         }
     ]
     selected, _ = prepare_fields_for_execution(
-        fields,
+        _domain_fields(fields),
         filters_dict=RunFilters(),
         expression_policy=get_dataset_expression_policy("fundamental6"),
         historical_state=HistoricalRunState(
@@ -187,7 +193,7 @@ def test_submittable_feedback_is_promising_even_after_single_attempt() -> None:
         selection_options=FieldSelectionOptions(limit=0, offset=0, top_fields_by_feedback=0),
     )
 
-    assert selected[0]["selection_reason"] == "historical_promising"
+    assert selected[0].get("selection_reason") == "historical_promising"
 
 
 def test_unknown_field_metadata_is_retained_without_affecting_rank_score() -> None:
@@ -204,19 +210,19 @@ def test_unknown_field_metadata_is_retained_without_affecting_rank_score() -> No
         {"id": "metadata_missing"},
     ]
     selected, stats = prepare_fields_for_execution(
-        fields,
+        _domain_fields(fields),
         filters_dict=RunFilters(),
         expression_policy=get_dataset_expression_policy("new_dataset"),
         historical_state=HistoricalRunState(field_feedback={}),
         selection_options=FieldSelectionOptions(limit=0, offset=0, top_fields_by_feedback=0),
     )
 
-    assert {row["id"] for row in selected} == {"complete_signal", "metadata_missing"}
+    assert {row.field_id for row in selected} == {"complete_signal", "metadata_missing"}
     assert stats["unknown_coverage_count"] == 1
     assert stats["unknown_date_coverage_count"] == 1
     assert stats["unknown_alpha_count"] == 1
     assert stats["unknown_user_count"] == 1
-    scores = {row["id"]: row["selection_score"] for row in selected}
+    scores = {row.field_id: row.get("selection_score") for row in selected}
     assert scores["metadata_missing"] == scores["complete_signal"] == 0.0
 
 
@@ -242,7 +248,7 @@ def test_single_attempt_feedback_is_not_pinned_as_promising() -> None:
         },
     ]
     selected, _ = prepare_fields_for_execution(
-        fields,
+        _domain_fields(fields),
         filters_dict=RunFilters(),
         expression_policy=get_dataset_expression_policy("fundamental6"),
         historical_state=HistoricalRunState(
@@ -251,7 +257,7 @@ def test_single_attempt_feedback_is_not_pinned_as_promising() -> None:
         selection_options=FieldSelectionOptions(limit=0, offset=0, top_fields_by_feedback=0),
     )
 
-    reasons = {row["id"]: row["selection_reason"] for row in selected}
+    reasons = {row.field_id: row.get("selection_reason") for row in selected}
     assert reasons["one_attempt"] == "historical_feedback"
 
 
@@ -268,7 +274,7 @@ def test_stale_feedback_is_decayed_before_promising_classification() -> None:
         }
     ]
     selected, _ = prepare_fields_for_execution(
-        fields,
+        _domain_fields(fields),
         filters_dict=RunFilters(),
         expression_policy=get_dataset_expression_policy("fundamental6"),
         historical_state=HistoricalRunState(
@@ -283,7 +289,7 @@ def test_stale_feedback_is_decayed_before_promising_classification() -> None:
         selection_options=FieldSelectionOptions(limit=0, offset=0, top_fields_by_feedback=0),
     )
 
-    assert selected[0]["selection_reason"] == "historical_feedback"
+    assert selected[0].get("selection_reason") == "historical_feedback"
 
 
 def test_unknown_dataset_prefers_matrix_over_equivalent_vector() -> None:
@@ -312,14 +318,14 @@ def test_unknown_dataset_prefers_matrix_over_equivalent_vector() -> None:
     args = FieldSelectionOptions(limit=1, offset=0, top_fields_by_feedback=0)
 
     selected, _ = prepare_fields_for_execution(
-        fields,
+        _domain_fields(fields),
         filters_dict=RunFilters(),
         expression_policy=get_dataset_expression_policy("new_dataset"),
         historical_state=HistoricalRunState(field_feedback={}),
         selection_options=args,
     )
 
-    assert [row["id"] for row in selected] == ["matrix_signal"]
+    assert [row.field_id for row in selected] == ["matrix_signal"]
 
 
 def test_family_selection_prefers_representative_windows_on_ties() -> None:
@@ -339,11 +345,11 @@ def test_family_selection_prefers_representative_windows_on_ties() -> None:
     args = FieldSelectionOptions(limit=2, offset=0, top_fields_by_feedback=0)
 
     selected, _ = prepare_fields_for_execution(
-        fields,
+        _domain_fields(fields),
         filters_dict=RunFilters(),
         expression_policy=get_dataset_expression_policy("new_dataset"),
         historical_state=HistoricalRunState(field_feedback={}),
         selection_options=args,
     )
 
-    assert [row["id"] for row in selected] == ["pcr_vol_30", "pcr_vol_60"]
+    assert [row.field_id for row in selected] == ["pcr_vol_30", "pcr_vol_60"]

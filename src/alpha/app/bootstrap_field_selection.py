@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
-from typing import Any, cast
+from typing import Any
 
 from ..config.constants import PREFERRED_FIELD_RANK_SENTINEL, SENTINEL_UNKNOWN, STATS_DEFAULT_SCORE
 from ..config.models import DatasetExpressionPolicy
@@ -11,7 +11,6 @@ from ..generators.fields import choose_field_name
 from ..models.domain import TemplateField
 from ..models.runtime_options import FieldSelectionOptions
 from ..runtime.contexts import HistoricalRunState
-from ..utils.helpers import first_non_empty
 from . import bootstrap_field_feedback as _feedback
 from .bootstrap_field_families import field_window_rank, infer_field_family, preferred_field_rank
 
@@ -45,36 +44,32 @@ def _clamp_unit(value: float) -> float:
 
 
 def _attach_selection_metadata(
-    field: TemplateField | dict[str, Any],
+    field: TemplateField,
     *,
     rank: int,
     score: float,
     family: str,
     reason: str,
-) -> TemplateField | dict[str, Any]:
+) -> TemplateField:
     updates = {
         "selection_rank": rank,
         "selection_score": round(score, 6),
         "selection_family": family,
         "selection_reason": reason,
     }
-    if isinstance(field, TemplateField):
-        metadata = dict(field.metadata)
-        metadata.update(updates)
-        return TemplateField(
-            field_id=field.field_id,
-            field_name=field.field_name,
-            field_type=field.field_type,
-            metadata=metadata,
-        )
-    field_copy = dict(field)
-    field_copy.update(updates)
-    return field_copy
+    metadata = dict(field.metadata)
+    metadata.update(updates)
+    return TemplateField(
+        field_id=field.field_id,
+        field_name=field.field_name,
+        field_type=field.field_type,
+        metadata=metadata,
+    )
 
 
 def _append_with_family_cap(
-    candidates: Sequence[TemplateField | dict[str, Any]],
-    selected: list[TemplateField | dict[str, Any]],
+    candidates: Sequence[TemplateField],
+    selected: list[TemplateField],
     selected_ids: set[str],
     family_counts: dict[str, int],
     *,
@@ -84,7 +79,7 @@ def _append_with_family_cap(
     for field in candidates:
         if len(selected) >= target:
             return
-        field_id = str(first_non_empty(field.get("id"), SENTINEL_UNKNOWN))
+        field_id = field.field_id or SENTINEL_UNKNOWN
         if field_id in selected_ids:
             continue
         family = infer_field_family(choose_field_name(field))
@@ -96,14 +91,14 @@ def _append_with_family_cap(
 
 
 def _select_diverse_fields(
-    fields: Sequence[TemplateField | dict[str, Any]],
+    fields: Sequence[TemplateField],
     *,
     target: int,
     max_per_family: int,
     exploration_ratio: float,
     historical_state: HistoricalRunState,
     expression_policy: DatasetExpressionPolicy,
-) -> list[TemplateField | dict[str, Any]]:
+) -> list[TemplateField]:
     """Select a bounded exploit/explore mix while avoiding tenor-family monopolies."""
     if target <= 0 or len(fields) <= target:
         return list(fields)
@@ -116,9 +111,9 @@ def _select_diverse_fields(
         field
         for field in fields
         if _is_promising_feedback(
-            str(first_non_empty(field.get("id"), SENTINEL_UNKNOWN)),
+            field.field_id or SENTINEL_UNKNOWN,
             priority=_feedback_priority(
-                str(first_non_empty(field.get("id"), SENTINEL_UNKNOWN)),
+                field.field_id or SENTINEL_UNKNOWN,
                 historical_state=historical_state,
                 expression_policy=expression_policy,
             ),
@@ -129,13 +124,10 @@ def _select_diverse_fields(
     unexplored = [
         field
         for field in fields
-        if historical_state.field_feedback.get(
-            str(first_non_empty(field.get("id"), SENTINEL_UNKNOWN))
-        )
-        is None
+        if historical_state.field_feedback.get(field.field_id or SENTINEL_UNKNOWN) is None
     ]
 
-    selected: list[TemplateField | dict[str, Any]] = []
+    selected: list[TemplateField] = []
     selected_ids: set[str] = set()
     family_counts: dict[str, int] = {}
     _append_with_family_cap(
@@ -184,19 +176,16 @@ def resolve_field_selection(selection_options: FieldSelectionOptions) -> tuple[i
     )
 
 
-def rank_by_id(fields: Sequence[TemplateField | dict[str, Any]]) -> dict[str, int]:
-    return {
-        str(first_non_empty(field.get("id"), SENTINEL_UNKNOWN)): index
-        for index, field in enumerate(fields, start=1)
-    }
+def rank_by_id(fields: Sequence[TemplateField]) -> dict[str, int]:
+    return {field.field_id: index for index, field in enumerate(fields, start=1)}
 
 
 def apply_offset_limit(
-    fields: Sequence[TemplateField | dict[str, Any]],
+    fields: Sequence[TemplateField],
     *,
     offset: int,
     limit: int,
-) -> list[TemplateField | dict[str, Any]]:
+) -> list[TemplateField]:
     window = list(fields)
     if offset > 0:
         window = window[offset:]
@@ -206,7 +195,7 @@ def apply_offset_limit(
 
 
 def attach_selection_to_fields(
-    fields: Sequence[TemplateField | dict[str, Any]],
+    fields: Sequence[TemplateField],
     *,
     rank_by_field_id: dict[str, int],
     field_scores: dict[str, float],
@@ -214,9 +203,9 @@ def attach_selection_to_fields(
     expression_policy: DatasetExpressionPolicy,
     explicit: bool,
 ) -> list[TemplateField]:
-    selected_fields: list[TemplateField | dict[str, Any]] = []
+    selected_fields: list[TemplateField] = []
     for field in fields:
-        field_id = str(first_non_empty(field.get("id"), SENTINEL_UNKNOWN))
+        field_id = field.field_id or SENTINEL_UNKNOWN
         selected_fields.append(
             _attach_selection_metadata(
                 field,
@@ -231,7 +220,7 @@ def attach_selection_to_fields(
                 ),
             )
         )
-    return cast(list[TemplateField], selected_fields)
+    return selected_fields
 
 
 def _field_sort_key(
@@ -240,9 +229,9 @@ def _field_sort_key(
     historical_state: HistoricalRunState,
     expression_policy: DatasetExpressionPolicy,
 ) -> FieldSortKey:
-    field_id = str(first_non_empty(item.get("id"), SENTINEL_UNKNOWN))
-    field_name = choose_field_name(item)
-    field_type = str(item.get("type", "UNKNOWN")).upper()
+    field_id = item.field_id or SENTINEL_UNKNOWN
+    field_name = item.field_name
+    field_type = item.field_type.upper()
     feedback = historical_state.field_feedback.get(field_id)
     priority = _feedback_priority(
         field_id,
@@ -305,36 +294,30 @@ def rank_and_select_exploration_fields(
             field
             for field in fields
             if _feedback_priority(
-                str(first_non_empty(field.get("id"), SENTINEL_UNKNOWN)),
+                field.field_id or SENTINEL_UNKNOWN,
                 historical_state=historical_state,
                 expression_policy=expression_policy,
             )
             > -999.0
         ]
-        fields = cast(
-            list[TemplateField],
-            _select_diverse_fields(
-                feedback_fields,
-                target=top_fields_by_feedback,
-                max_per_family=expression_policy.field_max_per_family,
-                exploration_ratio=0.0,
-                historical_state=historical_state,
-                expression_policy=expression_policy,
-            ),
+        fields = _select_diverse_fields(
+            feedback_fields,
+            target=top_fields_by_feedback,
+            max_per_family=expression_policy.field_max_per_family,
+            exploration_ratio=0.0,
+            historical_state=historical_state,
+            expression_policy=expression_policy,
         )
 
     ranked_field_count = len(fields)
     if limit > 0 and top_fields_by_feedback <= 0:
-        fields = cast(
-            list[TemplateField],
-            _select_diverse_fields(
-                fields,
-                target=offset + limit,
-                max_per_family=expression_policy.field_max_per_family,
-                exploration_ratio=expression_policy.field_exploration_ratio,
-                historical_state=historical_state,
-                expression_policy=expression_policy,
-            ),
+        fields = _select_diverse_fields(
+            fields,
+            target=offset + limit,
+            max_per_family=expression_policy.field_max_per_family,
+            exploration_ratio=expression_policy.field_exploration_ratio,
+            historical_state=historical_state,
+            expression_policy=expression_policy,
         )
-    fields = cast(list[TemplateField], apply_offset_limit(fields, offset=offset, limit=limit))
+    fields = apply_offset_limit(fields, offset=offset, limit=limit)
     return fields, rank_by_field_id, ranked_field_count

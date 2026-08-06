@@ -91,26 +91,21 @@ def _attach_runtime_metadata(
 
 
 def field_with_runtime_metadata(
-    field: TemplateField | dict[str, Any],
+    field: TemplateField,
     *,
     expression_policy: DatasetExpressionPolicy,
     coverage: float,
-) -> TemplateField | dict[str, Any]:
+) -> TemplateField:
     field_name = choose_field_name(field)
     runtime_field_tags = _infer_runtime_field_tags(
         field_name,
         dataset_id=expression_policy.dataset_id,
         coverage=coverage,
     )
-    if isinstance(field, TemplateField):
-        return _attach_runtime_metadata(field, runtime_field_tags=runtime_field_tags)
-    field_copy = dict(field)
-    if runtime_field_tags:
-        field_copy["runtime_field_tags"] = list(runtime_field_tags)
-    return field_copy
+    return _attach_runtime_metadata(field, runtime_field_tags=runtime_field_tags)
 
 
-def metadata_values(field: TemplateField | dict[str, Any]) -> FieldMetadataValues:
+def metadata_values(field: TemplateField) -> FieldMetadataValues:
     return FieldMetadataValues(
         coverage=_optional_float(field.get("coverage")),
         date_coverage=_optional_float(field.get("dateCoverage")),
