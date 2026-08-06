@@ -678,6 +678,60 @@ subuniverse_sharpe
 `Max Trade` 是模拟设置中的单票交易约束开关，不是文档已确认的固定 submission
 threshold。本仓库默认保持 `OFF`，需要时显式开启。
 
+### 13.11 特殊 Alpha 类型
+
+官方 Learn 的 Alpha Submission 页面还定义了几类特殊 Alpha。它们会改变适用检查或
+候选归类，不能只套用普通 Alpha 的门槛表。
+
+| 类型 | 官方定义与额外规则 |
+|---|---|
+| `ATOM` | 只使用 `1` 个 dataset 的字段；`currency`、`country`、`exchange`、`sector`、`industry`、`subindustry`、`market` 等 grouping 字段不计入 dataset 数量。`inst_pnl(...)` 会按使用 `pv1` 计算。ATOM 可以跳过 IS Ladder Sharpe，但仍须通过普通 IS tests 和 2Y Sharpe test。 |
+| `Pyramid` | Pyramid 由 `Region + Delay + dataset category` 组合定义；一个候选最多贡献到 `2` 个 pyramids。上述 grouping 字段不计入 pyramid 数量。 |
+| `Power Pool` | 官方页面列出的口径包括：USA D1、Sharpe `>= 1.0`、唯一 operator 数 `<= 8`、非 grouping data field 数 `<= 3`、Power Pool 内 Self-Correlation `<= 0.5`、Turnover 在 `1%-70%` 之间。标记过 Power Pool 的 Alpha 即使之后取消标签，仍会留在对应 self-correlation pool。 |
+
+这些类型、标签入口和门槛可能受账号等级与平台版本影响。上表来自 `2026-08-03`
+Documentation 快照；实际判断以当前 Alpha 页面和 Check Submission 返回为准。
+
+### 13.12 GLB Sub-Geography Sharpe
+
+GLB Alpha 还会检查三个地区的 Sharpe。`2026-08-03` 官方页面给出的口径是：
+
+| 地区 | Sharpe cutoff |
+|---|---:|
+| `AMER` | `>= 1` |
+| `APAC` | `>= 1` |
+| `EMEA` | `>= 1` |
+
+这项检查用于避免全球 Alpha 的 PnL 过度依赖单一地区。诊断时应分别查看地区 PnL、
+流动性、行业暴露和 Coverage，而不是只提高 GLB 汇总 Sharpe。
+
+### 13.13 ASI Japan Robustness Sharpe
+
+ASI Alpha 还可能接受 Japan Robustness Sharpe 检查。`2026-08-03` 官方页面给出的 cutoff
+是 `>= 1`。需要特别注意：
+
+- 该检查使用的 Japan universe 与 Visualization Tool 展示的 Japan universe 不同。
+- Visualization Tool 仍适合检查 Japan PnL、Turnover、Coverage、行业和市值暴露，但其中的
+  Japan Sharpe 不保证与 submission test 数值完全一致。
+- 改进时优先检查流动性、行业暴露、单票集中度和 Turnover，不应只做地区专属参数拟合。
+
+### 13.14 Check Submission 消息顺序
+
+官方 Learn 页面说明，Check Submission 或 Submit Alpha 会按顺序执行检查，遇到失败时显示
+对应消息。`2026-08-03` 页面列出的顺序是：
+
+1. Weight test
+2. Correlation test
+3. Fitness test
+4. D0 `checkDelay1Sharpe`
+5. Sub-Universe test
+
+因此页面只显示某个失败项，不代表排在它后面的检查已经通过。平台可能调整检查集合与顺序，
+本地分析应保存实际 Check Submission 返回，不能根据这张顺序表推断未显示项的终态。
+
+官方来源：[Clear these tests before submitting an Alpha](https://platform.worldquantbrain.com/learn/documentation/interpret-results/alpha-submission)
+（本地 Documentation 快照：`2026-08-03`，官网增量复核：`2026-08-04`）。
+
 ---
 
 ## 14. PnL、Drawdown、平滑
