@@ -116,7 +116,6 @@ class TestRuntimeOptionBuilders:
         config = _application_config(
             dataset_id="model51",
             output="results.json",
-            auto_update_blacklist=True,
             strategy_profile="refine",
             page_size="100",
             region="USA",

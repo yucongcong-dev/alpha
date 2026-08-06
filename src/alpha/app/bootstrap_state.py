@@ -5,30 +5,20 @@ from __future__ import annotations
 from ..analysis.results_persistence import dump_results_incremental
 from ..io.results_store import initialize_results_journal
 from ..models.runtime_protocols import RunConfig
-from ..policy.blacklist_context import set_active_datasets_root
-from ..policy.blacklist_runtime_stats import build_blacklist_runtime_stats
-from ..policy.blacklist_store import load_blacklisted_template_keys
 from ..runtime.contexts import HistoricalRunState
 from ..runtime.state import ExecutionState
 
 
 def create_execution_state(
     *,
-    dataset_id: str,
     historical_state: HistoricalRunState,
-    datasets_root: str = "",
 ) -> ExecutionState:
     """Build in-memory execution state without writing runtime artifacts."""
-    set_active_datasets_root(datasets_root)
-    execution_state = ExecutionState.create(
+    return ExecutionState.create(
         initial_results=historical_state.existing_results,
         attempted_keys=historical_state.attempted_keys,
         template_stats=historical_state.template_stats,
     )
-    result_ledger = execution_state.result_ledger
-    execution_state.blacklist_runtime_stats = build_blacklist_runtime_stats(result_ledger.results)
-    execution_state.blacklisted_template_keys = load_blacklisted_template_keys(dataset_id)
-    return execution_state
 
 
 def build_execution_state(
@@ -39,13 +29,10 @@ def build_execution_state(
     settings_fingerprint: str,
     template_library_fingerprint: str,
     run_config: RunConfig,
-    datasets_root: str = "",
 ) -> ExecutionState:
     """Restore execution state and initialize its incremental result journal."""
     execution_state = create_execution_state(
-        dataset_id=dataset_id,
         historical_state=historical_state,
-        datasets_root=datasets_root,
     )
     result_ledger = execution_state.result_ledger
     result_ledger.persisted_result_count = initialize_results_journal(

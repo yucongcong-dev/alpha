@@ -397,7 +397,6 @@ def test_parse_application_config_is_immutable_and_uses_normalized_paths(
     assert ResultWriteOptions.from_config(config) == ResultWriteOptions(
         dataset_id="pv1",
         output_path=config.paths.output,
-        auto_update_blacklist=False,
     )
     assert not hasattr(config, "__dict__")
     with pytest.raises((AttributeError, TypeError)):

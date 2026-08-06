@@ -85,7 +85,6 @@ def initialize_run_context(args: ApplicationConfig) -> InitializedRunContext | N
             settings_fingerprint=prepared.settings_fingerprint,
             template_library_fingerprint=prepared.template_library_fingerprint,
             run_config=prepared.run_config,
-            datasets_root=paths.datasets_root,
         )
 
         concurrency = build_runtime_concurrency(args.execution)

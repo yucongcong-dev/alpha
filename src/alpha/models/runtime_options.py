@@ -97,11 +97,10 @@ class TemplateBuildOptions(SimulationSettingsConfig):
 
 @dataclass(frozen=True)
 class ResultWriteOptions:
-    """future 完成后结果落盘与副作用所需的窄配置。"""
+    """future 完成后结果落盘所需的窄配置。"""
 
     dataset_id: str = ""
     output_path: str = ""
-    auto_update_blacklist: bool = False
 
     @classmethod
     def from_config(cls, config: ApplicationConfig) -> ResultWriteOptions:
@@ -109,7 +108,6 @@ class ResultWriteOptions:
         return cls(
             dataset_id=config.dataset.dataset_id,
             output_path=config.paths.output,
-            auto_update_blacklist=config.runtime_flags.auto_update_blacklist,
         )
 
 

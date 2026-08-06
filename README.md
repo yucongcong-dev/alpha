@@ -51,7 +51,7 @@ alpha/
 
 - `template.json`：默认模板库
 - `presets/`：专项模板、字段与模板筛选清单
-- `blacklist.json`：长期排除规则；自动学习默认关闭，显式开启时直接更新此文件
+- `blacklist.json`：人工维护的长期排除规则；运行过程只读取，不自动改写
 - `README.md`：该数据集的有效结论、当前策略与下一步
 
 `cache/`、`runs/`、`feedback/` 与 `.credentials/` 属于本地可重建或私密状态，不提交。详细目录、工作区、结果和清理规则见 [Runner Reference](docs/runner_reference.md)。

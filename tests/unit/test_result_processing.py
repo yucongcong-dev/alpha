@@ -72,49 +72,6 @@ def test_failed_result_persistence_does_not_commit_runtime_state(monkeypatch, tm
     assert state.attempted_keys == {result_processing.result_identity(result)}
 
 
-def test_blacklist_write_failure_does_not_abort_completed_result(monkeypatch, tmp_path) -> None:
-    result = FieldTestResult(
-        field_id="field_1",
-        field_type="MATRIX",
-        field_name="field_1",
-        template_name="tpl",
-        expression="rank(field_1)",
-        status="simulated",
-        submittable=False,
-    )
-    state = ExecutionState.create()
-    context = FutureCompletionContext(
-        result_write_options=ResultWriteOptions(
-            dataset_id="fundamental6",
-            output_path=str(tmp_path / "results.json"),
-            auto_update_blacklist=True,
-        ),
-        settings_fingerprint="settings",
-        template_library_fingerprint="templates",
-    )
-
-    monkeypatch.setattr(results_persistence, "dump_results_incremental", lambda *_a, **_k: 1)
-
-    def _fail_blacklist(*_args, **_kwargs):
-        raise OSError("blacklist is read-only")
-
-    monkeypatch.setattr(
-        result_processing,
-        "auto_update_blacklist_incremental",
-        _fail_blacklist,
-    )
-
-    result_processing.apply_completed_result(
-        result,
-        completion_ctx=context,
-        execution_state=state,
-    )
-
-    assert state.result_ledger.results == [result]
-    assert state.result_ledger.persisted_result_count == 1
-    assert state.attempted_keys == {result_processing.result_identity(result)}
-
-
 def test_worker_failure_is_persisted_without_marking_candidate_attempted(
     monkeypatch, tmp_path
 ) -> None:

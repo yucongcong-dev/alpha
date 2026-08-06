@@ -185,7 +185,6 @@ class QualityConfig:
 @dataclass(frozen=True, slots=True, kw_only=True)
 class RuntimeFlagsConfig:
     strategy_profile: str
-    auto_update_blacklist: bool
     verbose: bool
     quiet: bool
 
@@ -195,7 +194,6 @@ class RuntimeFlagsConfig:
             strategy_profile=normalize_strategy_profile(
                 _value(args, "strategy_profile", "explore")
             ),
-            auto_update_blacklist=bool(_value(args, "auto_update_blacklist", False)),
             verbose=bool(_value(args, "verbose", False)),
             quiet=bool(_value(args, "quiet", False)),
         )

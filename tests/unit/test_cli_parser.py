@@ -28,7 +28,6 @@ global:
   runtime:
     strategy_profile: refine
     smoke_test: false
-    auto_update_blacklist: true
 dataset_profiles:
   fundamental6:
     max_concurrent_simulations: 3
@@ -240,19 +239,6 @@ def test_full_run_allows_explicit_unlimited_total_simulation_budget(monkeypatch)
     assert args.max_total_simulations == 0
 
 
-def test_yaml_can_enable_auto_update_blacklist(monkeypatch, tmp_path) -> None:
-    """YAML runtime.auto_update_blacklist should be applied when CLI is silent."""
-    clear_yaml_cache()
-    config_path = tmp_path / "settings.yaml"
-    write_config(config_path)
-    monkeypatch.setattr(sys, "argv", ["alpha", "--config", str(config_path)])
-
-    args = parse_args()
-
-    assert args.auto_update_blacklist is True
-    assert args.strategy_profile == "refine"
-
-
 def test_cli_strategy_profile_applies_runtime_defaults(monkeypatch, tmp_path) -> None:
     """CLI can select a named strategy profile that rewrites non-explicit knobs."""
     clear_yaml_cache()
@@ -306,29 +292,6 @@ global:
         parse_args()
 
 
-def test_cli_auto_update_blacklist_flag(monkeypatch, tmp_path) -> None:
-    """--auto-update-blacklist should enable runtime blacklist updates explicitly."""
-    clear_yaml_cache()
-    config_path = tmp_path / "settings.yaml"
-    config_path.write_text(
-        """
-global:
-  runtime:
-    auto_update_blacklist: false
-""".strip(),
-        encoding="utf-8",
-    )
-    monkeypatch.setattr(
-        sys,
-        "argv",
-        ["alpha", "--config", str(config_path), "--auto-update-blacklist"],
-    )
-
-    args = parse_args()
-
-    assert args.auto_update_blacklist is True
-
-
 def test_cli_no_flag_overrides_yaml_true(monkeypatch, tmp_path) -> None:
     """--no-* flags must be able to disable YAML-enabled booleans."""
     clear_yaml_cache()
@@ -337,7 +300,6 @@ def test_cli_no_flag_overrides_yaml_true(monkeypatch, tmp_path) -> None:
         """
 global:
   runtime:
-    auto_update_blacklist: true
     dry_run_plan: true
     verbose: true
     quiet: true
@@ -351,7 +313,6 @@ global:
             "alpha",
             "--config",
             str(config_path),
-            "--no-auto-update-blacklist",
             "--no-dry-run-plan",
             "--no-verbose",
             "--no-quiet",
@@ -360,7 +321,6 @@ global:
 
     args = parse_args()
 
-    assert args.auto_update_blacklist is False
     assert args.dry_run_plan is False
     assert args.verbose is False
     assert args.quiet is False

@@ -14,7 +14,6 @@ from ..models.runtime_protocols import (
     SemaphoreLike,
     TemplateStats,
 )
-from ..policy.types import BlacklistRuntimeStats
 from .concurrency import RuntimeConcurrencyState
 from .contexts import HistoricalRunState, PendingFutureContext
 from .future_queue import FutureQueueState
@@ -31,8 +30,6 @@ class ExecutionState:
     future_queue: FutureQueueState = field(default_factory=FutureQueueState.create)
     queue_retry_state: QueueRetryState = field(default_factory=QueueRetryState)
     result_ledger: ResultLedgerState = field(default_factory=lambda: ResultLedgerState(results=[]))
-    blacklist_runtime_stats: BlacklistRuntimeStats = field(default_factory=dict)
-    blacklisted_template_keys: set[tuple[str, str, str, str]] = field(default_factory=set)
     last_submission_at: float = 0.0
 
     @classmethod

@@ -165,7 +165,6 @@ def apply_yaml_global_defaults(
         global_cfg.get("runtime", {}),
         {
             "strategy_profile",
-            "auto_update_blacklist",
             "smoke_test",
             "dry_run_plan",
             "full_run",

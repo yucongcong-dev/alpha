@@ -336,14 +336,12 @@ def test_drain_completed_futures_prefers_explicit_result_write_options(tmp_path)
     args = argparse.Namespace(
         dataset_id="fundamental6",
         output="raw-results.json",
-        auto_update_blacklist=False,
         queue_busy_retry_limit=0,
         queue_busy_cooldown_seconds=0,
     )
     result_write_options = ResultWriteOptions(
         dataset_id="fundamental6",
         output_path=str(tmp_path / "normalized-results.json"),
-        auto_update_blacklist=False,
     )
 
     with patch(

@@ -46,7 +46,6 @@ def test_finalize_run_uses_application_paths(monkeypatch, tmp_path) -> None:
     args = argparse.Namespace(
         output="raw-results.json",
         dataset_id="fundamental6",
-        auto_update_blacklist=False,
     )
     run_paths = RunPaths(
         results_dir=str(tmp_path / "results"),
@@ -82,7 +81,6 @@ def test_finalize_run_updates_separate_feedback_output(tmp_path) -> None:
     args = argparse.Namespace(
         output=str(tmp_path / "raw-results.json"),
         dataset_id="fundamental6",
-        auto_update_blacklist=False,
     )
     run_paths = RunPaths(
         results_dir=str(tmp_path),
@@ -140,7 +138,6 @@ def test_finalize_run_reconciles_pending_checks_before_persisting(tmp_path) -> N
     args = argparse.Namespace(
         output=str(tmp_path / "raw-results.json"),
         dataset_id="fundamental6",
-        auto_update_blacklist=False,
         check_submission_retries=3,
     )
     run_paths = RunPaths(

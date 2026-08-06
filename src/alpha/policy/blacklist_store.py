@@ -23,9 +23,7 @@ from .blacklist_context import get_active_datasets_root, set_active_datasets_roo
 from .types import (
     LEARNED_BLACKLIST_KEY,
     PATTERN_RULES_KEY,
-    BlacklistEntryKey,
     BlacklistPayload,
-    build_blacklist_entry_key,
 )
 
 logger = logging.getLogger(__name__)
@@ -163,34 +161,6 @@ def load_blacklisted_template_names(dataset_id: str, *, datasets_root: str = "")
         for item in entries
         if isinstance(item, dict) and str(item.get("name", "")).strip()
     }
-
-
-def load_blacklisted_template_keys(
-    dataset_id: str,
-    *,
-    datasets_root: str = "",
-) -> set[BlacklistEntryKey]:
-    """Load canonical learned blacklist entry identities."""
-    payload = read_blacklist_payload(dataset_id, datasets_root=datasets_root)
-    entries = payload.get(LEARNED_BLACKLIST_KEY, [])
-    if not isinstance(entries, list):
-        return set()
-    keys: set[BlacklistEntryKey] = set()
-    for item in entries:
-        if not isinstance(item, dict):
-            continue
-        name = str(item.get("name", "")).strip()
-        if not name:
-            continue
-        keys.add(
-            build_blacklist_entry_key(
-                name,
-                str(item.get("field_type", "")).strip(),
-                str(item.get("template_stage", "")).strip(),
-                str(item.get("template_family", "")).strip(),
-            )
-        )
-    return keys
 
 
 def summarize_blacklist_payload(payload: BlacklistPayload) -> tuple[int, int]:

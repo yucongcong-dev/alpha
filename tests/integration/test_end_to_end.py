@@ -214,7 +214,6 @@ class TestResultProcessingFlow:
             result_write_options=ResultWriteOptions(
                 dataset_id="test_dataset",
                 output_path=str(tmp_path / "test_output.jsonl"),
-                auto_update_blacklist=False,
             ),
             settings_fingerprint="abc",
             template_library_fingerprint="def",

@@ -99,9 +99,7 @@ def run_dry_run_plan(args: ApplicationConfig) -> bool:
         )
 
     execution_state = create_execution_state(
-        dataset_id=dataset_id,
         historical_state=supporting_resources.historical_state,
-        datasets_root=paths.datasets_root,
     )
     print_dry_run_plan(
         options=template_options,

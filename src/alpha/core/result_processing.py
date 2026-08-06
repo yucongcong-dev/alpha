@@ -22,9 +22,6 @@ from ..models.result_predicates import (
     is_retryable_infrastructure_result,
 )
 from ..models.runtime_protocols import TemplateStats
-from ..policy.blacklist_runtime_stats import build_blacklist_runtime_stats
-from ..policy.blacklist_runtime_updates import auto_update_blacklist_incremental
-from ..policy.types import BlacklistEntryKey, BlacklistRuntimeStats
 from ..runtime.contexts import FutureCompletionContext
 from ..runtime.state import ExecutionState
 
@@ -57,27 +54,13 @@ class IncrementalResultsWriter(Protocol):
     ) -> int: ...
 
 
-class IncrementalBlacklistUpdater(Protocol):
-    """Policy side-effect port for one incremental blacklist candidate."""
-
-    def __call__(
-        self,
-        runtime_stats: BlacklistRuntimeStats,
-        blacklisted_template_keys: set[BlacklistEntryKey],
-        result: FieldTestResult,
-        dataset_id: str,
-    ) -> bool: ...
-
-
 @dataclass(frozen=True)
 class ResultProcessingServices:
-    """Typed dependencies for state updates, policy effects, and persistence."""
+    """Typed dependencies for state updates and persistence."""
 
     is_attempted_result: Callable[[FieldTestResult], bool]
     result_identity: Callable[[FieldTestResult], ResultIdentity]
     update_template_stats_with_result: Callable[[TemplateStats, FieldTestResult], TemplateStats]
-    build_blacklist_runtime_stats: Callable[[list[FieldTestResult]], BlacklistRuntimeStats]
-    auto_update_blacklist_incremental: IncrementalBlacklistUpdater
     dump_results_incremental: IncrementalResultsWriter
 
 
@@ -89,8 +72,6 @@ def build_result_processing_services() -> ResultProcessingServices:
         is_attempted_result=is_attempted_result,
         result_identity=result_identity,
         update_template_stats_with_result=update_template_stats_with_result,
-        build_blacklist_runtime_stats=build_blacklist_runtime_stats,
-        auto_update_blacklist_incremental=auto_update_blacklist_incremental,
         dump_results_incremental=dump_results_incremental,
     )
 
@@ -173,40 +154,6 @@ def log_completed_result(result: FieldTestResult) -> None:
         )
 
 
-def maybe_update_blacklist_incrementally(
-    result: FieldTestResult,
-    *,
-    execution_state: ExecutionState,
-    dataset_id: str,
-    auto_update_enabled: bool,
-    services: ResultProcessingServices,
-) -> None:
-    """Apply incremental blacklist side effects for one completed result if enabled."""
-    if not auto_update_enabled:
-        return
-    try:
-        ledger = execution_state.result_ledger
-        if not execution_state.blacklist_runtime_stats and len(ledger.results) > 1:
-            execution_state.blacklist_runtime_stats = services.build_blacklist_runtime_stats(
-                ledger.results[:-1]
-            )
-        services.auto_update_blacklist_incremental(
-            execution_state.blacklist_runtime_stats,
-            execution_state.blacklisted_template_keys,
-            result,
-            dataset_id,
-        )
-    except Exception as exc:
-        logger.warning(
-            "[blacklist] incremental update failed for dataset=%s field=%s template=%s: %s",
-            dataset_id,
-            result.field_id,
-            result.template_name,
-            exc,
-            exc_info=True,
-        )
-
-
 def persist_incremental_result(
     result: FieldTestResult,
     *,
@@ -264,9 +211,8 @@ def apply_completed_result(
     execution_state: ExecutionState,
     services: ResultProcessingServices | None = None,
 ) -> tuple[TemplateStats, bool, ResultIdentity | None]:
-    """把单条结果并入执行状态，并执行增量持久化与策略副作用。"""
+    """把单条结果并入执行状态，并执行增量持久化。"""
     active_services = services or build_result_processing_services()
-    result_write_options = completion_ctx.result_write_options
     persisted_result_count, prospective_template_stats = persist_incremental_result(
         result,
         completion_ctx=completion_ctx,
@@ -281,13 +227,6 @@ def apply_completed_result(
         persisted_result_count=persisted_result_count,
     )
     log_completed_result(result)
-    maybe_update_blacklist_incrementally(
-        result,
-        execution_state=execution_state,
-        dataset_id=result_write_options.dataset_id,
-        auto_update_enabled=result_write_options.auto_update_blacklist,
-        services=active_services,
-    )
 
     congestion_detected, queue_busy_key = detect_result_congestion(result)
     log_congestion_signals(result)

@@ -64,7 +64,6 @@ def _build_run_loop_args(tmp_path, **overrides) -> ApplicationConfig:
         "field_template_batch_size": 0,
         "dataset_id": "fundamental6",
         "output": str(tmp_path / "results.json"),
-        "auto_update_blacklist": False,
         "region": "USA",
         "universe": "TOP3000",
         "instrument_type": "EQUITY",

@@ -238,8 +238,8 @@ def test_strategy_profile_schemas_are_loaded_from_yaml() -> None:
         "field_template_batch_size",
     )
     assert "feedback_loop_policy" in schemas["refine"].tuning_keys["expression_policies"]
-    assert "auto_update_blacklist" in schemas["explore"].tuning_keys["runtime"]
-    assert "auto_update_blacklist" in schemas["candidate-focused"].tuning_keys["runtime"]
+    assert "runtime" not in schemas["explore"].tuning_keys
+    assert "runtime" not in schemas["candidate-focused"].tuning_keys
     assert "filters" not in schemas["refine"].runtime_defaults
     assert schemas["explore"].runtime_defaults == {}
 
@@ -289,8 +289,6 @@ strategy_profiles:
       limits:
         max_total_simluations: 10
         limit: "all"
-      runtime:
-        auto_update_blacklist: 1
 """.strip(),
         encoding="utf-8",
     )
@@ -301,7 +299,6 @@ strategy_profiles:
     assert any("notes 必须是字符串列表" in warning for warning in warnings)
     assert any("max_total_simluations" in warning and "未知 key" in warning for warning in warnings)
     assert any("limits.limit 必须是 integer" in warning for warning in warnings)
-    assert any("auto_update_blacklist 必须是 boolean" in warning for warning in warnings)
 
 
 def test_strategy_profile_loader_rejects_invalid_runtime_defaults() -> None:

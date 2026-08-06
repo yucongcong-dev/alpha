@@ -57,7 +57,6 @@ def _result_write_options(args: MockArgs) -> ResultWriteOptions:
     return ResultWriteOptions(
         dataset_id=args.dataset_id,
         output_path=args.output,
-        auto_update_blacklist=bool(getattr(args, "auto_update_blacklist", False)),
     )
 
 

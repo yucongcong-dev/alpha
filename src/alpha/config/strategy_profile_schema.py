@@ -62,7 +62,6 @@ STRATEGY_PROFILE_RUNTIME_DEFAULT_TYPES: dict[str, dict[str, str]] = {
         "min_request_interval": _NUMBER,
     },
     "runtime": {
-        "auto_update_blacklist": _BOOL,
         "smoke_test": _BOOL,
         "dry_run_plan": _BOOL,
         "full_run": _BOOL,
