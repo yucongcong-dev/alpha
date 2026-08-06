@@ -175,6 +175,7 @@ def test_build_setting_variants_keeps_explicit_refine_small_and_deterministic() 
         pasteurization = "ON"
         unit_handling = "VERIFY"
         nan_handling = "OFF"
+        max_trade = "OFF"
         language = "FASTEXPR"
         start_date = None
         end_date = None

@@ -12,6 +12,7 @@ from ..config.constants import (
 )
 from ..config.defaults import apply_yaml_global_defaults
 from ..config.profiles import get_dataset_profile
+from ..config.simulation_dates import resolve_simulation_dates
 from ..config.strategy_profiles import (
     get_strategy_profile_runtime_defaults,
     normalize_strategy_profile,
@@ -42,6 +43,15 @@ def resolve_cli_args(
     set_active_config_path(args.config if args.config else "")
     yaml_config = get_yaml_config()
     apply_yaml_global_defaults(args, yaml_config, explicit_cli_keys)
+    global_config = (yaml_config or {}).get("global", {})
+    simulation_config = (
+        global_config.get("simulation", {}) if isinstance(global_config, dict) else {}
+    )
+    args.start_date, args.end_date = resolve_simulation_dates(
+        start_date=args.start_date,
+        end_date=args.end_date,
+        simulation_config=simulation_config if isinstance(simulation_config, dict) else None,
+    )
     apply_dataset_profile_defaults(
         args,
         yaml_config=yaml_config,
