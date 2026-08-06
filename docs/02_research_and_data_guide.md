@@ -109,8 +109,6 @@ Transformational、Group，共解析到 `66` 个 `base` 算子。平台说明更
 本地最新目录保留了 `2026-08-03` 从官方 Operators API 捕获的数据：
 [worldquant_operators_2026-08-06](source_snapshots/worldquant_operators_2026-08-06/README.md)。
 由于 `2026-08-06` API 返回 `401`，该目录明确标记为历史数据回退，而不是当天重新抓取的结果。
-`2026-08-04` 通过官网再次复核，当前仍为 `7` 类、`66` 个 `base` 算子，签名和说明未变化；
-增量记录见 [worldquant_review_2026-08-04](source_snapshots/worldquant_review_2026-08-04/README.md)。
 研究时不需要把它当成一篇从头读到尾的教程，而应该把分类当成表达式设计的积木：
 
 - Arithmetic：做符号、安全变换和基础比例关系，例如 `log`、`signed_power`、`divide`

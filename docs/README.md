@@ -33,7 +33,6 @@
 
 `source_snapshots/` 保存官网原始证据和带日期的审阅记录，不属于日常维护文档：
 
-- [2026-08-04 增量复核](source_snapshots/worldquant_review_2026-08-04/README.md)
 - [2026-08-06 Documentation 快照](source_snapshots/worldquant_official_2026-08-06)
 - [2026-08-06 Operators 回退快照](source_snapshots/worldquant_operators_2026-08-06/README.md)
 

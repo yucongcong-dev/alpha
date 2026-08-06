@@ -528,7 +528,6 @@ Operators 的精确定义、参数和分类以平台当前可见页面/API 为�
 - 本地索引：[source_snapshots/worldquant_operators_2026-08-06/README.md](source_snapshots/worldquant_operators_2026-08-06/README.md)
 - 官方 API：`https://api.worldquantbrain.com/operators`
 - 数据捕获日期：`2026-08-03`；目录日期：`2026-08-06`（当天 API 返回 `401`，使用历史数据回退）
-- 官网复核：`2026-08-04`，算子数量、签名和说明未变化；见 [增量记录](source_snapshots/worldquant_review_2026-08-04/README.md)
 
 使用时要注意两个边界：
 
@@ -743,7 +742,7 @@ ASI Alpha 还可能接受 Japan Robustness Sharpe 检查。`2026-08-06` 官方�
 本地分析应保存实际 Check Submission 返回，不能根据这张顺序表推断未显示项的终态。
 
 官方来源：[Clear these tests before submitting an Alpha](https://platform.worldquantbrain.com/learn/documentation/interpret-results/alpha-submission)
-（本地 Documentation 快照：`2026-08-06`，官网增量复核：`2026-08-04`）。
+（本地 Documentation 快照：`2026-08-06`）。
 
 ---
 
