@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import replace
 
-from alpha.app.bootstrap_state import (
+from alpha.app.bootstrap_pending_checks import (
     reconcile_pending_check_results,
     refresh_pending_check_results,
 )
@@ -40,7 +40,7 @@ def test_reconcile_pending_check_results_returns_original_state_when_unchanged(
 ) -> None:
     state = HistoricalRunState(feedback_results=[_pending_result()])
     monkeypatch.setattr(
-        "alpha.app.bootstrap_state.refresh_pending_check_results",
+        "alpha.app.bootstrap_pending_checks.refresh_pending_check_results",
         lambda *_args, **_kwargs: (list(state.feedback_results), 0),
     )
 
@@ -75,15 +75,15 @@ def test_reconcile_pending_check_results_persists_run_and_feedback_views(monkeyp
     persisted: list[dict[str, object]] = []
     indexed: list[str] = []
     monkeypatch.setattr(
-        "alpha.app.bootstrap_state.refresh_pending_check_results",
+        "alpha.app.bootstrap_pending_checks.refresh_pending_check_results",
         lambda *_args, **_kwargs: ([refreshed], 1),
     )
     monkeypatch.setattr(
-        "alpha.app.bootstrap_state.persist_reconciled_historical_results",
+        "alpha.app.bootstrap_pending_checks.persist_reconciled_historical_results",
         lambda **kwargs: persisted.append(kwargs),
     )
     monkeypatch.setattr(
-        "alpha.app.bootstrap_state.persist_feedback_run_index",
+        "alpha.app.bootstrap_pending_checks.persist_feedback_run_index",
         indexed.append,
     )
 
@@ -108,7 +108,7 @@ def test_reconcile_pending_check_results_persists_run_and_feedback_views(monkeyp
 
 def test_refresh_pending_check_results_replaces_terminal_result(monkeypatch) -> None:
     monkeypatch.setattr(
-        "alpha.app.bootstrap_state.check_submission_with_retry",
+        "alpha.app.bootstrap_pending_checks.check_submission_with_retry",
         lambda *_args, **_kwargs: (True, "checks passed", []),
     )
 
@@ -123,7 +123,7 @@ def test_refresh_pending_check_results_replaces_terminal_result(monkeypatch) -> 
 def test_refresh_pending_check_results_keeps_still_pending_result(monkeypatch) -> None:
     original = _pending_result()
     monkeypatch.setattr(
-        "alpha.app.bootstrap_state.check_submission_with_retry",
+        "alpha.app.bootstrap_pending_checks.check_submission_with_retry",
         lambda *_args, **_kwargs: (
             None,
             "checks pending",
@@ -143,7 +143,7 @@ def test_refresh_pending_check_results_terminalizes_permanent_http_error(monkeyp
         raise BrainHTTPError("GET /alphas/missing/check failed: 404", status=404)
 
     monkeypatch.setattr(
-        "alpha.app.bootstrap_state.check_submission_with_retry",
+        "alpha.app.bootstrap_pending_checks.check_submission_with_retry",
         _missing,
     )
 
@@ -162,7 +162,7 @@ def test_refresh_pending_check_results_skips_rows_without_alpha_id(monkeypatch) 
         raise AssertionError("check_submission should not be called")
 
     monkeypatch.setattr(
-        "alpha.app.bootstrap_state.check_submission_with_retry",
+        "alpha.app.bootstrap_pending_checks.check_submission_with_retry",
         _unexpected,
     )
 
@@ -178,7 +178,7 @@ def test_refresh_pending_check_results_skips_rows_without_alpha_id(monkeypatch) 
 
 def test_refresh_pending_check_results_recovers_stale_terminal_flag(monkeypatch) -> None:
     monkeypatch.setattr(
-        "alpha.app.bootstrap_state.check_submission_with_retry",
+        "alpha.app.bootstrap_pending_checks.check_submission_with_retry",
         lambda *_args, **_kwargs: (True, "checks passed", []),
     )
 
@@ -200,7 +200,7 @@ def test_refresh_pending_check_results_respects_startup_budget(monkeypatch) -> N
         return True, "checks passed", []
 
     monkeypatch.setattr(
-        "alpha.app.bootstrap_state.check_submission_with_retry",
+        "alpha.app.bootstrap_pending_checks.check_submission_with_retry",
         _resolve,
     )
     originals = [_pending_result(alpha_id=f"alpha_{index}") for index in range(3)]
@@ -226,7 +226,7 @@ def test_refresh_pending_check_results_rotates_oldest_attempts(monkeypatch) -> N
         return None, "checks pending", [FailedCheck(name="SELF_CORRELATION", result="PENDING")]
 
     monkeypatch.setattr(
-        "alpha.app.bootstrap_state.check_submission_with_retry",
+        "alpha.app.bootstrap_pending_checks.check_submission_with_retry",
         _pending,
     )
     originals = [_pending_result(alpha_id=f"alpha_{index}") for index in range(3)]
@@ -259,11 +259,11 @@ def test_refresh_pending_check_results_respects_total_time_budget(monkeypatch) -
         return None, "checks pending", []
 
     monkeypatch.setattr(
-        "alpha.app.bootstrap_state.check_submission_with_retry",
+        "alpha.app.bootstrap_pending_checks.check_submission_with_retry",
         _pending,
     )
     monkeypatch.setattr(
-        "alpha.app.bootstrap_state.time.monotonic",
+        "alpha.app.bootstrap_pending_checks.time.monotonic",
         lambda: next(monotonic_values),
     )
 
@@ -293,11 +293,11 @@ def test_refresh_pending_check_results_aborts_retry_at_deadline(monkeypatch) -> 
         raise BrainStopRequested("startup refresh deadline reached")
 
     monkeypatch.setattr(
-        "alpha.app.bootstrap_state.check_submission_with_retry",
+        "alpha.app.bootstrap_pending_checks.check_submission_with_retry",
         _deadline_abort,
     )
     monkeypatch.setattr(
-        "alpha.app.bootstrap_state.time.monotonic",
+        "alpha.app.bootstrap_pending_checks.time.monotonic",
         lambda: clock["now"],
     )
 
@@ -330,7 +330,7 @@ def test_refresh_pending_check_results_uses_worker_factory_for_parallel_checks(m
         return True, "checks passed", []
 
     monkeypatch.setattr(
-        "alpha.app.bootstrap_state.check_submission_with_retry",
+        "alpha.app.bootstrap_pending_checks.check_submission_with_retry",
         _resolve,
     )
 

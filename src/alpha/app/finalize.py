@@ -22,7 +22,7 @@ from ..io.results_store import exclusive_results_transaction
 from ..models.io_types import RunPaths
 from ..models.runtime_options import ResultWriteOptions
 from ..runtime.state import InitializedRunContext
-from .bootstrap_state import refresh_pending_check_results
+from .bootstrap_pending_checks import refresh_pending_check_results
 
 logger = logging.getLogger(__name__)
 
