@@ -66,7 +66,7 @@ def test_load_template_library_preserves_optional_metadata(tmp_path) -> None:
         encoding="utf-8",
     )
 
-    library = load_template_library(str(template_file))
+    library = load_template_library(str(template_file), default_backfill_window=504)
 
     item = library["default"][0]
     assert item.family == "custom_family"
@@ -118,7 +118,7 @@ def test_build_expression_candidates_respects_template_field_tags(tmp_path) -> N
             language="FASTEXPR",
             dataset_id="model16",
         ),
-        template_library=load_template_library(str(template_file)),
+        template_library=load_template_library(str(template_file), default_backfill_window=504),
     )
     field = TemplateField.from_dict(
         {
@@ -182,7 +182,7 @@ def test_build_expression_candidates_skip_refine_only_templates_in_default_libra
             dataset_id="fundamental6",
         ),
         template_library_file=str(template_file),
-        template_library=load_template_library(str(template_file)),
+        template_library=load_template_library(str(template_file), default_backfill_window=504),
     )
     field = TemplateField.from_dict({"id": "cash_st", "type": "VECTOR"})
 
@@ -242,7 +242,7 @@ def test_build_expression_candidates_include_refine_only_templates_in_explicit_p
             dataset_id="fundamental6",
         ),
         template_library_file=str(template_file),
-        template_library=load_template_library(str(template_file)),
+        template_library=load_template_library(str(template_file), default_backfill_window=504),
     )
     field = TemplateField.from_dict({"id": "cash_st", "type": "VECTOR"})
 
@@ -276,7 +276,7 @@ def test_load_template_library_infers_stage_from_layer(tmp_path) -> None:
         encoding="utf-8",
     )
 
-    library = load_template_library(str(template_file))
+    library = load_template_library(str(template_file), default_backfill_window=504)
 
     assert library["default"][0].stage == "group_second_order"
 
@@ -299,7 +299,7 @@ def test_missing_template_priorities_are_resolved_without_mutating_source(tmp_pa
 
     original = target.read_text(encoding="utf-8")
     ensure_dataset_template_library(str(target), "custom_ds")
-    library = load_template_library(str(target))
+    library = load_template_library(str(target), default_backfill_window=504)
 
     assert target.read_text(encoding="utf-8") == original
     assert [item.priority for item in library["default"]] == [1000, 999, 998]
@@ -310,13 +310,13 @@ def test_load_template_library_raises_on_missing_file(tmp_path) -> None:
     missing = tmp_path / "nonexistent.json"
 
     with pytest.raises(BrainAPIError, match="模板库文件不存在"):
-        load_template_library(str(missing))
+        load_template_library(str(missing), default_backfill_window=504)
 
 
 def test_load_template_library_raises_on_empty_path() -> None:
     """Loading with an empty path should raise an error."""
     with pytest.raises(BrainAPIError, match="模板库文件路径为空"):
-        load_template_library("")
+        load_template_library("", default_backfill_window=504)
 
 
 def test_fundamental6_template_library_has_family_and_layer_metadata() -> None:

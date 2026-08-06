@@ -42,6 +42,7 @@ def _config(paths: RunPaths) -> ApplicationConfig:
         universe="TOP3000",
         instrument_type="EQUITY",
         delay=1,
+        backfill_window=504,
         page_size=50,
     )
     return ApplicationConfig.from_args(args, paths)
@@ -53,7 +54,8 @@ def _patch_local_resources(monkeypatch, historical_state: HistoricalRunState) ->
         lambda path, _dataset_id: path,
     )
     monkeypatch.setattr(
-        "alpha.app.bootstrap_supporting_resources.load_template_library", lambda _path: {}
+        "alpha.app.bootstrap_supporting_resources.load_template_library",
+        lambda _path, **_kwargs: {},
     )
     monkeypatch.setattr(
         "alpha.app.bootstrap_supporting_resources.load_run_filters_extended",

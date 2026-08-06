@@ -38,11 +38,13 @@ def load_bootstrap_supporting_resources(
     *,
     dataset_id: str,
     paths: RunPaths,
+    backfill_window: int,
 ) -> BootstrapLoadedResources:
     """Load template library, blacklist, filters, and historical feedback state."""
     return load_supporting_resources(
         dataset_id=dataset_id,
         paths=paths,
+        backfill_window=backfill_window,
         repair_corrupt_summary=True,
         log_blacklist=True,
     )
@@ -52,6 +54,7 @@ def load_supporting_resources(
     *,
     dataset_id: str,
     paths: RunPaths,
+    backfill_window: int,
     repair_corrupt_summary: bool,
     log_blacklist: bool = True,
 ) -> BootstrapLoadedResources:
@@ -59,7 +62,10 @@ def load_supporting_resources(
     set_active_datasets_root(paths.datasets_root)
     template_library_file = ensure_dataset_template_library(paths.template_library_file, dataset_id)
 
-    template_library = load_template_library(template_library_file)
+    template_library = load_template_library(
+        template_library_file,
+        default_backfill_window=backfill_window,
+    )
     logger.info(
         "[templates] dataset=%s library=%s entries=%d",
         dataset_id,

@@ -235,7 +235,7 @@ def test_prepare_bootstrap_resources_persists_pending_refresh_before_empty_field
 
     result = prepare_bootstrap_resources(
         SimpleNamespace(dataset_id="fundamental6", check_submission_retries=1, fetch=None),
-        SimpleNamespace(),
+        SimpleNamespace(backfill_window=504),
         SimpleNamespace(output="results.json", feedback_output=""),
         object(),
         run_config={"run_name": "test"},
@@ -320,7 +320,7 @@ def test_prepare_bootstrap_resources_refreshes_cross_run_feedback_pending(
 
     result = prepare_bootstrap_resources(
         SimpleNamespace(dataset_id="fundamental6", check_submission_retries=1, fetch=None),
-        SimpleNamespace(),
+        SimpleNamespace(backfill_window=504),
         SimpleNamespace(output="run.json", feedback_output="feedback.json"),
         object(),
         run_config={"run_name": "test"},

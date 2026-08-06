@@ -5,7 +5,6 @@ from __future__ import annotations
 import json
 import os
 
-from ...config.runtime_values import get_runtime_config
 from ...exceptions import BrainAPIError
 from ...models.domain import TemplateLibrary, TemplateLibraryItem
 from ...policy.expression import get_dataset_expression_policy
@@ -48,12 +47,16 @@ def resolve_placeholders(expression: str, backfill_window: int) -> str:
     return expression.replace("{backfill_window}", str(backfill_window))
 
 
-def resolve_template_backfill_window(payload: dict[str, object], field_type: str) -> int:
+def resolve_template_backfill_window(
+    payload: dict[str, object],
+    field_type: str,
+    *,
+    default_backfill_window: int,
+) -> int:
     """Resolve backfill_window for a template group using dataset policy when present."""
     dataset_id = str(payload.get("_dataset_id", "")).strip()
-    fallback = get_runtime_config().expression.backfill_window
     if not dataset_id:
-        return fallback
+        return default_backfill_window
 
     policy = get_dataset_expression_policy(dataset_id)
     normalized = field_type.strip().upper()
@@ -63,10 +66,10 @@ def resolve_template_backfill_window(payload: dict[str, object], field_type: str
         configured = policy.matrix_field_transform.backfill_window
     else:
         configured = policy.default_field_transform.backfill_window
-    return configured or fallback
+    return configured or default_backfill_window
 
 
-def load_template_library(path: str) -> TemplateLibrary:
+def load_template_library(path: str, *, default_backfill_window: int) -> TemplateLibrary:
     """Load and validate a JSON template library."""
     if not path:
         raise BrainAPIError("模板库文件路径为空，请指定有效的模板库文件。")
@@ -91,7 +94,11 @@ def load_template_library(path: str) -> TemplateLibrary:
             raise BrainAPIError("模板库的键必须是字符串。")
         if not isinstance(templates, list):
             raise BrainAPIError(f"模板库条目 '{field_type}' 必须是一个列表。")
-        backfill_window = resolve_template_backfill_window(payload, field_type)
+        backfill_window = resolve_template_backfill_window(
+            payload,
+            field_type,
+            default_backfill_window=default_backfill_window,
+        )
         validated[field_type] = []
         for index, item in enumerate(templates):
             if not isinstance(item, dict):

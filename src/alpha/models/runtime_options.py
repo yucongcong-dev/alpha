@@ -52,6 +52,7 @@ class CredentialLoadOptions:
 class TemplateBuildOptions(SimulationSettingsConfig):
     """模板选择、反馈回路与 settings 变体展开所需的窄配置。"""
 
+    backfill_window: int = 504
     dataset_id: str = ""
     max_templates_per_field: int = 0
     max_templates_per_family: int = 0
@@ -78,6 +79,7 @@ class TemplateBuildOptions(SimulationSettingsConfig):
             nan_handling=simulation.nan_handling,
             language=simulation.language,
             max_trade=simulation.max_trade,
+            backfill_window=simulation.backfill_window,
             dataset_id=dataset.dataset_id,
             max_templates_per_field=planning.max_templates_per_field,
             max_templates_per_family=planning.max_templates_per_family,

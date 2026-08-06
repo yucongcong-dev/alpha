@@ -21,7 +21,6 @@ import re
 from ..analysis.field_stats import decay_field_feedback
 from ..config.constants import FEEDBACK_STAGE_GENERATE, FEEDBACK_STAGE_RESIMULATE
 from ..config.models import DatasetExpressionPolicy
-from ..config.runtime_values import get_runtime_config
 from ..generators.field_transforms import build_field_view
 from ..models.domain import FieldView, TemplateCandidate, TemplateField, TemplateLibraryItem
 from ..models.runtime_protocols import TemplateFeedback
@@ -227,7 +226,7 @@ def build_expression_candidates(
     feedback_stage = resolve_feedback_stage(field_feedback, policy.feedback_loop_policy)
     field_view = build_field_view(field, policy)
     is_event_field = _is_event_field(field_name, policy)
-    backfill_window = get_runtime_config().expression.backfill_window
+    backfill_window = options.backfill_window
     preset_mode = bool(options.preset_mode) or resolve_preset_mode(
         template_library_file=build_ctx.template_library_file,
     )
@@ -258,6 +257,7 @@ def build_expression_candidates(
             field_view,
             all_fields,
             policy,
+            default_backfill_window=backfill_window,
         )
         templates.extend(diversified)
         templates.extend(legacy)

@@ -7,8 +7,7 @@
 
 from __future__ import annotations
 
-from ...config.runtime_values import get_runtime_config
-from ...models.domain import FieldView, TemplateLibrary, TemplateLibraryItem
+from ...models.domain import TemplateLibrary, TemplateLibraryItem
 from ...models.domain_types import TemplateMetadata
 
 TemplateMetadataMap = dict[tuple[str, str], TemplateMetadata]
@@ -66,37 +65,3 @@ def _select_template_items(
             if isinstance(item, TemplateLibraryItem):
                 merged[item.name] = item
     return list(merged.values())
-
-
-def build_template_metadata_index(
-    field_view: FieldView,
-    template_library: TemplateLibrary,
-    field_type: str,
-    dataset_id: str,
-) -> TemplateMetadataMap:
-    """为当前字段构建已渲染模板的元数据索引。"""
-    metadata_by_key: TemplateMetadataMap = {}
-    raw_templates = _select_template_items(template_library, field_type, dataset_id)
-    backfill_window = get_runtime_config().expression.backfill_window
-    for item in raw_templates:
-        rendered_expression = item.expression.format(
-            field=field_view.raw_expression,
-            field_preprocessed=field_view.preprocessed_expression,
-            field_groupfill=field_view.groupfill_expression,
-            ratio_numerator=field_view.ratio_numerator_expression,
-            ratio_denominator=field_view.ratio_denominator_expression,
-            backfill_window=backfill_window,
-        )
-        metadata = _runtime_template_metadata(item)
-        if metadata:
-            metadata_by_key[_template_key(item.name, rendered_expression)] = metadata
-    return metadata_by_key
-
-
-def get_template_metadata(
-    template_name: str,
-    expression: str,
-    metadata_by_key: TemplateMetadataMap | None = None,
-) -> TemplateMetadata:
-    """查找模板元数据。"""
-    return (metadata_by_key or {}).get(_template_key(template_name, expression), {})

@@ -28,6 +28,7 @@ def run_dry_run_plan(args: ApplicationConfig) -> bool:
     supporting_resources = load_supporting_resources(
         dataset_id=dataset_id,
         paths=paths,
+        backfill_window=template_options.backfill_window,
         repair_corrupt_summary=False,
         log_blacklist=False,
     )

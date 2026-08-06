@@ -10,7 +10,6 @@ from ..config.constants import (
     TEMPLATE_STAGE_GROUP_SECOND_ORDER,
 )
 from ..config.models import DatasetExpressionPolicy
-from ..config.runtime_values import get_runtime_config
 from ..generators.field_transforms import build_field_view, build_ratio_expression
 from ..models.domain import FieldView, TemplateCandidate, TemplateField
 from .fields import choose_field_name
@@ -31,7 +30,6 @@ def build_high_conviction_ratio_templates(
     expression_policy: DatasetExpressionPolicy | None = None,
 ) -> list[TemplateCandidate]:
     """为财务含义强的 ratio pair 生成专属长窗质量模板。"""
-    bw = get_runtime_config().expression.backfill_window
     specs: tuple[tuple[str, str, int, str, str], ...] = (
         (
             "hc_ratio_group_level_{ratio_label}",
@@ -65,7 +63,7 @@ def build_high_conviction_ratio_templates(
     templates: list[TemplateCandidate] = []
     for name_template, expr_template, priority, family, stage in specs:
         name = name_template.format(ratio_label=ratio_label)
-        expr = expr_template.format(ratio_expr=ratio_expr, backfill_window=bw)
+        expr = expr_template.format(ratio_expr=ratio_expr)
         template = _make_template_candidate(
             name,
             expr,

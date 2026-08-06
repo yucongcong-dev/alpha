@@ -27,7 +27,6 @@ from ..config.constants import (
     TEMPLATE_STAGE_GROUP_SECOND_ORDER,
 )
 from ..config.models import DatasetExpressionPolicy
-from ..config.runtime_values import get_runtime_config
 from ..models.domain import FieldView, TemplateCandidate, TemplateField
 from .ratio_templates import extend_ratio_templates
 from .templates.candidates import (
@@ -42,11 +41,12 @@ def build_matrix_templates(
     field_view: FieldView,
     all_fields: Sequence[TemplateField],
     expression_policy: DatasetExpressionPolicy,
+    *,
+    default_backfill_window: int,
 ) -> tuple[list[TemplateCandidate], list[TemplateCandidate]]:
     """为 MATRIX 类型字段构建多样化和 legacy 模板候选。"""
     field_name = field_view.field_name
     preprocessed_expression = field_view.preprocessed_expression
-    default_backfill_window = get_runtime_config().expression.backfill_window
     backfill_window = (
         expression_policy.matrix_field_transform.backfill_window or default_backfill_window
     )

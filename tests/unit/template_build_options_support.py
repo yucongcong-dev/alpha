@@ -18,6 +18,7 @@ _DEFAULT_OPTIONS = TemplateBuildOptions(
     unit_handling="VERIFY",
     nan_handling="OFF",
     language="FASTEXPR",
+    backfill_window=504,
 )
 
 

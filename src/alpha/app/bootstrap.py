@@ -117,6 +117,7 @@ def prepare_bootstrap_resources(
     supporting_resources = load_bootstrap_supporting_resources(
         dataset_id=dataset_id,
         paths=paths,
+        backfill_window=template_options.backfill_window,
     )
     expression_policy = supporting_resources.expression_policy
     effective_run_config = dict(run_config)

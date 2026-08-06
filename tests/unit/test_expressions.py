@@ -332,7 +332,7 @@ def test_fundamental6_default_template_library_is_closed_for_vector_fields() -> 
     template_file = (
         Path(__file__).resolve().parents[2] / "datasets" / "fundamental6" / "template.json"
     )
-    template_library = load_template_library(str(template_file))
+    template_library = load_template_library(str(template_file), default_backfill_window=504)
 
     build_ctx = TemplateBuildContext(
         options=TemplateBuildOptions(**_DEFAULT_SIM_SETTINGS, legacy_similarity_penalty=0),
@@ -406,7 +406,7 @@ def test_fundamental6_refine_vector_templates_do_not_double_wrap_vec_avg(
 """,
         encoding="utf-8",
     )
-    template_library = load_template_library(str(template_file))
+    template_library = load_template_library(str(template_file), default_backfill_window=504)
 
     build_ctx = TemplateBuildContext(
         options=TemplateBuildOptions(
