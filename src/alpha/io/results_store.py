@@ -14,7 +14,6 @@ import os
 import tempfile
 from typing import Any
 
-from .._facade import ExportMap, facade_dir, resolve_export
 from ..models.domain import FieldTestResult
 from ..models.domain_serializers import serialize_field_test_result
 from .file_lock import exclusive_file_lock
@@ -247,23 +246,3 @@ def _append_results_journal(
             last_batch_rows=tuple(_journal_row_payload(result) for result in results),
         )
         return next_row_count
-
-
-_COMPAT_EXPORTS: ExportMap = {
-    "dump_results": ("..analysis.results_persistence", "dump_results"),
-    "dump_results_incremental": ("..analysis.results_persistence", "dump_results_incremental"),
-}
-
-
-def __getattr__(name: str) -> object:
-    return resolve_export(
-        name=name,
-        export_map=_COMPAT_EXPORTS,
-        package=__package__ or "",
-        namespace=__name__,
-        target_globals=globals(),
-    )
-
-
-def __dir__() -> list[str]:
-    return facade_dir(globals(), _COMPAT_EXPORTS)
