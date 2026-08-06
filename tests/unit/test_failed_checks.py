@@ -14,6 +14,7 @@ from alpha.analysis.failed_checks import (
     summarize_failed_check,
 )
 from alpha.models.domain import FailedCheck, FieldTestResult
+from alpha.models.result_predicates import has_pending_checks
 
 
 def _result(
@@ -133,6 +134,35 @@ def test_near_pass_summary_sorts_candidates_and_rejects_nonpositive_limit() -> N
     assert len(rows) == 1
     assert rows[0]["field_id"] == "near"
     assert rows[0]["failed_checks"][0]["name"] == "LOW_SHARPE"
+
+
+def test_pending_result_reports_confirmed_failures_without_counting_pending_check() -> None:
+    result = _result(
+        "tax_expense",
+        "tax-quality",
+        [
+            FailedCheck(name="LOW_SHARPE", value=0.66, limit=1.25, result="FAIL"),
+            FailedCheck(name="LOW_FITNESS", value=0.24, limit=1.0, result="FAIL"),
+            FailedCheck(name="SELF_CORRELATION", result="PENDING"),
+            FailedCheck(name="MATCHES_COMPETITION", result="PASS"),
+        ],
+        alpha_id="alpha-pending",
+        submittable=None,
+    )
+    result.message = "checks pending"
+
+    leaderboard = compile_failed_check_leaderboard([result])
+    near_pass = compile_near_pass_summary([result])
+    hints = compile_optimization_hints(leaderboard, near_pass)
+
+    assert has_pending_checks(result) is True
+    assert {row["name"] for row in leaderboard} == {"LOW_FITNESS", "LOW_SHARPE"}
+    assert [check["name"] for check in near_pass[0]["failed_checks"]] == [
+        "LOW_SHARPE",
+        "LOW_FITNESS",
+    ]
+    assert any("夏普比率" in hint for hint in hints)
+    assert all("还没有失败检查记录" not in hint for hint in hints)
 
 
 def test_optimization_hints_cover_known_failures_nearpass_and_fallback() -> None:
