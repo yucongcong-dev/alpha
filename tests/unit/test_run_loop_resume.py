@@ -16,7 +16,6 @@ from alpha.app.loop_future_support import (
     drain_remaining_futures,
 )
 from alpha.app.run_loop import run_field_test_loop
-from alpha.app.run_loop_paths import resolve_result_write_options
 from alpha.app.run_loop_resume import (
     persist_replanning_checkpoint,
     restore_fields_from_state,
@@ -269,14 +268,7 @@ def test_run_field_test_loop_persists_progress_for_skipped_fields(tmp_path) -> N
         patch("alpha.app.loop_future_support.drain_next_completion", return_value=False),
         patch("alpha.app.loop_future_support.drain_remaining_futures"),
     ):
-        run_field_test_loop(
-            args,
-            run_ctx,
-            run_paths=argparse.Namespace(
-                state_file=str(tmp_path / "state.json"),
-                checkpoint_file="",
-            ),
-        )
+            run_field_test_loop(args, run_ctx)
 
     assert mock_resume.call_count == 1
     assert mock_round.call_count == 1
@@ -326,14 +318,7 @@ def test_run_field_test_loop_replans_after_pending_seed_completion(tmp_path) -> 
         ) as mock_drain,
         patch("alpha.app.loop_future_support.drain_remaining_futures"),
     ):
-        run_field_test_loop(
-            args,
-            run_ctx,
-            run_paths=argparse.Namespace(
-                state_file=str(tmp_path / "state.json"),
-                checkpoint_file="",
-            ),
-        )
+            run_field_test_loop(args, run_ctx)
 
     assert mock_drain.call_count == 2
     assert mock_round.call_count == 2
@@ -381,14 +366,7 @@ def test_run_field_test_loop_interrupts_workers_without_waiting(tmp_path) -> Non
         patch("alpha.app.run_loop_resume.save_runtime_checkpoint") as mock_checkpoint,
         pytest.raises(KeyboardInterrupt),
     ):
-        run_field_test_loop(
-            args,
-            run_ctx,
-            run_paths=argparse.Namespace(
-                state_file=str(tmp_path / "state.json"),
-                checkpoint_file=str(tmp_path / "checkpoint.json"),
-            ),
-        )
+            run_field_test_loop(args, run_ctx)
 
     assert run_ctx.execution_state.future_queue.stop_signal.is_set() is True
     assert executor.shutdown_calls == [(False, True)]
@@ -447,14 +425,7 @@ def test_run_field_test_loop_waits_for_worker_metadata_before_interrupt_checkpoi
         patch("alpha.app.run_loop_resume.save_runtime_checkpoint") as mock_checkpoint,
         pytest.raises(KeyboardInterrupt),
     ):
-        run_field_test_loop(
-            args,
-            run_ctx,
-            run_paths=argparse.Namespace(
-                state_file=str(tmp_path / "state.json"),
-                checkpoint_file=str(tmp_path / "checkpoint.json"),
-            ),
-        )
+            run_field_test_loop(args, run_ctx)
 
     mock_stabilize.assert_called_once_with(
         run_ctx.execution_state,
@@ -510,14 +481,7 @@ def test_run_field_test_loop_waits_for_worker_metadata_before_exception_checkpoi
         patch("alpha.app.run_loop_resume.save_runtime_checkpoint") as mock_checkpoint,
         pytest.raises(RuntimeError, match="scheduler failed"),
     ):
-        run_field_test_loop(
-            args,
-            run_ctx,
-            run_paths=argparse.Namespace(
-                state_file=str(tmp_path / "state.json"),
-                checkpoint_file=str(tmp_path / "checkpoint.json"),
-            ),
-        )
+            run_field_test_loop(args, run_ctx)
 
     assert run_ctx.execution_state.future_queue.stop_signal.is_set() is True
     assert executor.shutdown_calls == [(True, True)]
@@ -525,36 +489,6 @@ def test_run_field_test_loop_waits_for_worker_metadata_before_exception_checkpoi
     assert (
         next(iter(saved_state.future_queue.pending_futures.values())).simulation_location
         == "/simulations/sim-after-error"
-    )
-
-
-def test_resolve_result_write_options_prefers_run_paths_output(tmp_path) -> None:
-    args = argparse.Namespace(
-        dataset_id="fundamental6",
-        output="raw-results.json",
-        auto_update_blacklist=False,
-    )
-    run_paths = RunPaths(
-        results_dir=str(tmp_path / "results"),
-        log_file=str(tmp_path / "run.log"),
-        state_file=str(tmp_path / "state.json"),
-        checkpoint_file=str(tmp_path / "checkpoint.json"),
-        output=str(tmp_path / "normalized-results.json"),
-    )
-
-    options = resolve_result_write_options(
-        ResultWriteOptions(
-            dataset_id=args.dataset_id,
-            output_path=args.output,
-            auto_update_blacklist=args.auto_update_blacklist,
-        ),
-        run_paths,
-    )
-
-    assert options == ResultWriteOptions(
-        dataset_id="fundamental6",
-        output_path=str(tmp_path / "normalized-results.json"),
-        auto_update_blacklist=False,
     )
 
 

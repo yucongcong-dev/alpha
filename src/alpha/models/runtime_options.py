@@ -33,36 +33,6 @@ class ApiClientOptions:
 
 
 @dataclass(frozen=True)
-class BootstrapPathOptions:
-    """Bootstrap path inputs normalized away from the full runtime config."""
-
-    output: str = ""
-    template_library_file: str = ""
-    fields_cache_file: str = ""
-    creds_file: str = ""
-    creds_key_file: str = ""
-    include_fields_file: str = ""
-    exclude_fields_file: str = ""
-    include_templates_file: str = ""
-    exclude_templates_file: str = ""
-
-    @classmethod
-    def from_config(cls, config: ApplicationConfig) -> BootstrapPathOptions:
-        paths = config.paths
-        return cls(
-            output=paths.output,
-            template_library_file=paths.template_library_file,
-            fields_cache_file=paths.fields_cache_file,
-            creds_file=paths.creds_file,
-            creds_key_file=paths.creds_key_file,
-            include_fields_file=paths.include_fields_file,
-            exclude_fields_file=paths.exclude_fields_file,
-            include_templates_file=paths.include_templates_file,
-            exclude_templates_file=paths.exclude_templates_file,
-        )
-
-
-@dataclass(frozen=True)
 class TemplateBuildOptions:
     """模板选择、反馈回路与 settings 变体展开所需的窄配置。"""
 

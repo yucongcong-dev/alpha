@@ -41,8 +41,8 @@ def _build_config(args: argparse.Namespace, run_paths: RunPaths) -> ApplicationC
     return ApplicationConfig.from_args(args, run_paths)
 
 
-def test_finalize_run_prefers_run_paths_output(monkeypatch, tmp_path) -> None:
-    """Final flush should honor normalized output paths over raw args.output."""
+def test_finalize_run_uses_application_paths(monkeypatch, tmp_path) -> None:
+    """Final flush should use the normalized paths owned by ApplicationConfig."""
     args = argparse.Namespace(
         output="raw-results.json",
         dataset_id="fundamental6",
@@ -61,7 +61,7 @@ def test_finalize_run_prefers_run_paths_output(monkeypatch, tmp_path) -> None:
         patch("alpha.app.finalize.dump_results") as mock_dump,
         patch("alpha.app.finalize.delete_pipeline_state") as mock_delete,
     ):
-        finalize_run(_build_config(args, run_paths), run_ctx, run_paths=run_paths)
+        finalize_run(_build_config(args, run_paths), run_ctx)
 
     assert mock_dump.call_args.args[0] == str(tmp_path / "normalized-results.json")
     assert mock_delete.call_args.args[0] == str(tmp_path / "state.json")
@@ -100,7 +100,7 @@ def test_finalize_run_updates_separate_feedback_output(tmp_path) -> None:
         patch("alpha.app.finalize.persist_feedback_run_index") as mock_persist_index,
         patch("alpha.app.finalize.delete_pipeline_state") as mock_delete,
     ):
-        finalize_run(_build_config(args, run_paths), run_ctx, run_paths=run_paths)
+        finalize_run(_build_config(args, run_paths), run_ctx)
 
     assert [call.args[0] for call in mock_dump.call_args_list] == [
         str(tmp_path / "results.json"),
@@ -159,7 +159,7 @@ def test_finalize_run_reconciles_pending_checks_before_persisting(tmp_path) -> N
         patch("alpha.app.finalize.dump_results") as mock_dump,
         patch("alpha.app.finalize.delete_pipeline_state"),
     ):
-        finalize_run(_build_config(args, run_paths), run_ctx, run_paths=run_paths)
+        finalize_run(_build_config(args, run_paths), run_ctx)
 
     mock_refresh.assert_called_once_with(
         client_factory,

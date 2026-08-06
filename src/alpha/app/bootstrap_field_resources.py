@@ -7,9 +7,9 @@ import logging
 from ..api.client import BrainClient
 from ..generators.fields import fetch_fields_with_cache, load_fields_cache
 from ..models.domain import TemplateField
+from ..models.io_types import RunPaths
 from ..models.runtime_options import FieldFetchOptions, FieldSelectionOptions
 from .bootstrap_fields import resolve_field_selection
-from .bootstrap_types import BootstrapPaths
 
 logger = logging.getLogger(__name__)
 
@@ -84,7 +84,7 @@ def load_bootstrap_fields(
     *,
     dataset_id: str,
     bootstrap_client: BrainClient,
-    paths: BootstrapPaths,
+    paths: RunPaths,
     field_fetch_options: FieldFetchOptions,
 ) -> list[TemplateField]:
     """Load cached fields and refresh from the upstream source when needed."""

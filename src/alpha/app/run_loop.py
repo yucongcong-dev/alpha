@@ -6,7 +6,6 @@ from concurrent.futures import ThreadPoolExecutor
 import logging
 
 from ..config.application import ApplicationConfig
-from ..models.io_types import RunPaths
 from ..models.runtime_options import RunLoopOptions
 from ..runtime.state import InitializedRunContext
 from . import loop_future_support, run_loop_paths, run_loop_resume, run_loop_rounds
@@ -20,13 +19,11 @@ INTERRUPT_METADATA_WAIT_SECONDS = 15.0
 def run_field_test_loop(
     args: ApplicationConfig,
     run_ctx: InitializedRunContext,
-    run_paths: RunPaths | None = None,
 ) -> None:
     """线程池中遍历字段并提交模拟任务，实时消费结果。"""
-    state_file = run_loop_paths.run_path_value(run_paths, "state_file")
-    interrupt_report_file = run_loop_paths.run_path_value(
-        run_paths, "interrupt_report_file"
-    ) or run_loop_paths.run_path_value(run_paths, "checkpoint_file")
+    paths = args.paths
+    state_file = paths.state_file
+    interrupt_report_file = paths.interrupt_report_file
     runtime_state = run_ctx.runtime_state
     execution_state = run_ctx.execution_state
     fields = list(run_ctx.fields)
@@ -35,9 +32,7 @@ def run_field_test_loop(
     run_loop_options = RunLoopOptions.from_config(args)
     field_template_batch_size = run_loop_options.field_template_batch_size
     scheduler_options = run_loop_options.scheduler
-    result_write_options = run_loop_paths.resolve_result_write_options(
-        run_loop_options.result_write, run_paths
-    )
+    result_write_options = run_loop_options.result_write
     completion_ctx = run_loop_paths.resolve_future_completion_context(run_ctx, result_write_options)
 
     fields = run_loop_resume.restore_fields_from_state(

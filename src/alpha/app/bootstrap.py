@@ -21,7 +21,6 @@ from ..models.io_types import RunPaths
 from ..models.runtime_options import (
     ApiClientOptions,
     BootstrapFieldOptions,
-    BootstrapPathOptions,
     TemplateBuildOptions,
 )
 from ..models.runtime_protocols import RunConfig
@@ -33,33 +32,22 @@ from .bootstrap_fields import prepare_fields_for_execution
 from .bootstrap_pending_checks import reconcile_pending_check_results
 from .bootstrap_run_context import assemble_initialized_run_context, build_runtime_concurrency
 from .bootstrap_runtime_outputs import (
-    build_effective_run_paths,
     prepare_runtime_outputs,
-    resolve_bootstrap_paths,
 )
 from .bootstrap_state import build_execution_state
 from .bootstrap_supporting_resources import load_bootstrap_supporting_resources
-from .bootstrap_types import BootstrapPaths, PreparedBootstrapResources, ResolvedCredentials
+from .bootstrap_types import PreparedBootstrapResources, ResolvedCredentials
 
 logger = logging.getLogger(__name__)
 
 
-def initialize_run_context(
-    args: ApplicationConfig,
-    run_paths: RunPaths | None,
-) -> InitializedRunContext | None:
+def initialize_run_context(args: ApplicationConfig) -> InitializedRunContext | None:
     """执行主流程的初始化阶段，返回结构化运行上下文。"""
     api_client_options = ApiClientOptions.from_config(args)
-    path_options = BootstrapPathOptions.from_config(args)
     field_options = BootstrapFieldOptions.from_config(args)
     template_options = TemplateBuildOptions.from_config(args)
-    paths = resolve_bootstrap_paths(path_options, run_paths)
-    run_config = prepare_runtime_outputs(
-        args,
-        path_options,
-        run_paths,
-        paths,
-    )
+    paths = args.paths
+    run_config = prepare_runtime_outputs(args)
     email, password = resolve_credentials(
         ResolvedCredentials(
             email=args.credentials.email,
@@ -81,13 +69,11 @@ def initialize_run_context(
     try:
         try:
             prepared = prepare_bootstrap_resources(
-                path_options,
                 field_options,
                 template_options,
                 paths,
                 bootstrap_client,
                 run_config=run_config,
-                run_paths=run_paths,
             )
         finally:
             close = getattr(bootstrap_client, "close", None)
@@ -98,7 +84,7 @@ def initialize_run_context(
 
         execution_state = build_execution_state(
             dataset_id=args.dataset.dataset_id,
-            output_file=paths.output_file,
+            output_file=paths.output,
             historical_state=prepared.historical_state,
             settings_fingerprint=prepared.settings_fingerprint,
             template_library_fingerprint=prepared.template_library_fingerprint,
@@ -123,22 +109,18 @@ def initialize_run_context(
 
 
 def prepare_bootstrap_resources(
-    path_options: BootstrapPathOptions,
     field_options: BootstrapFieldOptions,
     template_options: TemplateBuildOptions,
-    paths: BootstrapPaths,
+    paths: RunPaths,
     bootstrap_client: BrainClient,
     *,
     run_config: RunConfig,
-    run_paths: RunPaths | None,
 ) -> PreparedBootstrapResources | None:
     """Load template, feedback, and field resources needed to build the run context."""
     dataset_id = field_options.dataset_id
-    effective_run_paths = build_effective_run_paths(path_options, paths, run_paths)
     supporting_resources = load_bootstrap_supporting_resources(
         dataset_id=dataset_id,
         paths=paths,
-        effective_run_paths=effective_run_paths,
     )
     expression_policy = supporting_resources.expression_policy
     effective_run_config = dict(run_config)
@@ -155,8 +137,8 @@ def prepare_bootstrap_resources(
         bootstrap_client,
         historical_state,
         retries=field_options.check_submission_retries,
-        output_file=paths.output_file,
-        feedback_output=str(getattr(paths, "feedback_output", "") or ""),
+        output_file=paths.output,
+        feedback_output=paths.feedback_output,
         dataset_id=dataset_id,
         settings_fingerprint=settings_fingerprint,
         template_library_fingerprint=template_library_fingerprint,
@@ -195,7 +177,7 @@ def prepare_bootstrap_resources(
     if supporting_resources.historical_state.existing_results:
         logger.info(
             "[resume] 从 %s 加载 %d 个历史结果",
-            paths.output_file,
+            paths.output,
             len(supporting_resources.historical_state.existing_results),
         )
 

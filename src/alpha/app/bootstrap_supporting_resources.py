@@ -20,7 +20,6 @@ from ..policy.blacklist_store import (
 )
 from ..policy.expression import get_dataset_expression_policy
 from ..runtime.contexts import HistoricalRunState
-from .bootstrap_types import BootstrapPaths
 
 logger = logging.getLogger(__name__)
 
@@ -38,14 +37,12 @@ class BootstrapLoadedResources:
 def load_bootstrap_supporting_resources(
     *,
     dataset_id: str,
-    paths: BootstrapPaths,
-    effective_run_paths: RunPaths,
+    paths: RunPaths,
 ) -> BootstrapLoadedResources:
     """Load template library, blacklist, filters, and historical feedback state."""
     return load_supporting_resources(
         dataset_id=dataset_id,
         paths=paths,
-        effective_run_paths=effective_run_paths,
         repair_corrupt_summary=True,
         log_blacklist=True,
     )
@@ -54,8 +51,7 @@ def load_bootstrap_supporting_resources(
 def load_supporting_resources(
     *,
     dataset_id: str,
-    paths: BootstrapPaths,
-    effective_run_paths: RunPaths,
+    paths: RunPaths,
     repair_corrupt_summary: bool,
     log_blacklist: bool = True,
 ) -> BootstrapLoadedResources:
@@ -84,10 +80,10 @@ def load_supporting_resources(
         )
     return BootstrapLoadedResources(
         template_library=template_library,
-        filters=load_run_filters_extended(effective_run_paths),
+        filters=load_run_filters_extended(paths),
         expression_policy=get_dataset_expression_policy(dataset_id),
         historical_state=build_historical_run_state(
-            paths.output_file,
+            paths.output,
             paths.feedback_output,
             repair_corrupt_summary=repair_corrupt_summary,
         ),

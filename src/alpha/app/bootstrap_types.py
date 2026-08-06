@@ -24,20 +24,6 @@ class ResolvedCredentials:
 
 
 @dataclass(frozen=True)
-class BootstrapPaths:
-    """初始化阶段使用的归一化路径快照。"""
-
-    output_file: str
-    log_file: str
-    datasets_root: str
-    template_library_file: str
-    fields_cache_file: str
-    feedback_output: str
-    creds_file: str
-    creds_key_file: str
-
-
-@dataclass(frozen=True)
 class PreparedBootstrapResources:
     """模板、过滤器、反馈和字段等初始化资源集合。"""
 

@@ -19,7 +19,6 @@ from ..analysis.results_persistence import dump_results
 from ..config.application import ApplicationConfig
 from ..core.checkpoint import delete_pipeline_state
 from ..io.results_store import exclusive_results_transaction
-from ..models.io_types import RunPaths
 from ..models.runtime_options import ResultWriteOptions
 from ..runtime.state import InitializedRunContext
 from .bootstrap_pending_checks import refresh_pending_check_results
@@ -27,25 +26,17 @@ from .bootstrap_pending_checks import refresh_pending_check_results
 logger = logging.getLogger(__name__)
 
 
-def _run_path_value(run_paths: RunPaths | None, attr: str) -> str:
-    """从 RunPaths 读取路径属性。"""
-    if run_paths is None:
-        return ""
-    value = getattr(run_paths, attr, "")
-    return str(value or "")
-
-
 def finalize_run(
     args: ApplicationConfig,
     run_ctx: InitializedRunContext,
-    run_paths: RunPaths | None = None,
 ) -> None:
     """写出最终结果并清理运行中间状态。"""
     execution_state = run_ctx.execution_state
     write_options = ResultWriteOptions.from_config(args)
-    output_path = _run_path_value(run_paths, "output") or write_options.output_path
-    feedback_output_path = _run_path_value(run_paths, "feedback_output")
-    state_file = _run_path_value(run_paths, "state_file")
+    paths = args.paths
+    output_path = paths.output
+    feedback_output_path = paths.feedback_output
+    state_file = paths.state_file
     result_ledger = execution_state.result_ledger
     results = result_ledger.results
     pending_before = result_ledger.pending_check_count

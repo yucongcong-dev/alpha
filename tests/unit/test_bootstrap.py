@@ -22,6 +22,7 @@ from alpha.models.runtime_options import FieldSelectionOptions
 def _build_config(**overrides: object) -> ApplicationConfig:
     values: dict[str, object] = {
         "output": "",
+        "feedback_output": "",
         "log_file": "",
         "template_library_file": "",
         "fields_cache_file": "raw-cache.json",
@@ -66,7 +67,9 @@ def _build_config(**overrides: object) -> ApplicationConfig:
         log_file=str(values["log_file"]),
         state_file="state.json",
         checkpoint_file="interrupt.json",
+        datasets_root=str(values.get("datasets_root", "")),
         output=str(values["output"]),
+        feedback_output=str(values["feedback_output"]),
         template_library_file=str(values["template_library_file"]),
         fields_cache_file=str(values["fields_cache_file"]),
         creds_file=str(values["creds_file"]),
@@ -113,15 +116,10 @@ def test_initialize_run_context_closes_clients_when_resources_are_unavailable(
     monkeypatch,
 ) -> None:
     args = _build_config()
-    paths = SimpleNamespace(
-        creds_file="creds.json",
-        creds_key_file="creds.key",
-    )
     closed: list[str] = []
     bootstrap_client = SimpleNamespace(close=lambda: closed.append("bootstrap"))
     client_factory = SimpleNamespace(close=lambda: closed.append("factory"))
 
-    monkeypatch.setattr(bootstrap_module, "resolve_bootstrap_paths", lambda *_args: paths)
     monkeypatch.setattr(bootstrap_module, "prepare_runtime_outputs", lambda *_args, **_kwargs: {})
     monkeypatch.setattr(
         bootstrap_module,
@@ -139,18 +137,12 @@ def test_initialize_run_context_closes_clients_when_resources_are_unavailable(
         lambda *_args, **_kwargs: None,
     )
 
-    assert initialize_run_context(args, None) is None
+    assert initialize_run_context(args) is None
     assert closed == ["bootstrap", "factory"]
 
 
 def test_initialize_run_context_closes_factory_when_state_build_fails(monkeypatch) -> None:
     args = _build_config()
-    paths = SimpleNamespace(
-        creds_file="creds.json",
-        creds_key_file="creds.key",
-        output_file="results.json",
-        datasets_root="datasets",
-    )
     closed: list[str] = []
     bootstrap_client = SimpleNamespace(close=lambda: closed.append("bootstrap"))
     client_factory = SimpleNamespace(close=lambda: closed.append("factory"))
@@ -161,7 +153,6 @@ def test_initialize_run_context_closes_factory_when_state_build_fails(monkeypatc
         run_config={},
     )
 
-    monkeypatch.setattr(bootstrap_module, "resolve_bootstrap_paths", lambda *_args: paths)
     monkeypatch.setattr(bootstrap_module, "prepare_runtime_outputs", lambda *_args, **_kwargs: {})
     monkeypatch.setattr(
         bootstrap_module,
@@ -189,7 +180,7 @@ def test_initialize_run_context_closes_factory_when_state_build_fails(monkeypatc
     )
 
     with pytest.raises(RuntimeError, match="state failed"):
-        initialize_run_context(args, None)
+        initialize_run_context(args)
 
     assert closed == ["bootstrap", "factory"]
 
@@ -226,11 +217,6 @@ def test_prepare_bootstrap_resources_persists_pending_refresh_before_empty_field
 
     monkeypatch.setattr(
         bootstrap_module,
-        "build_effective_run_paths",
-        lambda *_args: SimpleNamespace(),
-    )
-    monkeypatch.setattr(
-        bootstrap_module,
         "load_bootstrap_supporting_resources",
         lambda **_kwargs: supporting_resources,
     )
@@ -248,13 +234,11 @@ def test_prepare_bootstrap_resources_persists_pending_refresh_before_empty_field
     )
 
     result = prepare_bootstrap_resources(
-        SimpleNamespace(),
         SimpleNamespace(dataset_id="fundamental6", check_submission_retries=1, fetch=None),
         SimpleNamespace(),
-        SimpleNamespace(output_file="results.json"),
+        SimpleNamespace(output="results.json", feedback_output=""),
         object(),
         run_config={"run_name": "test"},
-        run_paths=None,
     )
 
     assert result is None
@@ -318,11 +302,6 @@ def test_prepare_bootstrap_resources_refreshes_cross_run_feedback_pending(
 
     monkeypatch.setattr(
         bootstrap_module,
-        "build_effective_run_paths",
-        lambda *_args: SimpleNamespace(),
-    )
-    monkeypatch.setattr(
-        bootstrap_module,
         "load_bootstrap_supporting_resources",
         lambda **_kwargs: supporting_resources,
     )
@@ -340,13 +319,11 @@ def test_prepare_bootstrap_resources_refreshes_cross_run_feedback_pending(
     )
 
     result = prepare_bootstrap_resources(
-        SimpleNamespace(),
         SimpleNamespace(dataset_id="fundamental6", check_submission_retries=1, fetch=None),
         SimpleNamespace(),
-        SimpleNamespace(output_file="run.json", feedback_output="feedback.json"),
+        SimpleNamespace(output="run.json", feedback_output="feedback.json"),
         object(),
         run_config={"run_name": "test"},
-        run_paths=None,
     )
 
     assert result is None
@@ -354,16 +331,11 @@ def test_prepare_bootstrap_resources_refreshes_cross_run_feedback_pending(
     assert reconciliation["feedback_output"] == "feedback.json"
 
 
-def test_initialize_run_context_prefers_run_paths_for_cache_and_credentials(
+def test_initialize_run_context_uses_application_paths_for_cache_and_credentials(
     monkeypatch, tmp_path
 ) -> None:
-    """Runtime initialization should honor normalized run_paths before raw args paths."""
-    args = _build_config()
-    run_paths = RunPaths(
-        results_dir=str(tmp_path / "results"),
-        log_file=str(tmp_path / "run.log"),
-        state_file=str(tmp_path / "state.json"),
-        checkpoint_file=str(tmp_path / "checkpoint.json"),
+    """Runtime initialization should use the normalized paths in ApplicationConfig."""
+    args = _build_config(
         datasets_root=str(tmp_path / "datasets"),
         fields_cache_file=str(tmp_path / "normalized-fields.json"),
         template_library_file=str(tmp_path / "templates.json"),
@@ -460,21 +432,20 @@ def test_initialize_run_context_prefers_run_paths_for_cache_and_credentials(
         lambda **_kwargs: ExecutionState.create(),
     )
 
-    run_ctx = initialize_run_context(args, run_paths)
+    run_ctx = initialize_run_context(args)
 
     assert run_ctx is not None
-    assert captured["creds_file"] == run_paths.creds_file
-    assert captured["creds_key_file"] == run_paths.creds_key_file
-    assert captured["fields_cache_file"] == run_paths.fields_cache_file
-    assert args.paths.creds_file == "raw-creds.json"
-    assert args.paths.creds_key_file == "raw-creds.key"
+    assert captured["creds_file"] == args.paths.creds_file
+    assert captured["creds_key_file"] == args.paths.creds_key_file
+    assert captured["fields_cache_file"] == args.paths.fields_cache_file
 
 
-def test_initialize_run_context_builds_fallback_run_paths_when_missing(
+def test_initialize_run_context_shares_application_paths_with_resource_loaders(
     monkeypatch, tmp_path
 ) -> None:
-    """Initialization should build a minimal RunPaths snapshot when no normalized paths are passed."""
+    """Run config and local filters should receive the same authoritative path snapshot."""
     args = _build_config(
+        datasets_root=str(tmp_path / "datasets"),
         output=str(tmp_path / "raw-output.json"),
         template_library_file=str(tmp_path / "raw-templates.json"),
         include_fields_file=str(tmp_path / "include_fields.txt"),
@@ -568,16 +539,12 @@ def test_initialize_run_context_builds_fallback_run_paths_when_missing(
         lambda **_kwargs: ExecutionState.create(),
     )
 
-    run_ctx = initialize_run_context(args, None)
+    run_ctx = initialize_run_context(args)
 
     assert run_ctx is not None
     run_config_paths = captured["run_paths"]
     filter_paths = captured["filter_paths"]
     assert isinstance(run_config_paths, RunPaths)
     assert isinstance(filter_paths, RunPaths)
-    assert run_config_paths.output == args.paths.output
-    assert run_config_paths.template_library_file == args.paths.template_library_file
-    assert isinstance(run_config_paths.datasets_root, str)
-    assert run_config_paths.datasets_root
-    assert filter_paths.include_fields_file == args.paths.include_fields_file
-    assert filter_paths.exclude_templates_file == args.paths.exclude_templates_file
+    assert run_config_paths is args.paths
+    assert filter_paths is args.paths

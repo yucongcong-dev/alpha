@@ -4,31 +4,9 @@ from __future__ import annotations
 
 from ..core.executor import build_template_build_context
 from ..models.domain import TemplateField
-from ..models.io_types import RunPaths
 from ..models.runtime_options import ResultWriteOptions, TemplateBuildOptions
 from ..runtime.contexts import FutureCompletionContext, TemplateBuildContext
 from ..runtime.state import InitializedRunContext
-
-
-def run_path_value(run_paths: RunPaths | None, attr: str) -> str:
-    """Read a path from RunPaths."""
-    if run_paths is None:
-        return ""
-    value = getattr(run_paths, attr, "")
-    return str(value or "")
-
-
-def resolve_result_write_options(
-    options: ResultWriteOptions,
-    run_paths: RunPaths | None,
-) -> ResultWriteOptions:
-    """Prefer run_paths output over raw args output to avoid legacy mutation coupling."""
-    output_path = run_path_value(run_paths, "output") or options.output_path
-    return ResultWriteOptions(
-        dataset_id=options.dataset_id,
-        output_path=output_path,
-        auto_update_blacklist=options.auto_update_blacklist,
-    )
 
 
 def resolve_future_completion_context(

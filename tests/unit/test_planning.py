@@ -107,7 +107,7 @@ def test_dry_run_plan_uses_local_cache_without_runtime_writes(monkeypatch, tmp_p
     )
 
     before = sorted(str(path.relative_to(tmp_path)) for path in tmp_path.rglob("*"))
-    assert run_dry_run_plan(args, paths) is True
+    assert run_dry_run_plan(args) is True
     after = sorted(str(path.relative_to(tmp_path)) for path in tmp_path.rglob("*"))
 
     assert before == after
@@ -123,4 +123,4 @@ def test_dry_run_plan_fails_without_matching_local_cache(monkeypatch, tmp_path) 
     _patch_local_resources(monkeypatch, HistoricalRunState())
     monkeypatch.setattr("alpha.app.planning.load_fields_cache", lambda *_args, **_kwargs: [])
 
-    assert run_dry_run_plan(args, paths) is False
+    assert run_dry_run_plan(args) is False

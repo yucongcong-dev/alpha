@@ -22,7 +22,6 @@ from .config.yaml import activate_config_from_argv
 
 if TYPE_CHECKING:
     from .config.application import ApplicationConfig
-    from .models.io_types import RunPaths
     from .models.runtime_protocols import CleanRuntimeArgs
     from .runtime.state import InitializedRunContext
 
@@ -60,34 +59,28 @@ def configure_application_logging(config: ApplicationConfig) -> None:
     )
 
 
-def initialize_run_context(
-    config: ApplicationConfig, paths: RunPaths | None
-) -> InitializedRunContext | None:
+def initialize_run_context(config: ApplicationConfig) -> InitializedRunContext | None:
     from .app.bootstrap import initialize_run_context as initialize
 
-    return initialize(config, paths)
+    return initialize(config)
 
 
-def run_dry_run_plan(config: ApplicationConfig, paths: RunPaths | None) -> bool:
+def run_dry_run_plan(config: ApplicationConfig) -> bool:
     from .app.planning import run_dry_run_plan as plan
 
-    return plan(config, paths)
+    return plan(config)
 
 
-def run_field_test_loop(
-    config: ApplicationConfig, run_ctx: InitializedRunContext, paths: RunPaths | None
-) -> None:
+def run_field_test_loop(config: ApplicationConfig, run_ctx: InitializedRunContext) -> None:
     from .app.run_loop import run_field_test_loop as run
 
-    run(args=config, run_ctx=run_ctx, run_paths=paths)
+    run(args=config, run_ctx=run_ctx)
 
 
-def finalize_run(
-    config: ApplicationConfig, run_ctx: InitializedRunContext, paths: RunPaths | None
-) -> None:
+def finalize_run(config: ApplicationConfig, run_ctx: InitializedRunContext) -> None:
     from .app.finalize import finalize_run as finalize
 
-    finalize(args=config, run_ctx=run_ctx, run_paths=paths)
+    finalize(args=config, run_ctx=run_ctx)
 
 
 def main() -> int:
@@ -108,15 +101,15 @@ def main() -> int:
     if config.command == "clean":
         return clean_runtime_artifacts(config.credentials)
     if config.planning.dry_run_plan:
-        return 0 if run_dry_run_plan(config, config.paths) else 1
+        return 0 if run_dry_run_plan(config) else 1
 
-    init_result = initialize_run_context(config, config.paths)
+    init_result = initialize_run_context(config)
     if init_result is None:
         return 1
 
     try:
-        run_field_test_loop(config, init_result, config.paths)
-        finalize_run(config, init_result, config.paths)
+        run_field_test_loop(config, init_result)
+        finalize_run(config, init_result)
     finally:
         init_result.client_factory.close()
     return 0

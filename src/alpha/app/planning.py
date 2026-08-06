@@ -7,33 +7,27 @@ import logging
 from ..config.application import ApplicationConfig
 from ..core.executor import print_dry_run_plan
 from ..generators.fields import load_fields_cache
-from ..models.io_types import RunPaths
 from ..models.runtime_options import (
     BootstrapFieldOptions,
-    BootstrapPathOptions,
     TemplateBuildOptions,
 )
 from .bootstrap_fields import prepare_fields_for_execution
-from .bootstrap_runtime_outputs import build_effective_run_paths, resolve_bootstrap_paths
 from .bootstrap_state import create_execution_state
 from .bootstrap_supporting_resources import load_supporting_resources
 
 logger = logging.getLogger(__name__)
 
 
-def run_dry_run_plan(args: ApplicationConfig, run_paths: RunPaths | None) -> bool:
+def run_dry_run_plan(args: ApplicationConfig) -> bool:
     """Print a plan from local resources without authentication or filesystem writes."""
-    path_options = BootstrapPathOptions.from_config(args)
     field_options = BootstrapFieldOptions.from_config(args)
     template_options = TemplateBuildOptions.from_config(args)
-    paths = resolve_bootstrap_paths(path_options, run_paths)
-    effective_run_paths = build_effective_run_paths(path_options, paths, run_paths)
+    paths = args.paths
     dataset_id = field_options.dataset_id
 
     supporting_resources = load_supporting_resources(
         dataset_id=dataset_id,
         paths=paths,
-        effective_run_paths=effective_run_paths,
         repair_corrupt_summary=False,
         log_blacklist=False,
     )
