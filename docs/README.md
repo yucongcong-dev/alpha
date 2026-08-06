@@ -37,6 +37,15 @@
 - [2026-08-03 Operators 快照](source_snapshots/worldquant_operators_2026-08-03/README.md)
 - [2026-08-04 增量复核](source_snapshots/worldquant_review_2026-08-04/README.md)
 
+### 当前同步范围
+
+| 官网区域 | 本地覆盖 | 边界 |
+|---|---|---|
+| Learn Documentation | `24/24` 篇正文、元数据和官方 URL 已保存在 `2026-08-03` 快照；`2026-08-04` 登录官网复核未发现实质正文变化 | `01-05` 只整合会改变研究、平台判断或操作流程的内容；完整例子和基础材料仍以原始快照为证据，不在主文档重复全文 |
+| Learn Courses | 已记录 `2026-07-31` 可见的 `10` 门课程、`46` 个视频课时及主题地图 | 未播放、未转录的视频不写成官方逐字知识；课程与赛事内容会动态变化 |
+| Data | 五篇 Understanding Data 文档已整合到 `02/04`；数据集长期结论保存在 `datasets/<dataset_id>/` | 平台全部 dataset/data field 是动态账号数据，不做 Git 全量镜像；API 字段缓存属于可重建本地状态，不提交 |
+| Operators | 已保存 `2026-08-03` 当前账号可见的 `7` 类、`66` 个 base operators 及签名说明 | 不是全平台永久全集；Learn 教程提到的算子也可能不在当前账号 Operators API 中，实际可用性以当前页面/API 和模拟结果为准 |
+
 动态数量、阈值和平台规则必须附核对日期。Community 经验只能作为补充，不能覆盖官方正文
 或实际 Check Submission 结果。
 
