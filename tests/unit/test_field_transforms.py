@@ -2,16 +2,17 @@ from __future__ import annotations
 
 from dataclasses import replace
 
-from alpha.config import FieldTransformSpec, FieldTransformStage
+from alpha.config.models import FieldTransformSpec, FieldTransformStage
 from alpha.generators.expression_builder import build_expression_candidates
 from alpha.generators.field_transforms import (
     apply_transform_pipeline,
     build_field_view,
     iter_transform_stages,
 )
-from alpha.generators.templates import load_template_library
-from alpha.models import TemplateBuildContext, TemplateBuildOptions
+from alpha.generators.templates.library_loader import load_template_library
+from alpha.models.runtime_options import TemplateBuildOptions
 from alpha.policy.expression import get_dataset_expression_policy
+from alpha.runtime.contexts import TemplateBuildContext
 
 _DEFAULT_SIM_SETTINGS = {
     "region": "USA",

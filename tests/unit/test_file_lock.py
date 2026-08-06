@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from types import SimpleNamespace
 
-from alpha.io import file_lock
+import alpha.io.file_lock as file_lock
 
 
 def test_thread_lock_reuses_canonical_lock_object(tmp_path) -> None:

@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 from alpha.app.run_loop_feedback import refresh_runtime_feedback
-from alpha.models import TemplateBuildContext, TemplateBuildOptions
 from alpha.models.domain import FieldTestResult
+from alpha.models.runtime_options import TemplateBuildOptions
+from alpha.runtime.contexts import TemplateBuildContext
 
 _DEFAULT_SIM_SETTINGS = {
     "region": "USA",

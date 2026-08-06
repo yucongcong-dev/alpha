@@ -13,10 +13,11 @@ from alpha.app.bootstrap import initialize_run_context, prepare_bootstrap_resour
 from alpha.app.bootstrap_field_resources import log_field_selection_stats
 from alpha.app.bootstrap_supporting_resources import BootstrapLoadedResources
 from alpha.config.application import ApplicationConfig
-from alpha.models import ExecutionState, HistoricalRunState
 from alpha.models.domain import FieldTestResult, TemplateField
 from alpha.models.io_types import RunFilters, RunPaths
 from alpha.models.runtime_options import FieldSelectionOptions
+from alpha.runtime.contexts import HistoricalRunState
+from alpha.runtime.state import ExecutionState
 
 
 def _build_config(**overrides: object) -> ApplicationConfig:

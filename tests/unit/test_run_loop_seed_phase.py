@@ -3,8 +3,9 @@
 from concurrent.futures import Future
 
 from alpha.app.run_loop_seed_phase import SeedPhaseState
-from alpha.models import ExecutionState, PendingFutureContext
 from alpha.models.domain import FieldTestResult, TemplateField
+from alpha.runtime.contexts import PendingFutureContext
+from alpha.runtime.state import ExecutionState
 
 
 def test_seed_phase_tracks_resolved_and_inflight_fields() -> None:

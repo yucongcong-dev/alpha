@@ -9,14 +9,11 @@ from unittest.mock import patch
 
 from alpha.app.finalize import finalize_run
 from alpha.config.application import ApplicationConfig
-from alpha.models import (
-    ExecutionState,
-    HistoricalRunState,
-    InitializedRunContext,
-    RuntimeConcurrencyState,
-)
 from alpha.models.domain import FieldTestResult
 from alpha.models.io_types import RunFilters, RunPaths
+from alpha.runtime.concurrency import RuntimeConcurrencyState
+from alpha.runtime.contexts import HistoricalRunState
+from alpha.runtime.state import ExecutionState, InitializedRunContext
 
 
 def _build_run_ctx(*, client_factory=None) -> InitializedRunContext:

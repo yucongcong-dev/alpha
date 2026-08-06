@@ -11,16 +11,12 @@ from alpha.core.executor import (
     build_template_build_context,
     print_dry_run_plan,
 )
-from alpha.models import (
-    ExecutionState,
-    HistoricalRunState,
-    PendingTemplateEntry,
-    TemplateBuildContext,
-    TemplateBuildOptions,
-)
 from alpha.models.domain import SettingsVariant, TemplateCandidate, TemplateField
 from alpha.models.io_types import RunFilters
+from alpha.models.runtime_options import TemplateBuildOptions
 from alpha.policy.expression import get_dataset_expression_policy
+from alpha.runtime.contexts import HistoricalRunState, PendingTemplateEntry, TemplateBuildContext
+from alpha.runtime.state import ExecutionState
 
 from .template_build_options_support import template_build_options
 

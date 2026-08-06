@@ -14,18 +14,19 @@ import pytest
 
 from alpha.generators.expression_builder import build_expression_candidates
 from alpha.generators.ratio_templates import build_high_conviction_ratio_templates
-from alpha.generators.templates import load_template_library
 from alpha.generators.templates.classification import (
     classify_expression_family,
     is_legacy_family,
 )
+from alpha.generators.templates.library_loader import load_template_library
 from alpha.generators.templates.wrappers import (
     build_bucket_group_templates,
     build_trade_when_templates,
 )
-from alpha.models import TemplateBuildContext, TemplateBuildOptions
 from alpha.models.domain import TemplateLibraryItem
+from alpha.models.runtime_options import TemplateBuildOptions
 from alpha.policy.expression import get_dataset_expression_policy
+from alpha.runtime.contexts import TemplateBuildContext
 
 _DEFAULT_SIM_SETTINGS = {
     "region": "USA",

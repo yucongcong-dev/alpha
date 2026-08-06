@@ -6,7 +6,7 @@ from dataclasses import replace
 from datetime import date
 
 from alpha.config.simulation_dates import resolve_simulation_dates
-from alpha.generators import payload as payload_module
+import alpha.generators.payload as payload_module
 from alpha.models.runtime_config import SimulationSettingsConfig
 
 _SETTINGS = SimulationSettingsConfig(

@@ -7,8 +7,8 @@ import sys
 import pytest
 
 from alpha.cli.parser import parse_args
-from alpha.config import get_yaml_config
 from alpha.config.constants import FULL_RUN_MAX_TOTAL_SIMULATIONS
+from alpha.config.yaml import get_yaml_config
 
 
 def clear_yaml_cache() -> None:

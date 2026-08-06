@@ -4,8 +4,10 @@ from __future__ import annotations
 
 import alpha.analysis.results_persistence as results_persistence
 import alpha.core.result_processing as result_processing
-from alpha.models import ExecutionState, FutureCompletionContext, ResultWriteOptions
 from alpha.models.domain import FieldTestResult
+from alpha.models.runtime_options import ResultWriteOptions
+from alpha.runtime.contexts import FutureCompletionContext
+from alpha.runtime.state import ExecutionState
 
 
 def test_build_result_processing_services_reads_current_dependencies(monkeypatch) -> None:

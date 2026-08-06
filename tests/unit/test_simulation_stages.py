@@ -4,9 +4,9 @@ from __future__ import annotations
 
 from unittest.mock import patch
 
-from alpha.core import simulation_create as create_stages
-from alpha.core import simulation_poll as poll_stages
-from alpha.core import submission_checks as check_stages
+import alpha.core.simulation_create as create_stages
+import alpha.core.simulation_poll as poll_stages
+import alpha.core.submission_checks as check_stages
 from alpha.exceptions import BrainStopRequested
 from alpha.models.domain import FailedCheck, FieldTestContext, FieldTestResult, SettingsVariant
 from tests.unit.simulation_config_support import build_simulation_stage_config

@@ -14,21 +14,19 @@ import time
 
 import pytest
 
-from alpha.config import (
+from alpha.config.constants import (
     API_BASE,
     AUTH_URL,
     DEFAULT_DATASET_ID,
     SIM_ACCEPT_HEADER,
     VERSION_HEADER,
-    FieldTransformStage,
-    get_yaml_config,
 )
 from alpha.config.expression_policy_coercion import coerce_expression_policy_override
 from alpha.config.expression_policy_merging import (
     expression_policy_overrides_for_dataset,
 )
 from alpha.config.expression_policy_schema import EXPRESSION_POLICY_TYPED_OVERRIDE_FIELDS
-from alpha.config.models import DatasetExpressionPolicy
+from alpha.config.models import DatasetExpressionPolicy, FieldTransformStage
 from alpha.config.runtime_values import (
     clear_runtime_config_cache,
     get_runtime_config,
@@ -39,6 +37,7 @@ from alpha.config.strategy_profiles import load_strategy_profile_schemas
 from alpha.config.yaml import (
     clear_yaml_caches,
     get_active_config_path,
+    get_yaml_config,
     set_active_config_path,
     validate_yaml_config,
 )

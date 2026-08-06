@@ -78,11 +78,37 @@ def test_removed_compat_file_check_rejects_models_runtime_facade(tmp_path: Path)
     assert any("src/alpha/models/runtime.py" in error for error in errors)
 
 
+def test_removed_compat_file_check_rejects_dynamic_facade_helper(tmp_path: Path) -> None:
+    alpha_dir = tmp_path / "src" / "alpha"
+    app_dir = alpha_dir / "app"
+    app_dir.mkdir(parents=True)
+    (alpha_dir / "_facade.py").write_text("", encoding="utf-8")
+
+    errors = check_repo.removed_compat_file_check(tmp_path)
+
+    assert any("compatibility aggregate files" in error for error in errors)
+    assert any("src/alpha/_facade.py" in error for error in errors)
+
+
 def test_compat_import_check_rejects_package_facade_import(tmp_path: Path) -> None:
     test_file = tmp_path / "tests" / "test_legacy.py"
     test_file.parent.mkdir(parents=True)
     test_file.write_text(
         "from alpha." + "run_loop import run_field_test_loop\n",
+        encoding="utf-8",
+    )
+
+    errors = check_repo.compat_import_check(tmp_path)
+
+    assert any("canonical modules" in error for error in errors)
+    assert any("tests/test_legacy.py:1" in error for error in errors)
+
+
+def test_compat_import_check_rejects_symbol_package_export(tmp_path: Path) -> None:
+    test_file = tmp_path / "tests" / "test_legacy.py"
+    test_file.parent.mkdir(parents=True)
+    test_file.write_text(
+        "from alpha." + "models import ExecutionState\n",
         encoding="utf-8",
     )
 

@@ -11,8 +11,9 @@ from typing import Any
 
 import pytest
 
-from alpha.models import ExecutionState, RuntimeConcurrencyState
 from alpha.models.domain import FieldTestContext, FieldTestResult
+from alpha.runtime.concurrency import RuntimeConcurrencyState
+from alpha.runtime.state import ExecutionState
 
 # ============================================================================
 # 常量定义

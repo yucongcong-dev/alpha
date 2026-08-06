@@ -1,34 +1,8 @@
-"""
-WorldQuant BRAIN Alpha 自动生成与测试工具包。
-
-本工具包用于：
-- 自动生成 Alpha 表达式
-- 批量回测并筛选可提交的 Alpha
-- 分析失败原因并迭代优化策略
-
-包结构：
-    utils/          公共工具函数
-    models/         数据类定义
-    api/            Brain API 客户端
-    generators/     Alpha 生成器（模板、表达式、字段、参数）
-    analysis/       分析与优化（统计、反馈迭代）
-    core/           核心执行业务
-    io/             输入输出（凭证、结果持久化）
-    cli/            命令行接口
-    config.py       配置常量
-    exceptions.py   自定义异常类
-    main.py         主入口函数
-
-使用方式：
-    python -m alpha --smoke-test
-    python -m alpha --dry-run-plan
-    python -m alpha --limit 50
-"""
+"""WorldQuant BRAIN Alpha command-line runner."""
 
 from __future__ import annotations
 
 import sys
-from typing import TYPE_CHECKING
 
 if sys.version_info < (3, 10):
     version = f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"
@@ -37,79 +11,5 @@ if sys.version_info < (3, 10):
         f"Current interpreter: {version}. Please switch to Python 3.10 or newer."
     )
 
-from ._facade import facade_dir, resolve_export
-
-if TYPE_CHECKING:
-    from .config import (
-        ALPHAS_URL,
-        API_BASE,
-        AUTH_URL,
-        DATA_FIELDS_URL,
-        DEFAULT_DATASET_ID,
-        DEFAULT_HEADERS,
-        SIM_ACCEPT_HEADER,
-        SIMULATIONS_URL,
-        VERSION_HEADER,
-    )
-    from .exceptions import BrainAPIError, BrainQueueBusyError, BrainRateLimitError
-    from .generators import choose_field_name, choose_field_type
-    from .models import (
-        DatasetExpressionPolicy,
-        ExecutionState,
-        FieldTestResult,
-        FieldView,
-        HistoricalRunState,
-        RunFilters,
-        RunPaths,
-        RuntimeConcurrencyState,
-        SettingsVariant,
-        TemplateLibrary,
-    )
-    from .utils import first_non_empty
-
 __version__ = "1.0.0"
 __author__ = "Alpha Generator Team"
-
-_EXPORT_MAP: dict[str, tuple[str, str]] = {
-    "ALPHAS_URL": (".config", "ALPHAS_URL"),
-    "API_BASE": (".config", "API_BASE"),
-    "AUTH_URL": (".config", "AUTH_URL"),
-    "DATA_FIELDS_URL": (".config", "DATA_FIELDS_URL"),
-    "DEFAULT_DATASET_ID": (".config", "DEFAULT_DATASET_ID"),
-    "DEFAULT_HEADERS": (".config", "DEFAULT_HEADERS"),
-    "SIM_ACCEPT_HEADER": (".config", "SIM_ACCEPT_HEADER"),
-    "SIMULATIONS_URL": (".config", "SIMULATIONS_URL"),
-    "VERSION_HEADER": (".config", "VERSION_HEADER"),
-    "BrainAPIError": (".exceptions", "BrainAPIError"),
-    "BrainQueueBusyError": (".exceptions", "BrainQueueBusyError"),
-    "BrainRateLimitError": (".exceptions", "BrainRateLimitError"),
-    "choose_field_name": (".generators", "choose_field_name"),
-    "choose_field_type": (".generators", "choose_field_type"),
-    "DatasetExpressionPolicy": (".models", "DatasetExpressionPolicy"),
-    "ExecutionState": (".models", "ExecutionState"),
-    "FieldTestResult": (".models", "FieldTestResult"),
-    "FieldView": (".models", "FieldView"),
-    "HistoricalRunState": (".models", "HistoricalRunState"),
-    "RunFilters": (".models", "RunFilters"),
-    "RunPaths": (".models", "RunPaths"),
-    "RuntimeConcurrencyState": (".models", "RuntimeConcurrencyState"),
-    "SettingsVariant": (".models", "SettingsVariant"),
-    "TemplateLibrary": (".models", "TemplateLibrary"),
-    "first_non_empty": (".utils", "first_non_empty"),
-}
-
-__all__ = [*list(_EXPORT_MAP), "__author__", "__version__"]
-
-
-def __getattr__(name: str) -> object:
-    return resolve_export(
-        name=name,
-        export_map=_EXPORT_MAP,
-        package=__package__,
-        namespace=__name__,
-        target_globals=globals(),
-    )
-
-
-def __dir__() -> list[str]:
-    return facade_dir(globals(), _EXPORT_MAP)

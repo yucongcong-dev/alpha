@@ -18,9 +18,9 @@ from alpha.core.simulation import (
 from alpha.core.simulation_create import run_simulation_create_stage
 from alpha.core.simulation_poll import run_simulation_poll_stage
 from alpha.exceptions import BrainStopRequested
-from alpha.models import PendingFutureContext
 from alpha.models.domain import FieldTestContext, FieldTestResult, SettingsVariant, TemplateField
 from alpha.models.runtime_config import SimulationStageConfig
+from alpha.runtime.contexts import PendingFutureContext
 from tests.unit.simulation_config_support import build_simulation_stage_config
 
 

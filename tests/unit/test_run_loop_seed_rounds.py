@@ -7,8 +7,8 @@ from unittest.mock import patch
 
 from alpha.app.run_loop_feedback import RuntimeFeedbackRefresh
 from alpha.app.run_loop_rounds import execute_schedule_round
-from alpha.models import PendingFutureContext, PendingTemplateEntry
 from alpha.models.domain import FieldTestResult, SettingsVariant
+from alpha.runtime.contexts import PendingFutureContext, PendingTemplateEntry
 from tests.unit.run_loop_rounds_support import build_round_context as _build_context
 
 

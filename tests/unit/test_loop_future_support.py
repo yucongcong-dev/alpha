@@ -13,8 +13,9 @@ from alpha.app.loop_future_support import (
     submit_template_future,
     wait_for_inflight_simulation_metadata,
 )
-from alpha.models import ExecutionState, PendingFutureContext
 from alpha.models.domain import FieldTestResult, SettingsVariant, TemplateField
+from alpha.runtime.contexts import PendingFutureContext
+from alpha.runtime.state import ExecutionState
 from tests.unit.simulation_config_support import build_simulation_stage_config
 
 

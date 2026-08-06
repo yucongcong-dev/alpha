@@ -10,7 +10,7 @@ import pytest
 from alpha.cli.parser import parse_application_config, parse_args
 from alpha.cli.path_resolution import normalize_args_paths
 from alpha.cli.run_config import build_run_config_snapshot
-from alpha.config import get_yaml_config
+from alpha.config.yaml import get_yaml_config
 from alpha.models.runtime_options import ResultWriteOptions
 
 

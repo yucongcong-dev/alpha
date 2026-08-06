@@ -5,8 +5,9 @@ from __future__ import annotations
 from alpha.config.models import DatasetExpressionPolicy, FeedbackLoopPolicy, FeedbackPhasePolicy
 import alpha.core.template_planning as template_planning
 from alpha.core.template_planning import build_pending_template_variants
-from alpha.models import TemplateBuildContext, TemplateBuildOptions
 from alpha.models.domain import TemplateCandidate
+from alpha.models.runtime_options import TemplateBuildOptions
+from alpha.runtime.contexts import TemplateBuildContext
 
 _DEFAULT_SIM_SETTINGS = {
     "region": "USA",

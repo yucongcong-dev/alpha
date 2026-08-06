@@ -128,6 +128,9 @@ def removed_compat_file_check(root: Path) -> list[str]:
     models_runtime = root / "src" / "alpha" / "models" / "runtime.py"
     if models_runtime.is_file():
         removed.append(models_runtime)
+    facade_helper = root / "src" / "alpha" / "_facade.py"
+    if facade_helper.is_file():
+        removed.append(facade_helper)
     if removed:
         return [
             "[check] compatibility aggregate files were removed; import concrete modules",
@@ -140,7 +143,8 @@ def compat_import_check(root: Path) -> list[str]:
     errors: list[str] = []
     tests_pattern = re.compile(
         r"from alpha\.models\.base|from alpha\.(bootstrap|run_loop|finalize|loop_)|"
-        r"from alpha\.generators\.settings|from alpha\.models\.runtime import"
+        r"from alpha\.generators\.settings|from alpha\.models\.runtime import|"
+        r"from alpha\.(analysis|core|config|generators|io|models|policy|runtime|utils) import"
     )
     errors.extend(
         f"[check] tests should import canonical modules instead of compatibility exports\n{match}"

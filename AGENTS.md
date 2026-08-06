@@ -25,7 +25,7 @@
 - 如果核心逻辑只需要少数字段，不要传完整 `args` 对象。优先新增或复用窄配置类型，例如
   `FieldFetchOptions`、`FieldSelectionOptions`、`TemplateBuildOptions`、
   `ResultWriteOptions`。
-- 如果兼容 facade 仍然存在，除非为了兼容性，不要继续扩展它。内部代码优先导入具体模块。
+- 项目是纯 CLI，不维护包级兼容 facade 或 Python 公共导出面；代码和测试都应导入具体模块。
 
 ## 状态边界
 

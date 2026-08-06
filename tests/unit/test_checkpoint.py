@@ -5,14 +5,16 @@ from __future__ import annotations
 import json
 from unittest.mock import patch
 
-from alpha.core import checkpoint as checkpoint_module
+import alpha.core.checkpoint as checkpoint_module
 from alpha.core.checkpoint import (
     delete_pipeline_state,
     load_pipeline_state,
     save_interrupt_report,
     save_pipeline_state,
 )
-from alpha.models import ExecutionState, PendingFutureContext, RuntimeConcurrencyState
+from alpha.runtime.concurrency import RuntimeConcurrencyState
+from alpha.runtime.contexts import PendingFutureContext
+from alpha.runtime.state import ExecutionState
 
 
 def _build_execution_state() -> ExecutionState:
