@@ -29,7 +29,7 @@ datasets/<dataset_id>/
 
 | 数据集 | 状态 | 现役 preset |
 | --- | --- | --- |
-| `analyst4` | 探索 | `eps_dispersion_seed` |
+| `analyst4` | 探索 | `sales_guidance_seed` |
 | `fundamental2` | 暂停 | 无 |
 | `fundamental6` | 暂停 | 无 |
 | `option8` | 基线保留 | `subindustry_refine` |
@@ -39,6 +39,6 @@ datasets/<dataset_id>/
 | `option9` | 暂停 | 无 |
 | `news18` | 暂停 | 无 |
 
-`analyst4` 是当前唯一现役 explore 数据集。季度 EPS surprise 与 VECTOR EPS revision
-均已关闭，当前只运行最后两条独立 dispersion 种子；若仍失败则暂停，不直接扫描完整
-1324 字段池。
+`analyst4` 是当前唯一现役 explore 数据集。EPS surprise、revision 和 dispersion 均已关闭，
+当前验证公司销售指引区间；若失败，再验证销售预期修正。新增总预算最多 4 次，不直接扫描
+完整 1324 字段池。

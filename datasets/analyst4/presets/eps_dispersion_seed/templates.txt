@@ -1,2 +1,0 @@
-analyst4_eps_dispersion_price_zscore_252
-analyst4_eps_dispersion_price_delta_over_std_63_126

@@ -41,8 +41,22 @@ Decay 或 Truncation sweep。
 两条结构均明显失败，revision 方向关闭，原 `eps_revision_seed` preset 已删除。不做符号、
 窗口、Decay 或 Truncation sweep；负号翻转后的绝对 Sharpe 也仍低于提交要求。
 
+## Annual EPS estimate dispersion
+
+该实验比较年度 EPS 预期上界与下界。两个字段当时的 Coverage 均约为 `99%`，Alpha Count
+分别为 `86` 和 `45`。
+
+| 结构 | Alpha ID | Sharpe | Fitness | 其他检查 |
+|---|---|---:|---:|---|
+| dispersion/price 的 252 日 zscore | `rK2EQL98` | 0.39 | 0.13 | Self Correlation PENDING |
+| dispersion/price 的 63/126 变化率 | `KPGqxweN` | 0.49 | 0.19 | Self Correlation PENDING |
+
+两条结构虽为正值，但距离 Sharpe `1.25` 和 Fitness `1.0` 的要求较远，不属于 near-pass。
+EPS dispersion 方向关闭，原 `eps_dispersion_seed` preset 已删除，不做局部窗口或参数变体。
+
 ## 后续边界
 
-surprise 与 revision 是两条已经关闭的独立假设。最后只允许
-`eps_dispersion_seed` 的两次 simulation，验证年度 EPS 预期上下界差异。若 dispersion
-也没有形成正向基线，暂停 `analyst4`，不扩大到完整 1324 字段池。
+已关闭的 surprise、revision 和 dispersion 都属于 EPS 研究，不能外推为整个 `analyst4`
+失败。下一条独立假设是公司销售指引区间，仅允许 `sales_guidance_seed` 的两次 simulation；
+若失败，再运行 `sales_revision_seed` 的两次 simulation。两个销售方向都没有形成正向基线
+后暂停 `analyst4`，不研究 recommendation，也不扩大到完整 1324 字段池。

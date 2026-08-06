@@ -1,0 +1,30 @@
+{
+  "_comment": "Event-level sales estimate revision: current estimate versus the previous estimate.",
+  "_comment_placeholders": "{field}=sales_estimate_value; VECTOR fields are expanded to one vec_avg() by the generator",
+  "_dataset_id": "analyst4",
+  "default": [],
+  "VECTOR": [
+    {
+      "name": "analyst4_sales_revision_zscore_126",
+      "expression": "group_rank(ts_zscore(winsorize(ts_backfill({field} - vec_avg(sales_previous_estimate_value), 20), std=4), 126), subindustry)",
+      "priority": 1000,
+      "family": "sales_estimate_revision_level",
+      "layer": "composite",
+      "stage": "group_second_order",
+      "dataset_tags": ["analyst4", "sales", "estimate_revision", "sales_revision_seed"],
+      "role": "conditional_seed",
+      "activation_scope": "broad"
+    },
+    {
+      "name": "analyst4_sales_revision_delta_over_std_20_126",
+      "expression": "group_rank(ts_delta(winsorize(ts_backfill({field} - vec_avg(sales_previous_estimate_value), 20), std=4), 20) / ts_std_dev(winsorize(ts_backfill({field} - vec_avg(sales_previous_estimate_value), 20), std=4), 126), subindustry)",
+      "priority": 990,
+      "family": "sales_estimate_revision_change",
+      "layer": "composite",
+      "stage": "group_second_order",
+      "dataset_tags": ["analyst4", "sales", "estimate_revision", "sales_revision_seed"],
+      "role": "conditional_seed",
+      "activation_scope": "broad"
+    }
+  ]
+}
