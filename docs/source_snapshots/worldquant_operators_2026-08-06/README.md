@@ -3,9 +3,8 @@
 Source: https://api.worldquantbrain.com/operators
 Captured: 2026-08-06
 Official source: WorldQuant BRAIN Operators API
-Capture method: embedded_historical_fallback
-Fallback data captured: 2026-08-03
-Fallback note: the 2026-08-06 API request returned 401, so this directory embeds the latest previously captured official payload.
+Capture method: local_snapshot_fallback
+Fallback source: docs/source_snapshots/worldquant_operators_2026-08-06/operators.json
 
 Total operators: 66
 

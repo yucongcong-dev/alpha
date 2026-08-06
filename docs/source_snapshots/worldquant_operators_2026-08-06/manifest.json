@@ -1,9 +1,8 @@
 {
   "captured": "2026-08-06",
   "source": "https://api.worldquantbrain.com/operators",
-  "capture_source": "embedded_historical_fallback",
-  "source_snapshot": null,
-  "source_snapshot_captured": "2026-08-03",
+  "capture_source": "local_snapshot_fallback",
+  "source_snapshot": "docs/source_snapshots/worldquant_operators_2026-08-06/operators.json",
   "count": 66,
   "categories": [
     {
