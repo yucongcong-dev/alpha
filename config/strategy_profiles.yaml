@@ -31,7 +31,7 @@ strategy_profiles:
         - field_min_user_count
     notes:
       - "适合新数据集、字段族覆盖尚不清楚、模板表现还没有稳定反馈时使用。"
-      - "不应把 explore 调成提交收敛模式；提交门槛和黑名单提升应放到 submit-focused。"
+      - "不应把 explore 调成候选收敛模式；质量门槛和黑名单提升应放到 candidate-focused。"
     runtime_defaults: {}
 
   refine:
@@ -66,13 +66,12 @@ strategy_profiles:
         max_templates_per_field: 4
         field_template_batch_size: 2
 
-  submit-focused:
-    purpose: "提交导向收敛，优先控制风险、相关性和可提交数量。"
-    primary_goal: "减少噪声搜索，把预算集中到最可能提交的候选。"
+  candidate-focused:
+    purpose: "候选质量收敛，优先控制风险、相关性和稳健性。"
+    primary_goal: "减少噪声搜索，把预算集中到最值得继续优化和人工评估的候选。"
     tuning_keys:
       filters:
         - top_fields_by_feedback
-        - stop_after_submittable
       quality:
         - min_sharpe
         - min_fitness
@@ -88,7 +87,8 @@ strategy_profiles:
         - closed_default_template_library
         - protected_templates
     notes:
-      - "适合候选池已经较清楚、目标是少量高质量提交前验证时使用。"
+      - "适合候选池已经较清楚、需要对少量高质量候选继续验证和优化时使用。"
+      - "通过 submission check 只是候选信号，不会触发停止或正式提交。"
       - "自动学习默认关闭；显式开启时直接更新长期 blacklist.json。"
     runtime_defaults:
       limits:
@@ -97,4 +97,3 @@ strategy_profiles:
         field_template_batch_size: 1
       filters:
         top_fields_by_feedback: 20
-        stop_after_submittable: 1

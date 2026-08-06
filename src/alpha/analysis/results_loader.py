@@ -18,7 +18,6 @@ from ..config.constants import (
     STAT_FIELD_FIELD_NAME,
     STAT_FIELD_FIELD_TYPE,
     STAT_FIELD_SUBMITTABLE,
-    STAT_FIELD_SUBMITTED,
     STAT_FIELD_TEMPLATE_NAME,
 )
 from ..io.output_paths import build_output_sidecar_paths
@@ -81,7 +80,6 @@ def _rows_to_results(rows: list[Any], *, source: str) -> list[FieldTestResult]:
                     alpha_id=row.get("alpha_id"),
                     status=str(row.get(API_KEY_STATUS, SENTINEL_UNKNOWN_STATUS)),
                     submittable=row.get(STAT_FIELD_SUBMITTABLE),
-                    submitted=bool(row.get(STAT_FIELD_SUBMITTED, False)),
                     message=str(row.get(API_KEY_MESSAGE, "")),
                     expression=str(row.get("expression", "")),
                     settings_fingerprint=str(row.get("settings_fingerprint", "")),

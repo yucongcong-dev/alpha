@@ -223,7 +223,7 @@ def submit_resumable_futures(
 ) -> int:
     """Submit restored remote simulations for polling before scheduling new work."""
     pending_contexts = execution_state.future_queue.take_resumable_batch()
-    submitted_count = 0
+    scheduled_count = 0
     try:
         for pending_context in pending_contexts:
             future = executor.submit(
@@ -236,13 +236,13 @@ def submit_resumable_futures(
             )
             typed_future: Future[FieldTestResult] = future
             execution_state.future_queue.register(typed_future, pending_context)
-            submitted_count += 1
+            scheduled_count += 1
     except Exception:
-        execution_state.future_queue.restore_resumable_batch(pending_contexts[submitted_count:])
+        execution_state.future_queue.restore_resumable_batch(pending_contexts[scheduled_count:])
         raise
     if pending_contexts:
         logger.info(
-            "[resume] submitted %d simulations for continued polling", len(pending_contexts)
+            "[resume] scheduled %d simulations for continued polling", len(pending_contexts)
         )
     return len(pending_contexts)
 

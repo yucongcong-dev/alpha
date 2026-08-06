@@ -96,7 +96,6 @@ class PlanningConfig:
     field_template_batch_size: int
     legacy_similarity_penalty: int
     top_fields_by_feedback: int
-    stop_after_submittable: int
 
     @classmethod
     def from_args(cls, args: object) -> PlanningConfig:
@@ -114,7 +113,6 @@ class PlanningConfig:
             field_template_batch_size=int(_value(args, "field_template_batch_size", 0) or 0),
             legacy_similarity_penalty=int(_value(args, "legacy_similarity_penalty", 0) or 0),
             top_fields_by_feedback=int(_value(args, "top_fields_by_feedback", 0) or 0),
-            stop_after_submittable=int(_value(args, "stop_after_submittable", 0) or 0),
         )
 
 

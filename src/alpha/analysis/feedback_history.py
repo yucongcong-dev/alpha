@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from collections.abc import Sequence
 from dataclasses import replace
 from datetime import datetime, timezone
 from pathlib import Path
@@ -22,7 +21,6 @@ from .feedback_run_index import (
     run_summary_key,
 )
 from .feedback_stats import compile_field_feedback, compile_global_failed_check_counts
-from .field_stats import current_submittable_count
 from .result_identity import attempted_template_keys, merge_latest_results_by_identity
 from .result_provenance import enrich_results_provenance
 from .results_loader import load_existing_results
@@ -154,16 +152,3 @@ def choose_settings_variant_budget(
     if stage == FEEDBACK_STAGE_RESIMULATE:
         return policy.feedback_loop_policy.resimulate.settings_variant_budget
     return policy.feedback_loop_policy.generate.settings_variant_budget
-
-
-def should_stop_after_submittable(
-    stop_threshold: int,
-    results: Sequence[FieldTestResult],
-    *,
-    baseline_count: int = 0,
-) -> bool:
-    """判断本次启动后新增的可提交结果是否达到停止阈值。"""
-    if stop_threshold <= 0:
-        return False
-    current_count = max(0, current_submittable_count(results) - baseline_count)
-    return bool(current_count >= stop_threshold)

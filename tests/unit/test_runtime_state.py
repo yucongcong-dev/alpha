@@ -3,12 +3,10 @@
 from __future__ import annotations
 
 from concurrent.futures import Future
-from unittest.mock import patch
 
-from alpha.app.bootstrap_state import create_execution_state
 from alpha.config.application_sections import QualityConfig
 from alpha.models.domain import FailedCheck, FieldTestResult
-from alpha.runtime.contexts import HistoricalRunState, PendingFutureContext
+from alpha.runtime.contexts import PendingFutureContext
 from alpha.runtime.state import ExecutionState
 
 
@@ -26,7 +24,6 @@ def test_execution_metrics_follow_results_without_manual_refresh() -> None:
             template_name="tpl",
             status="simulated",
             submittable=True,
-            submitted=True,
             expression="rank(field_1)",
         )
     )
@@ -34,7 +31,6 @@ def test_execution_metrics_follow_results_without_manual_refresh() -> None:
     ledger = state.result_ledger
     assert ledger.unique_field_ids == {"field_1"}
     assert ledger.submittable_count == 1
-    assert ledger.submitted_count == 1
     assert ledger.error_count == 0
 
     ledger.results.clear()
@@ -107,7 +103,7 @@ def test_queue_retry_state_owns_retry_budget() -> None:
     assert state.queue_retry_state.exhausted_keys == set()
 
 
-def test_result_ledger_owns_results_and_stop_threshold() -> None:
+def test_result_ledger_owns_results_and_metrics() -> None:
     state = _state()
     result = FieldTestResult(
         field_id="field_1",
@@ -137,7 +133,7 @@ def test_result_ledger_owns_results_and_stop_threshold() -> None:
         )
     )
     assert len(ledger.results) == 2
-    assert ledger.reached_submittable_stop_threshold(1) is True
+    assert ledger.submittable_count == 2
 
 
 def test_execution_state_create_copies_runtime_inputs() -> None:
@@ -169,10 +165,8 @@ def test_execution_state_create_copies_runtime_inputs() -> None:
 def test_result_ledger_owns_runtime_counters() -> None:
     state = _state()
     ledger = state.result_ledger
-    ledger.submittable_baseline_count = 2
     ledger.persisted_result_count = 3
 
-    assert state.result_ledger.submittable_baseline_count == 2
     assert state.result_ledger.persisted_result_count == 3
 
 
@@ -212,46 +206,6 @@ def test_execution_state_create_copies_future_queue_inputs() -> None:
 
     assert state.future_queue.pending_futures == {future: pending_context}
     assert state.future_queue.resumable_simulations == [resumable_context]
-
-
-def test_bootstrap_baseline_excludes_historical_submittable_results() -> None:
-    historical = FieldTestResult(
-        field_id="field_1",
-        field_type="MATRIX",
-        field_name="field_1",
-        template_name="tpl",
-        status="simulated",
-        submittable=True,
-        expression="rank(field_1)",
-    )
-    with (
-        patch("alpha.app.bootstrap_state.build_blacklist_runtime_stats", return_value={}),
-        patch("alpha.app.bootstrap_state.load_blacklisted_template_keys", return_value=set()),
-    ):
-        state = create_execution_state(
-            dataset_id="fundamental6",
-            historical_state=HistoricalRunState(existing_results=[historical]),
-        )
-
-    ledger = state.result_ledger
-    assert ledger.submittable_baseline_count == 1
-    assert ledger.current_run_submittable_count == 0
-    assert ledger.reached_submittable_stop_threshold(1) is False
-
-    ledger.append(
-        FieldTestResult(
-            field_id="field_2",
-            field_type="MATRIX",
-            field_name="field_2",
-            template_name="tpl",
-            status="simulated",
-            submittable=True,
-            expression="rank(field_2)",
-        )
-    )
-    assert ledger.current_run_submittable_count == 1
-    assert ledger.reached_submittable_stop_threshold(1) is True
-    assert ledger.submitted_count == 0
 
 
 def test_quality_config_rejects_inverted_turnover_range() -> None:

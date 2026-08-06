@@ -100,7 +100,6 @@ def test_compile_template_stats_keeps_metadata_and_outcome_rules_separate() -> N
                 template_activation_scope="feedback_only",
                 status="simulated",
                 submittable=True,
-                submitted=True,
                 failed_checks=[
                     FailedCheck(name="LOW_SHARPE"),
                     FailedCheck(name="LOW_FITNESS"),
@@ -117,7 +116,6 @@ def test_compile_template_stats_keeps_metadata_and_outcome_rules_separate() -> N
     assert stats["attempted"] == 1
     assert stats["simulated"] == 1
     assert stats["submittable"] == 1
-    assert stats["submitted"] == 1
     assert stats["errors"] == 0
     assert stats["queue_timeouts"] == 1
     assert stats["low_sharpe"] == 1

@@ -80,7 +80,6 @@ def execute_schedule_round(
     """Execute one scheduling round across every remaining field."""
     scheduler_options = context.scheduler_options
     execution_state = context.run_ctx.execution_state
-    result_ledger = execution_state.result_ledger
     progressed_this_round = False
     last_field_id = ""
     context.seed_phase.sync(execution_state)
@@ -112,20 +111,6 @@ def execute_schedule_round(
                 stop_requested=True,
                 last_field_id=last_field_id,
             )
-        if result_ledger.reached_submittable_stop_threshold(
-            scheduler_options.stop_after_submittable
-        ):
-            execution_state.future_queue.scheduling_stop_signal.set()
-            logger.info(
-                "[stop] 达到 stop-after-submittable=%d",
-                scheduler_options.stop_after_submittable,
-            )
-            return ScheduleRoundResult(
-                progressed=progressed_this_round,
-                stop_requested=True,
-                last_field_id=last_field_id,
-            )
-
         field_result = schedule_field_round(
             context=context,
             field=field,

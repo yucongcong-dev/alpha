@@ -64,7 +64,6 @@ def build_run_config_snapshot(
         },
         "filters": {
             "top_fields_by_feedback": options.top_fields_by_feedback,
-            "stop_after_submittable": options.stop_after_submittable,
         },
         "paths": {
             "template_library_file": run_paths.template_library_file,

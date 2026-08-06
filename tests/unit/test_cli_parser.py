@@ -147,7 +147,7 @@ def test_full_run_applies_default_total_simulation_budget(monkeypatch) -> None:
         [
             "alpha",
             "--strategy-profile",
-            "submit-focused",
+            "candidate-focused",
             "--full-run",
             "--offset",
             "7",
@@ -159,8 +159,6 @@ def test_full_run_applies_default_total_simulation_budget(monkeypatch) -> None:
             "1",
             "--top-fields-by-feedback",
             "5",
-            "--stop-after-submittable",
-            "2",
         ],
     )
 
@@ -171,7 +169,6 @@ def test_full_run_applies_default_total_simulation_budget(monkeypatch) -> None:
     assert args.max_templates_per_field == 0
     assert args.max_templates_per_family == 0
     assert args.top_fields_by_feedback == 0
-    assert args.stop_after_submittable == 0
     assert args.max_total_simulations == FULL_RUN_MAX_TOTAL_SIMULATIONS
 
 
@@ -209,17 +206,16 @@ def test_cli_strategy_profile_applies_runtime_defaults(monkeypatch, tmp_path) ->
     monkeypatch.setattr(
         sys,
         "argv",
-        ["alpha", "--config", str(config_path), "--strategy-profile", "submit-focused"],
+        ["alpha", "--config", str(config_path), "--strategy-profile", "candidate-focused"],
     )
 
     args = parse_args()
 
-    assert args.strategy_profile == "submit-focused"
+    assert args.strategy_profile == "candidate-focused"
     assert args.limit == 30
     assert args.max_templates_per_field == 2
     assert args.field_template_batch_size == 1
     assert args.top_fields_by_feedback == 20
-    assert args.stop_after_submittable == 1
 
 
 def test_cli_normalizes_zero_field_template_batch_size(monkeypatch, tmp_path) -> None:

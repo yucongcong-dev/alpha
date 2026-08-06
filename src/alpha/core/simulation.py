@@ -90,7 +90,6 @@ def _complete_field_test_from_simulation(
         simulation_id=simulation_id,
         alpha_id=alpha_id,
         submittable=submittable,
-        submitted=False,
         message=message,
         status="simulated",
         failed_checks=failed_checks,

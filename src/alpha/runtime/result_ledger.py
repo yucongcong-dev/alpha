@@ -15,7 +15,6 @@ class ExecutionMetrics:
 
     unique_field_ids: frozenset[str]
     submittable_count: int
-    submitted_count: int
     error_count: int
     queue_timeout_count: int
     pending_check_count: int
@@ -25,7 +24,6 @@ class ExecutionMetrics:
         return cls(
             unique_field_ids=frozenset(result.field_id for result in results),
             submittable_count=sum(1 for result in results if result.submittable),
-            submitted_count=sum(1 for result in results if result.submitted),
             error_count=sum(1 for result in results if result.status == STATUS_ERROR),
             queue_timeout_count=sum(1 for result in results if is_queue_timeout_result(result)),
             pending_check_count=sum(1 for result in results if has_pending_checks(result)),
@@ -36,7 +34,6 @@ class ExecutionMetrics:
         return ExecutionMetrics(
             unique_field_ids=self.unique_field_ids | {result.field_id},
             submittable_count=self.submittable_count + int(bool(result.submittable)),
-            submitted_count=self.submitted_count + int(bool(result.submitted)),
             error_count=self.error_count + int(result.status == STATUS_ERROR),
             queue_timeout_count=self.queue_timeout_count + int(is_queue_timeout_result(result)),
             pending_check_count=self.pending_check_count + int(has_pending_checks(result)),
@@ -48,7 +45,6 @@ class ResultLedgerState:
     """Authoritative result sequence plus derived result counters."""
 
     results: list[FieldTestResult]
-    submittable_baseline_count: int = 0
     persisted_result_count: int = 0
     _metrics: ExecutionMetrics = field(init=False, repr=False)
     _metrics_result_count: int = field(init=False, repr=False)
@@ -77,15 +73,6 @@ class ResultLedgerState:
         return self.metrics.submittable_count
 
     @property
-    def current_run_submittable_count(self) -> int:
-        """Return submittable results added after this process initialized."""
-        return max(0, self.metrics.submittable_count - self.submittable_baseline_count)
-
-    @property
-    def submitted_count(self) -> int:
-        return self.metrics.submitted_count
-
-    @property
     def error_count(self) -> int:
         return self.metrics.error_count
 
@@ -103,10 +90,6 @@ class ResultLedgerState:
         self._metrics = current_metrics.with_result(result)
         self._metrics_result_count += 1
         return self._metrics
-
-    def reached_submittable_stop_threshold(self, stop_threshold: int) -> bool:
-        """Return whether current-run submittable results reached the stop threshold."""
-        return stop_threshold > 0 and self.current_run_submittable_count >= stop_threshold
 
     def refresh_metrics(self) -> ExecutionMetrics:
         """Force a full snapshot rebuild after direct result-list mutation."""

@@ -31,7 +31,6 @@ def compile_template_registry_summary(
             "attempted": int(stat.get("attempted", 0) or 0),
             "simulated": int(stat.get("simulated", 0) or 0),
             "submittable": int(stat.get("submittable", 0) or 0),
-            "submitted": int(stat.get("submitted", 0) or 0),
             "errors": int(stat.get("errors", 0) or 0),
             "queue_timeouts": int(stat.get("queue_timeouts", 0) or 0),
             "low_sharpe": int(stat.get("low_sharpe", 0) or 0),
@@ -46,7 +45,6 @@ def compile_template_registry_summary(
         rows,
         key=lambda row: (
             -row["submittable"],
-            -row["submitted"],
             -row["simulated"],
             -row["attempted"],
             row["template_name"],

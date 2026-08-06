@@ -39,7 +39,6 @@ if TYPE_CHECKING:
     from .feedback_history import (
         build_historical_run_state,
         choose_settings_variant_budget,
-        should_stop_after_submittable,
     )
     from .feedback_stats import (
         compile_field_feedback,
@@ -51,7 +50,6 @@ if TYPE_CHECKING:
     )
     from .field_stats import (
         compile_field_performance_summary,
-        current_submittable_count,
         field_priority,
     )
     from .result_identity import attempted_template_keys, result_identity
@@ -83,7 +81,6 @@ _EXPORT_MAP: ExportMap = {
     ),
     "build_historical_run_state": (".feedback_history", "build_historical_run_state"),
     "choose_settings_variant_budget": (".feedback_history", "choose_settings_variant_budget"),
-    "should_stop_after_submittable": (".feedback_history", "should_stop_after_submittable"),
     "compile_field_feedback": (".feedback_stats", "compile_field_feedback"),
     "compile_global_failed_check_counts": (".feedback_stats", "compile_global_failed_check_counts"),
     "dominant_failed_check_names": (".feedback_stats", "dominant_failed_check_names"),
@@ -94,7 +91,6 @@ _EXPORT_MAP: ExportMap = {
         "update_global_failed_check_counts_with_result",
     ),
     "compile_field_performance_summary": (".field_stats", "compile_field_performance_summary"),
-    "current_submittable_count": (".field_stats", "current_submittable_count"),
     "field_priority": (".field_stats", "field_priority"),
     "attempted_template_keys": (".result_identity", "attempted_template_keys"),
     "is_informative_result": ("..models.result_predicates", "is_informative_result"),

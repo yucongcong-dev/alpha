@@ -446,7 +446,6 @@ strings:
   stat_fields:
     attempted: "attempted"
     submittable: "submittable"
-    submitted: "submitted"
     errors: "errors"
     simulated: "simulated"
     queue_timeouts: "queue_timeouts"

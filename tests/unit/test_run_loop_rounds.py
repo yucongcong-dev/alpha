@@ -173,9 +173,8 @@ def test_queue_timeout_invalidates_only_retry_field_template_queue() -> None:
     assert not context.field_template_queues["f1"].entries
 
 
-def test_historical_submittable_result_does_not_stop_new_round() -> None:
+def test_submittable_result_does_not_stop_new_round() -> None:
     context = _build_context(field_template_batch_size=1)
-    context.scheduler_options = SchedulerControlOptions(stop_after_submittable=1)
     ledger = context.run_ctx.execution_state.result_ledger
     ledger.append(
         FieldTestResult(
@@ -188,7 +187,6 @@ def test_historical_submittable_result_does_not_stop_new_round() -> None:
             expression="rank(historical)",
         )
     )
-    ledger.submittable_baseline_count = 1
 
     with patch(
         "alpha.app.run_loop_rounds.schedule_field_round",
@@ -212,29 +210,6 @@ def test_preexisting_stop_signal_skips_round_without_building_fields() -> None:
         result = execute_schedule_round(context, round_index=1)
 
     assert result == ScheduleRoundResult(False, True, "")
-    mock_schedule.assert_not_called()
-
-
-def test_stop_after_submittable_stops_before_next_field() -> None:
-    context = _build_context(field_template_batch_size=1)
-    context.scheduler_options = SchedulerControlOptions(stop_after_submittable=1)
-    context.run_ctx.execution_state.result_ledger.append(
-        FieldTestResult(
-            field_id="new",
-            field_type="MATRIX",
-            field_name="new",
-            template_name="template",
-            status="simulated",
-            submittable=True,
-        )
-    )
-
-    with patch("alpha.app.run_loop_rounds.schedule_field_round") as mock_schedule:
-        result = execute_schedule_round(context, round_index=1)
-
-    assert result.stop_requested is True
-    assert context.run_ctx.execution_state.future_queue.scheduling_stop_signal.is_set()
-    assert context.run_ctx.execution_state.future_queue.stop_signal.is_set() is False
     mock_schedule.assert_not_called()
 
 
@@ -460,7 +435,6 @@ def test_dispatch_honors_stop_capacity_and_success_paths() -> None:
         "scheduled_templates": [entry],
     }
 
-    context.scheduler_options = SchedulerControlOptions(stop_after_submittable=1)
     context.run_ctx.execution_state.result_ledger.append(
         FieldTestResult(
             field_id="new",
@@ -471,13 +445,6 @@ def test_dispatch_honors_stop_capacity_and_success_paths() -> None:
             submittable=True,
         )
     )
-
-    assert dispatch_templates_for_field(**kwargs) is True
-    assert context.run_ctx.execution_state.future_queue.scheduling_stop_signal.is_set()
-    assert context.run_ctx.execution_state.future_queue.stop_signal.is_set() is False
-
-    context.scheduler_options = SchedulerControlOptions(stop_after_submittable=0)
-    context.run_ctx.execution_state.future_queue.scheduling_stop_signal.clear()
     with (
         patch("alpha.app.run_loop_dispatch.maybe_restore_runtime_concurrency"),
         patch("alpha.app.run_loop_dispatch.drain_until_capacity", return_value=False),

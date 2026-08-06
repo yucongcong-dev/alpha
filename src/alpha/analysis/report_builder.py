@@ -42,11 +42,9 @@ def build_results_summary_payload(
     """单次遍历构建主结果 summary 及 analysis 所需的中间聚合数据。"""
     results_dicts: list[ResultRow] = []
     submittable_results: list[ResultRow] = []
-    submitted_results: list[ResultRow] = []
     failed_checks_summary: list[ResultRow] = []
     field_ids: set[str] = set()
     submittable_count = 0
-    submitted_count = 0
     error_count = 0
     queue_timeout_count = 0
     pending_check_count = 0
@@ -59,9 +57,6 @@ def build_results_summary_payload(
         if result.submittable:
             submittable_count += 1
             submittable_results.append(item)
-        if result.submitted:
-            submitted_count += 1
-            submitted_results.append(item)
         if result.status == STATUS_ERROR:
             error_count += 1
         if is_queue_timeout_result(result):
@@ -88,7 +83,6 @@ def build_results_summary_payload(
         "tested": len(results),
         "unique_fields_tested": len(field_ids),
         "submittable": submittable_count,
-        "submitted": submitted_count,
         "errors": error_count,
         "queue_timeouts": queue_timeout_count,
         "pending_checks": pending_check_count,
@@ -98,7 +92,6 @@ def build_results_summary_payload(
     }
     analysis_inputs = {
         "submittable_results": submittable_results,
-        "submitted_results": submitted_results,
         "failed_checks_summary": failed_checks_summary,
     }
     return summary, analysis_inputs
@@ -126,12 +119,10 @@ def build_analysis_payload(
         "tested": summary["tested"],
         "unique_fields_tested": summary["unique_fields_tested"],
         "submittable_count": summary["submittable"],
-        "submitted_count": summary["submitted"],
         "error_count": summary["errors"],
         "queue_timeout_count": summary["queue_timeouts"],
         "pending_check_count": summary.get("pending_checks", 0),
         "submittable": analysis_inputs["submittable_results"],
-        "submitted": analysis_inputs["submitted_results"],
         "failed_checks_summary": analysis_inputs["failed_checks_summary"],
         "failed_check_leaderboard": failed_check_leaderboard,
         "near_pass_summary": near_pass_summary,

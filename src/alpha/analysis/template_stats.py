@@ -21,7 +21,6 @@ from ..config.constants import (
     STAT_FIELD_QUEUE_TIMEOUTS,
     STAT_FIELD_SIMULATED,
     STAT_FIELD_SUBMITTABLE,
-    STAT_FIELD_SUBMITTED,
     STAT_FIELD_TEMPLATE_NAME,
     STAT_FIELD_TOP_FAILED_CHECKS,
     STATS_PERFORMANCE_TOP_N,
@@ -44,7 +43,6 @@ def _new_template_stat() -> dict[str, Any]:
     return {
         STAT_FIELD_ATTEMPTED: 0,
         STAT_FIELD_SUBMITTABLE: 0,
-        STAT_FIELD_SUBMITTED: 0,
         STAT_FIELD_ERRORS: 0,
         STAT_FIELD_SIMULATED: 0,
         STAT_FIELD_QUEUE_TIMEOUTS: 0,
@@ -95,8 +93,6 @@ def _update_template_outcome_counts(stat: dict[str, Any], result: FieldTestResul
     stat[STAT_FIELD_ATTEMPTED] += 1
     if result.submittable:
         stat[STAT_FIELD_SUBMITTABLE] += 1
-    if result.submitted:
-        stat[STAT_FIELD_SUBMITTED] += 1
     if result.status == STATUS_SIMULATED:
         stat[STAT_FIELD_SIMULATED] += 1
     if result.status == STATUS_ERROR:
@@ -139,7 +135,6 @@ def compile_template_performance_summary(
                 STAT_FIELD_TEMPLATE_NAME: result.template_name,
                 STAT_FIELD_ATTEMPTED: 0,
                 STAT_FIELD_SUBMITTABLE: 0,
-                STAT_FIELD_SUBMITTED: 0,
                 STAT_FIELD_ERRORS: 0,
                 STAT_FIELD_QUEUE_TIMEOUTS: 0,
                 STAT_FIELD_FAILED_CHECK_COUNTS: {},
@@ -154,8 +149,6 @@ def compile_template_performance_summary(
         summary[STAT_FIELD_ATTEMPTED] += 1
         if result.submittable:
             summary[STAT_FIELD_SUBMITTABLE] += 1
-        if result.submitted:
-            summary[STAT_FIELD_SUBMITTED] += 1
         if result.status == STATUS_ERROR:
             summary[STAT_FIELD_ERRORS] += 1
         for check in result.failed_checks or []:
@@ -174,7 +167,6 @@ def compile_template_performance_summary(
         rows,
         key=lambda row: (
             -row[STAT_FIELD_SUBMITTABLE],
-            -row[STAT_FIELD_SUBMITTED],
             -row[STAT_FIELD_ATTEMPTED],
             row[STAT_FIELD_TEMPLATE_NAME],
         ),

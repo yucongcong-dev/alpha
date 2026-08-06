@@ -74,7 +74,6 @@ class ApplicationConfig:
     field_template_batch_size = SectionField[int]("planning")
     legacy_similarity_penalty = SectionField[int]("planning")
     top_fields_by_feedback = SectionField[int]("planning")
-    stop_after_submittable = SectionField[int]("planning")
 
     min_request_interval = SectionField[float]("execution")
     rate_limit_max_retries = SectionField[int]("execution")

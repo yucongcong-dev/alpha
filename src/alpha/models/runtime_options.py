@@ -269,7 +269,6 @@ class RunConfigSnapshotOptions:
     login_retries: int = 0
     min_request_interval: float = 0.0
     top_fields_by_feedback: int = 0
-    stop_after_submittable: int = 0
     strategy_profile: str = "explore"
     auto_update_blacklist: bool = False
     smoke_test: bool = False
@@ -321,7 +320,6 @@ class RunConfigSnapshotOptions:
             login_retries=execution.login_retries,
             min_request_interval=execution.min_request_interval,
             top_fields_by_feedback=planning.top_fields_by_feedback,
-            stop_after_submittable=planning.stop_after_submittable,
             strategy_profile=normalize_strategy_profile(flags.strategy_profile),
             auto_update_blacklist=flags.auto_update_blacklist,
             smoke_test=planning.smoke_test,
@@ -339,7 +337,6 @@ class SchedulerControlOptions:
     queue_busy_cooldown_seconds: float = 0.0
     queue_busy_retry_limit: int = 0
     sleep_between_fields: float = 0.0
-    stop_after_submittable: int = 0
     max_total_simulations: int = 0
 
     @classmethod
@@ -348,7 +345,6 @@ class SchedulerControlOptions:
             queue_busy_cooldown_seconds=config.execution.queue_busy_cooldown_seconds,
             queue_busy_retry_limit=config.execution.queue_busy_retry_limit,
             sleep_between_fields=config.planning.sleep_between_fields,
-            stop_after_submittable=config.planning.stop_after_submittable,
             max_total_simulations=config.planning.max_total_simulations,
         )
 

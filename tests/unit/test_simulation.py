@@ -252,7 +252,6 @@ class TestBuildFailureResult:
         assert result.field_id == "sales"
         assert result.status == "error"
         assert result.submittable is False
-        assert result.submitted is False
         assert result.failed_stage == "simulation"
 
     def test_failure_with_failed_checks(self) -> None:
@@ -332,13 +331,11 @@ class TestFieldTestContext:
             simulation_id="sim_1",
             alpha_id="alpha_1",
             submittable=True,
-            submitted=False,
             message="checks passed",
             status="simulated",
         )
         assert result.field_id == "sales"
         assert result.submittable is True
-        assert result.submitted is False
         assert result.status == "simulated"
 
     def test_failure_with_optional_fields(self, minimal_test_context: FieldTestContext) -> None:
@@ -364,7 +361,6 @@ class TestFieldTestContext:
             simulation_id="s1",
             alpha_id="a1",
             submittable=True,
-            submitted=False,
             message="ok",
         )
         assert result.status == "simulated"

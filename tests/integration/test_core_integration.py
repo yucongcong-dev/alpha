@@ -509,15 +509,14 @@ class TestContextConsistency:
             simulation_id="sim_1",
             alpha_id="alpha_1",
             submittable=True,
-            submitted=True,
-            message="submitted",
-            status="submitted",
+            message="submission checks passed",
+            status="simulated",
         )
         assert success_result.field_id == "sales"
         assert success_result.field_type == "MATRIX"
         assert success_result.template_name == "ts_mean_20"
         assert success_result.submittable is True
-        assert success_result.submitted is True
+        assert success_result.status == "simulated"
 
     def test_future_completion_context_fingerprints_preserved(
         self,

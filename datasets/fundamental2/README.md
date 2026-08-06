@@ -33,7 +33,7 @@ PYTHONPATH=src python3.10 -m alpha \
 ```
 
 `tax_quality_seed` 是 dataset profile 的默认 preset。首次本地没有字段缓存时，离线计划会提示
-先执行一次认证运行；正式运行前移除 `--dry-run-plan`。程序只做 simulation/check，不自动提交。
+先执行一次认证运行；正式运行前移除 `--dry-run-plan`。程序只做 simulation/check，正式提交始终由人工决定。
 
 ## 停止与扩展规则
 

@@ -55,16 +55,6 @@ def dispatch_templates_for_field(
                 scheduler_options.max_total_simulations,
             )
             return True
-        if result_ledger.reached_submittable_stop_threshold(
-            scheduler_options.stop_after_submittable
-        ):
-            execution_state.future_queue.scheduling_stop_signal.set()
-            logger.info(
-                "[stop] 达到 stop-after-submittable=%d",
-                scheduler_options.stop_after_submittable,
-            )
-            return True
-
         if execution_state.future_queue.should_stop_scheduling():
             return True
 

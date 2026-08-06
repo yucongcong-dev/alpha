@@ -38,7 +38,6 @@ STAT_FIELD_ATTEMPTED: str = _yaml_str("strings", "stat_fields", "attempted", def
 STAT_FIELD_SUBMITTABLE: str = _yaml_str(
     "strings", "stat_fields", "submittable", default="submittable"
 )
-STAT_FIELD_SUBMITTED: str = _yaml_str("strings", "stat_fields", "submitted", default="submitted")
 STAT_FIELD_ERRORS: str = _yaml_str("strings", "stat_fields", "errors", default="errors")
 STAT_FIELD_SIMULATED: str = _yaml_str("strings", "stat_fields", "simulated", default="simulated")
 STAT_FIELD_QUEUE_TIMEOUTS: str = _yaml_str(

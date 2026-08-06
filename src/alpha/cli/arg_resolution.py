@@ -122,7 +122,6 @@ def apply_run_mode_overrides(
         args.max_templates_per_field = 0
         args.max_templates_per_family = 0
         args.top_fields_by_feedback = 0
-        args.stop_after_submittable = 0
         if (
             "max_total_simulations" not in (explicit_cli_keys or set())
             and args.max_total_simulations <= 0

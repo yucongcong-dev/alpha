@@ -48,7 +48,6 @@ def build_failure_result(
         alpha_id=alpha_id,
         status=status,
         submittable=False,
-        submitted=False,
         message=message,
         expression=expression,
         settings_fingerprint=settings_fingerprint,

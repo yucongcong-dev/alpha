@@ -206,7 +206,6 @@ class FieldTestResult:
     alpha_id: str | None = None
     status: str = "unknown"
     submittable: bool | None = None
-    submitted: bool = False
     message: str = ""
     expression: str = ""
     settings_fingerprint: str = ""
@@ -318,7 +317,6 @@ class FieldTestContext:
             alpha_id=alpha_id,
             status=status,
             submittable=False,
-            submitted=False,
             message=message,
             expression=self.expression,
             settings_fingerprint=self.settings_fingerprint,
@@ -335,7 +333,6 @@ class FieldTestContext:
         simulation_id: str | None,
         alpha_id: str | None,
         submittable: bool | None,
-        submitted: bool,
         message: str,
         status: str = "simulated",
         failed_checks: list[FailedCheck] | None = None,
@@ -355,7 +352,6 @@ class FieldTestContext:
             alpha_id=alpha_id,
             status=status,
             submittable=submittable,
-            submitted=submitted,
             message=message,
             expression=self.expression,
             settings_fingerprint=self.settings_fingerprint,

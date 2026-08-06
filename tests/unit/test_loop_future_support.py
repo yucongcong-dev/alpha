@@ -191,14 +191,14 @@ def test_submit_resumable_futures_registers_restored_contexts() -> None:
         template_library_fingerprint="library-v1",
     )
 
-    submitted = submit_resumable_futures(
+    scheduled = submit_resumable_futures(
         executor=executor,  # type: ignore[arg-type]
         run_ctx=run_ctx,  # type: ignore[arg-type]
         execution_state=execution_state,
         args=SimpleNamespace(),  # type: ignore[arg-type]
     )
 
-    assert submitted == 1
+    assert scheduled == 1
     assert execution_state.future_queue.resumable_simulations == []
     assert list(execution_state.future_queue.pending_futures.values()) == [pending]
     assert len(executor.calls) == 1

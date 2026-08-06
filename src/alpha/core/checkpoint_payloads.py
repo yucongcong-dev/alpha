@@ -11,7 +11,6 @@ from ..runtime.state import ExecutionState
 TEMPLATE_STAT_COUNT_FIELDS = (
     "attempted",
     "submittable",
-    "submitted",
     "errors",
     "simulated",
     "queue_timeouts",
@@ -52,7 +51,7 @@ def restore_template_stats(payload: object) -> dict[str, dict[str, Any]]:
 
 
 def all_pending_contexts(execution_state: ExecutionState) -> list[PendingFutureContext]:
-    """Return submitted and not-yet-resubmitted simulation contexts."""
+    """Return active and not-yet-rescheduled simulation contexts."""
     future_queue = execution_state.future_queue
     return [
         *future_queue.pending_futures.values(),

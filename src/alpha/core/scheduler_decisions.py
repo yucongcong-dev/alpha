@@ -1,17 +1,5 @@
 """Pure scheduler state decisions separated from runtime side effects."""
 
-from __future__ import annotations
-
-from dataclasses import dataclass
-
-
-@dataclass(frozen=True)
-class DrainStateDecision:
-    """State-side effects selected after one completed future is persisted."""
-
-    activate_stop_signal: bool
-    apply_congestion_cooldown: bool
-
 
 def should_restore_runtime_concurrency(
     *,
@@ -39,28 +27,3 @@ def submission_throttle_delay(
     if interval_seconds <= 0 or last_submission_at <= 0:
         return 0.0
     return max(interval_seconds - (now - last_submission_at), 0.0)
-
-
-def reached_submittable_stop_threshold(
-    *,
-    stop_threshold: int,
-    current_submittable_count: int,
-) -> bool:
-    """Return whether completed results reached the configured stop target."""
-    return stop_threshold > 0 and current_submittable_count >= stop_threshold
-
-
-def decide_drain_state_updates(
-    *,
-    stop_threshold: int,
-    current_submittable_count: int,
-    congestion_detected: bool,
-) -> DrainStateDecision:
-    """Combine post-persistence signals into one immutable state decision."""
-    return DrainStateDecision(
-        activate_stop_signal=reached_submittable_stop_threshold(
-            stop_threshold=stop_threshold,
-            current_submittable_count=current_submittable_count,
-        ),
-        apply_congestion_cooldown=congestion_detected,
-    )

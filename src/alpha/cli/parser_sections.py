@@ -97,7 +97,7 @@ def add_run_mode_arguments(parser: argparse.ArgumentParser) -> None:
         "--strategy-profile",
         choices=STRATEGY_PROFILE_CHOICES,
         default="explore",
-        help="运行策略标签：explore=广覆盖探索，refine=反馈邻域优化，submit-focused=提交导向收敛",
+        help="运行策略标签：explore=广覆盖探索，refine=反馈邻域优化，candidate-focused=候选质量收敛",
     )
     run_mode_group = parser.add_mutually_exclusive_group()
     run_mode_group.add_argument(
@@ -212,12 +212,6 @@ def add_file_filter_arguments(parser: argparse.ArgumentParser) -> None:
         type=int,
         default=0,
         help="如果大于 0，仅测试按反馈排序的前 N 个字段",
-    )
-    parser.add_argument(
-        "--stop-after-submittable",
-        type=int,
-        default=0,
-        help="如果大于 0，在本次启动新增指定数量的可提交 Alpha 后停止",
     )
 
 

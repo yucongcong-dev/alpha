@@ -7,7 +7,7 @@ from typing import Any
 
 from .models import DatasetExpressionPolicy
 
-STRATEGY_PROFILE_CHOICES = ("explore", "refine", "submit-focused")
+STRATEGY_PROFILE_CHOICES = ("explore", "refine", "candidate-focused")
 STRATEGY_PROFILE_SCHEMA_KEYS = {
     "purpose",
     "primary_goal",
@@ -39,7 +39,6 @@ STRATEGY_PROFILE_RUNTIME_DEFAULT_TYPES: dict[str, dict[str, str]] = {
     },
     "filters": {
         "top_fields_by_feedback": _INT,
-        "stop_after_submittable": _INT,
     },
     "quality": {
         "min_sharpe": _NUMBER,

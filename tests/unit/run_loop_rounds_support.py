@@ -48,7 +48,7 @@ def build_round_context(
         run_config={},
     )
     return ScheduleRoundContext(
-        args=argparse.Namespace(stop_after_submittable=0),
+        args=argparse.Namespace(),
         run_ctx=run_ctx,
         executor=ThreadPoolExecutor(max_workers=1),
         template_build_ctx=MagicMock(spec=TemplateBuildContext),

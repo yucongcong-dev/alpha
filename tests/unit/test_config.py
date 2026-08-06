@@ -229,7 +229,7 @@ def test_unknown_dataset_uses_nonzero_default_field_selection_policy() -> None:
 def test_strategy_profile_schemas_are_loaded_from_yaml() -> None:
     schemas = load_strategy_profile_schemas()
 
-    assert set(schemas) == {"explore", "refine", "submit-focused"}
+    assert set(schemas) == {"explore", "refine", "candidate-focused"}
     assert schemas["explore"].tuning_keys["limits"] == (
         "limit",
         "max_templates_per_field",
@@ -239,7 +239,7 @@ def test_strategy_profile_schemas_are_loaded_from_yaml() -> None:
     )
     assert "feedback_loop_policy" in schemas["refine"].tuning_keys["expression_policies"]
     assert "auto_update_blacklist" in schemas["explore"].tuning_keys["runtime"]
-    assert "auto_update_blacklist" in schemas["submit-focused"].tuning_keys["runtime"]
+    assert "auto_update_blacklist" in schemas["candidate-focused"].tuning_keys["runtime"]
     assert "filters" not in schemas["refine"].runtime_defaults
     assert schemas["explore"].runtime_defaults == {}
 

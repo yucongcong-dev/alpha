@@ -46,7 +46,6 @@ class IncrementalResultsWriter(Protocol):
         tested: int,
         unique_fields_tested: int,
         submittable_count: int,
-        submitted_count: int,
         error_count: int,
         queue_timeout_count: int,
         settings_fingerprint: str,
@@ -165,12 +164,11 @@ def log_completed_result(result: FieldTestResult) -> None:
         )
     else:
         logger.info(
-            "[result] field=%s template=%s status=%s submittable=%s submitted=%s message=%s",
+            "[result] field=%s template=%s status=%s submittable=%s message=%s",
             result.field_id,
             result.template_name,
             result.status,
             result.submittable,
-            result.submitted,
             result.message,
         )
 
@@ -233,7 +231,6 @@ def persist_incremental_result(
         tested=len(ledger.results) + 1,
         unique_fields_tested=len(metrics.unique_field_ids),
         submittable_count=metrics.submittable_count,
-        submitted_count=metrics.submitted_count,
         error_count=metrics.error_count,
         queue_timeout_count=metrics.queue_timeout_count,
         pending_check_count=metrics.pending_check_count,

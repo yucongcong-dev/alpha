@@ -116,7 +116,6 @@ def serialize_field_test_result(result: Any) -> ResultRow:
         "alpha_id": result.alpha_id,
         "status": result.status,
         "submittable": result.submittable,
-        "submitted": result.submitted,
         "message": result.message,
         "expression": result.expression,
         "settings_fingerprint": result.settings_fingerprint,

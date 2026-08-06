@@ -134,10 +134,7 @@ def apply_yaml_global_defaults(
     _merge_section(
         args,
         global_cfg.get("filters", {}),
-        {
-            "top_fields_by_feedback",
-            "stop_after_submittable",
-        },
+        {"top_fields_by_feedback"},
         explicit_cli_keys,
     )
 

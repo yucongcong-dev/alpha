@@ -196,13 +196,11 @@ class TestRuntimeOptionBuilders:
             queue_busy_cooldown_seconds="5.5",
             queue_busy_retry_limit="3",
             sleep_between_fields="0.25",
-            stop_after_submittable="2",
         )
         assert SchedulerControlOptions.from_config(config) == SchedulerControlOptions(
             queue_busy_cooldown_seconds=5.5,
             queue_busy_retry_limit=3,
             sleep_between_fields=0.25,
-            stop_after_submittable=2,
         )
 
 
@@ -256,7 +254,7 @@ class TestExecutionState:
         ledger = ResultLedgerState(results=[result])
 
         assert isinstance(ledger.metrics, ExecutionMetrics)
-        assert ledger.current_run_submittable_count == 1
+        assert ledger.submittable_count == 1
 
 
 # ============================================================================

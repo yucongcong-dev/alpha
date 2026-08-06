@@ -79,13 +79,12 @@ class TestDataClassSerialization:
             simulation_id="sim_1",
             alpha_id="alpha_1",
             submittable=True,
-            submitted=True,
-            message="submitted",
-            status="submitted",
+            message="submission checks passed",
+            status="simulated",
         )
         assert success_result.field_id == "test_field"
         assert success_result.submittable is True
-        assert success_result.submitted is True
+        assert success_result.status == "simulated"
 
         fail_result = ctx.failure(
             failed_stage="simulation",

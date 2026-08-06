@@ -96,4 +96,4 @@ py -3.10 scripts/check_all.py
 
 - `.credentials/` 保存本地加密凭证与密钥，不应提交或共享。
 - `--dry-run-plan` 是离线只读操作；正常运行才会登录和创建 simulation。
-- `submittable=true` 表示通过本轮检查、值得人工评估，**不表示已正式提交**。
+- `submittable=true` 只表示通过本轮检查、值得继续优化和人工评估；运行器不提供正式提交功能。

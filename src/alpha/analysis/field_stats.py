@@ -21,7 +21,6 @@ from ..config.constants import (
     STAT_FIELD_FIELD_TYPE,
     STAT_FIELD_QUEUE_TIMEOUTS,
     STAT_FIELD_SUBMITTABLE,
-    STAT_FIELD_SUBMITTED,
     STAT_FIELD_TOP_FAILED_CHECKS,
     STATS_DEFAULT_SCORE,
     STATS_PERFORMANCE_TOP_N,
@@ -46,7 +45,6 @@ def compile_field_performance_summary(results: Sequence[FieldTestResult]) -> lis
                 STAT_FIELD_FIELD_TYPE: result.field_type,
                 STAT_FIELD_ATTEMPTED_TEMPLATES: 0,
                 STAT_FIELD_SUBMITTABLE: 0,
-                STAT_FIELD_SUBMITTED: 0,
                 STAT_FIELD_ERRORS: 0,
                 STAT_FIELD_QUEUE_TIMEOUTS: 0,
                 STAT_FIELD_FAILED_CHECK_COUNTS: {},
@@ -61,8 +59,6 @@ def compile_field_performance_summary(results: Sequence[FieldTestResult]) -> lis
         summary[STAT_FIELD_ATTEMPTED_TEMPLATES] += 1
         if result.submittable:
             summary[STAT_FIELD_SUBMITTABLE] += 1
-        if result.submitted:
-            summary[STAT_FIELD_SUBMITTED] += 1
         if result.status == STATUS_ERROR:
             summary[STAT_FIELD_ERRORS] += 1
         for check in result.failed_checks or []:
@@ -81,7 +77,6 @@ def compile_field_performance_summary(results: Sequence[FieldTestResult]) -> lis
         rows,
         key=lambda row: (
             -row[STAT_FIELD_SUBMITTABLE],
-            -row[STAT_FIELD_SUBMITTED],
             -row[STAT_FIELD_ATTEMPTED_TEMPLATES],
             row[STAT_FIELD_FIELD_ID],
         ),
@@ -142,8 +137,3 @@ def decay_field_feedback(
     result["effective_best_score"] = raw_score * multiplier
     result["best_score"] = result["effective_best_score"]
     return result
-
-
-def current_submittable_count(results: Sequence[FieldTestResult]) -> int:
-    """统计当前结果集中已经可提交的 Alpha 数量。"""
-    return sum(1 for result in results if result.submittable)

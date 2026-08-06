@@ -93,8 +93,6 @@ def _parse_timestamp(value: str) -> float:
 
 def _terminal_rank(result: FieldTestResult) -> int:
     """Rank durable outcomes above transient or incomplete observations."""
-    if result.submitted:
-        return 50
     if result.submittable is True:
         return 40
     status = result.status.strip().lower()

@@ -134,16 +134,15 @@ global:
     login_retries: 3                     # 登录失败重试次数
 
   # --------------------------------------------------------------------------
-  # 过滤器 —— 对应 CLI --top-fields-by-feedback / --stop-after-submittable
+  # 过滤器 —— 对应 CLI --top-fields-by-feedback
   # --------------------------------------------------------------------------
   filters:
     top_fields_by_feedback: 0       # 仅测试反馈排序前 N 个字段，0=不限制
-    stop_after_submittable: 0       # 本次启动新增 N 个可提交 Alpha 后停止，0=不停止
 
   # --------------------------------------------------------------------------
   # 质量阈值 —— 对应 CLI --min-sharpe / --min-fitness / --min-turnover / --max-turnover / --max-weight
   # --------------------------------------------------------------------------
-  # 模拟完成后本地预检: 低于阈值的 Alpha 不会被提交。
+  # 模拟完成后本地预检：低于阈值的 Alpha 会标记为未通过，不影响人工继续研究。
   quality:
     min_sharpe: 1.25                # 最低 Sharpe 比率 (风险调整后收益)
     min_fitness: 1.00               # 最低 Fitness (Sharpe × Turnover 惩罚调整)
@@ -193,7 +192,7 @@ global:
   # 运行时开关 —— 对应 CLI --smoke-test / --dry-run-plan / --full-run / --verbose / --quiet
   # --------------------------------------------------------------------------
   runtime:
-    strategy_profile: explore  # explore=广覆盖；refine=反馈邻域；submit-focused=提交导向；各 profile 会应用对应默认运行参数
+    strategy_profile: explore  # explore=广覆盖；refine=反馈邻域；candidate-focused=候选质量收敛
     auto_update_blacklist: false  # 默认不自动写入低质量模板；需要清理实验时再显式开启
     smoke_test: false      # 冒烟测试模式 (1字段/1模板，快速验证)
     dry_run_plan: false    # 干运行模式 (仅打印计划，不创建模拟)

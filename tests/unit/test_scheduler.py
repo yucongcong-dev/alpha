@@ -8,7 +8,7 @@
 from __future__ import annotations
 
 import argparse
-from concurrent.futures import Future, ThreadPoolExecutor
+from concurrent.futures import Future
 import time
 from unittest.mock import patch
 
@@ -20,11 +20,9 @@ from alpha.core.scheduler import (
     throttle_before_submission,
 )
 from alpha.core.scheduler_decisions import (
-    decide_drain_state_updates,
     should_restore_runtime_concurrency,
     submission_throttle_delay,
 )
-from alpha.models.domain import FieldTestResult
 from alpha.models.runtime import (
     ExecutionState,
     PendingFutureContext,
@@ -40,20 +38,8 @@ def _scheduler_options(args: object) -> SchedulerControlOptions:
         queue_busy_cooldown_seconds=float(getattr(args, "queue_busy_cooldown_seconds", 0.0)),
         queue_busy_retry_limit=int(getattr(args, "queue_busy_retry_limit", 0)),
         sleep_between_fields=float(getattr(args, "sleep_between_fields", 0.0)),
-        stop_after_submittable=int(getattr(args, "stop_after_submittable", 0)),
         max_total_simulations=int(getattr(args, "max_total_simulations", 0)),
     )
-
-
-def test_drain_state_decision_combines_stop_and_cooldown() -> None:
-    decision = decide_drain_state_updates(
-        stop_threshold=2,
-        current_submittable_count=2,
-        congestion_detected=True,
-    )
-
-    assert decision.activate_stop_signal is True
-    assert decision.apply_congestion_cooldown is True
 
 
 def test_submission_throttle_delay_is_deterministic_and_clamped() -> None:
@@ -378,146 +364,3 @@ def test_drain_completed_futures_prefers_explicit_result_write_options(tmp_path)
     assert completion_ctx.result_write_options.output_path == str(
         tmp_path / "normalized-results.json"
     )
-
-
-def test_drain_completed_futures_sets_stop_signal_and_cancels_unstarted_future(tmp_path) -> None:
-    done_future: Future[object] = Future()
-    done_future.set_result(None)
-
-    with ThreadPoolExecutor(max_workers=1) as executor:
-        blocker = executor.submit(time.sleep, 0.2)
-        queued_future = executor.submit(time.sleep, 0.2)
-        execution_state = ExecutionState.create(
-            pending_futures={
-                done_future: PendingFutureContext(
-                    field_id="field_done",
-                    field_name="field_done",
-                    field_type="MATRIX",
-                    template_name="tpl_done",
-                    expression="rank(field_done)",
-                    settings_fingerprint="done-fp",
-                ),
-                queued_future: PendingFutureContext(
-                    field_id="field_queued",
-                    field_name="field_queued",
-                    field_type="MATRIX",
-                    template_name="tpl_queued",
-                    expression="rank(field_queued)",
-                    settings_fingerprint="queued-fp",
-                ),
-            },
-        )
-        args = argparse.Namespace(
-            dataset_id="fundamental6",
-            output="raw-results.json",
-            auto_update_blacklist=False,
-            queue_busy_retry_limit=0,
-            queue_busy_cooldown_seconds=0,
-            stop_after_submittable=1,
-        )
-        result_write_options = ResultWriteOptions(
-            dataset_id="fundamental6",
-            output_path=str(tmp_path / "normalized-results.json"),
-            auto_update_blacklist=False,
-        )
-
-        with patch(
-            "alpha.core.scheduler.apply_completed_result",
-            return_value=({}, False, None),
-        ):
-            execution_state.result_ledger.append(
-                FieldTestResult(
-                    field_id="field_done",
-                    field_type="MATRIX",
-                    field_name="field_done",
-                    template_name="tpl_done",
-                    status="simulated",
-                    submittable=True,
-                    expression="rank(field_done)",
-                )
-            )
-            drain_completed_futures(
-                completed_futures=[done_future],
-                execution_state=execution_state,
-                scheduler_options=_scheduler_options(args),
-                result_write_options=result_write_options,
-                settings_fingerprint="settings-fp",
-                template_library_fingerprint="templates-fp",
-                run_config={},
-                runtime_state=RuntimeConcurrencyState(max_workers=1, runtime_max_workers=1),
-            )
-
-        assert execution_state.future_queue.scheduling_stop_signal.is_set() is True
-        assert execution_state.future_queue.stop_signal.is_set() is False
-        assert queued_future not in execution_state.future_queue.pending_futures
-        blocker.cancel()
-
-
-def test_drain_completed_futures_ignores_historical_submittable_baseline() -> None:
-    done_future: Future[object] = Future()
-    done_future.set_result(None)
-    queued_future: Future[object] = Future()
-    execution_state = ExecutionState.create(
-        initial_results=[
-            FieldTestResult(
-                field_id="field_done",
-                field_type="MATRIX",
-                field_name="field_done",
-                template_name="tpl_done",
-                status="simulated",
-                submittable=True,
-                expression="rank(field_done)",
-            )
-        ],
-        pending_futures={
-            done_future: PendingFutureContext(
-                field_id="field_done",
-                field_name="field_done",
-                field_type="MATRIX",
-                template_name="tpl_done",
-                expression="rank(field_done)",
-                settings_fingerprint="done-fp",
-            ),
-            queued_future: PendingFutureContext(
-                field_id="field_queued",
-                field_name="field_queued",
-                field_type="MATRIX",
-                template_name="tpl_queued",
-                expression="rank(field_queued)",
-                settings_fingerprint="queued-fp",
-            ),
-        },
-    )
-    execution_state.result_ledger.submittable_baseline_count = 1
-    args = argparse.Namespace(
-        dataset_id="fundamental6",
-        output="raw-results.json",
-        auto_update_blacklist=False,
-        queue_busy_retry_limit=0,
-        queue_busy_cooldown_seconds=0,
-        stop_after_submittable=1,
-    )
-
-    with patch(
-        "alpha.core.scheduler.apply_completed_result",
-        return_value=({}, False, None),
-    ):
-        drain_completed_futures(
-            completed_futures=[done_future],
-            execution_state=execution_state,
-            scheduler_options=_scheduler_options(args),
-            result_write_options=ResultWriteOptions(
-                dataset_id=args.dataset_id,
-                output_path=args.output,
-                auto_update_blacklist=args.auto_update_blacklist,
-            ),
-            settings_fingerprint="settings-fp",
-            template_library_fingerprint="templates-fp",
-            run_config={},
-            runtime_state=RuntimeConcurrencyState(max_workers=1, runtime_max_workers=1),
-        )
-
-    assert execution_state.future_queue.scheduling_stop_signal.is_set() is False
-    assert execution_state.future_queue.stop_signal.is_set() is False
-    assert queued_future in execution_state.future_queue.pending_futures
-    assert queued_future.cancelled() is False

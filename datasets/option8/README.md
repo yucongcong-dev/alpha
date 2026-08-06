@@ -33,7 +33,7 @@ group_rank(
 )
 ```
 
-该 Alpha 尚未由仓库自动提交。
+该 Alpha 只是本地研究基线；运行器不提供正式提交功能。
 
 ## 已验证结论
 
@@ -60,7 +60,7 @@ PYTHONPATH=src python3.10 -m alpha \
   --run-name verify-option8-subindustry
 ```
 
-先使用 `--dry-run-plan` 验证候选数。程序只做 simulation/check，不自动提交 Alpha。
+先使用 `--dry-run-plan` 验证候选数。程序只做 simulation/check，正式提交始终由人工决定。
 
 ## 下一步规则
 

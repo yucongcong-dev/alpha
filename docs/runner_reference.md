@@ -101,9 +101,9 @@ datasets/<dataset>/cache/<region>_<universe>_<instrument>_d<delay>.json
 | `feedback/<scope>/results.jsonl` | 带来源和 revision 的跨 run 去重结果历史 |
 | `feedback/<scope>/run_index.json` | 已聚合 run 的轻量索引 |
 
-`submittable=true` 表示该 Alpha 通过本轮 submission check、具备人工提交价值；
-`submitted=false` 表示运行器没有替你正式提交。`PENDING` 结果以 `submittable=null` 保存，
-不会被当作通过、失败反馈或 near-pass，但会在后续启动时重新查询终态。
+`submittable=true` 只表示该 Alpha 通过本轮 submission check，是值得继续比较和人工评估的
+候选信号，不代表它已经最优，也不会触发正式提交或自动停止。`PENDING` 结果以
+`submittable=null` 保存，不会被当作通过、失败反馈或 near-pass，但会在后续启动时重新查询终态。
 
 ## 5. 路径、配置与清理
 
@@ -118,11 +118,11 @@ datasets/<dataset>/cache/<region>_<universe>_<instrument>_d<delay>.json
 
 - `explore`：广覆盖探索，优先发现字段/模板是否有基本信息量
 - `refine`：反馈邻域优化，优先围绕 near-pass 和已知有效结构做小范围变体
-- `submit-focused`：提交导向收敛，优先控制风险、相关性和可提交数量
+- `candidate-focused`：候选质量收敛，聚焦高反馈字段并继续验证风险、相关性和稳健性
 
 `config/strategy_profiles.yaml` 同时定义策略说明、常调参数边界和 `runtime_defaults`。
-当前 `refine` 会收窄字段与模板预算，`submit-focused` 还会聚焦历史反馈字段并设置
-`stop_after_submittable`；`explore` 不额外改写默认预算。显式 CLI 参数优先于 profile 默认值，
+当前 `refine` 会收窄字段与模板预算，`candidate-focused` 还会聚焦历史反馈字段，但不会因为
+出现 `submittable=true` 就停止；`explore` 不额外改写默认预算。显式 CLI 参数优先于 profile 默认值，
 dataset profile 先于 strategy profile 合并，`--smoke-test` / `--full-run` 最后按运行模式归一化
 搜索范围。具体生效值以 dry-run 输出和 run config snapshot 为准。
 

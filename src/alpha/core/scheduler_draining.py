@@ -14,10 +14,9 @@ from ..runtime.concurrency import RuntimeConcurrencyState
 from ..runtime.contexts import FutureCompletionContext
 from ..runtime.queue_retry import QueueRetryKey
 from ..runtime.state import ExecutionState
-from . import scheduler_drain_state as _drain_state
+from . import scheduler_concurrency as _concurrency
 from . import scheduler_queue as _queue
 from .scheduler_completion import build_completion_context
-from .scheduler_decisions import decide_drain_state_updates
 
 logger = logging.getLogger(__name__)
 
@@ -91,21 +90,8 @@ def drain_completed_futures_with_context(
             execution_state=execution_state,
         )
         execution_state.template_stats = drain_result.template_stats
-        current_submittable_count = execution_state.result_ledger.current_run_submittable_count
-        # Queue timeouts are tracked per candidate below. Keep the shared
-        # decision helper focused here on stop/cooldown state only.
-        decision = decide_drain_state_updates(
-            stop_threshold=_drain_state.stop_after_submittable_threshold(scheduler_options),
-            current_submittable_count=current_submittable_count,
-            congestion_detected=drain_result.congestion_detected,
-        )
-        _drain_state.apply_drain_state_decision(
-            decision,
-            scheduler_options=scheduler_options,
-            execution_state=execution_state,
-            runtime_state=runtime_state,
-            log=log,
-        )
+        if drain_result.congestion_detected:
+            _concurrency.apply_congestion_cooldown(scheduler_options, runtime_state, log=log)
         _queue.register_queue_busy_template(
             drain_result.queue_busy_key, scheduler_options, execution_state
         )
