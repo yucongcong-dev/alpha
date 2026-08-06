@@ -36,6 +36,8 @@ from .run_loop_seed_phase import SeedPhaseState
 
 logger = logging.getLogger(__name__)
 
+INTERRUPT_METADATA_WAIT_SECONDS = 15.0
+
 
 def run_field_test_loop(
     args: ApplicationConfig,
@@ -164,7 +166,10 @@ def run_field_test_loop(
             cancelled = cancel_unstarted_futures(execution_state)
             executor.shutdown(wait=False, cancel_futures=True)
             executor_shutdown = True
-            unresolved_metadata = wait_for_inflight_simulation_metadata(execution_state)
+            unresolved_metadata = wait_for_inflight_simulation_metadata(
+                execution_state,
+                timeout_seconds=INTERRUPT_METADATA_WAIT_SECONDS,
+            )
             logger.warning(
                 "[abort] stopping workers cancelled=%d resumable=%d unresolved_metadata=%d",
                 cancelled,

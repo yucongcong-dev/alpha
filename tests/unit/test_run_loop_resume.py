@@ -417,7 +417,8 @@ def test_run_field_test_loop_waits_for_worker_metadata_before_interrupt_checkpoi
         }
         raise KeyboardInterrupt
 
-    def _stabilize(execution_state) -> int:
+    def _stabilize(execution_state, *, timeout_seconds: float) -> int:
+        assert timeout_seconds == 15.0
         context = next(iter(execution_state.future_queue.pending_futures.values()))
         context.simulation_location = "/simulations/sim-after-interrupt"
         return 0
@@ -451,7 +452,10 @@ def test_run_field_test_loop_waits_for_worker_metadata_before_interrupt_checkpoi
             ),
         )
 
-    mock_stabilize.assert_called_once_with(run_ctx.execution_state)
+    mock_stabilize.assert_called_once_with(
+        run_ctx.execution_state,
+        timeout_seconds=15.0,
+    )
     saved_state = mock_checkpoint.call_args.kwargs["execution_state"]
     assert (
         next(iter(saved_state.future_queue.pending_futures.values())).simulation_location
