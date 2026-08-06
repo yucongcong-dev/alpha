@@ -15,7 +15,6 @@ from ..config.constants import (
     SIMULATIONS_URL,
 )
 from ..config.runtime_values import get_runtime_config
-from ..error_handling import ErrorCategory, ErrorSeverity, error_handler
 from ..exceptions import BrainAPIError, BrainQueueBusyError, BrainStopRequested
 from ..utils.helpers import first_non_empty
 from .api_types import SimulationPayload
@@ -29,9 +28,6 @@ logger = logging.getLogger(__name__)
 class BrainSimulationsMixin:
     """Simulation creation and polling helpers for BrainClient."""
 
-    @error_handler(
-        severity=ErrorSeverity.ERROR, category=ErrorCategory.API, operation="create_simulation"
-    )
     def create_simulation(self, payload: SimulationPayload) -> str:
         """创建模拟任务并返回后续轮询使用的 Location 地址。"""
         _, response_headers, _ = self.request(  # type: ignore[attr-defined]
@@ -194,9 +190,6 @@ class BrainSimulationsMixin:
         )
         return False, pending_cycles, pending_started_at
 
-    @error_handler(
-        severity=ErrorSeverity.WARNING, category=ErrorCategory.API, operation="poll_simulation"
-    )
     def poll_simulation(
         self,
         location: str,

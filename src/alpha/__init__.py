@@ -51,18 +51,6 @@ if TYPE_CHECKING:
         SIMULATIONS_URL,
         VERSION_HEADER,
     )
-    from .error_handling import (
-        ErrorCategory,
-        ErrorContext,
-        ErrorHandler,
-        ErrorRecord,
-        ErrorSeverity,
-        error_handler,
-        get_error_handler,
-        handle_global_error,
-        retry_on_error,
-        set_error_handler,
-    )
     from .exceptions import BrainAPIError, BrainQueueBusyError, BrainRateLimitError
     from .generators import choose_field_name, choose_field_type
     from .models import (
@@ -92,16 +80,6 @@ _EXPORT_MAP: dict[str, tuple[str, str]] = {
     "SIM_ACCEPT_HEADER": (".config", "SIM_ACCEPT_HEADER"),
     "SIMULATIONS_URL": (".config", "SIMULATIONS_URL"),
     "VERSION_HEADER": (".config", "VERSION_HEADER"),
-    "ErrorCategory": (".error_handling", "ErrorCategory"),
-    "ErrorContext": (".error_handling", "ErrorContext"),
-    "ErrorHandler": (".error_handling", "ErrorHandler"),
-    "ErrorRecord": (".error_handling", "ErrorRecord"),
-    "ErrorSeverity": (".error_handling", "ErrorSeverity"),
-    "error_handler": (".error_handling", "error_handler"),
-    "get_error_handler": (".error_handling", "get_error_handler"),
-    "handle_global_error": (".error_handling", "handle_global_error"),
-    "retry_on_error": (".error_handling", "retry_on_error"),
-    "set_error_handler": (".error_handling", "set_error_handler"),
     "BrainAPIError": (".exceptions", "BrainAPIError"),
     "BrainQueueBusyError": (".exceptions", "BrainQueueBusyError"),
     "BrainRateLimitError": (".exceptions", "BrainRateLimitError"),
