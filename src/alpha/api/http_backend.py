@@ -84,4 +84,3 @@ class UrllibHttpBackend:
 
     def close(self) -> None:
         """urllib keeps no explicit connection pool to close."""
-

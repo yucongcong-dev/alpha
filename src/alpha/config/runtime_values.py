@@ -32,6 +32,7 @@ _QUALITY_DEFAULTS = {
     "max_weight": 0.10,
 }
 
+
 def _validate_non_negative(name: str, value: float) -> None:
     if value < 0:
         raise ValueError(f"{name} must be >= 0; got {value!r}")
