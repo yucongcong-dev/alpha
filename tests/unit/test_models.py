@@ -26,7 +26,6 @@ from alpha.models.runtime_options import (
     FieldSelectionOptions,
     RunLoopOptions,
     SchedulerControlOptions,
-    TemplateBuildOptions,
 )
 
 
@@ -112,35 +111,6 @@ class TestRuntimeOptionBuilders:
             rate_limit_max_retries=7,
             login_retries=3,
         )
-
-    def test_template_build_options_from_args(self) -> None:
-        class _Args:
-            dataset_id = "fundamental6"
-            max_templates_per_field = "8"
-            max_templates_per_family = 2
-            legacy_similarity_penalty = "4"
-            region = "USA"
-            universe = "TOP3000"
-            instrument_type = "EQUITY"
-            delay = 1
-            decay = 7
-            neutralization = "SUBINDUSTRY"
-            truncation = 0.08
-            pasteurization = "OFF"
-            unit_handling = "VERIFY"
-            nan_handling = "OFF"
-            language = "FASTEXPR"
-            start_date = "2020-01-01"
-            end_date = "2020-12-31"
-
-        options = TemplateBuildOptions.from_args(_Args())
-
-        assert options.dataset_id == "fundamental6"
-        assert options.max_templates_per_field == 8
-        assert options.max_templates_per_family == 2
-        assert options.truncation == 0.08
-        assert options.start_date == "2020-01-01"
-        assert options.end_date == "2020-12-31"
 
     def test_result_write_and_field_fetch_options_from_config(self) -> None:
         config = _application_config(

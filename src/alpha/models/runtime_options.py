@@ -7,9 +7,6 @@ from typing import TYPE_CHECKING
 
 from ..runtime.preset_mode import resolve_preset_mode
 from .runtime_config import SimulationStageConfig
-from .runtime_protocols import (
-    TemplateBuildArgs,
-)
 
 if TYPE_CHECKING:
     from ..config.application import ApplicationConfig
@@ -56,37 +53,6 @@ class TemplateBuildOptions:
     start_date: str | None = None
     end_date: str | None = None
     preset_mode: bool = False
-
-    @classmethod
-    def from_args(cls, args: TemplateBuildArgs) -> TemplateBuildOptions:
-        template_library_file = str(getattr(args, "template_library_file", "") or "")
-        return cls(
-            region=args.region,
-            universe=args.universe,
-            instrument_type=args.instrument_type,
-            delay=args.delay,
-            decay=args.decay,
-            neutralization=args.neutralization,
-            truncation=args.truncation,
-            pasteurization=args.pasteurization,
-            unit_handling=args.unit_handling,
-            nan_handling=args.nan_handling,
-            language=args.language,
-            max_trade=str(getattr(args, "max_trade", "OFF") or "OFF"),
-            dataset_id=args.dataset_id,
-            max_templates_per_field=int(args.max_templates_per_field or 0),
-            max_templates_per_family=int(args.max_templates_per_family or 0),
-            legacy_similarity_penalty=int(args.legacy_similarity_penalty or 0),
-            template_library_file=template_library_file,
-            start_date=getattr(args, "start_date", None),
-            end_date=getattr(args, "end_date", None),
-            preset_mode=bool(getattr(args, "preset_mode", False))
-            or resolve_preset_mode(
-                template_library_file=template_library_file,
-                include_fields_file=str(getattr(args, "include_fields_file", "") or ""),
-                include_templates_file=str(getattr(args, "include_templates_file", "") or ""),
-            ),
-        )
 
     @classmethod
     def from_config(cls, config: ApplicationConfig) -> TemplateBuildOptions:

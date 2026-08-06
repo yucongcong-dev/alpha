@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from argparse import Namespace
-
 from alpha.core.executor import build_pending_templates_for_field
 from alpha.core.scheduler import handle_completed_future
 from alpha.generators.templates.variation_common import (
@@ -20,10 +18,11 @@ from alpha.models.runtime import (
     PendingFutureContext,
     ResultWriteOptions,
     TemplateBuildContext,
-    TemplateBuildOptions,
 )
 from alpha.policy.blacklist_store import invalidate_blacklist_path_cache
 from alpha.policy.template_blacklist import invalidate_blacklist_cache
+
+from .template_build_options_support import template_build_options
 
 
 def test_scheduler_dump_results_shrinks_next_template_queue(monkeypatch, tmp_path) -> None:
@@ -37,10 +36,8 @@ def test_scheduler_dump_results_shrinks_next_template_queue(monkeypatch, tmp_pat
         lambda *args, **kwargs: [{"neutralization": "SUBINDUSTRY", "truncation": 0.08}],
     )
 
-    args = Namespace(
-        output=str(results_path),
+    options = template_build_options(
         dataset_id="custom_ds",
-        auto_update_blacklist=True,
         max_templates_per_field=1000,
         max_templates_per_family=1000,
         legacy_similarity_penalty=0,
@@ -58,9 +55,9 @@ def test_scheduler_dump_results_shrinks_next_template_queue(monkeypatch, tmp_pat
     )
     completion_ctx = FutureCompletionContext(
         result_write_options=ResultWriteOptions(
-            dataset_id=args.dataset_id,
-            output_path=args.output,
-            auto_update_blacklist=args.auto_update_blacklist,
+            dataset_id="custom_ds",
+            output_path=str(results_path),
+            auto_update_blacklist=True,
         ),
         settings_fingerprint="settings_fp",
         template_library_fingerprint="tpl_fp",
@@ -78,7 +75,7 @@ def test_scheduler_dump_results_shrinks_next_template_queue(monkeypatch, tmp_pat
         ]
     }
     build_ctx = TemplateBuildContext(
-        options=TemplateBuildOptions.from_args(args),
+        options=options,
         all_fields=[{"id": "sales", "type": "MATRIX"}],
         template_library=template_library,
         include_templates={"weak_template"},

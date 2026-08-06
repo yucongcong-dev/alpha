@@ -5,11 +5,6 @@ from __future__ import annotations
 from typing import Protocol
 
 
-class DatasetIdentityArgs(Protocol):
-    @property
-    def dataset_id(self) -> str: ...
-
-
 class MarketScopeArgs(Protocol):
     @property
     def region(self) -> str: ...
@@ -22,20 +17,6 @@ class MarketScopeArgs(Protocol):
 
     @property
     def delay(self) -> int: ...
-
-
-class TemplateSelectionArgs(Protocol):
-    @property
-    def max_templates_per_field(self) -> int: ...
-
-    @property
-    def max_templates_per_family(self) -> int: ...
-
-    @property
-    def legacy_similarity_penalty(self) -> int: ...
-
-    @property
-    def template_library_file(self) -> str: ...
 
 
 class SimulationSettingsArgs(MarketScopeArgs, Protocol):
@@ -68,15 +49,6 @@ class SimulationSettingsArgs(MarketScopeArgs, Protocol):
 
     @property
     def end_date(self) -> str | None: ...
-
-
-class TemplateBuildArgs(
-    DatasetIdentityArgs,
-    SimulationSettingsArgs,
-    TemplateSelectionArgs,
-    Protocol,
-):
-    pass
 
 
 class CleanRuntimeArgs(Protocol):

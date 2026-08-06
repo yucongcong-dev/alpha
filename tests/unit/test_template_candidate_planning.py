@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from argparse import Namespace
-
 from alpha.core.executor import build_pending_templates_for_field, inflight_template_keys
 from alpha.core.template_planning import (
     TemplatePlanningServices,
@@ -14,9 +12,10 @@ from alpha.models.domain import TemplateCandidate
 from alpha.models.runtime import (
     PendingFutureContext,
     TemplateBuildContext,
-    TemplateBuildOptions,
 )
 from alpha.policy.expression import get_dataset_expression_policy
+
+from .template_build_options_support import template_build_options
 
 
 def test_exploration_candidate_pool_is_not_limited_before_seed_selection() -> None:
@@ -33,7 +32,7 @@ def test_exploration_candidate_pool_is_not_limited_before_seed_selection() -> No
         captured_limits.append((max_templates_per_field, max_templates_per_family))
         return []
 
-    args = Namespace(
+    options = template_build_options(
         dataset_id="fundamental6",
         max_templates_per_field=1,
         max_templates_per_family=1,
@@ -51,7 +50,7 @@ def test_exploration_candidate_pool_is_not_limited_before_seed_selection() -> No
         language="FASTEXPR",
     )
     build_ctx = TemplateBuildContext(
-        options=TemplateBuildOptions.from_args(args),
+        options=options,
         expression_policy=get_dataset_expression_policy("fundamental6"),
     )
     services = TemplatePlanningServices(
@@ -86,7 +85,7 @@ def test_build_pending_templates_skips_inflight_duplicate(monkeypatch) -> None:
             )
         ],
     )
-    args = Namespace(
+    options = template_build_options(
         dataset_id="model51",
         max_templates_per_field=3,
         max_templates_per_family=1,
@@ -104,7 +103,7 @@ def test_build_pending_templates_skips_inflight_duplicate(monkeypatch) -> None:
         language="FASTEXPR",
     )
     build_ctx = TemplateBuildContext(
-        options=TemplateBuildOptions.from_args(args),
+        options=options,
         all_fields=[
             {
                 "id": "unsystematic_risk_last_360_days",
@@ -173,7 +172,7 @@ def test_build_pending_templates_uses_explicit_template_role(
             )
         ],
     )
-    args = Namespace(
+    options = template_build_options(
         dataset_id="fundamental6",
         max_templates_per_field=6,
         max_templates_per_family=3,
@@ -191,7 +190,7 @@ def test_build_pending_templates_uses_explicit_template_role(
         language="FASTEXPR",
     )
     build_ctx = TemplateBuildContext(
-        options=TemplateBuildOptions.from_args(args),
+        options=options,
         all_fields=[{"id": "cash_st", "type": "VECTOR", "name": "cash_st"}],
         field_feedback={"cash_st": {"attempted_templates": 1, "best_score": 0.0}},
         template_library={},
@@ -233,7 +232,7 @@ def test_build_pending_templates_ignores_persisted_registry_recommendation(monke
             )
         ],
     )
-    args = Namespace(
+    options = template_build_options(
         dataset_id="fundamental6",
         max_templates_per_field=6,
         max_templates_per_family=3,
@@ -251,7 +250,7 @@ def test_build_pending_templates_ignores_persisted_registry_recommendation(monke
         language="FASTEXPR",
     )
     build_ctx = TemplateBuildContext(
-        options=TemplateBuildOptions.from_args(args),
+        options=options,
         all_fields=[{"id": "cash_st", "type": "VECTOR", "name": "cash_st"}],
         field_feedback={"cash_st": {"attempted_templates": 1, "best_score": 0.0}},
         template_library={},
@@ -306,7 +305,7 @@ def test_build_pending_templates_dedupes_same_expression_variant_across_template
             ),
         ],
     )
-    args = Namespace(
+    options = template_build_options(
         dataset_id="fundamental6",
         max_templates_per_field=6,
         max_templates_per_family=6,
@@ -324,7 +323,7 @@ def test_build_pending_templates_dedupes_same_expression_variant_across_template
         language="FASTEXPR",
     )
     build_ctx = TemplateBuildContext(
-        options=TemplateBuildOptions.from_args(args),
+        options=options,
         all_fields=[{"id": "cash_st", "type": "VECTOR", "name": "cash_st"}],
         template_library={},
         use_dataset_heuristics=False,

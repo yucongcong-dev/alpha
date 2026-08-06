@@ -2,13 +2,13 @@
 
 from __future__ import annotations
 
-from argparse import Namespace
-
 from alpha.core.executor import build_pending_templates_for_field
 from alpha.generators.payload import build_settings_fingerprint_from_payload
 from alpha.models.domain import TemplateCandidate, TemplateLibraryItem
-from alpha.models.runtime import TemplateBuildContext, TemplateBuildOptions
+from alpha.models.runtime import TemplateBuildContext
 from alpha.policy.expression import get_dataset_expression_policy
+
+from .template_build_options_support import template_build_options
 
 
 def test_build_pending_templates_skips_attempted_expression_variant_across_template_names(
@@ -34,7 +34,7 @@ def test_build_pending_templates_skips_attempted_expression_variant_across_templ
             )
         ],
     )
-    args = Namespace(
+    options = template_build_options(
         dataset_id="fundamental6",
         max_templates_per_field=6,
         max_templates_per_family=6,
@@ -52,7 +52,7 @@ def test_build_pending_templates_skips_attempted_expression_variant_across_templ
         language="FASTEXPR",
     )
     build_ctx = TemplateBuildContext(
-        options=TemplateBuildOptions.from_args(args),
+        options=options,
         all_fields=[{"id": "cash_st", "type": "VECTOR", "name": "cash_st"}],
         template_library={},
         use_dataset_heuristics=False,
@@ -104,7 +104,7 @@ def test_build_pending_templates_uses_template_metadata_without_registry_overrid
             )
         ],
     )
-    args = Namespace(
+    options = template_build_options(
         dataset_id="fundamental6",
         max_templates_per_field=6,
         max_templates_per_family=3,
@@ -122,7 +122,7 @@ def test_build_pending_templates_uses_template_metadata_without_registry_overrid
         language="FASTEXPR",
     )
     build_ctx = TemplateBuildContext(
-        options=TemplateBuildOptions.from_args(args),
+        options=options,
         all_fields=[
             {
                 "id": "cash_st",
@@ -188,7 +188,7 @@ def test_event_field_exploration_uses_one_seed_template(monkeypatch) -> None:
             ),
         ],
     )
-    args = Namespace(
+    options = template_build_options(
         dataset_id="fundamental6",
         max_templates_per_field=10,
         max_templates_per_family=3,
@@ -206,7 +206,7 @@ def test_event_field_exploration_uses_one_seed_template(monkeypatch) -> None:
         language="FASTEXPR",
     )
     build_ctx = TemplateBuildContext(
-        options=TemplateBuildOptions.from_args(args),
+        options=options,
         all_fields=[
             {
                 "id": "fnd6_cptnewqeventv110_apq",
@@ -251,7 +251,7 @@ def test_build_pending_templates_does_not_hard_demote_from_global_stats(monkeypa
             )
         ],
     )
-    args = Namespace(
+    options = template_build_options(
         dataset_id="fundamental6",
         max_templates_per_field=6,
         max_templates_per_family=3,
@@ -269,7 +269,7 @@ def test_build_pending_templates_does_not_hard_demote_from_global_stats(monkeypa
         language="FASTEXPR",
     )
     build_ctx = TemplateBuildContext(
-        options=TemplateBuildOptions.from_args(args),
+        options=options,
         all_fields=[{"id": "cash_st", "type": "VECTOR", "name": "cash_st"}],
         field_feedback={"cash_st": {"attempted_templates": 1, "best_score": -999.0}},
         template_library={

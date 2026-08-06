@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import logging
-from types import SimpleNamespace
 from unittest.mock import patch
 
 from alpha.core.execution_filters import resolve_template_skip_reason
@@ -23,34 +22,17 @@ from alpha.models.runtime import (
 )
 from alpha.policy.expression import get_dataset_expression_policy
 
-
-def _args() -> SimpleNamespace:
-    return SimpleNamespace(
-        dataset_id="model16",
-        region="USA",
-        universe="TOP3000",
-        instrument_type="EQUITY",
-        delay=1,
-        decay=4,
-        neutralization="SUBINDUSTRY",
-        truncation=0.08,
-        pasteurization="ON",
-        unit_handling="VERIFY",
-        nan_handling="OFF",
-        language="FASTEXPR",
-        max_trade="OFF",
-        max_templates_per_field=6,
-        max_templates_per_family=2,
-        max_total_simulations=0,
-        legacy_similarity_penalty=42,
-        start_date=None,
-        end_date=None,
-        template_library_file="datasets/model16/template.json",
-    )
+from .template_build_options_support import template_build_options
 
 
 def _options() -> TemplateBuildOptions:
-    return TemplateBuildOptions.from_args(_args())
+    return template_build_options(
+        dataset_id="model16",
+        max_templates_per_field=6,
+        max_templates_per_family=2,
+        legacy_similarity_penalty=42,
+        template_library_file="datasets/model16/template.json",
+    )
 
 
 def _field(field_id: str) -> TemplateField:
@@ -73,7 +55,7 @@ def test_build_template_context_copies_narrow_options_and_feedback() -> None:
     )
 
     context = build_template_build_context(
-        options=TemplateBuildOptions.from_args(_args()),
+        options=_options(),
         fields=[_field("f1")],
         template_library={},
         historical_state=history,
@@ -98,9 +80,8 @@ def test_unexplored_field_gets_one_seed(monkeypatch) -> None:
         priority=1000,
         metadata={"family": "rank", "activation_scope": "broad"},
     )
-    args = _args()
     context = TemplateBuildContext(
-        options=TemplateBuildOptions.from_args(args),
+        options=_options(),
         all_fields=[field],
         expression_policy=get_dataset_expression_policy("model16"),
     )
@@ -135,7 +116,7 @@ def test_unexplored_field_prefers_explicit_seed_over_high_priority_refine(monkey
         metadata={"role": "default_seed", "activation_scope": "broad"},
     )
     context = TemplateBuildContext(
-        options=TemplateBuildOptions.from_args(_args()),
+        options=_options(),
         all_fields=[field],
         expression_policy=get_dataset_expression_policy("model16"),
     )
@@ -169,7 +150,7 @@ def test_unexplored_fields_rotate_across_explicit_seed_templates(monkeypatch) ->
         for index in range(3)
     ]
     context = TemplateBuildContext(
-        options=TemplateBuildOptions.from_args(_args()),
+        options=_options(),
         expression_policy=get_dataset_expression_policy("model16"),
     )
     monkeypatch.setattr(
@@ -205,7 +186,7 @@ def test_unexplored_fields_rotate_across_fallback_templates(monkeypatch) -> None
         for index in range(4)
     ]
     context = TemplateBuildContext(
-        options=TemplateBuildOptions.from_args(_args()),
+        options=_options(),
         expression_policy=get_dataset_expression_policy("model16"),
     )
     monkeypatch.setattr(
@@ -239,7 +220,7 @@ def test_template_skip_reason_explains_name_filter() -> None:
         metadata={"family": "rank", "activation_scope": "broad"},
     )
     context = TemplateBuildContext(
-        options=TemplateBuildOptions.from_args(_args()),
+        options=_options(),
         all_fields=[field],
         include_templates={"other"},
         expression_policy=get_dataset_expression_policy("model16"),
@@ -268,7 +249,7 @@ def test_template_skip_reason_explains_blacklist_match(monkeypatch) -> None:
         metadata={"family": "rank", "stage": "first_order"},
     )
     context = TemplateBuildContext(
-        options=TemplateBuildOptions.from_args(_args()),
+        options=_options(),
         all_fields=[field],
         expression_policy=get_dataset_expression_policy("model16"),
     )
@@ -304,7 +285,7 @@ def test_build_pending_templates_records_name_filter_reason(monkeypatch) -> None
         metadata={"family": "rank", "activation_scope": "broad"},
     )
     context = TemplateBuildContext(
-        options=TemplateBuildOptions.from_args(_args()),
+        options=_options(),
         all_fields=[field],
         include_templates={"other"},
         expression_policy=get_dataset_expression_policy("model16"),
@@ -342,7 +323,7 @@ def test_build_pending_templates_records_blacklist_reason(monkeypatch) -> None:
         metadata={"family": "rank", "stage": "first_order"},
     )
     context = TemplateBuildContext(
-        options=TemplateBuildOptions.from_args(_args()),
+        options=_options(),
         all_fields=[field],
         expression_policy=get_dataset_expression_policy("model16"),
     )
