@@ -27,9 +27,7 @@ if TYPE_CHECKING:
     )
     from .runtime_protocols import (
         BlacklistRuntimeStats,
-        CleanRuntimeArgs,
         ClientFactoryLike,
-        CredentialsArgs,
         RunConfig,
         SemaphoreLike,
         TemplateFeedback,
@@ -64,9 +62,7 @@ _EXPORT_MAP: ExportMap = {
     "RunLoopOptions": (".runtime_options", "RunLoopOptions"),
     "TemplateBuildOptions": (".runtime_options", "TemplateBuildOptions"),
     "BlacklistRuntimeStats": (".runtime_protocols", "BlacklistRuntimeStats"),
-    "CleanRuntimeArgs": (".runtime_protocols", "CleanRuntimeArgs"),
     "ClientFactoryLike": (".runtime_protocols", "ClientFactoryLike"),
-    "CredentialsArgs": (".runtime_protocols", "CredentialsArgs"),
     "RunConfig": (".runtime_protocols", "RunConfig"),
     "SemaphoreLike": (".runtime_protocols", "SemaphoreLike"),
     "TemplateFeedback": (".runtime_protocols", "TemplateFeedback"),

@@ -10,7 +10,6 @@ if TYPE_CHECKING:
 
 from .domain import FieldTestResult, TemplateCandidate
 from .domain_types import FieldFeedbackSummary
-from .runtime_arg_protocols import *  # noqa: F403
 
 TemplateFeedback = FieldFeedbackSummary
 TemplateStats = dict[str, dict[str, Any]]

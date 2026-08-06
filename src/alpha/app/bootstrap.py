@@ -21,6 +21,7 @@ from ..models.io_types import RunPaths
 from ..models.runtime_options import (
     ApiClientOptions,
     BootstrapFieldOptions,
+    CredentialLoadOptions,
     TemplateBuildOptions,
 )
 from ..models.runtime_protocols import RunConfig
@@ -36,7 +37,7 @@ from .bootstrap_runtime_outputs import (
 )
 from .bootstrap_state import build_execution_state
 from .bootstrap_supporting_resources import load_bootstrap_supporting_resources
-from .bootstrap_types import PreparedBootstrapResources, ResolvedCredentials
+from .bootstrap_types import PreparedBootstrapResources
 
 logger = logging.getLogger(__name__)
 
@@ -49,12 +50,7 @@ def initialize_run_context(args: ApplicationConfig) -> InitializedRunContext | N
     paths = args.paths
     run_config = prepare_runtime_outputs(args)
     email, password = resolve_credentials(
-        ResolvedCredentials(
-            email=args.credentials.email,
-            password=args.credentials.password,
-            creds_file=paths.creds_file,
-            creds_key_file=paths.creds_key_file,
-        ),
+        CredentialLoadOptions.from_config(args),
     )
     if not email or not password:
         logger.error("[error] 缺少凭证，无法继续")

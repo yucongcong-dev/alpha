@@ -18,7 +18,7 @@ from typing import Any
 
 from ..exceptions import BrainAPIError
 from ..io.common import atomic_write_json
-from ..models.runtime_protocols import CredentialsArgs
+from ..models.runtime_options import CredentialLoadOptions
 from .credentials_crypto import (
     CREDENTIALS_STORAGE_VERSION,
     decrypt_credentials_payload,
@@ -108,7 +108,7 @@ def _load_credentials_from_file(
     return file_email, file_password
 
 
-def load_credentials(args: CredentialsArgs) -> tuple[str | None, str | None]:
+def load_credentials(args: CredentialLoadOptions) -> tuple[str | None, str | None]:
     """优先从命令行/环境变量读取凭证，否则回退到本地加密凭证文件。"""
     email = args.email
     password = args.password

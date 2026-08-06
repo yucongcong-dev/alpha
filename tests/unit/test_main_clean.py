@@ -2,9 +2,17 @@
 
 from __future__ import annotations
 
-from types import SimpleNamespace
-
+from alpha.config.application_sections import CredentialsConfig
 from alpha.main import clean_runtime_artifacts
+
+
+def _credentials_config(*, include_credentials: bool, dry_run_clean: bool) -> CredentialsConfig:
+    return CredentialsConfig(
+        email=None,
+        password=None,
+        include_credentials=include_credentials,
+        dry_run_clean=dry_run_clean,
+    )
 
 
 def test_clean_runtime_artifacts_preserves_credentials(tmp_path) -> None:
@@ -33,7 +41,7 @@ def test_clean_runtime_artifacts_preserves_credentials(tmp_path) -> None:
     template_file = dataset_dir / "template.json"
     template_file.write_text("{}", encoding="utf-8")
 
-    args = SimpleNamespace(include_credentials=False, dry_run_clean=False)
+    args = _credentials_config(include_credentials=False, dry_run_clean=False)
 
     assert clean_runtime_artifacts(args, project_root=tmp_path) == 0
     assert not (tmp_path / "cache").exists()
@@ -58,7 +66,7 @@ def test_clean_runtime_artifacts_can_include_credentials(tmp_path) -> None:
     creds.mkdir()
     (creds / "credentials.json").write_text("{}", encoding="utf-8")
 
-    args = SimpleNamespace(include_credentials=True, dry_run_clean=False)
+    args = _credentials_config(include_credentials=True, dry_run_clean=False)
 
     assert clean_runtime_artifacts(args, project_root=tmp_path) == 0
     assert not creds.exists()
@@ -69,7 +77,7 @@ def test_clean_runtime_artifacts_dry_run_keeps_files(tmp_path) -> None:
     cache = tmp_path / "cache"
     cache.mkdir()
 
-    args = SimpleNamespace(include_credentials=False, dry_run_clean=True)
+    args = _credentials_config(include_credentials=False, dry_run_clean=True)
 
     assert clean_runtime_artifacts(args, project_root=tmp_path) == 0
     assert cache.exists()

@@ -5,12 +5,11 @@ from __future__ import annotations
 from ..api.client import BrainClient, WorkerClientFactory, login_with_retry
 from ..config.runtime_values import get_runtime_config
 from ..io.credentials import load_credentials
-from ..models.runtime_options import ApiClientOptions
-from .bootstrap_types import ResolvedCredentials
+from ..models.runtime_options import ApiClientOptions, CredentialLoadOptions
 
 
 def resolve_credentials(
-    credentials: ResolvedCredentials,
+    credentials: CredentialLoadOptions,
 ) -> tuple[str, str]:
     """Resolve credentials without mutating the runtime args object."""
     email, password = load_credentials(credentials)

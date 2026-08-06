@@ -6,11 +6,11 @@ from pathlib import Path
 import shutil
 
 from ..cli.constants import PROJECT_ROOT
-from ..models.runtime_protocols import CleanRuntimeArgs
+from ..config.application_sections import CredentialsConfig
 
 
 def clean_runtime_artifacts(
-    args: CleanRuntimeArgs,
+    args: CredentialsConfig,
     *,
     project_root: Path = PROJECT_ROOT,
 ) -> int:

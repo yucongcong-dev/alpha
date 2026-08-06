@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import argparse
 from concurrent.futures import ThreadPoolExecutor
 import json
 import os
@@ -26,10 +25,11 @@ from alpha.io.credentials_crypto import (
     encrypt_credentials_payload,
     read_or_create_credentials_key,
 )
+from alpha.models.runtime_options import CredentialLoadOptions
 
 
-def _args(creds_file, key_file, *, email=None, password=None):
-    return argparse.Namespace(
+def _options(creds_file, key_file, *, email=None, password=None) -> CredentialLoadOptions:
+    return CredentialLoadOptions(
         email=email,
         password=password,
         creds_file=str(creds_file),
@@ -58,7 +58,7 @@ def test_load_credentials_rejects_invalid_json_shape(tmp_path) -> None:
     creds_file.write_text("[]", encoding="utf-8")
 
     with pytest.raises(BrainAPIError, match="expected a JSON object"):
-        load_credentials(_args(creds_file, key_file))
+        load_credentials(_options(creds_file, key_file))
 
 
 def test_encrypted_credentials_round_trip_and_permissions(tmp_path) -> None:
@@ -72,7 +72,7 @@ def test_encrypted_credentials_round_trip_and_permissions(tmp_path) -> None:
     assert "user@example.com" not in creds_file.read_text(encoding="utf-8")
     assert "secret" not in creds_file.read_text(encoding="utf-8")
     _assert_credentials_storage_is_protected(creds_file, key_file)
-    assert load_credentials(_args(creds_file, key_file)) == ("user@example.com", "secret")
+    assert load_credentials(_options(creds_file, key_file)) == ("user@example.com", "secret")
 
 
 def test_plaintext_credentials_are_migrated_to_encrypted_storage(tmp_path) -> None:
@@ -83,7 +83,7 @@ def test_plaintext_credentials_are_migrated_to_encrypted_storage(tmp_path) -> No
         encoding="utf-8",
     )
 
-    assert load_credentials(_args(creds_file, key_file)) == (
+    assert load_credentials(_options(creds_file, key_file)) == (
         "legacy@example.com",
         "legacy-secret",
     )
@@ -98,7 +98,7 @@ def test_explicit_credentials_do_not_touch_local_files(tmp_path) -> None:
     key_file = tmp_path / "missing.key"
 
     assert load_credentials(
-        _args(creds_file, key_file, email="cli@example.com", password="cli-secret")
+        _options(creds_file, key_file, email="cli@example.com", password="cli-secret")
     ) == ("cli@example.com", "cli-secret")
     assert not creds_file.exists()
     assert not key_file.exists()
@@ -111,7 +111,7 @@ def test_missing_credentials_file_prompts_and_stores(tmp_path) -> None:
         patch("builtins.input", return_value="prompt@example.com"),
         patch("getpass.getpass", return_value="prompt-secret"),
     ):
-        loaded = load_credentials(_args(creds_file, key_file))
+        loaded = load_credentials(_options(creds_file, key_file))
 
     assert loaded == ("prompt@example.com", "prompt-secret")
     assert creds_file.exists()
@@ -131,7 +131,7 @@ def test_prompt_rejects_empty_credentials(tmp_path) -> None:
 
 def test_missing_creds_file_path_is_rejected() -> None:
     with pytest.raises(BrainAPIError, match="Missing creds-file path"):
-        load_credentials(_args("", ""))
+        load_credentials(_options("", ""))
 
 
 def test_invalid_or_empty_key_file_has_clear_error(tmp_path) -> None:

@@ -22,7 +22,7 @@ from .config.yaml import activate_config_from_argv
 
 if TYPE_CHECKING:
     from .config.application import ApplicationConfig
-    from .models.runtime_protocols import CleanRuntimeArgs
+    from .config.application_sections import CredentialsConfig
     from .runtime.state import InitializedRunContext
 
 
@@ -38,7 +38,7 @@ def parse_application_config() -> ApplicationConfig:
     return parse()
 
 
-def clean_runtime_artifacts(config: CleanRuntimeArgs, *, project_root: Path | None = None) -> int:
+def clean_runtime_artifacts(config: CredentialsConfig, *, project_root: Path | None = None) -> int:
     """Compatibility export that preserves lazy application imports."""
     from .app.bootstrap import clean_runtime_artifacts as clean
 

@@ -29,6 +29,25 @@ class ApiClientOptions:
         )
 
 
+@dataclass(frozen=True)
+class CredentialLoadOptions:
+    """Credential values and normalized storage paths used during bootstrap."""
+
+    email: str | None
+    password: str | None
+    creds_file: str
+    creds_key_file: str
+
+    @classmethod
+    def from_config(cls, config: ApplicationConfig) -> CredentialLoadOptions:
+        return cls(
+            email=config.credentials.email,
+            password=config.credentials.password,
+            creds_file=config.paths.creds_file,
+            creds_key_file=config.paths.creds_key_file,
+        )
+
+
 @dataclass(frozen=True, kw_only=True)
 class TemplateBuildOptions(SimulationSettingsConfig):
     """模板选择、反馈回路与 settings 变体展开所需的窄配置。"""

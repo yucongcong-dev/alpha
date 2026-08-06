@@ -14,16 +14,6 @@ from ..runtime.contexts import HistoricalRunState
 
 
 @dataclass(frozen=True)
-class ResolvedCredentials:
-    """凭证加载所需的最小只读输入。"""
-
-    email: str | None
-    password: str | None
-    creds_file: str
-    creds_key_file: str
-
-
-@dataclass(frozen=True)
 class PreparedBootstrapResources:
     """模板、过滤器、反馈和字段等初始化资源集合。"""
 

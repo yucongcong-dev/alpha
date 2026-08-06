@@ -48,9 +48,7 @@ if TYPE_CHECKING:
     from .result_predicates import is_informative_result, is_queue_timeout_result
     from .runtime import (
         ApiClientOptions,
-        CleanRuntimeArgs,
         ClientFactoryLike,
-        CredentialsArgs,
         ExecutionState,
         FieldFetchOptions,
         FutureCompletionContext,
@@ -98,9 +96,7 @@ _EXPORT_MAP: ExportMap = {
     "is_informative_result": (".result_predicates", "is_informative_result"),
     "is_queue_timeout_result": (".result_predicates", "is_queue_timeout_result"),
     "ApiClientOptions": (".runtime", "ApiClientOptions"),
-    "CleanRuntimeArgs": (".runtime", "CleanRuntimeArgs"),
     "ClientFactoryLike": (".runtime", "ClientFactoryLike"),
-    "CredentialsArgs": (".runtime", "CredentialsArgs"),
     "ExecutionState": (".runtime", "ExecutionState"),
     "FieldFetchOptions": (".runtime", "FieldFetchOptions"),
     "FutureCompletionContext": (".runtime", "FutureCompletionContext"),
