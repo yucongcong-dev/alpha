@@ -60,6 +60,27 @@ python -m alpha --dataset-id fundamental6 \
   --dry-run-plan
 ```
 
+## fnd6_newqv1300_tstkq
+
+该字段表示 Treasury Stock - Total (All Capital)。2026-08-05 的初始 Seed 使用市值十等分
+分组和 `63/126` 变化强度结构，Alpha `xANMqKqp` 的 Sharpe、Fitness 等质量检查均通过，
+仅 Self Correlation 为 `0.7028`，高于 `0.7` 限制。
+
+2026-08-06 最后一次专项分别只改变一个结构因素：
+
+| 变体 | Alpha ID | 结果 | 决策 |
+|---|---|---|---|
+| Backfill `90` | `mL52j0LK` | Self Correlation `0.7021` | 最接近通过，但改善仅 `0.0007` |
+| Winsorize `std=3` | `xANwj2gn` | Self Correlation `0.7031` | 未改善到阈值内 |
+| 市值五等分 | `GrG0lLdZ` | Self Correlation `0.7069` | 相关性变差 |
+| Subindustry 分组 | `LLGb77WM` | Self Correlation `0.7105` | 相关性变差 |
+| `60/120` 变化窗口 | `mL52j5zX` | Sharpe `1.24`、Fitness `0.95` | 质量检查已失败，无需等待 Self Correlation |
+| Assets 分母、Industry 分组 | `qMNkjpgK` | Sharpe `-0.17`、Fitness `-0.03` | 信号被破坏，无需等待 Self Correlation |
+
+六个变体均未形成可提交结果。最佳变体距离相关性阈值只有 `0.0021`，但继续微调 Backfill
+或相邻窗口只是在追逐阈值，缺少稳定余量，过拟合风险高于预期收益。该字段和整个
+`fundamental6` 专项因此关闭；临时 preset 不作为长期运行入口保留。
+
 ## cashflow_op 历史主线
 
 长期分组异常度：

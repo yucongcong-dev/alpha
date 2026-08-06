@@ -7,8 +7,8 @@ preset。普通 `--dataset-id fundamental6` 会拒绝运行；这不是永久禁
 研究都显式给出专项范围，或使用带正数总预算的 `--full-run`。
 
 当前结论：历史 `cashflow_op` 主线性能仍过线，但 Self Correlation 过高；
-`fnd6_cicurr` 和 `cashflow_dividends` 的近通过候选都没有形成新的提交入口。当前只保留
-`fnd6_newqv1300_tstkq` 一个待验证专项，不恢复全库探索。
+`fnd6_cicurr`、`cashflow_dividends` 和 `fnd6_newqv1300_tstkq` 的近通过候选都没有形成新的
+提交入口。当前没有待运行专项，不恢复全库探索。
 完整表达式、settings 和历史变体结果见 [research_history.md](research_history.md)。
 
 ## 关键证据
@@ -22,7 +22,8 @@ preset。普通 `--dataset-id fundamental6` 会拒绝运行；这不是永久禁
 | `cashflow_dividends` 市值分桶 | `YPvKdx56` | 通过 | 0.99 | Self Correlation 通过 | 差 Fitness `0.01`，停止微调 |
 | `cashflow_dividends` subindustry | `GrGAnPx3` | 通过 | 通过 | Self Correlation `0.7113` | 相关性失败 |
 | `cashflow_dividends` 事件触发 | `XgoQ1b7x` | 0.33 | 0.10 | Sub-universe Sharpe `0.05` | 事件化破坏信号 |
-| `fnd6_newqv1300_tstkq` 市值分桶变化强度 | `xANMqKqp` | 通过 | 通过 | Self Correlation `0.7028` | 最后一次 6 变体去相关专项 |
+| `fnd6_newqv1300_tstkq` 市值分桶变化强度 | `xANMqKqp` | 通过 | 通过 | Self Correlation `0.7028` | 6 个去相关变体均未通过 |
+| `fnd6_newqv1300_tstkq` Backfill 90 | `mL52j0LK` | 通过 | 通过 | Self Correlation `0.7021` | 改善仅 `0.0007`，专项关闭 |
 
 `fnd6_cicurr` 的 2026-08-05 refine 还测试了市值分桶、`enterprise_value` / `cap`
 分母和 `63/126` 变化强度；所有结果都因 Sharpe 或 Fitness 失败。历史应计关系
@@ -34,26 +35,8 @@ preset。普通 `--dataset-id fundamental6` 会拒绝运行；这不是永久禁
 经典基本面字段通常更拥挤，优先使用稳定预处理和结构差异；VECTOR 字段应使用独立聚合模板。
 
 现有 `presets/cicurr_refine/` 与 `presets/cashflow_decorrelate/` 只用于复现实验，
-不代表现役提交策略。`presets/tstkq_decorrelate/` 是当前唯一待运行专项；它围绕
-`xANMqKqp` 分别改变分桶粒度、时间窗口、分组、分母、Backfill 和 Winsorize，专项运行必须
-显式传入模板和 include 文件。
-
-先离线确认该专项严格只生成 6 个 simulation：
-
-```bash
-python -m alpha --dataset-id fundamental6 \
-  --strategy-profile refine \
-  --template-library-file datasets/fundamental6/presets/tstkq_decorrelate/template.json \
-  --include-fields-file datasets/fundamental6/presets/tstkq_decorrelate/fields.txt \
-  --include-templates-file datasets/fundamental6/presets/tstkq_decorrelate/templates.txt \
-  --max-templates-per-field 6 \
-  --max-total-simulations 6 \
-  --no-auto-update-blacklist \
-  --dry-run-plan
-```
-
-真实运行时移除 `--dry-run-plan` 并设置独立 `--run-name`。若六个变体仍无可提交结果，关闭
-该专项并保持 `fundamental6` 暂停。
+不代表现役提交策略。`fnd6_newqv1300_tstkq` 的临时去相关 preset 已在六个变体完成后删除；
+逐 Alpha 结果保存在 [research_history.md](research_history.md) 中。
 
 全量探索前先离线确认 Seed 覆盖和预算：
 
@@ -73,6 +56,7 @@ python -m alpha --dataset-id fundamental6 \
   Truncation 或 Neutralization。
 - `cogs`、`dpq`、`lctq` 第二主线，以及 `industry decay`、`backfill 504`、
   `trade_when(volume)`。
+- `fnd6_newqv1300_tstkq` 的分桶、邻近窗口、分组、分母、Backfill 和 Winsorize 微调。
 - 用普通短窗口批量扫描高拥挤 MATRIX 字段，或用 MATRIX 模板直接处理 VECTOR 字段。
 - 在没有新证据时恢复旧 submit core 或重复运行已完成候选。
 
