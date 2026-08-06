@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from types import SimpleNamespace
 from unittest.mock import patch
 
 from alpha.core import simulation_create as create_stages
@@ -10,7 +9,7 @@ from alpha.core import simulation_poll as poll_stages
 from alpha.core import submission_checks as check_stages
 from alpha.exceptions import BrainStopRequested
 from alpha.models.domain import FailedCheck, FieldTestContext, FieldTestResult, SettingsVariant
-from tests.conftest import MockArgs
+from tests.unit.simulation_config_support import build_simulation_stage_config
 
 
 def _context() -> FieldTestContext:
@@ -25,24 +24,8 @@ def _context() -> FieldTestContext:
     )
 
 
-def _stage_config() -> SimpleNamespace:
-    return SimpleNamespace(
-        simulation_create_retries=2,
-        simulation_poll_retries=3,
-        simulation_max_polls=10,
-        simulation_max_wait_seconds=60,
-        simulation_max_pending_cycles=5,
-        simulation_max_queue_seconds=30,
-    )
-
-
-def test_int_arg_and_settings_override_boundaries() -> None:
-    assert check_stages._int_arg(SimpleNamespace(value=0), "value", default=3) == 0
-    assert check_stages._int_arg(SimpleNamespace(value="invalid"), "value", default=2) == 2
+def test_settings_override_boundaries() -> None:
     assert create_stages._serialize_settings_overrides(None) == {}
-    assert create_stages._serialize_settings_overrides({"unitHandling": "OFF"}) == {
-        "unitHandling": "OFF"
-    }
     assert create_stages._serialize_settings_overrides(SettingsVariant(decay=6)) == {"decay": 6}
 
 
@@ -102,10 +85,6 @@ def test_create_stage_releases_semaphore_when_stop_arrives_after_acquire() -> No
     semaphore = Semaphore()
     with (
         patch(
-            "alpha.core.simulation_create.SimulationStageConfig.from_stage_args",
-            return_value=_stage_config(),
-        ),
-        patch(
             "alpha.core.simulation_create.build_simulation_payload",
             return_value={"settings": {}, "regular": "rank(f1)"},
         ),
@@ -114,7 +93,7 @@ def test_create_stage_releases_semaphore_when_stop_arrives_after_acquire() -> No
         result = create_stages.run_simulation_create_stage(
             _context(),
             client=object(),  # type: ignore[arg-type]
-            args=MockArgs(),
+            config=build_simulation_stage_config(simulation_create_retries=2),
             create_semaphore=semaphore,
             should_abort=lambda: abort,
         )
@@ -128,10 +107,6 @@ def test_create_stage_releases_semaphore_when_stop_arrives_after_acquire() -> No
 def test_create_stage_converts_unexpected_error_to_failure() -> None:
     with (
         patch(
-            "alpha.core.simulation_create.SimulationStageConfig.from_stage_args",
-            return_value=_stage_config(),
-        ),
-        patch(
             "alpha.core.simulation_create.build_simulation_payload",
             return_value={"settings": {}, "regular": "rank(f1)"},
         ),
@@ -143,7 +118,7 @@ def test_create_stage_converts_unexpected_error_to_failure() -> None:
         result = create_stages.run_simulation_create_stage(
             _context(),
             client=object(),  # type: ignore[arg-type]
-            args=MockArgs(),
+            config=build_simulation_stage_config(simulation_create_retries=2),
         )
 
     assert isinstance(result, FieldTestResult)
@@ -153,10 +128,6 @@ def test_create_stage_converts_unexpected_error_to_failure() -> None:
 
 def test_poll_stage_returns_alpha_and_reports_missing_alpha() -> None:
     with (
-        patch(
-            "alpha.core.simulation_poll.SimulationStageConfig.from_stage_args",
-            return_value=_stage_config(),
-        ),
         patch(
             "alpha.core.simulation_poll.poll_simulation_with_retry",
             side_effect=[
@@ -168,14 +139,14 @@ def test_poll_stage_returns_alpha_and_reports_missing_alpha() -> None:
         success = poll_stages.run_simulation_poll_stage(
             _context(),
             client=object(),  # type: ignore[arg-type]
-            args=MockArgs(),
+            config=build_simulation_stage_config(simulation_max_pending_cycles=5),
             simulation_location="/simulations/sim-1",
             simulation_id="sim-1",
         )
         failure = poll_stages.run_simulation_poll_stage(
             _context(),
             client=object(),  # type: ignore[arg-type]
-            args=MockArgs(),
+            config=build_simulation_stage_config(simulation_max_pending_cycles=5),
             simulation_location="/simulations/sim-2",
             simulation_id="sim-2",
         )
@@ -189,10 +160,6 @@ def test_poll_stage_returns_alpha_and_reports_missing_alpha() -> None:
 def test_poll_stage_converts_stop_and_unexpected_errors() -> None:
     with (
         patch(
-            "alpha.core.simulation_poll.SimulationStageConfig.from_stage_args",
-            return_value=_stage_config(),
-        ),
-        patch(
             "alpha.core.simulation_poll.poll_simulation_with_retry",
             side_effect=RuntimeError("poll failed"),
         ),
@@ -200,7 +167,7 @@ def test_poll_stage_converts_stop_and_unexpected_errors() -> None:
         failure = poll_stages.run_simulation_poll_stage(
             _context(),
             client=object(),  # type: ignore[arg-type]
-            args=MockArgs(),
+            config=build_simulation_stage_config(simulation_max_pending_cycles=5),
             simulation_location="/simulations/sim-1",
             simulation_id="sim-1",
         )
@@ -211,10 +178,6 @@ def test_poll_stage_converts_stop_and_unexpected_errors() -> None:
 
     with (
         patch(
-            "alpha.core.simulation_poll.SimulationStageConfig.from_stage_args",
-            return_value=_stage_config(),
-        ),
-        patch(
             "alpha.core.simulation_poll.poll_simulation_with_retry",
             side_effect=BrainStopRequested("stopped"),
         ),
@@ -222,7 +185,7 @@ def test_poll_stage_converts_stop_and_unexpected_errors() -> None:
         stopped = poll_stages.run_simulation_poll_stage(
             _context(),
             client=object(),  # type: ignore[arg-type]
-            args=MockArgs(),
+            config=build_simulation_stage_config(simulation_max_pending_cycles=5),
             simulation_location="/simulations/sim-1",
             simulation_id="sim-1",
         )
@@ -240,16 +203,6 @@ def test_check_submission_stage_precheck_failure_still_calls_remote_check() -> N
     }
     with (
         patch(
-            "alpha.core.submission_checks.PrecheckConfig.from_args",
-            return_value=SimpleNamespace(
-                min_sharpe=1.25,
-                min_fitness=1.0,
-                min_turnover=0.01,
-                max_turnover=0.7,
-                max_weight=0.1,
-            ),
-        ),
-        patch(
             "alpha.core.submission_checks.precheck_simulation_metrics",
             return_value=(False, "low sharpe", [failed_check]),
         ),
@@ -265,7 +218,7 @@ def test_check_submission_stage_precheck_failure_still_calls_remote_check() -> N
         rejected = check_stages.run_check_submission_stage(
             _context(),
             client=client,  # type: ignore[arg-type]
-            args=SimpleNamespace(check_submission_retries=3),  # type: ignore[arg-type]
+            config=build_simulation_stage_config(check_submission_retries=3),
             alpha_id="alpha-1",
             simulation_id="sim-1",
             simulation_result={"alpha": "alpha-1"},
@@ -288,7 +241,7 @@ def test_check_submission_stage_success_and_error() -> None:
         passed = check_stages.run_check_submission_stage(
             _context(),
             client=client,  # type: ignore[arg-type]
-            args=SimpleNamespace(check_submission_retries=2),  # type: ignore[arg-type]
+            config=build_simulation_stage_config(check_submission_retries=2),
             alpha_id="alpha-1",
             simulation_id="sim-1",
         )
@@ -302,7 +255,7 @@ def test_check_submission_stage_success_and_error() -> None:
         error = check_stages.run_check_submission_stage(
             _context(),
             client=object(),  # type: ignore[arg-type]
-            args=SimpleNamespace(check_submission_retries="invalid"),  # type: ignore[arg-type]
+            config=build_simulation_stage_config(check_submission_retries=2),
             alpha_id="alpha-1",
             simulation_id="sim-1",
         )

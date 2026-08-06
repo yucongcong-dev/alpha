@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import argparse
 from concurrent.futures import ThreadPoolExecutor
 from threading import Semaphore
 from unittest.mock import MagicMock
@@ -19,6 +18,7 @@ from alpha.models.runtime import (
     RuntimeConcurrencyState,
     TemplateBuildContext,
 )
+from tests.unit.simulation_config_support import build_simulation_stage_config
 
 
 def build_round_context(
@@ -48,7 +48,7 @@ def build_round_context(
         run_config={},
     )
     return ScheduleRoundContext(
-        args=argparse.Namespace(),
+        simulation_config=build_simulation_stage_config(),
         run_ctx=run_ctx,
         executor=ThreadPoolExecutor(max_workers=1),
         template_build_ctx=MagicMock(spec=TemplateBuildContext),

@@ -15,8 +15,8 @@ from ..core.executor import (
 )
 from ..generators.fields import choose_field_name, choose_field_type
 from ..models.domain import TemplateField
+from ..models.runtime_config import SimulationStageConfig
 from ..models.runtime_options import SchedulerControlOptions
-from ..models.runtime_protocols import SimulationStageArgs
 from ..runtime.contexts import (
     FutureCompletionContext,
     TemplateBuildContext,
@@ -45,7 +45,7 @@ class ScheduleRoundResult:
 class ScheduleRoundContext:
     """Stable dependencies shared by every breadth-first scheduling round."""
 
-    args: SimulationStageArgs
+    simulation_config: SimulationStageConfig
     run_ctx: InitializedRunContext
     executor: ThreadPoolExecutor
     template_build_ctx: TemplateBuildContext

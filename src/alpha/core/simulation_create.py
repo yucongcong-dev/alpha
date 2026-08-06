@@ -13,7 +13,7 @@ from ..exceptions import BrainStopRequested
 from ..generators.payload import build_simulation_payload
 from ..models.domain import FieldTestContext, FieldTestResult, SettingsVariant
 from ..models.runtime_config import SimulationStageConfig
-from ..models.runtime_protocols import SemaphoreLike, SimulationStageArgs
+from ..models.runtime_protocols import SemaphoreLike
 from .simulation_results import handle_stage_error
 
 logger = logging.getLogger(__name__)
@@ -22,13 +22,11 @@ _SIM_ID_REGEX: re.Pattern[str] = re.compile(r"/simulations/([^/]+)", re.IGNORECA
 
 
 def _serialize_settings_overrides(
-    simulation_settings: SettingsVariant | dict[str, Any] | None,
+    simulation_settings: SettingsVariant | None,
 ) -> dict[str, Any]:
-    """Normalize settings overrides while preserving compatibility with old dict callers."""
+    """Serialize the optional settings variant used for this simulation."""
     if simulation_settings is None:
         return {}
-    if isinstance(simulation_settings, dict):
-        return SettingsVariant.from_dict(simulation_settings).to_dict()
     return simulation_settings.to_dict()
 
 
@@ -59,7 +57,7 @@ def create_simulation_with_retry(
 def run_simulation_create_stage(
     ctx: FieldTestContext,
     client: BrainClient,
-    args: SimulationStageArgs,
+    config: SimulationStageConfig,
     *,
     simulation_settings: SettingsVariant | None = None,
     create_semaphore: SemaphoreLike | None = None,
@@ -68,8 +66,7 @@ def run_simulation_create_stage(
     try:
         if should_abort is not None and should_abort():
             raise BrainStopRequested("simulation create aborted because stop was requested")
-        config = SimulationStageConfig.from_stage_args(args)
-        payload = build_simulation_payload(args, ctx.expression)
+        payload = build_simulation_payload(config, ctx.expression)
         if simulation_settings is not None:
             payload["settings"].update(_serialize_settings_overrides(simulation_settings))
         ctx.settings = dict(payload["settings"])

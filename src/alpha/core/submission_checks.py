@@ -12,27 +12,19 @@ from ..config.constants import SIMULATION_RETRY_WAIT, STATUS_SKIPPED
 from ..exceptions import BrainAPIError, BrainHTTPError, BrainStopRequested
 from ..models.domain import FailedCheck, FieldTestContext, FieldTestResult
 from ..models.domain_parsers import parse_failed_check
-from ..models.runtime_protocols import SimulationStageArgs
+from ..models.runtime_config import SimulationStageConfig
 from .simulation_parsing import (
     extract_checks,
     extract_failed_checks,
     extract_pending_checks,
     is_submittable_from_checks,
 )
-from .simulation_precheck import PrecheckConfig, precheck_simulation_metrics
+from .simulation_precheck import precheck_simulation_metrics
 from .simulation_results import handle_stage_error
 
 logger = logging.getLogger(__name__)
 
 _CHECK_SUBMISSION_TRANSPORT_RETRIES = 2
-
-
-def _int_arg(args: object, name: str, default: int = 0) -> int:
-    try:
-        value = getattr(args, name, default)
-        return int(default if value is None else value)
-    except (TypeError, ValueError):
-        return default
 
 
 def check_submission_with_retry(
@@ -138,7 +130,7 @@ def check_submission_with_retry(
 def run_check_submission_stage(
     ctx: FieldTestContext,
     client: BrainClient,
-    args: SimulationStageArgs,
+    config: SimulationStageConfig,
     *,
     alpha_id: str,
     simulation_id: str,
@@ -146,14 +138,13 @@ def run_check_submission_stage(
     should_abort: Callable[[], bool] | None = None,
 ) -> FieldTestResult | tuple[bool | None, str, list[FailedCheck]]:
     if simulation_result:
-        precheck_config = PrecheckConfig.from_args(args)
         passed, reason, _ = precheck_simulation_metrics(
             simulation_result,
-            min_sharpe=precheck_config.min_sharpe,
-            min_fitness=precheck_config.min_fitness,
-            min_turnover=precheck_config.min_turnover,
-            max_turnover=precheck_config.max_turnover,
-            max_weight=precheck_config.max_weight,
+            min_sharpe=config.min_sharpe,
+            min_fitness=config.min_fitness,
+            min_turnover=config.min_turnover,
+            max_turnover=config.max_turnover,
+            max_weight=config.max_weight,
         )
         if not passed:
             logger.info(
@@ -167,7 +158,7 @@ def run_check_submission_stage(
         return check_submission_with_retry(
             client,
             alpha_id,
-            _int_arg(args, "check_submission_retries"),
+            config.check_submission_retries,
             should_abort=should_abort,
         )
     except BrainStopRequested as exc:

@@ -15,6 +15,7 @@ from alpha.app.loop_future_support import (
 )
 from alpha.models.domain import FieldTestResult, SettingsVariant, TemplateField
 from alpha.models.runtime import ExecutionState, PendingFutureContext
+from tests.unit.simulation_config_support import build_simulation_stage_config
 
 
 def _execution_state() -> ExecutionState:
@@ -152,7 +153,7 @@ def test_submit_template_future_records_created_simulation_location() -> None:
             executor=_ImmediateExecutor(),  # type: ignore[arg-type]
             run_ctx=run_ctx,  # type: ignore[arg-type]
             execution_state=execution_state,
-            args=SimpleNamespace(),  # type: ignore[arg-type]
+            simulation_config=build_simulation_stage_config(),
             field=field,
             field_id="f1",
             field_name="Field 1",
@@ -195,7 +196,7 @@ def test_submit_resumable_futures_registers_restored_contexts() -> None:
         executor=executor,  # type: ignore[arg-type]
         run_ctx=run_ctx,  # type: ignore[arg-type]
         execution_state=execution_state,
-        args=SimpleNamespace(),  # type: ignore[arg-type]
+        simulation_config=build_simulation_stage_config(),
     )
 
     assert scheduled == 1
@@ -233,7 +234,7 @@ def test_submit_resumable_futures_restores_unsubmitted_contexts_on_failure() -> 
             executor=executor,  # type: ignore[arg-type]
             run_ctx=run_ctx,  # type: ignore[arg-type]
             execution_state=execution_state,
-            args=SimpleNamespace(),  # type: ignore[arg-type]
+            simulation_config=build_simulation_stage_config(),
         )
     except RuntimeError as exc:
         assert "executor unavailable" in str(exc)

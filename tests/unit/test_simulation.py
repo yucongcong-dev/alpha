@@ -23,7 +23,7 @@ from alpha.models.domain import (
     FieldTestContext,
     FieldTestResult,
 )
-from tests.conftest import MockArgs
+from tests.unit.simulation_config_support import build_simulation_stage_config
 
 # ============================================================================
 # extract_alpha_id 测试
@@ -385,14 +385,7 @@ def test_run_check_submission_stage_with_self_correlation_pending(monkeypatch) -
         settings_fingerprint="s1",
         template_library_fingerprint="tlib1",
     )
-    args = MockArgs(
-        check_submission_retries=3,
-        min_sharpe=1.25,
-        min_fitness=1.0,
-        min_turnover=0.01,
-        max_turnover=0.7,
-        max_weight=0.1,
-    )
+    config = build_simulation_stage_config(check_submission_retries=3)
 
     class DummyClient:
         def check_alpha_submission(self, _alpha_id: str) -> dict[str, object]:
@@ -403,7 +396,7 @@ def test_run_check_submission_stage_with_self_correlation_pending(monkeypatch) -
     result = run_check_submission_stage(
         ctx,
         DummyClient(),
-        args,
+        config,
         alpha_id="alpha_1",
         simulation_id="sim_1",
         simulation_result=None,
@@ -438,7 +431,7 @@ def test_run_check_submission_stage_skips_when_stop_is_requested() -> None:
         result = run_check_submission_stage(
             ctx,
             client,  # type: ignore[arg-type]
-            MockArgs(check_submission_retries=3),
+            build_simulation_stage_config(check_submission_retries=3),
             alpha_id="alpha_1",
             simulation_id="sim_1",
             should_abort=should_abort,

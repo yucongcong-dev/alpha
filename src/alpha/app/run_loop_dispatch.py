@@ -42,7 +42,7 @@ def dispatch_templates_for_field(
     template_queue: FieldTemplateQueue | None = None,
 ) -> bool:
     """Dispatch scheduled templates for a single field; return whether a stop was requested."""
-    args = context.args
+    simulation_config = context.simulation_config
     scheduler_options = context.scheduler_options
     run_ctx = context.run_ctx
     execution_state = run_ctx.execution_state
@@ -100,7 +100,7 @@ def dispatch_templates_for_field(
             executor=context.executor,
             run_ctx=run_ctx,
             execution_state=execution_state,
-            args=args,
+            simulation_config=simulation_config,
             field=field,
             field_id=field_id,
             field_name=field_name,

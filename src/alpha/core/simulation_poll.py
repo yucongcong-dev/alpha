@@ -17,7 +17,6 @@ from ..config.constants import (
 from ..exceptions import BrainStopRequested
 from ..models.domain import FieldTestContext, FieldTestResult
 from ..models.runtime_config import SimulationStageConfig
-from ..models.runtime_protocols import SimulationStageArgs
 from ..utils.helpers import first_non_empty
 from .simulation_parsing import extract_alpha_id, summarize_failure
 from .simulation_results import handle_stage_error
@@ -55,14 +54,13 @@ def poll_simulation_with_retry(
 def run_simulation_poll_stage(
     ctx: FieldTestContext,
     client: BrainClient,
-    args: SimulationStageArgs,
+    config: SimulationStageConfig,
     *,
     simulation_location: str,
     simulation_id: str,
     should_abort: Callable[[], bool] | None = None,
 ) -> FieldTestResult | tuple[str, SimulationPayload]:
     try:
-        config = SimulationStageConfig.from_stage_args(args)
         simulation_result = poll_simulation_with_retry(
             client,
             simulation_location,

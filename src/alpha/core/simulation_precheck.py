@@ -18,7 +18,6 @@ from ..config.constants import (
     SUBMIT_MIN_TURNOVER,
 )
 from ..config.runtime_values import get_runtime_config
-from ..models.runtime_protocols import SimulationStageArgs
 
 _RESULT_FAIL: str = "FAIL"
 _KEY_CONCENTRATED_WEIGHT: str = "concentratedWeight"
@@ -41,22 +40,6 @@ class PrecheckConfig:
     min_turnover: float = SUBMIT_MIN_TURNOVER
     max_turnover: float = SUBMIT_MAX_TURNOVER
     max_weight: float = SUBMIT_MAX_WEIGHT
-
-    @classmethod
-    def from_args(cls, args: SimulationStageArgs) -> PrecheckConfig:
-        def _float_attr(name: str, default: float) -> float:
-            try:
-                return float(getattr(args, name, default))
-            except (TypeError, ValueError):
-                return default
-
-        return cls(
-            min_sharpe=_float_attr("min_sharpe", cls.min_sharpe),
-            min_fitness=_float_attr("min_fitness", cls.min_fitness),
-            min_turnover=_float_attr("min_turnover", cls.min_turnover),
-            max_turnover=_float_attr("max_turnover", cls.max_turnover),
-            max_weight=_float_attr("max_weight", cls.max_weight),
-        )
 
 
 def build_default_submit_precheck_config() -> PrecheckConfig:

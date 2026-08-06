@@ -12,8 +12,8 @@ from ..core.scheduler import drain_completed_futures_with_context
 from ..core.simulation import resume_field_test_in_worker, run_field_test_in_worker
 from ..generators.payload import build_simulation_payload
 from ..models.domain import FieldTestResult, SettingsVariant, TemplateField
+from ..models.runtime_config import SimulationStageConfig
 from ..models.runtime_options import SchedulerControlOptions
-from ..models.runtime_protocols import SimulationStageArgs
 from ..runtime.concurrency import RuntimeConcurrencyState
 from ..runtime.contexts import (
     FutureCompletionContext,
@@ -146,7 +146,7 @@ def submit_template_future(
     executor: ThreadPoolExecutor,
     run_ctx: InitializedRunContext,
     execution_state: ExecutionState,
-    args: SimulationStageArgs,
+    simulation_config: SimulationStageConfig,
     field: TemplateField,
     field_id: str,
     field_name: str,
@@ -173,7 +173,7 @@ def submit_template_future(
             "policy_version": policy_version,
         },
     )
-    effective_payload = build_simulation_payload(args, expression)
+    effective_payload = build_simulation_payload(simulation_config, expression)
     effective_payload["settings"].update(settings_variant.to_dict())
     pending_context = PendingFutureContext(
         field_id=field_id,
@@ -197,7 +197,7 @@ def submit_template_future(
     future = executor.submit(
         run_field_test_in_worker,
         run_ctx.client_factory,
-        args,
+        simulation_config,
         field_with_template,
         template_name,
         expression,
@@ -218,7 +218,7 @@ def submit_resumable_futures(
     executor: ThreadPoolExecutor,
     run_ctx: InitializedRunContext,
     execution_state: ExecutionState,
-    args: SimulationStageArgs,
+    simulation_config: SimulationStageConfig,
 ) -> int:
     """Submit restored remote simulations for polling before scheduling new work."""
     pending_contexts = execution_state.future_queue.take_resumable_batch()
@@ -228,7 +228,7 @@ def submit_resumable_futures(
             future = executor.submit(
                 resume_field_test_in_worker,
                 run_ctx.client_factory,
-                args,
+                simulation_config,
                 pending_context,
                 run_ctx.template_library_fingerprint,
                 execution_state.future_queue.stop_signal.is_set,

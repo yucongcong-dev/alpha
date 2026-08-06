@@ -5,8 +5,6 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
-from .runtime_protocols import SimulationSettingsArgs, SimulationStageArgs
-
 if TYPE_CHECKING:
     from ..config.application import ApplicationConfig
 
@@ -28,25 +26,6 @@ class SimulationSettingsConfig:
     start_date: str | None = None
     end_date: str | None = None
 
-    @classmethod
-    def from_args(cls, args: SimulationSettingsArgs) -> SimulationSettingsConfig:
-        return cls(
-            instrument_type=args.instrument_type,
-            region=args.region,
-            universe=args.universe,
-            delay=args.delay,
-            decay=args.decay,
-            neutralization=args.neutralization,
-            truncation=args.truncation,
-            pasteurization=args.pasteurization,
-            unit_handling=args.unit_handling,
-            nan_handling=args.nan_handling,
-            language=args.language,
-            max_trade=str(getattr(args, "max_trade", "OFF") or "OFF"),
-            start_date=args.start_date,
-            end_date=args.end_date,
-        )
-
 
 @dataclass(frozen=True)
 class SimulationStageConfig(SimulationSettingsConfig):
@@ -63,38 +42,6 @@ class SimulationStageConfig(SimulationSettingsConfig):
     min_turnover: float = 0.0
     max_turnover: float = 0.0
     max_weight: float = 0.0
-
-    @classmethod
-    def from_stage_args(cls, args: SimulationStageArgs) -> SimulationStageConfig:
-        settings = SimulationSettingsConfig.from_args(args)
-        return cls(
-            instrument_type=settings.instrument_type,
-            region=settings.region,
-            universe=settings.universe,
-            delay=settings.delay,
-            decay=settings.decay,
-            neutralization=settings.neutralization,
-            truncation=settings.truncation,
-            pasteurization=settings.pasteurization,
-            unit_handling=settings.unit_handling,
-            nan_handling=settings.nan_handling,
-            language=settings.language,
-            max_trade=settings.max_trade,
-            start_date=settings.start_date,
-            end_date=settings.end_date,
-            simulation_create_retries=int(args.simulation_create_retries or 0),
-            simulation_poll_retries=int(args.simulation_poll_retries or 0),
-            simulation_max_polls=int(args.simulation_max_polls or 0),
-            simulation_max_wait_seconds=int(args.simulation_max_wait_seconds or 0),
-            simulation_max_pending_cycles=int(args.simulation_max_pending_cycles or 0),
-            simulation_max_queue_seconds=int(args.simulation_max_queue_seconds or 0),
-            check_submission_retries=int(args.check_submission_retries or 0),
-            min_sharpe=float(args.min_sharpe or 0.0),
-            min_fitness=float(args.min_fitness or 0.0),
-            min_turnover=float(args.min_turnover or 0.0),
-            max_turnover=float(args.max_turnover or 0.0),
-            max_weight=float(args.max_weight or 0.0),
-        )
 
     @classmethod
     def from_application_config(cls, config: ApplicationConfig) -> SimulationStageConfig:

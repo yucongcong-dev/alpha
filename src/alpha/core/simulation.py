@@ -19,7 +19,8 @@ from ..models.domain import (
     SettingsVariant,
     TemplateField,
 )
-from ..models.runtime_protocols import ClientFactoryLike, SemaphoreLike, SimulationStageArgs
+from ..models.runtime_config import SimulationStageConfig
+from ..models.runtime_protocols import ClientFactoryLike, SemaphoreLike
 from ..runtime.contexts import PendingFutureContext
 from ..utils.helpers import first_non_empty
 from .simulation_create import run_simulation_create_stage
@@ -37,7 +38,7 @@ SimulationCreatedCallback = Callable[[str, str], None]
 def _complete_field_test_from_simulation(
     ctx: FieldTestContext,
     client: BrainClient,
-    args: SimulationStageArgs,
+    config: SimulationStageConfig,
     *,
     simulation_location: str,
     simulation_id: str,
@@ -47,7 +48,7 @@ def _complete_field_test_from_simulation(
     poll_result = run_simulation_poll_stage(
         ctx,
         client,
-        args,
+        config,
         simulation_location=simulation_location,
         simulation_id=simulation_id,
         should_abort=should_abort,
@@ -68,7 +69,7 @@ def _complete_field_test_from_simulation(
     check_result = run_check_submission_stage(
         ctx,
         client,
-        args,
+        config,
         alpha_id=alpha_id,
         simulation_id=simulation_id,
         simulation_result=simulation_result,
@@ -99,7 +100,7 @@ def _complete_field_test_from_simulation(
 
 def run_field_test(
     client: BrainClient,
-    args: SimulationStageArgs,
+    config: SimulationStageConfig,
     field: TemplateField,
     template_name: str,
     expression: str,
@@ -149,7 +150,7 @@ def run_field_test(
     create_result = run_simulation_create_stage(
         ctx,
         client,
-        args,
+        config,
         simulation_settings=simulation_settings,
         create_semaphore=create_semaphore,
         should_abort=should_abort,
@@ -163,7 +164,7 @@ def run_field_test(
     return _complete_field_test_from_simulation(
         ctx,
         client,
-        args,
+        config,
         simulation_location=simulation_location,
         simulation_id=simulation_id,
         should_abort=should_abort,
@@ -172,7 +173,7 @@ def run_field_test(
 
 def resume_field_test(
     client: BrainClient,
-    args: SimulationStageArgs,
+    config: SimulationStageConfig,
     pending: PendingFutureContext,
     template_library_fingerprint: str,
     should_abort: Callable[[], bool] | None = None,
@@ -208,7 +209,7 @@ def resume_field_test(
     return _complete_field_test_from_simulation(
         ctx,
         client,
-        args,
+        config,
         simulation_location=pending.simulation_location,
         simulation_id=simulation_id,
         should_abort=should_abort,
@@ -217,7 +218,7 @@ def resume_field_test(
 
 def run_field_test_in_worker(
     client_factory: ClientFactoryLike,
-    args: SimulationStageArgs,
+    config: SimulationStageConfig,
     field: TemplateField,
     template_name: str,
     expression: str,
@@ -232,7 +233,7 @@ def run_field_test_in_worker(
     client = client_factory.get_client()
     return run_field_test(
         client,
-        args,
+        config,
         field,
         template_name,
         expression,
@@ -247,7 +248,7 @@ def run_field_test_in_worker(
 
 def resume_field_test_in_worker(
     client_factory: ClientFactoryLike,
-    args: SimulationStageArgs,
+    config: SimulationStageConfig,
     pending: PendingFutureContext,
     template_library_fingerprint: str,
     should_abort: Callable[[], bool] | None = None,
@@ -256,7 +257,7 @@ def resume_field_test_in_worker(
     client = client_factory.get_client()
     return resume_field_test(
         client,
-        args,
+        config,
         pending,
         template_library_fingerprint,
         should_abort,

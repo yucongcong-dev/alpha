@@ -20,40 +20,15 @@ from alpha.core.simulation_poll import run_simulation_poll_stage
 from alpha.exceptions import BrainStopRequested
 from alpha.models.domain import FieldTestContext, FieldTestResult, SettingsVariant, TemplateField
 from alpha.models.runtime import PendingFutureContext
-from tests.conftest import MockArgs
+from alpha.models.runtime_config import SimulationStageConfig
+from tests.unit.simulation_config_support import build_simulation_stage_config
 
 
-def _default_stage_args() -> MockArgs:
-    return MockArgs(
-        instrument_type=None,
-        region=None,
-        universe=None,
-        delay=None,
-        decay=None,
-        neutralization=None,
-        truncation=None,
-        pasteurization=None,
-        unit_handling=None,
-        nan_handling=None,
-        language=None,
-        start_date=None,
-        end_date=None,
-        simulation_create_retries=3,
-        simulation_poll_retries=3,
-        simulation_max_polls=10,
-        simulation_max_wait_seconds=60,
-        simulation_max_pending_cycles=10,
-        simulation_max_queue_seconds=30,
-        check_submission_retries=3,
-        min_sharpe=1.25,
-        min_fitness=1.0,
-        min_turnover=0.01,
-        max_turnover=0.7,
-        max_weight=0.1,
-    )
+def _stage_config() -> SimulationStageConfig:
+    return build_simulation_stage_config()
 
 
-def test_run_simulation_create_stage_merges_dict_settings_with_baseline(monkeypatch) -> None:
+def test_run_simulation_create_stage_merges_settings_with_baseline(monkeypatch) -> None:
     ctx = FieldTestContext(
         field_id="cash_st",
         field_type="MATRIX",
@@ -75,8 +50,8 @@ def test_run_simulation_create_stage_merges_dict_settings_with_baseline(monkeypa
     result = run_simulation_create_stage(
         ctx,
         DummyClient(),
-        _default_stage_args(),
-        simulation_settings={"decay": 2, "neutralization": "MARKET"},
+        _stage_config(),
+        simulation_settings=SettingsVariant(decay=2, neutralization="MARKET"),
     )
 
     assert result == ("/simulations/sim_123", "sim_123")
@@ -116,7 +91,7 @@ def test_run_simulation_create_stage_merges_settings_variant_with_baseline(monke
     result = run_simulation_create_stage(
         ctx,
         DummyClient(),
-        _default_stage_args(),
+        _stage_config(),
         simulation_settings=SettingsVariant(decay=6, truncation=0.05),
     )
 
@@ -147,7 +122,7 @@ def test_run_simulation_create_stage_skips_when_stop_signal_is_set() -> None:
     result = run_simulation_create_stage(
         ctx,
         client=object(),  # type: ignore[arg-type]
-        args=MockArgs(),
+        config=_stage_config(),
         should_abort=stop_signal.is_set,
     )
 
@@ -169,16 +144,6 @@ def test_run_simulation_poll_stage_skips_when_stop_is_requested() -> None:
 
     with (
         patch(
-            "alpha.core.simulation_poll.SimulationStageConfig.from_stage_args",
-            return_value=SimpleNamespace(
-                simulation_poll_retries=3,
-                simulation_max_polls=10,
-                simulation_max_wait_seconds=60,
-                simulation_max_pending_cycles=10,
-                simulation_max_queue_seconds=30,
-            ),
-        ),
-        patch(
             "alpha.core.simulation_poll.poll_simulation_with_retry",
             side_effect=BrainStopRequested("polling stopped"),
         ),
@@ -186,7 +151,7 @@ def test_run_simulation_poll_stage_skips_when_stop_is_requested() -> None:
         result = run_simulation_poll_stage(
             ctx,
             client=object(),  # type: ignore[arg-type]
-            args=MockArgs(),
+            config=_stage_config(),
             simulation_location="/simulations/sim-1",
             simulation_id="sim-1",
             should_abort=lambda: True,
@@ -223,7 +188,7 @@ def test_resume_field_test_skips_create_and_completes_existing_simulation() -> N
     ):
         result = resume_field_test(
             client=object(),  # type: ignore[arg-type]
-            args=MockArgs(),
+            config=_stage_config(),
             pending=pending,
             template_library_fingerprint="library-v1",
         )
@@ -262,7 +227,7 @@ def _orchestration_field() -> TemplateField:
 def test_run_field_test_validates_required_inputs(overrides, message) -> None:
     kwargs = {
         "client": object(),
-        "args": MockArgs(),
+        "config": _stage_config(),
         "field": _orchestration_field(),
         "template_name": "rank",
         "expression": "rank(cashflow_op)",
@@ -281,7 +246,7 @@ def test_run_field_test_rejects_field_without_id() -> None:
     with pytest.raises(ValueError, match="field_id cannot be empty"):
         run_field_test(
             object(),  # type: ignore[arg-type]
-            MockArgs(),
+            _stage_config(),
             field,
             "rank",
             "rank(field)",
@@ -313,7 +278,7 @@ def test_run_field_test_calls_create_callback_and_completion() -> None:
     ):
         result = run_field_test(
             object(),  # type: ignore[arg-type]
-            MockArgs(),
+            _stage_config(),
             _orchestration_field(),
             "rank",
             "rank(cashflow_op)",
@@ -341,7 +306,7 @@ def test_run_field_test_returns_create_stage_failure() -> None:
     with patch("alpha.core.simulation.run_simulation_create_stage", return_value=failure):
         result = run_field_test(
             object(),  # type: ignore[arg-type]
-            MockArgs(),
+            _stage_config(),
             _orchestration_field(),
             "rank",
             "rank(cashflow_op)",
@@ -356,7 +321,7 @@ def test_resume_field_test_requires_location() -> None:
     with pytest.raises(ValueError, match="must contain simulation_location"):
         resume_field_test(
             object(),  # type: ignore[arg-type]
-            MockArgs(),
+            _stage_config(),
             PendingFutureContext(),
             "templates",
         )
@@ -380,7 +345,7 @@ def test_worker_entrypoints_resolve_thread_client() -> None:
         assert (
             run_field_test_in_worker(
                 factory,
-                MockArgs(),
+                _stage_config(),
                 _orchestration_field(),
                 "rank",
                 "rank(cashflow_op)",
@@ -389,7 +354,9 @@ def test_worker_entrypoints_resolve_thread_client() -> None:
             )
             is completed
         )
-        assert resume_field_test_in_worker(factory, MockArgs(), pending, "templates") is completed
+        assert (
+            resume_field_test_in_worker(factory, _stage_config(), pending, "templates") is completed
+        )
 
     assert mock_run.call_args.args[0] is client
     assert mock_resume.call_args.args[0] is client

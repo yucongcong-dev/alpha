@@ -53,7 +53,7 @@ def run_field_test_loop(
     executor_shutdown = False
     try:
         schedule_context = run_loop_rounds.ScheduleRoundContext(
-            args=run_loop_options.simulation_stage,
+            simulation_config=run_loop_options.simulation_stage,
             run_ctx=run_ctx,
             executor=executor,
             template_build_ctx=template_build_ctx,
@@ -95,7 +95,7 @@ def run_field_test_loop(
                 executor=executor,
                 run_ctx=run_ctx,
                 execution_state=execution_state,
-                args=run_loop_options.simulation_stage,
+                simulation_config=run_loop_options.simulation_stage,
             )
             round_index = 0
             while True:
