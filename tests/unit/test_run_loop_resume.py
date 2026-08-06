@@ -11,19 +11,19 @@ from unittest.mock import patch
 
 import pytest
 
-from alpha.app.run_loop import (
-    ScheduleRoundResult,
+from alpha.app.loop_future_support import (
     drain_next_completion,
     drain_remaining_futures,
-    resolve_result_write_options,
-    restore_fields_from_state,
-    run_field_test_loop,
 )
+from alpha.app.run_loop import run_field_test_loop
+from alpha.app.run_loop_paths import resolve_result_write_options
 from alpha.app.run_loop_resume import (
     persist_replanning_checkpoint,
+    restore_fields_from_state,
     save_runtime_checkpoint,
     save_terminal_pipeline_state,
 )
+from alpha.app.run_loop_rounds import ScheduleRoundResult
 from alpha.config.application import ApplicationConfig
 from alpha.models.io_types import RunFilters, RunPaths
 from alpha.models.runtime import (
@@ -248,9 +248,9 @@ def test_run_field_test_loop_persists_progress_for_skipped_fields(tmp_path) -> N
     args = _build_run_loop_args(tmp_path)
 
     with (
-        patch("alpha.app.run_loop.restore_fields_from_state", return_value=fields),
+        patch("alpha.app.run_loop_resume.restore_fields_from_state", return_value=fields),
         patch(
-            "alpha.app.run_loop.create_template_build_context",
+            "alpha.app.run_loop_paths.create_template_build_context",
             return_value=SimpleNamespace(
                 field_feedback={},
                 global_failed_check_counts={},
@@ -258,16 +258,16 @@ def test_run_field_test_loop_persists_progress_for_skipped_fields(tmp_path) -> N
             ),
         ),
         patch(
-            "alpha.app.run_loop.execute_schedule_round",
+            "alpha.app.run_loop_rounds.execute_schedule_round",
             return_value=ScheduleRoundResult(
                 progressed=False,
                 stop_requested=False,
                 last_field_id="f2",
             ),
         ) as mock_round,
-        patch("alpha.app.run_loop.submit_resumable_futures") as mock_resume,
-        patch("alpha.app.run_loop.drain_next_completion", return_value=False),
-        patch("alpha.app.run_loop.drain_remaining_futures"),
+        patch("alpha.app.loop_future_support.submit_resumable_futures") as mock_resume,
+        patch("alpha.app.loop_future_support.drain_next_completion", return_value=False),
+        patch("alpha.app.loop_future_support.drain_remaining_futures"),
     ):
         run_field_test_loop(
             args,
@@ -302,9 +302,9 @@ def test_run_field_test_loop_replans_after_pending_seed_completion(tmp_path) -> 
         return True
 
     with (
-        patch("alpha.app.run_loop.restore_fields_from_state", return_value=fields),
+        patch("alpha.app.run_loop_resume.restore_fields_from_state", return_value=fields),
         patch(
-            "alpha.app.run_loop.create_template_build_context",
+            "alpha.app.run_loop_paths.create_template_build_context",
             return_value=SimpleNamespace(
                 field_feedback={},
                 global_failed_check_counts={},
@@ -312,15 +312,19 @@ def test_run_field_test_loop_replans_after_pending_seed_completion(tmp_path) -> 
             ),
         ),
         patch(
-            "alpha.app.run_loop.execute_schedule_round",
+            "alpha.app.run_loop_rounds.execute_schedule_round",
             side_effect=[
                 ScheduleRoundResult(False, False, "f1"),
                 ScheduleRoundResult(False, False, "f1"),
             ],
         ) as mock_round,
-        patch("alpha.app.run_loop.submit_resumable_futures", side_effect=_submit_resumable),
-        patch("alpha.app.run_loop.drain_next_completion", side_effect=_drain_next) as mock_drain,
-        patch("alpha.app.run_loop.drain_remaining_futures"),
+        patch(
+            "alpha.app.loop_future_support.submit_resumable_futures", side_effect=_submit_resumable
+        ),
+        patch(
+            "alpha.app.loop_future_support.drain_next_completion", side_effect=_drain_next
+        ) as mock_drain,
+        patch("alpha.app.loop_future_support.drain_remaining_futures"),
     ):
         run_field_test_loop(
             args,
@@ -363,18 +367,18 @@ def test_run_field_test_loop_interrupts_workers_without_waiting(tmp_path) -> Non
 
     with (
         patch("alpha.app.run_loop.ThreadPoolExecutor", return_value=executor),
-        patch("alpha.app.run_loop.restore_fields_from_state", return_value=fields),
+        patch("alpha.app.run_loop_resume.restore_fields_from_state", return_value=fields),
         patch(
-            "alpha.app.run_loop.create_template_build_context",
+            "alpha.app.run_loop_paths.create_template_build_context",
             return_value=SimpleNamespace(
                 field_feedback={},
                 global_failed_check_counts={},
                 feedback_result_count=0,
             ),
         ),
-        patch("alpha.app.run_loop.submit_resumable_futures"),
-        patch("alpha.app.run_loop.execute_schedule_round", side_effect=_interrupt),
-        patch("alpha.app.run_loop.save_runtime_checkpoint") as mock_checkpoint,
+        patch("alpha.app.loop_future_support.submit_resumable_futures"),
+        patch("alpha.app.run_loop_rounds.execute_schedule_round", side_effect=_interrupt),
+        patch("alpha.app.run_loop_resume.save_runtime_checkpoint") as mock_checkpoint,
         pytest.raises(KeyboardInterrupt),
     ):
         run_field_test_loop(
@@ -425,22 +429,22 @@ def test_run_field_test_loop_waits_for_worker_metadata_before_interrupt_checkpoi
 
     with (
         patch("alpha.app.run_loop.ThreadPoolExecutor", return_value=FakeExecutor()),
-        patch("alpha.app.run_loop.restore_fields_from_state", return_value=fields),
+        patch("alpha.app.run_loop_resume.restore_fields_from_state", return_value=fields),
         patch(
-            "alpha.app.run_loop.create_template_build_context",
+            "alpha.app.run_loop_paths.create_template_build_context",
             return_value=SimpleNamespace(
                 field_feedback={},
                 global_failed_check_counts={},
                 feedback_result_count=0,
             ),
         ),
-        patch("alpha.app.run_loop.submit_resumable_futures"),
-        patch("alpha.app.run_loop.execute_schedule_round", side_effect=_interrupt),
+        patch("alpha.app.loop_future_support.submit_resumable_futures"),
+        patch("alpha.app.run_loop_rounds.execute_schedule_round", side_effect=_interrupt),
         patch(
-            "alpha.app.run_loop.wait_for_inflight_simulation_metadata",
+            "alpha.app.loop_future_support.wait_for_inflight_simulation_metadata",
             side_effect=_stabilize,
         ) as mock_stabilize,
-        patch("alpha.app.run_loop.save_runtime_checkpoint") as mock_checkpoint,
+        patch("alpha.app.run_loop_resume.save_runtime_checkpoint") as mock_checkpoint,
         pytest.raises(KeyboardInterrupt),
     ):
         run_field_test_loop(
@@ -492,18 +496,18 @@ def test_run_field_test_loop_waits_for_worker_metadata_before_exception_checkpoi
 
     with (
         patch("alpha.app.run_loop.ThreadPoolExecutor", return_value=executor),
-        patch("alpha.app.run_loop.restore_fields_from_state", return_value=fields),
+        patch("alpha.app.run_loop_resume.restore_fields_from_state", return_value=fields),
         patch(
-            "alpha.app.run_loop.create_template_build_context",
+            "alpha.app.run_loop_paths.create_template_build_context",
             return_value=SimpleNamespace(
                 field_feedback={},
                 global_failed_check_counts={},
                 feedback_result_count=0,
             ),
         ),
-        patch("alpha.app.run_loop.submit_resumable_futures"),
-        patch("alpha.app.run_loop.execute_schedule_round", side_effect=_fail_round),
-        patch("alpha.app.run_loop.save_runtime_checkpoint") as mock_checkpoint,
+        patch("alpha.app.loop_future_support.submit_resumable_futures"),
+        patch("alpha.app.run_loop_rounds.execute_schedule_round", side_effect=_fail_round),
+        patch("alpha.app.run_loop_resume.save_runtime_checkpoint") as mock_checkpoint,
         pytest.raises(RuntimeError, match="scheduler failed"),
     ):
         run_field_test_loop(

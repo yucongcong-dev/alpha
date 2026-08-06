@@ -119,6 +119,9 @@ def removed_compat_file_check(root: Path) -> list[str]:
         for path in (root / "src" / "alpha" / "app").iterdir()
         if path.is_file() and path.name in {"loop_support.py", "run_loop_state.py"}
     )
+    simulation_stages = root / "src" / "alpha" / "core" / "simulation_stages.py"
+    if simulation_stages.is_file():
+        removed.append(simulation_stages)
     if removed:
         return [
             "[check] compatibility aggregate files were removed; import concrete modules",

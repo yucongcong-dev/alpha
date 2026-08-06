@@ -39,6 +39,19 @@ def test_removed_compat_file_check_rejects_root_app_facade(tmp_path: Path) -> No
     assert any("src/alpha/run_loop.py" in error for error in errors)
 
 
+def test_removed_compat_file_check_rejects_simulation_stage_aggregate(tmp_path: Path) -> None:
+    app_dir = tmp_path / "src" / "alpha" / "app"
+    core_dir = tmp_path / "src" / "alpha" / "core"
+    app_dir.mkdir(parents=True)
+    core_dir.mkdir(parents=True)
+    (core_dir / "simulation_stages.py").write_text("", encoding="utf-8")
+
+    errors = check_repo.removed_compat_file_check(tmp_path)
+
+    assert any("compatibility aggregate files" in error for error in errors)
+    assert any("src/alpha/core/simulation_stages.py" in error for error in errors)
+
+
 def test_compat_import_check_rejects_package_facade_import(tmp_path: Path) -> None:
     test_file = tmp_path / "tests" / "test_legacy.py"
     test_file.parent.mkdir(parents=True)

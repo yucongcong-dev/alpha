@@ -9,29 +9,7 @@ from ..config.application import ApplicationConfig
 from ..models.io_types import RunPaths
 from ..models.runtime_options import RunLoopOptions
 from ..runtime.state import InitializedRunContext
-from .loop_future_support import cancel_unstarted_futures as cancel_unstarted_futures
-from .loop_future_support import drain_next_completion as drain_next_completion
-from .loop_future_support import drain_remaining_futures as drain_remaining_futures
-from .loop_future_support import submit_resumable_futures as submit_resumable_futures
-from .loop_future_support import (
-    wait_for_inflight_simulation_metadata as wait_for_inflight_simulation_metadata,
-)
-from .run_loop_feedback import refresh_runtime_feedback as refresh_runtime_feedback
-from .run_loop_paths import (
-    create_template_build_context as create_template_build_context,
-)
-from .run_loop_paths import (
-    resolve_future_completion_context as resolve_future_completion_context,
-)
-from .run_loop_paths import (
-    resolve_result_write_options as resolve_result_write_options,
-)
-from .run_loop_paths import run_path_value as run_path_value
-from .run_loop_resume import restore_fields_from_state as restore_fields_from_state
-from .run_loop_resume import save_runtime_checkpoint as save_runtime_checkpoint
-from .run_loop_rounds import ScheduleRoundContext
-from .run_loop_rounds import ScheduleRoundResult as ScheduleRoundResult
-from .run_loop_rounds import execute_schedule_round as execute_schedule_round
+from . import loop_future_support, run_loop_paths, run_loop_resume, run_loop_rounds
 from .run_loop_seed_phase import SeedPhaseState
 
 logger = logging.getLogger(__name__)
@@ -45,10 +23,10 @@ def run_field_test_loop(
     run_paths: RunPaths | None = None,
 ) -> None:
     """线程池中遍历字段并提交模拟任务，实时消费结果。"""
-    state_file = run_path_value(run_paths, "state_file")
-    interrupt_report_file = run_path_value(run_paths, "interrupt_report_file") or run_path_value(
-        run_paths, "checkpoint_file"
-    )
+    state_file = run_loop_paths.run_path_value(run_paths, "state_file")
+    interrupt_report_file = run_loop_paths.run_path_value(
+        run_paths, "interrupt_report_file"
+    ) or run_loop_paths.run_path_value(run_paths, "checkpoint_file")
     runtime_state = run_ctx.runtime_state
     execution_state = run_ctx.execution_state
     fields = list(run_ctx.fields)
@@ -57,17 +35,19 @@ def run_field_test_loop(
     run_loop_options = RunLoopOptions.from_config(args)
     field_template_batch_size = run_loop_options.field_template_batch_size
     scheduler_options = run_loop_options.scheduler
-    result_write_options = resolve_result_write_options(run_loop_options.result_write, run_paths)
-    completion_ctx = resolve_future_completion_context(run_ctx, result_write_options)
+    result_write_options = run_loop_paths.resolve_result_write_options(
+        run_loop_options.result_write, run_paths
+    )
+    completion_ctx = run_loop_paths.resolve_future_completion_context(run_ctx, result_write_options)
 
-    fields = restore_fields_from_state(
+    fields = run_loop_resume.restore_fields_from_state(
         fields=fields,
         state_file=state_file,
         runtime_state=runtime_state,
         execution_state=execution_state,
     )
 
-    template_build_ctx = create_template_build_context(
+    template_build_ctx = run_loop_paths.create_template_build_context(
         options=run_loop_options.template_build,
         run_ctx=run_ctx,
         fields=fields,
@@ -77,7 +57,7 @@ def run_field_test_loop(
     executor = ThreadPoolExecutor(max_workers=max_workers)
     executor_shutdown = False
     try:
-        schedule_context = ScheduleRoundContext(
+        schedule_context = run_loop_rounds.ScheduleRoundContext(
             args=run_loop_options.simulation_stage,
             run_ctx=run_ctx,
             executor=executor,
@@ -116,7 +96,7 @@ def run_field_test_loop(
                 )
         last_field_id = ""
         try:
-            submit_resumable_futures(
+            loop_future_support.submit_resumable_futures(
                 executor=executor,
                 run_ctx=run_ctx,
                 execution_state=execution_state,
@@ -125,7 +105,7 @@ def run_field_test_loop(
             round_index = 0
             while True:
                 round_index += 1
-                round_result = execute_schedule_round(
+                round_result = run_loop_rounds.execute_schedule_round(
                     schedule_context,
                     round_index=round_index,
                 )
@@ -133,7 +113,7 @@ def run_field_test_loop(
                 if round_result.stop_requested:
                     break
                 if not round_result.progressed:
-                    if drain_next_completion(
+                    if loop_future_support.drain_next_completion(
                         state_file=state_file,
                         total_fields=total_field_count,
                         last_field_id=last_field_id,
@@ -152,7 +132,7 @@ def run_field_test_loop(
                     )
                     break
 
-            drain_remaining_futures(
+            loop_future_support.drain_remaining_futures(
                 state_file=state_file,
                 total_fields=total_field_count,
                 last_field_id=last_field_id,
@@ -163,10 +143,10 @@ def run_field_test_loop(
             )
         except KeyboardInterrupt:
             execution_state.future_queue.stop_signal.set()
-            cancelled = cancel_unstarted_futures(execution_state)
+            cancelled = loop_future_support.cancel_unstarted_futures(execution_state)
             executor.shutdown(wait=False, cancel_futures=True)
             executor_shutdown = True
-            unresolved_metadata = wait_for_inflight_simulation_metadata(
+            unresolved_metadata = loop_future_support.wait_for_inflight_simulation_metadata(
                 execution_state,
                 timeout_seconds=INTERRUPT_METADATA_WAIT_SECONDS,
             )
@@ -180,7 +160,7 @@ def run_field_test_loop(
                 ),
                 unresolved_metadata,
             )
-            save_runtime_checkpoint(
+            run_loop_resume.save_runtime_checkpoint(
                 state_file=state_file,
                 interrupt_report_file=interrupt_report_file,
                 completed_field_index=0,
@@ -193,7 +173,7 @@ def run_field_test_loop(
             raise
         except Exception:
             execution_state.future_queue.stop_signal.set()
-            cancelled = cancel_unstarted_futures(execution_state)
+            cancelled = loop_future_support.cancel_unstarted_futures(execution_state)
             executor.shutdown(wait=True, cancel_futures=True)
             executor_shutdown = True
             logger.warning(
@@ -205,7 +185,7 @@ def run_field_test_loop(
                     if pending.simulation_location
                 ),
             )
-            save_runtime_checkpoint(
+            run_loop_resume.save_runtime_checkpoint(
                 state_file=state_file,
                 interrupt_report_file=interrupt_report_file,
                 completed_field_index=0,
