@@ -466,8 +466,8 @@ def test_initialize_run_context_prefers_run_paths_for_cache_and_credentials(
     assert captured["creds_file"] == run_paths.creds_file
     assert captured["creds_key_file"] == run_paths.creds_key_file
     assert captured["fields_cache_file"] == run_paths.fields_cache_file
-    assert args.creds_file == "raw-creds.json"
-    assert args.creds_key_file == "raw-creds.key"
+    assert args.paths.creds_file == "raw-creds.json"
+    assert args.paths.creds_key_file == "raw-creds.key"
 
 
 def test_initialize_run_context_builds_fallback_run_paths_when_missing(
@@ -575,9 +575,9 @@ def test_initialize_run_context_builds_fallback_run_paths_when_missing(
     filter_paths = captured["filter_paths"]
     assert isinstance(run_config_paths, RunPaths)
     assert isinstance(filter_paths, RunPaths)
-    assert run_config_paths.output == args.output
-    assert run_config_paths.template_library_file == args.template_library_file
+    assert run_config_paths.output == args.paths.output
+    assert run_config_paths.template_library_file == args.paths.template_library_file
     assert isinstance(run_config_paths.datasets_root, str)
     assert run_config_paths.datasets_root
-    assert filter_paths.include_fields_file == args.include_fields_file
-    assert filter_paths.exclude_templates_file == args.exclude_templates_file
+    assert filter_paths.include_fields_file == args.paths.include_fields_file
+    assert filter_paths.exclude_templates_file == args.paths.exclude_templates_file

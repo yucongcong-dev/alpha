@@ -387,14 +387,12 @@ def test_parse_application_config_is_immutable_and_uses_normalized_paths(
 
     config = parse_application_config()
 
-    assert config.output == config.paths.output
-    assert config.output == str((tmp_path / "results/custom.json").resolve())
+    assert config.paths.output == str((tmp_path / "results/custom.json").resolve())
     assert config.dataset.dataset_id == "pv1"
-    assert config.dataset_id == config.dataset.dataset_id
-    assert config.strategy_profile == "explore"
-    assert config.planning.limit == config.limit
-    assert config.execution.max_concurrent_simulations == config.max_concurrent_simulations
-    assert config.quality.min_sharpe == config.min_sharpe
+    assert config.runtime_flags.strategy_profile == "explore"
+    assert config.planning.limit > 0
+    assert config.execution.max_concurrent_simulations > 0
+    assert config.quality.min_sharpe > 0
     assert ResultWriteOptions.from_config(config) == ResultWriteOptions(
         dataset_id="pv1",
         output_path=config.paths.output,
@@ -402,7 +400,7 @@ def test_parse_application_config_is_immutable_and_uses_normalized_paths(
     )
     assert not hasattr(config, "__dict__")
     with pytest.raises((AttributeError, TypeError)):
-        config.limit = 999
+        config.planning = config.planning
     with pytest.raises((AttributeError, TypeError)):
         config.dataset.delay = 0
 

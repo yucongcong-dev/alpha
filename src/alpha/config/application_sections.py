@@ -1,13 +1,11 @@
-"""Typed sections and compatibility views for application configuration."""
+"""Typed sections for application configuration."""
 
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Generic, TypeVar, cast, overload
+from typing import Any
 
 from .strategy_profiles import normalize_strategy_profile
-
-_T = TypeVar("_T")
 
 
 def _value(args: object, name: str, default: Any = None) -> Any:
@@ -201,33 +199,3 @@ class RuntimeFlagsConfig:
             verbose=bool(_value(args, "verbose", False)),
             quiet=bool(_value(args, "quiet", False)),
         )
-
-
-class SectionField(Generic[_T]):
-    """Read-only descriptor forwarding one flat compatibility field to a section."""
-
-    __slots__ = ("field_name", "section_name")
-
-    def __init__(self, section_name: str, field_name: str = "") -> None:
-        self.section_name = section_name
-        self.field_name = field_name
-
-    def __set_name__(self, _owner: type[object], name: str) -> None:
-        if not self.field_name:
-            self.field_name = name
-
-    @overload
-    def __get__(self, instance: None, owner: type[object] | None = None) -> SectionField[_T]: ...
-
-    @overload
-    def __get__(self, instance: object, owner: type[object] | None = None) -> _T: ...
-
-    def __get__(
-        self,
-        instance: object | None,
-        owner: type[object] | None = None,
-    ) -> SectionField[_T] | _T:
-        if instance is None:
-            return self
-        section = getattr(instance, self.section_name)
-        return cast(_T, getattr(section, self.field_name))

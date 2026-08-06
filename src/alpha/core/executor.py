@@ -252,6 +252,8 @@ def print_dry_run_plan(
     execution_state: ExecutionState,
     use_dataset_heuristics: bool,
     sample_limit: int = DRY_RUN_SAMPLE_LIMIT,
+    full_run: bool | None = None,
+    max_total_simulations: int | None = None,
 ) -> None:
     """
     打印本轮计划执行的字段/模板，不创建任何 simulation。
@@ -268,6 +270,8 @@ def print_dry_run_plan(
         execution_state: 执行状态。
         use_dataset_heuristics: 是否使用数据集启发式。
         sample_limit: 打印样本数量限制。默认为 20。
+        full_run: 是否优先安排未完成的 seed 字段。
+        max_total_simulations: 本轮 simulation 预算；0 表示不限制。
 
     Example:
         >>> print_dry_run_plan(
@@ -299,4 +303,6 @@ def print_dry_run_plan(
         build_pending=build_pending_templates_for_field,
         sample_limit=sample_limit,
         log=logger,
+        full_run=full_run,
+        max_total_simulations=max_total_simulations,
     )

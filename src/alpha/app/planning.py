@@ -8,7 +8,11 @@ from ..config.application import ApplicationConfig
 from ..core.executor import print_dry_run_plan
 from ..generators.fields import load_fields_cache
 from ..models.io_types import RunPaths
-from ..models.runtime_options import BootstrapFieldOptions, BootstrapPathOptions
+from ..models.runtime_options import (
+    BootstrapFieldOptions,
+    BootstrapPathOptions,
+    TemplateBuildOptions,
+)
 from .bootstrap_fields import prepare_fields_for_execution
 from .bootstrap_runtime_outputs import build_effective_run_paths, resolve_bootstrap_paths
 from .bootstrap_state import create_execution_state
@@ -21,6 +25,7 @@ def run_dry_run_plan(args: ApplicationConfig, run_paths: RunPaths | None) -> boo
     """Print a plan from local resources without authentication or filesystem writes."""
     path_options = BootstrapPathOptions.from_config(args)
     field_options = BootstrapFieldOptions.from_config(args)
+    template_options = TemplateBuildOptions.from_config(args)
     paths = resolve_bootstrap_paths(path_options, run_paths)
     effective_run_paths = build_effective_run_paths(path_options, paths, run_paths)
     dataset_id = field_options.dataset_id
@@ -104,12 +109,14 @@ def run_dry_run_plan(args: ApplicationConfig, run_paths: RunPaths | None) -> boo
         datasets_root=paths.datasets_root,
     )
     print_dry_run_plan(
-        args=args,
+        args=template_options,
         fields=prepared_fields,
         filters=supporting_resources.filters,
         template_library=supporting_resources.template_library,
         historical_state=supporting_resources.historical_state,
         execution_state=execution_state,
         use_dataset_heuristics=supporting_resources.expression_policy.use_curated_heuristics,
+        full_run=args.planning.full_run,
+        max_total_simulations=args.planning.max_total_simulations,
     )
     return True

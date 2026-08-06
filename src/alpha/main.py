@@ -106,7 +106,7 @@ def main() -> int:
     configure_application_logging(config)
 
     if config.command == "clean":
-        return clean_runtime_artifacts(config)
+        return clean_runtime_artifacts(config.credentials)
     if config.planning.dry_run_plan:
         return 0 if run_dry_run_plan(config, config.paths) else 1
 

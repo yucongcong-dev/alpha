@@ -138,13 +138,16 @@ def build_dry_run_plan_summary(
     resolve_skip_reason: FieldSkipReasonResolver | None,
     build_pending: FieldPendingTemplateBuilder,
     sample_limit: int = DRY_RUN_SAMPLE_LIMIT,
+    full_run: bool | None = None,
+    max_total_simulations: int | None = None,
 ) -> DryRunPlanSummary:
     """Build the planned queue and its explain counters without rendering output."""
     planned_fields = 0
     eligible_templates = 0
     filtered_templates = 0
     unactionable_fields = 0
-    full_run = bool(getattr(args, "full_run", False))
+    if full_run is None:
+        full_run = bool(getattr(args, "full_run", False))
     attempted_field_ids = {
         field_id for field_id, _template, _expression, _settings in execution_state.attempted_keys
     }
@@ -224,7 +227,9 @@ def build_dry_run_plan_summary(
         if full_run
         else refine_samples[:sample_limit]
     )
-    simulation_budget = max(0, int(getattr(args, "max_total_simulations", 0) or 0))
+    if max_total_simulations is None:
+        max_total_simulations = int(getattr(args, "max_total_simulations", 0) or 0)
+    simulation_budget = max(0, max_total_simulations)
     scheduled_templates = (
         min(eligible_templates, simulation_budget) if simulation_budget > 0 else eligible_templates
     )
@@ -265,6 +270,8 @@ def print_dry_run_plan(
     build_pending: FieldPendingTemplateBuilder,
     sample_limit: int = DRY_RUN_SAMPLE_LIMIT,
     log: logging.Logger = logger,
+    full_run: bool | None = None,
+    max_total_simulations: int | None = None,
 ) -> None:
     """Build and render the planned field/template queue without creating simulations."""
     summary = build_dry_run_plan_summary(
@@ -280,5 +287,7 @@ def print_dry_run_plan(
         resolve_skip_reason=resolve_skip_reason,
         build_pending=build_pending,
         sample_limit=sample_limit,
+        full_run=full_run,
+        max_total_simulations=max_total_simulations,
     )
     render_dry_run_plan(summary, log=log)

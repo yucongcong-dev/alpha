@@ -24,6 +24,7 @@ from alpha.models.runtime_options import (
     BootstrapFieldOptions,
     FieldFetchOptions,
     FieldSelectionOptions,
+    RunLoopOptions,
     SchedulerControlOptions,
     TemplateBuildOptions,
 )
@@ -194,6 +195,26 @@ class TestRuntimeOptionBuilders:
             queue_busy_retry_limit=3,
             sleep_between_fields=0.25,
         )
+
+    def test_run_loop_options_read_canonical_config_sections(self) -> None:
+        config = _application_config(
+            dataset_id="model51",
+            instrument_type="EQUITY",
+            region="USA",
+            universe="TOP1000",
+            delay=1,
+            decay=6,
+            simulation_poll_retries=4,
+            min_sharpe=1.5,
+        )
+
+        options = RunLoopOptions.from_config(config)
+
+        assert options.template_build.dataset_id == "model51"
+        assert options.simulation_stage.instrument_type == "EQUITY"
+        assert options.simulation_stage.decay == 6
+        assert options.simulation_stage.simulation_poll_retries == 4
+        assert options.simulation_stage.min_sharpe == 1.5
 
 
 # ============================================================================

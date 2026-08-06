@@ -264,7 +264,7 @@ class RunLoopOptions:
         """Build live-loop options while reading result settings canonically."""
         return cls(
             template_build=TemplateBuildOptions.from_config(config),
-            simulation_stage=SimulationStageConfig.from_stage_args(config),
+            simulation_stage=SimulationStageConfig.from_application_config(config),
             result_write=ResultWriteOptions.from_config(config),
             scheduler=SchedulerControlOptions.from_config(config),
             field_template_batch_size=max(1, config.planning.field_template_batch_size),
