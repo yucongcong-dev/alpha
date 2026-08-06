@@ -1,4 +1,4 @@
-"""Dry-run planning output helpers for executor."""
+"""Dry-run plan construction helpers for executor."""
 
 from __future__ import annotations
 
@@ -29,6 +29,11 @@ from ..runtime.contexts import (
 from ..runtime.field_template_queue import select_seed_candidate
 from ..runtime.state import ExecutionState
 from ..utils.helpers import first_non_empty
+from .executor_dry_run_report import (
+    DryRunPlanSummary,
+    DryRunSample,
+    render_dry_run_plan,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -119,7 +124,7 @@ def _record_feedback_explain_counts(
     )
 
 
-def print_dry_run_plan(
+def build_dry_run_plan_summary(
     *,
     args: TemplateBuildArgs,
     fields: Sequence[TemplateField],
@@ -133,9 +138,8 @@ def print_dry_run_plan(
     resolve_skip_reason: FieldSkipReasonResolver | None,
     build_pending: FieldPendingTemplateBuilder,
     sample_limit: int = DRY_RUN_SAMPLE_LIMIT,
-    log: logging.Logger = logger,
-) -> None:
-    """Print the planned field/template queue without creating simulations."""
+) -> DryRunPlanSummary:
+    """Build the planned queue and its explain counters without rendering output."""
     planned_fields = 0
     eligible_templates = 0
     filtered_templates = 0
@@ -147,8 +151,8 @@ def print_dry_run_plan(
     seed_fields_remaining = 0
     seed_fields_resolved = 0
     explain_counts: Counter[str] = Counter()
-    seed_samples: list[dict[str, object]] = []
-    refine_samples: list[dict[str, object]] = []
+    seed_samples: list[DryRunSample] = []
+    refine_samples: list[DryRunSample] = []
     build_ctx = build_context(
         options=TemplateBuildOptions.from_args(args),
         fields=fields,
@@ -163,29 +167,16 @@ def print_dry_run_plan(
     for field in fields:
         field_id = str(first_non_empty(field.get("id"), SENTINEL_UNKNOWN))
         field_name = choose_field_name(field)
-        if should_skip(
-            field_id,
-            field_name,
-            filters,
-        ):
+        if should_skip(field_id, field_name, filters):
             explain_counts["field_skipped"] += 1
             skip_reason = (
-                resolve_skip_reason(
-                    field_id,
-                    field_name,
-                    filters,
-                )
+                resolve_skip_reason(field_id, field_name, filters)
                 if resolve_skip_reason is not None
                 else None
             )
             explain_counts[f"field_skipped_{skip_reason or 'unknown'}"] += 1
             continue
-        _record_feedback_explain_counts(
-            explain_counts,
-            build_ctx,
-            field_id,
-            args=args,
-        )
+        _record_feedback_explain_counts(explain_counts, build_ctx, field_id, args=args)
         pending_templates, filtered_count, _template_count = build_pending(
             build_ctx,
             field,
@@ -219,14 +210,13 @@ def print_dry_run_plan(
             if len(sample_target) >= sample_limit:
                 break
             sample_target.append(
-                {
-                    "field_id": field_id,
-                    "field_name": field_name,
-                    "template_name": entry.template_name,
-                    "priority": entry.priority,
-                    "settings": entry.variant_fingerprint,
-                    "expression": entry.expression,
-                }
+                DryRunSample(
+                    field_id=field_id,
+                    template_name=entry.template_name,
+                    priority=entry.priority,
+                    settings=entry.variant_fingerprint,
+                    expression=entry.expression,
+                )
             )
 
     samples = (
@@ -234,133 +224,61 @@ def print_dry_run_plan(
         if full_run
         else refine_samples[:sample_limit]
     )
-
     simulation_budget = max(0, int(getattr(args, "max_total_simulations", 0) or 0))
     scheduled_templates = (
         min(eligible_templates, simulation_budget) if simulation_budget > 0 else eligible_templates
     )
-    budget_truncated = scheduled_templates < eligible_templates
-    seed_budget_sufficient = simulation_budget <= 0 or simulation_budget >= seed_fields_remaining
-
-    log.info("[dry-run] simulation creation is disabled; this is a plan only")
-    log.info("[dry-run] planned_fields=%d", planned_fields)
-    log.info("[dry-run] eligible_simulations=%d", eligible_templates)
-    log.info("[dry-run] scheduled_simulations=%d", scheduled_templates)
-    log.info("[dry-run] budget_truncated=%s", str(budget_truncated).lower())
-    if full_run:
-        seed_scheduled = min(seed_fields_remaining, scheduled_templates)
-        refine_scheduled = max(0, scheduled_templates - seed_scheduled)
-        log.info(
-            "[dry-run] full_run_seed resolved=%d remaining=%d budget_sufficient=%s",
-            seed_fields_resolved,
-            seed_fields_remaining,
-            str(seed_budget_sufficient).lower(),
-        )
-        log.info(
-            "[dry-run] full_run_schedule seed=%d refine=%d",
-            seed_scheduled,
-            refine_scheduled,
-        )
-    log.info("[dry-run] filtered_templates=%d", filtered_templates)
-    log.info("[dry-run] unactionable_fields=%d", unactionable_fields)
-    log.info("[dry-run] existing_results=%d", len(execution_state.result_ledger.results))
-    log.info("[dry-run] attempted_keys=%d", len(execution_state.attempted_keys))
-    log.info(
-        "[dry-run] explain_summary fields_total=%d planned=%d skipped=%d "
-        "unactionable=%d templates_eligible=%d templates_scheduled=%d "
-        "templates_filtered=%d",
-        len(fields),
-        explain_counts["field_planned"],
-        explain_counts["field_skipped"],
-        explain_counts["field_unactionable"],
-        eligible_templates,
-        scheduled_templates,
-        explain_counts["templates_filtered"],
+    return DryRunPlanSummary(
+        fields_total=len(fields),
+        planned_fields=planned_fields,
+        eligible_templates=eligible_templates,
+        scheduled_templates=scheduled_templates,
+        budget_truncated=scheduled_templates < eligible_templates,
+        full_run=full_run,
+        seed_fields_resolved=seed_fields_resolved,
+        seed_fields_remaining=seed_fields_remaining,
+        seed_budget_sufficient=(
+            simulation_budget <= 0 or simulation_budget >= seed_fields_remaining
+        ),
+        filtered_templates=filtered_templates,
+        unactionable_fields=unactionable_fields,
+        existing_results=len(execution_state.result_ledger.results),
+        attempted_keys=len(execution_state.attempted_keys),
+        explain_counts=explain_counts,
+        field_samples=tuple(fields[:sample_limit]),
+        samples=tuple(samples),
     )
-    log.info(
-        "[dry-run] explain_fields skipped_queue=%d skipped_include=%d "
-        "skipped_exclude=%d skipped_unknown=%d unactionable=%d",
-        explain_counts["field_skipped_queue"],
-        explain_counts["field_skipped_include"],
-        explain_counts["field_skipped_exclude"],
-        explain_counts["field_skipped_unknown"],
-        explain_counts["field_unactionable"],
-    )
-    log.info(
-        "[dry-run] explain_templates name_filter=%d feedback=%d family=%d history=%d",
-        explain_counts["template_filtered_name_filter"],
-        explain_counts["template_filtered_feedback"],
-        explain_counts["template_filtered_family"],
-        explain_counts["template_filtered_history"],
-    )
-    log.info(
-        "[dry-run] explain_blacklist name_stage=%d name_stage_family=%d "
-        "name_family=%d legacy_name_only=%d pattern_expression=%d "
-        "pattern_template_name=%d other=%d",
-        explain_counts["template_filtered_blacklist_name_stage"],
-        explain_counts["template_filtered_blacklist_name_stage_family"],
-        explain_counts["template_filtered_blacklist_name_family"],
-        explain_counts["template_filtered_blacklist_legacy_name_only"],
-        _sum_counter_prefix(explain_counts, "template_filtered_blacklist_pattern_expression_"),
-        _sum_counter_prefix(explain_counts, "template_filtered_blacklist_pattern_template_name_"),
-        _sum_blacklist_other(explain_counts),
-    )
-    log.info(
-        "[dry-run] explain_feedback generate_no_feedback=%d generate_attempts=%d "
-        "generate_score=%d generate_other=%d resimulate=%d settings_budget=%d",
-        explain_counts["feedback_generate_no_feedback"],
-        explain_counts["feedback_generate_attempts"],
-        explain_counts["feedback_generate_score"],
-        explain_counts["feedback_generate_other"],
-        explain_counts["feedback_resimulate"],
-        explain_counts["feedback_settings_budget"],
-    )
-    for index, field in enumerate(fields[:sample_limit], start=1):
-        log.info(
-            "[dry-run] field %d/%d id=%s rank=%s score=%.4f family=%s reason=%s "
-            "coverage=%.4f alpha_count=%d user_count=%d",
-            index,
-            min(len(fields), sample_limit),
-            str(first_non_empty(field.get("id"), SENTINEL_UNKNOWN)),
-            field.get("selection_rank", "?"),
-            float(field.get("selection_score", 0.0) or 0.0),
-            field.get("selection_family", "unknown"),
-            field.get("selection_reason", "unknown"),
-            float(field.get("coverage", 0.0) or 0.0),
-            int(field.get("alphaCount", 0) or 0),
-            int(field.get("userCount", 0) or 0),
-        )
-    for index, sample in enumerate(samples, start=1):
-        log.info(
-            "[dry-run] sample %d/%d field=%s template=%s priority=%d settings=%s expression=%s",
-            index,
-            len(samples),
-            sample["field_id"],
-            sample["template_name"],
-            sample["priority"],
-            sample["settings"],
-            sample["expression"],
-        )
 
 
-def _sum_counter_prefix(explain_counts: Counter[str], prefix: str) -> int:
-    """Sum dry-run counters with one shared prefix."""
-    return sum(count for key, count in explain_counts.items() if key.startswith(prefix))
-
-
-def _sum_blacklist_other(explain_counts: Counter[str]) -> int:
-    """Count blacklist reasons not represented by the stable explain buckets."""
-    known_keys = {
-        "template_filtered_blacklist_name_stage",
-        "template_filtered_blacklist_name_stage_family",
-        "template_filtered_blacklist_name_family",
-        "template_filtered_blacklist_legacy_name_only",
-    }
-    return sum(
-        count
-        for key, count in explain_counts.items()
-        if key.startswith("template_filtered_blacklist_")
-        and key not in known_keys
-        and not key.startswith("template_filtered_blacklist_pattern_expression_")
-        and not key.startswith("template_filtered_blacklist_pattern_template_name_")
+def print_dry_run_plan(
+    *,
+    args: TemplateBuildArgs,
+    fields: Sequence[TemplateField],
+    filters: RunFilters,
+    template_library: TemplateLibrary,
+    historical_state: HistoricalRunState,
+    execution_state: ExecutionState,
+    use_dataset_heuristics: bool,
+    build_context: TemplateBuildContextBuilder,
+    should_skip: FieldSkipPredicate,
+    resolve_skip_reason: FieldSkipReasonResolver | None,
+    build_pending: FieldPendingTemplateBuilder,
+    sample_limit: int = DRY_RUN_SAMPLE_LIMIT,
+    log: logging.Logger = logger,
+) -> None:
+    """Build and render the planned field/template queue without creating simulations."""
+    summary = build_dry_run_plan_summary(
+        args=args,
+        fields=fields,
+        filters=filters,
+        template_library=template_library,
+        historical_state=historical_state,
+        execution_state=execution_state,
+        use_dataset_heuristics=use_dataset_heuristics,
+        build_context=build_context,
+        should_skip=should_skip,
+        resolve_skip_reason=resolve_skip_reason,
+        build_pending=build_pending,
+        sample_limit=sample_limit,
     )
+    render_dry_run_plan(summary, log=log)
