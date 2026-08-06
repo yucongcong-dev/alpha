@@ -20,7 +20,6 @@
 dataset_profiles:
   analyst4:
     default_preset: "eps_surprise_seed"
-    page_size: 20
     sleep_between_fields: 3.0
     max_concurrent_simulations: 2
     max_concurrent_creates: 1

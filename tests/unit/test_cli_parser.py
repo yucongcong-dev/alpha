@@ -66,6 +66,13 @@ def test_cli_limit_overrides_yaml(monkeypatch, tmp_path) -> None:
     assert args.max_concurrent_simulations == 1
 
 
+def test_default_field_page_size_prefers_stability(monkeypatch) -> None:
+    clear_yaml_cache()
+    monkeypatch.setattr(sys, "argv", ["alpha"])
+
+    assert parse_args().page_size == 20
+
+
 def test_dataset_profile_can_reduce_field_page_size(monkeypatch, tmp_path) -> None:
     clear_yaml_cache()
     config_path = tmp_path / "settings.yaml"
