@@ -103,7 +103,15 @@ def test_normalize_args_paths_allows_clean_for_paused_fundamental6(monkeypatch, 
 
 @pytest.mark.parametrize(
     "dataset_id",
-    ["model16", "model51", "option8", "option9", "socialmedia12", "news18"],
+    [
+        "fundamental2",
+        "model16",
+        "model51",
+        "option8",
+        "option9",
+        "socialmedia12",
+        "news18",
+    ],
 )
 def test_documented_paused_dataset_rejects_plain_run(monkeypatch, tmp_path, dataset_id) -> None:
     clear_yaml_cache()
@@ -139,23 +147,6 @@ def test_option8_explicit_active_preset_is_allowed(monkeypatch, tmp_path) -> Non
 
     assert paths.template_library_file == str(template_path)
     assert paths.include_fields_file == str(fields_path)
-
-
-def test_fundamental2_uses_default_tax_quality_preset(monkeypatch) -> None:
-    clear_yaml_cache()
-    monkeypatch.setattr(sys, "argv", ["alpha", "--dataset-id", "fundamental2"])
-
-    paths = normalize_args_paths(parse_args())
-
-    assert paths.template_library_file.replace("\\", "/").endswith(
-        "/datasets/fundamental2/presets/tax_quality_seed/template.json"
-    )
-    assert paths.include_fields_file.replace("\\", "/").endswith(
-        "/datasets/fundamental2/presets/tax_quality_seed/fields.txt"
-    )
-    assert paths.include_templates_file.replace("\\", "/").endswith(
-        "/datasets/fundamental2/presets/tax_quality_seed/templates.txt"
-    )
 
 
 def test_explicit_template_path_allows_paused_fundamental6(monkeypatch, tmp_path) -> None:

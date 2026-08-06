@@ -1,1 +1,0 @@
-current_income_tax_expense_amount

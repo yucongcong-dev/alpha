@@ -18,7 +18,7 @@
 
 dataset_profiles:
   fundamental2:
-    default_preset: "tax_quality_seed"
+    paused: true
     sleep_between_fields: 3.0
     max_concurrent_simulations: 2
     max_concurrent_creates: 1

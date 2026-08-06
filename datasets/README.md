@@ -29,7 +29,7 @@ datasets/<dataset_id>/
 
 | 数据集 | 状态 | 现役 preset |
 | --- | --- | --- |
-| `fundamental2` | 探索 | `tax_quality_seed` |
+| `fundamental2` | 暂停 | 无 |
 | `fundamental6` | 暂停 | 无 |
 | `option8` | 基线保留 | `subindustry_refine` |
 | `model16` | 暂停 | 无 |
@@ -38,5 +38,5 @@ datasets/<dataset_id>/
 | `option9` | 暂停 | 无 |
 | `news18` | 暂停 | 无 |
 
-`fundamental2` 是当前唯一现役 explore 数据集，从 1 个低拥挤字段和 2 条独立税务质量结构
-开始。没有初步正向证据前，不扩大到完整 766 字段池。
+当前没有现役 explore 数据集。重新开启暂停数据集时，应先提出新的经济假设，再建立带明确字段、
+模板、预算和停止规则的小范围 preset。
