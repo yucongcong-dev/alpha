@@ -27,9 +27,22 @@ Max Trade OFF。
 reported EPS surprise 方向关闭，原 `eps_surprise_seed` preset 已删除，不继续做符号、窗口、
 Decay 或 Truncation sweep。
 
+## Event-level EPS estimate revision
+
+该实验使用低拥挤 VECTOR 字段 `anl4_fs_basic_splt_v4_nd_eps_estimate` 与
+`anl4_fs_basic_splt_v4_nd_eps_previosestimate`，比较当前 EPS 预期和最近一次修正前预期。
+两个字段当时的 Coverage 分别为 `96.8%` 和 `96.3%`，Alpha Count 分别为 `14` 和 `13`。
+
+| 结构 | Alpha ID | Sharpe | Fitness | 其他检查 |
+|---|---|---:|---:|---|
+| revision spread 的 126 日 zscore | `npNY06jE` | -0.93 | -0.31 | Sub-universe -0.59；Self Correlation PENDING |
+| revision spread 的 20/126 变化率 | `9qpbod72` | -0.42 | -0.07 | Self Correlation PENDING |
+
+两条结构均明显失败，revision 方向关闭，原 `eps_revision_seed` preset 已删除。不做符号、
+窗口、Decay 或 Truncation sweep；负号翻转后的绝对 Sharpe 也仍低于提交要求。
+
 ## 后续边界
 
-surprise 失败不能外推为整个 `analyst4` 失败。下一条独立假设是低拥挤 VECTOR 字段的 EPS
-预期修正，即当前预期相对最近一次修正前预期的变化。该方向只允许当前
-`eps_revision_seed` 的两次 simulation；若仍全部明显失败，再运行两次独立 dispersion
-种子。两条独立方向都没有形成正向基线后，暂停 `analyst4`。
+surprise 与 revision 是两条已经关闭的独立假设。最后只允许
+`eps_dispersion_seed` 的两次 simulation，验证年度 EPS 预期上下界差异。若 dispersion
+也没有形成正向基线，暂停 `analyst4`，不扩大到完整 1324 字段池。
