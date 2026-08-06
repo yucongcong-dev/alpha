@@ -260,6 +260,86 @@ def todo_check(root: Path) -> list[str]:
     return []
 
 
+
+def strategy_tuning_keys_check(root: Path) -> list[str]:
+    """Validate that every tuning_key in strategy_profiles.yaml resolves to a real config path."""
+    import yaml  # delayed import to keep check_repo.py self-contained for non-yaml checks
+
+    errors: list[str] = []
+    strategy_path = root / "config" / "strategy_profiles.yaml"
+    if not strategy_path.is_file():
+        return []
+
+    try:
+        strategies = yaml.safe_load(strategy_path.read_text(encoding="utf-8"))
+    except Exception as exc:
+        return [f"[check] failed to parse strategy_profiles.yaml: {exc}"]
+
+    config_paths = {
+        "expression_policies.yaml",
+        "settings.yaml",
+        "templates.yaml",
+        "quality_feedback.yaml",
+        "dataset_profiles.yaml",
+        "constants_defaults.yaml",
+    }
+    merged: dict[str, object] = {}
+    for name in config_paths:
+        config_file = root / "config" / name
+        if not config_file.is_file():
+            continue
+        try:
+            data = yaml.safe_load(config_file.read_text(encoding="utf-8"))
+        except Exception:
+            continue
+        if isinstance(data, dict):
+            merged[name] = data
+
+    def _flatten(d: object, prefix: str = "") -> set[str]:
+        keys: set[str] = set()
+        if not isinstance(d, dict):
+            return keys
+        for k, v in d.items():
+            full = f"{prefix}.{k}" if prefix else str(k)
+            keys.add(full)
+            if isinstance(v, dict):
+                keys.update(_flatten(v, full))
+        return keys
+
+    all_config_keys: set[str] = set()
+    for name, data in merged.items():
+        all_config_keys.update(_flatten(data))
+
+    for profile_name, profile in strategies.get("strategy_profiles", {}).items():
+        tuning = profile.get("tuning_keys")
+        if not isinstance(tuning, dict):
+            continue
+        for section, keys in tuning.items():
+            if not isinstance(keys, list):
+                continue
+            for key in keys:
+                if not isinstance(key, str):
+                    continue
+                # Check if key exists anywhere in the merged config
+                # The lookup logic mirrors _yaml_val: global.<key> first, then flat <key>
+                if key in all_config_keys:
+                    continue
+                if any(k.endswith(f".{key}") or k.endswith(f".global.{key}") for k in all_config_keys):
+                    continue
+                # Also check as a sub-path (e.g. quality.min_sharpe might be quality_feedback.quality.min_sharpe)
+                found = False
+                for ck in all_config_keys:
+                    if ck.endswith(f".{key}"):
+                        found = True
+                        break
+                if not found:
+                    errors.append(
+                        f"[check] strategy_profiles.yaml: {profile_name}.tuning_keys.{section}.{key} "
+                        f"not found in any config file"
+                    )
+    return errors
+
+
 CHECKS: dict[str, Check] = {
     "scan-secrets": scan_secrets,
     "repo-boundary": repo_boundary_check,
@@ -267,6 +347,7 @@ CHECKS: dict[str, Check] = {
     "compat-import": compat_import_check,
     "arch-boundary": arch_boundary_check,
     "todo": todo_check,
+    "strategy-tuning-keys": strategy_tuning_keys_check,
 }
 
 
