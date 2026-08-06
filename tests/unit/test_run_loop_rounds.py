@@ -314,7 +314,7 @@ def test_breadth_first_reuses_cached_field_template_queue() -> None:
             return_value=(entries, 0, 2),
         ) as mock_build,
         patch("alpha.app.run_loop_dispatch.maybe_restore_runtime_concurrency"),
-        patch("alpha.app.run_loop_dispatch.drain_until_capacity", return_value=True),
+        patch("alpha.app.run_loop_dispatch.drain_until_capacity"),
         patch("alpha.app.run_loop_dispatch.throttle_before_submission"),
         patch("alpha.app.run_loop_dispatch.submit_template_future") as mock_submit,
         patch("alpha.app.run_loop_rounds.persist_field_progress"),
@@ -392,7 +392,7 @@ def test_feedback_change_invalidates_cached_field_template_queue() -> None:
             ],
         ) as mock_build,
         patch("alpha.app.run_loop_dispatch.maybe_restore_runtime_concurrency"),
-        patch("alpha.app.run_loop_dispatch.drain_until_capacity", return_value=True),
+        patch("alpha.app.run_loop_dispatch.drain_until_capacity"),
         patch("alpha.app.run_loop_dispatch.throttle_before_submission"),
         patch("alpha.app.run_loop_dispatch.submit_template_future") as mock_submit,
         patch("alpha.app.run_loop_rounds.persist_field_progress"),
@@ -413,7 +413,7 @@ def test_feedback_change_invalidates_cached_field_template_queue() -> None:
     ]
 
 
-def test_dispatch_honors_stop_capacity_and_success_paths() -> None:
+def test_dispatch_honors_success_path() -> None:
     context = _build_context(field_template_batch_size=1)
     entry = PendingTemplateEntry(
         template_name="template",
@@ -435,27 +435,9 @@ def test_dispatch_honors_stop_capacity_and_success_paths() -> None:
         "scheduled_templates": [entry],
     }
 
-    context.run_ctx.execution_state.result_ledger.append(
-        FieldTestResult(
-            field_id="new",
-            field_type="MATRIX",
-            field_name="new",
-            template_name="template",
-            status="simulated",
-            submittable=True,
-        )
-    )
     with (
         patch("alpha.app.run_loop_dispatch.maybe_restore_runtime_concurrency"),
-        patch("alpha.app.run_loop_dispatch.drain_until_capacity", return_value=False),
-        patch("alpha.app.run_loop_dispatch.submit_template_future") as mock_submit,
-    ):
-        assert dispatch_templates_for_field(**kwargs) is False
-    mock_submit.assert_not_called()
-
-    with (
-        patch("alpha.app.run_loop_dispatch.maybe_restore_runtime_concurrency"),
-        patch("alpha.app.run_loop_dispatch.drain_until_capacity", return_value=True),
+        patch("alpha.app.run_loop_dispatch.drain_until_capacity"),
         patch("alpha.app.run_loop_dispatch.throttle_before_submission"),
         patch("alpha.app.run_loop_dispatch.submit_template_future") as mock_submit,
     ):
@@ -490,7 +472,7 @@ def test_dispatch_replans_when_capacity_drain_changes_feedback() -> None:
         template_count=2,
     )
 
-    def _drain_with_result(**_kwargs) -> bool:
+    def _drain_with_result(**_kwargs) -> None:
         context.run_ctx.execution_state.result_ledger.append(
             FieldTestResult(
                 field_id="f1",
@@ -500,7 +482,6 @@ def test_dispatch_replans_when_capacity_drain_changes_feedback() -> None:
                 status="simulated",
             )
         )
-        return True
 
     with (
         patch("alpha.app.run_loop_dispatch.maybe_restore_runtime_concurrency"),
@@ -553,7 +534,7 @@ def test_dispatch_stops_at_total_simulation_budget_without_aborting_pending() ->
     with (
         context.executor,
         patch("alpha.app.run_loop_dispatch.maybe_restore_runtime_concurrency"),
-        patch("alpha.app.run_loop_dispatch.drain_until_capacity", return_value=True),
+        patch("alpha.app.run_loop_dispatch.drain_until_capacity"),
         patch("alpha.app.run_loop_dispatch.throttle_before_submission"),
         patch("alpha.app.run_loop_dispatch.submit_template_future") as mock_submit,
     ):
@@ -568,6 +549,5 @@ def test_dispatch_stops_at_total_simulation_budget_without_aborting_pending() ->
 
     assert stopped is True
     assert context.scheduled_simulations == 1
-    assert context.run_ctx.execution_state.future_queue.scheduling_stop_signal.is_set() is False
     assert context.run_ctx.execution_state.future_queue.stop_signal.is_set() is False
     mock_submit.assert_called_once()

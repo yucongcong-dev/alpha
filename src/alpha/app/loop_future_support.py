@@ -128,7 +128,7 @@ def drain_until_capacity(
     scheduler_options: SchedulerControlOptions,
     completion_ctx: FutureCompletionContext,
     field_id: str,
-) -> bool:
+) -> None:
     """Drain completed futures until runtime concurrency has available capacity."""
     future_queue = executor_state.future_queue
     while len(future_queue.pending_futures) >= runtime_state.runtime_max_workers:
@@ -139,7 +139,6 @@ def drain_until_capacity(
             completion_ctx=completion_ctx,
             runtime_state=runtime_state,
         )
-    return True
 
 
 def submit_template_future(

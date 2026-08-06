@@ -60,14 +60,13 @@ def dispatch_templates_for_field(
 
         maybe_restore_runtime_concurrency(runtime_state)
         result_count_before_drain = len(result_ledger.results)
-        if not drain_until_capacity(
+        drain_until_capacity(
             executor_state=execution_state,
             runtime_state=runtime_state,
             scheduler_options=scheduler_options,
             completion_ctx=context.completion_ctx,
             field_id=field_id,
-        ):
-            return False
+        )
         if execution_state.future_queue.should_stop_scheduling():
             return True
         if len(result_ledger.results) != result_count_before_drain:

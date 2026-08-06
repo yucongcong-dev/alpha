@@ -16,7 +16,6 @@ class FutureQueueState:
 
     pending_futures: dict[Future[FieldTestResult], PendingFutureContext]
     resumable_simulations: list[PendingFutureContext]
-    scheduling_stop_signal: Event
     stop_signal: Event
 
     @classmethod
@@ -30,13 +29,12 @@ class FutureQueueState:
         return cls(
             pending_futures=dict(pending_futures or {}),
             resumable_simulations=list(resumable_simulations or []),
-            scheduling_stop_signal=Event(),
             stop_signal=Event(),
         )
 
     def should_stop_scheduling(self) -> bool:
         """Return whether new work must no longer be scheduled."""
-        return self.scheduling_stop_signal.is_set() or self.stop_signal.is_set()
+        return self.stop_signal.is_set()
 
     def cancel_unstarted(self) -> int:
         """Cancel futures that have not started and remove their pending metadata."""
