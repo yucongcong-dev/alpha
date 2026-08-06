@@ -28,8 +28,9 @@ python -m alpha --top-fields-by-feedback 10 --max-templates-per-field 15
 不传参数时，运行器采用内置默认搜索预算。`--full-run` 会枚举更大的字段和模板空间，
 但仍保留 simulation 总预算。运行器先进入 Seed 阶段：历史上没有有效尝试的合格字段
 每个最多调度一个候选；只有所有字段都已获得种子尝试或被判定为不可执行后，才进入正常
-refine 轮次。默认最多调度 500 个 simulation；可用 `--max-total-simulations N` 调整，
-显式传入 `0` 才会取消总预算。若预算低于剩余 Seed 字段数，运行日志和 dry-run 会明确
+refine 轮次。full-run 默认预算由 `config/constants_defaults.yaml` 的
+`full_run.max_total_simulations` 定义；可用 `--max-total-simulations N` 调整，显式传入 `0`
+才会取消总预算。若预算低于剩余 Seed 字段数，运行日志和 dry-run 会明确
 标记 partial seed coverage，并且本次不会提前进入 refine。全量模式只适合有足够时间、
 且明确希望从零开始验证时使用。日常研究应从 `--dry-run-plan` 开始。
 
@@ -49,14 +50,15 @@ datasets/<dataset>/cache/<region>_<universe>_<instrument>_d<delay>.json
 
 - 先按 `coverage`、`dateCoverage`、`alphaCount`、`userCount` 做质量与拥挤度筛选；少量历史使用可以证明字段可运行，超过拥挤起点后才逐步降权。
 - 字段指标缺失会保留候选、轻微降分并记录 `unknown_*`，不会与真实低覆盖或低验证样本混为同一过滤原因。
-- `_10 / _30 / _60 / _180_days` 等数字窗口会归并成字段族，即使后面还有标的后缀也会归并；每个字段族默认先取不超过 2 个代表字段。
-- 默认约 40% 名额保留给未探索字段；其余名额只给历史优质字段，普通失败记录不会挤占探索预算。
+- `_10 / _30 / _60 / _180_days` 等数字窗口会归并成字段族，即使后面还有标的后缀也会归并；每族代表数由 `expression_policies.__default__.field_max_per_family` 控制。
+- 未探索字段配额由 `expression_policies.__default__.field_exploration_ratio` 控制；其余名额只给历史优质字段，普通失败记录不会挤占探索预算。
 - 任一通过 submission check 的 Alpha 会立即成为强正反馈；其他反馈还需满足最小尝试次数和结果时间衰减条件。
 - 新字段先以一个低成本种子模板探索；达到明确门槛后才进入 resimulate/refine，全局模板历史不会让未探索字段整体空跑。
 
 `--include-fields-file` 是人工明确指定的研究范围，因此跳过字段族配额和探索比例，但仍执行基础质量检查。
 `--dry-run-plan` 会输出字段分数、原始排名、字段族、入选原因、不可执行字段数和过滤统计，
-用于在真实运行前解释最终候选范围。
+用于在真实运行前解释最终候选范围。数据集可在 `config/expression_policies.yaml` 覆盖默认策略，
+因此具体生效值以 dry-run 和 run config snapshot 为准。
 
 ## 3. 数据集资产与仓库边界
 
@@ -135,4 +137,3 @@ python -m alpha clean
 
 `alpha clean` 处理数据集的 `cache/`、`runs/` 和遗留运行产物；`make clean-dev` 处理 Python
 字节码、测试缓存、coverage 与开发安装元数据。只有明确传入 `--include-credentials` 才会清理本地加密凭证。
-
