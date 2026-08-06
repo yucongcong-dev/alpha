@@ -18,7 +18,6 @@ if TYPE_CHECKING:
     from .state import (
         ExecutionState,
         InitializedRunContext,
-        PendingFutureLike,
     )
 
 _EXPORT_MAP: ExportMap = {
@@ -29,7 +28,6 @@ _EXPORT_MAP: ExportMap = {
     "TemplateBuildContext": (".contexts", "TemplateBuildContext"),
     "ExecutionState": (".state", "ExecutionState"),
     "InitializedRunContext": (".state", "InitializedRunContext"),
-    "PendingFutureLike": (".state", "PendingFutureLike"),
     "RuntimeConcurrencyState": (".concurrency", "RuntimeConcurrencyState"),
 }
 

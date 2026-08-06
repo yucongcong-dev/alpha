@@ -28,11 +28,9 @@ class ExecutionState:
 
     attempted_keys: set[tuple[str, str, str, str]] = field(default_factory=set)
     template_stats: TemplateStats = field(default_factory=dict)
-    future_queue_state: FutureQueueState = field(default_factory=FutureQueueState.create)
+    future_queue: FutureQueueState = field(default_factory=FutureQueueState.create)
     queue_retry_state: QueueRetryState = field(default_factory=QueueRetryState)
-    result_ledger_state: ResultLedgerState = field(
-        default_factory=lambda: ResultLedgerState(results=[])
-    )
+    result_ledger: ResultLedgerState = field(default_factory=lambda: ResultLedgerState(results=[]))
     blacklist_runtime_stats: BlacklistRuntimeStats = field(default_factory=dict)
     blacklisted_template_keys: set[tuple[str, str, str, str]] = field(default_factory=set)
     last_submission_at: float = 0.0
@@ -52,23 +50,13 @@ class ExecutionState:
         return cls(
             attempted_keys=set(attempted_keys or set()),
             template_stats=dict(template_stats or {}),
-            future_queue_state=FutureQueueState.create(
+            future_queue=FutureQueueState.create(
                 pending_futures=pending_futures,
                 resumable_simulations=resumable_simulations,
             ),
-            result_ledger_state=ResultLedgerState(results=list(initial_results or [])),
+            result_ledger=ResultLedgerState(results=list(initial_results or [])),
             last_submission_at=last_submission_at,
         )
-
-    @property
-    def future_queue(self) -> FutureQueueState:
-        """Return the authoritative future-state view."""
-        return self.future_queue_state
-
-    @property
-    def result_ledger(self) -> ResultLedgerState:
-        """Return the authoritative result-state view."""
-        return self.result_ledger_state
 
     def reset_transient_queue_state(self) -> None:
         """Reset queue state that should not survive process restarts."""
@@ -92,6 +80,3 @@ class InitializedRunContext:
     runtime_state: RuntimeConcurrencyState
     create_semaphore: SemaphoreLike
     run_config: RunConfig
-
-
-PendingFutureLike = PendingFutureContext

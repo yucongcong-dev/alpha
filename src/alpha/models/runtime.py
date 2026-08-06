@@ -26,12 +26,10 @@ if TYPE_CHECKING:
         TemplateBuildOptions,
     )
     from .runtime_protocols import (
-        BlacklistRuntimeStats,
         ClientFactoryLike,
         RunConfig,
         SemaphoreLike,
         TemplateFeedback,
-        TemplateSequence,
         TemplateStats,
     )
     from ..runtime.concurrency import RuntimeConcurrencyState
@@ -48,7 +46,6 @@ if TYPE_CHECKING:
     from ..runtime.state import (
         ExecutionState,
         InitializedRunContext,
-        PendingFutureLike,
     )
 
 _EXPORT_MAP: ExportMap = {
@@ -61,12 +58,10 @@ _EXPORT_MAP: ExportMap = {
     "ResultWriteOptions": (".runtime_options", "ResultWriteOptions"),
     "RunLoopOptions": (".runtime_options", "RunLoopOptions"),
     "TemplateBuildOptions": (".runtime_options", "TemplateBuildOptions"),
-    "BlacklistRuntimeStats": (".runtime_protocols", "BlacklistRuntimeStats"),
     "ClientFactoryLike": (".runtime_protocols", "ClientFactoryLike"),
     "RunConfig": (".runtime_protocols", "RunConfig"),
     "SemaphoreLike": (".runtime_protocols", "SemaphoreLike"),
     "TemplateFeedback": (".runtime_protocols", "TemplateFeedback"),
-    "TemplateSequence": (".runtime_protocols", "TemplateSequence"),
     "TemplateStats": (".runtime_protocols", "TemplateStats"),
     "ExecutionMetrics": ("..runtime.result_ledger", "ExecutionMetrics"),
     "ExecutionState": ("..runtime.state", "ExecutionState"),
@@ -75,7 +70,6 @@ _EXPORT_MAP: ExportMap = {
     "HistoricalRunState": ("..runtime.contexts", "HistoricalRunState"),
     "InitializedRunContext": ("..runtime.state", "InitializedRunContext"),
     "PendingFutureContext": ("..runtime.contexts", "PendingFutureContext"),
-    "PendingFutureLike": ("..runtime.state", "PendingFutureLike"),
     "PendingTemplateEntry": ("..runtime.contexts", "PendingTemplateEntry"),
     "QueueRetryKey": ("..runtime.queue_retry", "QueueRetryKey"),
     "QueueRetryState": ("..runtime.queue_retry", "QueueRetryState"),

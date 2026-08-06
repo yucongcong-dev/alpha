@@ -55,7 +55,6 @@ if TYPE_CHECKING:
         HistoricalRunState,
         InitializedRunContext,
         PendingFutureContext,
-        PendingFutureLike,
         ResultWriteOptions,
         RunLoopOptions,
         RuntimeConcurrencyState,
@@ -63,7 +62,6 @@ if TYPE_CHECKING:
         TemplateBuildContext,
         TemplateBuildOptions,
         TemplateFeedback,
-        TemplateSequence,
     )
 
 _EXPORT_MAP: ExportMap = {
@@ -103,7 +101,6 @@ _EXPORT_MAP: ExportMap = {
     "HistoricalRunState": (".runtime", "HistoricalRunState"),
     "InitializedRunContext": (".runtime", "InitializedRunContext"),
     "PendingFutureContext": (".runtime", "PendingFutureContext"),
-    "PendingFutureLike": (".runtime", "PendingFutureLike"),
     "ResultWriteOptions": (".runtime", "ResultWriteOptions"),
     "RunLoopOptions": (".runtime", "RunLoopOptions"),
     "RuntimeConcurrencyState": (".runtime", "RuntimeConcurrencyState"),
@@ -111,7 +108,6 @@ _EXPORT_MAP: ExportMap = {
     "TemplateBuildContext": (".runtime", "TemplateBuildContext"),
     "TemplateBuildOptions": (".runtime", "TemplateBuildOptions"),
     "TemplateFeedback": (".runtime", "TemplateFeedback"),
-    "TemplateSequence": (".runtime", "TemplateSequence"),
 }
 
 __all__ = list(_EXPORT_MAP)
