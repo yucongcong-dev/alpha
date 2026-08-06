@@ -19,7 +19,7 @@ from ..io.common import (
     sanitize_dataset_id_for_filename,
 )
 from ..io.file_lock import exclusive_file_lock
-from .blacklist_context import get_active_datasets_root, set_active_datasets_root
+from .blacklist_context import get_active_datasets_root
 from .types import (
     LEARNED_BLACKLIST_KEY,
     PATTERN_RULES_KEY,
@@ -36,11 +36,6 @@ def _resolve_datasets_root(datasets_root: str = "") -> str:
     if not datasets_root:
         return str(get_active_datasets_root())
     return str(Path(datasets_root).expanduser().resolve())
-
-
-def activate_datasets_root(datasets_root: str = "") -> str:
-    """Explicitly bind the process-local datasets root for blacklist matching."""
-    return set_active_datasets_root(_resolve_datasets_root(datasets_root))
 
 
 def resolve_blacklist_path(dataset_id: str, *, datasets_root: str = "") -> str:
@@ -149,18 +144,6 @@ def write_blacklist_payload(
     blacklist_path = resolve_blacklist_path(dataset_id, datasets_root=datasets_root)
     atomic_write_json(blacklist_path, normalize_blacklist_payload(payload, dataset_id))
     return blacklist_path
-
-
-def load_blacklisted_template_names(dataset_id: str, *, datasets_root: str = "") -> set[str]:
-    payload = read_blacklist_payload(dataset_id, datasets_root=datasets_root)
-    entries = payload.get(LEARNED_BLACKLIST_KEY, [])
-    if not isinstance(entries, list):
-        return set()
-    return {
-        str(item.get("name"))
-        for item in entries
-        if isinstance(item, dict) and str(item.get("name", "")).strip()
-    }
 
 
 def summarize_blacklist_payload(payload: BlacklistPayload) -> tuple[int, int]:

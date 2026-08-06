@@ -17,7 +17,6 @@ if TYPE_CHECKING:
     from .blacklist_store import (
         ensure_template_blacklist_file,
         invalidate_blacklist_path_cache,
-        load_blacklisted_template_names,
     )
     from .expression import (
         get_dataset_expression_policy,
@@ -29,7 +28,6 @@ _EXPORT_MAP: ExportMap = {
     "ensure_template_blacklist_file": (".blacklist_store", "ensure_template_blacklist_file"),
     "get_dataset_expression_policy": (".expression", "get_dataset_expression_policy"),
     "invalidate_blacklist_path_cache": (".blacklist_store", "invalidate_blacklist_path_cache"),
-    "load_blacklisted_template_names": (".blacklist_store", "load_blacklisted_template_names"),
     "resolve_feedback_stage": (".expression", "resolve_feedback_stage"),
     "use_curated_heuristics_for_dataset": (".expression", "use_curated_heuristics_for_dataset"),
 }
