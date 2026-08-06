@@ -89,6 +89,12 @@
 - `Test Period` 会影响统计和图表展示
 - 但 submission tests 仍然跑完整 5 年 IS
 
+页面操作上还要注意：
+
+- Stats Summary 默认显示 Train 段，可通过 `TEST / IS` 切换查看 Test 段或完整 IS
+- 图表中的 Test 段以单独颜色标识，隐藏或显示只改变页面展示
+- 如果设置了 Test Period，官方页面说明提交前必须先通过 `Show test period` 显示该区段
+
 所以它更像：
 
 - 一个研究验证工具
