@@ -41,7 +41,7 @@ def test_fundamental6_maintenance_policy_disables_feedback_priority_pruning(monk
     monkeypatch.setattr(
         feedback_filters_module,
         "get_runtime_config",
-        lambda: SimpleNamespace(feedback=SimpleNamespace(feedback_template_min_priority=175)),
+        lambda: SimpleNamespace(feedback_template_min_priority=175),
     )
 
     keep = should_keep_template_for_feedback(

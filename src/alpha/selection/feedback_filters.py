@@ -84,7 +84,7 @@ def should_keep_template_for_feedback(
     ):
         return False
 
-    return priority >= get_runtime_config().feedback.feedback_template_min_priority
+    return priority >= get_runtime_config().feedback_template_min_priority
 
 
 def should_skip_field_template_family(

@@ -24,15 +24,7 @@ _HTTP_DEFAULTS = {
     "polling_retry_buffer": 0.5,
     "backend": "urllib",
 }
-_FEEDBACK_DEFAULTS = {
-    "feedback_mutation_highscore_threshold": 0.25,
-    "feedback_template_min_priority": 105,
-    "delta_std_priority_boost": 15,
-    "expr_nearpass_boost_threshold": 0.50,
-    "expr_iter_boost_threshold": 0.20,
-    "expr_ratio_penalty_threshold": 0.30,
-    "expr_mutation_extend_threshold": 0.15,
-}
+_FEEDBACK_TEMPLATE_MIN_PRIORITY_DEFAULT = 105
 _QUALITY_DEFAULTS = {
     "min_sharpe": 1.25,
     "min_fitness": 1.0,
@@ -68,11 +60,6 @@ def yaml_global_section(section: str) -> dict[str, Any]:
     global_cfg = _get_yaml_global()
     sect = global_cfg.get(section, {})
     return sect if isinstance(sect, dict) else {}
-
-
-def yaml_global_value(section: str, key: str, default: Any) -> Any:
-    """Read a single scalar from the active YAML globals."""
-    return yaml_global_section(section).get(key, default)
 
 
 @dataclass(frozen=True)
@@ -113,28 +100,6 @@ class HttpRuntimeConfig:
         _validate_non_negative("http.login_retry_wait", self.login_retry_wait)
         _validate_non_negative("http.simulation_retry_wait", self.simulation_retry_wait)
         _validate_non_negative("http.polling_retry_buffer", self.polling_retry_buffer)
-
-
-@dataclass(frozen=True)
-class FeedbackRuntimeConfig:
-    feedback_mutation_highscore_threshold: float
-    feedback_template_min_priority: int
-    delta_std_priority_boost: int
-    expr_nearpass_boost_threshold: float
-    expr_iter_boost_threshold: float
-    expr_ratio_penalty_threshold: float
-    expr_mutation_extend_threshold: float
-
-
-@dataclass(frozen=True)
-class ExpressionRuntimeConfig:
-    backfill_window: int
-
-
-@dataclass(frozen=True)
-class SimulationRuntimeConfig:
-    start_date: str
-    end_date: str
 
 
 @dataclass(frozen=True)
@@ -200,65 +165,14 @@ def load_http_runtime_config() -> HttpRuntimeConfig:
     )
 
 
-def load_feedback_runtime_config() -> FeedbackRuntimeConfig:
-    """Build the current feedback threshold configuration snapshot.
-
-    单次 YAML 查询，从 local feedback section 读取有效阈值。
-    """
+def load_feedback_template_min_priority() -> int:
+    """Load the single feedback threshold read dynamically at runtime."""
     section = yaml_global_section("feedback")
-    return FeedbackRuntimeConfig(
-        feedback_mutation_highscore_threshold=float(
-            section.get(
-                "feedback_mutation_highscore_threshold",
-                _FEEDBACK_DEFAULTS["feedback_mutation_highscore_threshold"],
-            )
-        ),
-        feedback_template_min_priority=int(
-            section.get(
-                "feedback_template_min_priority",
-                _FEEDBACK_DEFAULTS["feedback_template_min_priority"],
-            )
-        ),
-        delta_std_priority_boost=int(
-            section.get("delta_std_priority_boost", _FEEDBACK_DEFAULTS["delta_std_priority_boost"])
-        ),
-        expr_nearpass_boost_threshold=float(
-            section.get(
-                "expr_nearpass_boost_threshold",
-                _FEEDBACK_DEFAULTS["expr_nearpass_boost_threshold"],
-            )
-        ),
-        expr_iter_boost_threshold=float(
-            section.get(
-                "expr_iter_boost_threshold", _FEEDBACK_DEFAULTS["expr_iter_boost_threshold"]
-            )
-        ),
-        expr_ratio_penalty_threshold=float(
-            section.get(
-                "expr_ratio_penalty_threshold", _FEEDBACK_DEFAULTS["expr_ratio_penalty_threshold"]
-            )
-        ),
-        expr_mutation_extend_threshold=float(
-            section.get(
-                "expr_mutation_extend_threshold",
-                _FEEDBACK_DEFAULTS["expr_mutation_extend_threshold"],
-            )
-        ),
-    )
-
-
-def load_expression_runtime_config() -> ExpressionRuntimeConfig:
-    """Build the current expression-generation configuration snapshot."""
-    section = yaml_global_section("expression")
-    return ExpressionRuntimeConfig(backfill_window=int(section.get("backfill_window", 504)))
-
-
-def load_simulation_runtime_config() -> SimulationRuntimeConfig:
-    """Build the current simulation-date configuration snapshot."""
-    section = yaml_global_section("simulation")
-    return SimulationRuntimeConfig(
-        start_date=str(section.get("start_date", "2020-01-01")),
-        end_date=str(section.get("end_date", "2025-12-31")),
+    return int(
+        section.get(
+            "feedback_template_min_priority",
+            _FEEDBACK_TEMPLATE_MIN_PRIORITY_DEFAULT,
+        )
     )
 
 
@@ -281,13 +195,11 @@ def load_quality_runtime_config() -> QualityRuntimeConfig:
 
 @dataclass(frozen=True)
 class RuntimeConfig:
-    """运行时配置的单一聚合快照。调用方直接通过属性访问，无需包装函数。"""
+    """Only configuration values read dynamically after CLI resolution."""
 
     http: HttpRuntimeConfig
-    feedback: FeedbackRuntimeConfig
-    expression: ExpressionRuntimeConfig
-    simulation: SimulationRuntimeConfig
     quality: QualityRuntimeConfig
+    feedback_template_min_priority: int
 
 
 _runtime_config_cache: RuntimeConfig | None = None
@@ -295,13 +207,11 @@ _runtime_config_source: object | None = None
 
 
 def _build_runtime_config() -> RuntimeConfig:
-    """构建完整的运行时配置。所有 7 个 section 一次加载。"""
+    """Build the three runtime sections still consumed by production code."""
     return RuntimeConfig(
         http=load_http_runtime_config(),
-        feedback=load_feedback_runtime_config(),
-        expression=load_expression_runtime_config(),
-        simulation=load_simulation_runtime_config(),
         quality=load_quality_runtime_config(),
+        feedback_template_min_priority=load_feedback_template_min_priority(),
     )
 
 

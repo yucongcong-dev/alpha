@@ -30,6 +30,7 @@ from alpha.config.models import DatasetExpressionPolicy, FieldTransformStage
 from alpha.config.runtime_values import (
     clear_runtime_config_cache,
     get_runtime_config,
+    load_feedback_template_min_priority,
     load_http_runtime_config,
     load_quality_runtime_config,
 )
@@ -550,6 +551,15 @@ def test_load_quality_runtime_config_reads_yaml_globals(monkeypatch) -> None:
     assert quality.min_turnover == 0.03
     assert quality.max_turnover == 0.55
     assert quality.max_weight == 0.08
+
+
+def test_load_feedback_template_min_priority_reads_yaml_globals(monkeypatch) -> None:
+    monkeypatch.setattr(
+        "alpha.config.runtime_values.get_yaml_config",
+        lambda config_path="": {"global": {"feedback": {"feedback_template_min_priority": 175}}},
+    )
+
+    assert load_feedback_template_min_priority() == 175
 
 
 def test_load_http_runtime_config_normalizes_backend(monkeypatch) -> None:
