@@ -19,6 +19,7 @@ from ..config.strategy_profiles import (
 from ..config.yaml import get_yaml_config, set_active_config_path
 
 DATASET_PROFILE_KEYS = (
+    "page_size",
     "min_request_interval",
     "sleep_between_fields",
     "max_concurrent_simulations",

@@ -3,6 +3,7 @@
 # ============================================================================
 # 运行时根据 --dataset-id 自动匹配。
 # 字段说明:
+#   page_size                    字段 API 分页大小
 #   min_request_interval          API 请求最小间隔 (秒)
 #   sleep_between_fields          字段间休眠 (秒)
 #   max_concurrent_simulations    最大并发模拟数
@@ -19,6 +20,7 @@
 dataset_profiles:
   analyst4:
     default_preset: "eps_surprise_seed"
+    page_size: 20
     sleep_between_fields: 3.0
     max_concurrent_simulations: 2
     max_concurrent_creates: 1

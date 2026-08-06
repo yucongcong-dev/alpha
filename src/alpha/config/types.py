@@ -80,6 +80,7 @@ class DatasetProfile(TypedDict, total=False):
 
     default_preset: str
     paused: bool
+    page_size: int
     min_request_interval: float
     sleep_between_fields: float
     max_concurrent_simulations: int

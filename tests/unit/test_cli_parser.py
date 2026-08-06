@@ -66,6 +66,54 @@ def test_cli_limit_overrides_yaml(monkeypatch, tmp_path) -> None:
     assert args.max_concurrent_simulations == 1
 
 
+def test_dataset_profile_can_reduce_field_page_size(monkeypatch, tmp_path) -> None:
+    clear_yaml_cache()
+    config_path = tmp_path / "settings.yaml"
+    config_path.write_text(
+        """
+dataset_profiles:
+  analyst4:
+    page_size: 20
+""".strip(),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        ["alpha", "--config", str(config_path), "--dataset-id", "analyst4"],
+    )
+
+    assert parse_args().page_size == 20
+
+
+def test_cli_page_size_overrides_dataset_profile(monkeypatch, tmp_path) -> None:
+    clear_yaml_cache()
+    config_path = tmp_path / "settings.yaml"
+    config_path.write_text(
+        """
+dataset_profiles:
+  analyst4:
+    page_size: 20
+""".strip(),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "alpha",
+            "--config",
+            str(config_path),
+            "--dataset-id",
+            "analyst4",
+            "--page-size",
+            "30",
+        ],
+    )
+
+    assert parse_args().page_size == 30
+
+
 @pytest.mark.parametrize(
     "option",
     ["--queue-busy-retry-limit", "--field-queue-busy-skip-after"],

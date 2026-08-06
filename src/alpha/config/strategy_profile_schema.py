@@ -87,6 +87,7 @@ _EXPRESSION_POLICY_TUNING_KEYS = {
     if item.name not in {"dataset_id", "policy_version"}
 }
 _DATASET_PROFILE_TUNING_KEYS = {
+    "page_size",
     "min_request_interval",
     "sleep_between_fields",
     "max_concurrent_simulations",
