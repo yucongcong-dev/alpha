@@ -1,0 +1,9 @@
+{
+  "_version": "v2",
+  "_comment": "Template blacklist for analyst4. Learned updates remain disabled for the seed study.",
+  "_created": "2026-08-06",
+  "_updated": "2026-08-06",
+  "dataset_id": "analyst4",
+  "learned_templates": [],
+  "expression_rules": []
+}

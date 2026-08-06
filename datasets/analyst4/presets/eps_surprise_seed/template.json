@@ -1,0 +1,30 @@
+{
+  "_comment": "Quarterly reported EPS versus the matching analyst median, scaled by price.",
+  "_comment_placeholders": "{field}=anl4_fs_actual_1qf_v4_nd_epsr_value",
+  "_dataset_id": "analyst4",
+  "default": [
+    {
+      "name": "analyst4_eps_surprise_price_zscore_252",
+      "expression": "group_rank(ts_zscore((winsorize(ts_backfill({field}, 120), std=4) - winsorize(ts_backfill(anl4_fs_detail_estimate_1qf_v4_nd_epsr_median, 120), std=4)) / ts_backfill(close, 5), 252), subindustry)",
+      "priority": 1000,
+      "family": "earnings_surprise_level",
+      "layer": "composite",
+      "stage": "group_second_order",
+      "dataset_tags": ["analyst4", "eps", "earnings_surprise", "eps_surprise_seed"],
+      "role": "default_seed",
+      "activation_scope": "broad"
+    },
+    {
+      "name": "analyst4_eps_surprise_price_delta_over_std_63_126",
+      "expression": "group_rank(ts_delta((winsorize(ts_backfill({field}, 120), std=4) - winsorize(ts_backfill(anl4_fs_detail_estimate_1qf_v4_nd_epsr_median, 120), std=4)) / ts_backfill(close, 5), 63) / ts_std_dev((winsorize(ts_backfill({field}, 120), std=4) - winsorize(ts_backfill(anl4_fs_detail_estimate_1qf_v4_nd_epsr_median, 120), std=4)) / ts_backfill(close, 5), 126), subindustry)",
+      "priority": 990,
+      "family": "earnings_surprise_change",
+      "layer": "composite",
+      "stage": "group_second_order",
+      "dataset_tags": ["analyst4", "eps", "earnings_surprise", "eps_surprise_seed"],
+      "role": "default_seed",
+      "activation_scope": "broad"
+    }
+  ],
+  "VECTOR": []
+}

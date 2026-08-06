@@ -149,6 +149,23 @@ def test_option8_explicit_active_preset_is_allowed(monkeypatch, tmp_path) -> Non
     assert paths.include_fields_file == str(fields_path)
 
 
+def test_analyst4_uses_default_eps_surprise_preset(monkeypatch) -> None:
+    clear_yaml_cache()
+    monkeypatch.setattr(sys, "argv", ["alpha", "--dataset-id", "analyst4"])
+
+    paths = normalize_args_paths(parse_args())
+
+    assert paths.template_library_file.replace("\\", "/").endswith(
+        "/datasets/analyst4/presets/eps_surprise_seed/template.json"
+    )
+    assert paths.include_fields_file.replace("\\", "/").endswith(
+        "/datasets/analyst4/presets/eps_surprise_seed/fields.txt"
+    )
+    assert paths.include_templates_file.replace("\\", "/").endswith(
+        "/datasets/analyst4/presets/eps_surprise_seed/templates.txt"
+    )
+
+
 def test_explicit_template_path_allows_paused_fundamental6(monkeypatch, tmp_path) -> None:
     clear_yaml_cache()
     monkeypatch.chdir(tmp_path)

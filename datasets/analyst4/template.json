@@ -1,0 +1,7 @@
+{
+  "_comment": "analyst4 baseline library; active research uses the bounded EPS presets.",
+  "_comment_placeholders": "{field}=field name",
+  "_dataset_id": "analyst4",
+  "default": [],
+  "VECTOR": []
+}
