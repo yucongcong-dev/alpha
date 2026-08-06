@@ -19,7 +19,6 @@ from ..generators.fields import choose_field_name
 from ..models.domain import FieldTestResult, TemplateField, TemplateLibrary
 from ..models.io_types import RunFilters
 from ..models.runtime_options import TemplateBuildOptions
-from ..models.runtime_protocols import TemplateBuildArgs
 from ..policy.expression import get_dataset_expression_policy, resolve_feedback_stage
 from ..runtime.contexts import (
     HistoricalRunState,
@@ -77,18 +76,12 @@ def _record_feedback_explain_counts(
     explain_counts: Counter[str],
     build_ctx: TemplateBuildContext,
     field_id: str,
-    *,
-    args: TemplateBuildArgs,
 ) -> None:
     """Record why one field enters generate or resimulate planning."""
-    options = getattr(build_ctx, "options", args)
-    expression_policy = getattr(
-        build_ctx, "expression_policy", None
-    ) or get_dataset_expression_policy(str(getattr(options, "dataset_id", "") or ""))
-    field_feedback_map = getattr(build_ctx, "field_feedback", {}) or {}
-    raw_feedback = (
-        field_feedback_map.get(field_id) if isinstance(field_feedback_map, dict) else None
+    expression_policy = build_ctx.expression_policy or get_dataset_expression_policy(
+        build_ctx.options.dataset_id
     )
+    raw_feedback = build_ctx.field_feedback.get(field_id)
     field_feedback = decay_field_feedback(
         raw_feedback,
         half_life_days=expression_policy.field_feedback_half_life_days,
@@ -126,7 +119,7 @@ def _record_feedback_explain_counts(
 
 def build_dry_run_plan_summary(
     *,
-    args: TemplateBuildArgs,
+    options: TemplateBuildOptions,
     fields: Sequence[TemplateField],
     filters: RunFilters,
     template_library: TemplateLibrary,
@@ -137,17 +130,15 @@ def build_dry_run_plan_summary(
     should_skip: FieldSkipPredicate,
     resolve_skip_reason: FieldSkipReasonResolver | None,
     build_pending: FieldPendingTemplateBuilder,
+    full_run: bool,
+    max_total_simulations: int,
     sample_limit: int = DRY_RUN_SAMPLE_LIMIT,
-    full_run: bool | None = None,
-    max_total_simulations: int | None = None,
 ) -> DryRunPlanSummary:
     """Build the planned queue and its explain counters without rendering output."""
     planned_fields = 0
     eligible_templates = 0
     filtered_templates = 0
     unactionable_fields = 0
-    if full_run is None:
-        full_run = bool(getattr(args, "full_run", False))
     attempted_field_ids = {
         field_id for field_id, _template, _expression, _settings in execution_state.attempted_keys
     }
@@ -157,7 +148,7 @@ def build_dry_run_plan_summary(
     seed_samples: list[DryRunSample] = []
     refine_samples: list[DryRunSample] = []
     build_ctx = build_context(
-        options=TemplateBuildOptions.from_args(args),
+        options=options,
         fields=fields,
         template_library=template_library,
         historical_state=historical_state,
@@ -179,7 +170,7 @@ def build_dry_run_plan_summary(
             )
             explain_counts[f"field_skipped_{skip_reason or 'unknown'}"] += 1
             continue
-        _record_feedback_explain_counts(explain_counts, build_ctx, field_id, args=args)
+        _record_feedback_explain_counts(explain_counts, build_ctx, field_id)
         pending_templates, filtered_count, _template_count = build_pending(
             build_ctx,
             field,
@@ -227,8 +218,6 @@ def build_dry_run_plan_summary(
         if full_run
         else refine_samples[:sample_limit]
     )
-    if max_total_simulations is None:
-        max_total_simulations = int(getattr(args, "max_total_simulations", 0) or 0)
     simulation_budget = max(0, max_total_simulations)
     scheduled_templates = (
         min(eligible_templates, simulation_budget) if simulation_budget > 0 else eligible_templates
@@ -257,7 +246,7 @@ def build_dry_run_plan_summary(
 
 def print_dry_run_plan(
     *,
-    args: TemplateBuildArgs,
+    options: TemplateBuildOptions,
     fields: Sequence[TemplateField],
     filters: RunFilters,
     template_library: TemplateLibrary,
@@ -268,14 +257,14 @@ def print_dry_run_plan(
     should_skip: FieldSkipPredicate,
     resolve_skip_reason: FieldSkipReasonResolver | None,
     build_pending: FieldPendingTemplateBuilder,
+    full_run: bool,
+    max_total_simulations: int,
     sample_limit: int = DRY_RUN_SAMPLE_LIMIT,
     log: logging.Logger = logger,
-    full_run: bool | None = None,
-    max_total_simulations: int | None = None,
 ) -> None:
     """Build and render the planned field/template queue without creating simulations."""
     summary = build_dry_run_plan_summary(
-        args=args,
+        options=options,
         fields=fields,
         filters=filters,
         template_library=template_library,

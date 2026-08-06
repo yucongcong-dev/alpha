@@ -49,6 +49,10 @@ def _args() -> SimpleNamespace:
     )
 
 
+def _options() -> TemplateBuildOptions:
+    return TemplateBuildOptions.from_args(_args())
+
+
 def _field(field_id: str) -> TemplateField:
     return TemplateField(
         field_id=field_id,
@@ -394,12 +398,11 @@ def test_print_dry_run_plan_counts_only_actionable_fields(caplog) -> None:
         return [entry, entry], 1, 2
 
     caplog.set_level(logging.INFO)
-    args = _args()
-    args.max_total_simulations = 1
+    options = _options()
     with (
         patch(
             "alpha.core.executor.build_template_build_context",
-            return_value=TemplateBuildContext(options=TemplateBuildOptions.from_args(args)),
+            return_value=TemplateBuildContext(options=options),
         ),
         patch(
             "alpha.core.executor.should_skip_field",
@@ -411,13 +414,15 @@ def test_print_dry_run_plan_counts_only_actionable_fields(caplog) -> None:
         ),
     ):
         print_dry_run_plan(
-            args=args,
+            options=options,
             fields=fields,
             filters=RunFilters(),
             template_library={},
             historical_state=HistoricalRunState(),
             execution_state=_execution_state(),
             use_dataset_heuristics=False,
+            full_run=False,
+            max_total_simulations=1,
             sample_limit=1,
         )
 
@@ -480,13 +485,15 @@ def test_print_dry_run_plan_explains_feedback_stage_reasons(caplog) -> None:
         return_value=([entry], 0, 1),
     ):
         print_dry_run_plan(
-            args=_args(),
+            options=_options(),
             fields=fields,
             filters=RunFilters(),
             template_library={},
             historical_state=historical_state,
             execution_state=_execution_state(),
             use_dataset_heuristics=False,
+            full_run=False,
+            max_total_simulations=0,
             sample_limit=1,
         )
 
@@ -510,9 +517,6 @@ def test_print_dry_run_plan_reports_partial_full_run_seed_budget(caplog) -> None
         settings_variant=SettingsVariant(),
         variant_fingerprint="settings",
     )
-    args = _args()
-    args.full_run = True
-    args.max_total_simulations = 1
     caplog.set_level(logging.INFO)
 
     with patch(
@@ -520,13 +524,15 @@ def test_print_dry_run_plan_reports_partial_full_run_seed_budget(caplog) -> None
         return_value=([entry], 0, 1),
     ):
         print_dry_run_plan(
-            args=args,
+            options=_options(),
             fields=fields,
             filters=RunFilters(),
             template_library={},
             historical_state=HistoricalRunState(),
             execution_state=_execution_state(),
             use_dataset_heuristics=False,
+            full_run=True,
+            max_total_simulations=1,
             sample_limit=1,
         )
 
@@ -559,8 +565,6 @@ def test_print_dry_run_plan_samples_explicit_default_seed(caplog) -> None:
         settings_variant=SettingsVariant(),
         variant_fingerprint="seed-settings",
     )
-    args = _args()
-    args.full_run = True
     caplog.set_level(logging.INFO)
 
     with patch(
@@ -568,13 +572,15 @@ def test_print_dry_run_plan_samples_explicit_default_seed(caplog) -> None:
         return_value=([refine_entry, seed_entry], 0, 2),
     ):
         print_dry_run_plan(
-            args=args,
+            options=_options(),
             fields=[field],
             filters=RunFilters(),
             template_library={},
             historical_state=HistoricalRunState(),
             execution_state=_execution_state(),
             use_dataset_heuristics=False,
+            full_run=True,
+            max_total_simulations=0,
             sample_limit=1,
         )
 

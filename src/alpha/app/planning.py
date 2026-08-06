@@ -103,7 +103,7 @@ def run_dry_run_plan(args: ApplicationConfig) -> bool:
         datasets_root=paths.datasets_root,
     )
     print_dry_run_plan(
-        args=template_options,
+        options=template_options,
         fields=prepared_fields,
         filters=supporting_resources.filters,
         template_library=supporting_resources.template_library,

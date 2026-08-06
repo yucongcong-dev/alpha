@@ -28,7 +28,6 @@ from ..generators.templates.metadata import normalize_template_role
 from ..models.domain import FieldTestResult, TemplateCandidate, TemplateField, TemplateLibrary
 from ..models.io_types import RunFilters
 from ..models.runtime_options import TemplateBuildOptions
-from ..models.runtime_protocols import TemplateBuildArgs
 from ..policy.expression import get_dataset_expression_policy
 from ..runtime.contexts import (
     HistoricalRunState,
@@ -244,16 +243,16 @@ def build_pending_templates_for_field(
 
 def print_dry_run_plan(
     *,
-    args: TemplateBuildArgs,
+    options: TemplateBuildOptions,
     fields: Sequence[TemplateField],
     filters: RunFilters,
     template_library: TemplateLibrary,
     historical_state: HistoricalRunState,
     execution_state: ExecutionState,
     use_dataset_heuristics: bool,
+    full_run: bool,
+    max_total_simulations: int,
     sample_limit: int = DRY_RUN_SAMPLE_LIMIT,
-    full_run: bool | None = None,
-    max_total_simulations: int | None = None,
 ) -> None:
     """
     打印本轮计划执行的字段/模板，不创建任何 simulation。
@@ -262,7 +261,7 @@ def print_dry_run_plan(
     不实际创建模拟任务。
 
     Args:
-        args: 命令行参数。
+        options: 模板构建配置。
         fields: 字段列表。
         filters: 运行过滤器。
         template_library: 模板库。
@@ -275,13 +274,15 @@ def print_dry_run_plan(
 
     Example:
         >>> print_dry_run_plan(
-        ...     args=args,
+        ...     options=options,
         ...     fields=fields,
         ...     filters=filters,
         ...     template_library=library,
         ...     historical_state=history,
         ...     execution_state=state,
         ...     use_dataset_heuristics=True,
+        ...     full_run=False,
+        ...     max_total_simulations=0,
         ... )
 
     Note:
@@ -290,7 +291,7 @@ def print_dry_run_plan(
         - 打印最多 sample_limit 个样本详情
     """
     _dry_run.print_dry_run_plan(
-        args=args,
+        options=options,
         fields=fields,
         filters=filters,
         template_library=template_library,
