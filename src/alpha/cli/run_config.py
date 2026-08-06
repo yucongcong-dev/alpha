@@ -6,64 +6,70 @@ from __future__ import annotations
 
 from typing import Any
 
+from ..config.application import ApplicationConfig
+from ..config.strategy_profiles import normalize_strategy_profile
 from ..models.io_types import RunPaths
-from ..models.runtime_options import RunConfigSnapshotOptions
 
 
 def build_run_config_snapshot(
-    options: RunConfigSnapshotOptions,
+    config: ApplicationConfig,
     run_paths: RunPaths,
 ) -> dict[str, Any]:
     """构建用于结果落盘的运行配置快照。"""
+    dataset = config.dataset
+    simulation = config.simulation
+    planning = config.planning
+    execution = config.execution
+    flags = config.runtime_flags
     return {
         "run": {
-            "name": options.run_name,
+            "name": config.run_name,
         },
         "dataset": {
-            "dataset_id": options.dataset_id,
-            "region": options.region,
-            "universe": options.universe,
-            "instrument_type": options.instrument_type,
-            "delay": options.delay,
+            "dataset_id": dataset.dataset_id,
+            "region": dataset.region,
+            "universe": dataset.universe,
+            "instrument_type": dataset.instrument_type,
+            "delay": dataset.delay,
         },
         "settings": {
-            "decay": options.decay,
-            "neutralization": options.neutralization,
-            "truncation": options.truncation,
-            "nan_handling": options.nan_handling,
-            "max_trade": options.max_trade,
+            "decay": simulation.decay,
+            "neutralization": simulation.neutralization,
+            "truncation": simulation.truncation,
+            "nan_handling": simulation.nan_handling,
+            "max_trade": simulation.max_trade,
         },
         "limits": {
-            "limit": options.limit,
-            "offset": options.offset,
-            "page_size": options.page_size,
-            "sleep_between_fields": options.sleep_between_fields,
-            "max_templates_per_field": options.max_templates_per_field,
-            "max_templates_per_family": options.max_templates_per_family,
-            "max_total_simulations": options.max_total_simulations,
-            "field_template_batch_size": options.field_template_batch_size,
-            "legacy_similarity_penalty": options.legacy_similarity_penalty,
+            "limit": planning.limit,
+            "offset": planning.offset,
+            "page_size": planning.page_size,
+            "sleep_between_fields": planning.sleep_between_fields,
+            "max_templates_per_field": planning.max_templates_per_field,
+            "max_templates_per_family": planning.max_templates_per_family,
+            "max_total_simulations": planning.max_total_simulations,
+            "field_template_batch_size": max(1, planning.field_template_batch_size),
+            "legacy_similarity_penalty": planning.legacy_similarity_penalty,
         },
         "concurrency": {
-            "max_concurrent_simulations": options.max_concurrent_simulations,
-            "max_concurrent_creates": options.max_concurrent_creates,
+            "max_concurrent_simulations": execution.max_concurrent_simulations,
+            "max_concurrent_creates": execution.max_concurrent_creates,
         },
         "retries": {
-            "simulation_create_retries": options.simulation_create_retries,
-            "simulation_poll_retries": options.simulation_poll_retries,
-            "simulation_max_polls": options.simulation_max_polls,
-            "simulation_max_wait_seconds": options.simulation_max_wait_seconds,
-            "simulation_max_pending_cycles": options.simulation_max_pending_cycles,
-            "simulation_max_queue_seconds": options.simulation_max_queue_seconds,
-            "queue_busy_cooldown_seconds": options.queue_busy_cooldown_seconds,
-            "queue_busy_retry_limit": options.queue_busy_retry_limit,
-            "check_submission_retries": options.check_submission_retries,
-            "rate_limit_max_retries": options.rate_limit_max_retries,
-            "login_retries": options.login_retries,
-            "min_request_interval": options.min_request_interval,
+            "simulation_create_retries": execution.simulation_create_retries,
+            "simulation_poll_retries": execution.simulation_poll_retries,
+            "simulation_max_polls": execution.simulation_max_polls,
+            "simulation_max_wait_seconds": execution.simulation_max_wait_seconds,
+            "simulation_max_pending_cycles": execution.simulation_max_pending_cycles,
+            "simulation_max_queue_seconds": execution.simulation_max_queue_seconds,
+            "queue_busy_cooldown_seconds": execution.queue_busy_cooldown_seconds,
+            "queue_busy_retry_limit": execution.queue_busy_retry_limit,
+            "check_submission_retries": execution.check_submission_retries,
+            "rate_limit_max_retries": execution.rate_limit_max_retries,
+            "login_retries": execution.login_retries,
+            "min_request_interval": execution.min_request_interval,
         },
         "filters": {
-            "top_fields_by_feedback": options.top_fields_by_feedback,
+            "top_fields_by_feedback": planning.top_fields_by_feedback,
         },
         "paths": {
             "template_library_file": run_paths.template_library_file,
@@ -72,12 +78,12 @@ def build_run_config_snapshot(
             "feedback_output": run_paths.feedback_output,
         },
         "runtime": {
-            "strategy_profile": options.strategy_profile,
-            "auto_update_blacklist": options.auto_update_blacklist,
-            "smoke_test": options.smoke_test,
-            "dry_run_plan": options.dry_run_plan,
-            "full_run": options.full_run,
-            "verbose": options.verbose,
-            "quiet": options.quiet,
+            "strategy_profile": normalize_strategy_profile(flags.strategy_profile),
+            "auto_update_blacklist": flags.auto_update_blacklist,
+            "smoke_test": planning.smoke_test,
+            "dry_run_plan": planning.dry_run_plan,
+            "full_run": planning.full_run,
+            "verbose": flags.verbose,
+            "quiet": flags.quiet,
         },
     }

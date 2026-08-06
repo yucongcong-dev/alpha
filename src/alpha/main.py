@@ -52,11 +52,11 @@ def configure_application_logging(config: ApplicationConfig) -> None:
     """Configure console/file logging once after the CLI boundary is parsed."""
     from .cli.filters import setup_runtime_logging
 
-    writes_runtime_log = config.command == "run" and not config.dry_run_plan
+    writes_runtime_log = config.command == "run" and not config.planning.dry_run_plan
     setup_runtime_logging(
-        config.log_file if writes_runtime_log else "",
-        verbose=config.verbose,
-        quiet=config.quiet,
+        config.paths.log_file if writes_runtime_log else "",
+        verbose=config.runtime_flags.verbose,
+        quiet=config.runtime_flags.quiet,
     )
 
 
@@ -107,7 +107,7 @@ def main() -> int:
 
     if config.command == "clean":
         return clean_runtime_artifacts(config)
-    if config.dry_run_plan:
+    if config.planning.dry_run_plan:
         return 0 if run_dry_run_plan(config, config.paths) else 1
 
     init_result = initialize_run_context(config, config.paths)

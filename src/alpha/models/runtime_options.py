@@ -5,7 +5,6 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
-from ..config.strategy_profiles import normalize_strategy_profile
 from ..runtime.preset_mode import resolve_preset_mode
 from .runtime_config import SimulationStageConfig
 from .runtime_protocols import (
@@ -227,106 +226,6 @@ class BootstrapFieldOptions:
             check_submission_retries=max(1, config.execution.check_submission_retries),
             fetch=FieldFetchOptions.from_config(config),
             selection=FieldSelectionOptions.from_config(config),
-        )
-
-
-@dataclass(frozen=True)
-class RunConfigSnapshotOptions:
-    """Inputs serialized into the persisted run configuration snapshot."""
-
-    run_name: str = "default"
-    dataset_id: str = ""
-    region: str = ""
-    universe: str = ""
-    instrument_type: str = ""
-    delay: int = 0
-    decay: int = 0
-    neutralization: str = ""
-    truncation: float = 0.0
-    nan_handling: str = ""
-    max_trade: str = "OFF"
-    limit: int = 0
-    offset: int = 0
-    page_size: int = 0
-    sleep_between_fields: float = 0.0
-    max_templates_per_field: int = 0
-    max_templates_per_family: int = 0
-    max_total_simulations: int = 0
-    field_template_batch_size: int = 0
-    legacy_similarity_penalty: int = 0
-    max_concurrent_simulations: int = 0
-    max_concurrent_creates: int = 0
-    simulation_create_retries: int = 0
-    simulation_poll_retries: int = 0
-    simulation_max_polls: int = 0
-    simulation_max_wait_seconds: float = 0.0
-    simulation_max_pending_cycles: int = 0
-    simulation_max_queue_seconds: float = 0.0
-    queue_busy_cooldown_seconds: float = 0.0
-    queue_busy_retry_limit: int = 0
-    check_submission_retries: int = 0
-    rate_limit_max_retries: int = 0
-    login_retries: int = 0
-    min_request_interval: float = 0.0
-    top_fields_by_feedback: int = 0
-    strategy_profile: str = "explore"
-    auto_update_blacklist: bool = False
-    smoke_test: bool = False
-    dry_run_plan: bool = False
-    full_run: bool = False
-    verbose: bool = False
-    quiet: bool = False
-
-    @classmethod
-    def from_config(cls, config: ApplicationConfig) -> RunConfigSnapshotOptions:
-        dataset = config.dataset
-        simulation = config.simulation
-        planning = config.planning
-        execution = config.execution
-        flags = config.runtime_flags
-        return cls(
-            run_name=config.run_name,
-            dataset_id=dataset.dataset_id,
-            region=dataset.region,
-            universe=dataset.universe,
-            instrument_type=dataset.instrument_type,
-            delay=dataset.delay,
-            decay=simulation.decay,
-            neutralization=simulation.neutralization,
-            truncation=simulation.truncation,
-            nan_handling=simulation.nan_handling,
-            max_trade=simulation.max_trade,
-            limit=planning.limit,
-            offset=planning.offset,
-            page_size=planning.page_size,
-            sleep_between_fields=planning.sleep_between_fields,
-            max_templates_per_field=planning.max_templates_per_field,
-            max_templates_per_family=planning.max_templates_per_family,
-            max_total_simulations=planning.max_total_simulations,
-            field_template_batch_size=max(1, planning.field_template_batch_size),
-            legacy_similarity_penalty=planning.legacy_similarity_penalty,
-            max_concurrent_simulations=execution.max_concurrent_simulations,
-            max_concurrent_creates=execution.max_concurrent_creates,
-            simulation_create_retries=execution.simulation_create_retries,
-            simulation_poll_retries=execution.simulation_poll_retries,
-            simulation_max_polls=execution.simulation_max_polls,
-            simulation_max_wait_seconds=execution.simulation_max_wait_seconds,
-            simulation_max_pending_cycles=execution.simulation_max_pending_cycles,
-            simulation_max_queue_seconds=execution.simulation_max_queue_seconds,
-            queue_busy_cooldown_seconds=execution.queue_busy_cooldown_seconds,
-            queue_busy_retry_limit=execution.queue_busy_retry_limit,
-            check_submission_retries=execution.check_submission_retries,
-            rate_limit_max_retries=execution.rate_limit_max_retries,
-            login_retries=execution.login_retries,
-            min_request_interval=execution.min_request_interval,
-            top_fields_by_feedback=planning.top_fields_by_feedback,
-            strategy_profile=normalize_strategy_profile(flags.strategy_profile),
-            auto_update_blacklist=flags.auto_update_blacklist,
-            smoke_test=planning.smoke_test,
-            dry_run_plan=planning.dry_run_plan,
-            full_run=planning.full_run,
-            verbose=flags.verbose,
-            quiet=flags.quiet,
         )
 
 

@@ -6,10 +6,11 @@ import logging
 
 from ..analysis.analysis_sync import ensure_analysis_synced
 from ..cli.run_config import build_run_config_snapshot
+from ..config.application import ApplicationConfig
 from ..io.common import resolve_datasets_root
 from ..io.output_paths import cleanup_legacy_sidecar_files
 from ..models.io_types import RunPaths
-from ..models.runtime_options import BootstrapPathOptions, RunConfigSnapshotOptions
+from ..models.runtime_options import BootstrapPathOptions
 from ..models.runtime_protocols import RunConfig
 from .bootstrap_types import BootstrapPaths
 
@@ -73,7 +74,7 @@ def build_effective_run_paths(
 
 
 def prepare_runtime_outputs(
-    run_config_options: RunConfigSnapshotOptions,
+    config: ApplicationConfig,
     path_options: BootstrapPathOptions,
     run_paths: RunPaths | None,
     paths: BootstrapPaths,
@@ -82,6 +83,6 @@ def prepare_runtime_outputs(
     effective_run_paths = build_effective_run_paths(path_options, paths, run_paths)
     cleanup_legacy_sidecar_files(paths.output_file, verbose=True)
     ensure_analysis_synced(paths.output_file)
-    run_config = build_run_config_snapshot(run_config_options, effective_run_paths)
+    run_config = build_run_config_snapshot(config, effective_run_paths)
     logger.info("[config] 运行配置将嵌入主结果文件")
     return run_config

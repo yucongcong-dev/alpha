@@ -101,9 +101,7 @@ def test_load_pipeline_state_preserves_result_derived_stats_with_zero_cursor(tmp
 
     assert resumed == 0
     assert execution_state.queue_retry_state.retry_counts == {}
-    assert execution_state.template_stats == {
-        "current": {"attempted": 4, "submittable": 1}
-    }
+    assert execution_state.template_stats == {"current": {"attempted": 4, "submittable": 1}}
     assert execution_state.attempted_keys == set()
     assert len(execution_state.future_queue.resumable_simulations) == 1
     restored = execution_state.future_queue.resumable_simulations[0]
@@ -155,9 +153,7 @@ def test_load_pipeline_state_ignores_legacy_template_stats(tmp_path) -> None:
 
     assert resumed == 0
     assert execution_state.queue_retry_state.retry_counts == {}
-    assert execution_state.template_stats == {
-        "current": {"attempted": 5, "simulated": 4}
-    }
+    assert execution_state.template_stats == {"current": {"attempted": 5, "simulated": 4}}
     assert runtime_state.runtime_max_workers == 1
 
 

@@ -53,7 +53,7 @@ def finalize_run(
         refreshed_results, resolved_count = refresh_pending_check_results(
             run_ctx.client_factory,
             list(results),
-            retries=args.check_submission_retries,
+            retries=args.execution.check_submission_retries,
             refresh_limit=0,
             max_refresh_seconds=0,
             max_workers=run_ctx.runtime_state.max_workers,

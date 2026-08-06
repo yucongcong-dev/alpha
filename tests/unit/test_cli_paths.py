@@ -9,8 +9,9 @@ import pytest
 
 from alpha.cli.parser import parse_application_config, parse_args
 from alpha.cli.path_resolution import normalize_args_paths
+from alpha.cli.run_config import build_run_config_snapshot
 from alpha.config import get_yaml_config
-from alpha.models.runtime_options import ResultWriteOptions, RunConfigSnapshotOptions
+from alpha.models.runtime_options import ResultWriteOptions
 
 
 def clear_yaml_cache() -> None:
@@ -425,10 +426,10 @@ def test_parse_application_config_preserves_named_run_in_snapshot(monkeypatch, t
     )
 
     config = parse_application_config()
-    snapshot = RunConfigSnapshotOptions.from_config(config)
+    snapshot = build_run_config_snapshot(config, config.paths)
 
     assert config.run_name == "named-run"
-    assert snapshot.run_name == "named-run"
+    assert snapshot["run"]["name"] == "named-run"
     assert config.paths.output.replace("\\", "/").endswith(
         "/datasets/pv1/runs/named-run/summary.json"
     )

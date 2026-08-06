@@ -22,7 +22,6 @@ from ..models.runtime_options import (
     ApiClientOptions,
     BootstrapFieldOptions,
     BootstrapPathOptions,
-    RunConfigSnapshotOptions,
     TemplateBuildOptions,
 )
 from ..models.runtime_protocols import RunConfig
@@ -55,19 +54,18 @@ def initialize_run_context(
     api_client_options = ApiClientOptions.from_config(args)
     path_options = BootstrapPathOptions.from_config(args)
     field_options = BootstrapFieldOptions.from_config(args)
-    run_config_options = RunConfigSnapshotOptions.from_config(args)
     template_options = TemplateBuildOptions.from_config(args)
     paths = resolve_bootstrap_paths(path_options, run_paths)
     run_config = prepare_runtime_outputs(
-        run_config_options,
+        args,
         path_options,
         run_paths,
         paths,
     )
     email, password = resolve_credentials(
         ResolvedCredentials(
-            email=args.email,
-            password=args.password,
+            email=args.credentials.email,
+            password=args.credentials.password,
             creds_file=paths.creds_file,
             creds_key_file=paths.creds_key_file,
         ),
@@ -101,7 +99,7 @@ def initialize_run_context(
             return None
 
         execution_state = build_execution_state(
-            dataset_id=str(args.dataset_id),
+            dataset_id=args.dataset.dataset_id,
             output_file=paths.output_file,
             historical_state=prepared.historical_state,
             settings_fingerprint=prepared.settings_fingerprint,
@@ -110,7 +108,7 @@ def initialize_run_context(
             datasets_root=paths.datasets_root,
         )
 
-        concurrency = build_runtime_concurrency(args)
+        concurrency = build_runtime_concurrency(args.execution)
         run_context = assemble_initialized_run_context(
             client_factory=client_factory,
             prepared=prepared,

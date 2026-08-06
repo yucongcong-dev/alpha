@@ -21,6 +21,7 @@ def non_negative_int(value: object) -> int | None:
         return None
     return parsed if parsed >= 0 else None
 
+
 def all_pending_contexts(execution_state: ExecutionState) -> list[PendingFutureContext]:
     """Return active and not-yet-rescheduled simulation contexts."""
     future_queue = execution_state.future_queue

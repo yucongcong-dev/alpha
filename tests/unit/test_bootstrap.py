@@ -432,7 +432,9 @@ def test_initialize_run_context_prefers_run_paths_for_cache_and_credentials(
         captured["fields_cache_file"] = cache_path
         return []
 
-    monkeypatch.setattr("alpha.app.bootstrap_field_resources.load_fields_cache", _capture_cache_path)
+    monkeypatch.setattr(
+        "alpha.app.bootstrap_field_resources.load_fields_cache", _capture_cache_path
+    )
     monkeypatch.setattr(
         "alpha.app.bootstrap_field_resources.fetch_fields_with_cache",
         lambda *_args, **_kwargs: [{"id": "field_1", "type": "MATRIX", "name": "field_1"}],

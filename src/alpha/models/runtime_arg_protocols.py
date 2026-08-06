@@ -118,17 +118,6 @@ class RunSettingsArgs(Protocol):
     def max_trade(self) -> str: ...
 
 
-class RuntimeConcurrencyArgs(Protocol):
-    @property
-    def max_concurrent_simulations(self) -> int: ...
-
-    @property
-    def max_concurrent_creates(self) -> int: ...
-
-    @property
-    def simulation_max_pending_cycles(self) -> int: ...
-
-
 class SimulationRetryArgs(Protocol):
     @property
     def simulation_create_retries(self) -> int: ...

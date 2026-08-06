@@ -16,15 +16,23 @@ def _disable_logging_setup(monkeypatch) -> None:
     monkeypatch.setattr(main_module, "configure_application_logging", lambda _config: None)
 
 
+def _config(*, paths: object, dry_run_plan: bool) -> SimpleNamespace:
+    return SimpleNamespace(
+        command="run",
+        paths=paths,
+        planning=SimpleNamespace(dry_run_plan=dry_run_plan),
+        runtime_flags=SimpleNamespace(verbose=False, quiet=False),
+    )
+
+
 def test_configure_application_logging_uses_console_only_for_dry_run(monkeypatch, tmp_path) -> None:
     setup = Mock()
     monkeypatch.setattr("alpha.cli.filters.setup_runtime_logging", setup)
     config = SimpleNamespace(
         command="run",
-        dry_run_plan=True,
-        log_file=str(tmp_path / "run.log"),
-        verbose=True,
-        quiet=False,
+        planning=SimpleNamespace(dry_run_plan=True),
+        paths=SimpleNamespace(log_file=str(tmp_path / "run.log")),
+        runtime_flags=SimpleNamespace(verbose=True, quiet=False),
     )
 
     main_module.configure_application_logging(config)
@@ -38,10 +46,9 @@ def test_configure_application_logging_uses_file_for_live_run(monkeypatch, tmp_p
     log_file = str(tmp_path / "run.log")
     config = SimpleNamespace(
         command="run",
-        dry_run_plan=False,
-        log_file=log_file,
-        verbose=False,
-        quiet=True,
+        planning=SimpleNamespace(dry_run_plan=False),
+        paths=SimpleNamespace(log_file=log_file),
+        runtime_flags=SimpleNamespace(verbose=False, quiet=True),
     )
 
     main_module.configure_application_logging(config)
@@ -81,7 +88,7 @@ def test_main_activates_custom_config_before_yaml_backed_constants(tmp_path) -> 
 def test_main_routes_dry_run_around_runtime_bootstrap_and_finalize(monkeypatch) -> None:
     _disable_logging_setup(monkeypatch)
     paths = object()
-    config = SimpleNamespace(command="run", dry_run_plan=True, paths=paths)
+    config = _config(paths=paths, dry_run_plan=True)
     monkeypatch.setattr(main_module, "parse_application_config", lambda: config)
     monkeypatch.setattr(main_module, "run_dry_run_plan", lambda args, run_paths: True)
 
@@ -98,7 +105,7 @@ def test_main_routes_dry_run_around_runtime_bootstrap_and_finalize(monkeypatch) 
 def test_main_runs_runtime_pipeline_and_closes_client_factory(monkeypatch) -> None:
     _disable_logging_setup(monkeypatch)
     paths = object()
-    config = SimpleNamespace(command="run", dry_run_plan=False, paths=paths)
+    config = _config(paths=paths, dry_run_plan=False)
     client_factory = SimpleNamespace()
     init_result = SimpleNamespace(client_factory=client_factory)
     calls: list[str] = []
@@ -131,7 +138,7 @@ def test_main_runs_runtime_pipeline_and_closes_client_factory(monkeypatch) -> No
 def test_main_closes_client_factory_when_runtime_pipeline_fails(monkeypatch) -> None:
     _disable_logging_setup(monkeypatch)
     paths = object()
-    config = SimpleNamespace(command="run", dry_run_plan=False, paths=paths)
+    config = _config(paths=paths, dry_run_plan=False)
     client_factory = SimpleNamespace()
     init_result = SimpleNamespace(client_factory=client_factory)
     calls: list[str] = []

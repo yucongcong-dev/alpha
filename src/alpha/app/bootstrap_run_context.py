@@ -5,7 +5,8 @@ from __future__ import annotations
 import logging
 import threading
 
-from ..models.runtime_protocols import ClientFactoryLike, RuntimeConcurrencyArgs
+from ..config.application_sections import ExecutionConfig
+from ..models.runtime_protocols import ClientFactoryLike
 from ..runtime.concurrency import RuntimeConcurrencyState
 from ..runtime.state import InitializedRunContext
 from .bootstrap_types import PreparedBootstrapResources, RuntimeConcurrencyResources
@@ -14,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 
 def build_runtime_concurrency(
-    args: RuntimeConcurrencyArgs,
+    args: ExecutionConfig,
 ) -> RuntimeConcurrencyResources:
     """Build runtime concurrency state and semaphore from narrow concurrency args."""
     max_workers = max(1, int(args.max_concurrent_simulations or 0))
