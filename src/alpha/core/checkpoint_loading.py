@@ -156,8 +156,6 @@ def load_pipeline_state(
             retry_from_start,
         )
 
-    execution_state.template_stats = _payloads.restore_template_stats(payload.get("template_stats"))
-
     _restore_runtime_cooldown(
         remaining=remaining,
         runtime_max_workers=runtime_max_workers,

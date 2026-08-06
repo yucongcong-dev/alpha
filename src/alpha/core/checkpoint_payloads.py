@@ -8,18 +8,6 @@ from ..config.constants import SENTINEL_UNKNOWN
 from ..runtime.contexts import PendingFutureContext
 from ..runtime.state import ExecutionState
 
-TEMPLATE_STAT_COUNT_FIELDS = (
-    "attempted",
-    "submittable",
-    "errors",
-    "simulated",
-    "queue_timeouts",
-    "low_sharpe",
-    "low_fitness",
-    "concentrated_weight",
-    "low_sub_universe_sharpe",
-)
-
 
 def non_negative_int(value: object) -> int | None:
     """Return a safe non-negative integer or None for unusable persisted values."""
@@ -32,23 +20,6 @@ def non_negative_int(value: object) -> int | None:
     except (OverflowError, TypeError, ValueError):
         return None
     return parsed if parsed >= 0 else None
-
-
-def restore_template_stats(payload: object) -> dict[str, dict[str, Any]]:
-    """Restore template statistics with safe numeric counters."""
-    if not isinstance(payload, dict):
-        return {}
-    restored: dict[str, dict[str, Any]] = {}
-    for template_name, raw_stat in payload.items():
-        normalized_name = str(template_name or "").strip()
-        if not normalized_name or not isinstance(raw_stat, dict):
-            continue
-        stat = dict(raw_stat)
-        for field_name in TEMPLATE_STAT_COUNT_FIELDS:
-            stat[field_name] = non_negative_int(stat.get(field_name)) or 0
-        restored[normalized_name] = stat
-    return restored
-
 
 def all_pending_contexts(execution_state: ExecutionState) -> list[PendingFutureContext]:
     """Return active and not-yet-rescheduled simulation contexts."""

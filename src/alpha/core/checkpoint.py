@@ -2,7 +2,7 @@
 管道状态与检查点持久化模块
 
 本模块实现可恢复状态（state_file）和中断诊断报告（interrupt_report_file），
-支持断点续传：重启时跳过已完成的字段、恢复远端模拟、冷却状态和模板统计数据。
+支持断点续传：重启时跳过已完成的字段、恢复远端模拟和冷却状态。
 
 模块内容：
     - save_pipeline_state: 在每个字段完成后保存运行进度
@@ -43,7 +43,6 @@ _atomic_save = _files.atomic_save
 delete_pipeline_state = _files.delete_pipeline_state
 _non_negative_int = _payloads.non_negative_int
 _restore_pending_simulations = _payloads.restore_pending_simulations
-_restore_template_stats = _payloads.restore_template_stats
 _serialize_pending_simulations = _payloads.serialize_pending_simulations
 
 
@@ -63,7 +62,7 @@ def save_pipeline_state(
     """
     在每个字段完成后原子性地保存管道运行状态。
 
-    保存当前进度、拥塞控制状态和模板统计，便于重启时继续执行。
+    保存当前进度和拥塞控制状态，便于重启时继续执行。
 
     Args:
         state_file: 状态文件的绝对路径。
@@ -92,7 +91,6 @@ def save_pipeline_state(
         "pending_simulations": _serialize_pending_simulations(execution_state),
         "runtime_max_workers": runtime_state.runtime_max_workers,
         "remaining_cooldown_seconds": round(remaining_cooldown, 3),
-        "template_stats": dict(execution_state.template_stats),
         "last_submission_at": execution_state.last_submission_at,
         "result_count": len(result_ledger.results),
         "attempted_keys_count": len(execution_state.attempted_keys),

@@ -59,8 +59,8 @@ def test_load_pipeline_state_ignores_invalid_cooldown_shape(tmp_path) -> None:
     assert resumed == 0
 
 
-def test_load_pipeline_state_restores_runtime_data_with_zero_cursor(tmp_path) -> None:
-    """Breadth-first runs resume all fields while retaining persisted runtime state."""
+def test_load_pipeline_state_preserves_result_derived_stats_with_zero_cursor(tmp_path) -> None:
+    """Breadth-first resume must not overwrite statistics rebuilt from durable results."""
     state_file = tmp_path / "state.json"
     state_file.write_text(
         json.dumps(
@@ -69,7 +69,7 @@ def test_load_pipeline_state_restores_runtime_data_with_zero_cursor(tmp_path) ->
                 "completed_field_index": 0,
                 "field_queue_busy_counts": {"f1": 2},
                 "skipped_fields_due_to_queue": ["f2"],
-                "template_stats": {"base": {"attempted": 3}},
+                "template_stats": {"stale": {"attempted": 3}},
                 "pending_simulations": [
                     {
                         "field_id": "f1",
@@ -88,7 +88,9 @@ def test_load_pipeline_state_restores_runtime_data_with_zero_cursor(tmp_path) ->
         ),
         encoding="utf-8",
     )
-    execution_state = _build_execution_state()
+    execution_state = ExecutionState.create(
+        template_stats={"current": {"attempted": 4, "submittable": 1}}
+    )
     runtime_state = RuntimeConcurrencyState(max_workers=4, runtime_max_workers=4)
 
     resumed = load_pipeline_state(
@@ -99,8 +101,9 @@ def test_load_pipeline_state_restores_runtime_data_with_zero_cursor(tmp_path) ->
 
     assert resumed == 0
     assert execution_state.queue_retry_state.retry_counts == {}
-    assert execution_state.template_stats["base"]["attempted"] == 3
-    assert execution_state.template_stats["base"]["submittable"] == 0
+    assert execution_state.template_stats == {
+        "current": {"attempted": 4, "submittable": 1}
+    }
     assert execution_state.attempted_keys == set()
     assert len(execution_state.future_queue.resumable_simulations) == 1
     restored = execution_state.future_queue.resumable_simulations[0]
@@ -111,8 +114,8 @@ def test_load_pipeline_state_restores_runtime_data_with_zero_cursor(tmp_path) ->
     assert runtime_state.cooldown_until > 0
 
 
-def test_load_pipeline_state_sanitizes_corrupt_runtime_collections(tmp_path) -> None:
-    """Invalid persisted counters must not poison scheduling after restart."""
+def test_load_pipeline_state_ignores_legacy_template_stats(tmp_path) -> None:
+    """Legacy checkpoint statistics must not replace the result-derived source of truth."""
     state_file = tmp_path / "state.json"
     state_file.write_text(
         json.dumps(
@@ -139,7 +142,9 @@ def test_load_pipeline_state_sanitizes_corrupt_runtime_collections(tmp_path) -> 
         ),
         encoding="utf-8",
     )
-    execution_state = _build_execution_state()
+    execution_state = ExecutionState.create(
+        template_stats={"current": {"attempted": 5, "simulated": 4}}
+    )
     runtime_state = RuntimeConcurrencyState(max_workers=4, runtime_max_workers=4)
 
     resumed = load_pipeline_state(
@@ -150,10 +155,9 @@ def test_load_pipeline_state_sanitizes_corrupt_runtime_collections(tmp_path) -> 
 
     assert resumed == 0
     assert execution_state.queue_retry_state.retry_counts == {}
-    assert set(execution_state.template_stats) == {"base"}
-    assert execution_state.template_stats["base"]["attempted"] == 2
-    assert execution_state.template_stats["base"]["submittable"] == 0
-    assert execution_state.template_stats["base"]["simulated"] == 0
+    assert execution_state.template_stats == {
+        "current": {"attempted": 5, "simulated": 4}
+    }
     assert runtime_state.runtime_max_workers == 1
 
 
@@ -270,6 +274,7 @@ def test_save_pipeline_state_persists_remote_simulation_location(tmp_path) -> No
 
     payload = json.loads(state_file.read_text(encoding="utf-8"))
     assert saved is True
+    assert "template_stats" not in payload
     assert payload["pending_simulations"][0]["simulation_location"] == "/simulations/sim-1"
 
 
