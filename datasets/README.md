@@ -29,7 +29,7 @@ datasets/<dataset_id>/
 
 | 数据集 | 状态 | 现役 preset |
 | --- | --- | --- |
-| `analyst4` | 探索 | `eps_surprise_seed` |
+| `analyst4` | 探索 | `eps_revision_seed` |
 | `fundamental2` | 暂停 | 无 |
 | `fundamental6` | 暂停 | 无 |
 | `option8` | 基线保留 | `subindustry_refine` |
@@ -39,5 +39,6 @@ datasets/<dataset_id>/
 | `option9` | 暂停 | 无 |
 | `news18` | 暂停 | 无 |
 
-`analyst4` 是当前唯一现役 explore 数据集，首轮只验证季度 EPS surprise 的两条独立结构。
-只有形成正向基线后才进入 `eps_dispersion_seed`；不直接扫描完整 1324 字段池。
+`analyst4` 是当前唯一现役 explore 数据集。季度 EPS surprise 已关闭，当前只验证低拥挤
+VECTOR EPS revision 的两条结构；若 revision 全部失败，再运行两条独立 dispersion 种子。
+不直接扫描完整 1324 字段池。

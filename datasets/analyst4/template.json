@@ -1,5 +1,5 @@
 {
-  "_comment": "analyst4 baseline library; active research uses the bounded EPS presets.",
+  "_comment": "analyst4 baseline library; active research uses the bounded EPS revision and dispersion presets.",
   "_comment_placeholders": "{field}=field name",
   "_dataset_id": "analyst4",
   "default": [],
