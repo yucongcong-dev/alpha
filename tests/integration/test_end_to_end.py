@@ -16,6 +16,11 @@ from unittest.mock import MagicMock
 import pytest
 
 from alpha.core.result_processing import apply_completed_result
+from alpha.models import (
+    ExecutionState,
+    PendingFutureContext,
+    RuntimeConcurrencyState,
+)
 from alpha.models.domain import (
     FailedCheck,
     FieldTestContext,
@@ -25,11 +30,6 @@ from alpha.models.domain import (
 from alpha.models.domain_serializers import (
     serialize_field_test_result,
     serialize_template_library_item,
-)
-from alpha.models.runtime import (
-    ExecutionState,
-    PendingFutureContext,
-    RuntimeConcurrencyState,
 )
 
 
@@ -197,7 +197,7 @@ class TestResultProcessingFlow:
 
     def test_apply_completed_result(self, tmp_path):
         """测试应用完成结果"""
-        from alpha.models.runtime import FutureCompletionContext, ResultWriteOptions
+        from alpha.models import FutureCompletionContext, ResultWriteOptions
 
         state = ExecutionState.create()
         result = FieldTestResult(

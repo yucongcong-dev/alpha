@@ -24,8 +24,7 @@ from alpha.app.run_loop_resume import (
 )
 from alpha.app.run_loop_rounds import ScheduleRoundResult
 from alpha.config.application import ApplicationConfig
-from alpha.models.io_types import RunFilters, RunPaths
-from alpha.models.runtime import (
+from alpha.models import (
     ExecutionState,
     FutureCompletionContext,
     HistoricalRunState,
@@ -33,6 +32,7 @@ from alpha.models.runtime import (
     ResultWriteOptions,
     RuntimeConcurrencyState,
 )
+from alpha.models.io_types import RunFilters, RunPaths
 from alpha.models.runtime_options import SchedulerControlOptions
 
 

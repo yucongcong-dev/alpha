@@ -8,11 +8,11 @@ from alpha.core.template_planning import (
     resolve_field_template_candidates,
 )
 from alpha.generators.payload import build_settings_fingerprint_from_payload
-from alpha.models.domain import TemplateCandidate
-from alpha.models.runtime import (
+from alpha.models import (
     PendingFutureContext,
     TemplateBuildContext,
 )
+from alpha.models.domain import TemplateCandidate
 from alpha.policy.expression import get_dataset_expression_policy
 
 from .template_build_options_support import template_build_options

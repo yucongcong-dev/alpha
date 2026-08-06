@@ -10,8 +10,8 @@ import pytest
 from alpha.exceptions import BrainAPIError
 from alpha.generators.expression_builder import build_expression_candidates
 from alpha.generators.templates import ensure_dataset_template_library, load_template_library
+from alpha.models import TemplateBuildContext, TemplateBuildOptions
 from alpha.models.domain import TemplateField
-from alpha.models.runtime import TemplateBuildContext, TemplateBuildOptions
 
 
 def test_ensure_dataset_template_library_raises_when_missing(tmp_path) -> None:

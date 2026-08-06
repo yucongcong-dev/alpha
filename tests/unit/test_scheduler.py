@@ -23,7 +23,7 @@ from alpha.core.scheduler_decisions import (
     should_restore_runtime_concurrency,
     submission_throttle_delay,
 )
-from alpha.models.runtime import (
+from alpha.models import (
     ExecutionState,
     PendingFutureContext,
     ResultWriteOptions,

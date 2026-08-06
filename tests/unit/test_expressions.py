@@ -23,8 +23,8 @@ from alpha.generators.templates.wrappers import (
     build_bucket_group_templates,
     build_trade_when_templates,
 )
+from alpha.models import TemplateBuildContext, TemplateBuildOptions
 from alpha.models.domain import TemplateLibraryItem
-from alpha.models.runtime import TemplateBuildContext, TemplateBuildOptions
 from alpha.policy.expression import get_dataset_expression_policy
 
 _DEFAULT_SIM_SETTINGS = {

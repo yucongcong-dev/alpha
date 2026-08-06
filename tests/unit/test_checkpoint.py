@@ -12,7 +12,7 @@ from alpha.core.checkpoint import (
     save_interrupt_report,
     save_pipeline_state,
 )
-from alpha.models.runtime import ExecutionState, PendingFutureContext, RuntimeConcurrencyState
+from alpha.models import ExecutionState, PendingFutureContext, RuntimeConcurrencyState
 
 
 def _build_execution_state() -> ExecutionState:

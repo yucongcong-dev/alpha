@@ -125,6 +125,9 @@ def removed_compat_file_check(root: Path) -> list[str]:
     domain_conversion = root / "src" / "alpha" / "models" / "domain_conversion.py"
     if domain_conversion.is_file():
         removed.append(domain_conversion)
+    models_runtime = root / "src" / "alpha" / "models" / "runtime.py"
+    if models_runtime.is_file():
+        removed.append(models_runtime)
     if removed:
         return [
             "[check] compatibility aggregate files were removed; import concrete modules",
@@ -137,7 +140,7 @@ def compat_import_check(root: Path) -> list[str]:
     errors: list[str] = []
     tests_pattern = re.compile(
         r"from alpha\.models\.base|from alpha\.(bootstrap|run_loop|finalize|loop_)|"
-        r"from alpha\.generators\.settings"
+        r"from alpha\.generators\.settings|from alpha\.models\.runtime import"
     )
     errors.extend(
         f"[check] tests should import canonical modules instead of compatibility exports\n{match}"

@@ -134,7 +134,6 @@ unfixable = [
 "src/alpha/__init__.py" = ["F401", "I001", "PLE0604", "UP036"]
 "src/alpha/config/__init__.py" = ["F401", "F403", "I001"]
 "src/alpha/config/constants.py" = ["F401", "F403", "I001"]
-"src/alpha/models/runtime.py" = ["F401", "I001"]
 "src/alpha/exceptions.py" = ["N818"]
 
 [tool.ruff.lint.isort]

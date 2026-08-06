@@ -11,11 +11,11 @@ from alpha.app.run_loop_rounds import (
     execute_schedule_round,
     schedule_field_round,
 )
-from alpha.models.domain import FieldTestResult, SettingsVariant
-from alpha.models.runtime import (
+from alpha.models import (
     PendingTemplateEntry,
     TemplateBuildContext,
 )
+from alpha.models.domain import FieldTestResult, SettingsVariant
 from alpha.models.runtime_options import SchedulerControlOptions
 from alpha.runtime.field_template_queue import FieldTemplateQueue
 from tests.unit.run_loop_rounds_support import build_round_context as _build_context

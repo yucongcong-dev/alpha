@@ -3,10 +3,10 @@
 from __future__ import annotations
 
 from alpha.app.bootstrap_fields import prepare_fields_for_execution
+from alpha.models import HistoricalRunState
 from alpha.models.domain import TemplateField
 from alpha.models.domain_parsers import parse_template_field
 from alpha.models.io_types import RunFilters
-from alpha.models.runtime import HistoricalRunState
 from alpha.models.runtime_options import FieldSelectionOptions
 from alpha.policy.expression import get_dataset_expression_policy
 

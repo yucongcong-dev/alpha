@@ -7,17 +7,17 @@ from alpha.core.scheduler import handle_completed_future
 from alpha.generators.templates.variation_common import (
     is_blacklisted_template as _is_blacklisted_template,
 )
-from alpha.models.domain import (
-    FailedCheck,
-    FieldTestResult,
-    TemplateLibraryItem,
-)
-from alpha.models.runtime import (
+from alpha.models import (
     ExecutionState,
     FutureCompletionContext,
     PendingFutureContext,
     ResultWriteOptions,
     TemplateBuildContext,
+)
+from alpha.models.domain import (
+    FailedCheck,
+    FieldTestResult,
+    TemplateLibraryItem,
 )
 from alpha.policy.blacklist_store import invalidate_blacklist_path_cache
 from alpha.policy.template_blacklist import invalidate_blacklist_cache

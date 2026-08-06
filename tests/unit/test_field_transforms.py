@@ -10,7 +10,7 @@ from alpha.generators.field_transforms import (
     iter_transform_stages,
 )
 from alpha.generators.templates import load_template_library
-from alpha.models.runtime import TemplateBuildContext, TemplateBuildOptions
+from alpha.models import TemplateBuildContext, TemplateBuildOptions
 from alpha.policy.expression import get_dataset_expression_policy
 
 _DEFAULT_SIM_SETTINGS = {

@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from alpha.core.executor import build_pending_templates_for_field
 from alpha.generators.payload import build_settings_fingerprint_from_payload
+from alpha.models import TemplateBuildContext
 from alpha.models.domain import TemplateCandidate, TemplateLibraryItem
-from alpha.models.runtime import TemplateBuildContext
 from alpha.policy.expression import get_dataset_expression_policy
 
 from .template_build_options_support import template_build_options
