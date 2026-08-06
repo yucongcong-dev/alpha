@@ -391,11 +391,9 @@ FAQ 里给过几类提高 Returns 的常见方向，但都要和风险一起看�
 
 ## 15. 最不流动 50% 的 after-cost 检查
 
-官网说明里还有一项容易遗漏的提交检查：
-
-- 平台会看原 Universe 中最不流动的 50% 股票
-- 计算该部分的 after-cost Sharpe
-- 其表现需要达到原 Universe after-cost Sharpe 的一定比例；官方示例约为 `52.5%`（来源为官方错误消息，复核 2026-07-31）
+平台定义和带日期阈值见
+[04 的 after-cost Sharpe 词典](04_platform_reference.md#138-最不流动-50-的-after-cost-sharpe)。
+这里重点只记录失败后的研究动作。
 
 失败时不应该简单删除低流动性股票。优先考虑：
 

@@ -211,15 +211,8 @@
 
 ### 5.3 `PROD_CORRELATION`
 
-官方 Glossary 的定义很直接：
-
-- 它衡量的是当前 Alpha
-- 和平台所有顾问已提交 Alpha 之间的最大相关性
-
-可以把它和 `SelfCorr` 对照着记：
-
-- `SelfCorr` 更像“和你自己已有池子太像”
-- `PROD_CORRELATION` 更像“和平台已有池子太像”
+它衡量候选和平台已有生产 Alpha 的相似程度；完整定义和 submission check 语义见
+[提交检查词典](#137-prod_correlation)。
 
 ---
 
@@ -256,29 +249,9 @@
 - leaderboard 上先展示基于 IS 结果的分数
 - 阶段结束后会继续结合 OS 结果
 
-如果你的本地文档未来继续服务竞赛使用，这一块值得单独维护，但和普通 Alpha 研究文档要保持边界。
-
-### 6.3.1 `Challenge-Country Leaderboard`
-
-Challenge-Country Leaderboard 更像地区维度的挑战排名入口。它会受挑战积分、活动和
-平台定义的排名规则影响，不等同于普通 Alpha submission 的质量判断。
-
-对本仓库而言：
-
-- 它可以说明用户为什么关注某些比赛分数
-- 但不应该反向改变 alpha runner 的默认筛选逻辑
-- 研究质量仍以 Sharpe、Fitness、Turnover、相关性、稳健性和提交检查为主
-
-### 6.3.2 IQC 信息的文档边界
-
-IQC FAQ 覆盖报名、组队、阶段分数、leaderboard 更新、顾问权益和付款时间等大量动态信息。
-这些内容容易随赛季变化，本仓库只保留与研究状态有关的稳定语义：
-
-- Stage 1 通常更偏 IS/leaderboard 计分展示
-- 后续阶段和最终评价会继续关注 OS 和提交结果
-- 团队、付款、资格和证书等规则不进入研究方法文档
-
-如果后续要做竞赛专用自动化，应另行维护赛季配置，而不是把动态规则写死进模板。
+这些分数不等同于普通 Alpha submission 的质量判断，也不应反向改变 runner 的默认筛选逻辑。
+报名、组队、赛季、资格、证书和付款等动态规则统一见
+[05 平台运营 Reference](05_platform_operations_reference.md)。
 
 ### 6.4 D1 / D0 Fitness 评级
 
@@ -536,7 +509,7 @@ group_zscore(alpha, densify(asset_group))
 
 ---
 
-## 11. Operators 官方快照与分类
+## 11. Operators 官方快照
 
 Operators 的精确定义、参数和分类以平台当前可见页面/API 为准。本地保存了一份 `2026-08-03`
 账号可见快照，作为离线查表入口：
@@ -546,22 +519,10 @@ Operators 的精确定义、参数和分类以平台当前可见页面/API 为�
 - 捕获日期：`2026-08-03`
 - 官网复核：`2026-08-04`，算子数量、签名和说明未变化；见 [增量记录](source_snapshots/worldquant_review_2026-08-04/README.md)
 
-当前快照包含 `66` 个 `base` 算子，分布如下：
-
-| 分类 | 数量 | 本地明细 |
-|---|---:|---|
-| Arithmetic | 15 | [arithmetic.md](source_snapshots/worldquant_operators_2026-08-03/arithmetic.md) |
-| Cross Sectional | 6 | [cross-sectional.md](source_snapshots/worldquant_operators_2026-08-03/cross-sectional.md) |
-| Group | 6 | [group.md](source_snapshots/worldquant_operators_2026-08-03/group.md) |
-| Logical | 11 | [logical.md](source_snapshots/worldquant_operators_2026-08-03/logical.md) |
-| Time Series | 24 | [time-series.md](source_snapshots/worldquant_operators_2026-08-03/time-series.md) |
-| Transformational | 2 | [transformational.md](source_snapshots/worldquant_operators_2026-08-03/transformational.md) |
-| Vector | 2 | [vector.md](source_snapshots/worldquant_operators_2026-08-03/vector.md) |
-
 使用时要注意两个边界：
 
-- 这是一份带日期的账号可见快照，不表示所有账号、所有等级、所有时间都只有这些算子。
-- 主文档只总结分类和研究用途；逐个算子的签名、说明和例子在快照文件里查，避免把 reference 变成重复镜像。
+- 这是一份带日期的账号可见快照，不表示所有账号、所有等级、所有时间都看到相同算子。
+- 分类数量、逐个算子的签名、说明和例子只在快照索引维护，主文档不再复制。
 
 ---
 
@@ -783,7 +744,6 @@ PnL 跳变属于表达式和持仓结构诊断问题，具体原因与改进动�
 - [What is ISladder test and how is it constructed?](https://api.worldquantbrain.com/faqs/isladder-test)
 - [What is the IQC scoring metrics?](https://api.worldquantbrain.com/faqs/iqc-scoring-metrics)
 - [After I submit an alpha, how much time does it take for it to be reflected as the score on leaderboard?](https://api.worldquantbrain.com/faqs/score-update-frequency)
-- [What is Challenge-Country Leaderboard?](https://support.worldquantbrain.com/hc/en-us/articles/41765589602327-What-is-Challenge-Country-Leaderboard)
 - [Understanding Data in BRAIN: Key Concepts and Tips](https://platform.worldquantbrain.com/learn/documentation/understanding-data/data)
 - [Group Data Fields](https://platform.worldquantbrain.com/learn/documentation/understanding-data/group-data-fields)
 - [Operators API](https://api.worldquantbrain.com/operators)

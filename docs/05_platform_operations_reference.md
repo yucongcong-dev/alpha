@@ -15,6 +15,7 @@
 - consultant onboarding 需要哪些步骤
 - Workday 问卷、协议、背景调查卡住了怎么办
 - conditional consultant 是什么状态
+- IQC 报名、组队、资格、证书或付款规则在哪里核对
 - 银行账户、付款、earnings 页面在哪里看
 - referral program 怎么理解
 - 账号、密码、登录、旧 VRC Alpha、平台技术问题怎么处理

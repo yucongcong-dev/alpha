@@ -190,72 +190,21 @@ ts_decay_linear(signal, 20)
 
 - `understanding-data/data`
 
-官网对字段最重要的区分是：
-
-- `Data Field`：有固定类型和业务含义的最小数据单元
-- `Dataset`：一组 Data Field
-
-同时一定要分清三种字段类型：
-
-- `MATRIX`
-- `VECTOR`
-- `GROUP`
-
-这是后续模板分流的起点。
+`Dataset` 是字段集合，`Data Field` 是带类型和业务含义的研究单元。开始写表达式前，先根据
+字段类型决定研究路径；平台精确定义统一见 [04 的字段类型词典](04_platform_reference.md#10-字段类型词典)。
 
 ---
 
 ## 5. MATRIX、VECTOR、GROUP 的研究分工
 
-### 5.1 MATRIX
+| 类型 | 研究角色 | 首个问题 |
+|---|---|---|
+| `MATRIX` | 直接进入普通截面、时序或 group 模板 | 字段水平、变化或相对位置是否有信息量？ |
+| `VECTOR` | 先用 `vec_*` 提取数量、均值、极值或离散度 | 多值集合中真正有经济含义的统计量是什么？ |
+| `GROUP` | 作为 `group_rank`、`group_zscore`、`group_neutralize` 的分组依据 | 哪个分类层级最能隔离系统性暴露？ |
 
-每个 `date × instrument` 只有一个值。
-
-特点：
-
-- 最适合直接进入普通表达式模板
-- 大多数 `rank / ts_* / group_*` 算子默认都围绕这类字段
-
-### 5.2 VECTOR
-
-每个 `date × instrument` 有多个值，而且数量不固定。
-
-特点：
-
-- 不能直接和普通 matrix 字段混用
-- 必须先通过 `vec_*` 算子聚合成单值
-
-常见聚合：
-
-- `vec_count`
-- `vec_avg`
-- `vec_max`
-- `vec_stddev`
-- `vec_skewness`
-
-研究重点不在“先套模板”，而在：
-
-- 我到底想提取事件数量、平均水平、极值冲击，还是离散程度
-
-### 5.3 GROUP
-
-不是方向信号本身，而是分组标签。
-
-典型字段：
-
-- `sector`
-- `industry`
-- `subindustry`
-- `exchange`
-
-用途：
-
-- 给 `group_rank / group_zscore / group_neutralize` 提供分组依据
-
-也可以用 `bucket()` 自造 group，然后配合 `densify()` 使用。
-
-> 字段类型的完整定义和平台语义见
-> [04 的字段类型词典](04_platform_reference.md)。
+模板生成不能把三类字段混成一条通用路径。VECTOR 的研究重点是先选择聚合语义；GROUP 的
+研究重点是选择比较范围；MATRIX 才适合直接进入大多数普通模板。
 
 ---
 
@@ -396,14 +345,8 @@ X < scale_down(field) && scale_down(field) < Y
 
 ## 8. Dataset Value Score 的正确位置
 
-官网定义：
-
-- 它衡量数据集是否“未被充分使用”
-
-更适合把它理解成：
-
-- 一个研究优先级参考
-- 不是“高分就一定好做”的保证
+Dataset Value Score 只作为研究优先级参考，不是“高分就一定好做”的保证；平台定义统一见
+[04 的 Coverage 与 Alpha list 词典](04_platform_reference.md#124-dataset-value-score)。
 
 因此更合理的顺序是：
 
@@ -411,17 +354,10 @@ X < scale_down(field) && scale_down(field) < Y
 2. 再看 coverage 和更新频率
 3. 最后用 `Value Score` 和拥挤度辅助排序
 
-> Dataset Value Score 和 Alpha list 的平台语义见
-> [04 的 Coverage 与 Alpha list 词典](04_platform_reference.md)。
-
 ### 8.1 Dataset Usage Management 的研究含义
 
-FAQ 里的 Dataset Usage Management 主要是平台对部分数据集类别访问和使用的管理机制。
-它不应该被理解成“某个数据集质量变差”，更接近：
-
-- 平台会对特定数据集类别设置使用阈值或约束
-- 约束可能影响能否继续使用某一类 dataset
-- 恢复访问通常取决于平台规则和用户后续研究表现
+Dataset Usage Management 是访问和使用约束，不代表数据质量变差；平台定义见
+[04 的 Dataset Usage Management 词典](04_platform_reference.md#125-dataset-usage-management)。
 
 对本仓库最实用的结论是：
 
@@ -435,9 +371,6 @@ FAQ 里的 Dataset Usage Management 主要是平台对部分数据集类别访�
 1. 保留历史结论
 2. 将该数据集标记为暂不可用或降优先级
 3. 用同类 idea 在其他 dataset category 上找替代字段
-
-> Dataset Usage Management 的平台定义见
-> [04 的 Coverage 与 Alpha list 词典](04_platform_reference.md)。
 
 ### 8.2 数据访问、外部工具与数据集退役
 

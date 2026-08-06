@@ -175,16 +175,6 @@ broad search。
 - 先用 `group_neutralize(...)` 决定信号结构
 - 再由 `neutralization` 设置决定最终组合暴露
 
-如果你已经想进一步搞清楚：
-
-- 回测设置里的 `Neutralization`
-- 表达式里的 `group_neutralize(...)`
-- 不同数据类别更适合哪种中性化
-
-优先继续看：
-
-- [03_optimization_and_submission.md](03_optimization_and_submission.md)
-
 > `neutralization` 设置与 `group_neutralize(...)` 算子的完整区分和实际选择见
 > [03 的 Neutralization 最终决策](03_optimization_and_submission.md)和
 > [04 的 Neutralization 页面语义](04_platform_reference.md)。
@@ -230,49 +220,16 @@ broad search。
 
 ### 5.5 Universe
 
-官方把 Universe 定义为“市场中最具流动性的一篮子股票”。
-
-可以先这样理解：
-
-- `TOP500`：最液态的 500 只
-- `TOP1000`：最液态的 1000 只
-- `TOP2000`：最液态的 2000 只
-- `TOP3000`：最液态的 3000 只
-
-而且它们是包含关系：
-
-- `TOP500` 是 `TOP1000` 的子集
-- `TOP1000` 是 `TOP2000` 的子集
-
-这意味着 Universe 不只是“股票数量设置”，它本身也在改变策略面对的流动性环境。
-
-如果你后面开始研究：
-
-- `D0` 和 `D1` 的差异
-- 为什么更高流动性的 Universe 对 D0 更重要
-
-优先继续看：
-
-- [03_optimization_and_submission.md](03_optimization_and_submission.md)
+Universe 是按流动性划分的可投资股票集合；`TOP500`、`TOP1000`、`TOP2000`、`TOP3000`
+不仅数量不同，也代表不同的流动性环境。精确定义见
+[04 的 Universe 词典](04_platform_reference.md#71-universe)；D0/D1 的选择见
+[03 的 D0 研究章节](03_optimization_and_submission.md#6-d0-alpha-应该单独研究)。
 
 ### 5.6 Test Period
 
-`Test Period` 可以理解为：
-
-- 在同一段 5 年 IS 内
-- 再额外切出一段尾部区间
-- 用来做 Train/Test 视角的验证
-
-官方强调的关键点是：
-
-- 它主要影响统计和图表展示
-- 不会把提交检查改成“只看 Test 段”
-- 平台的 submission tests 仍然跑完整 5 年 IS
-
-所以更实用的理解是：
-
-- `Test Period` 是防止过拟合的研究辅助工具
-- 不是提交门槛的“切换开关”
+`Test Period` 是 5 年 IS 内的 Train/Test 验证工具，用于观察候选是否过拟合；它不会把
+submission tests 改成只看 Test 段。完整时间边界见
+[04 的 Test Period 词典](04_platform_reference.md#25-test-period)。
 
 ---
 
@@ -362,12 +319,8 @@ booksize 缩放为组合资金分配。因此表达式输出是持仓计算的�
 
 ### 8.1 `NaNHandling`
 
-`NaNHandling=OFF` 保留缺失语义，也是本仓库默认值；需要补值时应在表达式里显式使用
-`ts_backfill()`、`is_nan()` 或有业务含义的 fallback。
-
-`NaNHandling=ON` 会让平台自动处理部分缺失情形，可能提高 Coverage，但也可能混淆
-“真实零值”和“缺失后产生的零值”。算术算子的 `filter=true` 只影响该次运算，是另一种
-局部行为。
+本仓库默认使用 `NaNHandling=OFF`，让缺失处理通过 `ts_backfill()`、`is_nan()` 或有业务
+含义的 fallback 显式表达。开启自动处理可能提高 Coverage，也可能混淆真实零值与补值结果。
 
 完整边界见 [04 的 NaN 与 Pasteurize 词典](04_platform_reference.md)。
 
@@ -375,12 +328,8 @@ booksize 缩放为组合资金分配。因此表达式输出是持仓计算的�
 
 ## 9. Pasteurize 与 Unit Handling
 
-`Pasteurize` 主要做两件事：
-
-1. 把 `INF` 转成 `NaN`。
-2. 把当前 Universe 外的 instrument 设成 `NaN`。
-
-因此它既处理非法值，也会影响 group operator 的输入集合和最终 Coverage。
+`Pasteurize` 会处理非法值和 Universe 外的 instrument，因此可能改变 group operator 的输入
+集合与 Coverage；精确行为统一查 [04 的 Pasteurize 词典](04_platform_reference.md#84-pasteurize)。
 
 `Unit Handling=VERIFY` 用于发现不兼容量纲的算术组合，例如：
 
