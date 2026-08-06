@@ -56,22 +56,15 @@ alpha/
 
 `cache/`、`runs/`、`feedback/` 与 `.credentials/` 属于本地可重建或私密状态，不提交。详细目录、工作区、结果和清理规则见 [Runner Reference](docs/runner_reference.md)。
 
-## 常用命令
+## 更多常用命令
 
 ```bash
-# 环境验证（需要登录）
-python -m alpha --smoke-test
-
-# 只读预览下一次计划
-python -m alpha --dry-run-plan
-
 # 聚焦历史高反馈字段
 python -m alpha --top-fields-by-feedback 10 --max-templates-per-field 15
 
 # 预览 / 执行本地运行产物清理
 python -m alpha clean --dry-run-clean
 python -m alpha clean
-
 ```
 
 完整的运行阶段、续跑、配置覆盖、缓存和结果文件说明统一在
