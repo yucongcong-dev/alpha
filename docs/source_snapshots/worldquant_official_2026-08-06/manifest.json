@@ -1,0 +1,609 @@
+{
+  "captured": "2026-08-06",
+  "source": "WorldQuant BRAIN Learn API and rendered official pages",
+  "capture_mode": "refresh_known_pages",
+  "catalog_source": {
+    "kind": "baseline_manifest",
+    "file": "manifest.json"
+  },
+  "baseline_count": 24,
+  "catalog_count": 24,
+  "captured_count": 24,
+  "api_captured_count": 15,
+  "browser_captured_count": 9,
+  "added_page_ids": [],
+  "removed_page_ids": [],
+  "count": 24,
+  "tutorials": [
+    {
+      "id": "discover-brain",
+      "category": "Getting Started",
+      "pages": [
+        {
+          "title": "*Read this First * - Starter Pack",
+          "duration": "PT19M",
+          "id": "read-first-starter-pack",
+          "lastModified": "2026-06-15T08:57:22.601732-04:00"
+        },
+        {
+          "title": "Introduction to Alphas",
+          "duration": "PT6M",
+          "id": "about-brain-platform",
+          "lastModified": "2026-08-04T08:57:53.284529-04:00"
+        },
+        {
+          "title": "Introduction to BRAIN Expression Language",
+          "duration": "PT3M",
+          "id": "introduction-brain-expression-language",
+          "lastModified": "2026-08-04T09:01:49.012743-04:00"
+        },
+        {
+          "title": "Intermediate Pack - Understand Results [1/2]",
+          "duration": "PT5M",
+          "id": "intermediate-pack-part-1",
+          "lastModified": "2026-08-05T09:04:17.367662-04:00"
+        },
+        {
+          "title": "Intermediate Pack - Improve your Alpha [2/2]",
+          "duration": "PT5M",
+          "id": "intermediate-pack-part-2",
+          "lastModified": "2026-08-04T08:56:03.831826-04:00"
+        },
+        {
+          "title": "10 Steps to Start on BRAIN",
+          "duration": "PT1M",
+          "id": "10-steps-start-brain-platform",
+          "lastModified": "2026-08-04T08:58:14.247570-04:00"
+        },
+        {
+          "title": "WorldQuant Challenge",
+          "duration": "PT3M",
+          "id": "challenge-help",
+          "lastModified": "2025-03-12T05:07:12.194953-04:00"
+        }
+      ],
+      "duration": "PT42M",
+      "title": "Discover BRAIN",
+      "sequence": 0,
+      "lastModified": "2023-03-30T10:03:04.259135-04:00"
+    },
+    {
+      "id": "create-alphas",
+      "category": "Getting Started",
+      "pages": [
+        {
+          "title": "Simulate your first Alpha",
+          "duration": "PT3M",
+          "id": "running-your-first-alpha",
+          "lastModified": "2026-03-09T06:50:21.997260-04:00"
+        },
+        {
+          "title": "Test Period",
+          "duration": null,
+          "id": "test-period",
+          "lastModified": null
+        },
+        {
+          "title": "How to choose the Simulation Settings",
+          "duration": "PT6M",
+          "id": "simulation-settings",
+          "lastModified": "2025-11-05T03:49:33.672757-05:00"
+        },
+        {
+          "title": "⭐ How BRAIN works",
+          "duration": "PT12M",
+          "id": "how-brain-platform-works",
+          "lastModified": "2025-09-08T05:31:37.418082-04:00"
+        }
+      ],
+      "duration": "PT24M",
+      "title": "Create Alphas",
+      "sequence": 2,
+      "lastModified": "2023-03-30T10:03:40.153233-04:00"
+    },
+    {
+      "id": "examples",
+      "category": "Getting Started",
+      "pages": [
+        {
+          "title": "⭐ Alpha Examples for Beginners",
+          "duration": null,
+          "id": "19-alpha-examples",
+          "lastModified": null
+        },
+        {
+          "title": "⭐ Alpha Examples for Bronze Users 🥉",
+          "duration": null,
+          "id": "sample-alpha-concepts",
+          "lastModified": null
+        },
+        {
+          "title": "⭐ Alpha Examples for Silver Users🥈",
+          "duration": null,
+          "id": "example-expression-alphas",
+          "lastModified": null
+        }
+      ],
+      "duration": "PT9M",
+      "title": "Examples",
+      "sequence": 3,
+      "lastModified": "2026-01-07T00:59:41.390915-05:00"
+    },
+    {
+      "id": "interpret-results",
+      "category": "Interpreting Results",
+      "pages": [
+        {
+          "title": "Clear these tests before submitting an Alpha",
+          "duration": "PT11M",
+          "id": "alpha-submission",
+          "lastModified": "2026-07-23T01:07:07.115045-04:00"
+        },
+        {
+          "title": "Parameters in the Simulation results",
+          "duration": "PT6M",
+          "id": "parameters-simulation-results",
+          "lastModified": "2025-04-04T04:35:07.278227-04:00"
+        }
+      ],
+      "duration": "PT17M",
+      "title": "Interpret Results",
+      "sequence": 4,
+      "lastModified": "2026-01-07T00:58:45.866729-05:00"
+    },
+    {
+      "id": "understanding-data",
+      "category": "Data",
+      "pages": [
+        {
+          "title": "Understanding Data in BRAIN: Key Concepts and Tips",
+          "duration": "PT4M",
+          "id": "data",
+          "lastModified": "2025-03-12T05:55:58.677840-04:00"
+        },
+        {
+          "title": "How to use the Data Explorer",
+          "duration": "PT3M",
+          "id": "how-use-data-explorer",
+          "lastModified": "2025-03-12T05:53:18.035922-04:00"
+        },
+        {
+          "title": "Vector Data Fields 🥉",
+          "duration": null,
+          "id": "vector-datafields",
+          "lastModified": null
+        },
+        {
+          "title": "Group Data Fields 🥈",
+          "duration": null,
+          "id": "group-data-fields",
+          "lastModified": null
+        },
+        {
+          "title": "Getting Started with Option6 Implied volatility (IV)",
+          "duration": "PT2M",
+          "id": "getting-started-option6-implied-volatility-iv",
+          "lastModified": "2026-06-15T23:55:25.566566-04:00"
+        }
+      ],
+      "duration": "PT16M",
+      "title": "Understanding Data",
+      "sequence": 5,
+      "lastModified": "2026-01-07T00:58:25.404498-05:00"
+    },
+    {
+      "id": "advanced-topics",
+      "category": "Getting Started",
+      "pages": [
+        {
+          "title": "Must-read posts: How to improve your Alphas🥉",
+          "duration": null,
+          "id": "list-must-read-posts-how-improve-your-alphas-are-submitted",
+          "lastModified": null
+        },
+        {
+          "title": "Neutralization 🥉",
+          "duration": null,
+          "id": "neut-cons",
+          "lastModified": null
+        },
+        {
+          "title": "D0",
+          "duration": null,
+          "id": "getting-started-d0",
+          "lastModified": null
+        }
+      ],
+      "duration": "PT11M",
+      "title": "Advanced Topics",
+      "sequence": 6,
+      "lastModified": "2026-01-07T00:58:08.807554-05:00"
+    }
+  ],
+  "pages": [
+    {
+      "id": "read-first-starter-pack",
+      "tutorial": "discover-brain",
+      "tutorial_title": "Discover BRAIN",
+      "title": "*Read this First * - Starter Pack",
+      "url": "https://platform.worldquantbrain.com/learn/documentation/discover-brain/read-first-starter-pack",
+      "lastModified": "2026-06-15T08:57:22.601732-04:00",
+      "duration": "PT19M",
+      "api_source": "https://api.worldquantbrain.com/tutorial-pages/read-first-starter-pack",
+      "index": 1,
+      "file": "01-read-this-first-starter-pack.md",
+      "chars": 23623,
+      "blocks": 56,
+      "raw_file": "_raw/01-read-first-starter-pack.json",
+      "capture_source": "official_api"
+    },
+    {
+      "id": "about-brain-platform",
+      "tutorial": "discover-brain",
+      "tutorial_title": "Discover BRAIN",
+      "title": "Introduction to Alphas",
+      "url": "https://platform.worldquantbrain.com/learn/documentation/discover-brain/about-brain-platform",
+      "lastModified": "2026-08-04T08:57:53.284529-04:00",
+      "duration": "PT6M",
+      "api_source": "https://api.worldquantbrain.com/tutorial-pages/about-brain-platform",
+      "index": 2,
+      "file": "02-introduction-to-alphas.md",
+      "chars": 8592,
+      "blocks": 19,
+      "raw_file": "_raw/02-about-brain-platform.json",
+      "capture_source": "official_api"
+    },
+    {
+      "id": "introduction-brain-expression-language",
+      "tutorial": "discover-brain",
+      "tutorial_title": "Discover BRAIN",
+      "title": "Introduction to BRAIN Expression Language",
+      "url": "https://platform.worldquantbrain.com/learn/documentation/discover-brain/introduction-brain-expression-language",
+      "lastModified": "2026-08-04T09:01:49.012743-04:00",
+      "duration": "PT3M",
+      "api_source": "https://api.worldquantbrain.com/tutorial-pages/introduction-brain-expression-language",
+      "index": 3,
+      "file": "03-introduction-to-brain-expression-language.md",
+      "chars": 3982,
+      "blocks": 13,
+      "raw_file": "_raw/03-introduction-brain-expression-language.json",
+      "capture_source": "official_api"
+    },
+    {
+      "id": "intermediate-pack-part-1",
+      "tutorial": "discover-brain",
+      "tutorial_title": "Discover BRAIN",
+      "title": "Intermediate Pack - Understand Results [1/2]",
+      "url": "https://platform.worldquantbrain.com/learn/documentation/discover-brain/intermediate-pack-part-1",
+      "lastModified": "2026-08-05T09:04:17.367662-04:00",
+      "duration": "PT5M",
+      "api_source": "https://api.worldquantbrain.com/tutorial-pages/intermediate-pack-part-1",
+      "index": 4,
+      "file": "04-intermediate-pack-understand-results-1-2.md",
+      "chars": 7550,
+      "blocks": 25,
+      "raw_file": "_raw/04-intermediate-pack-part-1.json",
+      "capture_source": "official_api"
+    },
+    {
+      "id": "intermediate-pack-part-2",
+      "tutorial": "discover-brain",
+      "tutorial_title": "Discover BRAIN",
+      "title": "Intermediate Pack - Improve your Alpha [2/2]",
+      "url": "https://platform.worldquantbrain.com/learn/documentation/discover-brain/intermediate-pack-part-2",
+      "lastModified": "2026-08-04T08:56:03.831826-04:00",
+      "duration": "PT5M",
+      "api_source": "https://api.worldquantbrain.com/tutorial-pages/intermediate-pack-part-2",
+      "index": 5,
+      "file": "05-intermediate-pack-improve-your-alpha-2-2.md",
+      "chars": 7117,
+      "blocks": 21,
+      "raw_file": "_raw/05-intermediate-pack-part-2.json",
+      "capture_source": "official_api"
+    },
+    {
+      "id": "10-steps-start-brain-platform",
+      "tutorial": "discover-brain",
+      "tutorial_title": "Discover BRAIN",
+      "title": "10 Steps to Start on BRAIN",
+      "url": "https://platform.worldquantbrain.com/learn/documentation/discover-brain/10-steps-start-brain-platform",
+      "lastModified": "2026-08-04T08:58:14.247570-04:00",
+      "duration": "PT1M",
+      "api_source": "https://api.worldquantbrain.com/tutorial-pages/10-steps-start-brain-platform",
+      "index": 6,
+      "file": "06-10-steps-to-start-on-brain.md",
+      "chars": 2829,
+      "blocks": 1,
+      "raw_file": "_raw/06-10-steps-start-brain-platform.json",
+      "capture_source": "official_api"
+    },
+    {
+      "id": "challenge-help",
+      "tutorial": "discover-brain",
+      "tutorial_title": "Discover BRAIN",
+      "title": "WorldQuant Challenge",
+      "url": "https://platform.worldquantbrain.com/learn/documentation/discover-brain/challenge-help",
+      "lastModified": "2025-03-12T05:07:12.194953-04:00",
+      "duration": "PT3M",
+      "api_source": "https://api.worldquantbrain.com/tutorial-pages/challenge-help",
+      "index": 7,
+      "file": "07-worldquant-challenge.md",
+      "chars": 4257,
+      "blocks": 7,
+      "raw_file": "_raw/07-challenge-help.json",
+      "capture_source": "official_api"
+    },
+    {
+      "id": "running-your-first-alpha",
+      "tutorial": "create-alphas",
+      "tutorial_title": "Create Alphas",
+      "title": "Simulate your first Alpha",
+      "url": "https://platform.worldquantbrain.com/learn/documentation/create-alphas/running-your-first-alpha",
+      "lastModified": "2026-03-09T06:50:21.997260-04:00",
+      "duration": "PT3M",
+      "api_source": "https://api.worldquantbrain.com/tutorial-pages/running-your-first-alpha",
+      "index": 8,
+      "file": "08-simulate-your-first-alpha.md",
+      "chars": 7266,
+      "blocks": 10,
+      "raw_file": "_raw/08-running-your-first-alpha.json",
+      "capture_source": "official_api"
+    },
+    {
+      "id": "test-period",
+      "tutorial": "create-alphas",
+      "tutorial_title": "Create Alphas",
+      "title": "Test Period",
+      "url": "https://platform.worldquantbrain.com/learn/documentation/create-alphas/test-period",
+      "lastModified": null,
+      "duration": null,
+      "api_source": "https://api.worldquantbrain.com/tutorial-pages/test-period",
+      "index": 9,
+      "file": "09-test-period.md",
+      "chars": 3349,
+      "blocks": 1,
+      "raw_file": "_raw/09-test-period.json",
+      "capture_source": "rendered_website"
+    },
+    {
+      "id": "simulation-settings",
+      "tutorial": "create-alphas",
+      "tutorial_title": "Create Alphas",
+      "title": "How to choose the Simulation Settings",
+      "url": "https://platform.worldquantbrain.com/learn/documentation/create-alphas/simulation-settings",
+      "lastModified": "2025-11-05T03:49:33.672757-05:00",
+      "duration": "PT6M",
+      "api_source": "https://api.worldquantbrain.com/tutorial-pages/simulation-settings",
+      "index": 10,
+      "file": "10-how-to-choose-the-simulation-settings.md",
+      "chars": 10013,
+      "blocks": 32,
+      "raw_file": "_raw/10-simulation-settings.json",
+      "capture_source": "official_api"
+    },
+    {
+      "id": "how-brain-platform-works",
+      "tutorial": "create-alphas",
+      "tutorial_title": "Create Alphas",
+      "title": "⭐ How BRAIN works",
+      "url": "https://platform.worldquantbrain.com/learn/documentation/create-alphas/how-brain-platform-works",
+      "lastModified": "2025-09-08T05:31:37.418082-04:00",
+      "duration": "PT12M",
+      "api_source": "https://api.worldquantbrain.com/tutorial-pages/how-brain-platform-works",
+      "index": 11,
+      "file": "11-how-brain-works.md",
+      "chars": 14320,
+      "blocks": 23,
+      "raw_file": "_raw/11-how-brain-platform-works.json",
+      "capture_source": "official_api"
+    },
+    {
+      "id": "19-alpha-examples",
+      "tutorial": "examples",
+      "tutorial_title": "Examples",
+      "title": "⭐ Alpha Examples for Beginners",
+      "url": "https://platform.worldquantbrain.com/learn/documentation/examples/19-alpha-examples",
+      "lastModified": null,
+      "duration": null,
+      "api_source": "https://api.worldquantbrain.com/tutorial-pages/19-alpha-examples",
+      "index": 12,
+      "file": "12-alpha-examples-for-beginners.md",
+      "chars": 5548,
+      "blocks": 1,
+      "raw_file": "_raw/12-19-alpha-examples.json",
+      "capture_source": "rendered_website"
+    },
+    {
+      "id": "sample-alpha-concepts",
+      "tutorial": "examples",
+      "tutorial_title": "Examples",
+      "title": "⭐ Alpha Examples for Bronze Users 🥉",
+      "url": "https://platform.worldquantbrain.com/learn/documentation/examples/sample-alpha-concepts",
+      "lastModified": null,
+      "duration": null,
+      "api_source": "https://api.worldquantbrain.com/tutorial-pages/sample-alpha-concepts",
+      "index": 13,
+      "file": "13-alpha-examples-for-bronze-users.md",
+      "chars": 3728,
+      "blocks": 1,
+      "raw_file": "_raw/13-sample-alpha-concepts.json",
+      "capture_source": "rendered_website"
+    },
+    {
+      "id": "example-expression-alphas",
+      "tutorial": "examples",
+      "tutorial_title": "Examples",
+      "title": "⭐ Alpha Examples for Silver Users🥈",
+      "url": "https://platform.worldquantbrain.com/learn/documentation/examples/example-expression-alphas",
+      "lastModified": null,
+      "duration": null,
+      "api_source": "https://api.worldquantbrain.com/tutorial-pages/example-expression-alphas",
+      "index": 14,
+      "file": "14-alpha-examples-for-silver-users.md",
+      "chars": 7811,
+      "blocks": 1,
+      "raw_file": "_raw/14-example-expression-alphas.json",
+      "capture_source": "rendered_website"
+    },
+    {
+      "id": "alpha-submission",
+      "tutorial": "interpret-results",
+      "tutorial_title": "Interpret Results",
+      "title": "Clear these tests before submitting an Alpha",
+      "url": "https://platform.worldquantbrain.com/learn/documentation/interpret-results/alpha-submission",
+      "lastModified": "2026-07-23T01:07:07.115045-04:00",
+      "duration": "PT11M",
+      "api_source": "https://api.worldquantbrain.com/tutorial-pages/alpha-submission",
+      "index": 15,
+      "file": "15-clear-these-tests-before-submitting-an-alpha.md",
+      "chars": 19242,
+      "blocks": 40,
+      "raw_file": "_raw/15-alpha-submission.json",
+      "capture_source": "official_api"
+    },
+    {
+      "id": "parameters-simulation-results",
+      "tutorial": "interpret-results",
+      "tutorial_title": "Interpret Results",
+      "title": "Parameters in the Simulation results",
+      "url": "https://platform.worldquantbrain.com/learn/documentation/interpret-results/parameters-simulation-results",
+      "lastModified": "2025-04-04T04:35:07.278227-04:00",
+      "duration": "PT6M",
+      "api_source": "https://api.worldquantbrain.com/tutorial-pages/parameters-simulation-results",
+      "index": 16,
+      "file": "16-parameters-in-the-simulation-results.md",
+      "chars": 12458,
+      "blocks": 29,
+      "raw_file": "_raw/16-parameters-simulation-results.json",
+      "capture_source": "official_api"
+    },
+    {
+      "id": "data",
+      "tutorial": "understanding-data",
+      "tutorial_title": "Understanding Data",
+      "title": "Understanding Data in BRAIN: Key Concepts and Tips",
+      "url": "https://platform.worldquantbrain.com/learn/documentation/understanding-data/data",
+      "lastModified": "2025-03-12T05:55:58.677840-04:00",
+      "duration": "PT4M",
+      "api_source": "https://api.worldquantbrain.com/tutorial-pages/data",
+      "index": 17,
+      "file": "17-understanding-data-in-brain-key-concepts-and-tips.md",
+      "chars": 7153,
+      "blocks": 20,
+      "raw_file": "_raw/17-data.json",
+      "capture_source": "official_api"
+    },
+    {
+      "id": "how-use-data-explorer",
+      "tutorial": "understanding-data",
+      "tutorial_title": "Understanding Data",
+      "title": "How to use the Data Explorer",
+      "url": "https://platform.worldquantbrain.com/learn/documentation/understanding-data/how-use-data-explorer",
+      "lastModified": "2025-03-12T05:53:18.035922-04:00",
+      "duration": "PT3M",
+      "api_source": "https://api.worldquantbrain.com/tutorial-pages/how-use-data-explorer",
+      "index": 18,
+      "file": "18-how-to-use-the-data-explorer.md",
+      "chars": 4811,
+      "blocks": 17,
+      "raw_file": "_raw/18-how-use-data-explorer.json",
+      "capture_source": "official_api"
+    },
+    {
+      "id": "vector-datafields",
+      "tutorial": "understanding-data",
+      "tutorial_title": "Understanding Data",
+      "title": "Vector Data Fields 🥉",
+      "url": "https://platform.worldquantbrain.com/learn/documentation/understanding-data/vector-datafields",
+      "lastModified": null,
+      "duration": null,
+      "api_source": "https://api.worldquantbrain.com/tutorial-pages/vector-datafields",
+      "index": 19,
+      "file": "19-vector-data-fields.md",
+      "chars": 5457,
+      "blocks": 1,
+      "raw_file": "_raw/19-vector-datafields.json",
+      "capture_source": "rendered_website"
+    },
+    {
+      "id": "group-data-fields",
+      "tutorial": "understanding-data",
+      "tutorial_title": "Understanding Data",
+      "title": "Group Data Fields 🥈",
+      "url": "https://platform.worldquantbrain.com/learn/documentation/understanding-data/group-data-fields",
+      "lastModified": null,
+      "duration": null,
+      "api_source": "https://api.worldquantbrain.com/tutorial-pages/group-data-fields",
+      "index": 20,
+      "file": "20-group-data-fields.md",
+      "chars": 4765,
+      "blocks": 1,
+      "raw_file": "_raw/20-group-data-fields.json",
+      "capture_source": "rendered_website"
+    },
+    {
+      "id": "getting-started-option6-implied-volatility-iv",
+      "tutorial": "understanding-data",
+      "tutorial_title": "Understanding Data",
+      "title": "Getting Started with Option6 Implied volatility (IV)",
+      "url": "https://platform.worldquantbrain.com/learn/documentation/understanding-data/getting-started-option6-implied-volatility-iv",
+      "lastModified": "2026-06-15T23:55:25.566566-04:00",
+      "duration": "PT2M",
+      "api_source": "https://api.worldquantbrain.com/tutorial-pages/getting-started-option6-implied-volatility-iv",
+      "index": 21,
+      "file": "21-getting-started-with-option6-implied-volatility-iv.md",
+      "chars": 8780,
+      "blocks": 19,
+      "raw_file": "_raw/21-getting-started-option6-implied-volatility-iv.json",
+      "capture_source": "official_api"
+    },
+    {
+      "id": "list-must-read-posts-how-improve-your-alphas-are-submitted",
+      "tutorial": "advanced-topics",
+      "tutorial_title": "Advanced Topics",
+      "title": "Must-read posts: How to improve your Alphas🥉",
+      "url": "https://platform.worldquantbrain.com/learn/documentation/advanced-topics/list-must-read-posts-how-improve-your-alphas-are-submitted",
+      "lastModified": null,
+      "duration": null,
+      "api_source": "https://api.worldquantbrain.com/tutorial-pages/list-must-read-posts-how-improve-your-alphas-are-submitted",
+      "index": 22,
+      "file": "22-must-read-posts-how-to-improve-your-alphas.md",
+      "chars": 3300,
+      "blocks": 1,
+      "raw_file": "_raw/22-list-must-read-posts-how-improve-your-alphas-are-submitted.json",
+      "capture_source": "rendered_website"
+    },
+    {
+      "id": "neut-cons",
+      "tutorial": "advanced-topics",
+      "tutorial_title": "Advanced Topics",
+      "title": "Neutralization 🥉",
+      "url": "https://platform.worldquantbrain.com/learn/documentation/advanced-topics/neut-cons",
+      "lastModified": null,
+      "duration": null,
+      "api_source": "https://api.worldquantbrain.com/tutorial-pages/neut-cons",
+      "index": 23,
+      "file": "23-neutralization.md",
+      "chars": 7019,
+      "blocks": 1,
+      "raw_file": "_raw/23-neut-cons.json",
+      "capture_source": "rendered_website"
+    },
+    {
+      "id": "getting-started-d0",
+      "tutorial": "advanced-topics",
+      "tutorial_title": "Advanced Topics",
+      "title": "D0",
+      "url": "https://platform.worldquantbrain.com/learn/documentation/advanced-topics/getting-started-d0",
+      "lastModified": null,
+      "duration": null,
+      "api_source": "https://api.worldquantbrain.com/tutorial-pages/getting-started-d0",
+      "index": 24,
+      "file": "24-d0.md",
+      "chars": 4766,
+      "blocks": 1,
+      "raw_file": "_raw/24-getting-started-d0.json",
+      "capture_source": "rendered_website"
+    }
+  ]
+}

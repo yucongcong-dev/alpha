@@ -3,9 +3,8 @@
 复核日期：`2026-08-04`
 
 本目录记录通过已登录 WorldQuant BRAIN 官网完成的增量复核，不重复保存没有变化的正文。
-完整 Documentation 正文基线仍位于
-[`worldquant_official_2026-08-03`](../worldquant_official_2026-08-03)，Operators 基线仍位于
-[`worldquant_operators_2026-08-03`](../worldquant_operators_2026-08-03/README.md)。
+当时使用的 Documentation 与 Operators 基线均捕获于 `2026-08-03`；旧基线目录已在完整
+`2026-08-06` 快照生成后删除，机器可读记录只保留其采集日期作为历史来源信息。
 
 ## 复核结果
 

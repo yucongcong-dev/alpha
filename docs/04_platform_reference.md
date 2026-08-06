@@ -522,12 +522,12 @@ group_zscore(alpha, densify(asset_group))
 
 ## 11. Operators 官方快照
 
-Operators 的精确定义、参数和分类以平台当前可见页面/API 为准。本地保存了一份 `2026-08-03`
-账号可见快照，作为离线查表入口：
+Operators 的精确定义、参数和分类以平台当前可见页面/API 为准。本地最新目录保留了一份
+`2026-08-03` 捕获的账号可见快照，作为离线查表入口：
 
-- 本地索引：[source_snapshots/worldquant_operators_2026-08-03/README.md](source_snapshots/worldquant_operators_2026-08-03/README.md)
+- 本地索引：[source_snapshots/worldquant_operators_2026-08-06/README.md](source_snapshots/worldquant_operators_2026-08-06/README.md)
 - 官方 API：`https://api.worldquantbrain.com/operators`
-- 捕获日期：`2026-08-03`
+- 数据捕获日期：`2026-08-03`；目录日期：`2026-08-06`（当天 API 返回 `401`，使用历史数据回退）
 - 官网复核：`2026-08-04`，算子数量、签名和说明未变化；见 [增量记录](source_snapshots/worldquant_review_2026-08-04/README.md)
 
 使用时要注意两个边界：
@@ -702,12 +702,12 @@ threshold。本仓库默认保持 `OFF`，需要时显式开启。
 | `Pyramid` | Pyramid 由 `Region + Delay + dataset category` 组合定义；一个候选最多贡献到 `2` 个 pyramids。上述 grouping 字段不计入 pyramid 数量。 |
 | `Power Pool` | 官方页面列出的口径包括：USA D1、Sharpe `>= 1.0`、唯一 operator 数 `<= 8`、非 grouping data field 数 `<= 3`、Power Pool 内 Self-Correlation `<= 0.5`、Turnover 在 `1%-70%` 之间。标记过 Power Pool 的 Alpha 即使之后取消标签，仍会留在对应 self-correlation pool。 |
 
-这些类型、标签入口和门槛可能受账号等级与平台版本影响。上表来自 `2026-08-03`
+这些类型、标签入口和门槛可能受账号等级与平台版本影响。上表来自 `2026-08-06`
 Documentation 快照；实际判断以当前 Alpha 页面和 Check Submission 返回为准。
 
 ### 13.12 GLB Sub-Geography Sharpe
 
-GLB Alpha 还会检查三个地区的 Sharpe。`2026-08-03` 官方页面给出的口径是：
+GLB Alpha 还会检查三个地区的 Sharpe。`2026-08-06` 官方页面给出的口径是：
 
 | 地区 | Sharpe cutoff |
 |---|---:|
@@ -720,7 +720,7 @@ GLB Alpha 还会检查三个地区的 Sharpe。`2026-08-03` 官方页面给出�
 
 ### 13.13 ASI Japan Robustness Sharpe
 
-ASI Alpha 还可能接受 Japan Robustness Sharpe 检查。`2026-08-03` 官方页面给出的 cutoff
+ASI Alpha 还可能接受 Japan Robustness Sharpe 检查。`2026-08-06` 官方页面给出的 cutoff
 是 `>= 1`。需要特别注意：
 
 - 该检查使用的 Japan universe 与 Visualization Tool 展示的 Japan universe 不同。
@@ -731,7 +731,7 @@ ASI Alpha 还可能接受 Japan Robustness Sharpe 检查。`2026-08-03` 官方�
 ### 13.14 Check Submission 消息顺序
 
 官方 Learn 页面说明，Check Submission 或 Submit Alpha 会按顺序执行检查，遇到失败时显示
-对应消息。`2026-08-03` 页面列出的顺序是：
+对应消息。`2026-08-06` 页面列出的顺序是：
 
 1. Weight test
 2. Correlation test
@@ -743,7 +743,7 @@ ASI Alpha 还可能接受 Japan Robustness Sharpe 检查。`2026-08-03` 官方�
 本地分析应保存实际 Check Submission 返回，不能根据这张顺序表推断未显示项的终态。
 
 官方来源：[Clear these tests before submitting an Alpha](https://platform.worldquantbrain.com/learn/documentation/interpret-results/alpha-submission)
-（本地 Documentation 快照：`2026-08-03`，官网增量复核：`2026-08-04`）。
+（本地 Documentation 快照：`2026-08-06`，官网增量复核：`2026-08-04`）。
 
 ---
 

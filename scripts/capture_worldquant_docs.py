@@ -15,6 +15,7 @@ import shutil
 import tempfile
 import time
 from typing import Any
+from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 from uuid import uuid4
 
@@ -124,6 +125,8 @@ def fetch_json(url: str, *, retries: int = 3, backoff_seconds: float = 0.5) -> A
         try:
             with urlopen(request, timeout=45) as response:
                 return json.load(response)
+        except HTTPError:
+            raise
         except (OSError, json.JSONDecodeError) as exc:
             last_error = exc
             if attempt + 1 < retries:
@@ -328,6 +331,12 @@ def render_page(
     official_url = page["url"]
     api_source = f"{API_ROOT}/tutorial-pages/{page_id}"
     title = metadata.get("title") or page["title"]
+    capture_source = metadata.get("_capture_source", "official_api")
+    source_label = (
+        "WorldQuant BRAIN rendered Learn page via Chrome"
+        if capture_source == "rendered_website"
+        else "WorldQuant BRAIN Learn Documentation API"
+    )
 
     header_metadata = {
         "id": page_id,
@@ -338,6 +347,7 @@ def render_page(
         "lastModified": metadata.get("lastModified"),
         "duration": metadata.get("duration"),
         "api_source": api_source,
+        "capture_source": capture_source,
     }
     blocks = [render_content_block(block) for block in metadata["content"]]
     content = "\n\n".join(block for block in blocks if block)
@@ -349,7 +359,8 @@ def render_page(
             f"Official URL: {official_url}",
             f"API Source: {api_source}",
             f"Captured: {captured}",
-            "Official source: WorldQuant BRAIN Learn Documentation API",
+            f"Official source: {source_label}",
+            f"Capture method: {capture_source}",
             f"Section: {page['tutorial_title']}",
             f"Last modified: {metadata.get('lastModified', 'unknown')}",
             "",
@@ -368,6 +379,7 @@ def render_page(
 
 def capture_documentation(
     baseline_manifest: Path,
+    browser_fallback_root: Path,
     output_root: Path,
     captured: str,
     *,
@@ -383,12 +395,27 @@ def capture_documentation(
 
     captured_pages: list[dict[str, Any]] = []
     page_metadata: dict[str, dict[str, Any]] = {}
+    api_captured_count = 0
+    browser_captured_count = 0
     for page in catalog["pages"]:
         page_id = page["id"]
-        payload = validate_page_payload(
-            fetch_json(f"{API_ROOT}/tutorial-pages/{page_id}"),
-            page_id,
-        )
+        try:
+            payload = validate_page_payload(
+                fetch_json(f"{API_ROOT}/tutorial-pages/{page_id}"),
+                page_id,
+            )
+            payload["_capture_source"] = "official_api"
+            api_captured_count += 1
+        except HTTPError as error:
+            fallback_file = browser_fallback_root / f"{page_id}.json"
+            if error.code != 404 or not fallback_file.is_file():
+                raise RuntimeError(
+                    f"Failed to capture {page_id}: HTTP {error.code}; "
+                    f"fallback not found at {fallback_file}"
+                ) from error
+            payload = validate_page_payload(load_json(fallback_file), page_id)
+            payload["_capture_source"] = "rendered_website"
+            browser_captured_count += 1
         page_metadata[page_id] = payload
         file_name = page["file"]
         raw_file = f"_raw/{page['index']:02d}-{page_id}.json"
@@ -405,6 +432,7 @@ def capture_documentation(
                 "duration": payload.get("duration"),
                 "api_source": f"{API_ROOT}/tutorial-pages/{page_id}",
                 "raw_file": raw_file,
+                "capture_source": payload["_capture_source"],
                 "chars": len(rendered_page),
                 "blocks": len(payload["content"]),
             }
@@ -420,7 +448,7 @@ def capture_documentation(
 
     manifest = {
         "captured": captured,
-        "source": "WorldQuant BRAIN Learn Documentation API",
+        "source": "WorldQuant BRAIN Learn API and rendered official pages",
         "capture_mode": "refresh_known_pages",
         "catalog_source": {
             "kind": "baseline_manifest"
@@ -430,7 +458,9 @@ def capture_documentation(
         },
         "baseline_count": len(baseline["pages"]),
         "catalog_count": len(catalog["pages"]),
-        "api_captured_count": len(captured_pages),
+        "captured_count": len(captured_pages),
+        "api_captured_count": api_captured_count,
+        "browser_captured_count": browser_captured_count,
         **catalog_diff,
         "count": len(captured_pages),
         "tutorials": tutorials,
@@ -451,8 +481,24 @@ def _operator_documentation_url(value: Any) -> str:
     return f"{PLATFORM_ROOT}{documentation}"
 
 
-def capture_operators(output_root: Path, captured: str) -> Path:
-    operators = validate_operator_payload(fetch_json(f"{API_ROOT}/operators"))
+def capture_operators(
+    output_root: Path,
+    captured: str,
+    operators_fallback: Path,
+) -> Path:
+    capture_source = "official_api"
+    source_snapshot: str | None = None
+    try:
+        operators = validate_operator_payload(fetch_json(f"{API_ROOT}/operators"))
+    except HTTPError as error:
+        if error.code != 401 or not operators_fallback.is_file():
+            raise RuntimeError(
+                f"Failed to capture operators: HTTP {error.code}; "
+                f"fallback not found at {operators_fallback}"
+            ) from error
+        operators = validate_operator_payload(load_json(operators_fallback))
+        capture_source = "local_snapshot_fallback"
+        source_snapshot = str(operators_fallback)
 
     output_dir = output_root / f"worldquant_operators_{captured}"
     output_dir.mkdir(parents=True)
@@ -499,6 +545,8 @@ def capture_operators(output_root: Path, captured: str) -> Path:
         f"Source: {API_ROOT}/operators",
         f"Captured: {captured}",
         "Official source: WorldQuant BRAIN Operators API",
+        f"Capture method: {capture_source}",
+        f"Fallback source: {source_snapshot or 'none'}",
         "",
         f"Total operators: {len(operators)}",
         "",
@@ -519,6 +567,8 @@ def capture_operators(output_root: Path, captured: str) -> Path:
         {
             "captured": captured,
             "source": f"{API_ROOT}/operators",
+            "capture_source": capture_source,
+            "source_snapshot": source_snapshot,
             "count": len(operators),
             "categories": categories,
         },
@@ -556,8 +606,12 @@ def validate_documentation_snapshot(output_dir: Path) -> None:
     manifest = _mapping(load_json(manifest_path), f"snapshot manifest {manifest_path}")
     pages = _list(manifest.get("pages"), f"snapshot manifest {manifest_path}.pages")
     count = manifest.get("count")
-    if count != len(pages) or manifest.get("api_captured_count") != len(pages):
+    if count != len(pages) or manifest.get("captured_count") != len(pages):
         raise RuntimeError(f"Documentation snapshot count mismatch in {manifest_path}")
+    if manifest.get("api_captured_count", 0) + manifest.get(
+        "browser_captured_count", 0
+    ) != len(pages):
+        raise RuntimeError(f"Documentation capture-source count mismatch in {manifest_path}")
     for position, raw_page in enumerate(pages, start=1):
         page = _mapping(raw_page, f"snapshot manifest {manifest_path}.pages[{position}]")
         file_name = _safe_relative_file(
@@ -634,6 +688,8 @@ def publish_snapshot_pair(
 def capture_snapshots(
     *,
     baseline_manifest: Path,
+    browser_fallback_root: Path,
+    operators_fallback: Path,
     catalog_manifest: Path | None,
     output_root: Path,
     captured: str,
@@ -652,11 +708,12 @@ def capture_snapshots(
     try:
         docs_dir = capture_documentation(
             baseline_manifest,
+            browser_fallback_root,
             staging_root,
             captured,
             catalog_manifest=catalog_manifest,
         )
-        operators_dir = capture_operators(staging_root, captured)
+        operators_dir = capture_operators(staging_root, captured, operators_fallback)
         validate_documentation_snapshot(docs_dir)
         validate_operator_snapshot(operators_dir)
         publish_snapshot_pair([docs_dir, operators_dir], targets)
@@ -672,12 +729,25 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--baseline-manifest",
         type=Path,
-        default=Path("docs/source_snapshots/worldquant_official_2026-08-03/manifest.json"),
+        default=Path("docs/source_snapshots/worldquant_official_2026-08-06/manifest.json"),
     )
     parser.add_argument(
         "--catalog-manifest",
         type=Path,
         help="Optional current page catalog; defaults to refreshing baseline-known pages only",
+    )
+    parser.add_argument(
+        "--browser-fallback-root",
+        type=Path,
+        help="Rendered Chrome page payloads used when a tutorial API returns 404",
+    )
+    parser.add_argument(
+        "--operators-fallback",
+        type=Path,
+        default=Path(
+            "docs/source_snapshots/worldquant_operators_2026-08-06/operators.json"
+        ),
+        help="Known official operator snapshot used only when the current API returns 401",
     )
     parser.add_argument(
         "--output-root",
@@ -693,6 +763,9 @@ def main() -> None:
     try:
         docs_dir, operators_dir = capture_snapshots(
             baseline_manifest=args.baseline_manifest,
+            browser_fallback_root=args.browser_fallback_root
+            or args.output_root / f"worldquant_browser_fallback_{args.date}",
+            operators_fallback=args.operators_fallback,
             catalog_manifest=args.catalog_manifest,
             output_root=args.output_root,
             captured=args.date,

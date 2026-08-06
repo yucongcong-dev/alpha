@@ -3,7 +3,8 @@
   "source": "WorldQuant BRAIN authenticated Learn web UI",
   "documentation": {
     "count": 24,
-    "baseline": "../worldquant_official_2026-08-03/manifest.json",
+    "baseline": null,
+    "baseline_captured": "2026-08-03",
     "body_comparison": "no substantive changes detected",
     "sections": [
       {
@@ -84,7 +85,8 @@
     ]
   },
   "operators": {
-    "baseline": "../worldquant_operators_2026-08-03/manifest.json",
+    "baseline": null,
+    "baseline_captured": "2026-08-03",
     "category_count": 7,
     "base_operator_count": 66,
     "signature_changes": 0,

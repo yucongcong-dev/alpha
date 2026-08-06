@@ -1,0 +1,45 @@
+{
+  "captured": "2026-08-06",
+  "source": "https://api.worldquantbrain.com/operators",
+  "capture_source": "embedded_historical_fallback",
+  "source_snapshot": null,
+  "source_snapshot_captured": "2026-08-03",
+  "count": 66,
+  "categories": [
+    {
+      "category": "Arithmetic",
+      "count": 15,
+      "file": "arithmetic.md"
+    },
+    {
+      "category": "Cross Sectional",
+      "count": 6,
+      "file": "cross-sectional.md"
+    },
+    {
+      "category": "Group",
+      "count": 6,
+      "file": "group.md"
+    },
+    {
+      "category": "Logical",
+      "count": 11,
+      "file": "logical.md"
+    },
+    {
+      "category": "Time Series",
+      "count": 24,
+      "file": "time-series.md"
+    },
+    {
+      "category": "Transformational",
+      "count": 2,
+      "file": "transformational.md"
+    },
+    {
+      "category": "Vector",
+      "count": 2,
+      "file": "vector.md"
+    }
+  ]
+}

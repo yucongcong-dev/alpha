@@ -106,8 +106,9 @@ Operators 页当前账号可见 `7` 类算子：Arithmetic、Logical、Time Seri
 Transformational、Group，共解析到 `66` 个 `base` 算子。平台说明更高等级可能解锁更多算子，
 因此本地知识库记录的是带日期的账号可见快照，不把 `66` 当成全平台永久总数。
 
-本地已保存 `2026-08-03` 的官方 Operators API 快照：
-[worldquant_operators_2026-08-03](source_snapshots/worldquant_operators_2026-08-03/README.md)。
+本地最新目录保留了 `2026-08-03` 从官方 Operators API 捕获的数据：
+[worldquant_operators_2026-08-06](source_snapshots/worldquant_operators_2026-08-06/README.md)。
+由于 `2026-08-06` API 返回 `401`，该目录明确标记为历史数据回退，而不是当天重新抓取的结果。
 `2026-08-04` 通过官网再次复核，当前仍为 `7` 类、`66` 个 `base` 算子，签名和说明未变化；
 增量记录见 [worldquant_review_2026-08-04](source_snapshots/worldquant_review_2026-08-04/README.md)。
 研究时不需要把它当成一篇从头读到尾的教程，而应该把分类当成表达式设计的积木：
@@ -565,7 +566,7 @@ feedback 目录用于机器自动复用历史，但仍属于可重建运行状�
 - [Alpha Examples for Silver Users](https://platform.worldquantbrain.com/learn/documentation/examples/example-expression-alphas)
 - [Courses](https://platform.worldquantbrain.com/learn/courses)
 - [Operators](https://platform.worldquantbrain.com/learn/operators)
-- [本地 Operators API 快照（2026-08-03）](source_snapshots/worldquant_operators_2026-08-03/README.md)
+- [本地 Operators 回退快照（目录日期 2026-08-06，数据捕获于 2026-08-03）](source_snapshots/worldquant_operators_2026-08-06/README.md)
 - [Understanding Data in BRAIN: Key Concepts and Tips](https://platform.worldquantbrain.com/learn/documentation/understanding-data/data)
 - [How to use the Data Explorer](https://platform.worldquantbrain.com/learn/documentation/understanding-data/how-use-data-explorer)
 - [Vector Data Fields](https://platform.worldquantbrain.com/learn/documentation/understanding-data/vector-datafields)
