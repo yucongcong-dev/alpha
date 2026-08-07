@@ -7,7 +7,10 @@ import json
 from alpha.generators.templates.variation_common import (
     is_blacklisted_template as _is_blacklisted_template,
 )
-from alpha.policy.blacklist_store import ensure_template_blacklist_file
+from alpha.policy.blacklist_store import (
+    ensure_template_blacklist_file,
+    normalize_blacklist_payload,
+)
 from alpha.policy.template_blacklist import invalidate_blacklist_cache
 
 
@@ -21,6 +24,22 @@ def test_ensure_template_blacklist_file_creates_empty_dataset_file(tmp_path) -> 
     assert payload["dataset_id"] == "custom_ds"
     assert payload["learned_templates"] == []
     assert payload["expression_rules"] == []
+
+
+def test_normalize_blacklist_payload_ignores_removed_schema_keys() -> None:
+    payload = normalize_blacklist_payload(
+        {
+            "dataset_id": "custom_ds",
+            "blacklisted_templates": [{"name": "old_template"}],
+            "auto_avoid_rules": [{"type": "contains", "pattern": "old"}],
+        },
+        "custom_ds",
+    )
+
+    assert payload["learned_templates"] == []
+    assert payload["expression_rules"] == []
+    assert "blacklisted_templates" not in payload
+    assert "auto_avoid_rules" not in payload
 
 
 def test_blacklist_prefers_name_and_stage_over_name_only(monkeypatch, tmp_path) -> None:

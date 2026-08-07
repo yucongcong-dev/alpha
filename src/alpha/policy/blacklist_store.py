@@ -97,27 +97,19 @@ def normalize_blacklist_payload(
 ) -> BlacklistPayload:
     """Normalize blacklist payload to the canonical top-level schema."""
     if not isinstance(payload, dict):
-        payload = build_default_blacklist(dataset_id)
-    normalized = dict(payload)
-    normalized.setdefault("_version", BLACKLIST_SCHEMA_VERSION)
-    normalized.setdefault("dataset_id", dataset_id)
-    normalized.setdefault("_created", time.strftime(DATE_FORMAT_ISO))
-    normalized.setdefault("_updated", time.strftime(DATE_FORMAT_ISO))
-    normalized.setdefault("_comment", build_default_blacklist(dataset_id)["_comment"])
-
-    learned_templates = normalized.get(LEARNED_BLACKLIST_KEY)
-    if not isinstance(learned_templates, list):
-        legacy_entries = normalized.get("blacklisted_templates", [])
-        learned_templates = legacy_entries if isinstance(legacy_entries, list) else []
-    expression_rules = normalized.get(PATTERN_RULES_KEY)
-    if not isinstance(expression_rules, list):
-        legacy_rules = normalized.get("auto_avoid_rules", [])
-        expression_rules = legacy_rules if isinstance(legacy_rules, list) else []
-
-    normalized[LEARNED_BLACKLIST_KEY] = learned_templates
-    normalized[PATTERN_RULES_KEY] = expression_rules
-    normalized.pop("blacklisted_templates", None)
-    normalized.pop("auto_avoid_rules", None)
+        return build_default_blacklist(dataset_id)
+    defaults = build_default_blacklist(dataset_id)
+    learned_templates = payload.get(LEARNED_BLACKLIST_KEY)
+    expression_rules = payload.get(PATTERN_RULES_KEY)
+    normalized = {
+        "_version": payload.get("_version", defaults["_version"]),
+        "_comment": payload.get("_comment", defaults["_comment"]),
+        "_created": payload.get("_created", defaults["_created"]),
+        "_updated": payload.get("_updated", defaults["_updated"]),
+        "dataset_id": payload.get("dataset_id", dataset_id),
+        LEARNED_BLACKLIST_KEY: learned_templates if isinstance(learned_templates, list) else [],
+        PATTERN_RULES_KEY: expression_rules if isinstance(expression_rules, list) else [],
+    }
     return cast(BlacklistPayload, normalized)
 
 
