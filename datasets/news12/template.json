@@ -1,0 +1,7 @@
+{
+  "_comment": "news12 baseline library; active research uses the bounded event_seed preset.",
+  "_comment_placeholders": "{field}=field name",
+  "_dataset_id": "news12",
+  "default": [],
+  "VECTOR": []
+}
