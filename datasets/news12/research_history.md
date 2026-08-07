@@ -25,3 +25,24 @@ subindustry 分组排序。
 
 价格反应方向明显失败，不做符号或相邻窗口 sweep。新颖度方向的 Sharpe 为正，
 但 Fitness 距离提交要求较远；只允许一次 4 个结构变体的 refine，不扩大字段池。
+
+## 首发新闻新颖度 refine
+
+| 结构 | Alpha ID | Sharpe | Fitness | 其他检查 |
+|---|---|---:|---:|---|
+| `vec_avg` 的 60 日 zscore | `RRmYExz1` | 0.15 | 0.01 | Self Correlation PENDING |
+| `vec_avg` 的 60 日 ts_rank | `A1GbVp6E` | 0.40 | 0.05 | Self Correlation PENDING |
+| `vec_sum` 新鲜事件数的 60 日 zscore | `A1GbxjRX` | -0.65 | -0.12 | Self Correlation PENDING |
+| `vec_avg` 的 5 日变化 | `GrG6m3ro` | 0.13 | 0.01 | Turnover 75%；Self Correlation PENDING |
+
+官方文档列出的 `vec_count` 在当前账号上返回 `inaccessible or unknown operator`，因此
+总新闻强度结构未被当作有效研究结果，并改用支持的 5 日变化结构补足第四条。
+
+四个有效结构的 Fitness 最高仅 `0.05`，没有 near-pass 或可提交候选。
+Self Correlation 的最终状态不会改变这一决策。
+
+## 当前结论
+
+新闻价格反应和首发新闻新颖度都没有形成可继续优化的基线，既定停止条件已经满足。
+`news12` 暂停，原 `newrecord_refine` preset 已删除，不做符号、窗口或运行参数 sweep，
+也不扩大到完整 875 字段池。

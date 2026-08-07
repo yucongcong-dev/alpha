@@ -2,14 +2,14 @@
 
 ## 当前状态
 
-`news12` 是当前现役 explore 数据集。WorldQuant BRAIN 在 USA / TOP3000 / Delay 1 下
+`news12` 当前已暂停。WorldQuant BRAIN 在 USA / TOP3000 / Delay 1 下
 将其显示为 `US News Data`：数据集 Coverage `82.28%`、Date Coverage `100%`，
 共 875 个字段，最近更新于 2026-03。
 
-新闻后 30 分钟价格反应已明显失败；首发新闻新颖度获得 Sharpe `0.87`、
-Fitness `0.23`，可作为弱正向基线继续一次小范围验证。当前入口是
-[newrecord_refine](presets/newrecord_refine/)，只测试 4 个结构变体，不遍历完整字段池。
-种子结果见 [research_history.md](research_history.md)。
+新闻后 30 分钟价格反应明显失败；首发新闻新颖度的水平种子虽获得
+Sharpe `0.87`、Fitness `0.23`，但后续 4 个有效结构均未形成 near-pass。既定停止条件
+已满足，因此当前没有默认运行入口，也不遍历完整字段池。完整结果见
+[research_history.md](research_history.md)。
 
 ## 官网筛选依据
 
@@ -24,23 +24,10 @@ Fitness `0.23`，可作为弱正向基线继续一次小范围验证。当前入
 延续或反转，后者验证首发新闻相对重复新闻的信息差异。不使用依赖事后最高价、
 最低价或有利仓位标签的字段。
 
-## 运行入口
+## 当前边界
 
-```bash
-PYTHONPATH=src python3.10 -m alpha \
-  --dataset-id news12 \
-  --strategy-profile refine \
-  --max-total-simulations 4 \
-  --run-name news12-newrecord-refine \
-  --dry-run-plan
-```
-
-确认计划后移除 `--dry-run-plan`。程序只做 simulation 和 Check Submission，正式提交由人工决定。
-
-## 停止与扩展规则
-
-- 当前只允许 `nws12_mainz_newrecord` 的 4 个结构变体。
-- 若仍没有 near-pass 或可提交候选，暂停 `news12`，不扩大到其他价格反应别名字段。
+- 暂停 `news12`，不再运行已完成的 newrecord refine。
+- 不扩大到其他价格反应别名字段，不扫描完整 875 字段池。
 - 不使用 `LS`、`advantageous_position` 等事后有利仓位标签。
 - 不做符号、相邻窗口、Decay 或 Truncation sweep。
-- refine 阶段最多 4 次 simulation。
+- 只有出现新的独立经济假设或平台字段发生实质更新时，才重新建立小范围 preset。

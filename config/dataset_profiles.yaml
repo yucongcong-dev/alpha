@@ -84,7 +84,7 @@ dataset_profiles:
     simulation_max_queue_seconds: 600
     queue_busy_cooldown_seconds: 60
   news12:
-    default_preset: "newrecord_refine"
+    paused: true
     sleep_between_fields: 3.0
     max_concurrent_simulations: 2
     max_concurrent_creates: 1

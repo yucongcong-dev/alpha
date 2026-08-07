@@ -1,4 +1,0 @@
-news12_newrecord_zscore_60
-news12_newrecord_ts_rank_60
-news12_fresh_event_count_zscore_60
-news12_event_count_ts_rank_60
