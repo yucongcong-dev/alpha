@@ -96,12 +96,11 @@ def render_dry_run_plan(summary: DryRunPlanSummary, *, log: logging.Logger) -> N
     )
     log.info(
         "[dry-run] explain_blacklist name_stage=%d name_stage_family=%d "
-        "name_family=%d legacy_name_only=%d pattern_expression=%d "
+        "name_family=%d pattern_expression=%d "
         "pattern_template_name=%d other=%d",
         counts["template_filtered_blacklist_name_stage"],
         counts["template_filtered_blacklist_name_stage_family"],
         counts["template_filtered_blacklist_name_family"],
-        counts["template_filtered_blacklist_legacy_name_only"],
         _sum_counter_prefix(counts, "template_filtered_blacklist_pattern_expression_"),
         _sum_counter_prefix(counts, "template_filtered_blacklist_pattern_template_name_"),
         _sum_blacklist_other(counts),
@@ -153,7 +152,6 @@ def _sum_blacklist_other(explain_counts: Counter[str]) -> int:
         "template_filtered_blacklist_name_stage",
         "template_filtered_blacklist_name_stage_family",
         "template_filtered_blacklist_name_family",
-        "template_filtered_blacklist_legacy_name_only",
     }
     return sum(
         count

@@ -21,7 +21,6 @@ def is_blacklisted_template(
     return _policy_is_blacklisted_template(
         template_name,
         expression,
-        template_metadata=template_metadata,
         dataset_id=dataset_id,
         policy=policy,
         current_field_type=field_type,

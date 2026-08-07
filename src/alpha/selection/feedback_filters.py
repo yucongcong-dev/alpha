@@ -147,7 +147,6 @@ def resolve_field_template_family_skip_reason(
         runtime_blacklist_match_reason(
             template_name,
             expression,
-            template_metadata=template_metadata,
             policy=policy,
             current_field_type=field_type,
             current_family=template_family,

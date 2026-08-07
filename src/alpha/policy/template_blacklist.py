@@ -11,7 +11,6 @@ import logging
 import os
 import re
 
-from ..models.domain_types import TemplateMetadata
 from .blacklist_context import clear_active_datasets_root
 from .blacklist_store import (
     invalidate_blacklist_path_cache,
@@ -91,7 +90,6 @@ def _match_pattern_rule(
 
 def _load_blacklist(dataset_id: str) -> None:
     """加载 datasets/<dataset>/blacklist.json。"""
-    names: set[str] = set()
     pattern_rules: list[BlacklistPatternRule] = []
     entries: list[BlacklistMatcherEntry] = []
     dataset_signature: tuple[int, int] | None = None
@@ -111,17 +109,18 @@ def _load_blacklist(dataset_id: str) -> None:
     if blacklist_path:
         try:
             ds_raw = read_blacklist_payload(dataset_id)
-            for item in ds_raw.get(LEARNED_BLACKLIST_KEY, []):
-                if isinstance(item, dict) and item.get("name"):
-                    names.add(item["name"])
-                    entries.append(
-                        {
-                            "name": str(item.get("name", "")).strip(),
-                            "field_type": str(item.get("field_type", "")).strip().upper(),
-                            "template_stage": str(item.get("template_stage", "")).strip().lower(),
-                            "template_family": str(item.get("template_family", "")).strip().lower(),
-                        }
-                    )
+            entries.extend(
+                {
+                    "name": str(item.get("name", "")).strip(),
+                    "field_type": str(item.get("field_type", "")).strip().upper(),
+                    "template_stage": str(item.get("template_stage", "")).strip().lower(),
+                    "template_family": str(item.get("template_family", "")).strip().lower(),
+                }
+                for item in ds_raw.get(LEARNED_BLACKLIST_KEY, [])
+                if isinstance(item, dict)
+                and item.get("name")
+                and (item.get("template_stage") or item.get("template_family"))
+            )
             for rule in ds_raw.get(PATTERN_RULES_KEY, []):
                 if isinstance(rule, dict):
                     normalized_rule = _normalize_pattern_rule(rule)
@@ -134,7 +133,6 @@ def _load_blacklist(dataset_id: str) -> None:
             )
 
     _BLACKLIST_CACHE[dataset_id] = {
-        "names": names,
         "pattern_rules": pattern_rules,
         "entries": entries,
         "dataset_path": blacklist_path,
@@ -146,7 +144,6 @@ def runtime_blacklist_match_reason(
     template_name: str,
     expression: str = "",
     *,
-    template_metadata: TemplateMetadata | None = None,
     dataset_id: str = "",
     policy: BlacklistRuntimePolicy | None = None,
     current_field_type: str = "",
@@ -163,7 +160,6 @@ def runtime_blacklist_match_reason(
         current_field_type=current_field_type,
         current_family=current_family,
         current_stage=current_stage,
-        has_runtime_context=bool(template_metadata or expression),
         protected_templates=set(protected_templates),
     )
 
@@ -172,7 +168,6 @@ def is_blacklisted_template(
     template_name: str,
     expression: str = "",
     *,
-    template_metadata: TemplateMetadata | None = None,
     dataset_id: str = "",
     policy: BlacklistRuntimePolicy | None = None,
     current_field_type: str = "",
@@ -184,7 +179,6 @@ def is_blacklisted_template(
         runtime_blacklist_match_reason(
             template_name,
             expression,
-            template_metadata=template_metadata,
             dataset_id=dataset_id,
             policy=policy,
             current_field_type=current_field_type,
@@ -203,7 +197,6 @@ def blacklist_match_reason(
     current_field_type: str,
     current_family: str,
     current_stage: str,
-    has_runtime_context: bool,
     protected_templates: set[str],
 ) -> str | None:
     """返回命中的黑名单原因；未命中则返回 None。"""
@@ -212,7 +205,6 @@ def blacklist_match_reason(
     if dataset_id:
         _load_blacklist(dataset_id)
         cached = _BLACKLIST_CACHE.get(dataset_id, {})
-        matched_legacy_name = False
         for entry in cached.get("entries", []):
             if not isinstance(entry, dict) or entry.get("name") != template_name:
                 continue
@@ -233,9 +225,6 @@ def blacklist_match_reason(
                 if current_family and current_family == entry_family:
                     return "name+family"
                 continue
-            matched_legacy_name = True
-        if matched_legacy_name and not has_runtime_context:
-            return "legacy_name_only"
         for rule in cached.get("pattern_rules", []):
             if isinstance(rule, dict) and _match_pattern_rule(template_name, expression, rule):
                 return f"pattern:{rule.get('target', 'expression')}:{rule.get('type', 'contains')}"

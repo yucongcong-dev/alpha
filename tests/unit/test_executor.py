@@ -420,7 +420,7 @@ def test_print_dry_run_plan_counts_only_actionable_fields(caplog) -> None:
     assert "[dry-run] explain_templates name_filter=0 feedback=0 family=0 history=0" in messages
     assert (
         "[dry-run] explain_blacklist name_stage=0 name_stage_family=0 "
-        "name_family=0 legacy_name_only=0 pattern_expression=0 "
+        "name_family=0 pattern_expression=0 "
         "pattern_template_name=0 other=0"
     ) in messages
     assert (

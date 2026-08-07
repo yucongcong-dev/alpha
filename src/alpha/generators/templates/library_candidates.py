@@ -58,7 +58,6 @@ def build_library_candidates(
         reason = runtime_blacklist_match_reason(
             item.name,
             item.expression,
-            template_metadata=metadata,
             policy=policy,
             current_field_type=field_type,
             current_family=classify_expression_family(item.name, item.expression, metadata),

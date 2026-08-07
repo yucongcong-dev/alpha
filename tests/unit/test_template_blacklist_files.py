@@ -78,9 +78,7 @@ def test_blacklist_prefers_name_and_stage_over_name_only(monkeypatch, tmp_path) 
     )
 
 
-def test_legacy_blacklist_name_only_only_applies_without_runtime_metadata(
-    monkeypatch, tmp_path
-) -> None:
+def test_blacklist_name_only_entry_is_ignored(monkeypatch, tmp_path) -> None:
     blacklist_file = tmp_path / "datasets" / "custom_ds" / "blacklist.json"
     blacklist_file.parent.mkdir(parents=True)
     blacklist_file.write_text(
@@ -96,7 +94,7 @@ def test_legacy_blacklist_name_only_only_applies_without_runtime_metadata(
     monkeypatch.chdir(tmp_path)
     invalidate_blacklist_cache()
 
-    assert _is_blacklisted_template("legacy_template", dataset_id="custom_ds")
+    assert not _is_blacklisted_template("legacy_template", dataset_id="custom_ds")
     assert not _is_blacklisted_template(
         "legacy_template",
         "rank(close)",
