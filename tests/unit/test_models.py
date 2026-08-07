@@ -9,6 +9,7 @@ from types import SimpleNamespace
 import pytest
 
 from alpha.config.application import ApplicationConfig
+from alpha.config.application_sections import ExecutionConfig, QualityConfig
 from alpha.models.domain import FailedCheck, FieldTestContext, FieldTestResult
 from alpha.models.domain_serializers import serialize_field_test_result
 from alpha.models.io_types import RunFilters, RunPaths
@@ -185,6 +186,42 @@ class TestRuntimeOptionBuilders:
         assert options.simulation_stage.simulation_max_wait_seconds == 0.5
         assert options.simulation_stage.simulation_max_queue_seconds == 0.75
         assert options.simulation_stage.min_sharpe == 1.5
+
+
+@pytest.mark.parametrize(
+    ("field_name", "value", "message"),
+    [
+        ("queue_busy_retry_limit", -1, "cannot be negative"),
+        ("simulation_max_polls", 0, "must be positive"),
+        ("simulation_max_wait_seconds", float("nan"), "must be finite"),
+        ("max_concurrent_simulations", 0, "must be positive"),
+    ],
+)
+def test_execution_config_rejects_invalid_numeric_ranges(
+    field_name: str,
+    value: int | float,
+    message: str,
+) -> None:
+    with pytest.raises(ValueError, match=message):
+        ExecutionConfig.from_args(SimpleNamespace(**{field_name: value}))
+
+
+@pytest.mark.parametrize(
+    ("field_name", "value", "message"),
+    [
+        ("min_sharpe", -0.1, "cannot be negative"),
+        ("max_turnover", 0.0, "must be positive"),
+        ("max_weight", 2.0, "at most 1"),
+        ("max_weight", float("inf"), "must be finite"),
+    ],
+)
+def test_quality_config_rejects_invalid_numeric_ranges(
+    field_name: str,
+    value: float,
+    message: str,
+) -> None:
+    with pytest.raises(ValueError, match=message):
+        QualityConfig.from_args(SimpleNamespace(**{field_name: value}))
 
 
 # ============================================================================

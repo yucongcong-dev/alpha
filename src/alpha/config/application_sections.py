@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import math
 from typing import Any
 
 from .strategy_profiles import normalize_strategy_profile
@@ -131,6 +132,54 @@ class ExecutionConfig:
     queue_busy_retry_limit: int
     check_submission_retries: int
 
+    def __post_init__(self) -> None:
+        numeric_values = {
+            field_name: getattr(self, field_name)
+            for field_name in (
+                "min_request_interval",
+                "rate_limit_max_retries",
+                "login_retries",
+                "simulation_create_retries",
+                "simulation_poll_retries",
+                "max_concurrent_simulations",
+                "max_concurrent_creates",
+                "simulation_max_polls",
+                "simulation_max_wait_seconds",
+                "simulation_max_pending_cycles",
+                "simulation_max_queue_seconds",
+                "queue_busy_cooldown_seconds",
+                "queue_busy_retry_limit",
+                "check_submission_retries",
+            )
+        }
+        for field_name, value in numeric_values.items():
+            if not math.isfinite(value):
+                raise ValueError(f"{field_name} must be finite")
+
+        for field_name in (
+            "min_request_interval",
+            "rate_limit_max_retries",
+            "login_retries",
+            "simulation_create_retries",
+            "simulation_poll_retries",
+            "queue_busy_cooldown_seconds",
+            "queue_busy_retry_limit",
+            "check_submission_retries",
+        ):
+            if numeric_values[field_name] < 0:
+                raise ValueError(f"{field_name} cannot be negative")
+
+        for field_name in (
+            "max_concurrent_simulations",
+            "max_concurrent_creates",
+            "simulation_max_polls",
+            "simulation_max_wait_seconds",
+            "simulation_max_pending_cycles",
+            "simulation_max_queue_seconds",
+        ):
+            if numeric_values[field_name] <= 0:
+                raise ValueError(f"{field_name} must be positive")
+
     @classmethod
     def from_args(cls, args: object) -> ExecutionConfig:
         return cls(
@@ -139,17 +188,17 @@ class ExecutionConfig:
             login_retries=int(_value(args, "login_retries", 0) or 0),
             simulation_create_retries=int(_value(args, "simulation_create_retries", 0) or 0),
             simulation_poll_retries=int(_value(args, "simulation_poll_retries", 0) or 0),
-            max_concurrent_simulations=int(_value(args, "max_concurrent_simulations", 0) or 0),
-            max_concurrent_creates=int(_value(args, "max_concurrent_creates", 0) or 0),
-            simulation_max_polls=int(_value(args, "simulation_max_polls", 0) or 0),
+            max_concurrent_simulations=int(_value(args, "max_concurrent_simulations", 1) or 0),
+            max_concurrent_creates=int(_value(args, "max_concurrent_creates", 1) or 0),
+            simulation_max_polls=int(_value(args, "simulation_max_polls", 1) or 0),
             simulation_max_wait_seconds=float(
-                _value(args, "simulation_max_wait_seconds", 0.0) or 0.0
+                _value(args, "simulation_max_wait_seconds", 1.0) or 0.0
             ),
             simulation_max_pending_cycles=int(
-                _value(args, "simulation_max_pending_cycles", 0) or 0
+                _value(args, "simulation_max_pending_cycles", 1) or 0
             ),
             simulation_max_queue_seconds=float(
-                _value(args, "simulation_max_queue_seconds", 0.0) or 0.0
+                _value(args, "simulation_max_queue_seconds", 1.0) or 0.0
             ),
             queue_busy_cooldown_seconds=float(
                 _value(args, "queue_busy_cooldown_seconds", 0.0) or 0.0
@@ -168,8 +217,25 @@ class QualityConfig:
     max_weight: float
 
     def __post_init__(self) -> None:
-        if self.max_turnover > 0 and self.min_turnover > self.max_turnover:
+        for field_name in (
+            "min_sharpe",
+            "min_fitness",
+            "min_turnover",
+            "max_turnover",
+            "max_weight",
+        ):
+            value = getattr(self, field_name)
+            if not math.isfinite(value):
+                raise ValueError(f"{field_name} must be finite")
+        for field_name in ("min_sharpe", "min_fitness", "min_turnover"):
+            if getattr(self, field_name) < 0:
+                raise ValueError(f"{field_name} cannot be negative")
+        if self.max_turnover <= 0:
+            raise ValueError("max_turnover must be positive")
+        if self.min_turnover > self.max_turnover:
             raise ValueError("min_turnover cannot exceed max_turnover")
+        if not 0 < self.max_weight <= 1:
+            raise ValueError("max_weight must be greater than 0 and at most 1")
 
     @classmethod
     def from_args(cls, args: object) -> QualityConfig:
@@ -177,8 +243,8 @@ class QualityConfig:
             min_sharpe=float(_value(args, "min_sharpe", 0.0) or 0.0),
             min_fitness=float(_value(args, "min_fitness", 0.0) or 0.0),
             min_turnover=float(_value(args, "min_turnover", 0.0) or 0.0),
-            max_turnover=float(_value(args, "max_turnover", 0.0) or 0.0),
-            max_weight=float(_value(args, "max_weight", 0.0) or 0.0),
+            max_turnover=float(_value(args, "max_turnover", 1.0) or 0.0),
+            max_weight=float(_value(args, "max_weight", 1.0) or 0.0),
         )
 
 
