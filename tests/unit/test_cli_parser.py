@@ -120,35 +120,19 @@ dataset_profiles:
     assert parse_args().page_size == 30
 
 
-@pytest.mark.parametrize(
-    "option",
-    ["--queue-busy-retry-limit", "--field-queue-busy-skip-after"],
-)
-def test_queue_busy_retry_limit_accepts_new_and_legacy_cli_names(monkeypatch, option) -> None:
-    monkeypatch.setattr(sys, "argv", ["alpha", option, "7"])
+def test_queue_busy_retry_limit_accepts_canonical_cli_name(monkeypatch) -> None:
+    monkeypatch.setattr(sys, "argv", ["alpha", "--queue-busy-retry-limit", "7"])
 
     args = parse_args()
 
     assert args.queue_busy_retry_limit == 7
-    assert not hasattr(args, "field_queue_busy_skip_after")
 
 
-def test_legacy_yaml_queue_busy_limit_maps_to_candidate_retry_limit(monkeypatch, tmp_path) -> None:
-    clear_yaml_cache()
-    config_path = tmp_path / "settings.yaml"
-    config_path.write_text(
-        """
-global:
-  retries:
-    field_queue_busy_skip_after: 9
-""".strip(),
-        encoding="utf-8",
-    )
-    monkeypatch.setattr(sys, "argv", ["alpha", "--config", str(config_path)])
+def test_queue_busy_retry_limit_rejects_removed_cli_alias(monkeypatch) -> None:
+    monkeypatch.setattr(sys, "argv", ["alpha", "--field-queue-busy-skip-after", "7"])
 
-    args = parse_args()
-
-    assert args.queue_busy_retry_limit == 9
+    with pytest.raises(SystemExit):
+        parse_args()
 
 
 def test_max_trade_respects_cli_over_yaml_precedence(monkeypatch, tmp_path) -> None:

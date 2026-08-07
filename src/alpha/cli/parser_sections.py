@@ -261,11 +261,9 @@ def add_api_runtime_arguments(parser: argparse.ArgumentParser) -> None:
     )
     parser.add_argument(
         "--queue-busy-retry-limit",
-        "--field-queue-busy-skip-after",
-        dest="queue_busy_retry_limit",
         type=int,
         default=2,
-        help="单候选队列拥塞重试上限；0 表示不限制（旧参数名仍兼容）",
+        help="单候选队列拥塞重试上限；0 表示不限制",
     )
     parser.add_argument(
         "--check-submission-retries",

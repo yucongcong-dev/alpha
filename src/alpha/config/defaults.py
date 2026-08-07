@@ -119,17 +119,6 @@ def apply_yaml_global_defaults(
         },
         explicit_cli_keys,
     )
-    if (
-        isinstance(global_cfg.get("retries"), dict)
-        and "queue_busy_retry_limit" not in global_cfg["retries"]
-        and "field_queue_busy_skip_after" in global_cfg["retries"]
-    ):
-        _assign_if_supported(
-            args,
-            "queue_busy_retry_limit",
-            global_cfg["retries"]["field_queue_busy_skip_after"],
-            explicit_cli_keys,
-        )
 
     _merge_section(
         args,
