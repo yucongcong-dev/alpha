@@ -27,6 +27,7 @@ tmp/
 scratch/
 tmp_*.txt
 tmp_*.json
+scripts/_tmp_*.py
 
 # Legacy patterns (for backward compatibility)
 worldquant_brain_credentials.json
