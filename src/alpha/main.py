@@ -71,6 +71,13 @@ def run_dry_run_plan(config: ApplicationConfig) -> bool:
     return plan(config)
 
 
+def run_lifecycle_lock(config: ApplicationConfig):
+    """Acquire exclusive ownership of the live run output."""
+    from .app.run_lock import exclusive_run_lock
+
+    return exclusive_run_lock(config.paths.output)
+
+
 def run_field_test_loop(config: ApplicationConfig, run_ctx: InitializedRunContext) -> None:
     from .app.run_loop import run_field_test_loop as run
 
@@ -103,15 +110,16 @@ def main() -> int:
     if config.planning.dry_run_plan:
         return 0 if run_dry_run_plan(config) else 1
 
-    init_result = initialize_run_context(config)
-    if init_result is None:
-        return 1
+    with run_lifecycle_lock(config):
+        init_result = initialize_run_context(config)
+        if init_result is None:
+            return 1
 
-    try:
-        run_field_test_loop(config, init_result)
-        finalize_run(config, init_result)
-    finally:
-        init_result.client_factory.close()
+        try:
+            run_field_test_loop(config, init_result)
+            finalize_run(config, init_result)
+        finally:
+            init_result.client_factory.close()
     return 0
 
 

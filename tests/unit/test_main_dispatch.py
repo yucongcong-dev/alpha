@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from contextlib import nullcontext
 import os
 from pathlib import Path
 import subprocess
@@ -14,6 +15,7 @@ import alpha.main as main_module
 
 def _disable_logging_setup(monkeypatch) -> None:
     monkeypatch.setattr(main_module, "configure_application_logging", lambda _config: None)
+    monkeypatch.setattr(main_module, "run_lifecycle_lock", lambda _config: nullcontext())
 
 
 def _config(*, paths: object, dry_run_plan: bool) -> SimpleNamespace:
@@ -100,6 +102,7 @@ def test_main_routes_dry_run_around_runtime_bootstrap_and_finalize(monkeypatch) 
     monkeypatch.setattr(main_module, "initialize_run_context", _unexpected)
     monkeypatch.setattr(main_module, "run_field_test_loop", _unexpected)
     monkeypatch.setattr(main_module, "finalize_run", _unexpected)
+    monkeypatch.setattr(main_module, "run_lifecycle_lock", _unexpected)
 
     assert main_module.main() == 0
 
@@ -116,6 +119,15 @@ def test_main_runs_runtime_pipeline_and_closes_client_factory(monkeypatch) -> No
         calls.append("close")
 
     client_factory.close = _close
+
+    class RecordingLock:
+        def __enter__(self):
+            calls.append("lock")
+
+        def __exit__(self, *_args: object) -> None:
+            calls.append("unlock")
+
+    monkeypatch.setattr(main_module, "run_lifecycle_lock", lambda _config: RecordingLock())
     monkeypatch.setattr(main_module, "parse_application_config", lambda: config)
     monkeypatch.setattr(
         main_module,
@@ -134,7 +146,7 @@ def test_main_runs_runtime_pipeline_and_closes_client_factory(monkeypatch) -> No
     )
 
     assert main_module.main() == 0
-    assert calls == ["initialize", "run", "finalize", "close"]
+    assert calls == ["lock", "initialize", "run", "finalize", "close", "unlock"]
 
 
 def test_main_closes_client_factory_when_runtime_pipeline_fails(monkeypatch) -> None:

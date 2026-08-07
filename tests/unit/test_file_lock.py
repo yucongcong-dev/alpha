@@ -2,8 +2,13 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterator
+from contextlib import contextmanager
 from types import SimpleNamespace
 
+import pytest
+
+import alpha.app.run_lock as run_lock
 import alpha.io.file_lock as file_lock
 
 
@@ -69,3 +74,71 @@ def test_exclusive_file_lock_uses_windows_byte_lock(monkeypatch, tmp_path) -> No
         assert calls[-1] == (fake_msvcrt.LK_LOCK, 1)
 
     assert calls[-1] == (fake_msvcrt.LK_UNLCK, 1)
+
+
+def test_exclusive_file_lock_uses_nonblocking_posix_mode(monkeypatch, tmp_path) -> None:
+    monkeypatch.setattr(file_lock.os, "name", "posix")
+    calls: list[int] = []
+    fake_fcntl = SimpleNamespace(
+        LOCK_EX=1,
+        LOCK_NB=4,
+        LOCK_UN=2,
+        flock=lambda _fd, operation: calls.append(operation),
+    )
+    monkeypatch.setattr(file_lock, "import_module", lambda _name: fake_fcntl)
+
+    with file_lock.exclusive_file_lock(str(tmp_path / "result.lock"), blocking=False):
+        pass
+
+    assert calls == [fake_fcntl.LOCK_EX | fake_fcntl.LOCK_NB, fake_fcntl.LOCK_UN]
+
+
+def test_exclusive_file_lock_reports_nonblocking_contention(monkeypatch, tmp_path) -> None:
+    monkeypatch.setattr(file_lock.os, "name", "posix")
+
+    def fail_to_lock(_fd: int, _operation: int) -> None:
+        raise BlockingIOError("busy")
+
+    fake_fcntl = SimpleNamespace(
+        LOCK_EX=1,
+        LOCK_NB=4,
+        LOCK_UN=2,
+        flock=fail_to_lock,
+    )
+    monkeypatch.setattr(file_lock, "import_module", lambda _name: fake_fcntl)
+
+    with (
+        pytest.raises(file_lock.FileLockUnavailableError, match="already held"),
+        file_lock.exclusive_file_lock(str(tmp_path / "result.lock"), blocking=False),
+    ):
+        pass
+
+
+def test_exclusive_run_lock_uses_output_scoped_nonblocking_lock(monkeypatch, tmp_path) -> None:
+    captured: dict[str, object] = {}
+
+    @contextmanager
+    def fake_lock(path: str, *, blocking: bool) -> Iterator[None]:
+        captured.update(path=path, blocking=blocking)
+        yield
+
+    monkeypatch.setattr(run_lock, "exclusive_file_lock", fake_lock)
+    output_path = str(tmp_path / "summary.json")
+
+    with run_lock.exclusive_run_lock(output_path):
+        pass
+
+    assert captured == {"path": f"{output_path}.run.lock", "blocking": False}
+
+
+def test_exclusive_run_lock_explains_contention(monkeypatch, tmp_path) -> None:
+    def fail_to_lock(*_args: object, **_kwargs: object) -> None:
+        raise file_lock.FileLockUnavailableError("busy")
+
+    monkeypatch.setattr(run_lock, "exclusive_file_lock", fail_to_lock)
+
+    with (
+        pytest.raises(RuntimeError, match="different --run-name"),
+        run_lock.exclusive_run_lock(str(tmp_path / "summary.json")),
+    ):
+        pass
