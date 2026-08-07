@@ -13,6 +13,7 @@ from ..config._constants_strings import STATUS_SKIPPED
 from ..exceptions import BrainStopRequested
 from ..generators.payload import build_simulation_payload
 from ..models.domain import FieldTestContext, FieldTestResult, SettingsVariant
+from ..models.domain_serializers import serialize_settings_variant
 from ..models.runtime_config import SimulationStageConfig
 from ..models.runtime_protocols import SemaphoreLike
 from .simulation_results import handle_stage_error
@@ -28,7 +29,7 @@ def _serialize_settings_overrides(
     """Serialize the optional settings variant used for this simulation."""
     if simulation_settings is None:
         return {}
-    return simulation_settings.to_dict()
+    return serialize_settings_variant(simulation_settings)
 
 
 def create_simulation_with_retry(

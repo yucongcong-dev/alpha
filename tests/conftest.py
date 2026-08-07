@@ -11,7 +11,7 @@ from typing import Any
 
 import pytest
 
-from alpha.models.domain import FieldTestContext, FieldTestResult
+from alpha.models.domain import FailedCheck, FieldTestContext, FieldTestResult
 from alpha.runtime.concurrency import RuntimeConcurrencyState
 from alpha.runtime.state import ExecutionState
 
@@ -197,7 +197,7 @@ def failed_field_test_result() -> FieldTestResult:
         expression="rank(ts_mean(sales, 20))",
         submittable=False,
         failed_checks=[
-            {"name": "LOW_SHARPE", "value": -0.1},
-            {"name": "LOW_FITNESS", "value": -0.2},
+            FailedCheck(name="LOW_SHARPE", value=-0.1),
+            FailedCheck(name="LOW_FITNESS", value=-0.2),
         ],
     )

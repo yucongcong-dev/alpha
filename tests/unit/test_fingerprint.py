@@ -36,16 +36,11 @@ def test_fingerprint_serializes_domain_models() -> None:
     assert len(set(fingerprints)) == len(objects)
 
 
-def test_fingerprint_supports_to_dict_and_generic_dataclass() -> None:
-    class _Convertible:
-        def to_dict(self) -> dict[str, int]:
-            return {"value": 1}
-
+def test_fingerprint_supports_generic_dataclass() -> None:
     @dataclass
     class _Record:
         value: int
 
-    assert stable_fingerprint(_Convertible()) == stable_fingerprint({"value": 1})
     assert stable_fingerprint(_Record(1)) == stable_fingerprint({"value": 1})
 
 

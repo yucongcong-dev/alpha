@@ -5,7 +5,7 @@ from __future__ import annotations
 from alpha.config.models import DatasetExpressionPolicy, FeedbackLoopPolicy, FeedbackPhasePolicy
 import alpha.core.template_planning as template_planning
 from alpha.core.template_planning import build_pending_template_variants
-from alpha.models.domain import TemplateCandidate
+from alpha.models.domain import TemplateCandidate, TemplateField
 from alpha.models.runtime_options import TemplateBuildOptions
 from alpha.runtime.contexts import TemplateBuildContext
 
@@ -22,6 +22,14 @@ _DEFAULT_SIM_SETTINGS = {
     "nan_handling": "OFF",
     "language": "FASTEXPR",
 }
+
+
+def _field() -> TemplateField:
+    return TemplateField(
+        field_id="cash_st",
+        field_name="cash_st",
+        field_type="MATRIX",
+    )
 
 
 def test_low_level_planning_services_read_current_module_dependencies(monkeypatch) -> None:
@@ -47,7 +55,7 @@ def test_preset_mode_limits_settings_variants_to_baseline() -> None:
     )
     pending = build_pending_template_variants(
         build_ctx,
-        {"id": "cash_st", "type": "MATRIX"},
+        _field(),
         templates=[
             TemplateCandidate(
                 name="manual_group_rank",
@@ -80,7 +88,7 @@ def test_resimulate_budget_prioritizes_decay_variants() -> None:
     )
     pending = build_pending_template_variants(
         build_ctx,
-        {"id": "cash_st", "type": "MATRIX"},
+        _field(),
         templates=[
             TemplateCandidate(
                 name="manual_group_rank",
@@ -95,7 +103,7 @@ def test_resimulate_budget_prioritizes_decay_variants() -> None:
     )
 
     assert len(pending) == 3
-    assert {entry.settings_variant.get("decay") for entry in pending} == {2, 4, 6}
+    assert {entry.settings_variant.decay for entry in pending} == {2, 4, 6}
 
 
 def test_resimulate_budget_can_include_full_settings_variant_set() -> None:
@@ -114,7 +122,7 @@ def test_resimulate_budget_can_include_full_settings_variant_set() -> None:
     )
     pending = build_pending_template_variants(
         build_ctx,
-        {"id": "cash_st", "type": "MATRIX"},
+        _field(),
         templates=[
             TemplateCandidate(
                 name="manual_group_rank",
@@ -129,6 +137,6 @@ def test_resimulate_budget_can_include_full_settings_variant_set() -> None:
     )
 
     assert len(pending) == 5
-    assert {entry.settings_variant.get("decay") for entry in pending} == {2, 4, 6}
-    assert any(entry.settings_variant.get("truncation") == 0.05 for entry in pending)
-    assert any(entry.settings_variant.get("neutralization") == "INDUSTRY" for entry in pending)
+    assert {entry.settings_variant.decay for entry in pending} == {2, 4, 6}
+    assert any(entry.settings_variant.truncation == 0.05 for entry in pending)
+    assert any(entry.settings_variant.neutralization == "INDUSTRY" for entry in pending)

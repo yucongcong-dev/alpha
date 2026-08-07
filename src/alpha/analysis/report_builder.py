@@ -16,9 +16,8 @@ from ..models.domain import (
     FieldTestResult,
     ResultRow,
     SummaryPayload,
-    serialize_failed_check,
 )
-from ..models.domain_serializers import serialize_field_test_result
+from ..models.domain_serializers import serialize_failed_check, serialize_field_test_result
 from ..models.result_predicates import has_pending_checks, is_queue_timeout_result
 from .failed_checks import (
     compile_failed_check_leaderboard,

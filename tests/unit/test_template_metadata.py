@@ -28,7 +28,7 @@ def test_similarity_penalty_uses_metadata_family() -> None:
         metadata_by_key={("custom_template", "rank(close)"): {"family": "legacy_ratio"}},
     )
 
-    assert penalized[0][2] == 80
+    assert penalized[0].priority == 80
 
 
 def test_cap_templates_per_family_uses_metadata_family() -> None:
@@ -47,7 +47,7 @@ def test_cap_templates_per_family_uses_metadata_family() -> None:
         },
     )
 
-    assert [name for name, _, _ in capped] == ["template_a", "template_b"]
+    assert [candidate.name for candidate in capped] == ["template_a", "template_b"]
 
 
 def test_classify_template_stage_prefers_explicit_metadata() -> None:

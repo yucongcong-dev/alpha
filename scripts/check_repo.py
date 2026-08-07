@@ -125,6 +125,9 @@ def removed_compat_file_check(root: Path) -> list[str]:
     domain_conversion = root / "src" / "alpha" / "models" / "domain_conversion.py"
     if domain_conversion.is_file():
         removed.append(domain_conversion)
+    domain_codecs = root / "src" / "alpha" / "models" / "domain_codecs.py"
+    if domain_codecs.is_file():
+        removed.append(domain_codecs)
     models_runtime = root / "src" / "alpha" / "models" / "runtime.py"
     if models_runtime.is_file():
         removed.append(models_runtime)
@@ -260,7 +263,6 @@ def todo_check(root: Path) -> list[str]:
     return []
 
 
-
 def strategy_tuning_keys_check(root: Path) -> list[str]:
     """Validate that every tuning_key in strategy_profiles.yaml resolves to a real config path."""
     import yaml  # delayed import to keep check_repo.py self-contained for non-yaml checks
@@ -307,7 +309,7 @@ def strategy_tuning_keys_check(root: Path) -> list[str]:
         return keys
 
     all_config_keys: set[str] = set()
-    for name, data in merged.items():
+    for data in merged.values():
         all_config_keys.update(_flatten(data))
 
     for profile_name, profile in strategies.get("strategy_profiles", {}).items():
@@ -324,7 +326,9 @@ def strategy_tuning_keys_check(root: Path) -> list[str]:
                 # The lookup logic mirrors _yaml_val: global.<key> first, then flat <key>
                 if key in all_config_keys:
                     continue
-                if any(k.endswith(f".{key}") or k.endswith(f".global.{key}") for k in all_config_keys):
+                if any(
+                    k.endswith(f".{key}") or k.endswith(f".global.{key}") for k in all_config_keys
+                ):
                     continue
                 # Also check as a sub-path (e.g. quality.min_sharpe might be quality_feedback.quality.min_sharpe)
                 found = False

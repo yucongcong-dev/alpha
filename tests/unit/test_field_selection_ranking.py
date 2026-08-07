@@ -193,7 +193,7 @@ def test_submittable_feedback_is_promising_even_after_single_attempt() -> None:
         selection_options=FieldSelectionOptions(limit=0, offset=0, top_fields_by_feedback=0),
     )
 
-    assert selected[0].get("selection_reason") == "historical_promising"
+    assert selected[0].metadata.get("selection_reason") == "historical_promising"
 
 
 def test_unknown_field_metadata_is_retained_without_affecting_rank_score() -> None:
@@ -222,7 +222,7 @@ def test_unknown_field_metadata_is_retained_without_affecting_rank_score() -> No
     assert stats["unknown_date_coverage_count"] == 1
     assert stats["unknown_alpha_count"] == 1
     assert stats["unknown_user_count"] == 1
-    scores = {row.field_id: row.get("selection_score") for row in selected}
+    scores = {row.field_id: row.metadata.get("selection_score") for row in selected}
     assert scores["metadata_missing"] == scores["complete_signal"] == 0.0
 
 
@@ -257,7 +257,7 @@ def test_single_attempt_feedback_is_not_pinned_as_promising() -> None:
         selection_options=FieldSelectionOptions(limit=0, offset=0, top_fields_by_feedback=0),
     )
 
-    reasons = {row.field_id: row.get("selection_reason") for row in selected}
+    reasons = {row.field_id: row.metadata.get("selection_reason") for row in selected}
     assert reasons["one_attempt"] == "historical_feedback"
 
 
@@ -289,7 +289,7 @@ def test_stale_feedback_is_decayed_before_promising_classification() -> None:
         selection_options=FieldSelectionOptions(limit=0, offset=0, top_fields_by_feedback=0),
     )
 
-    assert selected[0].get("selection_reason") == "historical_feedback"
+    assert selected[0].metadata.get("selection_reason") == "historical_feedback"
 
 
 def test_unknown_dataset_prefers_matrix_over_equivalent_vector() -> None:

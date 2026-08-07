@@ -74,12 +74,12 @@ def _finish_field_stats(
     stats["filtered_field_count"] = len(filtered_fields)
     stats["ranked_field_count"] = ranked_field_count
     stats["selected_family_count"] = len(
-        {str(field.get("selection_family", "")) for field in selected_fields}
+        {str(field.metadata.get("selection_family", "")) for field in selected_fields}
     )
     stats["selected_unexplored_count"] = sum(
         1
         for field in selected_fields
-        if str(field.get("selection_reason", "")).endswith("unexplored")
+        if str(field.metadata.get("selection_reason", "")).endswith("unexplored")
     )
     return stats
 

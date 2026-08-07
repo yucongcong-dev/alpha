@@ -178,7 +178,7 @@ def build_pending_templates_for_field(
         - 已尝试的键会被跳过
     """
     active_services = planning_services or build_template_planning_services()
-    field_id = str(first_non_empty(field.get("id"), SENTINEL_UNKNOWN))
+    field_id = str(first_non_empty(field.field_id, SENTINEL_UNKNOWN))
     field_name = choose_field_name(field)
     field_type = choose_field_type(field)
     templates, field_feedback, expression_policy = resolve_field_template_candidates(

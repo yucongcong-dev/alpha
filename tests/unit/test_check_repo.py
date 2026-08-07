@@ -65,6 +65,19 @@ def test_removed_compat_file_check_rejects_domain_conversion_facade(tmp_path: Pa
     assert any("src/alpha/models/domain_conversion.py" in error for error in errors)
 
 
+def test_removed_compat_file_check_rejects_domain_codecs_layer(tmp_path: Path) -> None:
+    app_dir = tmp_path / "src" / "alpha" / "app"
+    models_dir = tmp_path / "src" / "alpha" / "models"
+    app_dir.mkdir(parents=True)
+    models_dir.mkdir(parents=True)
+    (models_dir / "domain_codecs.py").write_text("", encoding="utf-8")
+
+    errors = check_repo.removed_compat_file_check(tmp_path)
+
+    assert any("compatibility aggregate files" in error for error in errors)
+    assert any("src/alpha/models/domain_codecs.py" in error for error in errors)
+
+
 def test_removed_compat_file_check_rejects_models_runtime_facade(tmp_path: Path) -> None:
     app_dir = tmp_path / "src" / "alpha" / "app"
     models_dir = tmp_path / "src" / "alpha" / "models"

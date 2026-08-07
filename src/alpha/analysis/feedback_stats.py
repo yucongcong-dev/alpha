@@ -65,7 +65,7 @@ def _update_latest_result_timestamp(summary: dict[str, Any], result: FieldTestRe
 def _increment_failed_check_counts(summary: dict[str, Any], result: FieldTestResult) -> None:
     counts = summary[STAT_FIELD_FAILED_CHECK_COUNTS]
     for check in result.failed_checks or []:
-        name = str(check.get("name", SENTINEL_UNKNOWN_CHECK))
+        name = check.name or SENTINEL_UNKNOWN_CHECK
         counts[name] = int(counts.get(name, 0) or 0) + 1
 
 
@@ -157,7 +157,7 @@ def update_global_failed_check_counts_with_result(
     if not is_feedback_eligible_result(result):
         return counts
     for check in result.failed_checks or []:
-        name = str(check.get("name", SENTINEL_UNKNOWN_CHECK))
+        name = check.name or SENTINEL_UNKNOWN_CHECK
         counts[name] = counts.get(name, 0) + 1
     return counts
 

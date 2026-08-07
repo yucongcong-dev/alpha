@@ -59,7 +59,7 @@ def should_skip_expression_by_history(
         failed_checks = result.failed_checks or []
         if not failed_checks:
             continue
-        values = {str(check.get("name")): check.get("value") for check in failed_checks}
+        values = {check.name: check.value for check in failed_checks}
         low_sharpe = values.get(CHECK_LOW_SHARPE)
         low_fitness = values.get(CHECK_LOW_FITNESS)
         if (

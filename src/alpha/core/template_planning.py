@@ -115,7 +115,7 @@ def _resolve_field_planning_policy(
 ) -> tuple[str, str, TemplateFeedback | None, DatasetExpressionPolicy]:
     """Resolve the stable policy inputs shared by candidate and variant planning."""
     options = build_ctx.options
-    field_id = str(first_non_empty(field.get("id"), SENTINEL_UNKNOWN))
+    field_id = str(first_non_empty(field.field_id, SENTINEL_UNKNOWN))
     field_name = choose_field_name(field)
     expression_policy = build_ctx.expression_policy or get_dataset_expression_policy(
         options.dataset_id

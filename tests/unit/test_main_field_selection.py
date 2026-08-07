@@ -127,7 +127,7 @@ def test_explicit_include_fields_bypass_metadata_filters_and_feedback_ranking() 
     )
 
     assert [row.field_id for row in selected] == ["manual_field"]
-    assert selected[0].get("selection_reason") == "explicit"
+    assert selected[0].metadata.get("selection_reason") == "explicit"
     assert stats["prefiltered_count"] == 1
     assert stats["low_coverage_count"] == 0
     assert stats["low_date_coverage_count"] == 0
@@ -205,7 +205,9 @@ def test_prepare_fields_for_execution_tags_model16_field_lanes() -> None:
         selection_options=args,
     )
 
-    tags_by_id = {row.field_id: tuple(row.get("runtime_field_tags", [])) for row in selected}
+    tags_by_id = {
+        row.field_id: tuple(row.metadata.get("runtime_field_tags", [])) for row in selected
+    }
     assert "model16_sparse_fscore" in tags_by_id["fscore_quality"]
     assert "model16_dense_derivative" in tags_by_id["analyst_revision_rank_derivative"]
     assert [row.field_id for row in selected] == [

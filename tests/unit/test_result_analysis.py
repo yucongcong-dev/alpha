@@ -20,9 +20,7 @@ def test_compile_template_stats_excludes_self_correlation_pending_results() -> N
                 status="simulated",
                 submittable=True,
                 expression="rank(field_pending)",
-                failed_checks=[
-                    {"name": "SELF_CORRELATION", "result": "PENDING", "value": None, "limit": None}
-                ],
+                failed_checks=[FailedCheck(name="SELF_CORRELATION", result="PENDING")],
             )
         ]
     )

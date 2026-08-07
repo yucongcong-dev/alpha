@@ -17,6 +17,7 @@ from ..config._constants_thresholds import (
     TRUNCATION_WEB_DEFAULT,
 )
 from ..models.domain import SettingsVariant
+from ..models.domain_parsers import parse_settings_variant
 from ..models.runtime_options import TemplateBuildOptions
 from .payload import build_simulation_payload
 
@@ -36,13 +37,13 @@ def build_setting_variants(
     """
     _ = template_name, field_feedback
     base_settings = build_simulation_payload(args, expression)["settings"]
-    variants: list[SettingsVariant] = [SettingsVariant.from_dict(dict(base_settings))]
+    variants: list[SettingsVariant] = [parse_settings_variant(dict(base_settings))]
     lower_expr = expression.lower()
 
     def add_variant(**updates: Any) -> None:
         candidate = dict(base_settings)
         candidate.update(updates)
-        casted = SettingsVariant.from_dict(candidate)
+        casted = parse_settings_variant(candidate)
         if casted not in variants:
             variants.append(casted)
 

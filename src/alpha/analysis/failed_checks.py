@@ -59,10 +59,10 @@ def _score_failed_checks_without_limits(checks: Sequence[FailedCheck]) -> float:
     score = 0.0
     counted = 0
     for check in checks:
-        value = check.get("value")
+        value = check.value
         if not isinstance(value, (int, float)):
             continue
-        name = str(check.get("name", SENTINEL_UNKNOWN_CHECK))
+        name = check.name or SENTINEL_UNKNOWN_CHECK
         counted += 1
         if name.startswith("LOW_"):
             score += max(float(value), 0.0)
@@ -75,8 +75,8 @@ def _score_failed_checks_without_limits(checks: Sequence[FailedCheck]) -> float:
 
 def failed_check_closeness(check: FailedCheck) -> float | None:
     """计算单个失败检查离通过阈值有多近，返回 0-1 左右的分数。"""
-    value = check.get("value")
-    limit = check.get("limit")
+    value = check.value
+    limit = check.limit
     if not isinstance(value, (int, float)) or not isinstance(limit, (int, float)):
         return None
     gap = failed_check_gap(check)
@@ -88,9 +88,9 @@ def failed_check_closeness(check: FailedCheck) -> float | None:
 
 def failed_check_gap(check: FailedCheck) -> float | None:
     """计算失败检查到阈值的原始差距，正数表示还差多少。"""
-    name = str(check.get("name", SENTINEL_UNKNOWN_CHECK))
-    value = check.get("value")
-    limit = check.get("limit")
+    name = check.name or SENTINEL_UNKNOWN_CHECK
+    value = check.value
+    limit = check.limit
     if not isinstance(value, (int, float)) or not isinstance(limit, (int, float)):
         return None
     if name.startswith("LOW_"):
@@ -101,9 +101,9 @@ def failed_check_gap(check: FailedCheck) -> float | None:
 def summarize_failed_check(check: FailedCheck) -> ResultRow:
     """把失败检查转换成适合分析排序的紧凑结构。"""
     return {
-        "name": check.get("name"),
-        "value": check.get("value"),
-        "limit": check.get("limit"),
+        "name": check.name,
+        "value": check.value,
+        "limit": check.limit,
         "gap": failed_check_gap(check),
         "closeness": failed_check_closeness(check),
     }
@@ -116,7 +116,7 @@ def compile_failed_check_leaderboard(results: Sequence[FieldTestResult]) -> list
         if not is_informative_result(result):
             continue
         for check in _confirmed_failed_checks(result):
-            name = str(check.get("name", SENTINEL_UNKNOWN_CHECK))
+            name = check.name or SENTINEL_UNKNOWN_CHECK
             row = grouped.setdefault(
                 name,
                 {
@@ -130,8 +130,8 @@ def compile_failed_check_leaderboard(results: Sequence[FieldTestResult]) -> list
                 },
             )
             row["count"] += 1
-            value = check.get("value")
-            limit = check.get("limit")
+            value = check.value
+            limit = check.limit
             gap = failed_check_gap(check)
             closeness = failed_check_closeness(check)
             if isinstance(value, (int, float)):

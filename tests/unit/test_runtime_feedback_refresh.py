@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from alpha.app.run_loop_feedback import refresh_runtime_feedback
-from alpha.models.domain import FieldTestResult
+from alpha.models.domain import FailedCheck, FieldTestResult
 from alpha.models.runtime_options import TemplateBuildOptions
 from alpha.runtime.contexts import TemplateBuildContext
 
@@ -36,7 +36,7 @@ def test_refresh_runtime_feedback_rebuilds_feedback_from_current_results() -> No
             status="simulated",
             submittable=False,
             expression="group_rank(ts_zscore(cash_st, 63), subindustry)",
-            failed_checks=[{"name": "LOW_SHARPE", "value": 0.9, "limit": 1.25}],
+            failed_checks=[FailedCheck(name="LOW_SHARPE", value=0.9, limit=1.25)],
         )
     ]
 
@@ -77,7 +77,7 @@ def test_refresh_runtime_feedback_preserves_seed_feedback_and_only_adds_new_resu
             status="simulated",
             submittable=False,
             expression="rank(existing_output_field)",
-            failed_checks=[{"name": "LOW_SHARPE", "value": 0.6, "limit": 1.25}],
+            failed_checks=[FailedCheck(name="LOW_SHARPE", value=0.6, limit=1.25)],
         ),
         FieldTestResult(
             field_id="new_field",
@@ -88,7 +88,7 @@ def test_refresh_runtime_feedback_preserves_seed_feedback_and_only_adds_new_resu
             status="simulated",
             submittable=False,
             expression="rank(new_field)",
-            failed_checks=[{"name": "LOW_SHARPE", "value": 0.9, "limit": 1.25}],
+            failed_checks=[FailedCheck(name="LOW_SHARPE", value=0.9, limit=1.25)],
         ),
     ]
 

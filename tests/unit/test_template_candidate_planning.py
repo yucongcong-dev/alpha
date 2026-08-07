@@ -8,11 +8,19 @@ from alpha.core.template_planning import (
     resolve_field_template_candidates,
 )
 from alpha.generators.payload import build_settings_fingerprint_from_payload
-from alpha.models.domain import TemplateCandidate
+from alpha.models.domain import TemplateCandidate, TemplateField
 from alpha.policy.expression import get_dataset_expression_policy
 from alpha.runtime.contexts import PendingFutureContext, TemplateBuildContext
 
 from .template_build_options_support import template_build_options
+
+
+def _field(field_id: str, field_type: str = "MATRIX") -> TemplateField:
+    return TemplateField(
+        field_id=field_id,
+        field_name=field_id,
+        field_type=field_type,
+    )
 
 
 def test_exploration_candidate_pool_is_not_limited_before_seed_selection() -> None:
@@ -58,7 +66,7 @@ def test_exploration_candidate_pool_is_not_limited_before_seed_selection() -> No
 
     resolve_field_template_candidates(
         build_ctx,
-        {"id": "new_signal", "type": "MATRIX", "name": "new_signal"},
+        _field("new_signal"),
         services=services,
     )
 
@@ -101,13 +109,7 @@ def test_build_pending_templates_skips_inflight_duplicate(monkeypatch) -> None:
     )
     build_ctx = TemplateBuildContext(
         options=options,
-        all_fields=[
-            {
-                "id": "unsystematic_risk_last_360_days",
-                "type": "MATRIX",
-                "name": "unsystematic_risk_last_360_days",
-            }
-        ],
+        all_fields=[_field("unsystematic_risk_last_360_days")],
         template_library={},
         use_dataset_heuristics=False,
         expression_policy=get_dataset_expression_policy("model51"),
@@ -128,11 +130,7 @@ def test_build_pending_templates_skips_inflight_duplicate(monkeypatch) -> None:
 
     pending, disabled, total = build_pending_templates_for_field(
         build_ctx,
-        {
-            "id": "unsystematic_risk_last_360_days",
-            "type": "MATRIX",
-            "name": "unsystematic_risk_last_360_days",
-        },
+        _field("unsystematic_risk_last_360_days"),
         attempted_keys=set(),
         prior_results=[],
         reserved_keys=inflight_template_keys(pending_futures),
@@ -188,7 +186,7 @@ def test_build_pending_templates_uses_explicit_template_role(
     )
     build_ctx = TemplateBuildContext(
         options=options,
-        all_fields=[{"id": "cash_st", "type": "VECTOR", "name": "cash_st"}],
+        all_fields=[_field("cash_st", "VECTOR")],
         field_feedback={"cash_st": {"attempted_templates": 1, "best_score": 0.0}},
         template_library={},
         use_dataset_heuristics=False,
@@ -197,7 +195,7 @@ def test_build_pending_templates_uses_explicit_template_role(
 
     pending, disabled, total = build_pending_templates_for_field(
         build_ctx,
-        {"id": "cash_st", "type": "VECTOR", "name": "cash_st"},
+        _field("cash_st", "VECTOR"),
         attempted_keys=set(),
         prior_results=[],
     )
@@ -248,7 +246,7 @@ def test_build_pending_templates_ignores_persisted_registry_recommendation(monke
     )
     build_ctx = TemplateBuildContext(
         options=options,
-        all_fields=[{"id": "cash_st", "type": "VECTOR", "name": "cash_st"}],
+        all_fields=[_field("cash_st", "VECTOR")],
         field_feedback={"cash_st": {"attempted_templates": 1, "best_score": 0.0}},
         template_library={},
         use_dataset_heuristics=False,
@@ -257,7 +255,7 @@ def test_build_pending_templates_ignores_persisted_registry_recommendation(monke
 
     pending, disabled, total = build_pending_templates_for_field(
         build_ctx,
-        {"id": "cash_st", "type": "VECTOR", "name": "cash_st"},
+        _field("cash_st", "VECTOR"),
         attempted_keys=set(),
         prior_results=[],
     )
@@ -321,7 +319,7 @@ def test_build_pending_templates_dedupes_same_expression_variant_across_template
     )
     build_ctx = TemplateBuildContext(
         options=options,
-        all_fields=[{"id": "cash_st", "type": "VECTOR", "name": "cash_st"}],
+        all_fields=[_field("cash_st", "VECTOR")],
         template_library={},
         use_dataset_heuristics=False,
         expression_policy=get_dataset_expression_policy("fundamental6"),
@@ -329,7 +327,7 @@ def test_build_pending_templates_dedupes_same_expression_variant_across_template
 
     pending, disabled, total = build_pending_templates_for_field(
         build_ctx,
-        {"id": "cash_st", "type": "VECTOR", "name": "cash_st"},
+        _field("cash_st", "VECTOR"),
         attempted_keys=set(),
         prior_results=[],
     )

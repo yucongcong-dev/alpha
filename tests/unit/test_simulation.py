@@ -366,7 +366,7 @@ class TestFieldTestContext:
         assert result.status == "simulated"
 
     def test_failure_with_failed_checks(self, basic_test_context: FieldTestContext) -> None:
-        checks = [{"name": "LOW_SHARPE", "value": 0.5, "limit": 1.0}]
+        checks = [FailedCheck(name="LOW_SHARPE", value=0.5, limit=1.0)]
         result = basic_test_context.failure(
             failed_stage="check_submission",
             message="checks failed",

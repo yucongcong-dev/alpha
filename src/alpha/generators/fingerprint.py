@@ -27,8 +27,6 @@ def _json_default(obj: Any) -> Any:
         return serialize_template_field(obj)
     if isinstance(obj, TemplateLibraryItem):
         return serialize_template_library_item(obj)
-    if hasattr(obj, "to_dict"):
-        return obj.to_dict()
     if hasattr(obj, "__dataclass_fields__"):
         import dataclasses
 

@@ -107,10 +107,10 @@ def field_with_runtime_metadata(
 
 def metadata_values(field: TemplateField) -> FieldMetadataValues:
     return FieldMetadataValues(
-        coverage=_optional_float(field.get("coverage")),
-        date_coverage=_optional_float(field.get("dateCoverage")),
-        alpha_count=_optional_int(field.get("alphaCount")),
-        user_count=_optional_int(field.get("userCount")),
+        coverage=_optional_float(field.metadata.get("coverage")),
+        date_coverage=_optional_float(field.metadata.get("dateCoverage")),
+        alpha_count=_optional_int(field.metadata.get("alphaCount")),
+        user_count=_optional_int(field.metadata.get("userCount")),
     )
 
 

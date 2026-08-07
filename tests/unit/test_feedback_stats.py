@@ -13,6 +13,7 @@ from alpha.analysis.feedback_stats import (
 from alpha.analysis.field_stats import decay_field_feedback, field_priority
 from alpha.config._constants_thresholds import STATS_DEFAULT_SCORE
 from alpha.models.domain import FieldTestResult
+from alpha.models.domain_parsers import coerce_failed_checks
 
 
 def _make_result(
@@ -34,7 +35,7 @@ def _make_result(
         expression=expression,
         status=status,
         submittable=submittable,
-        failed_checks=failed_checks or [],
+        failed_checks=coerce_failed_checks(failed_checks),
     )
 
 

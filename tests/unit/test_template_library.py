@@ -11,7 +11,7 @@ from alpha.exceptions import BrainAPIError
 from alpha.generators.expression_builder import build_expression_candidates
 from alpha.generators.templates.library_loader import load_template_library
 from alpha.generators.templates.library_store import ensure_dataset_template_library
-from alpha.models.domain import TemplateField
+from alpha.models.domain_parsers import parse_template_field
 from alpha.models.runtime_options import TemplateBuildOptions
 from alpha.runtime.contexts import TemplateBuildContext
 
@@ -122,7 +122,7 @@ def test_build_expression_candidates_respects_template_field_tags(tmp_path) -> N
         ),
         template_library=load_template_library(str(template_file), default_backfill_window=504),
     )
-    field = TemplateField.from_dict(
+    field = parse_template_field(
         {
             "id": "analyst_revision_rank_derivative",
             "type": "MATRIX",
@@ -186,7 +186,7 @@ def test_build_expression_candidates_skip_refine_only_templates_in_default_libra
         template_library_file=str(template_file),
         template_library=load_template_library(str(template_file), default_backfill_window=504),
     )
-    field = TemplateField.from_dict({"id": "cash_st", "type": "VECTOR"})
+    field = parse_template_field({"id": "cash_st", "type": "VECTOR"})
 
     candidates = build_expression_candidates(
         field,
@@ -246,7 +246,7 @@ def test_build_expression_candidates_include_refine_only_templates_in_explicit_p
         template_library_file=str(template_file),
         template_library=load_template_library(str(template_file), default_backfill_window=504),
     )
-    field = TemplateField.from_dict({"id": "cash_st", "type": "VECTOR"})
+    field = parse_template_field({"id": "cash_st", "type": "VECTOR"})
 
     candidates = build_expression_candidates(
         field,

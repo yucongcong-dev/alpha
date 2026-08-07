@@ -80,7 +80,9 @@ def build_task_commands(
         "compat-import": (CheckCommand((*py, "scripts/check_repo.py", "compat-import")),),
         "arch-boundary": (CheckCommand((*py, "scripts/check_repo.py", "arch-boundary")),),
         "todo": (CheckCommand((*py, "scripts/check_repo.py", "todo")),),
-        "strategy-tuning-keys": (CheckCommand((*py, "scripts/check_repo.py", "strategy-tuning-keys")),),
+        "strategy-tuning-keys": (
+            CheckCommand((*py, "scripts/check_repo.py", "strategy-tuning-keys")),
+        ),
         "config-sync": (CheckCommand((*py, "scripts/sync_config.py", "--check")),),
         "ruff": (CheckCommand((*ruff, "check", ".")),),
         "format": (CheckCommand((*ruff, "format", "--check", "src", "tests", "scripts")),),

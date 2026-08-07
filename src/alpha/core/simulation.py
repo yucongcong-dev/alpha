@@ -22,6 +22,7 @@ from ..models.domain import (
     SettingsVariant,
     TemplateField,
 )
+from ..models.domain_serializers import serialize_settings_variant
 from ..models.runtime_config import SimulationStageConfig
 from ..models.runtime_protocols import ClientFactoryLike, SemaphoreLike
 from ..runtime.contexts import PendingFutureContext
@@ -127,19 +128,25 @@ def run_field_test(
         raise ValueError("template_library_fingerprint cannot be empty")
 
     ctx = FieldTestContext(
-        field_id=str(first_non_empty(field.get("id"), SENTINEL_UNKNOWN)),
+        field_id=str(first_non_empty(field.field_id, SENTINEL_UNKNOWN)),
         field_type=choose_field_type(field),
-        field_name=str(first_non_empty(field.get("name"), field.get("id"), SENTINEL_UNKNOWN)),
+        field_name=str(first_non_empty(field.field_name, field.field_id, SENTINEL_UNKNOWN)),
         template_name=template_name,
-        template_family=str(first_non_empty(field.get("template_family"), "")),
-        template_stage=str(first_non_empty(field.get("template_stage"), "")),
-        template_role=str(first_non_empty(field.get("template_role"), "")),
-        template_activation_scope=str(first_non_empty(field.get("template_activation_scope"), "")),
-        policy_version=str(first_non_empty(field.get("policy_version"), "")),
+        template_family=str(first_non_empty(field.metadata.get("template_family"), "")),
+        template_stage=str(first_non_empty(field.metadata.get("template_stage"), "")),
+        template_role=str(first_non_empty(field.metadata.get("template_role"), "")),
+        template_activation_scope=str(
+            first_non_empty(field.metadata.get("template_activation_scope"), "")
+        ),
+        policy_version=str(first_non_empty(field.metadata.get("policy_version"), "")),
         expression=expression,
         settings_fingerprint=settings_fingerprint,
         template_library_fingerprint=template_library_fingerprint,
-        settings=simulation_settings.to_dict() if simulation_settings is not None else {},
+        settings=(
+            serialize_settings_variant(simulation_settings)
+            if simulation_settings is not None
+            else {}
+        ),
     )
 
     logger.info(

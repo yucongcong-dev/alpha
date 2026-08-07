@@ -145,7 +145,7 @@ def schedule_field_round(
     execution_state = run_ctx.execution_state
     runtime_state = run_ctx.runtime_state
     result_ledger = execution_state.result_ledger
-    field_id = str(first_non_empty(field.get("id"), SENTINEL_UNKNOWN))
+    field_id = str(first_non_empty(field.field_id, SENTINEL_UNKNOWN))
     field_name = choose_field_name(field)
     field_type = choose_field_type(field)
     seed_phase_active = context.seed_phase.active

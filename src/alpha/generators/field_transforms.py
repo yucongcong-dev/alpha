@@ -73,7 +73,7 @@ def build_field_view(
     )
 
     return FieldView(
-        field_id=str(field.get("id", field_name)),
+        field_id=field.field_id,
         field_name=field_name,
         field_type=field_type,
         raw_expression=raw_expression,

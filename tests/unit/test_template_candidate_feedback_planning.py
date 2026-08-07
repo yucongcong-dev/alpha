@@ -4,11 +4,25 @@ from __future__ import annotations
 
 from alpha.core.executor import build_pending_templates_for_field
 from alpha.generators.payload import build_settings_fingerprint_from_payload
-from alpha.models.domain import TemplateCandidate, TemplateLibraryItem
+from alpha.models.domain import TemplateCandidate, TemplateField, TemplateLibraryItem
 from alpha.policy.expression import get_dataset_expression_policy
 from alpha.runtime.contexts import TemplateBuildContext
 
 from .template_build_options_support import template_build_options
+
+
+def _field(
+    field_id: str,
+    field_type: str = "VECTOR",
+    *,
+    metadata: dict[str, object] | None = None,
+) -> TemplateField:
+    return TemplateField(
+        field_id=field_id,
+        field_name=field_id,
+        field_type=field_type,
+        metadata=dict(metadata or {}),
+    )
 
 
 def test_build_pending_templates_skips_attempted_expression_variant_across_template_names(
@@ -53,7 +67,7 @@ def test_build_pending_templates_skips_attempted_expression_variant_across_templ
     )
     build_ctx = TemplateBuildContext(
         options=options,
-        all_fields=[{"id": "cash_st", "type": "VECTOR", "name": "cash_st"}],
+        all_fields=[_field("cash_st")],
         template_library={},
         use_dataset_heuristics=False,
         expression_policy=get_dataset_expression_policy("fundamental6"),
@@ -71,7 +85,7 @@ def test_build_pending_templates_skips_attempted_expression_variant_across_templ
 
     pending, disabled, total = build_pending_templates_for_field(
         build_ctx,
-        {"id": "cash_st", "type": "VECTOR", "name": "cash_st"},
+        _field("cash_st"),
         attempted_keys=attempted_keys,
         prior_results=[],
     )
@@ -123,14 +137,7 @@ def test_build_pending_templates_uses_template_metadata_without_registry_overrid
     )
     build_ctx = TemplateBuildContext(
         options=options,
-        all_fields=[
-            {
-                "id": "cash_st",
-                "type": "VECTOR",
-                "name": "cash_st",
-                "runtime_field_tags": ["high_coverage"],
-            }
-        ],
+        all_fields=[_field("cash_st", metadata={"runtime_field_tags": ["high_coverage"]})],
         template_library={},
         use_dataset_heuristics=False,
         expression_policy=get_dataset_expression_policy("fundamental6"),
@@ -138,12 +145,7 @@ def test_build_pending_templates_uses_template_metadata_without_registry_overrid
 
     pending, disabled, total = build_pending_templates_for_field(
         build_ctx,
-        {
-            "id": "cash_st",
-            "type": "VECTOR",
-            "name": "cash_st",
-            "runtime_field_tags": ["high_coverage"],
-        },
+        _field("cash_st", metadata={"runtime_field_tags": ["high_coverage"]}),
         attempted_keys=set(),
         prior_results=[],
     )
@@ -207,13 +209,7 @@ def test_event_field_exploration_uses_one_seed_template(monkeypatch) -> None:
     )
     build_ctx = TemplateBuildContext(
         options=options,
-        all_fields=[
-            {
-                "id": "fnd6_cptnewqeventv110_apq",
-                "type": "VECTOR",
-                "name": "fnd6_cptnewqeventv110_apq",
-            }
-        ],
+        all_fields=[_field("fnd6_cptnewqeventv110_apq")],
         template_library={},
         use_dataset_heuristics=False,
         expression_policy=get_dataset_expression_policy("fundamental6"),
@@ -221,7 +217,7 @@ def test_event_field_exploration_uses_one_seed_template(monkeypatch) -> None:
 
     pending, _disabled, total = build_pending_templates_for_field(
         build_ctx,
-        {"id": "fnd6_cptnewqeventv110_apq", "type": "VECTOR", "name": "fnd6_cptnewqeventv110_apq"},
+        _field("fnd6_cptnewqeventv110_apq"),
         attempted_keys=set(),
         prior_results=[],
     )
@@ -270,7 +266,7 @@ def test_build_pending_templates_does_not_hard_demote_from_global_stats(monkeypa
     )
     build_ctx = TemplateBuildContext(
         options=options,
-        all_fields=[{"id": "cash_st", "type": "VECTOR", "name": "cash_st"}],
+        all_fields=[_field("cash_st")],
         field_feedback={"cash_st": {"attempted_templates": 1, "best_score": -999.0}},
         template_library={
             "default": [
@@ -290,7 +286,7 @@ def test_build_pending_templates_does_not_hard_demote_from_global_stats(monkeypa
 
     pending, disabled, total = build_pending_templates_for_field(
         build_ctx,
-        {"id": "cash_st", "type": "VECTOR", "name": "cash_st"},
+        _field("cash_st"),
         attempted_keys=set(),
         prior_results=[],
     )

@@ -12,6 +12,7 @@ from ..core.scheduler import drain_completed_futures_with_context
 from ..core.simulation import resume_field_test_in_worker, run_field_test_in_worker
 from ..generators.payload import build_simulation_payload
 from ..models.domain import FieldTestResult, SettingsVariant, TemplateField
+from ..models.domain_serializers import serialize_settings_variant
 from ..models.runtime_config import SimulationStageConfig
 from ..models.runtime_options import SchedulerControlOptions
 from ..runtime.concurrency import RuntimeConcurrencyState
@@ -174,7 +175,7 @@ def submit_template_future(
         },
     )
     effective_payload = build_simulation_payload(simulation_config, expression)
-    effective_payload["settings"].update(settings_variant.to_dict())
+    effective_payload["settings"].update(serialize_settings_variant(settings_variant))
     pending_context = PendingFutureContext(
         field_id=field_id,
         field_name=field_name,

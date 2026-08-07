@@ -24,6 +24,7 @@ from alpha.app.run_loop_resume import (
 )
 from alpha.app.run_loop_rounds import ScheduleRoundResult
 from alpha.config.application import ApplicationConfig
+from alpha.models.domain import TemplateField
 from alpha.models.io_types import RunFilters, RunPaths
 from alpha.models.runtime_options import ResultWriteOptions, SchedulerControlOptions
 from alpha.runtime.concurrency import RuntimeConcurrencyState
@@ -35,7 +36,16 @@ def _build_execution_state() -> ExecutionState:
     return ExecutionState.create()
 
 
-def _build_run_ctx(fields: list[dict[str, str]]) -> InitializedRunContext:
+def _field(field_id: str) -> TemplateField:
+    return TemplateField(
+        field_id=field_id,
+        field_name=field_id,
+        field_type="MATRIX",
+        metadata={"id": field_id, "name": field_id, "type": "MATRIX"},
+    )
+
+
+def _build_run_ctx(fields: list[TemplateField]) -> InitializedRunContext:
     runtime_state = RuntimeConcurrencyState(max_workers=1, runtime_max_workers=1)
     return InitializedRunContext(
         client_factory=None,
@@ -113,7 +123,7 @@ def test_restore_fields_from_state_returns_empty_when_all_fields_completed(tmp_p
         json.dumps({"version": 1, "completed_field_index": 2}),
         encoding="utf-8",
     )
-    fields = [{"id": "f1"}, {"id": "f2"}]
+    fields = [_field("f1"), _field("f2")]
 
     restored_fields = restore_fields_from_state(
         fields=fields,
@@ -131,7 +141,7 @@ def test_restore_fields_from_state_ignores_legacy_partial_cursor(tmp_path) -> No
         json.dumps({"version": 1, "completed_field_index": 1}),
         encoding="utf-8",
     )
-    fields = [{"id": "f1"}, {"id": "f2"}]
+    fields = [_field("f1"), _field("f2")]
 
     restored_fields = restore_fields_from_state(
         fields=fields,
@@ -233,10 +243,7 @@ def test_drain_next_completion_keeps_replanning_cursor_at_zero(tmp_path) -> None
 
 
 def test_run_field_test_loop_persists_progress_for_skipped_fields(tmp_path) -> None:
-    fields = [
-        {"id": "f1", "type": "MATRIX", "name": "f1"},
-        {"id": "f2", "type": "MATRIX", "name": "f2"},
-    ]
+    fields = [_field("f1"), _field("f2")]
     run_ctx = _build_run_ctx(fields)
     args = _build_run_loop_args(tmp_path)
 
@@ -269,7 +276,7 @@ def test_run_field_test_loop_persists_progress_for_skipped_fields(tmp_path) -> N
 
 
 def test_run_field_test_loop_replans_after_pending_seed_completion(tmp_path) -> None:
-    fields = [{"id": "f1", "type": "MATRIX", "name": "f1"}]
+    fields = [_field("f1")]
     run_ctx = _build_run_ctx(fields)
     args = _build_run_loop_args(tmp_path)
     pending_future = Future()
@@ -319,7 +326,7 @@ def test_run_field_test_loop_replans_after_pending_seed_completion(tmp_path) -> 
 
 
 def test_run_field_test_loop_interrupts_workers_without_waiting(tmp_path) -> None:
-    fields = [{"id": "f1", "type": "MATRIX", "name": "f1"}]
+    fields = [_field("f1")]
     run_ctx = _build_run_ctx(fields)
     args = _build_run_loop_args(tmp_path)
     running: Future[object] = Future()
@@ -376,7 +383,7 @@ def test_run_field_test_loop_interrupts_workers_without_waiting(tmp_path) -> Non
 def test_run_field_test_loop_waits_for_worker_metadata_before_interrupt_checkpoint(
     tmp_path,
 ) -> None:
-    fields = [{"id": "f1", "type": "MATRIX", "name": "f1"}]
+    fields = [_field("f1")]
     run_ctx = _build_run_ctx(fields)
     args = _build_run_loop_args(tmp_path)
     running: Future[object] = Future()
@@ -435,7 +442,7 @@ def test_run_field_test_loop_waits_for_worker_metadata_before_interrupt_checkpoi
 def test_run_field_test_loop_waits_for_worker_metadata_before_exception_checkpoint(
     tmp_path,
 ) -> None:
-    fields = [{"id": "f1", "type": "MATRIX", "name": "f1"}]
+    fields = [_field("f1")]
     run_ctx = _build_run_ctx(fields)
     args = _build_run_loop_args(tmp_path)
     running: Future[object] = Future()
@@ -502,7 +509,7 @@ def test_save_runtime_checkpoint_updates_resumable_pipeline_state(tmp_path) -> N
             execution_state=execution_state,
             runtime_state=runtime_state,
             last_field_id="f1",
-            fields=[{"id": "f1"}, {"id": "f2"}],
+            fields=[_field("f1"), _field("f2")],
             reason="KeyboardInterrupt",
         )
 
@@ -526,7 +533,7 @@ def test_save_runtime_checkpoint_logs_failed_writes_without_masking_abort(
             execution_state=_build_execution_state(),
             runtime_state=RuntimeConcurrencyState(max_workers=1, runtime_max_workers=1),
             last_field_id="f1",
-            fields=[{"id": "f1"}],
+            fields=[_field("f1")],
             reason="KeyboardInterrupt",
         )
 

@@ -23,7 +23,7 @@ from alpha.core.scheduler import (
 )
 from alpha.core.simulation_parsing import summarize_failure
 from alpha.core.simulation_results import build_failure_result
-from alpha.models.domain import FieldTestContext, FieldTestResult
+from alpha.models.domain import FailedCheck, FieldTestContext, FieldTestResult
 from alpha.models.io_types import RunFilters
 from alpha.models.runtime_options import (
     ResultWriteOptions,
@@ -239,8 +239,8 @@ class TestHistorySkipIntegration:
             expression="rank(ts_mean(sales, 20))",
             submittable=False,
             failed_checks=[
-                {"name": "LOW_SHARPE", "value": -0.1},
-                {"name": "LOW_FITNESS", "value": -0.2},
+                FailedCheck(name="LOW_SHARPE", value=-0.1),
+                FailedCheck(name="LOW_FITNESS", value=-0.2),
             ],
         )
         assert not should_skip_expression_by_history(
@@ -260,8 +260,8 @@ class TestHistorySkipIntegration:
             expression="rank(ts_mean(sales, 20))",
             submittable=False,
             failed_checks=[
-                {"name": "CONCENTRATED_WEIGHT", "value": 0.8},
-                {"name": "LOW_SUB_UNIVERSE_SHARPE", "value": 0.5},
+                FailedCheck(name="CONCENTRATED_WEIGHT", value=0.8),
+                FailedCheck(name="LOW_SUB_UNIVERSE_SHARPE", value=0.5),
             ],
         )
         assert should_skip_expression_by_history(

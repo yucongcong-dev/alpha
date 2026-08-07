@@ -13,7 +13,7 @@ from alpha.analysis.feedback_history import (
 from alpha.analysis.results_loader import load_existing_results
 from alpha.analysis.results_persistence import dump_results
 from alpha.generators.variants import build_setting_variants
-from alpha.models.domain import FieldTestResult
+from alpha.models.domain import FailedCheck, FieldTestResult
 from alpha.policy.expression import get_dataset_expression_policy, resolve_feedback_stage
 from alpha.runtime.contexts import HistoricalRunState
 from alpha.selection import feedback_filters as feedback_filters_module
@@ -109,7 +109,7 @@ def test_build_historical_run_state_uses_dataset_feedback_across_runs(tmp_path) 
         submittable=False,
         expression="rank(cash_st)",
         settings_fingerprint="settings-v1",
-        failed_checks=[{"name": "LOW_SHARPE", "value": 0.2}],
+        failed_checks=[FailedCheck(name="LOW_SHARPE", value=0.2)],
     )
     dump_results(
         str(feedback_output),
@@ -187,7 +187,7 @@ def test_build_setting_variants_keeps_explicit_refine_small_and_deterministic() 
     )
 
     assert len(variants) == 5
-    assert [variant.get("decay") for variant in variants[:3]] == [4, 6, 2]
-    assert any(variant.get("truncation") == 0.05 for variant in variants)
-    assert any(variant.get("neutralization") == "INDUSTRY" for variant in variants)
-    assert all(variant.to_dict().get("maxTrade") == "OFF" for variant in variants)
+    assert [variant.decay for variant in variants[:3]] == [4, 6, 2]
+    assert any(variant.truncation == 0.05 for variant in variants)
+    assert any(variant.neutralization == "INDUSTRY" for variant in variants)
+    assert all(variant.max_trade == "OFF" for variant in variants)

@@ -161,7 +161,7 @@ def build_dry_run_plan_summary(
     build_ctx.candidate_filter_counts = explain_counts
 
     for field in fields:
-        field_id = str(first_non_empty(field.get("id"), SENTINEL_UNKNOWN))
+        field_id = str(first_non_empty(field.field_id, SENTINEL_UNKNOWN))
         field_name = choose_field_name(field)
         if should_skip(field_id, field_name, filters):
             explain_counts["field_skipped"] += 1

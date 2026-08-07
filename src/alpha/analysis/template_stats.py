@@ -79,7 +79,7 @@ def _update_template_metadata(stat: dict[str, Any], result: FieldTestResult) -> 
 
 
 def _update_failed_check_counts(stat: dict[str, Any], result: FieldTestResult) -> None:
-    failed_check_names = {str(check.get("name", "")) for check in result.failed_checks or []}
+    failed_check_names = {check.name for check in result.failed_checks or []}
     for check_name, counter_name in _FAILED_CHECK_COUNTERS.items():
         if check_name in failed_check_names:
             stat[counter_name] += 1
@@ -154,7 +154,7 @@ def compile_template_performance_summary(
         if result.status == STATUS_ERROR:
             summary[STAT_FIELD_ERRORS] += 1
         for check in result.failed_checks or []:
-            name = str(check.get("name", SENTINEL_UNKNOWN_CHECK))
+            name = check.name or SENTINEL_UNKNOWN_CHECK
             summary[STAT_FIELD_FAILED_CHECK_COUNTS][name] = (
                 summary[STAT_FIELD_FAILED_CHECK_COUNTS].get(name, 0) + 1
             )

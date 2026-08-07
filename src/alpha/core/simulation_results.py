@@ -8,7 +8,8 @@ from collections.abc import Sequence
 from typing import Any
 
 from ..config._constants_strings import STATUS_ERROR
-from ..models.domain import FailedCheck, FieldTestContext, FieldTestResult, coerce_failed_checks
+from ..models.domain import FailedCheck, FieldTestContext, FieldTestResult
+from ..models.domain_parsers import coerce_failed_checks
 
 
 def build_failure_result(

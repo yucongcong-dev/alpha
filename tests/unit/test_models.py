@@ -9,7 +9,7 @@ from types import SimpleNamespace
 import pytest
 
 from alpha.config.application import ApplicationConfig
-from alpha.models.domain import FieldTestContext, FieldTestResult
+from alpha.models.domain import FailedCheck, FieldTestContext, FieldTestResult
 from alpha.models.domain_serializers import serialize_field_test_result
 from alpha.models.io_types import RunFilters, RunPaths
 from alpha.models.runtime_options import (
@@ -271,8 +271,8 @@ class TestFieldTestResult:
             expression="ts_delta(x, 5)",
             submittable=False,
             failed_checks=[
-                {"name": "LOW_SHARPE", "value": -0.1},
-                {"name": "LOW_FITNESS", "value": -0.2},
+                FailedCheck(name="LOW_SHARPE", value=-0.1),
+                FailedCheck(name="LOW_FITNESS", value=-0.2),
             ],
         )
         assert not result.submittable

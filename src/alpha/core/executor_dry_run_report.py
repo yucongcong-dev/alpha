@@ -122,14 +122,14 @@ def render_dry_run_plan(summary: DryRunPlanSummary, *, log: logging.Logger) -> N
             "coverage=%.4f alpha_count=%d user_count=%d",
             index,
             len(summary.field_samples),
-            str(first_non_empty(field.get("id"), SENTINEL_UNKNOWN)),
-            field.get("selection_rank", "?"),
-            float(field.get("selection_score", 0.0) or 0.0),
-            field.get("selection_family", "unknown"),
-            field.get("selection_reason", "unknown"),
-            float(field.get("coverage", 0.0) or 0.0),
-            int(field.get("alphaCount", 0) or 0),
-            int(field.get("userCount", 0) or 0),
+            str(first_non_empty(field.field_id, SENTINEL_UNKNOWN)),
+            field.metadata.get("selection_rank", "?"),
+            float(field.metadata.get("selection_score", 0.0) or 0.0),
+            field.metadata.get("selection_family", "unknown"),
+            field.metadata.get("selection_reason", "unknown"),
+            float(field.metadata.get("coverage", 0.0) or 0.0),
+            int(field.metadata.get("alphaCount", 0) or 0),
+            int(field.metadata.get("userCount", 0) or 0),
         )
     for index, sample in enumerate(summary.samples, start=1):
         log.info(

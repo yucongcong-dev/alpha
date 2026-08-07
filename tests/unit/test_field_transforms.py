@@ -80,7 +80,7 @@ def test_build_expression_candidates_uses_preprocessed_raw_field_view() -> None:
         expression_policy=policy,
     )
 
-    expressions = {expression for _, expression, _ in candidates}
+    expressions = {candidate.expression for candidate in candidates}
     assert "winsorize(ts_backfill(cash_st, 120), std=4)" in expressions
     assert (
         "group_rank(winsorize(ts_backfill(cash_st, 120), std=4), densify(bucket(rank(cap), range='0.1, 1, 0.1')))"
@@ -112,7 +112,7 @@ def test_fundamental6_matrix_templates_use_preprocessed_field_view() -> None:
         expression_policy=policy,
     )
 
-    by_name = {name: expression for name, expression, _ in candidates}
+    by_name = {candidate.name: candidate.expression for candidate in candidates}
     assert by_name["rank_raw_field"] == "rank(winsorize(ts_backfill(cash_st, 120), std=4))"
     assert by_name["bucket_bucket_group_rank_cap_bucket"] == (
         "group_rank(winsorize(ts_backfill(cash_st, 120), std=4), densify(bucket(rank(cap), range='0.1, 1, 0.1')))"
@@ -139,7 +139,7 @@ def test_model16_templates_include_bucket_groups() -> None:
         expression_policy=policy,
     )
 
-    by_name = {name: expression for name, expression, _ in candidates}
+    by_name = {candidate.name: candidate.expression for candidate in candidates}
     bucket_names = [n for n in by_name if "bucket" in n.lower()]
     assert len(bucket_names) > 0
 
@@ -164,6 +164,6 @@ def test_model51_templates_include_bucket_groups() -> None:
         expression_policy=policy,
     )
 
-    by_name = {name: expression for name, expression, _ in candidates}
+    by_name = {candidate.name: candidate.expression for candidate in candidates}
     bucket_names = [n for n in by_name if "bucket" in n.lower()]
     assert len(bucket_names) > 0

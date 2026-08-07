@@ -64,7 +64,7 @@ def compile_field_performance_summary(results: Sequence[FieldTestResult]) -> lis
         if result.status == STATUS_ERROR:
             summary[STAT_FIELD_ERRORS] += 1
         for check in result.failed_checks or []:
-            name = str(check.get("name", SENTINEL_UNKNOWN_CHECK))
+            name = check.name or SENTINEL_UNKNOWN_CHECK
             summary[STAT_FIELD_FAILED_CHECK_COUNTS][name] = (
                 summary[STAT_FIELD_FAILED_CHECK_COUNTS].get(name, 0) + 1
             )

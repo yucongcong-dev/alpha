@@ -12,16 +12,6 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from ..config._constants_strings import STATUS_ERROR
-from .domain_codecs import (
-    failed_check_values,
-    serialize_field_test_result,
-    serialize_settings_variant,
-    serialize_template_field,
-    serialize_template_library_item,
-    settings_variant_values,
-    template_field_values,
-    template_library_item_values,
-)
 from .domain_types import (
     AnalysisInputs as AnalysisInputs,
 )
@@ -54,52 +44,6 @@ class FailedCheck:
     limit: float | None = None
     result: str | None = None
 
-    def get(self, key: str, default: Any = None) -> Any:
-        """兼容 dict 风格的 get 方法。"""
-        return getattr(self, key, default)
-
-    @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> FailedCheck:
-        """兼容入口：从字典创建失败检查项。"""
-        return cls(**failed_check_values(data))
-
-    def to_dict(self) -> dict[str, Any]:
-        """转换为字典表示。"""
-        result: dict[str, Any] = {"name": self.name}
-        if self.value is not None:
-            result["value"] = self.value
-        if self.limit is not None:
-            result["limit"] = self.limit
-        if self.result is not None:
-            result["result"] = self.result
-        return result
-
-
-def coerce_failed_check(check: Any) -> FailedCheck:
-    """把任意 failed check 兼容对象归一化为领域 FailedCheck。"""
-    if isinstance(check, FailedCheck):
-        return check
-    if isinstance(check, dict):
-        return FailedCheck.from_dict(check)
-    return FailedCheck(
-        name=str(getattr(check, "name", "") or ""),
-        value=getattr(check, "value", None),
-        limit=getattr(check, "limit", getattr(check, "threshold", None)),
-        result=getattr(check, "result", None),
-    )
-
-
-def serialize_failed_check(check: Any) -> dict[str, Any]:
-    """把 failed check 归一化为可 JSON 序列化的字典。"""
-    return coerce_failed_check(check).to_dict()
-
-
-def coerce_failed_checks(checks: Sequence[Any] | None) -> list[FailedCheck]:
-    """把 failed checks 序列归一化为 FailedCheck 列表。"""
-    if not checks:
-        return []
-    return [coerce_failed_check(check) for check in checks]
-
 
 @dataclass(frozen=True)
 class TemplateLibraryItem:
@@ -111,15 +55,6 @@ class TemplateLibraryItem:
     family: str | None = None
     stage: str | None = None
     metadata: TemplateMetadata = field(default_factory=dict)
-
-    @classmethod
-    def from_dict(cls, item: dict[str, Any]) -> TemplateLibraryItem:
-        """兼容入口：从字典创建模板项。"""
-        return cls(**template_library_item_values(item))
-
-    def to_dict(self) -> dict[str, Any]:
-        """兼容入口：序列化为模板项字典。"""
-        return serialize_template_library_item(self)
 
 
 TemplateLibrary = dict[str, list[TemplateLibraryItem]]
@@ -146,19 +81,6 @@ class SettingsVariant:
     end_date: str | None = None
     visualization: bool | None = None
 
-    def get(self, key: str, default: Any = None) -> Any:
-        """兼容旧的 dict 风格读取。"""
-        return getattr(self, key, default)
-
-    def to_dict(self) -> dict[str, Any]:
-        """兼容入口：序列化为设置变体字典。"""
-        return serialize_settings_variant(self)
-
-    @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> SettingsVariant:
-        """兼容入口：从字典创建设置变体。"""
-        return cls(**settings_variant_values(data))
-
 
 @dataclass(frozen=True)
 class TemplateField:
@@ -168,25 +90,6 @@ class TemplateField:
     field_name: str
     field_type: str
     metadata: dict[str, Any] = field(default_factory=dict)
-
-    @classmethod
-    def from_dict(cls, field: dict[str, Any]) -> TemplateField:
-        """兼容入口：从字典创建字段对象。"""
-        return cls(**template_field_values(field))
-
-    def get(self, key: str, default: Any = None) -> Any:
-        """兼容 dict 风格读取，同时以规范化字段属性作为身份真值。"""
-        if key in {"id", "field_id"}:
-            return self.field_id
-        if key in {"name", "field_name"}:
-            return self.field_name
-        if key in {"type", "fieldType", "field_type"}:
-            return self.field_type
-        return self.metadata.get(key, default)
-
-    def to_dict(self) -> dict[str, Any]:
-        """兼容入口：序列化为字段字典。"""
-        return serialize_template_field(self)
 
 
 @dataclass
@@ -224,16 +127,8 @@ class FieldTestResult:
     failed_stage: str | None = None
     failed_checks: list[FailedCheck] | None = None
 
-    def __post_init__(self) -> None:
-        if self.failed_checks is not None:
-            self.failed_checks = [coerce_failed_check(check) for check in self.failed_checks]
-
     def is_successful(self) -> bool:
         return self.submittable is True
-
-    def to_dict(self) -> ResultRow:
-        """兼容入口：序列化为结果行字典。"""
-        return serialize_field_test_result(self)
 
     def __str__(self) -> str:
         status_symbol = "✓" if self.submittable else "✗"
@@ -264,14 +159,6 @@ class TemplateCandidate:
     priority: int
     metadata: TemplateMetadata = field(default_factory=dict)
 
-    def __iter__(self):
-        yield self.name
-        yield self.expression
-        yield self.priority
-
-    def __getitem__(self, index: int):
-        return (self.name, self.expression, self.priority)[index]
-
 
 @dataclass
 class FieldTestContext:
@@ -300,7 +187,7 @@ class FieldTestContext:
         simulation_id: str | None = None,
         alpha_id: str | None = None,
         status: str = STATUS_ERROR,
-        failed_checks: Sequence[FailedCheck | dict[str, Any]] | None = None,
+        failed_checks: Sequence[FailedCheck] | None = None,
         metrics: dict[str, Any] | None = None,
     ) -> FieldTestResult:
         return FieldTestResult(
@@ -324,7 +211,7 @@ class FieldTestContext:
             settings=dict(self.settings),
             metrics=dict(self.metrics if metrics is None else metrics),
             failed_stage=failed_stage,
-            failed_checks=coerce_failed_checks(failed_checks),
+            failed_checks=list(failed_checks or []),
         )
 
     def success(
