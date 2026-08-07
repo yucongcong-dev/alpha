@@ -72,7 +72,7 @@ def test_request_raises_rate_limit_error_after_retry_budget(monkeypatch) -> None
         client.request("GET", "https://example.test", retries=2)
 
     assert exc_info.value.retry_after == 6
-    assert waits == [6.0, 6.0]
+    assert waits == [6.0]
 
 
 def test_request_retries_server_error_then_returns(monkeypatch) -> None:
@@ -87,6 +87,25 @@ def test_request_retries_server_error_then_returns(monkeypatch) -> None:
     status, _, content = client.request("GET", "https://example.test", expected={200}, retries=2)
 
     assert (status, content) == (200, b"ok")
+    assert waits == ["server error 503"]
+
+
+def test_request_does_not_wait_after_final_server_error(monkeypatch) -> None:
+    client = BrainClient("user@example.com", "secret")
+    waits: list[str] = []
+    monkeypatch.setattr(
+        client,
+        "raw_request",
+        lambda *_args, **_kwargs: (503, {}, b"busy"),
+    )
+    monkeypatch.setattr(
+        "alpha.api.session.wait_seconds", lambda _seconds, reason: waits.append(reason)
+    )
+
+    with pytest.raises(BrainHTTPError) as exc_info:
+        client.request("GET", "https://example.test", expected={200}, retries=2)
+
+    assert exc_info.value.status == 503
     assert waits == ["server error 503"]
 
 

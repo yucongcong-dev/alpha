@@ -82,25 +82,27 @@ class BrainSessionMixin:
                     retries,
                     retry_after_header,
                 )
-                wait_seconds(
-                    doubled_retry_after(
-                        response_headers, default=http_config.rate_limit_default_wait
-                    ),
-                    "rate limit",
-                )
+                if attempt < retries:
+                    wait_seconds(
+                        doubled_retry_after(
+                            response_headers, default=http_config.rate_limit_default_wait
+                        ),
+                        "rate limit",
+                    )
                 continue
             if status == 401 and attempt < retries:
                 logger.warning("[auth] session expired on %s %s, re-logging in...", method, url)
                 self.login()
                 continue
             if status in (500, 502, 503, 504):
-                wait_seconds(
-                    min(
-                        http_config.server_error_backoff_max,
-                        attempt * http_config.server_error_backoff_step,
-                    ),
-                    f"server error {status}",
-                )
+                if attempt < retries:
+                    wait_seconds(
+                        min(
+                            http_config.server_error_backoff_max,
+                            attempt * http_config.server_error_backoff_step,
+                        ),
+                        f"server error {status}",
+                    )
                 continue
             if expected is None or status in expected:
                 return status, response_headers, content
