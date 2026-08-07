@@ -15,7 +15,7 @@ make install-dev
 python -m alpha --dataset-id fundamental2 --dry-run-plan
 
 # 首次真实运行：显式选择数据集，执行 1 字段 / 1 模板冒烟测试
-python -m alpha --dataset-id fundamental2 --smoke-test
+python -m alpha --dataset-id fundamental2 --template-library-file datasets/fundamental2/template.json --smoke-test
 
 # fundamental6 已暂停普通运行；全量探索必须显式给出 simulation 硬预算
 python -m alpha --dataset-id fundamental6 --full-run --max-total-simulations 100
@@ -60,7 +60,7 @@ alpha/
 
 ```bash
 # 聚焦历史高反馈字段
-python -m alpha --dataset-id fundamental2 --top-fields-by-feedback 10 --max-templates-per-field 15
+python -m alpha --dataset-id fundamental2 --template-library-file datasets/fundamental2/template.json --top-fields-by-feedback 10 --max-templates-per-field 15
 
 # 预览 / 执行本地运行产物清理
 python -m alpha clean --dataset-id fundamental2 --dry-run-clean

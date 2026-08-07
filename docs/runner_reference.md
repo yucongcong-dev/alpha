@@ -13,7 +13,7 @@ macOS 也可以在未激活环境时显式使用 `python3.10`，Windows 可使�
 
 ```bash
 # 需要登录：冒烟模式（1 字段/1 模板、并发 1）快速验证凭证、API 连通性和模拟创建
-python -m alpha --dataset-id fundamental2 --smoke-test
+python -m alpha --dataset-id fundamental2 --template-library-file datasets/fundamental2/template.json --smoke-test
 
 # 离线只读：检查字段、模板和候选计划，不创建 simulation
 python -m alpha --dataset-id fundamental2 --dry-run-plan
@@ -22,7 +22,7 @@ python -m alpha --dataset-id fundamental2 --dry-run-plan
 python -m alpha --dataset-id fundamental6 --full-run --max-total-simulations 100
 
 # 聚焦历史上更有希望的字段
-python -m alpha --dataset-id fundamental2 --top-fields-by-feedback 10 --max-templates-per-field 15
+python -m alpha --dataset-id fundamental2 --template-library-file datasets/fundamental2/template.json --top-fields-by-feedback 10 --max-templates-per-field 15
 ```
 
 `run` 和 `clean` 都必须显式传入 `--dataset-id`，避免误跑或误清理历史数据集。选择数据集后，

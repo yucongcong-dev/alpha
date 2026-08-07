@@ -102,6 +102,9 @@ def _validate_paused_dataset(args: argparse.Namespace) -> None:
                 raise ValueError(f"{option} must reference an existing file for a paused dataset")
         return
 
+    if bool(getattr(args, "dry_run_plan", False)):
+        return
+
     if "full_run" in explicit_keys and bool(getattr(args, "full_run", False)):
         budget_is_explicit = "max_total_simulations" in explicit_keys
         budget = int(getattr(args, "max_total_simulations", 0) or 0)

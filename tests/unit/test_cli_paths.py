@@ -101,6 +101,22 @@ def test_normalize_args_paths_allows_clean_for_paused_fundamental6(monkeypatch, 
     )
 
 
+def test_normalize_args_paths_allows_dry_plan_for_paused_dataset(monkeypatch, tmp_path) -> None:
+    clear_yaml_cache()
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        ["alpha", "--dataset-id", "fundamental2", "--dry-run-plan"],
+    )
+
+    paths = normalize_args_paths(parse_args())
+
+    assert paths.template_library_file.replace("\\", "/").endswith(
+        "/datasets/fundamental2/template.json"
+    )
+
+
 @pytest.mark.parametrize(
     "dataset_id",
     [
