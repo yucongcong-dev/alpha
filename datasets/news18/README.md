@@ -3,6 +3,8 @@
 ## 当前状态
 
 `news18` 由 dataset profile 标记为 `paused`，当前没有现役 preset 或可提交候选。
+2026-08-07 的跨市场筛选确认账号可访问 USA / TOP1000 / Delay 0，但 4 个独立事件
+种子均同时失败于 Sharpe、Fitness 和 Turnover，因此 D0 专项也已关闭。
 2026-08-04 在 USA TOP3000、EQUITY、Delay 1 下获取到 121 个字段：71 个 MATRIX、
 50 个 VECTOR。已测试的单字段情绪、新颖度和事件聚合结构均未形成正向基线。
 完整字段元数据、表达式和逐 Alpha 结果见 [research_history.md](research_history.md)。
@@ -30,8 +32,8 @@
   延长明显为负的研究线。
 - 一个字段的两条独立结构都明显为负时停止；新的研究应来自多字段关系或新的经济假设。
 
-普通 `--dataset-id news18` 会拒绝运行。重新探索必须显式传入研究文件，或使用带正数预算的
-`--full-run`；执行前先加 `--dry-run-plan` 检查字段、模板和 simulation 数量。
+普通 `--dataset-id news18` 会拒绝运行。重新探索必须显式传入新的研究文件，或使用带
+正数预算的 `--full-run`；执行前先加 `--dry-run-plan` 检查字段、模板和 simulation 数量。
 
 ## 已停止方向
 
@@ -39,6 +41,9 @@
 - `mean_event_novelty_score` 的符号反转和窗口搜索。
 - `nws18_bee_fast_d1`、`nws18_qmb_fast_d1` 的单字段 VECTOR 聚合邻域。
 - 用相同两套模板继续枚举相似 sentiment 字段。
+- USA / TOP1000 / Delay 0 下 `nws18_bee`、`nws18_nip`、`nws18_bam`、
+  `nws18_ghc_lna` 的直接事件持仓结构；4 个种子最高 Sharpe 仅 `0.88`，且换手率
+  均高于 `1.09`，不做 Decay、窗口或符号 sweep。
 
 ## 重新开启条件
 
