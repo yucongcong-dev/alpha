@@ -1,4 +1,4 @@
-"""Local simulation metric precheck helpers."""
+"""Local simulation metric diagnostic helpers."""
 
 from __future__ import annotations
 
@@ -133,7 +133,7 @@ def precheck_simulation_metrics(
     max_turnover: float | None = None,
     max_weight: float | None = None,
 ) -> tuple[bool, str, list[CheckResultDict]]:
-    """Run local metric checks before calling Check Submission."""
+    """Evaluate local thresholds for diagnostics before Check Submission."""
     is_section = simulation_result.get(_KEY_IS)
     if not isinstance(is_section, dict):
         return True, "", []

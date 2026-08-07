@@ -193,7 +193,7 @@ def test_poll_stage_converts_stop_and_unexpected_errors() -> None:
     assert stopped.failed_stage == "stopped"
 
 
-def test_check_submission_stage_precheck_failure_still_calls_remote_check() -> None:
+def test_check_submission_stage_local_threshold_miss_still_calls_remote_check() -> None:
     client = object()
     failed_check = {
         "name": "LOW_SHARPE",

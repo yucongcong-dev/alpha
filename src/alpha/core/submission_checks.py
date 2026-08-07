@@ -139,7 +139,7 @@ def run_check_submission_stage(
     should_abort: Callable[[], bool] | None = None,
 ) -> FieldTestResult | tuple[bool | None, str, list[FailedCheck]]:
     if simulation_result:
-        passed, reason, _ = precheck_simulation_metrics(
+        within_local_thresholds, reason, _ = precheck_simulation_metrics(
             simulation_result,
             min_sharpe=config.min_sharpe,
             min_fitness=config.min_fitness,
@@ -147,9 +147,10 @@ def run_check_submission_stage(
             max_turnover=config.max_turnover,
             max_weight=config.max_weight,
         )
-        if not passed:
+        if not within_local_thresholds:
             logger.info(
-                "[check-submission-precheck] alpha_id=%s simulation_id=%s precheck_failed=%s",
+                "[check-submission-diagnostic] alpha_id=%s simulation_id=%s "
+                "local_threshold_miss=%s",
                 alpha_id,
                 simulation_id,
                 reason,

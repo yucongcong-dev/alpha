@@ -142,7 +142,7 @@ global:
   # --------------------------------------------------------------------------
   # 质量阈值 —— 对应 CLI --min-sharpe / --min-fitness / --min-turnover / --max-turnover / --max-weight
   # --------------------------------------------------------------------------
-  # 模拟完成后本地预检：低于阈值的 Alpha 会标记为未通过，不影响人工继续研究。
+  # 模拟完成后的本地指标诊断：仅记录阈值差距，不改变官网 Check Submission 结果。
   quality:
     min_sharpe: 1.25                # 最低 Sharpe 比率 (风险调整后收益)
     min_fitness: 1.00               # 最低 Fitness (Sharpe × Turnover 惩罚调整)

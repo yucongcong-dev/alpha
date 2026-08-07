@@ -1,7 +1,7 @@
 # ============================================================================
 # Quality / feedback / analysis defaults
 # ============================================================================
-# Thresholds used by local precheck, feedback-driven template generation,
+# Thresholds used by local metric diagnostics, feedback-driven template generation,
 # analysis summaries, checkpointing, and smoke-test safety limits.
 
 quality:

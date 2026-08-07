@@ -274,16 +274,16 @@ def add_api_runtime_arguments(parser: argparse.ArgumentParser) -> None:
 
 
 def add_precheck_arguments(parser: argparse.ArgumentParser) -> None:
-    """Add local precheck threshold arguments."""
-    parser.add_argument("--min-sharpe", type=float, default=1.25, help="本地预检最低 Sharpe 阈值")
-    parser.add_argument("--min-fitness", type=float, default=1.00, help="本地预检最低 Fitness 阈值")
+    """Add local metric diagnostic threshold arguments."""
+    parser.add_argument("--min-sharpe", type=float, default=1.25, help="本地诊断最低 Sharpe 阈值")
+    parser.add_argument("--min-fitness", type=float, default=1.00, help="本地诊断最低 Fitness 阈值")
     parser.add_argument(
-        "--min-turnover", type=float, default=0.01, help="本地预检最低 Turnover 阈值"
+        "--min-turnover", type=float, default=0.01, help="本地诊断最低 Turnover 阈值"
     )
     parser.add_argument(
-        "--max-turnover", type=float, default=0.70, help="本地预检最高 Turnover 阈值"
+        "--max-turnover", type=float, default=0.70, help="本地诊断最高 Turnover 阈值"
     )
-    parser.add_argument("--max-weight", type=float, default=0.10, help="本地预检单股最大权重阈值")
+    parser.add_argument("--max-weight", type=float, default=0.10, help="本地诊断单股最大权重阈值")
     parser.add_argument(
         "--backfill-window", type=int, default=240, help="ts_backfill 时间窗口大小（天）"
     )
