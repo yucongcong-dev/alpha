@@ -32,9 +32,9 @@ class SimulationStageConfig(SimulationSettingsConfig):
     simulation_create_retries: int = 0
     simulation_poll_retries: int = 0
     simulation_max_polls: int = 0
-    simulation_max_wait_seconds: int = 0
+    simulation_max_wait_seconds: float = 0.0
     simulation_max_pending_cycles: int = 0
-    simulation_max_queue_seconds: int = 0
+    simulation_max_queue_seconds: float = 0.0
     check_submission_retries: int = 0
 
     min_sharpe: float = 0.0
@@ -68,9 +68,9 @@ class SimulationStageConfig(SimulationSettingsConfig):
             simulation_create_retries=execution.simulation_create_retries,
             simulation_poll_retries=execution.simulation_poll_retries,
             simulation_max_polls=execution.simulation_max_polls,
-            simulation_max_wait_seconds=int(execution.simulation_max_wait_seconds),
+            simulation_max_wait_seconds=execution.simulation_max_wait_seconds,
             simulation_max_pending_cycles=execution.simulation_max_pending_cycles,
-            simulation_max_queue_seconds=int(execution.simulation_max_queue_seconds),
+            simulation_max_queue_seconds=execution.simulation_max_queue_seconds,
             check_submission_retries=execution.check_submission_retries,
             min_sharpe=quality.min_sharpe,
             min_fitness=quality.min_fitness,

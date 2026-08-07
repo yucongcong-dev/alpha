@@ -171,6 +171,8 @@ class TestRuntimeOptionBuilders:
             delay=1,
             decay=6,
             simulation_poll_retries=4,
+            simulation_max_wait_seconds=0.5,
+            simulation_max_queue_seconds=0.75,
             min_sharpe=1.5,
         )
 
@@ -180,6 +182,8 @@ class TestRuntimeOptionBuilders:
         assert options.simulation_stage.instrument_type == "EQUITY"
         assert options.simulation_stage.decay == 6
         assert options.simulation_stage.simulation_poll_retries == 4
+        assert options.simulation_stage.simulation_max_wait_seconds == 0.5
+        assert options.simulation_stage.simulation_max_queue_seconds == 0.75
         assert options.simulation_stage.min_sharpe == 1.5
 
 

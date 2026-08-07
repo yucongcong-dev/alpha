@@ -87,9 +87,9 @@ class DatasetProfile(TypedDict, total=False):
     max_concurrent_creates: int
     max_templates_per_field: int
     field_template_batch_size: int
-    simulation_max_wait_seconds: int
-    simulation_max_queue_seconds: int
-    queue_busy_cooldown_seconds: int
+    simulation_max_wait_seconds: float
+    simulation_max_queue_seconds: float
+    queue_busy_cooldown_seconds: float
 
 
 class StrategyProfileSchema(TypedDict, total=False):
