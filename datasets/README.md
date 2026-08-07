@@ -37,9 +37,10 @@ datasets/<dataset_id>/
 | `model51` | 暂停 | 无 |
 | `socialmedia12` | 暂停 | 无 |
 | `socialmedia8` | 暂停 | 无 |
+| `pv13` | 暂停 | 无 |
 | `option9` | 暂停 | 无 |
 | `news18` | 暂停 | 无 |
 
-当前没有现役 explore 数据集。`socialmedia8` 的 fast D1 情绪和社交关注度两条独立方向均已
-关闭；完整依据见其 `research_history.md`。下一轮研究应筛选新的数据集，不恢复已失败方向，
-也不扫描完整字段池。
+当前没有现役 explore 数据集。`pv13` 的客户收益传播和客户网络中心性两个独立
+方向均未形成正向基线；完整依据见其 `research_history.md`。下一轮应筛选新数据集，
+不恢复已失败方向，也不扫描完整字段池。

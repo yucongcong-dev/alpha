@@ -1,0 +1,7 @@
+{
+  "_comment": "pv13 baseline library; active research uses the bounded relationship_seed preset.",
+  "_comment_placeholders": "{field}=field name",
+  "_dataset_id": "pv13",
+  "default": [],
+  "VECTOR": []
+}
