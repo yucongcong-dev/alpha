@@ -9,7 +9,7 @@ from types import SimpleNamespace
 import pytest
 
 from alpha.config.application import ApplicationConfig
-from alpha.config.application_sections import ExecutionConfig, QualityConfig
+from alpha.config.application_sections import ExecutionConfig, PlanningConfig, QualityConfig
 from alpha.models.domain import FailedCheck, FieldTestContext, FieldTestResult
 from alpha.models.domain_serializers import serialize_field_test_result
 from alpha.models.io_types import RunFilters, RunPaths
@@ -204,6 +204,25 @@ def test_execution_config_rejects_invalid_numeric_ranges(
 ) -> None:
     with pytest.raises(ValueError, match=message):
         ExecutionConfig.from_args(SimpleNamespace(**{field_name: value}))
+
+
+@pytest.mark.parametrize(
+    ("field_name", "value", "message"),
+    [
+        ("max_total_simulations", -1, "cannot be negative"),
+        ("limit", -1, "cannot be negative"),
+        ("page_size", 0, "must be positive"),
+        ("field_template_batch_size", 0, "must be positive"),
+        ("sleep_between_fields", float("nan"), "must be finite"),
+    ],
+)
+def test_planning_config_rejects_invalid_numeric_ranges(
+    field_name: str,
+    value: int | float,
+    message: str,
+) -> None:
+    with pytest.raises(ValueError, match=message):
+        PlanningConfig.from_args(SimpleNamespace(**{field_name: value}))
 
 
 @pytest.mark.parametrize(

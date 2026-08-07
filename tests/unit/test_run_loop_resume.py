@@ -66,7 +66,7 @@ def _build_run_ctx(fields: list[TemplateField]) -> InitializedRunContext:
 
 def _build_run_loop_args(tmp_path, **overrides) -> ApplicationConfig:
     values = {
-        "field_template_batch_size": 0,
+        "field_template_batch_size": 1,
         "dataset_id": "fundamental6",
         "output": str(tmp_path / "results.json"),
         "region": "USA",

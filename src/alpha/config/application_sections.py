@@ -96,6 +96,27 @@ class PlanningConfig:
     legacy_similarity_penalty: int
     top_fields_by_feedback: int
 
+    def __post_init__(self) -> None:
+        if not math.isfinite(self.sleep_between_fields):
+            raise ValueError("sleep_between_fields must be finite")
+        for field_name in (
+            "limit",
+            "offset",
+            "max_templates_per_field",
+            "max_templates_per_family",
+            "max_total_simulations",
+            "legacy_similarity_penalty",
+            "top_fields_by_feedback",
+        ):
+            if getattr(self, field_name) < 0:
+                raise ValueError(f"{field_name} cannot be negative")
+        if self.page_size <= 0:
+            raise ValueError("page_size must be positive")
+        if self.sleep_between_fields < 0:
+            raise ValueError("sleep_between_fields cannot be negative")
+        if self.field_template_batch_size <= 0:
+            raise ValueError("field_template_batch_size must be positive")
+
     @classmethod
     def from_args(cls, args: object) -> PlanningConfig:
         return cls(
@@ -104,12 +125,12 @@ class PlanningConfig:
             dry_run_plan=bool(_value(args, "dry_run_plan", False)),
             limit=int(_value(args, "limit", 0) or 0),
             offset=int(_value(args, "offset", 0) or 0),
-            page_size=int(_value(args, "page_size", 0) or 0),
+            page_size=int(_value(args, "page_size", 1) or 0),
             sleep_between_fields=float(_value(args, "sleep_between_fields", 0.0) or 0.0),
             max_templates_per_field=int(_value(args, "max_templates_per_field", 0) or 0),
             max_templates_per_family=int(_value(args, "max_templates_per_family", 0) or 0),
-            max_total_simulations=max(0, int(_value(args, "max_total_simulations", 0) or 0)),
-            field_template_batch_size=int(_value(args, "field_template_batch_size", 0) or 0),
+            max_total_simulations=int(_value(args, "max_total_simulations", 0) or 0),
+            field_template_batch_size=int(_value(args, "field_template_batch_size", 1) or 0),
             legacy_similarity_penalty=int(_value(args, "legacy_similarity_penalty", 0) or 0),
             top_fields_by_feedback=int(_value(args, "top_fields_by_feedback", 0) or 0),
         )

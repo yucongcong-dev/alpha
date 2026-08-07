@@ -421,6 +421,34 @@ def test_parse_application_config_is_immutable_and_uses_normalized_paths(
         config.dataset.delay = 0
 
 
+@pytest.mark.parametrize(
+    ("option", "value", "message"),
+    [
+        ("--max-total-simulations", "-10", "max_total_simulations cannot be negative"),
+        ("--limit", "-1", "limit cannot be negative"),
+        ("--page-size", "0", "page_size must be positive"),
+        ("--field-template-batch-size", "0", "field_template_batch_size must be positive"),
+    ],
+)
+def test_parse_application_config_rejects_invalid_planning_ranges(
+    monkeypatch,
+    tmp_path,
+    option,
+    value,
+    message,
+) -> None:
+    clear_yaml_cache()
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        ["alpha", "--dataset-id", "pv1", "--dry-run-plan", option, value],
+    )
+
+    with pytest.raises(ValueError, match=message):
+        parse_application_config()
+
+
 def test_parse_application_config_preserves_named_run_in_snapshot(monkeypatch, tmp_path) -> None:
     clear_yaml_cache()
     monkeypatch.chdir(tmp_path)

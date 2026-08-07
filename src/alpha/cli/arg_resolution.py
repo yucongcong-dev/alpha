@@ -65,7 +65,6 @@ def resolve_cli_args(
         explicit_cli_keys=explicit_cli_keys,
     )
     apply_run_mode_overrides(args, explicit_cli_keys=explicit_cli_keys)
-    args.field_template_batch_size = max(1, int(args.field_template_batch_size or 0))
     args._explicit_cli_keys = frozenset(explicit_cli_keys)
     return args
 

@@ -243,7 +243,9 @@ def test_cli_strategy_profile_applies_runtime_defaults(monkeypatch, tmp_path) ->
     assert args.top_fields_by_feedback == 20
 
 
-def test_cli_normalizes_zero_field_template_batch_size(monkeypatch, tmp_path) -> None:
+def test_cli_preserves_zero_field_template_batch_size_for_config_validation(
+    monkeypatch, tmp_path
+) -> None:
     clear_yaml_cache()
     config_path = tmp_path / "settings.yaml"
     write_config(config_path)
@@ -255,7 +257,7 @@ def test_cli_normalizes_zero_field_template_batch_size(monkeypatch, tmp_path) ->
 
     args = parse_args()
 
-    assert args.field_template_batch_size == 1
+    assert args.field_template_batch_size == 0
 
 
 def test_yaml_strategy_profile_rejects_unknown_value(monkeypatch, tmp_path) -> None:
