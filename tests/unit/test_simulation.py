@@ -121,19 +121,16 @@ class TestSummarizeFailure:
         assert summarize_failure({"error": "Something wrong"}) == "Something wrong"
 
 
-def test_precheck_simulation_metrics_loads_runtime_defaults(monkeypatch) -> None:
-    payload = {"is": {"sharpe": 0.8, "fitness": 0.9, "turnover": 0.05, "maxWeight": 0.02}}
-
-    monkeypatch.setattr(
-        "alpha.core.simulation_precheck.build_default_submit_precheck_config",
-        lambda: PrecheckConfig(
-            min_sharpe=1.0,
-            min_fitness=1.0,
-            min_turnover=0.01,
-            max_turnover=0.7,
-            max_weight=0.01,
-        ),
-    )
+def test_precheck_simulation_metrics_uses_precheck_defaults() -> None:
+    defaults = PrecheckConfig()
+    payload = {
+        "is": {
+            "sharpe": defaults.min_sharpe - 0.1,
+            "fitness": defaults.min_fitness - 0.1,
+            "turnover": defaults.min_turnover,
+            "maxWeight": defaults.max_weight + 0.01,
+        }
+    }
 
     passed, _reason, failures = precheck_simulation_metrics(payload)
 
@@ -145,19 +142,8 @@ def test_precheck_simulation_metrics_loads_runtime_defaults(monkeypatch) -> None
     }
 
 
-def test_precheck_simulation_metrics_preserves_explicit_thresholds(monkeypatch) -> None:
+def test_precheck_simulation_metrics_preserves_explicit_thresholds() -> None:
     payload = {"is": {"sharpe": 0.8, "fitness": 1.2, "turnover": 0.05, "maxWeight": 0.02}}
-
-    monkeypatch.setattr(
-        "alpha.core.simulation_precheck.build_default_submit_precheck_config",
-        lambda: PrecheckConfig(
-            min_sharpe=5.0,
-            min_fitness=5.0,
-            min_turnover=5.0,
-            max_turnover=5.0,
-            max_weight=5.0,
-        ),
-    )
 
     passed, _reason, failures = precheck_simulation_metrics(
         payload,

@@ -24,13 +24,6 @@ _HTTP_DEFAULTS = {
     "polling_retry_buffer": 0.5,
 }
 _FEEDBACK_TEMPLATE_MIN_PRIORITY_DEFAULT = 105
-_QUALITY_DEFAULTS = {
-    "min_sharpe": 1.25,
-    "min_fitness": 1.0,
-    "min_turnover": 0.01,
-    "max_turnover": 0.70,
-    "max_weight": 0.10,
-}
 
 
 def _validate_non_negative(name: str, value: float) -> None:
@@ -93,28 +86,6 @@ class HttpRuntimeConfig:
         _validate_non_negative("http.polling_retry_buffer", self.polling_retry_buffer)
 
 
-@dataclass(frozen=True)
-class QualityRuntimeConfig:
-    min_sharpe: float
-    min_fitness: float
-    min_turnover: float
-    max_turnover: float
-    max_weight: float
-
-    def __post_init__(self) -> None:
-        _validate_non_negative("quality.min_sharpe", self.min_sharpe)
-        _validate_non_negative("quality.min_fitness", self.min_fitness)
-        _validate_non_negative("quality.min_turnover", self.min_turnover)
-        _validate_positive("quality.max_turnover", self.max_turnover)
-        if self.min_turnover > self.max_turnover:
-            raise ValueError(
-                "quality.min_turnover must be <= quality.max_turnover; "
-                f"got {self.min_turnover!r} > {self.max_turnover!r}"
-            )
-        if not 0 < self.max_weight <= 1:
-            raise ValueError(f"quality.max_weight must be > 0 and <= 1; got {self.max_weight!r}")
-
-
 def load_http_runtime_config() -> HttpRuntimeConfig:
     """Build the current HTTP/runtime wait configuration snapshot.
 
@@ -166,20 +137,8 @@ def load_feedback_template_min_priority() -> int:
     )
 
 
-def load_quality_runtime_config() -> QualityRuntimeConfig:
-    """Build the single local quality gate used before platform checks."""
-    section = yaml_global_section("quality")
-    return QualityRuntimeConfig(
-        min_sharpe=float(section.get("min_sharpe", _QUALITY_DEFAULTS["min_sharpe"])),
-        min_fitness=float(section.get("min_fitness", _QUALITY_DEFAULTS["min_fitness"])),
-        min_turnover=float(section.get("min_turnover", _QUALITY_DEFAULTS["min_turnover"])),
-        max_turnover=float(section.get("max_turnover", _QUALITY_DEFAULTS["max_turnover"])),
-        max_weight=float(section.get("max_weight", _QUALITY_DEFAULTS["max_weight"])),
-    )
-
-
 # ---------------------------------------------------------------------------
-# 统一运行时配置复合对象 — 消除 30 个 getter 包装函数的冗余 YAML 查询
+# 统一运行时配置复合对象
 # ---------------------------------------------------------------------------
 
 
@@ -188,7 +147,6 @@ class RuntimeConfig:
     """Only configuration values read dynamically after CLI resolution."""
 
     http: HttpRuntimeConfig
-    quality: QualityRuntimeConfig
     feedback_template_min_priority: int
 
 
@@ -197,19 +155,15 @@ _runtime_config_source: object | None = None
 
 
 def _build_runtime_config() -> RuntimeConfig:
-    """Build the three runtime sections still consumed by production code."""
+    """Build the runtime values still consumed outside ApplicationConfig."""
     return RuntimeConfig(
         http=load_http_runtime_config(),
-        quality=load_quality_runtime_config(),
         feedback_template_min_priority=load_feedback_template_min_priority(),
     )
 
 
 def get_runtime_config() -> RuntimeConfig:
-    """获取完整运行时配置（惰性构建 + 缓存）。
-
-    取代原来 30 个独立的 get_*() 函数，消除 30→1 次 YAML 遍历的冗余。
-    """
+    """获取仍需动态读取的运行时配置（惰性构建 + 缓存）。"""
     global _runtime_config_cache, _runtime_config_source
     active_source = get_yaml_config_version()
     if _runtime_config_cache is None or _runtime_config_source != active_source:

@@ -32,7 +32,6 @@ from alpha.config.runtime_values import (
     get_runtime_config,
     load_feedback_template_min_priority,
     load_http_runtime_config,
-    load_quality_runtime_config,
 )
 from alpha.config.strategy_profiles import load_strategy_profile_schemas
 from alpha.config.yaml import (
@@ -528,31 +527,6 @@ def test_model51_policy_disables_undersized_holdout_experiment() -> None:
     assert policy.closed_default_template_library is True
 
 
-def test_load_quality_runtime_config_reads_yaml_globals(monkeypatch) -> None:
-    monkeypatch.setattr(
-        "alpha.config.runtime_values.get_yaml_config",
-        lambda config_path="": {
-            "global": {
-                "quality": {
-                    "min_sharpe": 1.7,
-                    "min_fitness": 1.2,
-                    "min_turnover": 0.03,
-                    "max_turnover": 0.55,
-                    "max_weight": 0.08,
-                }
-            }
-        },
-    )
-
-    quality = load_quality_runtime_config()
-
-    assert quality.min_sharpe == 1.7
-    assert quality.min_fitness == 1.2
-    assert quality.min_turnover == 0.03
-    assert quality.max_turnover == 0.55
-    assert quality.max_weight == 0.08
-
-
 def test_load_feedback_template_min_priority_reads_yaml_globals(monkeypatch) -> None:
     monkeypatch.setattr(
         "alpha.config.runtime_values.get_yaml_config",
@@ -570,23 +544,3 @@ def test_load_http_runtime_config_rejects_invalid_waits(monkeypatch) -> None:
 
     with pytest.raises(ValueError, match=r"http\.request_timeout"):
         load_http_runtime_config()
-
-
-def test_load_quality_runtime_config_rejects_invalid_turnover_range(monkeypatch) -> None:
-    monkeypatch.setattr(
-        "alpha.config.runtime_values.get_yaml_config",
-        lambda config_path="": {"global": {"quality": {"min_turnover": 0.8, "max_turnover": 0.7}}},
-    )
-
-    with pytest.raises(ValueError, match="min_turnover"):
-        load_quality_runtime_config()
-
-
-def test_load_quality_runtime_config_rejects_invalid_max_weight(monkeypatch) -> None:
-    monkeypatch.setattr(
-        "alpha.config.runtime_values.get_yaml_config",
-        lambda config_path="": {"global": {"quality": {"max_weight": 1.2}}},
-    )
-
-    with pytest.raises(ValueError, match="max_weight"):
-        load_quality_runtime_config()

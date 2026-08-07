@@ -17,7 +17,6 @@ from ..config._constants_thresholds import (
     SUBMIT_MIN_SHARPE,
     SUBMIT_MIN_TURNOVER,
 )
-from ..config.runtime_values import get_runtime_config
 
 _RESULT_FAIL: str = "FAIL"
 _KEY_CONCENTRATED_WEIGHT: str = "concentratedWeight"
@@ -40,18 +39,6 @@ class PrecheckConfig:
     min_turnover: float = SUBMIT_MIN_TURNOVER
     max_turnover: float = SUBMIT_MAX_TURNOVER
     max_weight: float = SUBMIT_MAX_WEIGHT
-
-
-def build_default_submit_precheck_config() -> PrecheckConfig:
-    """Load submit-grade precheck defaults from the current runtime config."""
-    quality = get_runtime_config().quality
-    return PrecheckConfig(
-        min_sharpe=quality.min_sharpe,
-        min_fitness=quality.min_fitness,
-        min_turnover=quality.min_turnover,
-        max_turnover=quality.max_turnover,
-        max_weight=quality.max_weight,
-    )
 
 
 def _resolve_precheck_config(
@@ -78,7 +65,7 @@ def _resolve_precheck_config(
             max_turnover=max_turnover,
             max_weight=max_weight,
         )
-    defaults = build_default_submit_precheck_config()
+    defaults = PrecheckConfig()
     return PrecheckConfig(
         min_sharpe=defaults.min_sharpe if min_sharpe is None else min_sharpe,
         min_fitness=defaults.min_fitness if min_fitness is None else min_fitness,
