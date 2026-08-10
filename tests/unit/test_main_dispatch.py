@@ -10,6 +10,8 @@ import sys
 from types import SimpleNamespace
 from unittest.mock import Mock
 
+from alpha.config.application import CleanConfig
+from alpha.config.application_sections import CredentialsConfig
 import alpha.main as main_module
 
 
@@ -102,6 +104,29 @@ def test_main_routes_dry_run_around_runtime_bootstrap_and_finalize(monkeypatch) 
     monkeypatch.setattr(main_module, "initialize_run_context", _unexpected)
     monkeypatch.setattr(main_module, "run_field_test_loop", _unexpected)
     monkeypatch.setattr(main_module, "finalize_run", _unexpected)
+    monkeypatch.setattr(main_module, "run_lifecycle_lock", _unexpected)
+
+    assert main_module.main() == 0
+
+
+def test_main_routes_clean_before_run_logging_and_bootstrap(monkeypatch) -> None:
+    config = CleanConfig(
+        command="clean",
+        credentials=CredentialsConfig(
+            email=None,
+            password=None,
+            include_credentials=False,
+            dry_run_clean=True,
+        ),
+    )
+    monkeypatch.setattr(main_module, "parse_application_config", lambda: config)
+    monkeypatch.setattr(main_module, "clean_runtime_artifacts", lambda _config: 0)
+
+    def _unexpected(*_args, **_kwargs):
+        raise AssertionError("clean must not enter the run configuration path")
+
+    monkeypatch.setattr(main_module, "configure_application_logging", _unexpected)
+    monkeypatch.setattr(main_module, "initialize_run_context", _unexpected)
     monkeypatch.setattr(main_module, "run_lifecycle_lock", _unexpected)
 
     assert main_module.main() == 0

@@ -63,8 +63,8 @@ alpha/
 python -m alpha --dataset-id fundamental2 --template-library-file datasets/fundamental2/template.json --top-fields-by-feedback 10 --max-templates-per-field 15
 
 # 预览 / 执行本地运行产物清理
-python -m alpha clean --dataset-id fundamental2 --dry-run-clean
-python -m alpha clean --dataset-id fundamental2
+python -m alpha clean --dry-run-clean
+python -m alpha clean
 ```
 
 完整的运行阶段、续跑、配置覆盖、缓存和结果文件说明统一在

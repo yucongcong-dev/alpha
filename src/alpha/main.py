@@ -21,7 +21,7 @@ from typing import TYPE_CHECKING
 from .config.yaml import activate_config_from_argv
 
 if TYPE_CHECKING:
-    from .config.application import ApplicationConfig
+    from .config.application import ApplicationConfig, CommandConfig
     from .config.application_sections import CredentialsConfig
     from .runtime.state import InitializedRunContext
 
@@ -31,7 +31,7 @@ activate_config_from_argv()
 logger = logging.getLogger(__name__)
 
 
-def parse_application_config() -> ApplicationConfig:
+def parse_application_config() -> CommandConfig:
     """Lazy compatibility export for the CLI boundary parser."""
     from .cli.parser import parse_application_config as parse
 
@@ -103,10 +103,11 @@ def main() -> int:
         int: 退出状态码（0=正常, 1=错误, 130=用户中断）。
     """
     config = parse_application_config()
-    configure_application_logging(config)
+    from .config.application import CleanConfig
 
-    if config.command == "clean":
+    if isinstance(config, CleanConfig):
         return clean_runtime_artifacts(config.credentials)
+    configure_application_logging(config)
     if config.planning.dry_run_plan:
         return 0 if run_dry_run_plan(config) else 1
 

@@ -10,6 +10,7 @@ import pytest
 from alpha.cli.parser import parse_application_config, parse_args
 from alpha.cli.path_resolution import normalize_args_paths
 from alpha.cli.run_config import build_run_config_snapshot
+from alpha.config.application import CleanConfig
 from alpha.config.yaml import get_yaml_config
 from alpha.models.runtime_options import ResultWriteOptions
 
@@ -31,15 +32,28 @@ def test_clean_command_parses(monkeypatch) -> None:
     assert args.dry_run_clean is True
 
 
-@pytest.mark.parametrize("command", ["run", "clean"])
-def test_normalize_args_paths_requires_dataset_id(monkeypatch, tmp_path, command) -> None:
+def test_normalize_args_paths_requires_dataset_id(monkeypatch, tmp_path) -> None:
     clear_yaml_cache()
     monkeypatch.chdir(tmp_path)
-    argv = ["alpha"] if command == "run" else ["alpha", "clean"]
-    monkeypatch.setattr(sys, "argv", argv)
+    monkeypatch.setattr(sys, "argv", ["alpha"])
 
     with pytest.raises(ValueError, match="--dataset-id is required"):
         normalize_args_paths(parse_args())
+
+
+def test_parse_clean_config_ignores_invalid_run_settings(monkeypatch, tmp_path) -> None:
+    clear_yaml_cache()
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        ["alpha", "clean", "--dry-run-clean", "--backfill-window", "0"],
+    )
+
+    config = parse_application_config()
+
+    assert isinstance(config, CleanConfig)
+    assert config.credentials.dry_run_clean is True
 
 
 def test_normalize_args_paths_uses_dataset_scoped_defaults(monkeypatch, tmp_path) -> None:

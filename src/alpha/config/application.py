@@ -17,6 +17,21 @@ from .application_sections import (
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
+class CleanConfig:
+    """Narrow configuration for the repository-wide cleanup command."""
+
+    command: str
+    credentials: CredentialsConfig
+
+    @classmethod
+    def from_args(cls, args: object) -> CleanConfig:
+        return cls(
+            command="clean",
+            credentials=CredentialsConfig.from_args(args),
+        )
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
 class ApplicationConfig:
     """Validated runtime configuration used after argument parsing.
 
@@ -54,3 +69,6 @@ class ApplicationConfig:
             quality=QualityConfig.from_args(args),
             runtime_flags=RuntimeFlagsConfig.from_args(args),
         )
+
+
+CommandConfig = ApplicationConfig | CleanConfig

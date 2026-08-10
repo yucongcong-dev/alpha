@@ -25,7 +25,8 @@ python -m alpha --dataset-id fundamental6 --full-run --max-total-simulations 100
 python -m alpha --dataset-id fundamental2 --template-library-file datasets/fundamental2/template.json --top-fields-by-feedback 10 --max-templates-per-field 15
 ```
 
-`run` 和 `clean` 都必须显式传入 `--dataset-id`，避免误跑或误清理历史数据集。选择数据集后，
+`run` 必须显式传入 `--dataset-id`，避免误跑历史数据集。`clean` 不进入研究配置路径，
+也不要求数据集参数；它会处理所有数据集的可重建运行产物。选择数据集后，
 运行器采用内置默认搜索预算。`--full-run` 会枚举更大的字段和模板空间，
 但仍保留 simulation 总预算。运行器先进入 Seed 阶段：历史上没有有效尝试的合格字段
 每个最多调度一个候选；只有所有字段都已获得种子尝试或被判定为不可执行后，才进入正常
@@ -131,8 +132,8 @@ make sync-config
 make check
 
 # 仅预览 / 执行可重建运行产物清理（默认保留 .credentials）
-python -m alpha clean --dataset-id fundamental2 --dry-run-clean
-python -m alpha clean --dataset-id fundamental2
+python -m alpha clean --dry-run-clean
+python -m alpha clean
 ```
 
 `alpha clean` 处理数据集的 `cache/`、`runs/` 和遗留运行产物；`make clean-dev` 处理 Python
