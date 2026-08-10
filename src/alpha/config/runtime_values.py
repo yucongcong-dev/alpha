@@ -7,6 +7,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import math
 from typing import Any
 
 from .yaml import get_yaml_config, get_yaml_config_version
@@ -27,11 +28,15 @@ _FEEDBACK_TEMPLATE_MIN_PRIORITY_DEFAULT = 105
 
 
 def _validate_non_negative(name: str, value: float) -> None:
+    if not math.isfinite(value):
+        raise ValueError(f"{name} must be finite; got {value!r}")
     if value < 0:
         raise ValueError(f"{name} must be >= 0; got {value!r}")
 
 
 def _validate_positive(name: str, value: float) -> None:
+    if not math.isfinite(value):
+        raise ValueError(f"{name} must be finite; got {value!r}")
     if value <= 0:
         raise ValueError(f"{name} must be > 0; got {value!r}")
 
@@ -129,12 +134,15 @@ def load_http_runtime_config() -> HttpRuntimeConfig:
 def load_feedback_template_min_priority() -> int:
     """Load the single feedback threshold read dynamically at runtime."""
     section = yaml_global_section("feedback")
-    return int(
+    priority = int(
         section.get(
             "feedback_template_min_priority",
             _FEEDBACK_TEMPLATE_MIN_PRIORITY_DEFAULT,
         )
     )
+    if priority < 0:
+        raise ValueError(f"feedback.feedback_template_min_priority must be >= 0; got {priority!r}")
+    return priority
 
 
 # ---------------------------------------------------------------------------

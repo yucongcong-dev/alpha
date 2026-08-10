@@ -557,6 +557,16 @@ def test_load_feedback_template_min_priority_reads_yaml_globals(monkeypatch) -> 
     assert load_feedback_template_min_priority() == 175
 
 
+def test_load_feedback_template_min_priority_rejects_negative_value(monkeypatch) -> None:
+    monkeypatch.setattr(
+        "alpha.config.runtime_values.get_yaml_config",
+        lambda config_path="": {"global": {"feedback": {"feedback_template_min_priority": -1}}},
+    )
+
+    with pytest.raises(ValueError, match="feedback_template_min_priority must be >= 0"):
+        load_feedback_template_min_priority()
+
+
 def test_load_http_runtime_config_rejects_invalid_waits(monkeypatch) -> None:
     monkeypatch.setattr(
         "alpha.config.runtime_values.get_yaml_config",
@@ -564,4 +574,25 @@ def test_load_http_runtime_config_rejects_invalid_waits(monkeypatch) -> None:
     )
 
     with pytest.raises(ValueError, match=r"http\.request_timeout"):
+        load_http_runtime_config()
+
+
+@pytest.mark.parametrize(
+    ("key", "value"),
+    [
+        ("request_timeout", float("nan")),
+        ("rate_limit_default_wait", float("inf")),
+    ],
+)
+def test_load_http_runtime_config_rejects_non_finite_values(
+    monkeypatch,
+    key,
+    value,
+) -> None:
+    monkeypatch.setattr(
+        "alpha.config.runtime_values.get_yaml_config",
+        lambda config_path="": {"global": {"http": {key: value}}},
+    )
+
+    with pytest.raises(ValueError, match=rf"http\.{key} must be finite"):
         load_http_runtime_config()
