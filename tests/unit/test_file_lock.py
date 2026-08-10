@@ -114,6 +114,85 @@ def test_exclusive_file_lock_reports_nonblocking_contention(monkeypatch, tmp_pat
         pass
 
 
+def test_exclusive_file_lock_reports_thread_contention(monkeypatch, tmp_path) -> None:
+    fake_thread_lock = SimpleNamespace(acquire=lambda **_kwargs: False)
+    monkeypatch.setattr(file_lock, "_thread_lock", lambda _path: fake_thread_lock)
+
+    with (
+        pytest.raises(file_lock.FileLockUnavailableError, match="already held"),
+        file_lock.exclusive_file_lock(str(tmp_path / "result.lock"), blocking=False),
+    ):
+        pass
+
+
+def test_exclusive_file_lock_uses_nonblocking_windows_mode(monkeypatch, tmp_path) -> None:
+    calls: list[tuple[int, int]] = []
+    fake_msvcrt = SimpleNamespace(
+        LK_LOCK=10,
+        LK_NBLCK=12,
+        LK_UNLCK=11,
+        locking=lambda _fd, mode, size: calls.append((mode, size)),
+    )
+    monkeypatch.setattr(file_lock.os, "name", "nt")
+    monkeypatch.setattr(file_lock, "import_module", lambda _name: fake_msvcrt)
+    lock_path = tmp_path / "result.lock"
+    lock_path.write_bytes(b"x")
+
+    with file_lock.exclusive_file_lock(str(lock_path), blocking=False):
+        pass
+
+    assert calls == [(fake_msvcrt.LK_NBLCK, 1), (fake_msvcrt.LK_UNLCK, 1)]
+
+
+def test_exclusive_file_lock_maps_nonblocking_windows_contention(
+    monkeypatch, tmp_path
+) -> None:
+    def fail_to_lock(_fd: int, _mode: int, _size: int) -> None:
+        raise OSError("busy")
+
+    fake_msvcrt = SimpleNamespace(
+        LK_LOCK=10,
+        LK_NBLCK=12,
+        LK_UNLCK=11,
+        locking=fail_to_lock,
+    )
+    monkeypatch.setattr(file_lock.os, "name", "nt")
+    monkeypatch.setattr(file_lock, "import_module", lambda _name: fake_msvcrt)
+
+    with (
+        pytest.raises(file_lock.FileLockUnavailableError, match="already held"),
+        file_lock.exclusive_file_lock(str(tmp_path / "result.lock"), blocking=False),
+    ):
+        pass
+
+
+@pytest.mark.parametrize("platform_name", ["nt", "posix"])
+def test_exclusive_file_lock_preserves_blocking_os_error(
+    monkeypatch, tmp_path, platform_name
+) -> None:
+    def fail_to_lock(*_args: object) -> None:
+        raise OSError("filesystem lock failed")
+
+    fake_lock_module = SimpleNamespace(
+        LK_LOCK=10,
+        LK_NBLCK=12,
+        LK_UNLCK=11,
+        LOCK_EX=1,
+        LOCK_NB=4,
+        LOCK_UN=2,
+        locking=fail_to_lock,
+        flock=fail_to_lock,
+    )
+    monkeypatch.setattr(file_lock.os, "name", platform_name)
+    monkeypatch.setattr(file_lock, "import_module", lambda _name: fake_lock_module)
+
+    with (
+        pytest.raises(OSError, match="filesystem lock failed"),
+        file_lock.exclusive_file_lock(str(tmp_path / "result.lock")),
+    ):
+        pass
+
+
 def test_exclusive_run_lock_uses_output_scoped_nonblocking_lock(monkeypatch, tmp_path) -> None:
     captured: dict[str, object] = {}
 
