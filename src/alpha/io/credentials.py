@@ -22,6 +22,7 @@ from . import credentials_crypto as _crypto
 
 logger = logging.getLogger(__name__)
 
+
 def write_credentials_file(path: str, key_path: str, email: str, password: str) -> None:
     """将 WorldQuant 凭证加密写入本地 JSON 文件。"""
     _crypto.ensure_parent_dir(path)

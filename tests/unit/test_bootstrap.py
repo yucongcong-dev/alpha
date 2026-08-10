@@ -372,9 +372,7 @@ def test_prepare_bootstrap_resources_rejects_run_drift_before_reconciliation(
     monkeypatch.setattr(
         bootstrap_module, "build_settings_fingerprint", lambda _options: "settings-fp"
     )
-    monkeypatch.setattr(
-        bootstrap_module, "stable_fingerprint", lambda _library: "templates-fp"
-    )
+    monkeypatch.setattr(bootstrap_module, "stable_fingerprint", lambda _library: "templates-fp")
     monkeypatch.setattr(
         bootstrap_module,
         "reconcile_pending_check_results",

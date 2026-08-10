@@ -113,6 +113,7 @@ class WorkerClientFactory:
             if request_deadline is None and request_abort is None:
                 login_with_retry(client, self.options.login_retries)
             else:
+
                 def _abort_requested() -> bool:
                     return bool(request_abort is not None and request_abort()) or bool(
                         request_deadline is not None and time.monotonic() >= request_deadline
