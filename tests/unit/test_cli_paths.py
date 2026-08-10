@@ -456,7 +456,11 @@ def test_parse_application_config_rejects_invalid_planning_ranges(
         ("--decay", "-1", "decay cannot be negative"),
         ("--truncation", "1.1", "truncation must be between 0 and 1"),
         ("--backfill-window", "0", "backfill_window must be positive"),
-        ("--neutralization", "NOT_A_MODE", "neutralization must be one of"),
+        (
+            "--neutralization",
+            "not-a-mode",
+            "neutralization must be an uppercase platform option",
+        ),
         ("--start-date", "not-a-date", "start_date must use YYYY-MM-DD format"),
     ],
 )

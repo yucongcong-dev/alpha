@@ -49,7 +49,8 @@ global:
 
     # 6. NEUTRALIZATION — 官网: Neutralization
     #    通用选项: SUBINDUSTRY, INDUSTRY, SECTOR, MARKET, NONE
-    #    Consultant 账号可能显示额外风险中性化选项，不建议在未验证账号权限前设为默认。
+    #    EUR/ASI 还可能使用 COUNTRY、EXCHANGE；Consultant 账号可能显示额外选项。
+    #    非通用值应先在当前账号的官网 Settings 中确认。
     neutralization: "SUBINDUSTRY"
 
     # 7. DECAY — 官网: Decay

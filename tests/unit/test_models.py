@@ -247,7 +247,11 @@ def test_dataset_config_rejects_invalid_values(
         ("truncation", float("inf"), "truncation must be finite"),
         ("truncation", 1.01, "truncation must be between 0 and 1"),
         ("backfill_window", 0, "backfill_window must be positive"),
-        ("neutralization", "NOT_A_MODE", "neutralization must be one of"),
+        (
+            "neutralization",
+            "not-a-mode",
+            "neutralization must be an uppercase platform option",
+        ),
         ("pasteurization", "MAYBE", "pasteurization must be one of"),
         ("unit_handling", "ON", "unit_handling must be one of"),
         ("language", "PYTHON", "language must be one of"),
@@ -266,6 +270,15 @@ def test_simulation_config_rejects_invalid_values(
 def test_simulation_config_rejects_reversed_date_range() -> None:
     with pytest.raises(ValueError, match="start_date cannot be after end_date"):
         SimulationConfig.from_args(SimpleNamespace(start_date="2026-02-01", end_date="2026-01-31"))
+
+
+@pytest.mark.parametrize("neutralization", ["COUNTRY", "EXCHANGE", "STATISTICAL"])
+def test_simulation_config_accepts_account_neutralization_options(
+    neutralization: str,
+) -> None:
+    config = SimulationConfig.from_args(SimpleNamespace(neutralization=neutralization))
+
+    assert config.neutralization == neutralization
 
 
 @pytest.mark.parametrize(

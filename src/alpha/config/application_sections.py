@@ -5,12 +5,13 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import date
 import math
+import re
 from typing import Any
 
 from .strategy_profiles import normalize_strategy_profile
 
 _INSTRUMENT_TYPES = frozenset({"EQUITY", "FUTURES"})
-_NEUTRALIZATION_MODES = frozenset({"NONE", "MARKET", "SECTOR", "INDUSTRY", "SUBINDUSTRY"})
+_PLATFORM_OPTION_PATTERN = re.compile(r"[A-Z][A-Z0-9_]*")
 _ON_OFF_VALUES = frozenset({"ON", "OFF"})
 _UNIT_HANDLING_VALUES = frozenset({"VERIFY", "OFF"})
 _LANGUAGES = frozenset({"FASTEXPR"})
@@ -90,7 +91,6 @@ class SimulationConfig:
             raise ValueError("backfill_window must be positive")
 
         allowed_values = {
-            "neutralization": _NEUTRALIZATION_MODES,
             "nan_handling": _ON_OFF_VALUES,
             "pasteurization": _ON_OFF_VALUES,
             "unit_handling": _UNIT_HANDLING_VALUES,
@@ -100,6 +100,8 @@ class SimulationConfig:
         for field_name, choices in allowed_values.items():
             if getattr(self, field_name) not in choices:
                 raise ValueError(f"{field_name} must be one of {sorted(choices)}")
+        if not _PLATFORM_OPTION_PATTERN.fullmatch(self.neutralization):
+            raise ValueError("neutralization must be an uppercase platform option")
 
         parsed_dates: dict[str, date] = {}
         for field_name in ("start_date", "end_date"):
