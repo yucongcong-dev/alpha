@@ -21,8 +21,7 @@ from typing import TYPE_CHECKING
 from .config.yaml import activate_config_from_argv
 
 if TYPE_CHECKING:
-    from .config.application import ApplicationConfig, CommandConfig
-    from .config.application_sections import CredentialsConfig
+    from .config.application import ApplicationConfig, CleanConfig, CommandConfig
     from .runtime.state import InitializedRunContext
 
 
@@ -38,7 +37,7 @@ def parse_application_config() -> CommandConfig:
     return parse()
 
 
-def clean_runtime_artifacts(config: CredentialsConfig, *, project_root: Path | None = None) -> int:
+def clean_runtime_artifacts(config: CleanConfig, *, project_root: Path | None = None) -> int:
     """Compatibility export that preserves lazy application imports."""
     from .app.bootstrap import clean_runtime_artifacts as clean
 
@@ -106,7 +105,7 @@ def main() -> int:
     from .config.application import CleanConfig
 
     if isinstance(config, CleanConfig):
-        return clean_runtime_artifacts(config.credentials)
+        return clean_runtime_artifacts(config)
     configure_application_logging(config)
     if config.planning.dry_run_plan:
         return 0 if run_dry_run_plan(config) else 1

@@ -54,7 +54,9 @@ alpha/
 - `blacklist.json`：人工维护的长期排除规则；运行过程只读取，不自动改写
 - `README.md`：该数据集的有效结论、当前策略与下一步
 
-`cache/`、`runs/`、`feedback/` 与 `.credentials/` 属于本地可重建或私密状态，不提交。详细目录、工作区、结果和清理规则见 [Runner Reference](docs/runner_reference.md)。
+`cache/`、`runs/`、`feedback/` 与 `.credentials/` 属于本地或私密状态，不提交；其中
+`runs/results.jsonl` 是本地权威回测记录，清理前应确认重要结论已经沉淀。详细目录、工作区、
+结果和清理规则见 [Runner Reference](docs/runner_reference.md)。
 
 ## 更多常用命令
 
@@ -62,9 +64,12 @@ alpha/
 # 聚焦历史高反馈字段
 python -m alpha --dataset-id fundamental2 --template-library-file datasets/fundamental2/template.json --top-fields-by-feedback 10 --max-templates-per-field 15
 
-# 预览 / 执行本地运行产物清理
-python -m alpha clean --dry-run-clean
+# 默认预览所有数据集；确认后只清理一个数据集
 python -m alpha clean
+python -m alpha clean --dataset-id option9 --confirm-clean
+
+# 全局清理必须显式确认
+python -m alpha clean --all-datasets --confirm-clean
 ```
 
 完整的运行阶段、续跑、配置覆盖、缓存和结果文件说明统一在

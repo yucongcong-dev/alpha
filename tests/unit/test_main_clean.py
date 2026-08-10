@@ -2,82 +2,103 @@
 
 from __future__ import annotations
 
-from alpha.config.application_sections import CredentialsConfig
+from alpha.config.application import CleanConfig
 from alpha.main import clean_runtime_artifacts
 
 
-def _credentials_config(*, include_credentials: bool, dry_run_clean: bool) -> CredentialsConfig:
-    return CredentialsConfig(
-        email=None,
-        password=None,
+def _clean_config(
+    *,
+    dataset_id: str | None = None,
+    all_datasets: bool = False,
+    include_credentials: bool = False,
+    confirm_clean: bool = False,
+    dry_run_clean: bool = False,
+) -> CleanConfig:
+    return CleanConfig(
+        command="clean",
+        dataset_id=dataset_id,
+        all_datasets=all_datasets,
         include_credentials=include_credentials,
+        confirm_clean=confirm_clean,
         dry_run_clean=dry_run_clean,
     )
 
 
-def test_clean_runtime_artifacts_preserves_credentials(tmp_path) -> None:
-    """clean should remove runtime dirs while keeping credentials by default."""
-    for dirname in (
-        "cache",
-        "results",
-        ".credentials",
-        ".pytest_cache",
-        ".mypy_cache",
-        ".ruff_cache",
-        "htmlcov",
-    ):
-        path = tmp_path / dirname
-        path.mkdir()
-        (path / "marker.txt").write_text("x", encoding="utf-8")
-    coverage_file = tmp_path / ".coverage"
-    coverage_file.write_text("x", encoding="utf-8")
-    dataset_dir = tmp_path / "datasets" / "fundamental6"
+def _create_dataset_runtime(tmp_path, dataset_id: str) -> None:
+    dataset_dir = tmp_path / "datasets" / dataset_id
     for dirname in ("cache", "runs", "feedback", "presets"):
         path = dataset_dir / dirname
         path.mkdir(parents=True)
         (path / "marker.txt").write_text("x", encoding="utf-8")
-    blacklist_file = dataset_dir / "blacklist.json"
-    blacklist_file.write_text("{}", encoding="utf-8")
-    template_file = dataset_dir / "template.json"
-    template_file.write_text("{}", encoding="utf-8")
+    (dataset_dir / "blacklist.json").write_text("{}", encoding="utf-8")
+    (dataset_dir / "template.json").write_text("{}", encoding="utf-8")
 
-    args = _credentials_config(include_credentials=False, dry_run_clean=False)
 
-    assert clean_runtime_artifacts(args, project_root=tmp_path) == 0
+def test_clean_defaults_to_global_preview(tmp_path) -> None:
+    _create_dataset_runtime(tmp_path, "fundamental6")
+    root_cache = tmp_path / "cache"
+    root_cache.mkdir()
+
+    assert clean_runtime_artifacts(_clean_config(), project_root=tmp_path) == 0
+
+    assert (tmp_path / "datasets" / "fundamental6" / "runs").exists()
+    assert root_cache.exists()
+
+
+def test_confirmed_dataset_clean_only_removes_selected_runtime(tmp_path) -> None:
+    _create_dataset_runtime(tmp_path, "fundamental6")
+    _create_dataset_runtime(tmp_path, "option9")
+    root_cache = tmp_path / "cache"
+    root_cache.mkdir()
+
+    config = _clean_config(dataset_id="fundamental6", confirm_clean=True)
+
+    assert clean_runtime_artifacts(config, project_root=tmp_path) == 0
+    selected = tmp_path / "datasets" / "fundamental6"
+    untouched = tmp_path / "datasets" / "option9"
+    assert not (selected / "cache").exists()
+    assert not (selected / "runs").exists()
+    assert not (selected / "feedback").exists()
+    assert (selected / "presets").exists()
+    assert (selected / "blacklist.json").exists()
+    assert (selected / "template.json").exists()
+    assert (untouched / "runs").exists()
+    assert root_cache.exists()
+
+
+def test_confirmed_global_clean_preserves_credentials_by_default(tmp_path) -> None:
+    _create_dataset_runtime(tmp_path, "fundamental6")
+    for dirname in ("cache", "results", ".credentials"):
+        path = tmp_path / dirname
+        path.mkdir()
+        (path / "marker.txt").write_text("x", encoding="utf-8")
+
+    config = _clean_config(all_datasets=True, confirm_clean=True)
+
+    assert clean_runtime_artifacts(config, project_root=tmp_path) == 0
+    assert not (tmp_path / "datasets" / "fundamental6" / "runs").exists()
     assert not (tmp_path / "cache").exists()
     assert not (tmp_path / "results").exists()
-    assert not (dataset_dir / "cache").exists()
-    assert not (dataset_dir / "runs").exists()
-    assert not (dataset_dir / "feedback").exists()
-    assert (dataset_dir / "presets").exists()
-    assert blacklist_file.exists()
-    assert template_file.exists()
     assert (tmp_path / ".credentials").exists()
-    assert (tmp_path / ".pytest_cache").exists()
-    assert (tmp_path / ".mypy_cache").exists()
-    assert (tmp_path / ".ruff_cache").exists()
-    assert (tmp_path / "htmlcov").exists()
-    assert coverage_file.exists()
 
 
-def test_clean_runtime_artifacts_can_include_credentials(tmp_path) -> None:
-    """--include-credentials should remove encrypted credential storage too."""
+def test_confirmed_global_clean_can_include_credentials(tmp_path) -> None:
     creds = tmp_path / ".credentials"
     creds.mkdir()
     (creds / "credentials.json").write_text("{}", encoding="utf-8")
+    config = _clean_config(
+        all_datasets=True,
+        include_credentials=True,
+        confirm_clean=True,
+    )
 
-    args = _credentials_config(include_credentials=True, dry_run_clean=False)
-
-    assert clean_runtime_artifacts(args, project_root=tmp_path) == 0
+    assert clean_runtime_artifacts(config, project_root=tmp_path) == 0
     assert not creds.exists()
 
 
-def test_clean_runtime_artifacts_dry_run_keeps_files(tmp_path) -> None:
-    """--dry-run-clean should only print targets and not delete anything."""
-    cache = tmp_path / "cache"
-    cache.mkdir()
+def test_explicit_dry_run_keeps_files(tmp_path) -> None:
+    _create_dataset_runtime(tmp_path, "option9")
+    config = _clean_config(dataset_id="option9", dry_run_clean=True)
 
-    args = _credentials_config(include_credentials=False, dry_run_clean=True)
-
-    assert clean_runtime_artifacts(args, project_root=tmp_path) == 0
-    assert cache.exists()
+    assert clean_runtime_artifacts(config, project_root=tmp_path) == 0
+    assert (tmp_path / "datasets" / "option9" / "runs").exists()

@@ -25,16 +25,12 @@ def _value(args: object, name: str, default: Any = None) -> Any:
 class CredentialsConfig:
     email: str | None
     password: str | None
-    include_credentials: bool
-    dry_run_clean: bool
 
     @classmethod
     def from_args(cls, args: object) -> CredentialsConfig:
         return cls(
             email=_value(args, "email"),
             password=_value(args, "password"),
-            include_credentials=bool(_value(args, "include_credentials", False)),
-            dry_run_clean=bool(_value(args, "dry_run_clean", False)),
         )
 
 

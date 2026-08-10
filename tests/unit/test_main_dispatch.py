@@ -11,7 +11,6 @@ from types import SimpleNamespace
 from unittest.mock import Mock
 
 from alpha.config.application import CleanConfig
-from alpha.config.application_sections import CredentialsConfig
 import alpha.main as main_module
 
 
@@ -112,12 +111,11 @@ def test_main_routes_dry_run_around_runtime_bootstrap_and_finalize(monkeypatch) 
 def test_main_routes_clean_before_run_logging_and_bootstrap(monkeypatch) -> None:
     config = CleanConfig(
         command="clean",
-        credentials=CredentialsConfig(
-            email=None,
-            password=None,
-            include_credentials=False,
-            dry_run_clean=True,
-        ),
+        dataset_id=None,
+        all_datasets=False,
+        include_credentials=False,
+        confirm_clean=False,
+        dry_run_clean=True,
     )
     monkeypatch.setattr(main_module, "parse_application_config", lambda: config)
     monkeypatch.setattr(main_module, "clean_runtime_artifacts", lambda _config: 0)

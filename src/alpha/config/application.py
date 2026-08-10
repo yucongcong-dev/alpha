@@ -18,16 +18,46 @@ from .application_sections import (
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class CleanConfig:
-    """Narrow configuration for the repository-wide cleanup command."""
+    """Narrow configuration for previewing or confirming runtime cleanup."""
 
     command: str
-    credentials: CredentialsConfig
+    dataset_id: str | None
+    all_datasets: bool
+    include_credentials: bool
+    confirm_clean: bool
+    dry_run_clean: bool
+
+    def __post_init__(self) -> None:
+        if self.dataset_id and self.all_datasets:
+            raise ValueError("clean accepts either --dataset-id or --all-datasets, not both")
+        if self.confirm_clean and self.dry_run_clean:
+            raise ValueError("--confirm-clean and --dry-run-clean cannot be used together")
+        if self.confirm_clean and not (self.dataset_id or self.all_datasets):
+            raise ValueError(
+                "confirmed clean requires an explicit --dataset-id or --all-datasets scope"
+            )
+        if self.include_credentials and not self.all_datasets:
+            raise ValueError("--include-credentials requires --all-datasets")
+
+    @property
+    def preview_only(self) -> bool:
+        return self.dry_run_clean or not self.confirm_clean
 
     @classmethod
     def from_args(cls, args: object) -> CleanConfig:
+        explicit_keys = frozenset(getattr(args, "_explicit_cli_keys", frozenset()))
+        dataset_id = (
+            str(getattr(args, "dataset_id", "") or "").strip()
+            if "dataset_id" in explicit_keys
+            else ""
+        )
         return cls(
             command="clean",
-            credentials=CredentialsConfig.from_args(args),
+            dataset_id=dataset_id or None,
+            all_datasets=bool(getattr(args, "all_datasets", False)),
+            include_credentials=bool(getattr(args, "include_credentials", False)),
+            confirm_clean=bool(getattr(args, "confirm_clean", False)),
+            dry_run_clean=bool(getattr(args, "dry_run_clean", False)),
         )
 
 

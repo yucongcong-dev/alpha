@@ -131,10 +131,19 @@ dataset profile 先于 strategy profile 合并，`--smoke-test` / `--full-run` �
 make sync-config
 make check
 
-# 仅预览 / 执行可重建运行产物清理（默认保留 .credentials）
-python -m alpha clean --dry-run-clean
+# 默认只预览所有数据集的清理目标
 python -m alpha clean
+
+# 确认后仅清理一个数据集
+python -m alpha clean --dataset-id option9 --confirm-clean
+
+# 全局清理必须显式声明范围并确认
+python -m alpha clean --all-datasets --confirm-clean
 ```
 
-`alpha clean` 处理数据集的 `cache/`、`runs/` 和遗留运行产物；`make clean-dev` 处理 Python
-字节码、测试缓存、coverage 与开发安装元数据。只有明确传入 `--include-credentials` 才会清理本地加密凭证。
+`alpha clean` 默认只打印目标，不删除文件。指定 `--dataset-id` 时只处理该数据集的
+`cache/`、`runs/` 和 `feedback/`；全局范围必须使用 `--all-datasets`，并额外处理遗留根目录
+运行产物。实际删除都要求 `--confirm-clean`。`runs/results.jsonl` 是本地权威回测记录，不能在
+删除后由分析视图反向重建；清理前应先将重要证据沉淀到数据集 README、模板或外部备份。
+`make clean-dev` 只处理 Python 字节码、测试缓存、coverage 与开发安装元数据。
+只有 `--all-datasets --include-credentials --confirm-clean` 才会清理本地加密凭证。

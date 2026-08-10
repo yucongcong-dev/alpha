@@ -22,6 +22,7 @@ def parse_args() -> argparse.Namespace:
     parser_defaults = collect_parser_defaults(parser)
     explicit_cli_keys = collect_explicit_cli_keys(parser, sys.argv[1:])
     args = parser.parse_args()
+    args._explicit_cli_keys = frozenset(explicit_cli_keys)
     if args.command == "clean":
         return args
     return resolve_cli_args(

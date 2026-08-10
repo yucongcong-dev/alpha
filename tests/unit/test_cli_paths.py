@@ -53,7 +53,63 @@ def test_parse_clean_config_ignores_invalid_run_settings(monkeypatch, tmp_path) 
     config = parse_application_config()
 
     assert isinstance(config, CleanConfig)
-    assert config.credentials.dry_run_clean is True
+    assert config.dry_run_clean is True
+
+
+def test_clean_defaults_to_previewing_all_datasets(monkeypatch) -> None:
+    clear_yaml_cache()
+    monkeypatch.setattr(sys, "argv", ["alpha", "clean"])
+
+    config = parse_application_config()
+
+    assert isinstance(config, CleanConfig)
+    assert config.dataset_id is None
+    assert config.all_datasets is False
+    assert config.preview_only is True
+
+
+def test_clean_uses_only_explicit_dataset_scope(monkeypatch) -> None:
+    clear_yaml_cache()
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        ["alpha", "clean", "--dataset-id", "option9", "--confirm-clean"],
+    )
+
+    config = parse_application_config()
+
+    assert isinstance(config, CleanConfig)
+    assert config.dataset_id == "option9"
+    assert config.preview_only is False
+
+
+@pytest.mark.parametrize(
+    "argv, message",
+    [
+        (["alpha", "clean", "--confirm-clean"], "requires an explicit"),
+        (
+            [
+                "alpha",
+                "clean",
+                "--dataset-id",
+                "option9",
+                "--all-datasets",
+                "--confirm-clean",
+            ],
+            "either --dataset-id or --all-datasets",
+        ),
+        (
+            ["alpha", "clean", "--include-credentials", "--dataset-id", "option9"],
+            "requires --all-datasets",
+        ),
+    ],
+)
+def test_clean_rejects_ambiguous_or_unsafe_scope(monkeypatch, argv, message) -> None:
+    clear_yaml_cache()
+    monkeypatch.setattr(sys, "argv", argv)
+
+    with pytest.raises(ValueError, match=message):
+        parse_application_config()
 
 
 def test_normalize_args_paths_uses_dataset_scoped_defaults(monkeypatch, tmp_path) -> None:

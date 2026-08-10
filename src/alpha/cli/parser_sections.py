@@ -317,8 +317,20 @@ def add_output_logging_arguments(parser: argparse.ArgumentParser) -> None:
     parser.add_argument(
         "--include-credentials",
         action="store_true",
-        help="clean 命令同时删除 .credentials/（默认不会删除凭据）",
+        help="全局 clean 同时删除 .credentials/；必须与 --all-datasets 一起使用",
     )
     parser.add_argument(
-        "--dry-run-clean", action="store_true", help="预览 clean 命令会删除的路径，不实际删除"
+        "--all-datasets",
+        action="store_true",
+        help="clean 命令覆盖所有数据集和遗留根目录运行产物",
+    )
+    parser.add_argument(
+        "--confirm-clean",
+        action="store_true",
+        help="确认执行 clean；未提供时只预览将删除的路径",
+    )
+    parser.add_argument(
+        "--dry-run-clean",
+        action="store_true",
+        help="显式预览 clean 命令会删除的路径，不实际删除",
     )
