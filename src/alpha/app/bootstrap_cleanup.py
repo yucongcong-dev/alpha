@@ -19,9 +19,7 @@ def _dataset_runtime_targets(project_root: Path, config: CleanConfig) -> list[Pa
         dataset_dirs = [datasets_dir / sanitize_dataset_id_for_filename(config.dataset_id)]
     else:
         dataset_dirs = [
-            path
-            for path in datasets_dir.iterdir()
-            if path.is_dir() and not path.is_symlink()
+            path for path in datasets_dir.iterdir() if path.is_dir() and not path.is_symlink()
         ]
 
     return [
@@ -65,9 +63,7 @@ def clean_runtime_artifacts(
         print(f"[clean] removed {target}")
 
     if config.preview_only:
-        scope_hint = (
-            f"--dataset-id {config.dataset_id}" if config.dataset_id else "--all-datasets"
-        )
+        scope_hint = f"--dataset-id {config.dataset_id}" if config.dataset_id else "--all-datasets"
         print(f"[clean] preview only; add {scope_hint} --confirm-clean to remove these paths")
     if not config.include_credentials:
         print("[clean] credentials preserved (.credentials/)")

@@ -52,11 +52,7 @@ def test_run_config_snapshot_captures_research_inputs(monkeypatch, tmp_path) -> 
             "0.6",
             "--max-weight",
             "0.08",
-            *(
-                value
-                for option, path in filter_paths.items()
-                for value in (option, str(path))
-            ),
+            *(value for option, path in filter_paths.items() for value in (option, str(path))),
         ],
     )
 
