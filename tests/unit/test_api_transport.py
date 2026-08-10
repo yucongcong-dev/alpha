@@ -98,6 +98,8 @@ def test_response_header_matches_names_case_insensitively() -> None:
         ({"Retry-After": "2.5"}, 7.0, 2.5),
         ({"retry-after": "3.5"}, 7.0, 3.5),
         ({"Retry-After": "invalid"}, 7.0, 7.0),
+        ({"Retry-After": "nan"}, 7.0, 7.0),
+        ({"Retry-After": "-1"}, 7.0, 7.0),
         ({}, 7.0, 7.0),
     ],
 )

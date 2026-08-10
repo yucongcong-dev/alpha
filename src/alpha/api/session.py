@@ -22,8 +22,39 @@ from .timing import doubled_retry_after, wait_seconds
 
 logger = logging.getLogger(__name__)
 
-_request_throttle_lock = threading.Lock()
+_request_throttle_condition = threading.Condition()
 _global_last_request_at: float = 0.0
+_global_rate_limit_until: float = 0.0
+
+
+def _wait_for_request_slot(min_request_interval: float) -> None:
+    """Wait until both the global interval and rate-limit embargo allow a request."""
+    global _global_last_request_at
+
+    with _request_throttle_condition:
+        while True:
+            now = time.monotonic()
+            allowed_at = max(
+                _global_rate_limit_until,
+                _global_last_request_at + min_request_interval,
+            )
+            remaining = allowed_at - now
+            if remaining <= 0:
+                _global_last_request_at = now
+                return
+            _request_throttle_condition.wait(timeout=remaining)
+
+
+def _extend_rate_limit_deadline(retry_after_seconds: float) -> None:
+    """Share a 429 backoff deadline across every client in this process."""
+    global _global_rate_limit_until
+
+    deadline = time.monotonic() + max(retry_after_seconds, 0.0)
+    with _request_throttle_condition:
+        if deadline <= _global_rate_limit_until:
+            return
+        _global_rate_limit_until = deadline
+        _request_throttle_condition.notify_all()
 
 
 class BrainSessionMixin:
@@ -74,6 +105,10 @@ class BrainSessionMixin:
             last_response = (status, response_headers, content)
             if status == 429:
                 retry_after_header = response_header(response_headers, "Retry-After")
+                retry_after_seconds = doubled_retry_after(
+                    response_headers, default=http_config.rate_limit_default_wait
+                )
+                _extend_rate_limit_deadline(retry_after_seconds)
                 logger.warning(
                     "[rate-limit] %s %s attempt=%d/%d retry_after=%s",
                     method,
@@ -83,12 +118,7 @@ class BrainSessionMixin:
                     retry_after_header,
                 )
                 if attempt < retries:
-                    wait_seconds(
-                        doubled_retry_after(
-                            response_headers, default=http_config.rate_limit_default_wait
-                        ),
-                        "rate limit",
-                    )
+                    wait_seconds(retry_after_seconds, "rate limit")
                 continue
             if status == 401 and attempt < retries:
                 logger.warning("[auth] session expired on %s %s, re-logging in...", method, url)
@@ -137,17 +167,7 @@ class BrainSessionMixin:
         data: Any | None = None,
     ) -> tuple[int, dict[str, str], bytes]:
         """执行一次不带高层重试策略的原始 HTTP 请求。"""
-        if self.min_request_interval > 0:
-            global _global_last_request_at
-            with _request_throttle_lock:
-                now = time.monotonic()
-                elapsed = now - _global_last_request_at
-                remaining = self.min_request_interval - elapsed
-                _global_last_request_at = max(
-                    now, _global_last_request_at + self.min_request_interval
-                )
-            if remaining > 0:
-                wait_seconds(remaining, "global request throttle")
+        _wait_for_request_slot(self.min_request_interval)
         if params:
             query = urlencode(params)
             separator = "&" if "?" in url else "?"

@@ -8,6 +8,7 @@ import pytest
 
 from alpha.api.client import BrainClient
 from alpha.api.retry import login_with_retry, retry_operation
+import alpha.api.session as session_module
 from alpha.exceptions import (
     BrainAPIError,
     BrainHTTPError,
@@ -16,6 +17,12 @@ from alpha.exceptions import (
     BrainStopRequested,
     BrainTransientError,
 )
+
+
+@pytest.fixture(autouse=True)
+def reset_global_request_timing(monkeypatch) -> None:
+    monkeypatch.setattr(session_module, "_global_last_request_at", 0.0)
+    monkeypatch.setattr(session_module, "_global_rate_limit_until", 0.0)
 
 
 def test_login_sends_basic_authorization_header(monkeypatch) -> None:
@@ -73,6 +80,54 @@ def test_request_raises_rate_limit_error_after_retry_budget(monkeypatch) -> None
 
     assert exc_info.value.retry_after == 6
     assert waits == [6.0]
+
+
+def test_rate_limit_deadline_is_shared_across_clients(monkeypatch) -> None:
+    clock = [100.0]
+    condition_waits: list[float] = []
+
+    class FakeCondition:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args: object) -> None:
+            return None
+
+        def wait(self, timeout: float | None = None) -> None:
+            assert timeout is not None
+            condition_waits.append(timeout)
+            clock[0] += timeout
+
+        def notify_all(self) -> None:
+            return None
+
+    rate_limited_client = BrainClient("user@example.com", "secret")
+    waiting_client = BrainClient("user@example.com", "secret")
+    responses = iter(
+        [
+            (429, {"Retry-After": "3"}, b"limited"),
+            (200, {}, b"ok"),
+        ]
+    )
+
+    class FakeBackend:
+        def request(self, **_kwargs: Any):
+            return next(responses)
+
+    rate_limited_client._http_backend = FakeBackend()  # type: ignore[assignment]
+    waiting_client._http_backend = FakeBackend()  # type: ignore[assignment]
+    monkeypatch.setattr(session_module, "_request_throttle_condition", FakeCondition())
+    monkeypatch.setattr(session_module, "_global_last_request_at", 0.0)
+    monkeypatch.setattr(session_module, "_global_rate_limit_until", 0.0)
+    monkeypatch.setattr(session_module.time, "monotonic", lambda: clock[0])
+
+    with pytest.raises(BrainRateLimitError):
+        rate_limited_client.request("GET", "https://example.test", retries=1)
+    status, _, content = waiting_client.raw_request("GET", "https://example.test")
+
+    assert (status, content) == (200, b"ok")
+    assert condition_waits == [6.0]
+    assert clock[0] == 106.0
 
 
 def test_request_retries_server_error_then_returns(monkeypatch) -> None:

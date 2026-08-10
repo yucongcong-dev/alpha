@@ -6,6 +6,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 import logging
+import math
 import time
 
 from ..config.runtime_values import get_runtime_config
@@ -50,9 +51,10 @@ def extract_retry_after(headers: dict[str, str], default: float = 5.0) -> float:
     if not value:
         return default
     try:
-        return float(value)
+        parsed = float(value)
     except ValueError:
         return default
+    return parsed if math.isfinite(parsed) and parsed >= 0 else default
 
 
 def doubled_retry_after(headers: dict[str, str], default: float = 5.0) -> float:
