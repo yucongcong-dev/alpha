@@ -51,6 +51,7 @@ def assemble_initialized_run_context(
         use_dataset_heuristics=prepared.use_dataset_heuristics,
         template_library_fingerprint=prepared.template_library_fingerprint,
         settings_fingerprint=prepared.settings_fingerprint,
+        run_fingerprint=prepared.run_fingerprint,
         historical_state=prepared.historical_state,
         fields=prepared.fields,
         execution_state=execution_state,

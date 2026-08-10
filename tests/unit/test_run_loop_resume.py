@@ -42,7 +42,7 @@ from alpha.runtime.contexts import (
 )
 from alpha.runtime.state import ExecutionState, InitializedRunContext
 
-IDENTITY = CheckpointIdentity("settings-fp", "tpl-fp")
+IDENTITY = CheckpointIdentity("run-fp")
 persist_replanning_checkpoint = partial(_persist_replanning_checkpoint, identity=IDENTITY)
 restore_fields_from_state = partial(_restore_fields_from_state, identity=IDENTITY)
 save_runtime_checkpoint = partial(_save_runtime_checkpoint, identity=IDENTITY)
@@ -52,9 +52,8 @@ save_terminal_pipeline_state = partial(_save_terminal_pipeline_state, identity=I
 def _checkpoint_json(completed_field_index: int) -> str:
     return json.dumps(
         {
-            "version": 2,
-            "settings_fingerprint": IDENTITY.settings_fingerprint,
-            "template_library_fingerprint": IDENTITY.template_library_fingerprint,
+            "version": 3,
+            "run_fingerprint": IDENTITY.run_fingerprint,
             "completed_field_index": completed_field_index,
         }
     )
@@ -63,8 +62,9 @@ def _checkpoint_json(completed_field_index: int) -> str:
 def _completion_context() -> FutureCompletionContext:
     return FutureCompletionContext(
         result_write_options=ResultWriteOptions(),
-        settings_fingerprint=IDENTITY.settings_fingerprint,
-        template_library_fingerprint=IDENTITY.template_library_fingerprint,
+        settings_fingerprint="settings-fp",
+        template_library_fingerprint="tpl-fp",
+        run_fingerprint=IDENTITY.run_fingerprint,
     )
 
 
@@ -91,6 +91,7 @@ def _build_run_ctx(fields: list[TemplateField]) -> InitializedRunContext:
         use_dataset_heuristics=False,
         template_library_fingerprint="tpl-fp",
         settings_fingerprint="settings-fp",
+        run_fingerprint=IDENTITY.run_fingerprint,
         historical_state=HistoricalRunState(),
         fields=fields,
         execution_state=_build_execution_state(),

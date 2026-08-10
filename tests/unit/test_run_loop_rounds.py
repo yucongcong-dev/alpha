@@ -52,7 +52,7 @@ def test_breadth_first_field_progress_keeps_resume_cursor_at_start(tmp_path) -> 
         "field_id": "f1",
         "execution_state": context.run_ctx.execution_state,
         "runtime_state": context.run_ctx.runtime_state,
-        "identity": CheckpointIdentity("settings-fp", "tpl-fp"),
+        "identity": CheckpointIdentity("run-fp"),
     }
 
 

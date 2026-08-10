@@ -29,6 +29,7 @@ def _build_run_ctx(*, client_factory=None) -> InitializedRunContext:
         use_dataset_heuristics=False,
         template_library_fingerprint="tpl-fp",
         settings_fingerprint="settings-fp",
+        run_fingerprint="run-fp",
         historical_state=HistoricalRunState(),
         fields=[],
         execution_state=ExecutionState.create(),

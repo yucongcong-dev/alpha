@@ -13,6 +13,7 @@ from alpha.app.bootstrap import initialize_run_context, prepare_bootstrap_resour
 from alpha.app.bootstrap_field_resources import log_field_selection_stats
 from alpha.app.bootstrap_supporting_resources import BootstrapLoadedResources
 from alpha.config.application import ApplicationConfig
+from alpha.config.models import DatasetExpressionPolicy
 from alpha.models.domain import FieldTestResult, TemplateField
 from alpha.models.io_types import RunFilters, RunPaths
 from alpha.models.runtime_options import FieldSelectionOptions
@@ -213,6 +214,7 @@ def test_prepare_bootstrap_resources_persists_pending_refresh_before_empty_field
         expression_policy=expression_policy,
         template_library={"MATRIX": []},
         filters={},
+        blacklist_payload={},
     )
     reconciliation: dict[str, object] = {}
 
@@ -298,6 +300,7 @@ def test_prepare_bootstrap_resources_refreshes_cross_run_feedback_pending(
         expression_policy=expression_policy,
         template_library={"MATRIX": []},
         filters={},
+        blacklist_payload={},
     )
     reconciliation: dict[str, object] = {}
 
@@ -388,7 +391,7 @@ def test_initialize_run_context_uses_application_paths_for_cache_and_credentials
     )
     monkeypatch.setattr(
         "alpha.app.bootstrap_supporting_resources.get_dataset_expression_policy",
-        lambda *_args, **_kwargs: type("Policy", (), {"use_curated_heuristics": False})(),
+        lambda *_args, **_kwargs: DatasetExpressionPolicy(),
     )
     monkeypatch.setattr(
         "alpha.app.bootstrap.stable_fingerprint", lambda *_args, **_kwargs: "tpl-fp"
@@ -500,7 +503,7 @@ def test_initialize_run_context_shares_application_paths_with_resource_loaders(
     )
     monkeypatch.setattr(
         "alpha.app.bootstrap_supporting_resources.get_dataset_expression_policy",
-        lambda *_args, **_kwargs: type("Policy", (), {"use_curated_heuristics": False})(),
+        lambda *_args, **_kwargs: DatasetExpressionPolicy(),
     )
     monkeypatch.setattr(
         "alpha.app.bootstrap.stable_fingerprint", lambda *_args, **_kwargs: "tpl-fp"

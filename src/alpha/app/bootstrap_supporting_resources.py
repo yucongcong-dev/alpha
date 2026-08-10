@@ -19,6 +19,7 @@ from ..policy.blacklist_store import (
     summarize_blacklist_payload,
 )
 from ..policy.expression import get_dataset_expression_policy
+from ..policy.types import BlacklistPayload
 from ..runtime.contexts import HistoricalRunState
 
 logger = logging.getLogger(__name__)
@@ -31,6 +32,7 @@ class BootstrapLoadedResources:
     template_library: TemplateLibrary
     filters: RunFilters
     expression_policy: DatasetExpressionPolicy
+    blacklist_payload: BlacklistPayload
     historical_state: HistoricalRunState
 
 
@@ -73,9 +75,9 @@ def load_supporting_resources(
         sum(len(items) for items in template_library.values()),
     )
 
+    blacklist_path = ensure_template_blacklist_file(dataset_id) if log_blacklist else ""
+    blacklist_payload = read_blacklist_payload(dataset_id)
     if log_blacklist:
-        blacklist_path = ensure_template_blacklist_file(dataset_id)
-        blacklist_payload = read_blacklist_payload(dataset_id)
         learned_count, rule_count = summarize_blacklist_payload(blacklist_payload)
         logger.info(
             "[blacklist] dataset=%s file=%s learned_templates=%d expression_rules=%d",
@@ -91,6 +93,7 @@ def load_supporting_resources(
             dataset_id,
             default_backfill_window=backfill_window,
         ),
+        blacklist_payload=blacklist_payload,
         historical_state=build_historical_run_state(
             paths.output,
             paths.feedback_output,

@@ -133,15 +133,8 @@ def load_pipeline_state(
     )
     if payload is None:
         return 0
-    saved_identity = (
-        str(payload.get("settings_fingerprint", "") or ""),
-        str(payload.get("template_library_fingerprint", "") or ""),
-    )
-    current_identity = (
-        identity.settings_fingerprint,
-        identity.template_library_fingerprint,
-    )
-    if saved_identity != current_identity:
+    saved_identity = str(payload.get("run_fingerprint", "") or "")
+    if saved_identity != identity.run_fingerprint:
         log.warning("[checkpoint] run identity mismatch in %s; starting fresh", state_file)
         return 0
 

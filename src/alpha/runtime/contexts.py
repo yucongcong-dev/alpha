@@ -19,14 +19,13 @@ from ..models.runtime_protocols import RunConfig, TemplateStats
 
 @dataclass(frozen=True, slots=True)
 class CheckpointIdentity:
-    """Fingerprints that bind a checkpoint to one resolved research run."""
+    """Fingerprint that binds a checkpoint to one resolved research run."""
 
-    settings_fingerprint: str
-    template_library_fingerprint: str
+    run_fingerprint: str
 
     def __post_init__(self) -> None:
-        if not self.settings_fingerprint or not self.template_library_fingerprint:
-            raise ValueError("checkpoint fingerprints cannot be empty")
+        if not self.run_fingerprint:
+            raise ValueError("checkpoint run fingerprint cannot be empty")
 
 
 @dataclass
@@ -91,6 +90,7 @@ class FutureCompletionContext:
     result_write_options: ResultWriteOptions = field(default_factory=ResultWriteOptions)
     settings_fingerprint: str = ""
     template_library_fingerprint: str = ""
+    run_fingerprint: str = ""
     run_config: RunConfig | None = None
 
 

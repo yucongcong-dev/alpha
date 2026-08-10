@@ -34,11 +34,7 @@ logger = logging.getLogger(__name__)
 
 
 def _checkpoint_identity(context: ScheduleRoundContext) -> CheckpointIdentity:
-    completion_ctx = context.completion_ctx
-    return CheckpointIdentity(
-        settings_fingerprint=completion_ctx.settings_fingerprint,
-        template_library_fingerprint=completion_ctx.template_library_fingerprint,
-    )
+    return CheckpointIdentity(run_fingerprint=context.completion_ctx.run_fingerprint)
 
 
 @dataclass(frozen=True)

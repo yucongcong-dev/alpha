@@ -23,7 +23,7 @@ from alpha.runtime.concurrency import RuntimeConcurrencyState
 from alpha.runtime.contexts import CheckpointIdentity, PendingFutureContext
 from alpha.runtime.state import ExecutionState
 
-IDENTITY = CheckpointIdentity("settings-current", "templates-current")
+IDENTITY = CheckpointIdentity("run-current")
 load_pipeline_state = partial(_load_pipeline_state, identity=IDENTITY)
 save_interrupt_report = partial(_save_interrupt_report, identity=IDENTITY)
 save_pipeline_state = partial(_save_pipeline_state, identity=IDENTITY)
@@ -34,8 +34,7 @@ def _checkpoint_json(payload: dict[str, object]) -> str:
         {
             **payload,
             "version": checkpoint_module.STATE_VERSION,
-            "settings_fingerprint": IDENTITY.settings_fingerprint,
-            "template_library_fingerprint": IDENTITY.template_library_fingerprint,
+            "run_fingerprint": IDENTITY.run_fingerprint,
         }
     )
 
@@ -351,7 +350,7 @@ def test_load_pipeline_state_rejects_different_run_identity(tmp_path, caplog) ->
         str(state_file),
         runtime_state=RuntimeConcurrencyState(max_workers=2, runtime_max_workers=2),
         execution_state=execution_state,
-        identity=CheckpointIdentity("settings-other", "templates-current"),
+        identity=CheckpointIdentity("run-other"),
     )
 
     assert resumed == 0

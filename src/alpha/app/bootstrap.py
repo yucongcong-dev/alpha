@@ -38,6 +38,7 @@ from .bootstrap_runtime_outputs import (
 from .bootstrap_state import build_execution_state
 from .bootstrap_supporting_resources import load_bootstrap_supporting_resources
 from .bootstrap_types import PreparedBootstrapResources
+from .run_identity import build_research_run_fingerprint
 
 logger = logging.getLogger(__name__)
 
@@ -170,6 +171,14 @@ def prepare_bootstrap_resources(
     )
     if not prepared_fields:
         return None
+    run_fingerprint = build_research_run_fingerprint(
+        run_config=effective_run_config,
+        template_library=supporting_resources.template_library,
+        filters=supporting_resources.filters,
+        expression_policy=supporting_resources.expression_policy,
+        blacklist_payload=supporting_resources.blacklist_payload,
+        fields=prepared_fields,
+    )
     if supporting_resources.historical_state.existing_results:
         logger.info(
             "[resume] 从 %s 加载 %d 个历史结果",
@@ -184,6 +193,7 @@ def prepare_bootstrap_resources(
         use_dataset_heuristics=supporting_resources.expression_policy.use_curated_heuristics,
         template_library_fingerprint=template_library_fingerprint,
         settings_fingerprint=settings_fingerprint,
+        run_fingerprint=run_fingerprint,
         historical_state=supporting_resources.historical_state,
         fields=prepared_fields,
         run_config=effective_run_config,

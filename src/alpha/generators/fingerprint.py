@@ -19,6 +19,8 @@ FINGERPRINT_HEX_LENGTH = 16
 
 
 def _json_default(obj: Any) -> Any:
+    if isinstance(obj, (set, frozenset)):
+        return sorted(obj, key=repr)
     if isinstance(obj, FieldTestResult):
         return serialize_field_test_result(obj)
     if isinstance(obj, SettingsVariant):

@@ -36,7 +36,7 @@ __all__ = [
 
 logger = logging.getLogger(__name__)
 
-STATE_VERSION = 2
+STATE_VERSION = 3
 os = _files.os
 
 _all_pending_contexts = _payloads.all_pending_contexts
@@ -88,8 +88,7 @@ def save_pipeline_state(
     result_ledger = execution_state.result_ledger
     payload: dict[str, Any] = {
         "version": STATE_VERSION,
-        "settings_fingerprint": identity.settings_fingerprint,
-        "template_library_fingerprint": identity.template_library_fingerprint,
+        "run_fingerprint": identity.run_fingerprint,
         "completed_field_index": completed_field_index,
         "last_field_id": field_id,
         "pending_simulations": _serialize_pending_simulations(execution_state),
@@ -195,8 +194,7 @@ def save_interrupt_report(
     result_ledger = execution_state.result_ledger
     payload: dict[str, Any] = {
         "version": STATE_VERSION,
-        "settings_fingerprint": identity.settings_fingerprint,
-        "template_library_fingerprint": identity.template_library_fingerprint,
+        "run_fingerprint": identity.run_fingerprint,
         "reason": reason,
         "field_id": field_id,
         "remaining_fields": remaining_fields,

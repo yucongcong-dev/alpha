@@ -38,8 +38,7 @@ def run_field_test_loop(
         run_ctx, result_write_options
     )
     checkpoint_identity = CheckpointIdentity(
-        settings_fingerprint=run_ctx.settings_fingerprint,
-        template_library_fingerprint=run_ctx.template_library_fingerprint,
+        run_fingerprint=run_ctx.run_fingerprint,
     )
 
     fields = run_loop_resume.restore_fields_from_state(

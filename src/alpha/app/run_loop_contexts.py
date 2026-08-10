@@ -18,6 +18,7 @@ def resolve_future_completion_context(
         result_write_options=result_write_options,
         settings_fingerprint=run_ctx.settings_fingerprint,
         template_library_fingerprint=run_ctx.template_library_fingerprint,
+        run_fingerprint=run_ctx.run_fingerprint,
         run_config=run_ctx.run_config,
     )
 

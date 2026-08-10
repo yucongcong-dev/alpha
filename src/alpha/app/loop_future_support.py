@@ -30,10 +30,7 @@ INTERRUPT_METADATA_POLL_SECONDS = 0.05
 
 
 def _checkpoint_identity(completion_ctx: FutureCompletionContext) -> CheckpointIdentity:
-    return CheckpointIdentity(
-        settings_fingerprint=completion_ctx.settings_fingerprint,
-        template_library_fingerprint=completion_ctx.template_library_fingerprint,
-    )
+    return CheckpointIdentity(run_fingerprint=completion_ctx.run_fingerprint)
 
 
 def cancel_unstarted_futures(execution_state: ExecutionState) -> int:

@@ -35,6 +35,7 @@ def build_round_context(
         use_dataset_heuristics=False,
         template_library_fingerprint="tpl-fp",
         settings_fingerprint="settings-fp",
+        run_fingerprint="run-fp",
         historical_state=HistoricalRunState(),
         fields=fields,
         execution_state=execution_state,
@@ -51,6 +52,7 @@ def build_round_context(
         completion_ctx=FutureCompletionContext(
             settings_fingerprint=run_ctx.settings_fingerprint,
             template_library_fingerprint=run_ctx.template_library_fingerprint,
+            run_fingerprint=run_ctx.run_fingerprint,
         ),
         state_file=state_file,
         field_template_batch_size=field_template_batch_size,

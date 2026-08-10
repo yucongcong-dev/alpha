@@ -23,6 +23,7 @@ class PreparedBootstrapResources:
     use_dataset_heuristics: bool
     template_library_fingerprint: str
     settings_fingerprint: str
+    run_fingerprint: str
     historical_state: HistoricalRunState
     fields: list[TemplateField]
     run_config: RunConfig
