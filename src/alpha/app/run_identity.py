@@ -32,6 +32,7 @@ def _research_config(run_config: RunConfig) -> dict[str, Any]:
             "quality",
             "runtime",
             "heuristic_policy",
+            "input_fingerprints",
         )
     }
     runtime_payload = identity_config.get("runtime")
@@ -65,6 +66,23 @@ def _research_blacklist(payload: BlacklistPayload) -> dict[str, object]:
         key: value
         for key, value in payload.items()
         if key not in {"_comment", "_created", "_updated"}
+    }
+
+
+def build_research_input_fingerprints(
+    *,
+    filters: RunFilters,
+    expression_policy: DatasetExpressionPolicy,
+    blacklist_payload: BlacklistPayload,
+) -> dict[str, str]:
+    """Build auditable fingerprints for mutable local research inputs."""
+    return {
+        "include_fields": stable_fingerprint(sorted(filters.include_fields)),
+        "exclude_fields": stable_fingerprint(sorted(filters.exclude_fields)),
+        "include_templates": stable_fingerprint(sorted(filters.include_templates)),
+        "exclude_templates": stable_fingerprint(sorted(filters.exclude_templates)),
+        "expression_policy": stable_fingerprint(asdict(expression_policy)),
+        "blacklist": stable_fingerprint(_research_blacklist(blacklist_payload)),
     }
 
 

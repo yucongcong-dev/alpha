@@ -8,6 +8,7 @@ import json
 import pytest
 
 from alpha.app.run_identity import (
+    build_research_input_fingerprints,
     build_research_run_fingerprint,
     validate_existing_run_identity,
 )
@@ -74,6 +75,43 @@ def test_run_fingerprint_changes_with_resolved_research_inputs() -> None:
             "expression_rules": [],
         }
     )
+
+
+def test_research_input_fingerprints_track_normalized_content() -> None:
+    baseline = build_research_input_fingerprints(
+        filters=RunFilters(include_fields={"f2", "f1"}),
+        expression_policy=DatasetExpressionPolicy(dataset_id="fundamental6"),
+        blacklist_payload={
+            "dataset_id": "fundamental6",
+            "_updated": "2026-08-01",
+            "learned_templates": [],
+            "expression_rules": [],
+        },
+    )
+    reordered_metadata = build_research_input_fingerprints(
+        filters=RunFilters(include_fields={"f1", "f2"}),
+        expression_policy=DatasetExpressionPolicy(dataset_id="fundamental6"),
+        blacklist_payload={
+            "dataset_id": "fundamental6",
+            "_updated": "2026-08-10",
+            "learned_templates": [],
+            "expression_rules": [],
+        },
+    )
+    changed = build_research_input_fingerprints(
+        filters=RunFilters(include_fields={"f1"}),
+        expression_policy=DatasetExpressionPolicy(dataset_id="fundamental6", partner_limit=9),
+        blacklist_payload={
+            "dataset_id": "fundamental6",
+            "learned_templates": ["weak_template"],
+            "expression_rules": [],
+        },
+    )
+
+    assert baseline == reordered_metadata
+    assert changed["include_fields"] != baseline["include_fields"]
+    assert changed["expression_policy"] != baseline["expression_policy"]
+    assert changed["blacklist"] != baseline["blacklist"]
 
 
 def test_existing_run_identity_rejects_configuration_drift(tmp_path) -> None:

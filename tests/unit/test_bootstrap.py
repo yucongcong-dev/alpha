@@ -234,6 +234,11 @@ def test_prepare_bootstrap_resources_persists_pending_refresh_before_empty_field
     monkeypatch.setattr(
         bootstrap_module, "build_settings_fingerprint", lambda _value: "settings-fp"
     )
+    monkeypatch.setattr(
+        bootstrap_module,
+        "build_research_input_fingerprints",
+        lambda **_kwargs: {"include_fields": "include-fp"},
+    )
 
     result = prepare_bootstrap_resources(
         SimpleNamespace(dataset_id="fundamental6", check_submission_retries=1, fetch=None),
@@ -255,6 +260,7 @@ def test_prepare_bootstrap_resources_persists_pending_refresh_before_empty_field
             "feedback_scope": "field_type",
             "use_curated_heuristics": True,
         },
+        "input_fingerprints": {"include_fields": "include-fp"},
     }
 
 
@@ -317,6 +323,11 @@ def test_prepare_bootstrap_resources_refreshes_cross_run_feedback_pending(
     monkeypatch.setattr(bootstrap_module, "stable_fingerprint", lambda _value: "templates-fp")
     monkeypatch.setattr(
         bootstrap_module, "build_settings_fingerprint", lambda _value: "settings-fp"
+    )
+    monkeypatch.setattr(
+        bootstrap_module,
+        "build_research_input_fingerprints",
+        lambda **_kwargs: {"include_fields": "include-fp"},
     )
 
     result = prepare_bootstrap_resources(
@@ -487,6 +498,14 @@ def test_initialize_run_context_uses_application_paths_for_cache_and_credentials
     assert captured["creds_file"] == args.paths.creds_file
     assert captured["creds_key_file"] == args.paths.creds_key_file
     assert captured["fields_cache_file"] == args.paths.fields_cache_file
+    assert set(run_ctx.run_config["input_fingerprints"]) == {
+        "include_fields",
+        "exclude_fields",
+        "include_templates",
+        "exclude_templates",
+        "expression_policy",
+        "blacklist",
+    }
 
 
 def test_initialize_run_context_shares_application_paths_with_resource_loaders(

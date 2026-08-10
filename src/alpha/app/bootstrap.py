@@ -38,7 +38,11 @@ from .bootstrap_runtime_outputs import (
 from .bootstrap_state import build_execution_state
 from .bootstrap_supporting_resources import load_bootstrap_supporting_resources
 from .bootstrap_types import PreparedBootstrapResources
-from .run_identity import build_research_run_fingerprint, validate_existing_run_identity
+from .run_identity import (
+    build_research_input_fingerprints,
+    build_research_run_fingerprint,
+    validate_existing_run_identity,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -128,6 +132,11 @@ def prepare_bootstrap_resources(
         "feedback_scope": str(getattr(expression_policy, "feedback_scope", "field_type")),
         "use_curated_heuristics": bool(expression_policy.use_curated_heuristics),
     }
+    effective_run_config["input_fingerprints"] = build_research_input_fingerprints(
+        filters=supporting_resources.filters,
+        expression_policy=supporting_resources.expression_policy,
+        blacklist_payload=supporting_resources.blacklist_payload,
+    )
     template_library_fingerprint = stable_fingerprint(supporting_resources.template_library)
     settings_fingerprint = build_settings_fingerprint(template_options)
     run_fingerprint = build_research_run_fingerprint(
