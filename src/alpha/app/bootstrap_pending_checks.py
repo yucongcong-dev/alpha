@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
 from concurrent.futures import ThreadPoolExecutor
+from contextlib import contextmanager
 from dataclasses import replace
 from datetime import datetime, timezone
 import logging
@@ -135,9 +136,27 @@ def _ordered_pending_check_results(
     return pending_results
 
 
-def _refresh_client(client: BrainClient | ClientFactoryLike) -> BrainClient:
+@contextmanager
+def _refresh_client(
+    client: BrainClient | ClientFactoryLike,
+    *,
+    request_deadline: float | None,
+) -> Iterator[BrainClient]:
     get_client = getattr(client, "get_client", None)
-    return cast(BrainClient, get_client() if callable(get_client) else client)
+    if callable(get_client):
+        yield cast(BrainClient, get_client(request_deadline=request_deadline))
+        return
+
+    refresh_client = cast(BrainClient, client)
+    if not hasattr(refresh_client, "request_deadline"):
+        yield refresh_client
+        return
+    previous_deadline = refresh_client.request_deadline
+    refresh_client.request_deadline = request_deadline
+    try:
+        yield refresh_client
+    finally:
+        refresh_client.request_deadline = previous_deadline
 
 
 def _refresh_pending_check_result(
@@ -146,18 +165,20 @@ def _refresh_pending_check_result(
     *,
     retries: int,
     should_abort: Callable[[], bool] | None,
+    request_deadline: float | None,
 ) -> tuple[FieldTestResult, bool]:
     alpha_id = result.alpha_id
     if not alpha_id:
         return result, False
     checked_at = _utc_now_iso()
     try:
-        submittable, message, failed_checks = check_submission_with_retry(
-            _refresh_client(client),
-            alpha_id,
-            retries,
-            should_abort=should_abort,
-        )
+        with _refresh_client(client, request_deadline=request_deadline) as refresh_client:
+            submittable, message, failed_checks = check_submission_with_retry(
+                refresh_client,
+                alpha_id,
+                retries,
+                should_abort=should_abort,
+            )
     except BrainStopRequested:
         logger.info(
             "[check-submission-resume] startup deadline reached alpha_id=%s field=%s template=%s",
@@ -253,6 +274,7 @@ def _apply_pending_check_refreshes(
                     result,
                     retries=retries,
                     should_abort=should_abort,
+                    request_deadline=deadline,
                 )
                 for _index, result in batch
             ]

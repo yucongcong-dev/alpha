@@ -116,12 +116,25 @@ def is_invalid_credentials_error(error: Exception) -> bool:
     return "INVALID_CREDENTIALS" in str(error) or "401" in str(error)
 
 
-def login_with_retry(client: BrainClient, retries: int) -> None:
+def login_with_retry(
+    client: BrainClient,
+    retries: int,
+    *,
+    should_abort: Callable[[], bool] | None = None,
+) -> None:
     """通过统一的重试封装完成客户端登录。"""
     attempts = max(retries, 1)
     login_retry_wait = get_runtime_config().http.login_retry_wait
     try:
-        retry_operation("login", attempts, client.login, retry_wait_seconds=login_retry_wait)
+        retry_operation(
+            "login",
+            attempts,
+            client.login,
+            retry_wait_seconds=login_retry_wait,
+            should_abort=should_abort,
+        )
+    except BrainStopRequested:
+        raise
     except BrainAPIError as exc:
         if is_invalid_credentials_error(exc):
             raise BrainAPIError(

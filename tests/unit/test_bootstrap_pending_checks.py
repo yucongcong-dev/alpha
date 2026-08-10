@@ -316,11 +316,13 @@ def test_refresh_pending_check_results_aborts_retry_at_deadline(monkeypatch) -> 
 
 def test_refresh_pending_check_results_uses_worker_factory_for_parallel_checks(monkeypatch) -> None:
     clients: list[object] = []
+    deadlines: list[float | None] = []
 
     class _Factory:
-        def get_client(self):
+        def get_client(self, *, request_deadline=None):
             client = object()
             clients.append(client)
+            deadlines.append(request_deadline)
             return client
 
     checked_clients: list[object] = []
@@ -339,7 +341,7 @@ def test_refresh_pending_check_results_uses_worker_factory_for_parallel_checks(m
         [_pending_result(alpha_id="alpha_0"), _pending_result(alpha_id="alpha_1")],
         retries=1,
         refresh_limit=0,
-        max_refresh_seconds=0,
+        max_refresh_seconds=30,
         max_workers=2,
     )
 
@@ -347,3 +349,5 @@ def test_refresh_pending_check_results_uses_worker_factory_for_parallel_checks(m
     assert all(result.submittable is True for result in refreshed)
     assert len(clients) == 2
     assert set(checked_clients) == set(clients)
+    assert len(set(deadlines)) == 1
+    assert deadlines[0] is not None

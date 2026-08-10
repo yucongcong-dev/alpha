@@ -14,7 +14,7 @@ from ..config._constants_api import (
     DEFAULT_HEADERS,
 )
 from ..config.runtime_values import get_runtime_config
-from ..exceptions import BrainAPIError, BrainHTTPError, BrainRateLimitError
+from ..exceptions import BrainAPIError, BrainHTTPError, BrainRateLimitError, BrainStopRequested
 from .api_types import ApiParams
 from .http_backend import HttpBackend, response_header
 from .payloads import safe_json_bytes
@@ -27,13 +27,19 @@ _global_last_request_at: float = 0.0
 _global_rate_limit_until: float = 0.0
 
 
-def _wait_for_request_slot(min_request_interval: float) -> None:
+def _wait_for_request_slot(
+    min_request_interval: float,
+    *,
+    request_deadline: float | None = None,
+) -> None:
     """Wait until both the global interval and rate-limit embargo allow a request."""
     global _global_last_request_at
 
     with _request_throttle_condition:
         while True:
             now = time.monotonic()
+            if request_deadline is not None and now >= request_deadline:
+                raise BrainStopRequested("HTTP request deadline reached")
             allowed_at = max(
                 _global_rate_limit_until,
                 _global_last_request_at + min_request_interval,
@@ -42,6 +48,8 @@ def _wait_for_request_slot(min_request_interval: float) -> None:
             if remaining <= 0:
                 _global_last_request_at = now
                 return
+            if request_deadline is not None:
+                remaining = min(remaining, request_deadline - now)
             _request_throttle_condition.wait(timeout=remaining)
 
 
@@ -64,6 +72,7 @@ class BrainSessionMixin:
     password: str
     min_request_interval: float
     rate_limit_max_retries: int
+    request_deadline: float | None
     _http_backend: HttpBackend
 
     def login(self) -> None:
@@ -167,7 +176,10 @@ class BrainSessionMixin:
         data: Any | None = None,
     ) -> tuple[int, dict[str, str], bytes]:
         """执行一次不带高层重试策略的原始 HTTP 请求。"""
-        _wait_for_request_slot(self.min_request_interval)
+        _wait_for_request_slot(
+            self.min_request_interval,
+            request_deadline=self.request_deadline,
+        )
         if params:
             query = urlencode(params)
             separator = "&" if "?" in url else "?"
@@ -181,10 +193,17 @@ class BrainSessionMixin:
         else:
             request_data = str(data).encode("utf-8")
 
+        request_timeout = get_runtime_config().http.request_timeout
+        if self.request_deadline is not None:
+            remaining = self.request_deadline - time.monotonic()
+            if remaining <= 0:
+                raise BrainStopRequested("HTTP request deadline reached")
+            request_timeout = min(request_timeout, remaining)
+
         return self._http_backend.request(
             method=method,
             url=url,
             headers=headers,
             data=request_data,
-            timeout=get_runtime_config().http.request_timeout,
+            timeout=request_timeout,
         )

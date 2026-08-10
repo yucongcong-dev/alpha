@@ -11,6 +11,7 @@ and WorkerClientFactory entry points stable.
 from __future__ import annotations
 
 import threading
+import time
 
 from ..config._constants_api import DEFAULT_RATE_LIMIT_MAX_RETRIES
 from ..exceptions import BrainAPIError
@@ -46,6 +47,7 @@ class BrainClient(BrainSessionMixin, BrainFieldsMixin, BrainSimulationsMixin, Br
         password: str,
         min_request_interval: float = 0.0,
         rate_limit_max_retries: int = DEFAULT_RATE_LIMIT_MAX_RETRIES,
+        request_deadline: float | None = None,
     ) -> None:
         """初始化客户端凭证、节流参数与 HTTP 后端。"""
         if not email or not password:
@@ -56,6 +58,7 @@ class BrainClient(BrainSessionMixin, BrainFieldsMixin, BrainSimulationsMixin, Br
         self.password = password
         self.min_request_interval = max(min_request_interval, 0.0)
         self.rate_limit_max_retries = max(rate_limit_max_retries, 1)
+        self.request_deadline = request_deadline
         self._http_backend = UrllibHttpBackend()
 
     def close(self) -> None:
@@ -82,10 +85,11 @@ class WorkerClientFactory:
         self._clients_lock = threading.Lock()
         self._closed: bool = False
 
-    def get_client(self) -> BrainClient:
+    def get_client(self, *, request_deadline: float | None = None) -> BrainClient:
         """获取当前线程专属客户端，不存在时懒加载并登录。"""
         client: BrainClient | None = getattr(self._local, "client", None)
         if client is not None:
+            client.request_deadline = request_deadline
             return client
 
         client = BrainClient(
@@ -93,9 +97,17 @@ class WorkerClientFactory:
             self.password,
             min_request_interval=self.options.min_request_interval,
             rate_limit_max_retries=self.options.rate_limit_max_retries,
+            request_deadline=request_deadline,
         )
         try:
-            login_with_retry(client, self.options.login_retries)
+            if request_deadline is None:
+                login_with_retry(client, self.options.login_retries)
+            else:
+                login_with_retry(
+                    client,
+                    self.options.login_retries,
+                    should_abort=lambda: time.monotonic() >= request_deadline,
+                )
         except BaseException:
             client.close()
             raise

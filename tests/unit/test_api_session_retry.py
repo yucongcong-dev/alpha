@@ -201,6 +201,31 @@ def test_raw_request_encodes_query_and_non_byte_data() -> None:
     assert captured["data"] == b"payload"
 
 
+def test_raw_request_caps_transport_timeout_to_request_deadline(monkeypatch) -> None:
+    client = BrainClient("user@example.com", "secret", request_deadline=105.0)
+    captured: dict[str, Any] = {}
+
+    class FakeBackend:
+        def request(self, **kwargs: Any):
+            captured.update(kwargs)
+            return 200, {}, b"ok"
+
+    client._http_backend = FakeBackend()  # type: ignore[assignment]
+    monkeypatch.setattr(session_module.time, "monotonic", lambda: 100.0)
+
+    client.raw_request("GET", "https://example.test")
+
+    assert captured["timeout"] == 5.0
+
+
+def test_raw_request_stops_before_expired_request_deadline(monkeypatch) -> None:
+    client = BrainClient("user@example.com", "secret", request_deadline=100.0)
+    monkeypatch.setattr(session_module.time, "monotonic", lambda: 100.0)
+
+    with pytest.raises(BrainStopRequested, match="deadline reached"):
+        client.raw_request("GET", "https://example.test")
+
+
 def test_retry_operation_retries_regular_exception(monkeypatch) -> None:
     attempts = 0
     waits: list[float] = []
@@ -309,3 +334,12 @@ def test_login_with_retry_preserves_operational_context(monkeypatch) -> None:
 
     with pytest.raises(BrainAPIError, match="最后一次错误"):
         login_with_retry(FakeClient(), 1)  # type: ignore[arg-type]
+
+
+def test_login_with_retry_preserves_deadline_stop() -> None:
+    class FakeClient:
+        def login(self) -> None:
+            raise BrainStopRequested("deadline reached")
+
+    with pytest.raises(BrainStopRequested, match="deadline reached"):
+        login_with_retry(FakeClient(), 2)  # type: ignore[arg-type]

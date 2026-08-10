@@ -39,6 +39,41 @@ def test_worker_client_factory_closes_client_when_login_fails(monkeypatch) -> No
     assert closed == [True]
 
 
+def test_worker_client_factory_applies_deadline_during_login(monkeypatch) -> None:
+    captured: dict[str, object] = {}
+    clock = {"now": 100.0}
+
+    class FakeClient:
+        def __init__(self, *_args, **kwargs) -> None:
+            captured["request_deadline"] = kwargs["request_deadline"]
+
+        def close(self) -> None:
+            return None
+
+    def _capture_login(_client, _retries, *, should_abort=None) -> None:
+        assert should_abort is not None
+        captured["before_deadline"] = should_abort()
+        clock["now"] = 106.0
+        captured["after_deadline"] = should_abort()
+
+    monkeypatch.setattr(client_module, "BrainClient", FakeClient)
+    monkeypatch.setattr(client_module, "login_with_retry", _capture_login)
+    monkeypatch.setattr(client_module.time, "monotonic", lambda: clock["now"])
+    factory = WorkerClientFactory(
+        ApiClientOptions(login_retries=1),
+        "user@example.com",
+        "secret",
+    )
+
+    factory.get_client(request_deadline=105.0)
+
+    assert captured == {
+        "request_deadline": 105.0,
+        "before_deadline": False,
+        "after_deadline": True,
+    }
+
+
 def test_fetch_dataset_fields_logs_progress_with_total(monkeypatch, caplog) -> None:
     """Pagination should emit cache fetch progress while building the full field cache."""
     client = BrainClient("user@example.com", "password")
