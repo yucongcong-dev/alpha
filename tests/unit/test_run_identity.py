@@ -3,10 +3,15 @@
 from __future__ import annotations
 
 from copy import deepcopy
+import json
 
-from alpha.app.run_identity import build_research_run_fingerprint
+import pytest
+
+from alpha.app.run_identity import (
+    build_research_run_fingerprint,
+    validate_existing_run_identity,
+)
 from alpha.config.models import DatasetExpressionPolicy
-from alpha.models.domain import TemplateField
 from alpha.models.io_types import RunFilters
 
 
@@ -16,7 +21,6 @@ def _fingerprint(
     filters=None,
     policy=None,
     blacklist=None,
-    fields=None,
 ) -> str:
     return build_research_run_fingerprint(
         run_config=run_config
@@ -37,11 +41,6 @@ def _fingerprint(
             "learned_templates": [],
             "expression_rules": [],
         },
-        fields=fields
-        or [
-            TemplateField("f1", "Field 1", "MATRIX"),
-            TemplateField("f2", "Field 2", "MATRIX"),
-        ],
     )
 
 
@@ -77,10 +76,48 @@ def test_run_fingerprint_changes_with_resolved_research_inputs() -> None:
     )
 
 
-def test_run_fingerprint_changes_with_resolved_field_order() -> None:
-    fields = [
-        TemplateField("f1", "Field 1", "MATRIX"),
-        TemplateField("f2", "Field 2", "MATRIX"),
-    ]
+def test_existing_run_identity_rejects_configuration_drift(tmp_path) -> None:
+    output_path = tmp_path / "summary.json"
+    output_path.write_text(
+        json.dumps({"tested": 1, "run_fingerprint": "old-run"}),
+        encoding="utf-8",
+    )
 
-    assert _fingerprint(fields=fields) != _fingerprint(fields=list(reversed(fields)))
+    with pytest.raises(ValueError, match="new --run-name"):
+        validate_existing_run_identity(
+            str(output_path),
+            run_fingerprint="current-run",
+            run_config={},
+            settings_fingerprint="settings",
+            template_library_fingerprint="templates",
+        )
+
+
+def test_existing_run_identity_migrates_matching_legacy_summary(tmp_path, caplog) -> None:
+    output_path = tmp_path / "summary.json"
+    run_config = {
+        "dataset": {"dataset_id": "fundamental6"},
+        "settings": {"decay": 4},
+        "runtime": {"strategy_profile": "balanced"},
+    }
+    output_path.write_text(
+        json.dumps(
+            {
+                "tested": 1,
+                "run_config": run_config,
+                "settings_fingerprint": "settings",
+                "template_library_fingerprint": "templates",
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    validate_existing_run_identity(
+        str(output_path),
+        run_fingerprint="current-run",
+        run_config=run_config,
+        settings_fingerprint="settings",
+        template_library_fingerprint="templates",
+    )
+
+    assert "migrating legacy summary" in caplog.text

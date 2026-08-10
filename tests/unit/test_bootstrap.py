@@ -152,6 +152,7 @@ def test_initialize_run_context_closes_factory_when_state_build_fails(monkeypatc
         historical_state=HistoricalRunState(),
         settings_fingerprint="settings-fp",
         template_library_fingerprint="templates-fp",
+        run_fingerprint="run-fp",
         run_config={},
     )
 
@@ -204,16 +205,14 @@ def test_prepare_bootstrap_resources_persists_pending_refresh_before_empty_field
         updated_at="2026-08-04T00:00:00Z",
     )
     historical_state = HistoricalRunState(existing_results=[original])
-    expression_policy = SimpleNamespace(
-        policy_version="policy-v1",
-        feedback_scope="field_type",
-        use_curated_heuristics=True,
+    expression_policy = DatasetExpressionPolicy(
+        policy_version="policy-v1", use_curated_heuristics=True
     )
     supporting_resources = BootstrapLoadedResources(
         historical_state=historical_state,
         expression_policy=expression_policy,
         template_library={"MATRIX": []},
-        filters={},
+        filters=RunFilters(),
         blacklist_payload={},
     )
     reconciliation: dict[str, object] = {}
@@ -290,16 +289,14 @@ def test_prepare_bootstrap_resources_refreshes_cross_run_feedback_pending(
         existing_results=[],
         feedback_results=[original],
     )
-    expression_policy = SimpleNamespace(
-        policy_version="policy-v1",
-        feedback_scope="field_type",
-        use_curated_heuristics=True,
+    expression_policy = DatasetExpressionPolicy(
+        policy_version="policy-v1", use_curated_heuristics=True
     )
     supporting_resources = BootstrapLoadedResources(
         historical_state=historical_state,
         expression_policy=expression_policy,
         template_library={"MATRIX": []},
-        filters={},
+        filters=RunFilters(),
         blacklist_payload={},
     )
     reconciliation: dict[str, object] = {}
@@ -333,6 +330,54 @@ def test_prepare_bootstrap_resources_refreshes_cross_run_feedback_pending(
     assert result is None
     assert reconciliation["output_file"] == "run.json"
     assert reconciliation["feedback_output"] == "feedback.json"
+
+
+def test_prepare_bootstrap_resources_rejects_run_drift_before_reconciliation(
+    monkeypatch,
+    tmp_path,
+) -> None:
+    output_path = tmp_path / "summary.json"
+    output_path.write_text(
+        '{"tested": 1, "run_fingerprint": "previous-run"}',
+        encoding="utf-8",
+    )
+    supporting_resources = BootstrapLoadedResources(
+        historical_state=HistoricalRunState(),
+        expression_policy=DatasetExpressionPolicy(),
+        template_library={"MATRIX": []},
+        filters=RunFilters(),
+        blacklist_payload={},
+    )
+    monkeypatch.setattr(
+        bootstrap_module,
+        "load_bootstrap_supporting_resources",
+        lambda **_kwargs: supporting_resources,
+    )
+    monkeypatch.setattr(
+        bootstrap_module,
+        "build_research_run_fingerprint",
+        lambda **_kwargs: "current-run",
+    )
+    monkeypatch.setattr(
+        bootstrap_module, "build_settings_fingerprint", lambda _options: "settings-fp"
+    )
+    monkeypatch.setattr(
+        bootstrap_module, "stable_fingerprint", lambda _library: "templates-fp"
+    )
+    monkeypatch.setattr(
+        bootstrap_module,
+        "reconcile_pending_check_results",
+        lambda *_args, **_kwargs: pytest.fail("reconciliation must not run after drift"),
+    )
+
+    with pytest.raises(ValueError, match="new --run-name"):
+        prepare_bootstrap_resources(
+            SimpleNamespace(dataset_id="fundamental6", check_submission_retries=1, fetch=None),
+            SimpleNamespace(backfill_window=504),
+            SimpleNamespace(output=str(output_path), feedback_output=""),
+            object(),
+            run_config={"dataset": {"dataset_id": "fundamental6"}},
+        )
 
 
 def test_initialize_run_context_uses_application_paths_for_cache_and_credentials(

@@ -37,6 +37,7 @@ def dump_results(
     *,
     settings_fingerprint: str,
     template_library_fingerprint: str,
+    run_fingerprint: str = "",
     run_config: dict[str, Any] | None = None,
     include_analysis: bool = True,
 ) -> None:
@@ -47,6 +48,7 @@ def dump_results(
         results,
         settings_fingerprint=settings_fingerprint,
         template_library_fingerprint=template_library_fingerprint,
+        run_fingerprint=run_fingerprint,
         run_config=run_config,
         results_journal_path=_portable_journal_reference(path, sidecar_paths["results_journal"]),
     )
@@ -83,6 +85,7 @@ def dump_results_incremental(
     queue_timeout_count: int,
     settings_fingerprint: str,
     template_library_fingerprint: str,
+    run_fingerprint: str = "",
     run_config: dict[str, Any] | None = None,
     template_registry_summary: list[dict[str, Any]] | None = None,
     template_stats: dict[str, dict[str, Any]] | None = None,
@@ -105,6 +108,7 @@ def dump_results_incremental(
             "run_config": run_config or {},
             "settings_fingerprint": settings_fingerprint,
             "template_library_fingerprint": template_library_fingerprint,
+            "run_fingerprint": run_fingerprint,
             "tested": tested,
             "unique_fields_tested": unique_fields_tested,
             "submittable": submittable_count,

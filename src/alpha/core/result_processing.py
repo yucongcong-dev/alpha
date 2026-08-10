@@ -50,6 +50,7 @@ class IncrementalResultsWriter(Protocol):
         queue_timeout_count: int,
         settings_fingerprint: str,
         template_library_fingerprint: str,
+        run_fingerprint: str = "",
         run_config: dict[str, Any] | None = None,
         template_registry_summary: list[dict[str, Any]] | None = None,
         template_stats: TemplateStats | None = None,
@@ -186,6 +187,7 @@ def persist_incremental_result(
         pending_check_count=metrics.pending_check_count,
         settings_fingerprint=completion_ctx.settings_fingerprint,
         template_library_fingerprint=completion_ctx.template_library_fingerprint,
+        run_fingerprint=completion_ctx.run_fingerprint,
         run_config=completion_ctx.run_config,
         template_stats=prospective_template_stats,
     )

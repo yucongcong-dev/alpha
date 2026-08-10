@@ -79,6 +79,7 @@ def finalize_run(
         results,
         settings_fingerprint=run_ctx.settings_fingerprint,
         template_library_fingerprint=run_ctx.template_library_fingerprint,
+        run_fingerprint=run_ctx.run_fingerprint,
         run_config=run_ctx.run_config,
     )
     if feedback_output_path and feedback_output_path != output_path:
@@ -97,6 +98,7 @@ def finalize_run(
                 feedback_results,
                 settings_fingerprint=run_ctx.settings_fingerprint,
                 template_library_fingerprint=run_ctx.template_library_fingerprint,
+                run_fingerprint=run_ctx.run_fingerprint,
                 run_config=run_ctx.run_config,
             )
             persist_feedback_run_index(feedback_output_path)

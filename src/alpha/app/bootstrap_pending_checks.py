@@ -43,6 +43,7 @@ def persist_reconciled_historical_results(
     settings_fingerprint: str,
     template_library_fingerprint: str,
     run_config: RunConfig,
+    run_fingerprint: str = "",
 ) -> None:
     """Persist startup reconciliation before later bootstrap stages may return early."""
     with exclusive_results_transaction(output_file):
@@ -52,6 +53,7 @@ def persist_reconciled_historical_results(
             results,
             settings_fingerprint=settings_fingerprint,
             template_library_fingerprint=template_library_fingerprint,
+            run_fingerprint=run_fingerprint,
             run_config=run_config,
         )
 
@@ -67,6 +69,7 @@ def reconcile_pending_check_results(
     settings_fingerprint: str,
     template_library_fingerprint: str,
     run_config: RunConfig,
+    run_fingerprint: str = "",
 ) -> HistoricalRunState:
     """Refresh pending checks and persist every historical view that changed."""
     existing_results = historical_state.existing_results
@@ -100,6 +103,7 @@ def reconcile_pending_check_results(
             settings_fingerprint=settings_fingerprint,
             template_library_fingerprint=template_library_fingerprint,
             run_config=run_config,
+            run_fingerprint=run_fingerprint,
         )
     if feedback_output and feedback_output != output_file:
         persist_reconciled_historical_results(
@@ -109,6 +113,7 @@ def reconcile_pending_check_results(
             settings_fingerprint=settings_fingerprint,
             template_library_fingerprint=template_library_fingerprint,
             run_config=run_config,
+            run_fingerprint=run_fingerprint,
         )
         persist_feedback_run_index(feedback_output)
     if refreshed_count:

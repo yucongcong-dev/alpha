@@ -433,6 +433,7 @@ def test_dump_results_incremental_writes_lightweight_summary(tmp_path) -> None:
         queue_timeout_count=0,
         settings_fingerprint="settings",
         template_library_fingerprint="templates",
+        run_fingerprint="run-fp",
         run_config={"mode": "incremental"},
         template_registry_summary=[
             {
@@ -446,6 +447,7 @@ def test_dump_results_incremental_writes_lightweight_summary(tmp_path) -> None:
     payload = json.loads(output_path.read_text(encoding="utf-8"))
     assert persisted == 1
     assert payload["results_embedded"] is False
+    assert payload["run_fingerprint"] == "run-fp"
     assert "results" not in payload
     registry = json.loads((tmp_path / "results_template_registry.json").read_text(encoding="utf-8"))
     assert registry[0]["template_name"] == "tpl"

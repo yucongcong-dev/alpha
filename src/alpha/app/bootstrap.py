@@ -38,7 +38,7 @@ from .bootstrap_runtime_outputs import (
 from .bootstrap_state import build_execution_state
 from .bootstrap_supporting_resources import load_bootstrap_supporting_resources
 from .bootstrap_types import PreparedBootstrapResources
-from .run_identity import build_research_run_fingerprint
+from .run_identity import build_research_run_fingerprint, validate_existing_run_identity
 
 logger = logging.getLogger(__name__)
 
@@ -85,6 +85,7 @@ def initialize_run_context(args: ApplicationConfig) -> InitializedRunContext | N
             historical_state=prepared.historical_state,
             settings_fingerprint=prepared.settings_fingerprint,
             template_library_fingerprint=prepared.template_library_fingerprint,
+            run_fingerprint=prepared.run_fingerprint,
             run_config=prepared.run_config,
         )
 
@@ -129,6 +130,20 @@ def prepare_bootstrap_resources(
     }
     template_library_fingerprint = stable_fingerprint(supporting_resources.template_library)
     settings_fingerprint = build_settings_fingerprint(template_options)
+    run_fingerprint = build_research_run_fingerprint(
+        run_config=effective_run_config,
+        template_library=supporting_resources.template_library,
+        filters=supporting_resources.filters,
+        expression_policy=supporting_resources.expression_policy,
+        blacklist_payload=supporting_resources.blacklist_payload,
+    )
+    validate_existing_run_identity(
+        paths.output,
+        run_fingerprint=run_fingerprint,
+        run_config=effective_run_config,
+        settings_fingerprint=settings_fingerprint,
+        template_library_fingerprint=template_library_fingerprint,
+    )
     historical_state = supporting_resources.historical_state
     reconciled_historical_state = reconcile_pending_check_results(
         bootstrap_client,
@@ -139,6 +154,7 @@ def prepare_bootstrap_resources(
         dataset_id=dataset_id,
         settings_fingerprint=settings_fingerprint,
         template_library_fingerprint=template_library_fingerprint,
+        run_fingerprint=run_fingerprint,
         run_config=effective_run_config,
     )
     if reconciled_historical_state is not historical_state:
@@ -171,14 +187,6 @@ def prepare_bootstrap_resources(
     )
     if not prepared_fields:
         return None
-    run_fingerprint = build_research_run_fingerprint(
-        run_config=effective_run_config,
-        template_library=supporting_resources.template_library,
-        filters=supporting_resources.filters,
-        expression_policy=supporting_resources.expression_policy,
-        blacklist_payload=supporting_resources.blacklist_payload,
-        fields=prepared_fields,
-    )
     if supporting_resources.historical_state.existing_results:
         logger.info(
             "[resume] 从 %s 加载 %d 个历史结果",

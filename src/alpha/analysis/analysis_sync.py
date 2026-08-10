@@ -54,6 +54,7 @@ def ensure_analysis_synced(output_path: str) -> None:
                     or analysis.get("settings_fingerprint") != summary.get("settings_fingerprint")
                     or analysis.get("template_library_fingerprint")
                     != summary.get("template_library_fingerprint")
+                    or analysis.get("run_fingerprint") != summary.get("run_fingerprint")
                 )
         except Exception:
             should_rebuild = True
@@ -67,6 +68,7 @@ def ensure_analysis_synced(output_path: str) -> None:
         results,
         settings_fingerprint=str(summary.get("settings_fingerprint", "")),
         template_library_fingerprint=str(summary.get("template_library_fingerprint", "")),
+        run_fingerprint=str(summary.get("run_fingerprint", "")),
         run_config=summary.get("run_config") if isinstance(summary.get("run_config"), dict) else {},
         results_journal_path=os.path.relpath(
             sidecar_paths["results_journal"], start=Path(output_path).parent

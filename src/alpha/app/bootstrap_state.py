@@ -28,6 +28,7 @@ def build_execution_state(
     historical_state: HistoricalRunState,
     settings_fingerprint: str,
     template_library_fingerprint: str,
+    run_fingerprint: str,
     run_config: RunConfig,
 ) -> ExecutionState:
     """Restore execution state and initialize its incremental result journal."""
@@ -53,6 +54,7 @@ def build_execution_state(
         pending_check_count=metrics.pending_check_count,
         settings_fingerprint=settings_fingerprint,
         template_library_fingerprint=template_library_fingerprint,
+        run_fingerprint=run_fingerprint,
         run_config=run_config,
         template_stats=execution_state.template_stats,
     )

@@ -35,6 +35,7 @@ def build_results_summary_payload(
     *,
     settings_fingerprint: str,
     template_library_fingerprint: str,
+    run_fingerprint: str,
     run_config: dict[str, Any] | None,
     results_journal_path: str,
 ) -> tuple[SummaryPayload, AnalysisInputs]:
@@ -79,6 +80,7 @@ def build_results_summary_payload(
         "run_config": run_config or {},
         "settings_fingerprint": settings_fingerprint,
         "template_library_fingerprint": template_library_fingerprint,
+        "run_fingerprint": run_fingerprint,
         "tested": len(results),
         "unique_fields_tested": len(field_ids),
         "submittable": submittable_count,
@@ -115,6 +117,7 @@ def build_analysis_payload(
         "dataset_id": summary["dataset_id"],
         "settings_fingerprint": summary["settings_fingerprint"],
         "template_library_fingerprint": summary["template_library_fingerprint"],
+        "run_fingerprint": summary.get("run_fingerprint", ""),
         "tested": summary["tested"],
         "unique_fields_tested": summary["unique_fields_tested"],
         "submittable_count": summary["submittable"],
