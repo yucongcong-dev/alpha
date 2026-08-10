@@ -240,7 +240,7 @@ def run_field_test_in_worker(
     on_simulation_created: SimulationCreatedCallback | None = None,
 ) -> FieldTestResult:
     """工作线程入口，先解析线程本地客户端再执行测试。"""
-    client = client_factory.get_client()
+    client = client_factory.get_client(request_abort=should_abort)
     return run_field_test(
         client,
         config,
@@ -264,7 +264,7 @@ def resume_field_test_in_worker(
     should_abort: Callable[[], bool] | None = None,
 ) -> FieldTestResult:
     """Worker entrypoint for resuming an existing remote simulation."""
-    client = client_factory.get_client()
+    client = client_factory.get_client(request_abort=should_abort)
     return resume_field_test(
         client,
         config,

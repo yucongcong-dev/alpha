@@ -74,8 +74,9 @@ def test_create_stage_releases_semaphore_when_stop_arrives_after_acquire() -> No
     class Semaphore:
         released = False
 
-        def acquire(self) -> bool:
+        def acquire(self, *, timeout: float | None = None) -> bool:
             nonlocal abort
+            assert timeout == 0.1
             abort = True
             return True
 
@@ -101,6 +102,44 @@ def test_create_stage_releases_semaphore_when_stop_arrives_after_acquire() -> No
     assert isinstance(result, FieldTestResult)
     assert result.failed_stage == "stopped"
     assert semaphore.released is True
+    create.assert_not_called()
+
+
+def test_create_stage_stops_while_waiting_for_semaphore() -> None:
+    abort = False
+
+    class Semaphore:
+        released = False
+
+        def acquire(self, *, timeout: float | None = None) -> bool:
+            nonlocal abort
+            assert timeout == 0.1
+            abort = True
+            return False
+
+        def release(self) -> None:
+            self.released = True
+
+    semaphore = Semaphore()
+    with (
+        patch(
+            "alpha.core.simulation_create.build_simulation_payload",
+            return_value={"settings": {}, "regular": "rank(f1)"},
+        ),
+        patch("alpha.core.simulation_create.create_simulation_with_retry") as create,
+    ):
+        result = create_stages.run_simulation_create_stage(
+            _context(),
+            client=object(),  # type: ignore[arg-type]
+            config=build_simulation_stage_config(simulation_create_retries=2),
+            create_semaphore=semaphore,
+            should_abort=lambda: abort,
+        )
+
+    assert isinstance(result, FieldTestResult)
+    assert result.failed_stage == "stopped"
+    assert "waiting for a create slot" in result.message
+    assert semaphore.released is False
     create.assert_not_called()
 
 

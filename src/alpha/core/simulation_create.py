@@ -72,13 +72,19 @@ def run_simulation_create_stage(
         if simulation_settings is not None:
             payload["settings"].update(_serialize_settings_overrides(simulation_settings))
         ctx.settings = dict(payload["settings"])
+        create_slot_acquired = False
         if create_semaphore is not None:
             logger.info(
                 "[simulation] waiting for create slot field=%s template=%s",
                 ctx.field_id,
                 ctx.template_name,
             )
-            _ = create_semaphore.acquire()
+            while not create_slot_acquired:
+                if should_abort is not None and should_abort():
+                    raise BrainStopRequested(
+                        "simulation create aborted while waiting for a create slot"
+                    )
+                create_slot_acquired = create_semaphore.acquire(timeout=0.1)
         try:
             if should_abort is not None and should_abort():
                 raise BrainStopRequested("simulation create aborted because stop was requested")
@@ -89,7 +95,7 @@ def run_simulation_create_stage(
                 should_abort=should_abort,
             )
         finally:
-            if create_semaphore is not None:
+            if create_semaphore is not None and create_slot_acquired:
                 create_semaphore.release()
         return simulation_location, simulation_id
     except BrainStopRequested as exc:

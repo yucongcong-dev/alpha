@@ -10,6 +10,7 @@ and WorkerClientFactory entry points stable.
 
 from __future__ import annotations
 
+from collections.abc import Callable
 import threading
 import time
 
@@ -48,6 +49,7 @@ class BrainClient(BrainSessionMixin, BrainFieldsMixin, BrainSimulationsMixin, Br
         min_request_interval: float = 0.0,
         rate_limit_max_retries: int = DEFAULT_RATE_LIMIT_MAX_RETRIES,
         request_deadline: float | None = None,
+        request_abort: Callable[[], bool] | None = None,
     ) -> None:
         """初始化客户端凭证、节流参数与 HTTP 后端。"""
         if not email or not password:
@@ -59,6 +61,7 @@ class BrainClient(BrainSessionMixin, BrainFieldsMixin, BrainSimulationsMixin, Br
         self.min_request_interval = max(min_request_interval, 0.0)
         self.rate_limit_max_retries = max(rate_limit_max_retries, 1)
         self.request_deadline = request_deadline
+        self.request_abort = request_abort
         self._http_backend = UrllibHttpBackend()
 
     def close(self) -> None:
@@ -85,11 +88,17 @@ class WorkerClientFactory:
         self._clients_lock = threading.Lock()
         self._closed: bool = False
 
-    def get_client(self, *, request_deadline: float | None = None) -> BrainClient:
+    def get_client(
+        self,
+        *,
+        request_deadline: float | None = None,
+        request_abort: Callable[[], bool] | None = None,
+    ) -> BrainClient:
         """获取当前线程专属客户端，不存在时懒加载并登录。"""
         client: BrainClient | None = getattr(self._local, "client", None)
         if client is not None:
             client.request_deadline = request_deadline
+            client.request_abort = request_abort
             return client
 
         client = BrainClient(
@@ -98,15 +107,21 @@ class WorkerClientFactory:
             min_request_interval=self.options.min_request_interval,
             rate_limit_max_retries=self.options.rate_limit_max_retries,
             request_deadline=request_deadline,
+            request_abort=request_abort,
         )
         try:
-            if request_deadline is None:
+            if request_deadline is None and request_abort is None:
                 login_with_retry(client, self.options.login_retries)
             else:
+                def _abort_requested() -> bool:
+                    return bool(request_abort is not None and request_abort()) or bool(
+                        request_deadline is not None and time.monotonic() >= request_deadline
+                    )
+
                 login_with_retry(
                     client,
                     self.options.login_retries,
-                    should_abort=lambda: time.monotonic() >= request_deadline,
+                    should_abort=_abort_requested,
                 )
         except BaseException:
             client.close()

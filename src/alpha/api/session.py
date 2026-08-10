@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import base64
+from collections.abc import Callable
 import logging
 import threading
 import time
@@ -31,6 +32,7 @@ def _wait_for_request_slot(
     min_request_interval: float,
     *,
     request_deadline: float | None = None,
+    should_abort: Callable[[], bool] | None = None,
 ) -> None:
     """Wait until both the global interval and rate-limit embargo allow a request."""
     global _global_last_request_at
@@ -38,6 +40,8 @@ def _wait_for_request_slot(
     with _request_throttle_condition:
         while True:
             now = time.monotonic()
+            if should_abort is not None and should_abort():
+                raise BrainStopRequested("HTTP request aborted because stop was requested")
             if request_deadline is not None and now >= request_deadline:
                 raise BrainStopRequested("HTTP request deadline reached")
             allowed_at = max(
@@ -50,6 +54,8 @@ def _wait_for_request_slot(
                 return
             if request_deadline is not None:
                 remaining = min(remaining, request_deadline - now)
+            if should_abort is not None:
+                remaining = min(remaining, 0.1)
             _request_throttle_condition.wait(timeout=remaining)
 
 
@@ -70,15 +76,22 @@ def _wait_before_request_retry(
     reason: str,
     *,
     request_deadline: float | None,
+    should_abort: Callable[[], bool] | None,
 ) -> None:
     """Wait for a request retry without crossing the caller's deadline."""
-    if request_deadline is None:
+    if request_deadline is None and should_abort is None:
         wait_seconds(seconds, reason)
         return
+
+    def _abort_requested() -> bool:
+        return bool(should_abort is not None and should_abort()) or bool(
+            request_deadline is not None and time.monotonic() >= request_deadline
+        )
+
     wait_seconds(
         seconds,
         reason,
-        should_abort=lambda: time.monotonic() >= request_deadline,
+        should_abort=_abort_requested,
     )
 
 
@@ -90,6 +103,7 @@ class BrainSessionMixin:
     min_request_interval: float
     rate_limit_max_retries: int
     request_deadline: float | None
+    request_abort: Callable[[], bool] | None
     _http_backend: HttpBackend
 
     def login(self) -> None:
@@ -148,6 +162,7 @@ class BrainSessionMixin:
                         retry_after_seconds,
                         "rate limit",
                         request_deadline=self.request_deadline,
+                        should_abort=self.request_abort,
                     )
                 continue
             if status == 401 and attempt < retries:
@@ -163,6 +178,7 @@ class BrainSessionMixin:
                         ),
                         f"server error {status}",
                         request_deadline=self.request_deadline,
+                        should_abort=self.request_abort,
                     )
                 continue
             if expected is None or status in expected:
@@ -201,6 +217,7 @@ class BrainSessionMixin:
         _wait_for_request_slot(
             self.min_request_interval,
             request_deadline=self.request_deadline,
+            should_abort=self.request_abort,
         )
         if params:
             query = urlencode(params)
@@ -216,6 +233,8 @@ class BrainSessionMixin:
             request_data = str(data).encode("utf-8")
 
         request_timeout = get_runtime_config().http.request_timeout
+        if self.request_abort is not None and self.request_abort():
+            raise BrainStopRequested("HTTP request aborted because stop was requested")
         if self.request_deadline is not None:
             remaining = self.request_deadline - time.monotonic()
             if remaining <= 0:

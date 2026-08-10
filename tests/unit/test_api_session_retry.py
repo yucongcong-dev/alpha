@@ -206,6 +206,48 @@ def test_request_retry_wait_stops_at_request_deadline(
         client.request("GET", "https://example.test", retries=2)
 
 
+@pytest.mark.parametrize(
+    ("status", "headers"),
+    [
+        (429, {"Retry-After": "30"}),
+        (503, {}),
+    ],
+)
+def test_request_retry_wait_stops_when_worker_stop_is_requested(
+    monkeypatch,
+    status: int,
+    headers: dict[str, str],
+) -> None:
+    stopped = False
+    client = BrainClient(
+        "user@example.com",
+        "secret",
+        request_abort=lambda: stopped,
+    )
+    monkeypatch.setattr(
+        client,
+        "raw_request",
+        lambda *_args, **_kwargs: (status, headers, b"busy"),
+    )
+
+    def fake_wait(
+        _seconds: float,
+        _reason: str,
+        *,
+        should_abort,
+    ) -> None:
+        nonlocal stopped
+        assert should_abort() is False
+        stopped = True
+        assert should_abort() is True
+        raise BrainStopRequested("worker stop requested")
+
+    monkeypatch.setattr("alpha.api.session.wait_seconds", fake_wait)
+
+    with pytest.raises(BrainStopRequested, match="worker stop requested"):
+        client.request("GET", "https://example.test", retries=2)
+
+
 def test_request_preserves_unexpected_http_status(monkeypatch) -> None:
     client = BrainClient("user@example.com", "secret")
     monkeypatch.setattr(

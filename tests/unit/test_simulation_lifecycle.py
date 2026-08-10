@@ -329,7 +329,13 @@ def test_resume_field_test_requires_location() -> None:
 
 def test_worker_entrypoints_resolve_thread_client() -> None:
     client = object()
-    factory = SimpleNamespace(get_client=lambda: client)
+    requested_abort_callbacks = []
+
+    def get_client(*, request_abort=None):
+        requested_abort_callbacks.append(request_abort)
+        return client
+
+    factory = SimpleNamespace(get_client=get_client)
     completed = FieldTestResult(
         field_id="f",
         field_type="MATRIX",
@@ -360,3 +366,4 @@ def test_worker_entrypoints_resolve_thread_client() -> None:
 
     assert mock_run.call_args.args[0] is client
     assert mock_resume.call_args.args[0] is client
+    assert requested_abort_callbacks == [None, None]
