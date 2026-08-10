@@ -144,9 +144,7 @@ def test_exclusive_file_lock_uses_nonblocking_windows_mode(monkeypatch, tmp_path
     assert calls == [(fake_msvcrt.LK_NBLCK, 1), (fake_msvcrt.LK_UNLCK, 1)]
 
 
-def test_exclusive_file_lock_maps_nonblocking_windows_contention(
-    monkeypatch, tmp_path
-) -> None:
+def test_exclusive_file_lock_maps_nonblocking_windows_contention(monkeypatch, tmp_path) -> None:
     def fail_to_lock(_fd: int, _mode: int, _size: int) -> None:
         raise OSError("busy")
 

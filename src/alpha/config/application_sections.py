@@ -10,9 +10,7 @@ from typing import Any
 from .strategy_profiles import normalize_strategy_profile
 
 _INSTRUMENT_TYPES = frozenset({"EQUITY", "FUTURES"})
-_NEUTRALIZATION_MODES = frozenset(
-    {"NONE", "MARKET", "SECTOR", "INDUSTRY", "SUBINDUSTRY"}
-)
+_NEUTRALIZATION_MODES = frozenset({"NONE", "MARKET", "SECTOR", "INDUSTRY", "SUBINDUSTRY"})
 _ON_OFF_VALUES = frozenset({"ON", "OFF"})
 _UNIT_HANDLING_VALUES = frozenset({"VERIFY", "OFF"})
 _LANGUAGES = frozenset({"FASTEXPR"})
@@ -52,9 +50,7 @@ class DatasetConfig:
             if not getattr(self, field_name).strip():
                 raise ValueError(f"{field_name} cannot be empty")
         if self.instrument_type not in _INSTRUMENT_TYPES:
-            raise ValueError(
-                f"instrument_type must be one of {sorted(_INSTRUMENT_TYPES)}"
-            )
+            raise ValueError(f"instrument_type must be one of {sorted(_INSTRUMENT_TYPES)}")
         if self.delay < 0:
             raise ValueError("delay cannot be negative")
 

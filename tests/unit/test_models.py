@@ -265,9 +265,7 @@ def test_simulation_config_rejects_invalid_values(
 
 def test_simulation_config_rejects_reversed_date_range() -> None:
     with pytest.raises(ValueError, match="start_date cannot be after end_date"):
-        SimulationConfig.from_args(
-            SimpleNamespace(start_date="2026-02-01", end_date="2026-01-31")
-        )
+        SimulationConfig.from_args(SimpleNamespace(start_date="2026-02-01", end_date="2026-01-31"))
 
 
 @pytest.mark.parametrize(
