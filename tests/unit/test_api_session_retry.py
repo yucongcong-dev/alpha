@@ -164,6 +164,48 @@ def test_request_does_not_wait_after_final_server_error(monkeypatch) -> None:
     assert waits == ["server error 503"]
 
 
+@pytest.mark.parametrize(
+    ("status", "headers"),
+    [
+        (429, {"Retry-After": "30"}),
+        (503, {}),
+    ],
+)
+def test_request_retry_wait_stops_at_request_deadline(
+    monkeypatch,
+    status: int,
+    headers: dict[str, str],
+) -> None:
+    clock = [100.0]
+    client = BrainClient(
+        "user@example.com",
+        "secret",
+        request_deadline=101.0,
+    )
+    monkeypatch.setattr(
+        client,
+        "raw_request",
+        lambda *_args, **_kwargs: (status, headers, b"busy"),
+    )
+    monkeypatch.setattr(session_module.time, "monotonic", lambda: clock[0])
+
+    def fake_wait(
+        _seconds: float,
+        _reason: str,
+        *,
+        should_abort,
+    ) -> None:
+        assert should_abort() is False
+        clock[0] = 101.0
+        assert should_abort() is True
+        raise BrainStopRequested("request deadline reached")
+
+    monkeypatch.setattr("alpha.api.session.wait_seconds", fake_wait)
+
+    with pytest.raises(BrainStopRequested, match="deadline reached"):
+        client.request("GET", "https://example.test", retries=2)
+
+
 def test_request_preserves_unexpected_http_status(monkeypatch) -> None:
     client = BrainClient("user@example.com", "secret")
     monkeypatch.setattr(

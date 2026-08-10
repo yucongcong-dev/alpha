@@ -65,6 +65,23 @@ def _extend_rate_limit_deadline(retry_after_seconds: float) -> None:
         _request_throttle_condition.notify_all()
 
 
+def _wait_before_request_retry(
+    seconds: float,
+    reason: str,
+    *,
+    request_deadline: float | None,
+) -> None:
+    """Wait for a request retry without crossing the caller's deadline."""
+    if request_deadline is None:
+        wait_seconds(seconds, reason)
+        return
+    wait_seconds(
+        seconds,
+        reason,
+        should_abort=lambda: time.monotonic() >= request_deadline,
+    )
+
+
 class BrainSessionMixin:
     """Authentication and low-level HTTP request helpers for BrainClient."""
 
@@ -127,7 +144,11 @@ class BrainSessionMixin:
                     retry_after_header,
                 )
                 if attempt < retries:
-                    wait_seconds(retry_after_seconds, "rate limit")
+                    _wait_before_request_retry(
+                        retry_after_seconds,
+                        "rate limit",
+                        request_deadline=self.request_deadline,
+                    )
                 continue
             if status == 401 and attempt < retries:
                 logger.warning("[auth] session expired on %s %s, re-logging in...", method, url)
@@ -135,12 +156,13 @@ class BrainSessionMixin:
                 continue
             if status in (500, 502, 503, 504):
                 if attempt < retries:
-                    wait_seconds(
+                    _wait_before_request_retry(
                         min(
                             http_config.server_error_backoff_max,
                             attempt * http_config.server_error_backoff_step,
                         ),
                         f"server error {status}",
+                        request_deadline=self.request_deadline,
                     )
                 continue
             if expected is None or status in expected:
