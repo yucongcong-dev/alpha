@@ -18,6 +18,7 @@ from ..models.domain import TemplateField
 from ..models.runtime_config import SimulationStageConfig
 from ..models.runtime_options import SchedulerControlOptions
 from ..runtime.contexts import (
+    CheckpointIdentity,
     FutureCompletionContext,
     TemplateBuildContext,
 )
@@ -30,6 +31,14 @@ from .run_loop_resume import persist_replanning_checkpoint
 from .run_loop_seed_phase import SeedPhaseState
 
 logger = logging.getLogger(__name__)
+
+
+def _checkpoint_identity(context: ScheduleRoundContext) -> CheckpointIdentity:
+    completion_ctx = context.completion_ctx
+    return CheckpointIdentity(
+        settings_fingerprint=completion_ctx.settings_fingerprint,
+        template_library_fingerprint=completion_ctx.template_library_fingerprint,
+    )
 
 
 @dataclass(frozen=True)
@@ -167,6 +176,7 @@ def schedule_field_round(
             field_id=field_id,
             execution_state=execution_state,
             runtime_state=runtime_state,
+            identity=_checkpoint_identity(context),
         )
         return ScheduleRoundResult(
             progressed=seed_resolution_progressed,
@@ -241,6 +251,7 @@ def schedule_field_round(
         field_id=field_id,
         execution_state=execution_state,
         runtime_state=runtime_state,
+        identity=_checkpoint_identity(context),
     )
     return ScheduleRoundResult(
         progressed=progressed,

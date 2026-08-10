@@ -7,6 +7,7 @@ import logging
 from ..core.checkpoint import load_pipeline_state, save_interrupt_report, save_pipeline_state
 from ..models.domain import TemplateField
 from ..runtime.concurrency import RuntimeConcurrencyState
+from ..runtime.contexts import CheckpointIdentity
 from ..runtime.state import ExecutionState
 
 logger = logging.getLogger(__name__)
@@ -18,6 +19,7 @@ def restore_fields_from_state(
     state_file: str,
     runtime_state: RuntimeConcurrencyState,
     execution_state: ExecutionState,
+    identity: CheckpointIdentity,
 ) -> list[TemplateField]:
     """Restore runtime state while keeping breadth-first field order stable."""
     if not state_file:
@@ -26,6 +28,7 @@ def restore_fields_from_state(
         state_file,
         runtime_state=runtime_state,
         execution_state=execution_state,
+        identity=identity,
     )
     if fields and legacy_completed_index >= len(fields):
         logger.info(
@@ -47,6 +50,7 @@ def persist_replanning_checkpoint(
     field_id: str,
     execution_state: ExecutionState,
     runtime_state: RuntimeConcurrencyState,
+    identity: CheckpointIdentity,
 ) -> None:
     """Persist an in-progress breadth-first checkpoint without advancing a field cursor."""
     if not state_file:
@@ -56,6 +60,7 @@ def persist_replanning_checkpoint(
         completed_field_index=0,
         execution_state=execution_state,
         runtime_state=runtime_state,
+        identity=identity,
         field_id=field_id,
     )
     if not saved:
@@ -69,6 +74,7 @@ def save_runtime_checkpoint(
     completed_field_index: int,
     execution_state: ExecutionState,
     runtime_state: RuntimeConcurrencyState,
+    identity: CheckpointIdentity,
     last_field_id: str,
     fields: list[TemplateField],
     reason: str,
@@ -80,6 +86,7 @@ def save_runtime_checkpoint(
             completed_field_index=max(0, completed_field_index),
             execution_state=execution_state,
             runtime_state=runtime_state,
+            identity=identity,
             field_id=last_field_id or "",
         )
         if not state_saved:
@@ -89,6 +96,7 @@ def save_runtime_checkpoint(
             interrupt_report_file,
             execution_state=execution_state,
             runtime_state=runtime_state,
+            identity=identity,
             field_id=last_field_id or "",
             remaining_fields=max(0, len(fields)),
             reason=reason,
@@ -107,6 +115,7 @@ def save_terminal_pipeline_state(
     last_field_id: str,
     execution_state: ExecutionState,
     runtime_state: RuntimeConcurrencyState,
+    identity: CheckpointIdentity,
 ) -> None:
     """Persist the terminal completed-field cursor after draining all futures."""
     if not state_file:
@@ -116,6 +125,7 @@ def save_terminal_pipeline_state(
         completed_field_index=max(0, total_fields),
         execution_state=execution_state,
         runtime_state=runtime_state,
+        identity=identity,
         field_id=last_field_id,
     )
     if not saved:

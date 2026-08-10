@@ -17,6 +17,7 @@ from ..models.runtime_config import SimulationStageConfig
 from ..models.runtime_options import SchedulerControlOptions
 from ..runtime.concurrency import RuntimeConcurrencyState
 from ..runtime.contexts import (
+    CheckpointIdentity,
     FutureCompletionContext,
     PendingFutureContext,
 )
@@ -26,6 +27,13 @@ from .run_loop_resume import save_terminal_pipeline_state
 logger = logging.getLogger(__name__)
 
 INTERRUPT_METADATA_POLL_SECONDS = 0.05
+
+
+def _checkpoint_identity(completion_ctx: FutureCompletionContext) -> CheckpointIdentity:
+    return CheckpointIdentity(
+        settings_fingerprint=completion_ctx.settings_fingerprint,
+        template_library_fingerprint=completion_ctx.template_library_fingerprint,
+    )
 
 
 def cancel_unstarted_futures(execution_state: ExecutionState) -> int:
@@ -108,6 +116,7 @@ def drain_next_completion(
             last_field_id=last_field_id,
             execution_state=execution_state,
             runtime_state=runtime_state,
+            identity=_checkpoint_identity(completion_ctx),
         )
     elif state_file:
         saved = save_pipeline_state(
@@ -115,6 +124,7 @@ def drain_next_completion(
             completed_field_index=0,
             execution_state=execution_state,
             runtime_state=runtime_state,
+            identity=_checkpoint_identity(completion_ctx),
             field_id=last_field_id,
         )
         if not saved:

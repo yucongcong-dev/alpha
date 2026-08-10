@@ -19,6 +19,7 @@ from typing import Any
 
 from ..config._constants_thresholds import CHECKPOINT_PENDING_FUTURES_LIMIT
 from ..runtime.concurrency import RuntimeConcurrencyState
+from ..runtime.contexts import CheckpointIdentity
 from ..runtime.state import ExecutionState
 from . import checkpoint_files as _files
 from . import checkpoint_loading as _loading
@@ -35,7 +36,7 @@ __all__ = [
 
 logger = logging.getLogger(__name__)
 
-STATE_VERSION = 1
+STATE_VERSION = 2
 os = _files.os
 
 _all_pending_contexts = _payloads.all_pending_contexts
@@ -57,6 +58,7 @@ def save_pipeline_state(
     completed_field_index: int,
     execution_state: ExecutionState,
     runtime_state: RuntimeConcurrencyState,
+    identity: CheckpointIdentity,
     field_id: str = "",
 ) -> bool:
     """
@@ -86,6 +88,8 @@ def save_pipeline_state(
     result_ledger = execution_state.result_ledger
     payload: dict[str, Any] = {
         "version": STATE_VERSION,
+        "settings_fingerprint": identity.settings_fingerprint,
+        "template_library_fingerprint": identity.template_library_fingerprint,
         "completed_field_index": completed_field_index,
         "last_field_id": field_id,
         "pending_simulations": _serialize_pending_simulations(execution_state),
@@ -110,6 +114,7 @@ def load_pipeline_state(
     *,
     runtime_state: RuntimeConcurrencyState,
     execution_state: ExecutionState,
+    identity: CheckpointIdentity,
 ) -> int:
     """
     启动时加载上次管道运行状态，恢复进度和拥塞控制信息。
@@ -131,6 +136,7 @@ def load_pipeline_state(
         state_file,
         runtime_state=runtime_state,
         execution_state=execution_state,
+        identity=identity,
         state_version=STATE_VERSION,
         monotonic=time.monotonic,
         log=logger,
@@ -147,6 +153,7 @@ def save_interrupt_report(
     *,
     execution_state: ExecutionState,
     runtime_state: RuntimeConcurrencyState,
+    identity: CheckpointIdentity,
     field_id: str = "",
     remaining_fields: int = 0,
     reason: str = "",
@@ -188,6 +195,8 @@ def save_interrupt_report(
     result_ledger = execution_state.result_ledger
     payload: dict[str, Any] = {
         "version": STATE_VERSION,
+        "settings_fingerprint": identity.settings_fingerprint,
+        "template_library_fingerprint": identity.template_library_fingerprint,
         "reason": reason,
         "field_id": field_id,
         "remaining_fields": remaining_fields,

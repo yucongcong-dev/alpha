@@ -10,6 +10,7 @@ from typing import Any
 
 from ..config._constants_thresholds import CHECKPOINT_RESUME_SAFETY_SECONDS
 from ..runtime.concurrency import RuntimeConcurrencyState
+from ..runtime.contexts import CheckpointIdentity
 from ..runtime.state import ExecutionState
 from . import checkpoint_payloads as _payloads
 
@@ -119,6 +120,7 @@ def load_pipeline_state(
     *,
     runtime_state: RuntimeConcurrencyState,
     execution_state: ExecutionState,
+    identity: CheckpointIdentity,
     state_version: int,
     monotonic: Callable[[], float],
     log: logging.Logger = logger,
@@ -130,6 +132,17 @@ def load_pipeline_state(
         log=log,
     )
     if payload is None:
+        return 0
+    saved_identity = (
+        str(payload.get("settings_fingerprint", "") or ""),
+        str(payload.get("template_library_fingerprint", "") or ""),
+    )
+    current_identity = (
+        identity.settings_fingerprint,
+        identity.template_library_fingerprint,
+    )
+    if saved_identity != current_identity:
+        log.warning("[checkpoint] run identity mismatch in %s; starting fresh", state_file)
         return 0
 
     parsed = _parse_resume_scalars(

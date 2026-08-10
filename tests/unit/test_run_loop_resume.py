@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 from concurrent.futures import Future
+from functools import partial
 import json
 from threading import Semaphore
 from types import SimpleNamespace
@@ -17,10 +18,16 @@ from alpha.app.loop_future_support import (
 )
 from alpha.app.run_loop import run_field_test_loop
 from alpha.app.run_loop_resume import (
-    persist_replanning_checkpoint,
-    restore_fields_from_state,
-    save_runtime_checkpoint,
-    save_terminal_pipeline_state,
+    persist_replanning_checkpoint as _persist_replanning_checkpoint,
+)
+from alpha.app.run_loop_resume import (
+    restore_fields_from_state as _restore_fields_from_state,
+)
+from alpha.app.run_loop_resume import (
+    save_runtime_checkpoint as _save_runtime_checkpoint,
+)
+from alpha.app.run_loop_resume import (
+    save_terminal_pipeline_state as _save_terminal_pipeline_state,
 )
 from alpha.app.run_loop_rounds import ScheduleRoundResult
 from alpha.config.application import ApplicationConfig
@@ -28,8 +35,37 @@ from alpha.models.domain import TemplateField
 from alpha.models.io_types import RunFilters, RunPaths
 from alpha.models.runtime_options import ResultWriteOptions, SchedulerControlOptions
 from alpha.runtime.concurrency import RuntimeConcurrencyState
-from alpha.runtime.contexts import FutureCompletionContext, HistoricalRunState
+from alpha.runtime.contexts import (
+    CheckpointIdentity,
+    FutureCompletionContext,
+    HistoricalRunState,
+)
 from alpha.runtime.state import ExecutionState, InitializedRunContext
+
+IDENTITY = CheckpointIdentity("settings-fp", "tpl-fp")
+persist_replanning_checkpoint = partial(_persist_replanning_checkpoint, identity=IDENTITY)
+restore_fields_from_state = partial(_restore_fields_from_state, identity=IDENTITY)
+save_runtime_checkpoint = partial(_save_runtime_checkpoint, identity=IDENTITY)
+save_terminal_pipeline_state = partial(_save_terminal_pipeline_state, identity=IDENTITY)
+
+
+def _checkpoint_json(completed_field_index: int) -> str:
+    return json.dumps(
+        {
+            "version": 2,
+            "settings_fingerprint": IDENTITY.settings_fingerprint,
+            "template_library_fingerprint": IDENTITY.template_library_fingerprint,
+            "completed_field_index": completed_field_index,
+        }
+    )
+
+
+def _completion_context() -> FutureCompletionContext:
+    return FutureCompletionContext(
+        result_write_options=ResultWriteOptions(),
+        settings_fingerprint=IDENTITY.settings_fingerprint,
+        template_library_fingerprint=IDENTITY.template_library_fingerprint,
+    )
 
 
 def _build_execution_state() -> ExecutionState:
@@ -120,7 +156,7 @@ def _build_run_loop_args(tmp_path, **overrides) -> ApplicationConfig:
 def test_restore_fields_from_state_returns_empty_when_all_fields_completed(tmp_path) -> None:
     state_file = tmp_path / "state.json"
     state_file.write_text(
-        json.dumps({"version": 1, "completed_field_index": 2}),
+        _checkpoint_json(2),
         encoding="utf-8",
     )
     fields = [_field("f1"), _field("f2")]
@@ -138,7 +174,7 @@ def test_restore_fields_from_state_returns_empty_when_all_fields_completed(tmp_p
 def test_restore_fields_from_state_ignores_legacy_partial_cursor(tmp_path) -> None:
     state_file = tmp_path / "state.json"
     state_file.write_text(
-        json.dumps({"version": 1, "completed_field_index": 1}),
+        _checkpoint_json(1),
         encoding="utf-8",
     )
     fields = [_field("f1"), _field("f2")]
@@ -201,9 +237,7 @@ def test_drain_remaining_futures_persists_total_field_count(tmp_path) -> None:
             execution_state=execution_state,
             runtime_state=RuntimeConcurrencyState(max_workers=2, runtime_max_workers=2),
             scheduler_options=SchedulerControlOptions(),
-            completion_ctx=FutureCompletionContext(
-                result_write_options=ResultWriteOptions(),
-            ),
+            completion_ctx=_completion_context(),
         )
 
     assert mock_save.call_args.kwargs["completed_field_index"] == 5
@@ -231,9 +265,7 @@ def test_drain_next_completion_keeps_replanning_cursor_at_zero(tmp_path) -> None
                 last_field_id="f1",
                 execution_state=execution_state,
                 scheduler_options=SimpleNamespace(),
-                completion_ctx=FutureCompletionContext(
-                    result_write_options=ResultWriteOptions(),
-                ),
+                completion_ctx=_completion_context(),
                 runtime_state=RuntimeConcurrencyState(max_workers=2, runtime_max_workers=2),
             )
             is True

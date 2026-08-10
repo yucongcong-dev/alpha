@@ -48,7 +48,10 @@ def build_round_context(
         executor=ThreadPoolExecutor(max_workers=1),
         template_build_ctx=MagicMock(spec=TemplateBuildContext),
         fields=fields,
-        completion_ctx=FutureCompletionContext(),
+        completion_ctx=FutureCompletionContext(
+            settings_fingerprint=run_ctx.settings_fingerprint,
+            template_library_fingerprint=run_ctx.template_library_fingerprint,
+        ),
         state_file=state_file,
         field_template_batch_size=field_template_batch_size,
         seed_phase=SeedPhaseState.create(

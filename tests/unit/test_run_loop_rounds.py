@@ -13,7 +13,7 @@ from alpha.app.run_loop_rounds import (
 )
 from alpha.models.domain import FieldTestResult, SettingsVariant
 from alpha.models.runtime_options import SchedulerControlOptions
-from alpha.runtime.contexts import PendingTemplateEntry, TemplateBuildContext
+from alpha.runtime.contexts import CheckpointIdentity, PendingTemplateEntry, TemplateBuildContext
 from alpha.runtime.field_template_queue import FieldTemplateQueue
 from tests.unit.run_loop_rounds_support import build_round_context as _build_context
 
@@ -52,6 +52,7 @@ def test_breadth_first_field_progress_keeps_resume_cursor_at_start(tmp_path) -> 
         "field_id": "f1",
         "execution_state": context.run_ctx.execution_state,
         "runtime_state": context.run_ctx.runtime_state,
+        "identity": CheckpointIdentity("settings-fp", "tpl-fp"),
     }
 
 

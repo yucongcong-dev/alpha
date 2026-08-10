@@ -17,6 +17,18 @@ from ..models.runtime_options import ResultWriteOptions, TemplateBuildOptions
 from ..models.runtime_protocols import RunConfig, TemplateStats
 
 
+@dataclass(frozen=True, slots=True)
+class CheckpointIdentity:
+    """Fingerprints that bind a checkpoint to one resolved research run."""
+
+    settings_fingerprint: str
+    template_library_fingerprint: str
+
+    def __post_init__(self) -> None:
+        if not self.settings_fingerprint or not self.template_library_fingerprint:
+            raise ValueError("checkpoint fingerprints cannot be empty")
+
+
 @dataclass
 class PendingFutureContext:
     """尚未完成的 future 元数据及可恢复的远端 simulation 状态。"""

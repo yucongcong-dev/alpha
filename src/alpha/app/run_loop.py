@@ -7,6 +7,7 @@ import logging
 
 from ..config.application import ApplicationConfig
 from ..models.runtime_options import RunLoopOptions
+from ..runtime.contexts import CheckpointIdentity
 from ..runtime.state import InitializedRunContext
 from . import loop_future_support, run_loop_contexts, run_loop_resume, run_loop_rounds
 from .run_loop_seed_phase import SeedPhaseState
@@ -36,12 +37,17 @@ def run_field_test_loop(
     completion_ctx = run_loop_contexts.resolve_future_completion_context(
         run_ctx, result_write_options
     )
+    checkpoint_identity = CheckpointIdentity(
+        settings_fingerprint=run_ctx.settings_fingerprint,
+        template_library_fingerprint=run_ctx.template_library_fingerprint,
+    )
 
     fields = run_loop_resume.restore_fields_from_state(
         fields=fields,
         state_file=state_file,
         runtime_state=runtime_state,
         execution_state=execution_state,
+        identity=checkpoint_identity,
     )
 
     template_build_ctx = run_loop_contexts.create_template_build_context(
@@ -163,6 +169,7 @@ def run_field_test_loop(
                 completed_field_index=0,
                 execution_state=execution_state,
                 runtime_state=runtime_state,
+                identity=checkpoint_identity,
                 last_field_id=last_field_id,
                 fields=fields,
                 reason="KeyboardInterrupt",
@@ -188,6 +195,7 @@ def run_field_test_loop(
                 completed_field_index=0,
                 execution_state=execution_state,
                 runtime_state=runtime_state,
+                identity=checkpoint_identity,
                 last_field_id=last_field_id,
                 fields=fields,
                 reason="Exception",

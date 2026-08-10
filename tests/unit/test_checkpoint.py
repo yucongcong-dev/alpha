@@ -2,19 +2,42 @@
 
 from __future__ import annotations
 
+from functools import partial
 import json
 from unittest.mock import patch
 
 import alpha.core.checkpoint as checkpoint_module
 from alpha.core.checkpoint import (
     delete_pipeline_state,
-    load_pipeline_state,
-    save_interrupt_report,
-    save_pipeline_state,
+)
+from alpha.core.checkpoint import (
+    load_pipeline_state as _load_pipeline_state,
+)
+from alpha.core.checkpoint import (
+    save_interrupt_report as _save_interrupt_report,
+)
+from alpha.core.checkpoint import (
+    save_pipeline_state as _save_pipeline_state,
 )
 from alpha.runtime.concurrency import RuntimeConcurrencyState
-from alpha.runtime.contexts import PendingFutureContext
+from alpha.runtime.contexts import CheckpointIdentity, PendingFutureContext
 from alpha.runtime.state import ExecutionState
+
+IDENTITY = CheckpointIdentity("settings-current", "templates-current")
+load_pipeline_state = partial(_load_pipeline_state, identity=IDENTITY)
+save_interrupt_report = partial(_save_interrupt_report, identity=IDENTITY)
+save_pipeline_state = partial(_save_pipeline_state, identity=IDENTITY)
+
+
+def _checkpoint_json(payload: dict[str, object]) -> str:
+    return json.dumps(
+        {
+            **payload,
+            "version": checkpoint_module.STATE_VERSION,
+            "settings_fingerprint": IDENTITY.settings_fingerprint,
+            "template_library_fingerprint": IDENTITY.template_library_fingerprint,
+        }
+    )
 
 
 def _build_execution_state() -> ExecutionState:
@@ -25,7 +48,7 @@ def test_load_pipeline_state_ignores_invalid_completed_index(tmp_path) -> None:
     """Invalid numeric fields in state payload should fall back to fresh start."""
     state_file = tmp_path / "state.json"
     state_file.write_text(
-        json.dumps({"version": 1, "completed_field_index": "oops"}),
+        _checkpoint_json({"completed_field_index": "oops"}),
         encoding="utf-8",
     )
 
@@ -42,9 +65,8 @@ def test_load_pipeline_state_ignores_invalid_cooldown_shape(tmp_path) -> None:
     """Invalid cooldown fields should not crash resume logic."""
     state_file = tmp_path / "state.json"
     state_file.write_text(
-        json.dumps(
+        _checkpoint_json(
             {
-                "version": 1,
                 "completed_field_index": 1,
                 "remaining_cooldown_seconds": "oops",
             }
@@ -65,9 +87,8 @@ def test_load_pipeline_state_preserves_result_derived_stats_with_zero_cursor(tmp
     """Breadth-first resume must not overwrite statistics rebuilt from durable results."""
     state_file = tmp_path / "state.json"
     state_file.write_text(
-        json.dumps(
+        _checkpoint_json(
             {
-                "version": 1,
                 "completed_field_index": 0,
                 "field_queue_busy_counts": {"f1": 2},
                 "skipped_fields_due_to_queue": ["f2"],
@@ -118,9 +139,8 @@ def test_load_pipeline_state_ignores_legacy_template_stats(tmp_path) -> None:
     """Legacy checkpoint statistics must not replace the result-derived source of truth."""
     state_file = tmp_path / "state.json"
     state_file.write_text(
-        json.dumps(
+        _checkpoint_json(
             {
-                "version": 1,
                 "completed_field_index": 0,
                 "field_queue_busy_counts": {
                     "f1": "3",
@@ -163,9 +183,8 @@ def test_load_pipeline_state_caps_restored_concurrency_at_configured_maximum(tmp
     """A state file cannot silently expand the configured worker pool."""
     state_file = tmp_path / "state.json"
     state_file.write_text(
-        json.dumps(
+        _checkpoint_json(
             {
-                "version": 1,
                 "completed_field_index": 0,
                 "runtime_max_workers": 99,
                 "remaining_cooldown_seconds": 30,
@@ -188,9 +207,8 @@ def test_load_pipeline_state_discards_non_finite_cooldown_and_counters(tmp_path)
     """Infinity from a damaged JSON file must not create a permanent cooldown."""
     state_file = tmp_path / "state.json"
     state_file.write_text(
-        json.dumps(
+        _checkpoint_json(
             {
-                "version": 1,
                 "completed_field_index": 0,
                 "field_queue_busy_counts": {"f1": float("inf")},
                 "runtime_max_workers": 1,
@@ -217,9 +235,8 @@ def test_load_pipeline_state_retries_legacy_pending_entries_without_location(tmp
     """Legacy pending keys cannot be resumed and must remain eligible for recreation."""
     state_file = tmp_path / "state.json"
     state_file.write_text(
-        json.dumps(
+        _checkpoint_json(
             {
-                "version": 1,
                 "completed_field_index": 2,
                 "pending_template_keys": [
                     {
@@ -280,9 +297,8 @@ def test_load_pipeline_state_skips_resumable_simulation_already_in_results(tmp_p
     """A stale state file must not append a duplicate for an already persisted result."""
     state_file = tmp_path / "state.json"
     state_file.write_text(
-        json.dumps(
+        _checkpoint_json(
             {
-                "version": 1,
                 "completed_field_index": 1,
                 "pending_simulations": [
                     {
@@ -308,6 +324,39 @@ def test_load_pipeline_state_skips_resumable_simulation_already_in_results(tmp_p
 
     assert resumed == 1
     assert execution_state.future_queue.resumable_simulations == []
+
+
+def test_load_pipeline_state_rejects_different_run_identity(tmp_path, caplog) -> None:
+    state_file = tmp_path / "state.json"
+    state_file.write_text(
+        _checkpoint_json(
+            {
+                "completed_field_index": 1,
+                "pending_simulations": [
+                    {
+                        "field_id": "f1",
+                        "template_name": "base",
+                        "expression": "rank(f1)",
+                        "settings_fingerprint": "settings-v1",
+                        "simulation_location": "/simulations/sim-1",
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    execution_state = _build_execution_state()
+
+    resumed = _load_pipeline_state(
+        str(state_file),
+        runtime_state=RuntimeConcurrencyState(max_workers=2, runtime_max_workers=2),
+        execution_state=execution_state,
+        identity=CheckpointIdentity("settings-other", "templates-current"),
+    )
+
+    assert resumed == 0
+    assert execution_state.future_queue.resumable_simulations == []
+    assert "run identity mismatch" in caplog.text
 
 
 def test_non_negative_int_rejects_untrusted_values() -> None:
@@ -354,7 +403,7 @@ def test_load_pipeline_state_handles_missing_invalid_and_version_mismatch(tmp_pa
 def test_load_pipeline_state_rejects_negative_cursor_and_restores_idle_runtime(tmp_path) -> None:
     negative = tmp_path / "negative.json"
     negative.write_text(
-        json.dumps({"version": 1, "completed_field_index": -1}),
+        _checkpoint_json({"completed_field_index": -1}),
         encoding="utf-8",
     )
     runtime_state = RuntimeConcurrencyState(max_workers=3, runtime_max_workers=1)
@@ -369,9 +418,8 @@ def test_load_pipeline_state_rejects_negative_cursor_and_restores_idle_runtime(t
 
     idle = tmp_path / "idle.json"
     idle.write_text(
-        json.dumps(
+        _checkpoint_json(
             {
-                "version": 1,
                 "completed_field_index": 2,
                 "remaining_cooldown_seconds": 0,
                 "runtime_max_workers": 1,
