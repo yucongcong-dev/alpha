@@ -449,6 +449,36 @@ def test_parse_application_config_rejects_invalid_planning_ranges(
         parse_application_config()
 
 
+@pytest.mark.parametrize(
+    ("option", "value", "message"),
+    [
+        ("--delay", "-1", "delay cannot be negative"),
+        ("--decay", "-1", "decay cannot be negative"),
+        ("--truncation", "1.1", "truncation must be between 0 and 1"),
+        ("--backfill-window", "0", "backfill_window must be positive"),
+        ("--neutralization", "NOT_A_MODE", "neutralization must be one of"),
+        ("--start-date", "not-a-date", "start_date must use YYYY-MM-DD format"),
+    ],
+)
+def test_parse_application_config_rejects_invalid_simulation_settings(
+    monkeypatch,
+    tmp_path,
+    option,
+    value,
+    message,
+) -> None:
+    clear_yaml_cache()
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        ["alpha", "--dataset-id", "pv1", "--dry-run-plan", option, value],
+    )
+
+    with pytest.raises(ValueError, match=message):
+        parse_application_config()
+
+
 def test_parse_application_config_preserves_named_run_in_snapshot(monkeypatch, tmp_path) -> None:
     clear_yaml_cache()
     monkeypatch.chdir(tmp_path)

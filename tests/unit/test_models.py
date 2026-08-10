@@ -9,7 +9,13 @@ from types import SimpleNamespace
 import pytest
 
 from alpha.config.application import ApplicationConfig
-from alpha.config.application_sections import ExecutionConfig, PlanningConfig, QualityConfig
+from alpha.config.application_sections import (
+    DatasetConfig,
+    ExecutionConfig,
+    PlanningConfig,
+    QualityConfig,
+    SimulationConfig,
+)
 from alpha.models.domain import FailedCheck, FieldTestContext, FieldTestResult
 from alpha.models.domain_serializers import serialize_field_test_result
 from alpha.models.io_types import RunFilters, RunPaths
@@ -28,7 +34,7 @@ from alpha.runtime.state import ExecutionState
 
 
 def _application_config(**overrides: object) -> ApplicationConfig:
-    args = SimpleNamespace(**overrides)
+    args = SimpleNamespace(**{"dataset_id": "test_dataset", **overrides})
     paths = RunPaths(
         results_dir="runs",
         log_file="run.log",
@@ -204,6 +210,64 @@ def test_execution_config_rejects_invalid_numeric_ranges(
 ) -> None:
     with pytest.raises(ValueError, match=message):
         ExecutionConfig.from_args(SimpleNamespace(**{field_name: value}))
+
+
+@pytest.mark.parametrize(
+    ("field_name", "value", "message"),
+    [
+        ("dataset_id", "", "dataset_id cannot be empty"),
+        ("region", "", "region cannot be empty"),
+        ("universe", "", "universe cannot be empty"),
+        ("instrument_type", "CRYPTO", "instrument_type must be one of"),
+        ("delay", -1, "delay cannot be negative"),
+    ],
+)
+def test_dataset_config_rejects_invalid_values(
+    field_name: str,
+    value: str | int,
+    message: str,
+) -> None:
+    values: dict[str, object] = {
+        "dataset_id": "pv1",
+        "region": "USA",
+        "universe": "TOP3000",
+        "instrument_type": "EQUITY",
+        "delay": 1,
+    }
+    values[field_name] = value
+
+    with pytest.raises(ValueError, match=message):
+        DatasetConfig.from_args(SimpleNamespace(**values))
+
+
+@pytest.mark.parametrize(
+    ("field_name", "value", "message"),
+    [
+        ("decay", -1, "decay cannot be negative"),
+        ("truncation", float("inf"), "truncation must be finite"),
+        ("truncation", 1.01, "truncation must be between 0 and 1"),
+        ("backfill_window", 0, "backfill_window must be positive"),
+        ("neutralization", "NOT_A_MODE", "neutralization must be one of"),
+        ("pasteurization", "MAYBE", "pasteurization must be one of"),
+        ("unit_handling", "ON", "unit_handling must be one of"),
+        ("language", "PYTHON", "language must be one of"),
+        ("start_date", "2026-02-30", "start_date must use YYYY-MM-DD format"),
+    ],
+)
+def test_simulation_config_rejects_invalid_values(
+    field_name: str,
+    value: str | int | float,
+    message: str,
+) -> None:
+    with pytest.raises(ValueError, match=message):
+        SimulationConfig.from_args(SimpleNamespace(**{field_name: value}))
+
+
+def test_simulation_config_rejects_reversed_date_range() -> None:
+    with pytest.raises(ValueError, match="start_date cannot be after end_date"):
+        SimulationConfig.from_args(
+            SimpleNamespace(start_date="2026-02-01", end_date="2026-01-31")
+        )
 
 
 @pytest.mark.parametrize(

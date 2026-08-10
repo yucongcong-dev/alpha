@@ -3,10 +3,19 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import date
 import math
 from typing import Any
 
 from .strategy_profiles import normalize_strategy_profile
+
+_INSTRUMENT_TYPES = frozenset({"EQUITY", "FUTURES"})
+_NEUTRALIZATION_MODES = frozenset(
+    {"NONE", "MARKET", "SECTOR", "INDUSTRY", "SUBINDUSTRY"}
+)
+_ON_OFF_VALUES = frozenset({"ON", "OFF"})
+_UNIT_HANDLING_VALUES = frozenset({"VERIFY", "OFF"})
+_LANGUAGES = frozenset({"FASTEXPR"})
 
 
 def _value(args: object, name: str, default: Any = None) -> Any:
@@ -38,14 +47,25 @@ class DatasetConfig:
     instrument_type: str
     delay: int
 
+    def __post_init__(self) -> None:
+        for field_name in ("dataset_id", "region", "universe"):
+            if not getattr(self, field_name).strip():
+                raise ValueError(f"{field_name} cannot be empty")
+        if self.instrument_type not in _INSTRUMENT_TYPES:
+            raise ValueError(
+                f"instrument_type must be one of {sorted(_INSTRUMENT_TYPES)}"
+            )
+        if self.delay < 0:
+            raise ValueError("delay cannot be negative")
+
     @classmethod
     def from_args(cls, args: object) -> DatasetConfig:
         return cls(
             dataset_id=str(_value(args, "dataset_id", "") or ""),
-            region=str(_value(args, "region", "") or ""),
-            universe=str(_value(args, "universe", "") or ""),
-            instrument_type=str(_value(args, "instrument_type", "") or ""),
-            delay=int(_value(args, "delay", 0) or 0),
+            region=str(_value(args, "region", "USA") or ""),
+            universe=str(_value(args, "universe", "TOP3000") or ""),
+            instrument_type=str(_value(args, "instrument_type", "EQUITY") or ""),
+            delay=int(_value(args, "delay", 1) or 0),
         )
 
 
@@ -63,20 +83,58 @@ class SimulationConfig:
     end_date: str | None
     backfill_window: int
 
+    def __post_init__(self) -> None:
+        if self.decay < 0:
+            raise ValueError("decay cannot be negative")
+        if not math.isfinite(self.truncation):
+            raise ValueError("truncation must be finite")
+        if not 0 <= self.truncation <= 1:
+            raise ValueError("truncation must be between 0 and 1")
+        if self.backfill_window <= 0:
+            raise ValueError("backfill_window must be positive")
+
+        allowed_values = {
+            "neutralization": _NEUTRALIZATION_MODES,
+            "nan_handling": _ON_OFF_VALUES,
+            "pasteurization": _ON_OFF_VALUES,
+            "unit_handling": _UNIT_HANDLING_VALUES,
+            "max_trade": _ON_OFF_VALUES,
+            "language": _LANGUAGES,
+        }
+        for field_name, choices in allowed_values.items():
+            if getattr(self, field_name) not in choices:
+                raise ValueError(f"{field_name} must be one of {sorted(choices)}")
+
+        parsed_dates: dict[str, date] = {}
+        for field_name in ("start_date", "end_date"):
+            value = getattr(self, field_name)
+            if value is None:
+                continue
+            try:
+                parsed_dates[field_name] = date.fromisoformat(value)
+            except ValueError as exc:
+                raise ValueError(f"{field_name} must use YYYY-MM-DD format") from exc
+        if (
+            "start_date" in parsed_dates
+            and "end_date" in parsed_dates
+            and parsed_dates["start_date"] > parsed_dates["end_date"]
+        ):
+            raise ValueError("start_date cannot be after end_date")
+
     @classmethod
     def from_args(cls, args: object) -> SimulationConfig:
         return cls(
-            decay=int(_value(args, "decay", 0) or 0),
-            neutralization=str(_value(args, "neutralization", "") or ""),
-            truncation=float(_value(args, "truncation", 0.0) or 0.0),
-            nan_handling=str(_value(args, "nan_handling", "") or ""),
-            pasteurization=str(_value(args, "pasteurization", "") or ""),
-            unit_handling=str(_value(args, "unit_handling", "") or ""),
+            decay=int(_value(args, "decay", 4) or 0),
+            neutralization=str(_value(args, "neutralization", "SUBINDUSTRY") or ""),
+            truncation=float(_value(args, "truncation", 0.08) or 0.0),
+            nan_handling=str(_value(args, "nan_handling", "OFF") or ""),
+            pasteurization=str(_value(args, "pasteurization", "ON") or ""),
+            unit_handling=str(_value(args, "unit_handling", "VERIFY") or ""),
             max_trade=str(_value(args, "max_trade", "OFF") or "OFF"),
-            language=str(_value(args, "language", "") or ""),
+            language=str(_value(args, "language", "FASTEXPR") or ""),
             start_date=_value(args, "start_date"),
             end_date=_value(args, "end_date"),
-            backfill_window=int(_value(args, "backfill_window", 0) or 0),
+            backfill_window=int(_value(args, "backfill_window", 240) or 0),
         )
 
 
