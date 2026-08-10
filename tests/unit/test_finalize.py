@@ -7,6 +7,10 @@ from contextlib import nullcontext
 from threading import Semaphore
 from unittest.mock import patch
 
+from alpha.app.bootstrap_pending_checks import (
+    DEFAULT_PENDING_CHECK_REFRESH_LIMIT,
+    DEFAULT_PENDING_CHECK_REFRESH_MAX_SECONDS,
+)
 from alpha.app.finalize import finalize_run
 from alpha.config.application import ApplicationConfig
 from alpha.models.domain import FieldTestResult
@@ -159,8 +163,8 @@ def test_finalize_run_reconciles_pending_checks_before_persisting(tmp_path) -> N
         client_factory,
         [pending],
         retries=3,
-        refresh_limit=0,
-        max_refresh_seconds=0,
+        refresh_limit=DEFAULT_PENDING_CHECK_REFRESH_LIMIT,
+        max_refresh_seconds=DEFAULT_PENDING_CHECK_REFRESH_MAX_SECONDS,
         max_workers=1,
     )
     assert mock_dump.call_args.args[2] == [resolved]

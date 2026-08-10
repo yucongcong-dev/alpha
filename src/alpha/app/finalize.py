@@ -21,7 +21,11 @@ from ..core.checkpoint import delete_pipeline_state
 from ..io.results_store import exclusive_results_transaction
 from ..models.runtime_options import ResultWriteOptions
 from ..runtime.state import InitializedRunContext
-from .bootstrap_pending_checks import refresh_pending_check_results
+from .bootstrap_pending_checks import (
+    DEFAULT_PENDING_CHECK_REFRESH_LIMIT,
+    DEFAULT_PENDING_CHECK_REFRESH_MAX_SECONDS,
+    refresh_pending_check_results,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -45,8 +49,8 @@ def finalize_run(
             run_ctx.client_factory,
             list(results),
             retries=args.execution.check_submission_retries,
-            refresh_limit=0,
-            max_refresh_seconds=0,
+            refresh_limit=DEFAULT_PENDING_CHECK_REFRESH_LIMIT,
+            max_refresh_seconds=DEFAULT_PENDING_CHECK_REFRESH_MAX_SECONDS,
             max_workers=run_ctx.runtime_state.max_workers,
         )
         results[:] = refreshed_results
