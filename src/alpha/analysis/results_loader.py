@@ -193,18 +193,27 @@ def _load_summary_payload(
 
 def _load_results_from_summary(path: str, payload: dict[str, Any]) -> list[FieldTestResult]:
     """Load authoritative journal rows, with embedded rows as a compatibility fallback."""
-    journal_path = _resolve_results_journal_path(path, payload.get("results_journal"))
+    journal_reference = payload.get("results_journal")
+    journal_path = _resolve_results_journal_path(path, journal_reference)
+    journal_error: Exception | None = None
     if os.path.exists(journal_path):
         try:
             rows = _load_results_rows_from_journal(journal_path)
             return _rows_to_results(rows, source=journal_path)
         except Exception as exc:
+            journal_error = exc
             logger.warning("[recovery] failed to read results journal %s: %s", journal_path, exc)
+    elif journal_reference or payload.get("results_embedded") is False:
+        journal_error = FileNotFoundError(journal_path)
 
     if payload.get("results_embedded", True):
         payload_rows = payload.get("results")
         if isinstance(payload_rows, list):
             return _rows_to_results(payload_rows, source=f"{path}:results")
+    if journal_error is not None:
+        raise ValueError(
+            f"failed to load authoritative results journal {journal_path}: {journal_error}"
+        ) from journal_error
     return []
 
 

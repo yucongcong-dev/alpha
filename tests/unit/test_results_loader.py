@@ -85,6 +85,43 @@ def test_load_existing_results_falls_back_when_journal_row_is_invalid(tmp_path) 
     assert [result.field_id for result in loaded] == ["embedded_field"]
 
 
+def test_load_existing_results_rejects_invalid_authoritative_journal(tmp_path) -> None:
+    output_path = tmp_path / "results.json"
+    journal_path = tmp_path / "results_results.jsonl"
+    journal_contents = json.dumps({"field_id": "broken", "delay": "not-an-int"}) + "\n"
+    journal_path.write_text(journal_contents, encoding="utf-8")
+    output_path.write_text(
+        json.dumps(
+            {
+                "results_journal": journal_path.name,
+                "results_embedded": False,
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="failed to load authoritative results journal"):
+        load_existing_results(str(output_path))
+
+    assert journal_path.read_text(encoding="utf-8") == journal_contents
+
+
+def test_load_existing_results_rejects_missing_authoritative_journal(tmp_path) -> None:
+    output_path = tmp_path / "results.json"
+    output_path.write_text(
+        json.dumps(
+            {
+                "results_journal": "missing_results.jsonl",
+                "results_embedded": False,
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match=r"missing_results\.jsonl"):
+        load_existing_results(str(output_path))
+
+
 def test_load_existing_results_rejects_invalid_embedded_row(tmp_path) -> None:
     output_path = tmp_path / "results.json"
     output_path.write_text(
