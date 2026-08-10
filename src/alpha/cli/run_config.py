@@ -20,6 +20,7 @@ def build_run_config_snapshot(
     simulation = config.simulation
     planning = config.planning
     execution = config.execution
+    quality = config.quality
     flags = config.runtime_flags
     return {
         "run": {
@@ -37,7 +38,13 @@ def build_run_config_snapshot(
             "neutralization": simulation.neutralization,
             "truncation": simulation.truncation,
             "nan_handling": simulation.nan_handling,
+            "pasteurization": simulation.pasteurization,
+            "unit_handling": simulation.unit_handling,
             "max_trade": simulation.max_trade,
+            "language": simulation.language,
+            "start_date": simulation.start_date,
+            "end_date": simulation.end_date,
+            "backfill_window": simulation.backfill_window,
         },
         "limits": {
             "limit": planning.limit,
@@ -70,6 +77,17 @@ def build_run_config_snapshot(
         },
         "filters": {
             "top_fields_by_feedback": planning.top_fields_by_feedback,
+            "include_fields_file": run_paths.include_fields_file,
+            "exclude_fields_file": run_paths.exclude_fields_file,
+            "include_templates_file": run_paths.include_templates_file,
+            "exclude_templates_file": run_paths.exclude_templates_file,
+        },
+        "quality": {
+            "min_sharpe": quality.min_sharpe,
+            "min_fitness": quality.min_fitness,
+            "min_turnover": quality.min_turnover,
+            "max_turnover": quality.max_turnover,
+            "max_weight": quality.max_weight,
         },
         "paths": {
             "template_library_file": run_paths.template_library_file,
