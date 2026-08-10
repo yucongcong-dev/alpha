@@ -39,12 +39,13 @@ datasets/<dataset_id>/
 | `socialmedia8` | 暂停 | 无 |
 | `pv13` | 暂停 | 无 |
 | `news12` | 暂停 | 无 |
-| `option9` | 暂停 | 无 |
+| `option9` | 探索 | `forward_curve_seed` |
 | `news18` | 暂停 | 无 |
 
-当前没有现役 explore 数据集。跨市场筛选受账号 Region 权限限制；随后完成的 `news18`
-USA / TOP1000 / Delay 0 四个独立事件种子也均失败。下一轮应筛选新的经济信息源，
-不恢复已失败的 D1/D0 新闻方向，也不扫描完整字段池。
+当前现役 explore 数据集是 `option9`，仅运行 `forward_curve_seed`：比较 90/270 日远期价格
+相对现货和 30 日远期价格的期限结构，不恢复已失败的 put/call volume-ratio 假设，也不扫描
+完整字段池。跨市场筛选仍受账号 Region 权限限制；此前 `news18` USA / TOP1000 /
+Delay 0 的四个独立事件种子均已失败，不恢复该 D1/D0 新闻方向。
 
 2026-08-07 的官网只读筛选还比较了 USA 的 TOP2000、TOP1000、TOP500、TOP200 和
 TOPSP500。D1 均返回同一组 14 个数据集，D0 均返回同一组 11 个数据集；更换 Universe

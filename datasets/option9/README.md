@@ -2,7 +2,7 @@
 
 ## 当前状态
 
-`option9` 已完成最小验证，当前暂停。它提供期权 put/call 成交量与持仓量比率、远期价格和盈亏平衡价格，USA / TOP3000 / delay=1 的覆盖率约为 98.17%。
+`option9` 已完成 put/call 最小验证，当前以 `forward_curve_seed` 重新进入受限探索。它提供期权 put/call 成交量与持仓量比率、远期价格和盈亏平衡价格，USA / TOP3000 / delay=1 的覆盖率约为 98.17%。
 
 本轮只验证了低拥挤的 put/call 成交量比率：
 
@@ -22,6 +22,8 @@
 
 ## 下一步规则
 
-- 暂不保留现役 preset。
+- 现役 preset 仅保留 `presets/forward_curve_seed/`，只运行 `forward_price_90` 和
+  `forward_price_270`。
 - 不围绕 `pcr_vol_30` 做符号、窗口或 Decay 微调。
-- 若未来重启，只考虑远期价格相对现货价格、或 put/call 持仓量与成交量的联合结构。
+- 当前先比较远期价格相对现货价格，以及相对 `forward_price_30` 的期限结构；在得到首轮
+  结果前不扩字段、不扩模板。

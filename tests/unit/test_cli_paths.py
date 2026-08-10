@@ -139,7 +139,6 @@ def test_normalize_args_paths_allows_dry_plan_for_paused_dataset(monkeypatch, tm
         "model16",
         "model51",
         "option8",
-        "option9",
         "socialmedia12",
         "news18",
     ],
@@ -178,6 +177,20 @@ def test_option8_explicit_active_preset_is_allowed(monkeypatch, tmp_path) -> Non
 
     assert paths.template_library_file == str(template_path)
     assert paths.include_fields_file == str(fields_path)
+
+
+def test_option9_default_preset_is_selected(monkeypatch) -> None:
+    clear_yaml_cache()
+    root = Path(__file__).resolve().parents[2]
+    monkeypatch.chdir(root)
+    monkeypatch.setattr(sys, "argv", ["alpha", "--dataset-id", "option9"])
+
+    paths = normalize_args_paths(parse_args())
+
+    preset_dir = root / "datasets" / "option9" / "presets" / "forward_curve_seed"
+    assert paths.template_library_file == str(preset_dir / "template.json")
+    assert paths.include_fields_file == str(preset_dir / "fields.txt")
+    assert paths.include_templates_file == str(preset_dir / "templates.txt")
 
 
 def test_explicit_template_path_allows_paused_fundamental6(monkeypatch, tmp_path) -> None:
