@@ -58,7 +58,10 @@ def resolve_template_backfill_window(
     if not dataset_id:
         return default_backfill_window
 
-    policy = get_dataset_expression_policy(dataset_id)
+    policy = get_dataset_expression_policy(
+        dataset_id,
+        default_backfill_window=default_backfill_window,
+    )
     normalized = field_type.strip().upper()
     if normalized == "VECTOR":
         configured = policy.vector_field_transform.backfill_window

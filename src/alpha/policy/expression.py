@@ -64,12 +64,13 @@ def _default_feedback_loop_policy() -> FeedbackLoopPolicy:
 def _base_expression_policy(
     dataset_id: str,
     *,
+    default_backfill_window: int,
     use_curated_heuristics: bool,
 ) -> DatasetExpressionPolicy:
     """Build a base policy before YAML overrides are applied."""
     backfill_transform = FieldTransformSpec(
-        stages=(FieldTransformStage(kind="backfill", window=BACKFILL_WINDOW),),
-        backfill_window=BACKFILL_WINDOW,
+        stages=(FieldTransformStage(kind="backfill", window=default_backfill_window),),
+        backfill_window=default_backfill_window,
     )
     policy_kwargs: dict[str, Any] = {
         "dataset_id": dataset_id,
@@ -102,6 +103,7 @@ def _base_expression_policy(
 def get_dataset_expression_policy(
     dataset_id: str,
     *,
+    default_backfill_window: int = BACKFILL_WINDOW,
     use_curated_heuristics: bool | None = None,
 ) -> DatasetExpressionPolicy:
     """Return the dataset expression policy after YAML overrides.
@@ -114,6 +116,7 @@ def get_dataset_expression_policy(
 
     base_policy = _base_expression_policy(
         dataset_id,
+        default_backfill_window=default_backfill_window,
         use_curated_heuristics=use_curated_heuristics,
     )
     return apply_yaml_expression_policy_overrides(

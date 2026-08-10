@@ -81,7 +81,8 @@ def _record_feedback_explain_counts(
 ) -> None:
     """Record why one field enters generate or resimulate planning."""
     expression_policy = build_ctx.expression_policy or get_dataset_expression_policy(
-        build_ctx.options.dataset_id
+        build_ctx.options.dataset_id,
+        default_backfill_window=build_ctx.options.backfill_window,
     )
     raw_feedback = build_ctx.field_feedback.get(field_id)
     field_feedback = decay_field_feedback(

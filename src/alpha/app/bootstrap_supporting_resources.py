@@ -87,7 +87,10 @@ def load_supporting_resources(
     return BootstrapLoadedResources(
         template_library=template_library,
         filters=load_run_filters_extended(paths),
-        expression_policy=get_dataset_expression_policy(dataset_id),
+        expression_policy=get_dataset_expression_policy(
+            dataset_id,
+            default_backfill_window=backfill_window,
+        ),
         historical_state=build_historical_run_state(
             paths.output,
             paths.feedback_output,

@@ -63,7 +63,7 @@ def _patch_local_resources(monkeypatch, historical_state: HistoricalRunState) ->
     )
     monkeypatch.setattr(
         "alpha.app.bootstrap_supporting_resources.get_dataset_expression_policy",
-        lambda _dataset_id: DatasetExpressionPolicy(dataset_id="fundamental6"),
+        lambda _dataset_id, **_kwargs: DatasetExpressionPolicy(dataset_id="fundamental6"),
     )
     monkeypatch.setattr(
         "alpha.app.bootstrap_supporting_resources.build_historical_run_state",

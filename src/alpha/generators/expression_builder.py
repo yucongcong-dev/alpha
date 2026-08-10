@@ -220,6 +220,7 @@ def build_expression_candidates(
     all_fields = list(build_ctx.all_fields)
     policy = expression_policy or get_dataset_expression_policy(
         options.dataset_id,
+        default_backfill_window=options.backfill_window,
         use_curated_heuristics=build_ctx.use_dataset_heuristics,
     )
     field_feedback = decay_field_feedback(

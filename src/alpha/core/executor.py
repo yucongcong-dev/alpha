@@ -116,6 +116,7 @@ def build_template_build_context(
         use_dataset_heuristics=use_dataset_heuristics,
         expression_policy=get_dataset_expression_policy(
             options.dataset_id,
+            default_backfill_window=options.backfill_window,
             use_curated_heuristics=use_dataset_heuristics,
         ),
     )

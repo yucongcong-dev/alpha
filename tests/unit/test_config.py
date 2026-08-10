@@ -225,6 +225,27 @@ def test_unknown_dataset_uses_nonzero_default_field_selection_policy() -> None:
     }
 
 
+def test_unknown_dataset_uses_runtime_backfill_window_as_policy_default() -> None:
+    policy = get_dataset_expression_policy("new_dataset", default_backfill_window=5)
+
+    assert policy.matrix_field_transform.backfill_window == 5
+    assert policy.matrix_field_transform.stages == (
+        FieldTransformStage(kind="backfill", window=5, std=None),
+    )
+    assert policy.vector_field_transform.backfill_window == 5
+    assert policy.ratio_numerator_transform.backfill_window == 5
+    assert policy.ratio_denominator_transform.backfill_window == 5
+
+
+def test_dataset_policy_backfill_override_beats_runtime_default() -> None:
+    policy = get_dataset_expression_policy("model16", default_backfill_window=5)
+
+    assert policy.matrix_field_transform.backfill_window == 252
+    assert policy.matrix_field_transform.stages[0] == FieldTransformStage(
+        kind="backfill", window=252, std=None
+    )
+
+
 def test_strategy_profile_schemas_are_loaded_from_yaml() -> None:
     schemas = load_strategy_profile_schemas()
 
