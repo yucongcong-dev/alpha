@@ -8,7 +8,7 @@ API 客户端包
     - session: 登录、底层 request、全局节流
     - fields: dataset 字段分页查询
     - simulations: simulation 创建与轮询
-    - alphas: alpha 详情与提交
+    - alphas: alpha 详情与 Check Submission
     - payloads: API payload 解析
     - timing: Retry-After 与等待策略
 """
