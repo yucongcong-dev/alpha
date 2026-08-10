@@ -18,6 +18,7 @@ from ..config.strategy_profiles import (
     normalize_strategy_profile,
 )
 from ..config.yaml import get_yaml_config, set_active_config_path
+from ..config.yaml_sources import validate_explicit_yaml_file
 
 DATASET_PROFILE_KEYS = (
     "page_size",
@@ -40,6 +41,8 @@ def resolve_cli_args(
     explicit_cli_keys: set[str],
 ) -> argparse.Namespace:
     """Apply YAML defaults, dataset profile overrides, and run-mode rewrites."""
+    if "config" in explicit_cli_keys:
+        validate_explicit_yaml_file(args.config)
     set_active_config_path(args.config if args.config else "")
     yaml_config = get_yaml_config()
     apply_yaml_global_defaults(args, yaml_config, explicit_cli_keys)

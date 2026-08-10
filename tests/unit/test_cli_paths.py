@@ -56,6 +56,54 @@ def test_parse_clean_config_ignores_invalid_run_settings(monkeypatch, tmp_path) 
     assert config.dry_run_clean is True
 
 
+def test_clean_does_not_load_explicit_run_config(monkeypatch, tmp_path) -> None:
+    invalid_config = tmp_path / "invalid.yaml"
+    invalid_config.write_text("global: [broken", encoding="utf-8")
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        ["alpha", "clean", "--config", str(invalid_config)],
+    )
+
+    config = parse_application_config()
+
+    assert isinstance(config, CleanConfig)
+    assert config.preview_only is True
+
+
+@pytest.mark.parametrize(
+    "contents, message",
+    [
+        ("global: [broken", "contains invalid YAML"),
+        ("- not\n- a\n- mapping\n", "must contain a YAML mapping"),
+        ("", "must contain a YAML mapping"),
+    ],
+)
+def test_run_rejects_invalid_explicit_config(monkeypatch, tmp_path, contents, message) -> None:
+    config_path = tmp_path / "settings.yaml"
+    config_path.write_text(contents, encoding="utf-8")
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        ["alpha", "run", "--config", str(config_path), "--dataset-id", "option9"],
+    )
+
+    with pytest.raises(ValueError, match=message):
+        parse_application_config()
+
+
+def test_run_rejects_missing_explicit_config(monkeypatch, tmp_path) -> None:
+    missing_path = tmp_path / "missing.yaml"
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        ["alpha", "run", "--config", str(missing_path), "--dataset-id", "option9"],
+    )
+
+    with pytest.raises(ValueError, match="does not exist or is not a file"):
+        parse_application_config()
+
+
 def test_clean_defaults_to_previewing_all_datasets(monkeypatch) -> None:
     clear_yaml_cache()
     monkeypatch.setattr(sys, "argv", ["alpha", "clean"])

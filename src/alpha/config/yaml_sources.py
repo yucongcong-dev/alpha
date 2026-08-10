@@ -90,6 +90,28 @@ def load_yaml_file(path: str) -> YamlConfig:
     return {}
 
 
+def validate_explicit_yaml_file(path: str) -> str:
+    """Require an explicitly selected settings file to be a valid YAML mapping."""
+    import yaml
+
+    raw_path = str(path or "").strip()
+    if not raw_path:
+        raise ValueError("--config requires a non-empty file path")
+    resolved_path = os.path.abspath(os.path.expanduser(raw_path))
+    if not os.path.isfile(resolved_path):
+        raise ValueError(f"--config does not exist or is not a file: {resolved_path}")
+    try:
+        with open(resolved_path, encoding="utf-8") as handle:
+            data = yaml.safe_load(handle)
+    except yaml.YAMLError as exc:
+        raise ValueError(f"--config contains invalid YAML: {resolved_path}: {exc}") from exc
+    except (UnicodeDecodeError, OSError) as exc:
+        raise ValueError(f"--config cannot be read as UTF-8: {resolved_path}: {exc}") from exc
+    if not isinstance(data, dict):
+        raise ValueError(f"--config must contain a YAML mapping at the top level: {resolved_path}")
+    return resolved_path
+
+
 def deep_merge(base: YamlConfig, override: YamlConfig, max_depth: int = 6) -> YamlConfig:
     """Deep-merge dictionaries with override winning."""
     if max_depth <= 0:
