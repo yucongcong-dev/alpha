@@ -7,7 +7,6 @@ from unittest.mock import Mock, patch
 
 from alpha.cli.filters import (
     load_line_set,
-    load_run_filters,
     load_run_filters_extended,
     setup_runtime_logging,
 )
@@ -50,10 +49,8 @@ def test_load_run_filters_reads_all_include_and_exclude_files(tmp_path) -> None:
     (tmp_path / "include_templates.txt").write_text("rank\n", encoding="utf-8")
     (tmp_path / "exclude_templates.txt").write_text("raw\n", encoding="utf-8")
 
-    basic = load_run_filters(paths)
     extended = load_run_filters_extended(paths)
 
-    assert basic.exclude_fields == {"f2"}
     assert extended.include_fields == {"f1"}
     assert extended.exclude_fields == {"f2"}
     assert extended.include_templates == {"rank"}

@@ -12,13 +12,13 @@ import pytest
 
 from alpha.exceptions import BrainAPIError
 from alpha.io.credentials import (
-    CREDENTIALS_STORAGE_VERSION,
     load_credentials,
     prompt_and_store_credentials,
     write_credentials_file,
 )
 import alpha.io.credentials_crypto as credentials_crypto
 from alpha.io.credentials_crypto import (
+    CREDENTIALS_STORAGE_VERSION,
     WINDOWS_DPAPI_KEY_STORAGE,
     WINDOWS_DPAPI_KEY_VERSION,
     decrypt_credentials_payload,

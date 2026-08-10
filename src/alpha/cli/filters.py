@@ -38,27 +38,6 @@ def load_line_set(path: str) -> set[str]:
         return set()
 
 
-def load_run_filters(run_paths: RunPaths) -> RunFilters:
-    """加载运行过滤器，包括字段和模板的包含/排除列表。
-
-    Args:
-        run_paths: 运行路径对象。
-
-    Returns:
-        包含过滤规则的 RunFilters 对象。
-    """
-    exclude_fields = load_line_set(
-        run_paths.exclude_fields_file if hasattr(run_paths, "exclude_fields_file") else ""
-    )
-    return RunFilters(
-        region_filter=None,
-        delay_filter=None,
-        min_sharpe=None,
-        max_turnover=None,
-        exclude_fields=exclude_fields,
-    )
-
-
 def load_run_filters_extended(run_paths: RunPaths) -> RunFilters:
     """加载扩展的运行过滤器（含 include 列表）。
 

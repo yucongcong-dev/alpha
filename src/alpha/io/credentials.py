@@ -4,8 +4,7 @@ Credential loading and interactive encrypted storage.
 凭证加载与交互式加密存储模块。
 
 Low-level Fernet/key-file operations live in ``credentials_crypto``. This file
-keeps the user-facing load/prompt flow and re-exports the historical helper
-names for compatibility.
+keeps only the user-facing load, prompt, and write flow.
 """
 
 from __future__ import annotations
@@ -19,39 +18,15 @@ from typing import Any
 from ..exceptions import BrainAPIError
 from ..io.common import atomic_write_json
 from ..models.runtime_options import CredentialLoadOptions
-from .credentials_crypto import (
-    CREDENTIALS_STORAGE_VERSION,
-    decrypt_credentials_payload,
-    encrypt_credentials_payload,
-    ensure_parent_dir,
-    is_encrypted_credentials_payload,
-    load_crypto_dependencies,
-    read_or_create_credentials_key,
-    restrict_file_to_owner,
-)
+from . import credentials_crypto as _crypto
 
 logger = logging.getLogger(__name__)
 
-__all__ = [
-    "CREDENTIALS_STORAGE_VERSION",
-    "decrypt_credentials_payload",
-    "encrypt_credentials_payload",
-    "ensure_parent_dir",
-    "is_encrypted_credentials_payload",
-    "load_credentials",
-    "load_crypto_dependencies",
-    "prompt_and_store_credentials",
-    "read_or_create_credentials_key",
-    "restrict_file_to_owner",
-    "write_credentials_file",
-]
-
-
 def write_credentials_file(path: str, key_path: str, email: str, password: str) -> None:
     """将 WorldQuant 凭证加密写入本地 JSON 文件。"""
-    ensure_parent_dir(path)
-    atomic_write_json(path, encrypt_credentials_payload(email, password, key_path))
-    restrict_file_to_owner(path)
+    _crypto.ensure_parent_dir(path)
+    atomic_write_json(path, _crypto.encrypt_credentials_payload(email, password, key_path))
+    _crypto.restrict_file_to_owner(path)
 
 
 def prompt_and_store_credentials(path: str, key_path: str) -> tuple[str, str]:
@@ -90,8 +65,8 @@ def _load_credentials_from_file(
 ) -> tuple[str | None, str | None]:
     """Load credentials from encrypted or legacy plaintext local storage."""
     payload = _read_credentials_payload(creds_file)
-    if is_encrypted_credentials_payload(payload):
-        return decrypt_credentials_payload(payload, creds_key_file)
+    if _crypto.is_encrypted_credentials_payload(payload):
+        return _crypto.decrypt_credentials_payload(payload, creds_key_file)
 
     raw_email = payload.get("email")
     raw_password = payload.get("password")

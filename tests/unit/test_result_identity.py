@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from alpha.analysis.result_identity import (
     attempted_template_keys,
-    merge_results_by_identity,
+    merge_latest_results_by_identity,
     merge_results_for_update,
     result_identity,
 )
@@ -38,7 +38,7 @@ def test_merge_preserves_terminal_success_over_later_retryable_error() -> None:
         updated_at="2026-02-01T00:00:00Z",
     )
 
-    assert merge_results_by_identity([successful], [later_error]) == [successful]
+    assert merge_latest_results_by_identity([successful], [later_error]) == [successful]
 
 
 def test_merge_uses_newer_submission_check_outcome() -> None:
@@ -55,7 +55,7 @@ def test_merge_uses_newer_submission_check_outcome() -> None:
         updated_at="2026-02-01T00:00:00Z",
     )
 
-    assert merge_results_by_identity([successful], [later_failure]) == [later_failure]
+    assert merge_latest_results_by_identity([successful], [later_failure]) == [later_failure]
 
 
 def test_merge_uses_timestamp_for_equal_terminal_states() -> None:
@@ -70,7 +70,7 @@ def test_merge_uses_timestamp_for_equal_terminal_states() -> None:
         updated_at="2026-02-01T00:00:00Z",
     )
 
-    assert merge_results_by_identity([newer], [older]) == [newer]
+    assert merge_latest_results_by_identity([newer], [older]) == [newer]
 
 
 def test_persistence_update_advances_revision() -> None:

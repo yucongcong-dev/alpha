@@ -1,8 +1,4 @@
-"""结果身份、续跑去重与有效反馈判断。
-
-核心谓词已移至 models.result_predicates 以打破 policy ↔ analysis 循环依赖。
-本模块保留旧导入路径兼容，并补充仅 analysis 内部使用的聚合函数。
-"""
+"""结果身份、续跑去重与历史结果聚合。"""
 
 from __future__ import annotations
 
@@ -14,12 +10,6 @@ from ..models.domain import FieldTestResult
 from ..models.result_predicates import (
     is_attempted_result,
     is_retryable_infrastructure_result,
-)
-from ..models.result_predicates import (
-    is_informative_result as is_informative_result,
-)
-from ..models.result_predicates import (
-    is_queue_timeout_result as is_queue_timeout_result,
 )
 
 
@@ -36,13 +26,6 @@ def result_identity(result: FieldTestResult) -> tuple[str, str, str, str]:
 def attempted_template_keys(results: Sequence[FieldTestResult]) -> set[tuple[str, str, str, str]]:
     """收集已经持久化记录过的模板尝试键集合。"""
     return {result_identity(result) for result in results if is_attempted_result(result)}
-
-
-def merge_results_by_identity(
-    *result_groups: Sequence[FieldTestResult],
-) -> list[FieldTestResult]:
-    """Compatibility wrapper for latest-authoritative history merging."""
-    return merge_latest_results_by_identity(*result_groups)
 
 
 def merge_latest_results_by_identity(
