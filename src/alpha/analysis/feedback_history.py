@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import replace
 from datetime import datetime, timezone
+import logging
 from pathlib import Path
 
 from ..config._constants_strings import FEEDBACK_STAGE_RESIMULATE
@@ -25,6 +26,28 @@ from .result_identity import attempted_template_keys, merge_latest_results_by_id
 from .result_provenance import enrich_results_provenance
 from .results_loader import load_existing_results
 from .template_stats import compile_template_stats
+
+logger = logging.getLogger(__name__)
+
+
+def _load_rebuildable_feedback_results(
+    feedback_output_path: str,
+    *,
+    repair_corrupt_summary: bool,
+) -> list[FieldTestResult]:
+    """Load the aggregate feedback cache, rebuilding from runs when it is unusable."""
+    try:
+        return load_existing_results(
+            feedback_output_path,
+            repair_corrupt_summary=repair_corrupt_summary,
+        )
+    except ValueError as exc:
+        logger.warning(
+            "[feedback] ignored unusable aggregate %s; rebuilding from run summaries: %s",
+            feedback_output_path,
+            exc,
+        )
+        return []
 
 
 def _load_dataset_run_results(
@@ -93,7 +116,7 @@ def build_historical_run_state(
     feedback_results = (
         existing_results
         if feedback_output_path == output_path
-        else load_existing_results(
+        else _load_rebuildable_feedback_results(
             feedback_output_path,
             repair_corrupt_summary=repair_corrupt_summary,
         )
