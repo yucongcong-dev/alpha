@@ -39,6 +39,29 @@ def test_worker_client_factory_closes_client_when_login_fails(monkeypatch) -> No
     assert closed == [True]
 
 
+def test_worker_client_factory_preserves_original_error_when_close_fails(monkeypatch) -> None:
+    class FakeClient:
+        def __init__(self, *_args, **_kwargs) -> None:
+            return None
+
+        def close(self) -> None:
+            raise OSError("worker close failed")
+
+    def _fail_login(_client, _retries) -> None:
+        raise RuntimeError("worker login failed")
+
+    monkeypatch.setattr(client_module, "BrainClient", FakeClient)
+    monkeypatch.setattr(client_module, "login_with_retry", _fail_login)
+    factory = WorkerClientFactory(
+        ApiClientOptions(login_retries=1),
+        "user@example.com",
+        "secret",
+    )
+
+    with pytest.raises(RuntimeError, match="worker login failed"):
+        factory.get_client()
+
+
 def test_worker_client_factory_applies_deadline_during_login(monkeypatch) -> None:
     captured: dict[str, object] = {}
     clock = {"now": 100.0}

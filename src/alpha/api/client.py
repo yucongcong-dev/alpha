@@ -11,6 +11,7 @@ and WorkerClientFactory entry points stable.
 from __future__ import annotations
 
 from collections.abc import Callable
+from contextlib import suppress
 import threading
 import time
 
@@ -109,6 +110,7 @@ class WorkerClientFactory:
             request_deadline=request_deadline,
             request_abort=request_abort,
         )
+        initialized = False
         try:
             if request_deadline is None and request_abort is None:
                 login_with_retry(client, self.options.login_retries)
@@ -124,9 +126,12 @@ class WorkerClientFactory:
                     self.options.login_retries,
                     should_abort=_abort_requested,
                 )
-        except BaseException:
-            client.close()
-            raise
+            initialized = True
+        finally:
+            # 只在初始化失败时释放半成品客户端；close 出错不能掩盖原始异常。
+            if not initialized:
+                with suppress(Exception):
+                    client.close()
         with self._clients_lock:
             if self._closed:
                 client.close()

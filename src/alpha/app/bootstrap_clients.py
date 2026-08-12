@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from contextlib import suppress
+
 from ..api.client import BrainClient, WorkerClientFactory, login_with_retry
 from ..io.credentials import load_credentials
 from ..models.runtime_options import ApiClientOptions, CredentialLoadOptions
@@ -27,6 +29,7 @@ def create_and_login_client(
         min_request_interval=client_options.min_request_interval,
         rate_limit_max_retries=client_options.rate_limit_max_retries,
     )
+    initialized = False
     try:
         login_with_retry(bootstrap_client, client_options.login_retries)
         client_factory = WorkerClientFactory(
@@ -34,7 +37,10 @@ def create_and_login_client(
             email,
             password,
         )
-    except BaseException:
-        bootstrap_client.close()
-        raise
+        initialized = True
+    finally:
+        # 只在初始化失败时释放半成品客户端；close 出错不能掩盖原始异常。
+        if not initialized:
+            with suppress(Exception):
+                bootstrap_client.close()
     return bootstrap_client, client_factory
