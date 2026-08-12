@@ -110,3 +110,54 @@ def test_runtime_config_sections_consume_every_setting_dest() -> None:
         if spec.dest not in cli_derived and spec.dest not in section_source
     ]
     assert missing == []
+
+
+def test_section_field_sets_match_runtime_dataclasses() -> None:
+    """每个 section 的设置 dest 集合必须与对应运行时 dataclass 字段一致。"""
+    from dataclasses import fields
+
+    from alpha.config.application_sections import (
+        DatasetConfig,
+        ExecutionConfig,
+        PlanningConfig,
+        QualityConfig,
+        RuntimeFlagsConfig,
+        SimulationConfig,
+    )
+    from alpha.config.settings_spec import section_settings
+
+    section_fields = {
+        "dataset": {field.name for field in fields(DatasetConfig)} - {"dataset_id"},
+        "simulation": {field.name for field in fields(SimulationConfig)},
+        "planning": {field.name for field in fields(PlanningConfig)},
+        "execution": {field.name for field in fields(ExecutionConfig)},
+        "quality": {field.name for field in fields(QualityConfig)},
+        "runtime_flags": {field.name for field in fields(RuntimeFlagsConfig)},
+    }
+    for section, expected in section_fields.items():
+        assert {spec.dest for spec in section_settings(section)} == expected
+
+
+def test_section_args_empty_namespace_uses_fallbacks() -> None:
+    """空 namespace 时 from_args 必须落到 section 级防御性默认值。"""
+    from alpha.config.application_sections import (
+        ExecutionConfig,
+        PlanningConfig,
+        QualityConfig,
+        SimulationConfig,
+    )
+
+    empty = SimpleNamespace()
+    assert SimulationConfig.from_args(empty).decay == 4
+    assert SimulationConfig.from_args(empty).neutralization == "SUBINDUSTRY"
+    assert PlanningConfig.from_args(empty).page_size == 1
+    assert ExecutionConfig.from_args(empty).max_concurrent_simulations == 1
+    assert QualityConfig.from_args(empty).max_turnover == 1.0
+
+
+def test_section_args_falsy_values_normalize_like_legacy() -> None:
+    """falsy 值必须按旧版 `or 默认` 语义归一化。"""
+    from alpha.config.application_sections import SimulationConfig
+
+    assert SimulationConfig.from_args(SimpleNamespace(max_trade="")).max_trade == "OFF"
+    assert SimulationConfig.from_args(SimpleNamespace(decay=0)).decay == 0

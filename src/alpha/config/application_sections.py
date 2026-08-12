@@ -8,6 +8,7 @@ import math
 import re
 from typing import Any
 
+from .settings_spec import section_args
 from .strategy_profiles import normalize_strategy_profile
 
 _INSTRUMENT_TYPES = frozenset({"EQUITY", "FUTURES"})
@@ -55,10 +56,7 @@ class DatasetConfig:
     def from_args(cls, args: object) -> DatasetConfig:
         return cls(
             dataset_id=str(_value(args, "dataset_id", "") or ""),
-            region=str(_value(args, "region", "USA") or ""),
-            universe=str(_value(args, "universe", "TOP3000") or ""),
-            instrument_type=str(_value(args, "instrument_type", "EQUITY") or ""),
-            delay=int(_value(args, "delay", 1) or 0),
+            **section_args("dataset", args),
         )
 
 
@@ -117,19 +115,7 @@ class SimulationConfig:
 
     @classmethod
     def from_args(cls, args: object) -> SimulationConfig:
-        return cls(
-            decay=int(_value(args, "decay", 4) or 0),
-            neutralization=str(_value(args, "neutralization", "SUBINDUSTRY") or ""),
-            truncation=float(_value(args, "truncation", 0.08) or 0.0),
-            nan_handling=str(_value(args, "nan_handling", "OFF") or ""),
-            pasteurization=str(_value(args, "pasteurization", "ON") or ""),
-            unit_handling=str(_value(args, "unit_handling", "VERIFY") or ""),
-            max_trade=str(_value(args, "max_trade", "OFF") or "OFF"),
-            language=str(_value(args, "language", "FASTEXPR") or ""),
-            start_date=_value(args, "start_date"),
-            end_date=_value(args, "end_date"),
-            backfill_window=int(_value(args, "backfill_window", 240) or 0),
-        )
+        return cls(**section_args("simulation", args))
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -171,21 +157,7 @@ class PlanningConfig:
 
     @classmethod
     def from_args(cls, args: object) -> PlanningConfig:
-        return cls(
-            smoke_test=bool(_value(args, "smoke_test", False)),
-            full_run=bool(_value(args, "full_run", False)),
-            dry_run_plan=bool(_value(args, "dry_run_plan", False)),
-            limit=int(_value(args, "limit", 0) or 0),
-            offset=int(_value(args, "offset", 0) or 0),
-            page_size=int(_value(args, "page_size", 1) or 0),
-            sleep_between_fields=float(_value(args, "sleep_between_fields", 0.0) or 0.0),
-            max_templates_per_field=int(_value(args, "max_templates_per_field", 0) or 0),
-            max_templates_per_family=int(_value(args, "max_templates_per_family", 0) or 0),
-            max_total_simulations=int(_value(args, "max_total_simulations", 0) or 0),
-            field_template_batch_size=int(_value(args, "field_template_batch_size", 1) or 0),
-            legacy_similarity_penalty=int(_value(args, "legacy_similarity_penalty", 0) or 0),
-            top_fields_by_feedback=int(_value(args, "top_fields_by_feedback", 0) or 0),
-        )
+        return cls(**section_args("planning", args))
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -255,30 +227,7 @@ class ExecutionConfig:
 
     @classmethod
     def from_args(cls, args: object) -> ExecutionConfig:
-        return cls(
-            min_request_interval=float(_value(args, "min_request_interval", 0.0) or 0.0),
-            rate_limit_max_retries=int(_value(args, "rate_limit_max_retries", 0) or 0),
-            login_retries=int(_value(args, "login_retries", 0) or 0),
-            simulation_create_retries=int(_value(args, "simulation_create_retries", 0) or 0),
-            simulation_poll_retries=int(_value(args, "simulation_poll_retries", 0) or 0),
-            max_concurrent_simulations=int(_value(args, "max_concurrent_simulations", 1) or 0),
-            max_concurrent_creates=int(_value(args, "max_concurrent_creates", 1) or 0),
-            simulation_max_polls=int(_value(args, "simulation_max_polls", 1) or 0),
-            simulation_max_wait_seconds=float(
-                _value(args, "simulation_max_wait_seconds", 1.0) or 0.0
-            ),
-            simulation_max_pending_cycles=int(
-                _value(args, "simulation_max_pending_cycles", 1) or 0
-            ),
-            simulation_max_queue_seconds=float(
-                _value(args, "simulation_max_queue_seconds", 1.0) or 0.0
-            ),
-            queue_busy_cooldown_seconds=float(
-                _value(args, "queue_busy_cooldown_seconds", 0.0) or 0.0
-            ),
-            queue_busy_retry_limit=int(_value(args, "queue_busy_retry_limit", 0) or 0),
-            check_submission_retries=int(_value(args, "check_submission_retries", 0) or 0),
-        )
+        return cls(**section_args("execution", args))
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -312,13 +261,7 @@ class QualityConfig:
 
     @classmethod
     def from_args(cls, args: object) -> QualityConfig:
-        return cls(
-            min_sharpe=float(_value(args, "min_sharpe", 0.0) or 0.0),
-            min_fitness=float(_value(args, "min_fitness", 0.0) or 0.0),
-            min_turnover=float(_value(args, "min_turnover", 0.0) or 0.0),
-            max_turnover=float(_value(args, "max_turnover", 1.0) or 0.0),
-            max_weight=float(_value(args, "max_weight", 1.0) or 0.0),
-        )
+        return cls(**section_args("quality", args))
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -329,10 +272,6 @@ class RuntimeFlagsConfig:
 
     @classmethod
     def from_args(cls, args: object) -> RuntimeFlagsConfig:
-        return cls(
-            strategy_profile=normalize_strategy_profile(
-                _value(args, "strategy_profile", "explore")
-            ),
-            verbose=bool(_value(args, "verbose", False)),
-            quiet=bool(_value(args, "quiet", False)),
-        )
+        values = section_args("runtime_flags", args)
+        values["strategy_profile"] = normalize_strategy_profile(values["strategy_profile"])
+        return cls(**values)
