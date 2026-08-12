@@ -108,15 +108,6 @@ def _yaml_dict(*keys: str, default: dict | None = None) -> dict:
     return result if isinstance(result, dict) else (default or {})
 
 
-def _yaml_list(*keys: str, default: list | None = None) -> list:
-    result = _yaml_val(*keys, default=default, cast=None)
-    if isinstance(result, list):
-        return result
-    elif isinstance(result, tuple):
-        return list(result)
-    return default or []
-
-
 def _yaml_set(*keys: str, default: set | None = None) -> set:
     result = _yaml_val(*keys, default=default, cast=None)
     if isinstance(result, (list, tuple)):

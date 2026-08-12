@@ -68,8 +68,3 @@ def enrich_results_provenance(
         if not result.updated_at:
             result.updated_at = timestamp
         result.revision = max(1, int(result.revision or 1))
-
-
-def result_scope(result: FieldTestResult) -> tuple[str, str, str, int | None]:
-    """Return the market scope used to isolate aggregate feedback."""
-    return (result.region, result.universe, result.instrument_type, result.delay)

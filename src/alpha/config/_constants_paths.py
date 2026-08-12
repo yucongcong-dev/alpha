@@ -7,10 +7,4 @@ process to whichever YAML file happened to load first.
 
 from __future__ import annotations
 
-CREDENTIALS_DIR: str = ".credentials"
 DATASETS_DIR: str = "datasets"
-CREDENTIALS_FILENAME: str = "worldquant_brain_credentials.json"
-CREDENTIALS_KEY_FILENAME: str = "worldquant_brain_credentials.key"
-ANALYSIS_SUFFIX: str = "_analysis.json"
-RESULTS_JOURNAL_SUFFIX: str = "_results.jsonl"
-STATE_SUFFIX: str = "_state.json"

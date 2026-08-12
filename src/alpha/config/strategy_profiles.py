@@ -13,8 +13,6 @@ from .types import YamlConfig
 from .yaml import get_yaml_config
 
 STRATEGY_PROFILE_EXPLORE = "explore"
-STRATEGY_PROFILE_REFINE = "refine"
-STRATEGY_PROFILE_CANDIDATE_FOCUSED = "candidate-focused"
 DEFAULT_STRATEGY_PROFILE = STRATEGY_PROFILE_EXPLORE
 
 

@@ -107,33 +107,6 @@ def resolve_field_skip_reason(
     return None
 
 
-def is_template_actionable(
-    *,
-    template: TemplateCandidate,
-    build_ctx: TemplateBuildContext,
-    field_id: str,
-    field_name: str,
-    field_type: str = "",
-    field_feedback: TemplateFeedback | None,
-    expression_policy: DatasetExpressionPolicy | None,
-    prior_results: Sequence[FieldTestResult],
-) -> bool:
-    """判断模板在当前字段上下文中是否应继续展开 settings 变体。"""
-    return (
-        resolve_template_skip_reason(
-            template=template,
-            build_ctx=build_ctx,
-            field_id=field_id,
-            field_name=field_name,
-            field_type=field_type,
-            field_feedback=field_feedback,
-            expression_policy=expression_policy,
-            prior_results=prior_results,
-        )
-        is None
-    )
-
-
 def resolve_template_skip_reason(
     *,
     template: TemplateCandidate,

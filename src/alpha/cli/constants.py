@@ -12,6 +12,3 @@ CREDS_DIR = DEFAULT_WORKSPACE.credentials_dir
 
 DEFAULT_CREDS_FILE = str(CREDS_DIR / "worldquant_brain_credentials.json")
 DEFAULT_CREDS_KEY_FILE = str(CREDS_DIR / "worldquant_brain_credentials.key")
-DEFAULT_TEMPLATE_LIBRARY_FILE = ""
-DEFAULT_FIELDS_CACHE_FILE = ""
-DEFAULT_OUTPUT_FILE = ""

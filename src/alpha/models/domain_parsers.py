@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Mapping, Sequence
 from typing import Any
 
-from .domain import FailedCheck, SettingsVariant, TemplateField, TemplateLibraryItem
+from .domain import FailedCheck, SettingsVariant, TemplateField
 
 
 def parse_failed_check(data: Mapping[str, Any]) -> FailedCheck:
@@ -27,18 +27,6 @@ def coerce_failed_checks(
     return [
         check if isinstance(check, FailedCheck) else parse_failed_check(check) for check in checks
     ]
-
-
-def parse_template_library_item(item: dict[str, Any]) -> TemplateLibraryItem:
-    """从字典创建模板项。"""
-    return TemplateLibraryItem(
-        name=str(item["name"]),
-        expression=str(item["expression"]),
-        priority=int(item.get("priority", 0)),
-        family=item.get("family"),
-        stage=item.get("stage"),
-        metadata=item.get("metadata", {}),
-    )
 
 
 def parse_settings_variant(data: dict[str, Any]) -> SettingsVariant:

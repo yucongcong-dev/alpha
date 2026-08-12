@@ -98,16 +98,6 @@ def validate_yaml_config(config_path: str = "") -> list[str]:
     return validate_merged_config(merged, resolved_files)
 
 
-def load_yaml_config(config_path: str = "") -> YamlConfig:
-    """Load all YAML files and merge them into one config dict.
-
-    Backward compatibility: the original API only loaded settings.yaml. The
-    merged config now also includes dataset profiles, expression policies, and
-    split default YAML files.
-    """
-    return _load_all_yamls(config_path or None)
-
-
 def get_yaml_config(config_path: str = "") -> YamlConfig:
     """Return cached merged YAML config, reloading when any source file changes."""
     global _config_validated

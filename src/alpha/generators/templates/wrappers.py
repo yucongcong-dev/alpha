@@ -24,13 +24,6 @@ _TRADE_WHEN_EVENT_SPECS: tuple[tuple[str, str, int], ...] = (
 )
 
 
-def invert_expression(expression: str) -> str:
-    """Flip the sign of an expression."""
-    if expression.startswith("-"):
-        return expression[1:]
-    return f"-{expression}"
-
-
 def build_bucket_group_templates(
     expression: str,
     *,

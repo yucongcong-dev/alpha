@@ -32,6 +32,7 @@ FULL_CHECK_ORDER = (
     "compat-import",
     "arch-boundary",
     "todo",
+    "dead-symbols",
     "strategy-tuning-keys",
     "config-sync",
     "ruff",
@@ -80,6 +81,7 @@ def build_task_commands(
         "compat-import": (CheckCommand((*py, "scripts/check_repo.py", "compat-import")),),
         "arch-boundary": (CheckCommand((*py, "scripts/check_repo.py", "arch-boundary")),),
         "todo": (CheckCommand((*py, "scripts/check_repo.py", "todo")),),
+        "dead-symbols": (CheckCommand((*py, "scripts/check_repo.py", "dead-symbols")),),
         "strategy-tuning-keys": (
             CheckCommand((*py, "scripts/check_repo.py", "strategy-tuning-keys")),
         ),

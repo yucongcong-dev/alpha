@@ -193,3 +193,52 @@ def test_scan_secrets_skips_ignored_runtime_dirs(tmp_path: Path) -> None:
     )
 
     assert check_repo.scan_secrets(tmp_path) == []
+
+
+def test_dead_symbols_check_flags_unreferenced_module_constant(tmp_path: Path) -> None:
+    module_file = tmp_path / "src" / "alpha" / "config" / "_constants_example.py"
+    module_file.parent.mkdir(parents=True)
+    module_file.write_text(
+        "ORPHANED_DEFAULT: int = 3\nLIVE_DEFAULT: int = 4\n",
+        encoding="utf-8",
+    )
+    consumer = tmp_path / "src" / "alpha" / "app" / "consumer.py"
+    consumer.parent.mkdir(parents=True)
+    consumer.write_text(
+        "from alpha.config._constants_example import LIVE_DEFAULT\n",
+        encoding="utf-8",
+    )
+
+    errors = check_repo.dead_symbols_check(tmp_path)
+
+    assert any("dead module-level symbols" in error for error in errors)
+    assert any("ORPHANED_DEFAULT" in error for error in errors)
+    assert not any("LIVE_DEFAULT" in error for error in errors)
+
+
+def test_dead_symbols_check_allows_all_exported_names(tmp_path: Path) -> None:
+    module_file = tmp_path / "src" / "alpha" / "config" / "_constants_exported.py"
+    module_file.parent.mkdir(parents=True)
+    module_file.write_text(
+        '__all__ = ["PUBLIC_TOKEN"]\nPUBLIC_TOKEN: str = "x"\n',
+        encoding="utf-8",
+    )
+
+    errors = check_repo.dead_symbols_check(tmp_path)
+
+    assert errors == []
+
+
+def test_dead_symbols_check_counts_attribute_references(tmp_path: Path) -> None:
+    module_file = tmp_path / "src" / "alpha" / "app" / "helpers.py"
+    module_file.parent.mkdir(parents=True)
+    module_file.write_text("def used_via_attribute() -> None: ...\n", encoding="utf-8")
+    consumer = tmp_path / "src" / "alpha" / "app" / "consumer.py"
+    consumer.write_text(
+        "import alpha.app.helpers as helpers\nhelpers.used_via_attribute()\n",
+        encoding="utf-8",
+    )
+
+    errors = check_repo.dead_symbols_check(tmp_path)
+
+    assert errors == []

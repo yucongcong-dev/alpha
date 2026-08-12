@@ -572,13 +572,6 @@ def yaml_default_settings() -> tuple[SettingSpec, ...]:
     return tuple(spec for spec in SETTINGS if spec.yaml is not None)
 
 
-def cli_settings() -> tuple[SettingSpec, ...]:
-    """返回暴露 CLI 参数的设置（bool_pair 与 run_mode 由各自 section 处理）。"""
-    return tuple(
-        spec for spec in SETTINGS if spec.cli is not None and spec.kind in ("plain", "bool_pair")
-    )
-
-
 def dataset_profile_keys() -> tuple[str, ...]:
     """返回可被 dataset profile 覆盖的设置 dest（保持声明顺序）。"""
     return tuple(spec.dest for spec in SETTINGS if spec.dataset_profile)

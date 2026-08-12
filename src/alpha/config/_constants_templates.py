@@ -15,12 +15,6 @@ from ._constants_core import (
     _yaml_tuple_str_int,
 )
 
-
-# ---- 模板优先级调整辅助 ----
-def _pa(key: str, default: int) -> int:
-    return _yaml_int("templates", "priority_adj", key, default=default)
-
-
 # ---- Similarity 惩罚 ----
 SIMILARITY_PENALTY_OFFSET_LEGACY_LEVEL: int = _yaml_int(
     "templates", "similarity_penalty_offset", "legacy_level", default=0
@@ -36,57 +30,6 @@ SIMILARITY_PENALTY_OFFSET_LEGACY_NEG_RATIO: int = _yaml_int(
 )
 SIMILARITY_PENALTY_OFFSET_GROUP_RATIO_LEVEL: int = _yaml_int(
     "templates", "similarity_penalty_offset", "group_ratio_level", default=14
-)
-
-# ---- 模板优先级调整 ----
-PRIORITY_ADJ_GROUP_LOW_SHARPE: int = _pa("group_low_sharpe", 28)
-PRIORITY_ADJ_SIGNAL_LOW_SHARPE: int = _pa("signal_low_sharpe", 18)
-PRIORITY_ADJ_LEGACY_LOW_SHARPE: int = _pa("legacy_low_sharpe", -35)
-PRIORITY_ADJ_DELTA_LOW_FITNESS: int = _pa("delta_low_fitness", 22)
-PRIORITY_ADJ_LEGACY_BASIC_LOW_FITNESS: int = _pa("legacy_basic_low_fitness", -25)
-PRIORITY_ADJ_VOL_SCALED_LOW_FITNESS: int = _pa("vol_scaled_low_fitness", -18)
-PRIORITY_ADJ_DELTA_LOW_TURNOVER: int = _pa("delta_low_turnover", 30)
-PRIORITY_ADJ_LEGACY_MEAN_SPREAD_LOW_TURNOVER: int = _pa("legacy_mean_spread_low_turnover", -18)
-PRIORITY_ADJ_STABLE_HIGH_TURNOVER: int = _pa("stable_high_turnover", 20)
-PRIORITY_ADJ_DELTA_HIGH_TURNOVER: int = _pa("delta_high_turnover", -20)
-PRIORITY_ADJ_GROUP_CONCENTRATED: int = _pa("group_concentrated", 24)
-PRIORITY_ADJ_VOL_SCALED_CONCENTRATED: int = _pa("vol_scaled_concentrated", -30)
-PRIORITY_ADJ_LEGACY_RATIO_CONCENTRATED: int = _pa("legacy_ratio_concentrated", -30)
-PRIORITY_ADJ_HIGH_TURNOVER_CONCENTRATED_RANK_SPREAD: int = _pa(
-    "high_turnover_concentrated_rank_spread", -50
-)
-PRIORITY_ADJ_HIGH_TURNOVER_CONCENTRATED_ZSCORE_SPREAD: int = _pa(
-    "high_turnover_concentrated_zscore_spread", -45
-)
-PRIORITY_ADJ_NEARPASS_BOOST: int = _pa("nearpass_boost", 40)
-PRIORITY_ADJ_ITER_BOOST: int = _pa("iter_boost", 18)
-PRIORITY_ADJ_LEGACY_RATIO_PENALTY: int = _pa("legacy_ratio_penalty", -40)
-PRIORITY_ADJ_NEARPASS_GROUP_RANK_DELTA: int = _pa("nearpass_group_rank_delta", 20)
-PRIORITY_ADJ_VOL_SCALED_DELTA_BASE: int = _pa("vol_scaled_delta_base", -28)
-PRIORITY_ADJ_VOL_SCALED_DELTA_CONCENTRATED: int = _pa("vol_scaled_delta_concentrated", -18)
-PRIORITY_ADJ_VOL_SCALED_DELTA_NEARPASS: int = _pa("vol_scaled_delta_nearpass", -8)
-PRIORITY_ADJ_ACCOUNT_TEMPLATES: int = _pa("account_templates", 22)
-
-# ---- Near-pass 精修优先级 ----
-REFINE_PRIORITY_BASE: int = _yaml_int("templates", "refine_priority", "base", default=260)
-REFINE_PRIORITY_STEP: int = _yaml_int("templates", "refine_priority", "step", default=12)
-REFINE_PRIORITY_SUBINDUSTRY_DELTA: int = _yaml_int(
-    "templates", "refine_priority", "subindustry_delta", default=-2
-)
-REFINE_PRIORITY_ZSCORE_DELTA: int = _yaml_int(
-    "templates", "refine_priority", "zscore_delta", default=-3
-)
-REFINE_PRIORITY_TSRANK_DELTA: int = _yaml_int(
-    "templates", "refine_priority", "tsrank_delta", default=-4
-)
-REFINE_PRIORITY_BACKFILL_DELTA: int = _yaml_int(
-    "templates", "refine_priority", "backfill_delta", default=-5
-)
-REFINE_PRIORITY_TRADE_WHEN_DELTA: int = _yaml_int(
-    "templates", "refine_priority", "trade_when_delta", default=-6
-)
-REFINE_PRIORITY_DECAY_DELTA: int = _yaml_int(
-    "templates", "refine_priority", "decay_delta", default=-7
 )
 
 # ---- Legacy Matrix 模板优先级 ----

@@ -28,37 +28,7 @@ BACKFILL_WINDOW: int = _yaml_int("expression", "backfill_window", default=504)
 FEEDBACK_MUTATION_HIGHSCORE_THRESHOLD: float = _yaml_float(
     "feedback", "mutation_highscore_threshold", default=0.25
 )
-FEEDBACK_TEMPLATE_MIN_PRIORITY: int = _yaml_int("feedback", "template_min_priority", default=105)
 DELTA_STD_PRIORITY_BOOST: int = _yaml_int("feedback", "delta_std_priority_boost", default=15)
-
-EXPR_NEARPASS_BOOST_THRESHOLD: float = _yaml_float(
-    "feedback", "expr_nearpass_boost_threshold", default=0.50
-)
-EXPR_ITER_BOOST_THRESHOLD: float = _yaml_float(
-    "feedback", "expr_iter_boost_threshold", default=0.20
-)
-EXPR_RATIO_PENALTY_THRESHOLD: float = _yaml_float(
-    "feedback", "expr_ratio_penalty_threshold", default=0.30
-)
-EXPR_MUTATION_EXTEND_THRESHOLD: float = _yaml_float(
-    "feedback", "expr_mutation_extend_threshold", default=0.15
-)
-
-# ---- Near-pass 惩罚权重 ----
-NEARPASS_PENALTY_CONCENTRATED_WEIGHT: float = _yaml_float(
-    "nearpass", "penalty_concentrated_weight", default=0.35
-)
-NEARPASS_PENALTY_CONCENTRATED_WEIGHT_GAP_THRESHOLD: float = _yaml_float(
-    "nearpass", "penalty_concentrated_weight_gap_threshold", default=0.20
-)
-NEARPASS_PENALTY_CONCENTRATED_WEIGHT_EXTRA: float = _yaml_float(
-    "nearpass", "penalty_concentrated_weight_extra", default=0.55
-)
-NEARPASS_PENALTY_LOW_TURNOVER: float = _yaml_float("nearpass", "penalty_low_turnover", default=0.10)
-NEARPASS_PENALTY_LOW_SUB_UNIVERSE_SHARPE: float = _yaml_float(
-    "nearpass", "penalty_low_sub_universe_sharpe", default=0.05
-)
-NEARPASS_DEFAULT_LIMIT: int = _yaml_int("nearpass", "default_limit", default=3)
 
 # ---- 检查名称 ----
 CHECK_LOW_SHARPE: str = _yaml_str("strings", "check_names", "low_sharpe", default="LOW_SHARPE")
@@ -89,8 +59,6 @@ FIELDS_CACHE_TTL_HOURS: int = _yaml_int("stats", "fields_cache_ttl_hours", defau
 FAILED_CHECK_EPSILON: float = _yaml_float("failed_check", "epsilon", default=1e-9)
 FAILED_CHECK_MAX_EXAMPLE_IDS: int = _yaml_int("failed_check", "max_example_ids", default=5)
 OPTIMIZATION_HINT_TOP_N: int = _yaml_int("failed_check", "optimization_hint_top_n", default=3)
-DOMINANT_FAILED_CHECK_LIMIT: int = _yaml_int("failed_check", "dominant_check_limit", default=4)
-
 # ---- 哨兵值 ----
 PREFERRED_FIELD_RANK_SENTINEL: int = _yaml_int("sentinel", "preferred_field_rank", default=999)
 DEFAULT_SETTINGS_VARIANT_BUDGET: int = _yaml_int(
@@ -116,11 +84,6 @@ SETTINGS_VARIANT_DECAY_FAST: int = _yaml_int("settings_variant", "decay_fast", d
 SETTINGS_VARIANT_DECAY_SLOW: int = _yaml_int("settings_variant", "decay_slow", default=6)
 
 # ---- Mutation 阈值 ----
-MUTATION_DOMINANT_CHECK_LIMIT: int = _yaml_int("mutation", "dominant_check_limit", default=3)
-MUTATION_ACCOUNT_EXTEND_THRESHOLD: float = _yaml_float(
-    "mutation", "account_extend_threshold", default=0.45
-)
-
 # ---- 字段优先级阈值 ----
 FIELD_PRIORITY_ATTEMPTED_HIGH: int = _yaml_int("field", "priority", "attempted_high", default=8)
 FIELD_PRIORITY_SCORE_HIGH: float = _yaml_float("field", "priority", "score_high", default=0.70)
@@ -160,15 +123,8 @@ DEFAULT_QUEUE_BUSY_COOLDOWN_SECONDS: int = _yaml_int(
 DEFAULT_DATASET_ID: str = _yaml_str("simulation", "default_dataset_id", default="model51")
 
 # ---- 模拟默认值 ----
-SIMULATION_DEFAULT_START_DATE: str = _yaml_str(
-    "simulation", "default_start_date", default="2020-01-01"
-)
-SIMULATION_DEFAULT_END_DATE: str = _yaml_str("simulation", "default_end_date", default="2025-12-31")
 TRUNCATION_WEB_DEFAULT: float = _yaml_float("simulation", "truncation", "web_default", default=0.08)
 TRUNCATION_TIGHTER_MAX: float = _yaml_float("simulation", "truncation", "tighter_max", default=0.05)
-TRUNCATION_TIGHTER_MIN: float = _yaml_float("simulation", "truncation", "tighter_min", default=0.03)
-TRUNCATION_LOOSE: float = _yaml_float("simulation", "truncation", "loose", default=0.10)
-
 # ---- 伙伴字段配对 ----
 PARTNER_SELF_MATCH_PENALTY: int = _yaml_int("partner", "self_match_penalty", default=-10000)
 PARTNER_PREFERRED_BASE_SCORE: int = _yaml_int("partner", "preferred_base_score", default=180)

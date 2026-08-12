@@ -14,32 +14,6 @@ ApiResultList = list[dict[str, Any]]
 SimulationPayload = dict[str, Any]
 
 
-class SimulationAlphaResult(TypedDict, total=False):
-    """模拟 Alpha 结果的结构定义。"""
-
-    id: str
-    status: str
-    alpha: str
-    expression: str | None
-    is_: ApiPayload
-    os_: ApiPayload
-    settings: ApiPayload
-    regular: str | None
-    submittable: bool | None
-    failed_checks: list[CheckResultDict] | None
-
-
-class SimulationResponsePayload(TypedDict, total=False):
-    """Brain API 模拟任务响应结构。"""
-
-    id: str | None
-    status: str | None
-    queue_position: int | None
-    detail: str | None
-    retry_after: int | None
-    result: SimulationAlphaResult | None
-
-
 class FieldInfoDict(TypedDict, total=False):
     """Brain API 返回的数据集字段信息结构。"""
 

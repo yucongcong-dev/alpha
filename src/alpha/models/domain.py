@@ -127,9 +127,6 @@ class FieldTestResult:
     failed_stage: str | None = None
     failed_checks: list[FailedCheck] | None = None
 
-    def is_successful(self) -> bool:
-        return self.submittable is True
-
     def __str__(self) -> str:
         status_symbol = "✓" if self.submittable else "✗"
         return f"FieldTestResult({self.field_name}/{self.template_name}: {status_symbol})"

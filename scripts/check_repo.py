@@ -263,6 +263,91 @@ def todo_check(root: Path) -> list[str]:
     return []
 
 
+def dead_symbols_check(root: Path) -> list[str]:
+    """Flag module-level names defined in src/alpha that are never referenced.
+
+    Counts real code references (Name nodes, attribute accesses, and import
+    aliases) across src, tests, and scripts. Names listed in any ``__all__``
+    are treated as an explicit re-export contract and skipped. Dynamic string
+    references the AST cannot see (for example ``monkeypatch.setattr`` paths)
+    must import the symbol instead so it remains visible to this check.
+    """
+    import ast
+    from collections import Counter
+
+    def _iter_py(*roots: str):
+        for path in _iter_files(root, *roots):
+            if path.suffix == ".py":
+                yield path
+
+    reference_counts: Counter[str] = Counter()
+    for path in _iter_py("src", "tests", "scripts"):
+        try:
+            tree = ast.parse(_read_text(path))
+        except SyntaxError:
+            continue
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Name):
+                reference_counts[node.id] += 1
+            elif isinstance(node, ast.Attribute):
+                reference_counts[node.attr] += 1
+            elif isinstance(node, ast.Import):
+                for alias in node.names:
+                    reference_counts[alias.asname or alias.name.split(".")[0]] += 1
+                    if alias.asname:
+                        reference_counts[alias.name.split(".")[0]] += 1
+            elif isinstance(node, ast.ImportFrom):
+                for alias in node.names:
+                    if alias.name == "*":
+                        continue
+                    reference_counts[alias.asname or alias.name] += 1
+                    if alias.asname:
+                        reference_counts[alias.name] += 1
+
+    exported: set[str] = set()
+    for path in _iter_py("src", "tests", "scripts"):
+        try:
+            tree = ast.parse(_read_text(path))
+        except SyntaxError:
+            continue
+        for node in tree.body:
+            if (
+                isinstance(node, ast.Assign)
+                and any(isinstance(t, ast.Name) and t.id == "__all__" for t in node.targets)
+                and isinstance(node.value, (ast.List, ast.Tuple))
+            ):
+                for elt in node.value.elts:
+                    if isinstance(elt, ast.Constant) and isinstance(elt.value, str):
+                        exported.add(elt.value)
+
+    errors: list[str] = []
+    for path in _iter_py("src/alpha"):
+        try:
+            tree = ast.parse(_read_text(path))
+        except SyntaxError:
+            continue
+        for node in tree.body:
+            defined: list[str] = []
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+                defined = [node.name]
+            elif isinstance(node, ast.Assign):
+                defined = [t.id for t in node.targets if isinstance(t, ast.Name)]
+            elif isinstance(node, ast.AnnAssign) and isinstance(node.target, ast.Name):
+                defined = [node.target.id]
+            for name in defined:
+                if name.startswith("__") or name in exported:
+                    continue
+                definition_occurrences = 1 if isinstance(node, (ast.Assign, ast.AnnAssign)) else 0
+                if reference_counts[name] <= definition_occurrences:
+                    errors.append(
+                        f"{_relative(path, root)}:{node.lineno}: {name} is defined "
+                        "but never referenced"
+                    )
+    if errors:
+        return ["[check] dead module-level symbols in src/alpha", *errors]
+    return []
+
+
 def strategy_tuning_keys_check(root: Path) -> list[str]:
     """Validate that every tuning_key in strategy_profiles.yaml resolves to a real config path."""
     import yaml  # delayed import to keep check_repo.py self-contained for non-yaml checks
@@ -351,6 +436,7 @@ CHECKS: dict[str, Check] = {
     "compat-import": compat_import_check,
     "arch-boundary": arch_boundary_check,
     "todo": todo_check,
+    "dead-symbols": dead_symbols_check,
     "strategy-tuning-keys": strategy_tuning_keys_check,
 }
 

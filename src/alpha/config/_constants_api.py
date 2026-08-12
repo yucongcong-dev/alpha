@@ -45,15 +45,4 @@ SIM_ACCEPT_HEADER: dict[str, str] = _yaml_dict(
 )
 
 # ---- HTTP 客户端超时 ----
-HTTP_REQUEST_TIMEOUT: float = _yaml_float("http", "request_timeout", default=90.0)
-RATE_LIMIT_DEFAULT_WAIT: float = _yaml_float("http", "rate_limit_default_wait", default=10.0)
-POLLING_DEFAULT_WAIT: float = _yaml_float("http", "polling_default_wait", default=5.0)
-POLLING_NO_RETRY_AFTER_WAIT: float = _yaml_float("http", "polling_no_retry_after_wait", default=1.5)
-SERVER_ERROR_BACKOFF_MAX: float = _yaml_float("http", "server_error_backoff_max", default=30.0)
-SERVER_ERROR_BACKOFF_STEP: float = _yaml_float("http", "server_error_backoff_step", default=3.0)
-RETRY_OPERATION_DEFAULT_WAIT: float = _yaml_float(
-    "http", "retry_operation_default_wait", default=2.0
-)
-LOGIN_RETRY_WAIT: float = _yaml_float("http", "login_retry_wait", default=3.0)
 SIMULATION_RETRY_WAIT: float = _yaml_float("http", "simulation_retry_wait", default=3.0)
-POLLING_RETRY_BUFFER: float = _yaml_float("http", "polling_retry_buffer", default=0.5)

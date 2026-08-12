@@ -495,17 +495,17 @@ def test_cli_config_is_bound_before_yaml_backed_constants_import(tmp_path) -> No
     """The CLI settings file must govern both constants and runtime snapshots."""
     config_path = tmp_path / "settings.yaml"
     config_path.write_text(
-        "global:\n  http:\n    request_timeout: 12.5\n",
+        "global:\n  http:\n    simulation_retry_wait: 12.5\n",
         encoding="utf-8",
     )
     script = """
 import sys
 sys.argv = ["alpha", "--config", sys.argv[1]]
 import alpha.main
-from alpha.config._constants_api import HTTP_REQUEST_TIMEOUT
+from alpha.config._constants_api import SIMULATION_RETRY_WAIT
 from alpha.config.runtime_values import get_runtime_config
-assert HTTP_REQUEST_TIMEOUT == 12.5
-assert get_runtime_config().http.request_timeout == 12.5
+assert SIMULATION_RETRY_WAIT == 12.5
+assert get_runtime_config().http.simulation_retry_wait == 12.5
 """
 
     completed = subprocess.run(
