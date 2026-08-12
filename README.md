@@ -11,11 +11,12 @@
 # 创建并激活虚拟环境后，安装完整开发依赖
 make install-dev
 
-# 先确认本地候选计划；不会登录、联网或创建 simulation
-python -m alpha --dataset-id fundamental2 --dry-run-plan
-
-# 首次真实运行：显式选择数据集，执行 1 字段 / 1 模板冒烟测试
+# 全新环境先做一次 1 字段 / 1 模板冒烟运行：登录并生成 datasets/<id>/cache/ 字段缓存
+# （dry-run 是离线只读的，依赖这份本地缓存；未生成缓存前 dry-run 会直接报错）
 python -m alpha --dataset-id fundamental2 --template-library-file datasets/fundamental2/template.json --smoke-test
+
+# 之后即可离线确认本地候选计划；不会登录、联网或创建 simulation
+python -m alpha --dataset-id fundamental2 --dry-run-plan
 
 # fundamental6 已暂停普通运行；全量探索必须显式给出 simulation 硬预算
 python -m alpha --dataset-id fundamental6 --full-run --max-total-simulations 100
@@ -99,6 +100,8 @@ py -3.10 scripts/check_all.py
 
 ## 安全边界
 
-- `.credentials/` 保存本地加密凭证与密钥，不应提交或共享。
+- `.credentials/` 保存本地加密凭证与密钥，不应提交或共享。优先使用交互式凭证提示或
+  `.credentials/` 加密存储；避免用 `--email` / `--password` 明文参数（会出现在 shell
+  历史与进程列表中）。
 - `--dry-run-plan` 是离线只读操作；正常运行才会登录和创建 simulation。
 - `submittable=true` 只表示通过本轮检查、值得继续优化和人工评估；运行器不提供正式提交功能。

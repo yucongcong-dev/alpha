@@ -22,7 +22,9 @@ datasets/<dataset_id>/
 - 跨 run 反馈只在相同 `<market_scope>` 内聚合，避免不同 universe、region 或 delay 相互污染。
 - 每次运行使用独立的 `runs/<run_name>/`，不要让多个实验共享同一组 sidecar。
 - 实验结论写入数据集 README 后，可以删除对应 `runs/`；运行目录不是长期知识资产。
-- 暂停的数据集不保留历史 preset，重新开启时按新的研究假设重新建立。
+- 暂停的数据集不保留历史 preset，重新开启时按新的研究假设重新建立；唯一例外是明确
+  标注为「仅复现」的历史 preset（当前为 `fundamental6` 的 `cicurr_refine` 与
+  `cashflow_decorrelate`），须在该数据集 README 中说明用途，不代表现役提交策略。
 - `alpha clean` 只清理 `cache/` 和 `runs/`，不会删除数据集策略资产。
 
 当前状态：

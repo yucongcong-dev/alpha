@@ -44,9 +44,15 @@ def run_dry_run_plan(args: ApplicationConfig) -> bool:
     )
     if not fields:
         logger.error(
-            "[dry-run] no matching local field cache at %s; run a normal authenticated command "
-            "once to populate it",
+            "[dry-run] no matching local field cache at %s; dry-run is offline and cannot plan "
+            "without a previously cached field list",
             paths.fields_cache_file,
+        )
+        logger.error(
+            "[dry-run] populate the cache with one authenticated smoke run first, e.g. "
+            "`python -m alpha --dataset-id %s --limit 1 --smoke-test`, or point "
+            "--fields-cache-file at an existing cache from the same market scope",
+            dataset_id,
         )
         return False
 

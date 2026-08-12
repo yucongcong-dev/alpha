@@ -12,10 +12,11 @@ macOS 也可以在未激活环境时显式使用 `python3.10`，Windows 可使�
 ## 1. 最小运行路径
 
 ```bash
-# 需要登录：冒烟模式（1 字段/1 模板、并发 1）快速验证凭证、API 连通性和模拟创建
+# 需要登录：冒烟模式（1 字段/1 模板、并发 1）快速验证凭证、API 连通性和模拟创建，
+# 同时会生成 dry-run 依赖的本地字段缓存
 python -m alpha --dataset-id fundamental2 --template-library-file datasets/fundamental2/template.json --smoke-test
 
-# 离线只读：检查字段、模板和候选计划，不创建 simulation
+# 离线只读：检查字段、模板和候选计划，不创建 simulation（依赖上面生成的字段缓存）
 python -m alpha --dataset-id fundamental2 --dry-run-plan
 
 # fundamental6 广泛探索：首次会拉取字段缓存，且必须显式给出 simulation 硬预算
@@ -46,7 +47,12 @@ datasets/<dataset>/cache/<region>_<universe>_<instrument>_d<delay>.json
 ```
 
 例如 `usa_top3000_equity_d1.json`。同一市场范围会复用缓存；缓存缺失或结构失效时，
-正常运行会重新拉取。`--dry-run-plan` 只使用本地缓存，不登录、不联网；没有匹配缓存时应先做一次正常运行。
+正常运行会重新拉取。`--dry-run-plan` 只使用本地缓存，不登录、不联网；没有匹配缓存时
+先用一次带凭证的冒烟运行生成缓存，例如：
+
+```bash
+python -m alpha --dataset-id <dataset-id> --limit 1 --smoke-test
+```
 
 有限 `--limit` 下的候选保护机制：
 
@@ -147,3 +153,5 @@ python -m alpha clean --all-datasets --confirm-clean
 删除后由分析视图反向重建；清理前应先将重要证据沉淀到数据集 README、模板或外部备份。
 `make clean-dev` 只处理 Python 字节码、测试缓存、coverage 与开发安装元数据。
 只有 `--all-datasets --include-credentials --confirm-clean` 才会清理本地加密凭证。
+凭证优先使用交互式提示或 `.credentials/` 加密存储；`--email` / `--password` 明文参数
+会出现在 shell 历史与进程列表中，仅用于一次性调试。
