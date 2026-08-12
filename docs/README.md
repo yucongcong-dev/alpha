@@ -12,7 +12,9 @@
 把研究计划交给本地运行器时，查
 [Alpha Runner 运行与本地资产 Reference](runner_reference.md)；
 不清楚某个功能在哪个模块、或想改某类东西时，先查
-[代码地图](code_map.md)。
+[代码地图](code_map.md)；
+可变状态归谁管、重启后如何恢复时查
+[聚合边界图](aggregate_boundaries.md)。
 遇到术语、页面状态或平台规则时查 [04 平台 Reference](04_platform_reference.md)；
 遇到顾问申请、Workday、付款、Referral 或账号支持时查
 [05 平台运营 Reference](05_platform_operations_reference.md)。
@@ -27,7 +29,8 @@
 | [04](04_platform_reference.md) | IS/OS、页面字段、状态、公式、算子与带日期规则 | 具体 Alpha 优化方案 |
 | [05](05_platform_operations_reference.md) | 顾问流程、账户、付款和平台支持 | Alpha 研究与 runner 逻辑 |
 | [Runner](runner_reference.md) | CLI、字段调度、缓存、反馈、续跑、结果、配置和清理 | 字段研究方法、平台规则定义 |
-| [Code Map](code_map.md) | 包职责、关键调用链、AGENTS.md 规则落点、「改哪里」索引 | 平台术语、运行参数细节 |
+| [Code Map](code_map.md) | 包职责、关键调用链、AGENTS.md 规则落点、术语表、「改哪里」索引 | 平台术语、运行参数细节 |
+| [Aggregates](aggregate_boundaries.md) | 状态所有权、聚合边界、访问规则与生命周期 | 平台术语、运行参数细节 |
 
 根 [README](../README.md) 只提供项目入口和常用命令；
 `datasets/<dataset_id>/README.md` 只记录该数据集当前有效证据、运行边界和下一步。

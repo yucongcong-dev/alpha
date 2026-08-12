@@ -156,3 +156,29 @@ app/finalize.py
 会拦截越层导入）。因此优化方向是**降低导航成本而不是合并**：本页即第一版地图；
 后续若某处拆分失去边界价值（单消费者、无状态所有权含义），再按"一次只切一个边界"
 的原则做机械合并，并同步更新本页。
+
+
+## 7. 术语表（Ubiquitous Language）
+
+研究文档、CLI 输出与代码共用同一套术语；命名新类型前先查本表，避免同义反复。
+
+| 领域概念 | 代码标识 | 说明 |
+| --- | --- | --- |
+| Alpha 结果（一次模拟+检查的产物） | `models/domain.py::FieldTestResult` | 已落盘结果行：指标、failed_checks、error_type、failed_stage |
+| 字段（数据集数据字段） | `models/domain.py::TemplateField` | API 字段元数据 + 选择/质量元数据 |
+| 模板（候选表达式结构） | `models/domain.py::TemplateCandidate` / `TemplateLibraryItem` | 一个表达式模板候选 / 模板库条目 |
+| 检查项 | `models/domain.py::FailedCheck` | 一次 submission check：name/value/limit/result |
+| 设置变体 | `models/domain.py::SettingsVariant` | 一次模拟的 settings 覆盖（不可变值对象） |
+| 字段测试上下文 | `models/domain.py::FieldTestContext` | 单次 字段×模板 执行上下文，产出 FieldTestResult |
+| 结果聚合 | `runtime/result_ledger.py::ResultLedgerState` | 唯一权威结果序列 + 派生计数 |
+| 队列聚合 | `runtime/future_queue.py::FutureQueueState` | 未完成 future + 可恢复远端 simulation + stop signal |
+| 重试预算聚合 | `runtime/queue_retry.py::QueueRetryState` | 候选级 queue-busy 重试计数与耗尽集 |
+| 并发/拥塞聚合 | `runtime/concurrency.py::RuntimeConcurrencyState` | worker 上限与拥塞冷却 |
+| 模拟阶段（stage） | `config/_constants_strings.py::TEMPLATE_STAGE_*` | first_order / group_second_order / event_conditioned |
+| 结果状态 | `config/_constants_strings.py::STATUS_*` | simulated / error / skipped |
+| 失败阶段 | `FieldTestResult.failed_stage` | simulation / check_submission / stopped / worker |
+
+约定：文档说"结果 / Alpha 结果"即代码 `FieldTestResult`；"字段"即 `TemplateField`；
+"模板"即 `TemplateCandidate`；"检查"即 `FailedCheck`。不要为同一概念引入新词。
+
+状态归属的聚合级地图见 [聚合边界图](aggregate_boundaries.md)。
