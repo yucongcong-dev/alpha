@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import os
 
+from ...config.models import DatasetExpressionPolicy
 from ...exceptions import BrainAPIError
 from ...models.domain import TemplateLibrary, TemplateLibraryItem
 from ...policy.expression import get_dataset_expression_policy
@@ -52,15 +53,15 @@ def resolve_template_backfill_window(
     field_type: str,
     *,
     default_backfill_window: int,
+    expression_policy: DatasetExpressionPolicy | None = None,
 ) -> int:
     """Resolve backfill_window for a template group using dataset policy when present."""
     dataset_id = str(payload.get("_dataset_id", "")).strip()
     if not dataset_id:
         return default_backfill_window
 
-    policy = get_dataset_expression_policy(
-        dataset_id,
-        default_backfill_window=default_backfill_window,
+    policy = expression_policy or get_dataset_expression_policy(
+        dataset_id, default_backfill_window=default_backfill_window
     )
     normalized = field_type.strip().upper()
     if normalized == "VECTOR":
@@ -72,7 +73,12 @@ def resolve_template_backfill_window(
     return configured or default_backfill_window
 
 
-def load_template_library(path: str, *, default_backfill_window: int) -> TemplateLibrary:
+def load_template_library(
+    path: str,
+    *,
+    default_backfill_window: int,
+    expression_policy: DatasetExpressionPolicy | None = None,
+) -> TemplateLibrary:
     """Load and validate a JSON template library."""
     if not path:
         raise BrainAPIError("模板库文件路径为空，请指定有效的模板库文件。")
@@ -101,6 +107,7 @@ def load_template_library(path: str, *, default_backfill_window: int) -> Templat
             payload,
             field_type,
             default_backfill_window=default_backfill_window,
+            expression_policy=expression_policy,
         )
         validated[field_type] = []
         for index, item in enumerate(templates):

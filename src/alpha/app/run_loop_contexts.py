@@ -37,9 +37,7 @@ def create_template_build_context(
         template_library=run_ctx.template_library,
         historical_state=run_ctx.historical_state,
         filters=run_ctx.filters,
-        use_dataset_heuristics=run_ctx.use_dataset_heuristics,
+        expression_policy=run_ctx.expression_policy,
         existing_results_count=existing_results_count,
     )
-    if run_ctx.expression_policy is not None:
-        template_build_ctx.expression_policy = run_ctx.expression_policy
     return template_build_ctx

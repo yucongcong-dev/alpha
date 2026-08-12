@@ -108,7 +108,7 @@ def run_dry_run_plan(args: ApplicationConfig) -> bool:
         template_library=supporting_resources.template_library,
         historical_state=supporting_resources.historical_state,
         execution_state=execution_state,
-        use_dataset_heuristics=supporting_resources.expression_policy.use_curated_heuristics,
+        expression_policy=supporting_resources.expression_policy,
         full_run=args.planning.full_run,
         max_total_simulations=args.planning.max_total_simulations,
     )

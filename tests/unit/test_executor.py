@@ -56,7 +56,7 @@ def test_build_template_context_copies_narrow_options_and_feedback() -> None:
         template_library={},
         historical_state=history,
         filters=RunFilters(include_templates={"rank"}, exclude_templates={"raw"}),
-        use_dataset_heuristics=True,
+        expression_policy=get_dataset_expression_policy("model16"),
         existing_results_count=7,
     )
 
@@ -66,6 +66,8 @@ def test_build_template_context_copies_narrow_options_and_feedback() -> None:
     assert context.include_templates == {"rank"}
     assert context.exclude_templates == {"raw"}
     assert context.feedback_result_count == 7
+    assert context.expression_policy is not None
+    assert context.use_dataset_heuristics is context.expression_policy.use_curated_heuristics
 
 
 def test_unexplored_field_gets_one_seed(monkeypatch) -> None:
@@ -397,7 +399,7 @@ def test_print_dry_run_plan_counts_only_actionable_fields(caplog) -> None:
             template_library={},
             historical_state=HistoricalRunState(),
             execution_state=_execution_state(),
-            use_dataset_heuristics=False,
+            expression_policy=get_dataset_expression_policy("model16"),
             full_run=False,
             max_total_simulations=1,
             sample_limit=1,
@@ -468,7 +470,7 @@ def test_print_dry_run_plan_explains_feedback_stage_reasons(caplog) -> None:
             template_library={},
             historical_state=historical_state,
             execution_state=_execution_state(),
-            use_dataset_heuristics=False,
+            expression_policy=get_dataset_expression_policy("model16"),
             full_run=False,
             max_total_simulations=0,
             sample_limit=1,
@@ -507,7 +509,7 @@ def test_print_dry_run_plan_reports_partial_full_run_seed_budget(caplog) -> None
             template_library={},
             historical_state=HistoricalRunState(),
             execution_state=_execution_state(),
-            use_dataset_heuristics=False,
+            expression_policy=get_dataset_expression_policy("model16"),
             full_run=True,
             max_total_simulations=1,
             sample_limit=1,
@@ -555,7 +557,7 @@ def test_print_dry_run_plan_samples_explicit_default_seed(caplog) -> None:
             template_library={},
             historical_state=HistoricalRunState(),
             execution_state=_execution_state(),
-            use_dataset_heuristics=False,
+            expression_policy=get_dataset_expression_policy("model16"),
             full_run=True,
             max_total_simulations=0,
             sample_limit=1,

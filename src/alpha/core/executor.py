@@ -24,12 +24,12 @@ import zlib
 
 from ..config._constants_strings import SENTINEL_UNKNOWN
 from ..config._constants_thresholds import DRY_RUN_SAMPLE_LIMIT
+from ..config.models import DatasetExpressionPolicy
 from ..generators.fields import choose_field_name, choose_field_type
 from ..generators.templates.metadata import normalize_template_role
 from ..models.domain import FieldTestResult, TemplateCandidate, TemplateField, TemplateLibrary
 from ..models.io_types import RunFilters
 from ..models.runtime_options import TemplateBuildOptions
-from ..policy.expression import get_dataset_expression_policy
 from ..runtime.contexts import (
     HistoricalRunState,
     PendingFutureContext,
@@ -92,7 +92,7 @@ def build_template_build_context(
     template_library: TemplateLibrary,
     historical_state: HistoricalRunState,
     filters: RunFilters,
-    use_dataset_heuristics: bool,
+    expression_policy: DatasetExpressionPolicy,
     existing_results_count: int,
 ) -> TemplateBuildContext:
     """Construct the shared template build context for dry-run and live execution."""
@@ -113,12 +113,8 @@ def build_template_build_context(
         global_failed_check_counts=historical_state.global_failed_check_counts,
         include_templates=filters.include_templates,
         exclude_templates=filters.exclude_templates,
-        use_dataset_heuristics=use_dataset_heuristics,
-        expression_policy=get_dataset_expression_policy(
-            options.dataset_id,
-            default_backfill_window=options.backfill_window,
-            use_curated_heuristics=use_dataset_heuristics,
-        ),
+        use_dataset_heuristics=expression_policy.use_curated_heuristics,
+        expression_policy=expression_policy,
     )
     template_build_ctx.feedback_result_count = existing_results_count
     return template_build_ctx
@@ -251,7 +247,7 @@ def print_dry_run_plan(
     template_library: TemplateLibrary,
     historical_state: HistoricalRunState,
     execution_state: ExecutionState,
-    use_dataset_heuristics: bool,
+    expression_policy: DatasetExpressionPolicy,
     full_run: bool,
     max_total_simulations: int,
     sample_limit: int = DRY_RUN_SAMPLE_LIMIT,
@@ -269,7 +265,7 @@ def print_dry_run_plan(
         template_library: 模板库。
         historical_state: 历史运行状态。
         execution_state: 执行状态。
-        use_dataset_heuristics: 是否使用数据集启发式。
+        expression_policy: bootstrap 阶段冻结的数据集表达式策略。
         sample_limit: 打印样本数量限制。默认为 20。
         full_run: 是否优先安排未完成的 seed 字段。
         max_total_simulations: 本轮 simulation 预算；0 表示不限制。
@@ -282,7 +278,7 @@ def print_dry_run_plan(
         ...     template_library=library,
         ...     historical_state=history,
         ...     execution_state=state,
-        ...     use_dataset_heuristics=True,
+        ...     expression_policy=expression_policy,
         ...     full_run=False,
         ...     max_total_simulations=0,
         ... )
@@ -299,7 +295,7 @@ def print_dry_run_plan(
         template_library=template_library,
         historical_state=historical_state,
         execution_state=execution_state,
-        use_dataset_heuristics=use_dataset_heuristics,
+        expression_policy=expression_policy,
         build_context=build_template_build_context,
         should_skip=should_skip_field,
         resolve_skip_reason=resolve_field_skip_reason,

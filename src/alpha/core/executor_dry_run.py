@@ -17,6 +17,7 @@ from ..config._constants_thresholds import (
     DRY_RUN_SAMPLE_LIMIT,
     STATS_DEFAULT_SCORE,
 )
+from ..config.models import DatasetExpressionPolicy
 from ..generators.fields import choose_field_name
 from ..models.domain import FieldTestResult, TemplateField, TemplateLibrary
 from ..models.io_types import RunFilters
@@ -50,7 +51,7 @@ class TemplateBuildContextBuilder(Protocol):
         template_library: TemplateLibrary,
         historical_state: HistoricalRunState,
         filters: RunFilters,
-        use_dataset_heuristics: bool,
+        expression_policy: DatasetExpressionPolicy,
         existing_results_count: int,
     ) -> TemplateBuildContext: ...
 
@@ -128,7 +129,7 @@ def build_dry_run_plan_summary(
     template_library: TemplateLibrary,
     historical_state: HistoricalRunState,
     execution_state: ExecutionState,
-    use_dataset_heuristics: bool,
+    expression_policy: DatasetExpressionPolicy,
     build_context: TemplateBuildContextBuilder,
     should_skip: FieldSkipPredicate,
     resolve_skip_reason: FieldSkipReasonResolver | None,
@@ -156,7 +157,7 @@ def build_dry_run_plan_summary(
         template_library=template_library,
         historical_state=historical_state,
         filters=filters,
-        use_dataset_heuristics=use_dataset_heuristics,
+        expression_policy=expression_policy,
         existing_results_count=len(execution_state.result_ledger.results),
     )
     build_ctx.candidate_filter_counts = explain_counts
@@ -255,7 +256,7 @@ def print_dry_run_plan(
     template_library: TemplateLibrary,
     historical_state: HistoricalRunState,
     execution_state: ExecutionState,
-    use_dataset_heuristics: bool,
+    expression_policy: DatasetExpressionPolicy,
     build_context: TemplateBuildContextBuilder,
     should_skip: FieldSkipPredicate,
     resolve_skip_reason: FieldSkipReasonResolver | None,
@@ -273,7 +274,7 @@ def print_dry_run_plan(
         template_library=template_library,
         historical_state=historical_state,
         execution_state=execution_state,
-        use_dataset_heuristics=use_dataset_heuristics,
+        expression_policy=expression_policy,
         build_context=build_context,
         should_skip=should_skip,
         resolve_skip_reason=resolve_skip_reason,

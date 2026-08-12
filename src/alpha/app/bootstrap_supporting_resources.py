@@ -63,10 +63,15 @@ def load_supporting_resources(
     """Load local template, filter, policy, and history resources for a run plan."""
     set_active_datasets_root(paths.datasets_root)
     template_library_file = ensure_dataset_template_library(paths.template_library_file, dataset_id)
+    expression_policy = get_dataset_expression_policy(
+        dataset_id,
+        default_backfill_window=backfill_window,
+    )
 
     template_library = load_template_library(
         template_library_file,
         default_backfill_window=backfill_window,
+        expression_policy=expression_policy,
     )
     logger.info(
         "[templates] dataset=%s library=%s entries=%d",
@@ -89,10 +94,7 @@ def load_supporting_resources(
     return BootstrapLoadedResources(
         template_library=template_library,
         filters=load_run_filters_extended(paths),
-        expression_policy=get_dataset_expression_policy(
-            dataset_id,
-            default_backfill_window=backfill_window,
-        ),
+        expression_policy=expression_policy,
         blacklist_payload=blacklist_payload,
         historical_state=build_historical_run_state(
             paths.output,
