@@ -14,13 +14,13 @@ macOS 也可以在未激活环境时显式使用 `python3.10`，Windows 可使�
 ```bash
 # 需要登录：冒烟模式（1 字段/1 模板、并发 1）快速验证凭证、API 连通性和模拟创建，
 # 同时会生成 dry-run 依赖的本地字段缓存
-python -m alpha --dataset-id fundamental2 --template-library-file datasets/fundamental2/template.json --smoke-test
+python -m alpha --dataset-id fundamental2 --template-library-file datasets/fundamental2/template.json --run-mode smoke
 
 # 离线只读：检查字段、模板和候选计划，不创建 simulation（依赖上面生成的字段缓存）
 python -m alpha --dataset-id fundamental2 --dry-run-plan
 
 # fundamental6 广泛探索：首次会拉取字段缓存，且必须显式给出 simulation 硬预算
-python -m alpha --dataset-id fundamental6 --full-run --max-total-simulations 100
+python -m alpha --dataset-id fundamental6 --run-mode full --max-total-simulations 100
 
 # 聚焦历史上更有希望的字段
 python -m alpha --dataset-id fundamental2 --template-library-file datasets/fundamental2/template.json --top-fields-by-feedback 10 --max-templates-per-field 15
@@ -28,7 +28,7 @@ python -m alpha --dataset-id fundamental2 --template-library-file datasets/funda
 
 `run` 必须显式传入 `--dataset-id`，避免误跑历史数据集。`clean` 不进入研究配置路径，
 也不要求数据集参数；它会处理所有数据集的可重建运行产物。选择数据集后，
-运行器采用内置默认搜索预算。`--full-run` 会枚举更大的字段和模板空间，
+运行器采用内置默认搜索预算。`--run-mode full` 会枚举更大的字段和模板空间，
 但仍保留 simulation 总预算。运行器先进入 Seed 阶段：历史上没有有效尝试的合格字段
 每个最多调度一个候选；只有所有字段都已获得种子尝试或被判定为不可执行后，才进入正常
 refine 轮次。full-run 默认预算由 `config/constants_defaults.yaml` 的
@@ -51,7 +51,7 @@ datasets/<dataset>/cache/<region>_<universe>_<instrument>_d<delay>.json
 先用一次带凭证的冒烟运行生成缓存，例如：
 
 ```bash
-python -m alpha --dataset-id <dataset-id> --limit 1 --smoke-test
+python -m alpha --dataset-id <dataset-id> --limit 1 --run-mode smoke
 ```
 
 有限 `--limit` 下的候选保护机制：
@@ -129,7 +129,7 @@ python -m alpha --dataset-id <dataset-id> --limit 1 --smoke-test
 `config/strategy_profiles.yaml` 同时定义策略说明、常调参数边界和 `runtime_defaults`。
 当前 `refine` 会收窄字段与模板预算，`candidate-focused` 还会聚焦历史反馈字段，但不会因为
 出现 `submittable=true` 就停止；`explore` 不额外改写默认预算。显式 CLI 参数优先于 profile 默认值，
-dataset profile 先于 strategy profile 合并，`--smoke-test` / `--full-run` 最后按运行模式归一化
+dataset profile 先于 strategy profile 合并，`--run-mode`（smoke/normal/full）最后按运行模式归一化；旧的 smoke/full 布尔开关作为兼容别名仍可用
 搜索范围。具体生效值以 dry-run 输出和 run config snapshot 为准。
 
 ```bash

@@ -39,6 +39,7 @@ def resolve_cli_args(
     *,
     parser_defaults: dict[str, object],
     explicit_cli_keys: set[str],
+    explicit_cli_options: set[str] | None = None,
 ) -> argparse.Namespace:
     """Apply YAML defaults, dataset profile overrides, and run-mode rewrites."""
     if "config" in explicit_cli_keys:
@@ -67,7 +68,11 @@ def resolve_cli_args(
         yaml_config=yaml_config,
         explicit_cli_keys=explicit_cli_keys,
     )
-    apply_run_mode_overrides(args, explicit_cli_keys=explicit_cli_keys)
+    apply_run_mode_overrides(
+        args,
+        explicit_cli_keys=explicit_cli_keys,
+        explicit_cli_options=explicit_cli_options,
+    )
     args._explicit_cli_keys = frozenset(explicit_cli_keys)
     return args
 
@@ -115,8 +120,33 @@ def apply_run_mode_overrides(
     args: argparse.Namespace,
     *,
     explicit_cli_keys: set[str] | None = None,
+    explicit_cli_options: set[str] | None = None,
 ) -> None:
     """Normalize run-mode flags into concrete concurrency and search limits."""
+    options = explicit_cli_options or set()
+    if "--smoke-test" in options and "--no-smoke-test" in options:
+        raise ValueError("--smoke-test 与 --no-smoke-test 不能同时使用；请改用 --run-mode")
+    if "--full-run" in options and "--no-full-run" in options:
+        raise ValueError("--full-run 与 --no-full-run 不能同时使用；请改用 --run-mode")
+
+    run_mode = str(getattr(args, "run_mode", "") or "")
+    if not run_mode:
+        if "--smoke-test" in options:
+            run_mode = "smoke"
+        elif "--full-run" in options:
+            run_mode = "full"
+        elif "--no-smoke-test" in options or "--no-full-run" in options:
+            run_mode = "normal"
+        elif bool(getattr(args, "smoke_test", False)):
+            run_mode = "smoke"
+        elif bool(getattr(args, "full_run", False)):
+            run_mode = "full"
+        else:
+            run_mode = "normal"
+    args.run_mode = run_mode
+    args.smoke_test = run_mode == "smoke"
+    args.full_run = run_mode == "full"
+
     if args.smoke_test:
         args.limit = 1
         args.max_templates_per_field = 1

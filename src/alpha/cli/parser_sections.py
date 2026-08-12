@@ -101,30 +101,44 @@ def add_run_mode_arguments(parser: argparse.ArgumentParser) -> None:
     )
     run_mode_group = parser.add_mutually_exclusive_group()
     run_mode_group.add_argument(
+        "--run-mode",
+        choices=("smoke", "normal", "full"),
+        dest="run_mode",
+        default="",
+        help=(
+            "运行模式：smoke=冒烟测试（1 字段/1 模板），normal=常规（默认），"
+            "full=全量搜索（受 --max-total-simulations 预算限制）；"
+            "传 normal 可覆盖 YAML runtime.smoke_test/full_run=true"
+        ),
+    )
+    # 兼容旧脚本的隐藏别名；新代码请使用 --run-mode。
+    run_mode_group.add_argument(
         "--smoke-test",
         action="store_true",
+        dest="smoke_test",
         default=False,
-        help="运行冒烟测试（单字段/单模板），不用于 Alpha 发现",
+        help=argparse.SUPPRESS,
     )
     run_mode_group.add_argument(
         "--full-run",
         action="store_true",
+        dest="full_run",
         default=False,
-        help="运行全量字段/模板搜索；默认受 --max-total-simulations 安全预算限制",
+        help=argparse.SUPPRESS,
     )
     parser.add_argument(
         "--no-smoke-test",
         action="store_false",
         dest="smoke_test",
         default=False,
-        help="关闭冒烟测试模式（覆盖 YAML runtime.smoke_test=true）",
+        help=argparse.SUPPRESS,
     )
     parser.add_argument(
         "--no-full-run",
         action="store_false",
         dest="full_run",
         default=False,
-        help="关闭全量运行模式（覆盖 YAML runtime.full_run=true）",
+        help=argparse.SUPPRESS,
     )
 
 

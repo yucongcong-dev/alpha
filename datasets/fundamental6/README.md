@@ -4,7 +4,7 @@
 
 `fundamental6` 由 dataset profile 标记为 `paused`，没有当前可提交候选，也不配置默认
 preset。普通 `--dataset-id fundamental6` 会拒绝运行；这不是永久禁止探索，而是要求每次
-研究都显式给出专项范围，或使用带正数总预算的 `--full-run`。
+研究都显式给出专项范围，或使用带正数总预算的 `--run-mode full`。
 
 当前结论：历史 `cashflow_op` 主线性能仍过线，但 Self Correlation 过高；
 `fnd6_cicurr`、`cashflow_dividends` 和 `fnd6_newqv1300_tstkq` 的近通过候选都没有形成新的
@@ -42,7 +42,7 @@ preset。普通 `--dataset-id fundamental6` 会拒绝运行；这不是永久禁
 
 ```bash
 python -m alpha --dataset-id fundamental6 \
-  --full-run \
+  --run-mode full \
   --max-total-simulations 100 \
   --dry-run-plan
 ```

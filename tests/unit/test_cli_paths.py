@@ -393,6 +393,35 @@ def test_explicit_budgeted_full_run_allows_paused_fundamental6(monkeypatch, tmp_
     )
 
 
+def test_run_mode_full_with_budget_allows_paused_fundamental6(monkeypatch, tmp_path) -> None:
+    """Canonical --run-mode full must unlock a paused dataset like --full-run."""
+    clear_yaml_cache()
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "alpha",
+            "--dataset-id",
+            "fundamental6",
+            "--run-mode",
+            "full",
+            "--max-total-simulations",
+            "100",
+        ],
+    )
+
+    args = parse_args()
+    paths = normalize_args_paths(args)
+
+    assert args.run_mode == "full"
+    assert args.full_run is True
+    assert args.max_total_simulations == 100
+    assert paths.template_library_file.replace("\\", "/").endswith(
+        "/datasets/fundamental6/template.json"
+    )
+
+
 def test_budgeted_full_run_dry_plan_allows_paused_fundamental6(monkeypatch, tmp_path) -> None:
     clear_yaml_cache()
     monkeypatch.chdir(tmp_path)

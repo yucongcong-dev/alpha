@@ -105,7 +105,11 @@ def _validate_paused_dataset(args: argparse.Namespace) -> None:
     if bool(getattr(args, "dry_run_plan", False)):
         return
 
-    if "full_run" in explicit_keys and bool(getattr(args, "full_run", False)):
+    explicit_full_run = bool(getattr(args, "full_run", False)) and (
+        "full_run" in explicit_keys
+        or ("run_mode" in explicit_keys and str(getattr(args, "run_mode", "") or "") == "full")
+    )
+    if explicit_full_run:
         budget_is_explicit = "max_total_simulations" in explicit_keys
         budget = int(getattr(args, "max_total_simulations", 0) or 0)
         if budget_is_explicit and budget > 0:

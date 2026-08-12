@@ -335,3 +335,88 @@ global:
 
     assert args.smoke_test is False
     assert args.full_run is False
+
+
+def test_run_mode_smoke_matches_smoke_test(monkeypatch, tmp_path) -> None:
+    """--run-mode smoke is the canonical form of --smoke-test."""
+    clear_yaml_cache()
+    config_path = tmp_path / "settings.yaml"
+    write_config(config_path)
+    monkeypatch.setattr(sys, "argv", ["alpha", "--config", str(config_path), "--run-mode", "smoke"])
+
+    args = parse_args()
+
+    assert args.run_mode == "smoke"
+    assert args.smoke_test is True
+    assert args.full_run is False
+    assert args.limit == 1
+    assert args.max_templates_per_field == 1
+    assert args.max_concurrent_simulations == 1
+
+
+def test_run_mode_full_applies_default_total_simulation_budget(monkeypatch) -> None:
+    """--run-mode full is the canonical form of --full-run."""
+    clear_yaml_cache()
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        ["alpha", "--run-mode", "full", "--offset", "7", "--limit", "4"],
+    )
+
+    args = parse_args()
+
+    assert args.run_mode == "full"
+    assert args.full_run is True
+    assert args.smoke_test is False
+    assert args.limit == 0
+    assert args.offset == 0
+    assert args.max_total_simulations == FULL_RUN_MAX_TOTAL_SIMULATIONS
+
+
+def test_run_mode_normal_overrides_yaml_true(monkeypatch, tmp_path) -> None:
+    """--run-mode normal replaces --no-smoke-test --no-full-run for YAML overrides."""
+    clear_yaml_cache()
+    config_path = tmp_path / "settings.yaml"
+    config_path.write_text(
+        """
+global:
+  runtime:
+    smoke_test: true
+    full_run: true
+""".strip(),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(
+        sys, "argv", ["alpha", "--config", str(config_path), "--run-mode", "normal"]
+    )
+
+    args = parse_args()
+
+    assert args.run_mode == "normal"
+    assert args.smoke_test is False
+    assert args.full_run is False
+
+
+@pytest.mark.parametrize(
+    "argv",
+    [
+        ["--smoke-test", "--no-smoke-test"],
+        ["--full-run", "--no-full-run"],
+    ],
+)
+def test_conflicting_run_mode_aliases_rejected(monkeypatch, argv) -> None:
+    """Self-contradictory legacy run-mode flags must fail loudly."""
+    clear_yaml_cache()
+    monkeypatch.setattr(sys, "argv", ["alpha", *argv])
+
+    with pytest.raises(ValueError, match="不能同时使用"):
+        parse_args()
+
+
+def test_run_mode_conflicts_with_legacy_alias(monkeypatch) -> None:
+    """--run-mode and its legacy aliases are mutually exclusive at parse time."""
+    clear_yaml_cache()
+    monkeypatch.setattr(sys, "argv", ["alpha", "--run-mode", "smoke", "--smoke-test"])
+
+    with pytest.raises(SystemExit):
+        parse_args()

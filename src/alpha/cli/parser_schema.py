@@ -29,6 +29,12 @@ def collect_parser_defaults(parser: argparse.ArgumentParser) -> dict[str, Any]:
     return defaults
 
 
+def collect_explicit_cli_options(parser: argparse.ArgumentParser, argv: list[str]) -> set[str]:
+    """Collect raw option strings explicitly provided on the command line."""
+    known_options = {option for action in parser._actions for option in action.option_strings}
+    return {token.split("=", 1)[0] for token in argv if token.split("=", 1)[0] in known_options}
+
+
 def collect_explicit_cli_keys(parser: argparse.ArgumentParser, argv: list[str]) -> set[str]:
     """Collect argparse destination names explicitly provided on the command line."""
     explicit_keys: set[str] = set()
