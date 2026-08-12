@@ -12,6 +12,7 @@ from ..config._constants_thresholds import (
 )
 from ..config.defaults import apply_yaml_global_defaults
 from ..config.profiles import get_dataset_profile
+from ..config.settings_spec import dataset_profile_keys
 from ..config.simulation_dates import resolve_simulation_dates
 from ..config.strategy_profiles import (
     get_strategy_profile_runtime_defaults,
@@ -20,18 +21,7 @@ from ..config.strategy_profiles import (
 from ..config.yaml import get_yaml_config, set_active_config_path
 from ..config.yaml_sources import validate_explicit_yaml_file
 
-DATASET_PROFILE_KEYS = (
-    "page_size",
-    "min_request_interval",
-    "sleep_between_fields",
-    "max_concurrent_simulations",
-    "max_concurrent_creates",
-    "max_templates_per_field",
-    "field_template_batch_size",
-    "simulation_max_wait_seconds",
-    "simulation_max_queue_seconds",
-    "queue_busy_cooldown_seconds",
-)
+DATASET_PROFILE_KEYS = dataset_profile_keys()
 
 
 def resolve_cli_args(

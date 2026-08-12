@@ -2,11 +2,16 @@
 YAML global 默认值合并。
 
 本模块负责把合并 YAML 配置中的 global 配置应用到 argparse namespace。
+声明式设置表见 ``config.settings_spec``，本模块只做通用遍历合并。
 """
 
 from __future__ import annotations
 
 from typing import Any, Protocol
+
+from .settings_spec import yaml_default_settings
+
+_MISSING = object()
 
 
 class DefaultsTarget(Protocol):
@@ -29,6 +34,18 @@ def _assign_if_supported(
     setattr(target, key, value)
 
 
+def _lookup_yaml_default(global_cfg: dict[str, Any], path: tuple[str, ...]) -> object:
+    """沿 YAML 路径取 global 默认值；路径缺失或非 dict 时返回 _MISSING。"""
+    section: Any = global_cfg
+    for part in path[:-1]:
+        if not isinstance(section, dict):
+            return _MISSING
+        section = section.get(part, {})
+    if not isinstance(section, dict) or path[-1] not in section:
+        return _MISSING
+    return section[path[-1]]
+
+
 def apply_yaml_global_defaults(
     args: DefaultsTarget,
     yaml_config: dict[str, Any] | None = None,
@@ -43,137 +60,8 @@ def apply_yaml_global_defaults(
     if not isinstance(global_cfg, dict):
         return
 
-    sim_key_map = {
-        "instrumentType": "instrument_type",
-        "unitHandling": "unit_handling",
-        "nanHandling": "nan_handling",
-        "maxTrade": "max_trade",
-        "startDate": "start_date",
-        "endDate": "end_date",
-    }
-    sim_section = global_cfg.get("simulation", {})
-    if isinstance(sim_section, dict):
-        for yaml_key, arg_key in sim_key_map.items():
-            if yaml_key in sim_section:
-                _assign_if_supported(args, arg_key, sim_section[yaml_key], explicit_cli_keys)
-
-    _merge_section(
-        args,
-        sim_section,
-        {
-            "region",
-            "universe",
-            "delay",
-            "decay",
-            "neutralization",
-            "truncation",
-            "pasteurization",
-            "language",
-        },
-        explicit_cli_keys,
-    )
-
-    _merge_section(
-        args,
-        global_cfg.get("limits", {}),
-        {
-            "limit",
-            "offset",
-            "page_size",
-            "sleep_between_fields",
-            "max_templates_per_field",
-            "max_templates_per_family",
-            "max_total_simulations",
-            "field_template_batch_size",
-            "legacy_similarity_penalty",
-        },
-        explicit_cli_keys,
-    )
-
-    _merge_section(
-        args,
-        global_cfg.get("concurrency", {}),
-        {
-            "max_concurrent_simulations",
-            "max_concurrent_creates",
-        },
-        explicit_cli_keys,
-    )
-
-    _merge_section(
-        args,
-        global_cfg.get("retries", {}),
-        {
-            "simulation_create_retries",
-            "simulation_poll_retries",
-            "simulation_max_polls",
-            "simulation_max_wait_seconds",
-            "simulation_max_pending_cycles",
-            "simulation_max_queue_seconds",
-            "queue_busy_cooldown_seconds",
-            "queue_busy_retry_limit",
-            "check_submission_retries",
-            "rate_limit_max_retries",
-            "login_retries",
-            "min_request_interval",
-        },
-        explicit_cli_keys,
-    )
-
-    _merge_section(
-        args,
-        global_cfg.get("filters", {}),
-        {"top_fields_by_feedback"},
-        explicit_cli_keys,
-    )
-
-    _merge_section(
-        args,
-        global_cfg.get("quality", {}),
-        {
-            "min_sharpe",
-            "min_fitness",
-            "min_turnover",
-            "max_turnover",
-            "max_weight",
-        },
-        explicit_cli_keys,
-    )
-
-    _merge_section(
-        args,
-        global_cfg.get("expression", {}),
-        {
-            "backfill_window",
-        },
-        explicit_cli_keys,
-    )
-
-    _merge_section(
-        args,
-        global_cfg.get("runtime", {}),
-        {
-            "strategy_profile",
-            "smoke_test",
-            "dry_run_plan",
-            "full_run",
-            "verbose",
-            "quiet",
-        },
-        explicit_cli_keys,
-    )
-
-
-def _merge_section(
-    args: DefaultsTarget,
-    section: Any,
-    keys: set[str],
-    explicit_cli_keys: set[str] | None = None,
-) -> None:
-    """将 YAML section 中的值合并到 args（仅当 key 在 section 中存在时）。"""
-    if not isinstance(section, dict):
-        return
-    explicit_cli_keys = explicit_cli_keys or set()
-    for key in keys:
-        if key in section:
-            _assign_if_supported(args, key, section[key], explicit_cli_keys)
+    for spec in yaml_default_settings():
+        assert spec.yaml is not None
+        value = _lookup_yaml_default(global_cfg, spec.yaml)
+        if value is not _MISSING:
+            _assign_if_supported(args, spec.dest, value, explicit_cli_keys)

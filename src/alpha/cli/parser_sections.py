@@ -6,7 +6,7 @@ import argparse
 import os
 
 from ..config._constants_thresholds import DEFAULT_DATASET_ID
-from ..config.strategy_profiles import STRATEGY_PROFILE_CHOICES
+from ..config.settings_spec import SettingSpec, get_setting, settings_by_yaml_section
 from .constants import DEFAULT_CREDS_FILE, DEFAULT_CREDS_KEY_FILE
 
 
@@ -30,6 +30,30 @@ def add_bool_argument(
         default=default,
         help=help_disable,
     )
+
+
+def add_settings(parser: argparse.ArgumentParser, specs: tuple[SettingSpec, ...]) -> None:
+    """从声明式设置表生成一组 argparse 参数。"""
+    for spec in specs:
+        assert spec.cli is not None
+        if spec.kind == "bool_pair":
+            add_bool_argument(
+                parser,
+                spec.cli,
+                dest=spec.dest,
+                default=spec.default,
+                help_enable=spec.help,
+                help_disable=spec.help_disable,
+            )
+            continue
+        parser.add_argument(
+            spec.cli,
+            dest=spec.dest,
+            default=spec.default,
+            type=spec.arg_type,
+            choices=spec.choices or None,
+            help=spec.help,
+        )
 
 
 def add_base_arguments(parser: argparse.ArgumentParser) -> None:
@@ -67,49 +91,20 @@ def add_dataset_arguments(parser: argparse.ArgumentParser) -> None:
         default=DEFAULT_DATASET_ID,
         help="数据集 ID；run/clean 命令必须显式指定",
     )
-    parser.add_argument("--region", default=None, help="地区代码")
-    parser.add_argument("--universe", default=None, help="宇宙代码")
-    parser.add_argument("--instrument-type", default=None, help="工具类型")
-    parser.add_argument("--delay", type=int, default=None, help="延迟天数")
-    parser.add_argument("--decay", type=int, default=None, help="衰减天数 (Decay)")
-    parser.add_argument("--neutralization", default=None, help="中性化类型 (Neutralization)")
-    parser.add_argument("--truncation", type=float, default=None, help="截断阈值 (Truncation)")
-    parser.add_argument("--nan-handling", default=None, help="NaN 处理方式 (NaN Handling)")
-    parser.add_argument("--pasteurization", default=None, help="Pasteurization 开关 (ON/OFF)")
-    parser.add_argument("--unit-handling", default=None, help="单位验证 (Unit Handling)")
-    parser.add_argument("--max-trade", default=None, help="可交易性约束 (Max Trade, ON/OFF)")
-    parser.add_argument("--language", default=None, help="表达式语言 (Language)")
-    parser.add_argument(
-        "--start-date",
-        default=None,
-        help="模拟开始日期 (Start Date, YYYY-MM-DD)，默认使用 config 中的值",
-    )
-    parser.add_argument(
-        "--end-date",
-        default=None,
-        help="模拟结束日期 (End Date, YYYY-MM-DD)，默认使用 config 中的值",
-    )
+    add_settings(parser, settings_by_yaml_section("simulation"))
 
 
 def add_run_mode_arguments(parser: argparse.ArgumentParser) -> None:
     """Add run-mode toggles."""
-    parser.add_argument(
-        "--strategy-profile",
-        choices=STRATEGY_PROFILE_CHOICES,
-        default="explore",
-        help="运行策略标签：explore=广覆盖探索，refine=反馈邻域优化，candidate-focused=候选质量收敛",
-    )
+    add_settings(parser, (get_setting("strategy_profile"),))
+    run_mode = get_setting("run_mode")
     run_mode_group = parser.add_mutually_exclusive_group()
     run_mode_group.add_argument(
         "--run-mode",
-        choices=("smoke", "normal", "full"),
+        choices=run_mode.choices,
         dest="run_mode",
-        default="",
-        help=(
-            "运行模式：smoke=冒烟测试（1 字段/1 模板），normal=常规（默认），"
-            "full=全量搜索（受 --max-total-simulations 预算限制）；"
-            "传 normal 可覆盖 YAML runtime.smoke_test/full_run=true"
-        ),
+        default=run_mode.default,
+        help=run_mode.help,
     )
     # 兼容旧脚本的隐藏别名；新代码请使用 --run-mode。
     run_mode_group.add_argument(
@@ -144,47 +139,7 @@ def add_run_mode_arguments(parser: argparse.ArgumentParser) -> None:
 
 def add_search_arguments(parser: argparse.ArgumentParser) -> None:
     """Add field/template search-space arguments."""
-    parser.add_argument(
-        "--limit", type=int, default=200, help="要获取/测试的字段数量；0 表示所有字段"
-    )
-    parser.add_argument("--offset", type=int, default=0, help="字段偏移量")
-    parser.add_argument("--page-size", type=int, default=50, help="分页大小")
-    parser.add_argument(
-        "--sleep-between-fields",
-        type=float,
-        default=5.0,
-        help="字段间的休眠时间（增大以降低 API 限流）",
-    )
-    parser.add_argument(
-        "--max-templates-per-field",
-        type=int,
-        default=6,
-        help="每个字段测试的最大模板数；0 表示所有内置模板",
-    )
-    parser.add_argument(
-        "--max-templates-per-family",
-        type=int,
-        default=1,
-        help="每个表达式家族保留的最大候选数；0 表示不限制",
-    )
-    parser.add_argument(
-        "--max-total-simulations",
-        type=int,
-        default=0,
-        help="本次启动最多调度的 simulation 数量；0 表示不限制",
-    )
-    parser.add_argument(
-        "--field-template-batch-size",
-        type=int,
-        default=2,
-        help="每轮每个字段最多发出的模板/setting 组合数；最小为 1，默认 2",
-    )
-    parser.add_argument(
-        "--legacy-similarity-penalty",
-        type=int,
-        default=42,
-        help="应用于 raw/group-rank/simple-ratio 等模板的优先级惩罚",
-    )
+    add_settings(parser, settings_by_yaml_section("limits"))
 
 
 def add_file_filter_arguments(parser: argparse.ArgumentParser) -> None:
@@ -202,13 +157,7 @@ def add_file_filter_arguments(parser: argparse.ArgumentParser) -> None:
         default="",
         help="本地 JSON 字段缓存文件路径（留空则根据 dataset_id 自动生成）",
     )
-    add_bool_argument(
-        parser,
-        "--dry-run-plan",
-        dest="dry_run_plan",
-        help_enable="仅打印计划，不创建模拟",
-        help_disable="关闭干运行模式（覆盖 YAML runtime.dry_run_plan=true）",
-    )
+    add_settings(parser, (get_setting("dry_run_plan"),))
     parser.add_argument(
         "--include-fields-file", default="", help="包含字段 ID/名称的文本文件，每行一个"
     )
@@ -221,86 +170,19 @@ def add_file_filter_arguments(parser: argparse.ArgumentParser) -> None:
     parser.add_argument(
         "--exclude-templates-file", default="", help="排除模板名称的文本文件，每行一个"
     )
-    parser.add_argument(
-        "--top-fields-by-feedback",
-        type=int,
-        default=0,
-        help="如果大于 0，仅测试按反馈排序的前 N 个字段",
-    )
+    add_settings(parser, settings_by_yaml_section("filters"))
 
 
 def add_api_runtime_arguments(parser: argparse.ArgumentParser) -> None:
     """Add API retry/concurrency/runtime wait arguments."""
-    parser.add_argument(
-        "--min-request-interval",
-        type=float,
-        default=2.5,
-        help="请求间的最小间隔，用于降低速率限制（增大以应对 API 429）",
-    )
-    parser.add_argument(
-        "--rate-limit-max-retries", type=int, default=5, help="速率限制时的最大重试次数"
-    )
-    parser.add_argument("--login-retries", type=int, default=3, help="登录重试次数")
-    parser.add_argument("--simulation-create-retries", type=int, default=3, help="模拟创建重试次数")
-    parser.add_argument("--simulation-poll-retries", type=int, default=3, help="模拟轮询重试次数")
-    parser.add_argument(
-        "--max-concurrent-simulations",
-        type=int,
-        default=1,
-        help="并发模拟的最大数量（降低以避免 API 限流）",
-    )
-    parser.add_argument(
-        "--max-concurrent-creates", type=int, default=1, help="并发模拟创建请求的最大数量"
-    )
-    parser.add_argument(
-        "--simulation-max-polls", type=int, default=240, help="单个模拟的最大轮询次数"
-    )
-    parser.add_argument(
-        "--simulation-max-wait-seconds",
-        type=float,
-        default=1800.0,
-        help="单个模拟的最大等待时间（秒）",
-    )
-    parser.add_argument(
-        "--simulation-max-pending-cycles", type=int, default=120, help="最大等待周期数"
-    )
-    parser.add_argument(
-        "--simulation-max-queue-seconds", type=float, default=600.0, help="最大队列等待时间（秒）"
-    )
-    parser.add_argument(
-        "--queue-busy-cooldown-seconds",
-        type=float,
-        default=300.0,
-        help="队列拥塞后的冷却时间（秒，增大以避免重复触发限流）",
-    )
-    parser.add_argument(
-        "--queue-busy-retry-limit",
-        type=int,
-        default=2,
-        help="单候选队列拥塞重试上限；0 表示不限制",
-    )
-    parser.add_argument(
-        "--check-submission-retries",
-        type=int,
-        default=3,
-        help="Check Submission 状态轮询次数",
-    )
+    add_settings(parser, settings_by_yaml_section("concurrency"))
+    add_settings(parser, settings_by_yaml_section("retries"))
 
 
 def add_precheck_arguments(parser: argparse.ArgumentParser) -> None:
     """Add local metric diagnostic threshold arguments."""
-    parser.add_argument("--min-sharpe", type=float, default=1.25, help="本地诊断最低 Sharpe 阈值")
-    parser.add_argument("--min-fitness", type=float, default=1.00, help="本地诊断最低 Fitness 阈值")
-    parser.add_argument(
-        "--min-turnover", type=float, default=0.01, help="本地诊断最低 Turnover 阈值"
-    )
-    parser.add_argument(
-        "--max-turnover", type=float, default=0.70, help="本地诊断最高 Turnover 阈值"
-    )
-    parser.add_argument("--max-weight", type=float, default=0.10, help="本地诊断单股最大权重阈值")
-    parser.add_argument(
-        "--backfill-window", type=int, default=240, help="ts_backfill 时间窗口大小（天）"
-    )
+    add_settings(parser, settings_by_yaml_section("quality"))
+    add_settings(parser, settings_by_yaml_section("expression"))
 
 
 def add_output_logging_arguments(parser: argparse.ArgumentParser) -> None:
@@ -313,20 +195,7 @@ def add_output_logging_arguments(parser: argparse.ArgumentParser) -> None:
         default="default",
         help="默认运行目录名；仅在未显式传入 --output 时生效",
     )
-    add_bool_argument(
-        parser,
-        "--verbose",
-        dest="verbose",
-        help_enable="详细日志模式",
-        help_disable="关闭详细日志模式（覆盖 YAML runtime.verbose=true）",
-    )
-    add_bool_argument(
-        parser,
-        "--quiet",
-        dest="quiet",
-        help_enable="安静模式",
-        help_disable="关闭安静模式（覆盖 YAML runtime.quiet=true）",
-    )
+    add_settings(parser, (get_setting("verbose"), get_setting("quiet")))
     parser.add_argument("--log-file", default="", help="日志文件路径")
     parser.add_argument(
         "--include-credentials",
