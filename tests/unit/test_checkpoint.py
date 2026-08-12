@@ -6,7 +6,6 @@ from functools import partial
 import json
 from unittest.mock import patch
 
-from alpha.core import checkpoint_files, checkpoint_payloads
 import alpha.core.checkpoint as checkpoint_module
 from alpha.core.checkpoint import (
     load_pipeline_state as _load_pipeline_state,
@@ -17,7 +16,9 @@ from alpha.core.checkpoint import (
 from alpha.core.checkpoint import (
     save_pipeline_state as _save_pipeline_state,
 )
+import alpha.core.checkpoint_files as checkpoint_files
 from alpha.core.checkpoint_files import delete_pipeline_state
+import alpha.core.checkpoint_payloads as checkpoint_payloads
 from alpha.runtime.concurrency import RuntimeConcurrencyState
 from alpha.runtime.contexts import CheckpointIdentity, PendingFutureContext
 from alpha.runtime.state import ExecutionState
