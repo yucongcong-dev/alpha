@@ -134,7 +134,7 @@ def _build_run_loop_args(tmp_path, **overrides) -> ApplicationConfig:
         "max_weight": 1.0,
         "max_templates_per_field": 0,
         "max_templates_per_family": 0,
-        "legacy_similarity_penalty": 0,
+        "similarity_penalty": 0,
         "template_library_file": "",
         "include_fields_file": "",
         "include_templates_file": "",

@@ -54,6 +54,14 @@ def add_settings(parser: argparse.ArgumentParser, specs: tuple[SettingSpec, ...]
             choices=spec.choices or None,
             help=spec.help,
         )
+        for alias in spec.cli_aliases:
+            parser.add_argument(
+                alias,
+                dest=spec.dest,
+                type=spec.arg_type,
+                choices=spec.choices or None,
+                help=argparse.SUPPRESS,
+            )
 
 
 def add_base_arguments(parser: argparse.ArgumentParser) -> None:

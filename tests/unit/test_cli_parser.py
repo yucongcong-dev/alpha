@@ -337,6 +337,14 @@ global:
     assert args.full_run is False
 
 
+def test_legacy_similarity_penalty_alias_still_parses(monkeypatch) -> None:
+    """旧 CLI 标志 --legacy-similarity-penalty 必须继续映射到 similarity_penalty。"""
+    clear_yaml_cache()
+    monkeypatch.setattr(sys, "argv", ["alpha", "--legacy-similarity-penalty", "5"])
+
+    assert parse_args().similarity_penalty == 5
+
+
 def test_run_mode_smoke_matches_smoke_test(monkeypatch, tmp_path) -> None:
     """--run-mode smoke is the canonical form of --smoke-test."""
     clear_yaml_cache()

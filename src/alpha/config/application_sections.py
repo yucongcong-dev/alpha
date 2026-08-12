@@ -131,7 +131,7 @@ class PlanningConfig:
     max_templates_per_family: int
     max_total_simulations: int
     field_template_batch_size: int
-    legacy_similarity_penalty: int
+    similarity_penalty: int
     top_fields_by_feedback: int
 
     def __post_init__(self) -> None:
@@ -143,7 +143,7 @@ class PlanningConfig:
             "max_templates_per_field",
             "max_templates_per_family",
             "max_total_simulations",
-            "legacy_similarity_penalty",
+            "similarity_penalty",
             "top_fields_by_feedback",
         ):
             if getattr(self, field_name) < 0:

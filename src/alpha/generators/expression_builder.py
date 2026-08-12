@@ -280,7 +280,7 @@ def build_expression_candidates(
     templates = [item for item in templates if _template_supports_field_tags(item, field_view)]
     templates = [item for item in templates if _template_supports_grouping_fields(item, policy)]
 
-    templates = apply_similarity_penalty(templates, options.legacy_similarity_penalty)
+    templates = apply_similarity_penalty(templates, options.similarity_penalty)
     templates = [
         replace(
             template,

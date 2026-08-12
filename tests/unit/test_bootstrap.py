@@ -56,7 +56,7 @@ def _build_config(**overrides: object) -> ApplicationConfig:
         "top_fields_by_feedback": 0,
         "max_templates_per_field": 0,
         "max_templates_per_family": 0,
-        "legacy_similarity_penalty": 0,
+        "similarity_penalty": 0,
         "include_fields_file": "",
         "exclude_fields_file": "",
         "include_templates_file": "",

@@ -56,7 +56,7 @@ class TemplateBuildOptions(SimulationSettingsConfig):
     dataset_id: str = ""
     max_templates_per_field: int = 0
     max_templates_per_family: int = 0
-    legacy_similarity_penalty: int = 0
+    similarity_penalty: int = 0
     template_library_file: str = ""
     preset_mode: bool = False
 
@@ -83,7 +83,7 @@ class TemplateBuildOptions(SimulationSettingsConfig):
             dataset_id=dataset.dataset_id,
             max_templates_per_field=planning.max_templates_per_field,
             max_templates_per_family=planning.max_templates_per_family,
-            legacy_similarity_penalty=planning.legacy_similarity_penalty,
+            similarity_penalty=planning.similarity_penalty,
             template_library_file=paths.template_library_file,
             start_date=simulation.start_date,
             end_date=simulation.end_date,

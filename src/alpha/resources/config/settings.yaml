@@ -108,7 +108,7 @@ global:
     max_templates_per_family: 2    # 每表达式家族保留的最大候选数
     max_total_simulations: 0       # 本次启动 simulation 总预算，0=不限；full-run 默认使用安全预算
     field_template_batch_size: 2   # breadth-first 每轮批量，最小为 1
-    legacy_similarity_penalty: 42  # legacy 模板族优先级惩罚值
+    similarity_penalty: 42  # 模板族相似度优先级惩罚值
 
   # --------------------------------------------------------------------------
   # 并发控制 —— 对应 CLI --max-concurrent-simulations / --max-concurrent-creates

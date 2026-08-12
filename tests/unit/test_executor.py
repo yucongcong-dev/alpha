@@ -26,7 +26,7 @@ def _options() -> TemplateBuildOptions:
         dataset_id="model16",
         max_templates_per_field=6,
         max_templates_per_family=2,
-        legacy_similarity_penalty=42,
+        similarity_penalty=42,
         template_library_file="datasets/model16/template.json",
     )
 

@@ -92,6 +92,14 @@ def test_yaml_global_defaults_merge_every_section() -> None:
     assert applied == sentinel
 
 
+def test_yaml_alias_keys_still_merge() -> None:
+    """旧版 YAML 键（legacy_similarity_penalty）必须经别名继续合并。"""
+    global_cfg = {"global": {"limits": {"legacy_similarity_penalty": 7}}}
+    target = SimpleNamespace(similarity_penalty=None)
+    apply_yaml_global_defaults(target, global_cfg, set())
+    assert target.similarity_penalty == 7
+
+
 def test_yaml_global_defaults_respect_explicit_cli() -> None:
     """CLI 显式传参时，YAML 默认值不得覆盖。"""
     global_cfg = {"global": {"limits": {"limit": 300}}}

@@ -31,7 +31,8 @@ STRATEGY_PROFILE_RUNTIME_DEFAULT_TYPES: dict[str, dict[str, str]] = {
         "max_templates_per_family": _INT,
         "max_total_simulations": _INT,
         "field_template_batch_size": _INT,
-        "legacy_similarity_penalty": _INT,
+        "similarity_penalty": _INT,
+        "legacy_similarity_penalty": _INT,  # deprecated alias
     },
     "concurrency": {
         "max_concurrent_simulations": _INT,

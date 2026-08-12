@@ -55,7 +55,7 @@ def build_run_config_snapshot(
             "max_templates_per_family": planning.max_templates_per_family,
             "max_total_simulations": planning.max_total_simulations,
             "field_template_batch_size": max(1, planning.field_template_batch_size),
-            "legacy_similarity_penalty": planning.legacy_similarity_penalty,
+            "similarity_penalty": planning.similarity_penalty,
         },
         "concurrency": {
             "max_concurrent_simulations": execution.max_concurrent_simulations,

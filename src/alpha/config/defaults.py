@@ -63,5 +63,10 @@ def apply_yaml_global_defaults(
     for spec in yaml_default_settings():
         assert spec.yaml is not None
         value = _lookup_yaml_default(global_cfg, spec.yaml)
+        if value is _MISSING:
+            for alias in spec.yaml_aliases:
+                value = _lookup_yaml_default(global_cfg, alias)
+                if value is not _MISSING:
+                    break
         if value is not _MISSING:
             _assign_if_supported(args, spec.dest, value, explicit_cli_keys)

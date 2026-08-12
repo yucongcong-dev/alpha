@@ -7,6 +7,7 @@ import logging
 from ..config.application import ApplicationConfig
 from ..core.executor import print_dry_run_plan
 from ..generators.fields import load_fields_cache
+from ..models.domain import TemplateField
 from ..models.runtime_options import (
     BootstrapFieldOptions,
     TemplateBuildOptions,
@@ -43,18 +44,30 @@ def run_dry_run_plan(args: ApplicationConfig) -> bool:
         cache_ttl_hours=0,
     )
     if not fields:
-        logger.error(
-            "[dry-run] no matching local field cache at %s; dry-run is offline and cannot plan "
-            "without a previously cached field list",
-            paths.fields_cache_file,
-        )
-        logger.error(
-            "[dry-run] populate the cache with one authenticated smoke run first, e.g. "
-            "`python -m alpha --dataset-id %s --run-mode smoke`, or point "
-            "--fields-cache-file at an existing cache from the same market scope",
-            dataset_id,
-        )
-        return False
+        include_names = sorted(supporting_resources.filters.include_fields)
+        if include_names:
+            logger.warning(
+                "[dry-run] no local field cache at %s; building a structural preview from "
+                "include-fields names without coverage/rank metadata",
+                paths.fields_cache_file,
+            )
+            fields = [
+                TemplateField(field_id=name, field_name=name, field_type="MATRIX")
+                for name in include_names
+            ]
+        else:
+            logger.error(
+                "[dry-run] no matching local field cache at %s; dry-run is offline and cannot "
+                "plan without a previously cached field list",
+                paths.fields_cache_file,
+            )
+            logger.error(
+                "[dry-run] populate the cache with one authenticated smoke run first, e.g. "
+                "`python -m alpha --dataset-id %s --run-mode smoke`, or point "
+                "--fields-cache-file at an existing cache from the same market scope",
+                dataset_id,
+            )
+            return False
 
     prepared_fields, field_stats = prepare_fields_for_execution(
         list(fields),

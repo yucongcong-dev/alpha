@@ -120,6 +120,41 @@ def test_dry_run_plan_uses_local_cache_without_runtime_writes(monkeypatch, tmp_p
     assert captured["planned_fields"] == [TemplateField("field_1", "field_1", "MATRIX")]
 
 
+def test_dry_run_plan_previews_include_fields_without_cache(monkeypatch, tmp_path) -> None:
+    """无缓存时，dry-run 应基于 include-fields 名字输出结构化预览而非失败。"""
+    paths = _paths(tmp_path)
+    args = _config(paths)
+    _patch_local_resources(monkeypatch, HistoricalRunState())
+    monkeypatch.setattr(
+        "alpha.app.bootstrap_supporting_resources.load_run_filters_extended",
+        lambda _paths: RunFilters(include_fields={"field_a", "field_b"}),
+    )
+    monkeypatch.setattr("alpha.app.planning.load_fields_cache", lambda *_args, **_kwargs: [])
+
+    captured: dict[str, object] = {}
+    monkeypatch.setattr(
+        "alpha.app.planning.prepare_fields_for_execution",
+        lambda fields, **_kwargs: (fields, {}),
+    )
+    execution_state = SimpleNamespace(
+        results=[], attempted_keys=set(), skipped_fields_due_to_queue=set()
+    )
+    monkeypatch.setattr(
+        "alpha.app.planning.create_execution_state",
+        lambda **_kwargs: execution_state,
+    )
+    monkeypatch.setattr(
+        "alpha.app.planning.print_dry_run_plan",
+        lambda **kwargs: captured.update(planned_fields=kwargs["fields"]),
+    )
+
+    assert run_dry_run_plan(args) is True
+    assert sorted(field.field_name for field in captured["planned_fields"]) == [
+        "field_a",
+        "field_b",
+    ]
+
+
 def test_dry_run_plan_fails_without_matching_local_cache(monkeypatch, tmp_path) -> None:
     paths = _paths(tmp_path)
     args = _config(paths)

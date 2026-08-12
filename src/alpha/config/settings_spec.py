@@ -41,6 +41,8 @@ class SettingSpec:
     fallback: Any = _UNSET
     or_default: Any = _UNSET
     coerce: bool = True
+    cli_aliases: tuple[str, ...] = ()
+    yaml_aliases: tuple[tuple[str, ...], ...] = ()
 
 
 SETTINGS: tuple[SettingSpec, ...] = (
@@ -263,13 +265,15 @@ SETTINGS: tuple[SettingSpec, ...] = (
         help="每轮每个字段最多发出的模板/setting 组合数；最小为 1，默认 2",
     ),
     SettingSpec(
-        "legacy_similarity_penalty",
-        ("limits", "legacy_similarity_penalty"),
+        "similarity_penalty",
+        ("limits", "similarity_penalty"),
         42,
-        "--legacy-similarity-penalty",
+        "--similarity-penalty",
         int,
         section="planning",
         fallback=0,
+        cli_aliases=("--legacy-similarity-penalty",),
+        yaml_aliases=(("limits", "legacy_similarity_penalty"),),
         help="应用于 raw/group-rank/simple-ratio 等模板的优先级惩罚",
     ),
     # ---- global.concurrency ----

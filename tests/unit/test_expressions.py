@@ -138,7 +138,7 @@ def test_build_expression_candidates_preserve_generated_metadata() -> None:
     template_library = {"default": []}
 
     build_ctx = TemplateBuildContext(
-        options=TemplateBuildOptions(**_DEFAULT_SIM_SETTINGS, legacy_similarity_penalty=0),
+        options=TemplateBuildOptions(**_DEFAULT_SIM_SETTINGS, similarity_penalty=0),
         all_fields=[field],
         template_library=template_library,
     )
@@ -173,7 +173,7 @@ def test_preset_mode_uses_template_library_as_closed_candidate_set() -> None:
         options=TemplateBuildOptions(
             **_DEFAULT_SIM_SETTINGS,
             dataset_id="fundamental6",
-            legacy_similarity_penalty=0,
+            similarity_penalty=0,
             preset_mode=True,
         ),
         all_fields=all_fields,
@@ -213,7 +213,7 @@ def test_candidate_generation_records_blacklist_reason(monkeypatch) -> None:
         options=TemplateBuildOptions(
             **_DEFAULT_SIM_SETTINGS,
             dataset_id="fundamental6",
-            legacy_similarity_penalty=0,
+            similarity_penalty=0,
             preset_mode=True,
         ),
         all_fields=[field],
@@ -245,7 +245,7 @@ def test_build_expression_candidates_skip_unsupported_grouping_fields() -> None:
     )
     field = {"id": "cash_st", "type": "MATRIX"}
     build_ctx = TemplateBuildContext(
-        options=TemplateBuildOptions(**_DEFAULT_SIM_SETTINGS, legacy_similarity_penalty=0),
+        options=TemplateBuildOptions(**_DEFAULT_SIM_SETTINGS, similarity_penalty=0),
         all_fields=[field],
         template_library={
             "default": [
@@ -311,7 +311,7 @@ def test_fundamental6_default_policy_does_not_auto_expand_financial_ratio_templa
     ]
 
     build_ctx = TemplateBuildContext(
-        options=TemplateBuildOptions(**_DEFAULT_SIM_SETTINGS, legacy_similarity_penalty=0),
+        options=TemplateBuildOptions(**_DEFAULT_SIM_SETTINGS, similarity_penalty=0),
         all_fields=all_fields,
         template_library_file="datasets/fundamental6/template.json",
         template_library={"default": []},
@@ -336,7 +336,7 @@ def test_fundamental6_default_template_library_is_closed_for_vector_fields() -> 
     template_library = load_template_library(str(template_file), default_backfill_window=504)
 
     build_ctx = TemplateBuildContext(
-        options=TemplateBuildOptions(**_DEFAULT_SIM_SETTINGS, legacy_similarity_penalty=0),
+        options=TemplateBuildOptions(**_DEFAULT_SIM_SETTINGS, similarity_penalty=0),
         all_fields=[field],
         template_library=template_library,
     )
@@ -411,7 +411,7 @@ def test_fundamental6_refine_vector_templates_do_not_double_wrap_vec_avg(
 
     build_ctx = TemplateBuildContext(
         options=TemplateBuildOptions(
-            **_DEFAULT_SIM_SETTINGS, dataset_id="fundamental6", legacy_similarity_penalty=0
+            **_DEFAULT_SIM_SETTINGS, dataset_id="fundamental6", similarity_penalty=0
         ),
         all_fields=[field],
         template_library_file=str(template_file),

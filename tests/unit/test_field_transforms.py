@@ -67,7 +67,7 @@ def test_build_expression_candidates_uses_preprocessed_raw_field_view() -> None:
     template_library = {"default": []}
     build_ctx = TemplateBuildContext(
         options=TemplateBuildOptions(
-            **_DEFAULT_SIM_SETTINGS, dataset_id="fundamental6", legacy_similarity_penalty=0
+            **_DEFAULT_SIM_SETTINGS, dataset_id="fundamental6", similarity_penalty=0
         ),
         all_fields=[{"id": "assets_curr", "type": "MATRIX"}],
         template_library=template_library,
@@ -99,7 +99,7 @@ def test_fundamental6_matrix_templates_use_preprocessed_field_view() -> None:
     )
     build_ctx = TemplateBuildContext(
         options=TemplateBuildOptions(
-            **_DEFAULT_SIM_SETTINGS, dataset_id="fundamental6", legacy_similarity_penalty=0
+            **_DEFAULT_SIM_SETTINGS, dataset_id="fundamental6", similarity_penalty=0
         ),
         all_fields=[{"id": "assets_curr", "type": "MATRIX"}],
         template_library=template_library,
@@ -126,7 +126,7 @@ def test_model16_templates_include_bucket_groups() -> None:
     )
     build_ctx = TemplateBuildContext(
         options=TemplateBuildOptions(
-            **_DEFAULT_SIM_SETTINGS, dataset_id="model16", legacy_similarity_penalty=0
+            **_DEFAULT_SIM_SETTINGS, dataset_id="model16", similarity_penalty=0
         ),
         all_fields=[{"id": "quality_score", "type": "MATRIX"}],
         template_library=template_library,
@@ -151,7 +151,7 @@ def test_model51_templates_include_bucket_groups() -> None:
     )
     build_ctx = TemplateBuildContext(
         options=TemplateBuildOptions(
-            **_DEFAULT_SIM_SETTINGS, dataset_id="model51", legacy_similarity_penalty=0
+            **_DEFAULT_SIM_SETTINGS, dataset_id="model51", similarity_penalty=0
         ),
         all_fields=[{"id": "market_beta", "type": "MATRIX"}],
         template_library=template_library,

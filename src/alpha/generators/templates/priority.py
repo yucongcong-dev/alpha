@@ -33,7 +33,7 @@ _SIMILARITY_PENALTY_OFFSETS: dict[str, int] = {
 
 def apply_similarity_penalty(
     templates: Sequence[TemplateCandidate | tuple[str, str, int]],
-    legacy_similarity_penalty: int,
+    similarity_penalty: int,
     *,
     metadata_by_key: TemplateMetadataMap | None = None,
 ) -> list[TemplateCandidate]:
@@ -42,7 +42,7 @@ def apply_similarity_penalty(
 
     Args:
         templates: 模板候选列表。
-        legacy_similarity_penalty: legacy 家族基础惩罚分数。
+        similarity_penalty: legacy 家族基础惩罚分数。
         metadata_by_key: 可选模板元数据索引。
 
     Returns:
@@ -57,7 +57,7 @@ def apply_similarity_penalty(
             template.metadata,
         )
         offset = _SIMILARITY_PENALTY_OFFSETS.get(family)
-        penalty = max(legacy_similarity_penalty - offset, 0) if offset is not None else 0
+        penalty = max(similarity_penalty - offset, 0) if offset is not None else 0
         penalized.append(
             _make_template_candidate(
                 template.name,

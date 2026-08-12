@@ -24,7 +24,7 @@ def test_similarity_penalty_uses_metadata_family() -> None:
     templates = [("custom_template", "rank(close)", 100)]
     penalized = apply_similarity_penalty(
         templates,
-        legacy_similarity_penalty=30,
+        similarity_penalty=30,
         metadata_by_key={("custom_template", "rank(close)"): {"family": "legacy_ratio"}},
     )
 
