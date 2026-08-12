@@ -33,6 +33,7 @@ FULL_CHECK_ORDER = (
     "arch-boundary",
     "todo",
     "dead-symbols",
+    "acl-boundary",
     "config-binding",
     "config-consistency",
     "strategy-tuning-keys",
@@ -84,6 +85,7 @@ def build_task_commands(
         "arch-boundary": (CheckCommand((*py, "scripts/check_repo.py", "arch-boundary")),),
         "todo": (CheckCommand((*py, "scripts/check_repo.py", "todo")),),
         "dead-symbols": (CheckCommand((*py, "scripts/check_repo.py", "dead-symbols")),),
+        "acl-boundary": (CheckCommand((*py, "scripts/check_repo.py", "acl-boundary")),),
         "config-binding": (CheckCommand((*py, "scripts/check_repo.py", "config-binding")),),
         "config-consistency": (CheckCommand((*py, "scripts/check_repo.py", "config-consistency")),),
         "strategy-tuning-keys": (

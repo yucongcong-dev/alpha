@@ -312,3 +312,44 @@ def test_config_binding_check_accepts_entrypoint_binding(tmp_path: Path) -> None
     main_file.write_text("def run_cli_entry() -> int:\n    return 0\n", encoding="utf-8")
 
     assert check_repo.config_binding_check(tmp_path) == []
+
+
+def test_acl_boundary_check_rejects_domain_construction_outside_acl(tmp_path: Path) -> None:
+    module_file = tmp_path / "src" / "alpha" / "app" / "run_loop.py"
+    module_file.parent.mkdir(parents=True)
+    module_file.write_text(
+        "def _convert(raw):\n    return FailedCheck(name=raw.get('name'))\n",
+        encoding="utf-8",
+    )
+
+    errors = check_repo.acl_boundary_check(tmp_path)
+
+    assert any("constructed outside the ACL" in error for error in errors)
+    assert any("src/alpha/app/run_loop.py:2" in error for error in errors)
+
+
+def test_acl_boundary_check_accepts_acl_module_construction(tmp_path: Path) -> None:
+    module_file = tmp_path / "src" / "alpha" / "models" / "domain_parsers.py"
+    module_file.parent.mkdir(parents=True)
+    module_file.write_text(
+        "def parse_failed_check(data):\n    return FailedCheck(name=str(data.get('name')))\n",
+        encoding="utf-8",
+    )
+
+    assert check_repo.acl_boundary_check(tmp_path) == []
+
+
+def test_acl_boundary_check_ignores_annotations_and_type_checks(tmp_path: Path) -> None:
+    module_file = tmp_path / "src" / "alpha" / "analysis" / "field_stats.py"
+    module_file.parent.mkdir(parents=True)
+    module_file.write_text(
+        "def count(results):\n"
+        "    total = 0\n"
+        "    for result in results:\n"
+        "        if isinstance(result, FieldTestResult):\n"
+        "            total += 1\n"
+        "    return total\n",
+        encoding="utf-8",
+    )
+
+    assert check_repo.acl_boundary_check(tmp_path) == []

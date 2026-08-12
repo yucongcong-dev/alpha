@@ -348,6 +348,63 @@ def dead_symbols_check(root: Path) -> list[str]:
     return []
 
 
+def acl_boundary_check(root: Path) -> list[str]:
+    """Domain dataclasses may only be constructed in anti-corruption modules.
+
+    Raw API/config payloads must enter the domain through the documented ACL
+    (models/domain_parsers.py, core/simulation_parsing.py,
+    analysis/results_loader.py, generators/templates/library_loader.py) plus the
+    domain-owned factories. New raw-to-domain conversions must extend one of
+    those modules instead of constructing domain types in arbitrary places.
+    """
+    import ast
+
+    domain_types = {
+        "FailedCheck",
+        "FieldTestResult",
+        "SettingsVariant",
+        "TemplateField",
+        "TemplateLibraryItem",
+        "FieldTestContext",
+        "TemplateCandidate",
+    }
+    allowed_modules = {
+        "src/alpha/models/domain.py",
+        "src/alpha/models/domain_parsers.py",
+        "src/alpha/core/simulation_parsing.py",
+        "src/alpha/core/simulation_results.py",
+        "src/alpha/core/simulation.py",
+        "src/alpha/analysis/results_loader.py",
+        "src/alpha/generators/templates/library_loader.py",
+        "src/alpha/generators/templates/candidates.py",
+        "src/alpha/app/bootstrap_field_selection.py",
+        "src/alpha/app/bootstrap_field_quality.py",
+        "src/alpha/app/planning.py",
+    }
+    errors: list[str] = []
+    for path in _iter_files(root, "src/alpha"):
+        if not path.name.endswith(".py"):
+            continue
+        rel = _relative(path, root)
+        if rel in allowed_modules:
+            continue
+        try:
+            tree = ast.parse(_read_text(path))
+        except SyntaxError:
+            continue
+        errors.extend(
+            f"{rel}:{node.lineno}: {node.func.id} constructed outside the ACL; "
+            "route raw payloads through models/domain_parsers.py or an existing ACL module"
+            for node in ast.walk(tree)
+            if isinstance(node, ast.Call)
+            and isinstance(node.func, ast.Name)
+            and node.func.id in domain_types
+        )
+    if errors:
+        return ["[check] domain types must only be constructed in ACL modules", *sorted(errors)]
+    return []
+
+
 def config_binding_check(root: Path) -> list[str]:
     """Only the CLI entrypoint may bind --config before importing alpha.main.
 
@@ -535,6 +592,7 @@ CHECKS: dict[str, Check] = {
     "arch-boundary": arch_boundary_check,
     "todo": todo_check,
     "dead-symbols": dead_symbols_check,
+    "acl-boundary": acl_boundary_check,
     "config-binding": config_binding_check,
     "config-consistency": config_consistency_check,
     "strategy-tuning-keys": strategy_tuning_keys_check,
