@@ -1,14 +1,17 @@
-"""Realistic Brain API simulation-response contract regression.
+"""Brain API response contract regressions driven by recorded snapshots.
 
-Freezes one representative poll response shape (as observed on the WorldQuant
-BRAIN simulate API) and pushes it through the full local parsing pipeline. If
-the platform renames a key or changes a state value, this test fails loudly
-instead of silently degrading parsing.
+The response payloads come from tests/unit/fixtures/worldquant_api_snapshots.json,
+which freezes representative WorldQuant BRAIN API shapes so a platform key
+rename or state change fails loudly instead of silently degrading parsing. The
+HTTP transport is still faked offline; the payloads it carries are the
+snapshots.
 """
 
 from __future__ import annotations
 
 from collections.abc import Iterable
+import json
+from pathlib import Path
 from typing import Any
 
 from alpha.api.alphas import BrainAlphasMixin
@@ -25,92 +28,52 @@ from alpha.core.simulation_parsing import (
 )
 from alpha.models.domain_parsers import parse_failed_check
 
-COMPLETED_RESPONSE = {
-    "status": "COMPLETED",
-    "progress": "1.0",
-    "alpha": "ALPHA_ID_CONTRACT_001",
-    "instrumentType": "EQUITY",
-    "region": "USA",
-    "universe": "TOP3000",
-    "delay": 1,
-    "neutralization": "SUBINDUSTRY",
-    "decay": 4,
-    "truncation": 0.08,
-    "pasteurization": "ON",
-    "unitHandling": "VERIFY",
-    "nanHandling": "OFF",
-    "is": {
-        "sharpe": 2.13,
-        "fitness": 1.41,
-        "turnover": 0.23,
-        "returns": 0.042,
-        "volatility": 0.021,
-        "maxdrawdown": -0.147,
-        "checks": [
-            {"name": "IS_SHARPE", "value": 2.13, "limit": 1.25, "result": "PASS"},
-            {"name": "IS_FITNESS", "value": 1.41, "limit": 1.0, "result": "PASS"},
-            {"name": "IS_TURNOVER", "value": 0.23, "limit": 0.70, "result": "PASS"},
-            {"name": "IS_LOW_SUB_UNIVERSE_SHARPE", "value": 1.12, "limit": 1.0, "result": "PASS"},
-            {"name": "IS_CONCENTRATED_WEIGHT", "value": 0.06, "limit": 0.10, "result": "PASS"},
-            {"name": "IS_HIGH_TURNOVER", "value": 0.23, "limit": 0.70, "result": "PASS"},
-        ],
-    },
-    "os": {"sharpe": 1.02, "fitness": 0.74},
-}
+_SNAPSHOT_PATH = Path(__file__).parent / "fixtures" / "worldquant_api_snapshots.json"
+_SNAPSHOTS = json.loads(_SNAPSHOT_PATH.read_text(encoding="utf-8"))
+
+
+def _snapshot(name: str) -> dict[str, Any]:
+    return _SNAPSHOTS[name]
+
+
+def _json_bytes(payload: dict[str, Any]) -> bytes:
+    return json.dumps(payload, ensure_ascii=False).encode("utf-8")
 
 
 def test_simulation_response_contract_lifecycle() -> None:
     """A completed Brain simulation response parses end to end."""
-    pending, status, progress = simulation_payload_is_pending(COMPLETED_RESPONSE)
+    completed = _snapshot("simulation_completed")
+    pending, status, progress = simulation_payload_is_pending(completed)
     assert pending is False
     assert status == "COMPLETED"
     assert progress == "1.0"
 
-    assert extract_alpha_id(COMPLETED_RESPONSE) == "ALPHA_ID_CONTRACT_001"
+    assert extract_alpha_id(completed) == "ALPHA_ID_CONTRACT_001"
 
-    assert extract_failed_checks(COMPLETED_RESPONSE) == []
+    assert extract_failed_checks(completed) == []
     all_checks = [
-        parse_failed_check(check)
-        for check in extract_checks(COMPLETED_RESPONSE)
-        if isinstance(check, dict)
+        parse_failed_check(check) for check in extract_checks(completed) if isinstance(check, dict)
     ]
     assert len(all_checks) == 6
     assert is_submittable_from_checks(all_checks) is True
 
-    metrics = extract_simulation_metrics(COMPLETED_RESPONSE)
+    metrics = extract_simulation_metrics(completed)
     assert metrics["sharpe"] == 2.13
     assert metrics["fitness"] == 1.41
     assert metrics["turnover"] == 0.23
     assert "checks" not in metrics
 
     # A PENDING poll response stays in the active waiting set.
-    pending_response = {
-        "status": "PENDING",
-        "progress": "0.0",
-        "stage": "Queued",
-        "queue_position": 3,
-    }
+    pending_response = _snapshot("simulation_pending")
     assert simulation_payload_is_pending(pending_response)[0] is True
     assert summarize_failure(pending_response) != ""
 
     # A terminal failure surfaces the platform detail message.
-    failed_response = {
-        "status": "ERROR",
-        "detail": "Expression is invalid: division by zero",
-    }
-    assert summarize_failure(failed_response) == "Expression is invalid: division by zero"
+    error_response = _snapshot("simulation_error")
+    assert summarize_failure(error_response) == "Expression is invalid: division by zero"
 
     # A FAIL check survives extraction and blocks submittability.
-    failing_response = {
-        "status": "COMPLETED",
-        "alpha": "ALPHA_ID_CONTRACT_002",
-        "is": {
-            "checks": [
-                {"name": "IS_SHARPE", "value": 0.9, "limit": 1.25, "result": "FAIL"},
-                {"name": "IS_FITNESS", "value": 0.8, "limit": 1.0, "result": "PASS"},
-            ]
-        },
-    }
+    failing_response = _snapshot("simulation_failing")
     failed = extract_failed_checks(failing_response)
     assert [check.name for check in failed] == ["IS_SHARPE"]
     assert is_submittable_from_checks(failed) is False
@@ -150,23 +113,7 @@ class _FakeFieldsClient(BrainFieldsMixin):
 
 def test_check_submission_response_contract() -> None:
     """A real check-submission response parses into pending/failed/submittable."""
-    client = _FakeAlphasClient(
-        [
-            (
-                200,
-                {},
-                (
-                    b'{"checks": ['
-                    b'{"name": "IS_SHARPE", "value": 2.05, "limit": 1.25, "result": "PASS"},'
-                    b'{"name": "IS_FITNESS", "value": 1.3, "limit": 1.0, "result": "PASS"},'
-                    b'{"name": "IS_CONCENTRATED_WEIGHT", "value": 0.12, "limit": 0.1, '
-                    b'"result": "FAIL"},'
-                    b'{"name": "IS_TURNOVER", "value": null, "limit": 0.7, "result": "PENDING"}'
-                    b"]}"
-                ),
-            ),
-        ]
-    )
+    client = _FakeAlphasClient([(200, {}, _json_bytes(_snapshot("check_submission")))])
 
     payload = client.check_alpha_submission("ALPHA_ID_CONTRACT_003")
     assert client.requests == [
@@ -183,45 +130,8 @@ def test_check_submission_response_contract() -> None:
 
 
 def test_fields_pagination_contract() -> None:
-    """Realistic data-fields pages paginate into the full field list."""
-    client = _FakeFieldsClient(
-        [
-            {
-                "results": [
-                    {
-                        "id": "f1",
-                        "name": "total_assets",
-                        "type": "MATRIX",
-                        "fieldType": "MATRIX",
-                        "category": "Fundamental",
-                        "mnemonic": "total_assets",
-                    },
-                    {
-                        "id": "f2",
-                        "name": "market_cap",
-                        "type": "MATRIX",
-                        "fieldType": "MATRIX",
-                        "category": "Fundamental",
-                        "mnemonic": "market_cap",
-                    },
-                ],
-                "count": 3,
-            },
-            {
-                "results": [
-                    {
-                        "id": "f3",
-                        "name": "book_value",
-                        "type": "MATRIX",
-                        "fieldType": "MATRIX",
-                        "category": "Fundamental",
-                        "mnemonic": "book_value",
-                    },
-                ],
-                "count": 3,
-            },
-        ]
-    )
+    """Recorded data-fields pages paginate into the full field list."""
+    client = _FakeFieldsClient(_snapshot("fields_pages"))
 
     rows = client.fetch_dataset_fields(
         "fundamental6",

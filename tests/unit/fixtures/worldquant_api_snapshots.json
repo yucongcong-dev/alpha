@@ -1,0 +1,98 @@
+{
+  "simulation_completed": {
+    "status": "COMPLETED",
+    "progress": "1.0",
+    "alpha": "ALPHA_ID_CONTRACT_001",
+    "instrumentType": "EQUITY",
+    "region": "USA",
+    "universe": "TOP3000",
+    "delay": 1,
+    "neutralization": "SUBINDUSTRY",
+    "decay": 4,
+    "truncation": 0.08,
+    "pasteurization": "ON",
+    "unitHandling": "VERIFY",
+    "nanHandling": "OFF",
+    "is": {
+      "sharpe": 2.13,
+      "fitness": 1.41,
+      "turnover": 0.23,
+      "returns": 0.042,
+      "volatility": 0.021,
+      "maxdrawdown": -0.147,
+      "checks": [
+        {"name": "IS_SHARPE", "value": 2.13, "limit": 1.25, "result": "PASS"},
+        {"name": "IS_FITNESS", "value": 1.41, "limit": 1.0, "result": "PASS"},
+        {"name": "IS_TURNOVER", "value": 0.23, "limit": 0.7, "result": "PASS"},
+        {"name": "IS_LOW_SUB_UNIVERSE_SHARPE", "value": 1.12, "limit": 1.0, "result": "PASS"},
+        {"name": "IS_CONCENTRATED_WEIGHT", "value": 0.06, "limit": 0.1, "result": "PASS"},
+        {"name": "IS_HIGH_TURNOVER", "value": 0.23, "limit": 0.7, "result": "PASS"}
+      ]
+    },
+    "os": {"sharpe": 1.02, "fitness": 0.74}
+  },
+  "simulation_pending": {
+    "status": "PENDING",
+    "progress": "0.0",
+    "stage": "Queued",
+    "queue_position": 3
+  },
+  "simulation_error": {
+    "status": "ERROR",
+    "detail": "Expression is invalid: division by zero"
+  },
+  "simulation_failing": {
+    "status": "COMPLETED",
+    "alpha": "ALPHA_ID_CONTRACT_002",
+    "is": {
+      "checks": [
+        {"name": "IS_SHARPE", "value": 0.9, "limit": 1.25, "result": "FAIL"},
+        {"name": "IS_FITNESS", "value": 0.8, "limit": 1.0, "result": "PASS"}
+      ]
+    }
+  },
+  "check_submission": {
+    "checks": [
+      {"name": "IS_SHARPE", "value": 2.05, "limit": 1.25, "result": "PASS"},
+      {"name": "IS_FITNESS", "value": 1.3, "limit": 1.0, "result": "PASS"},
+      {"name": "IS_CONCENTRATED_WEIGHT", "value": 0.12, "limit": 0.1, "result": "FAIL"},
+      {"name": "IS_TURNOVER", "value": null, "limit": 0.7, "result": "PENDING"}
+    ]
+  },
+  "fields_pages": [
+    {
+      "results": [
+        {
+          "id": "f1",
+          "name": "total_assets",
+          "type": "MATRIX",
+          "fieldType": "MATRIX",
+          "category": "Fundamental",
+          "mnemonic": "total_assets"
+        },
+        {
+          "id": "f2",
+          "name": "market_cap",
+          "type": "MATRIX",
+          "fieldType": "MATRIX",
+          "category": "Fundamental",
+          "mnemonic": "market_cap"
+        }
+      ],
+      "count": 3
+    },
+    {
+      "results": [
+        {
+          "id": "f3",
+          "name": "book_value",
+          "type": "MATRIX",
+          "fieldType": "MATRIX",
+          "category": "Fundamental",
+          "mnemonic": "book_value"
+        }
+      ],
+      "count": 3
+    }
+  ]
+}
