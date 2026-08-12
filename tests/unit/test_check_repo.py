@@ -275,3 +275,40 @@ def test_config_consistency_check_accepts_matching_overlap(tmp_path: Path) -> No
     )
 
     assert check_repo.config_consistency_check(tmp_path) == []
+
+
+def test_config_binding_check_rejects_module_level_binding(tmp_path: Path) -> None:
+    module_file = tmp_path / "src" / "alpha" / "config" / "yaml.py"
+    module_file.parent.mkdir(parents=True)
+    module_file.write_text(
+        "def _activate() -> None:\n    activate_config_from_argv()\n",
+        encoding="utf-8",
+    )
+
+    errors = check_repo.config_binding_check(tmp_path)
+
+    assert any("__main__.py" in error for error in errors)
+    assert any("src/alpha/config/yaml.py:2" in error for error in errors)
+
+
+def test_config_binding_check_rejects_non_entry_import_of_main(tmp_path: Path) -> None:
+    module_file = tmp_path / "src" / "alpha" / "app" / "tool.py"
+    module_file.parent.mkdir(parents=True)
+    module_file.write_text("from alpha.main import run_cli_entry\n", encoding="utf-8")
+
+    errors = check_repo.config_binding_check(tmp_path)
+
+    assert any("alpha.main may only be imported" in error for error in errors)
+
+
+def test_config_binding_check_accepts_entrypoint_binding(tmp_path: Path) -> None:
+    entry_file = tmp_path / "src" / "alpha" / "__main__.py"
+    entry_file.parent.mkdir(parents=True)
+    entry_file.write_text(
+        "def _bind_active_config() -> None:\n    activate_config_from_argv()\n",
+        encoding="utf-8",
+    )
+    main_file = tmp_path / "src" / "alpha" / "main.py"
+    main_file.write_text("def run_cli_entry() -> int:\n    return 0\n", encoding="utf-8")
+
+    assert check_repo.config_binding_check(tmp_path) == []

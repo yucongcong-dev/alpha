@@ -495,7 +495,12 @@ def test_cli_config_is_bound_before_yaml_backed_constants_import(tmp_path) -> No
     """The CLI settings file must govern both constants and runtime snapshots."""
     config_path = tmp_path / "settings.yaml"
     config_path.write_text(
-        "global:\n  http:\n    simulation_retry_wait: 12.5\n",
+        "global:\n"
+        "  quality:\n"
+        "    submit:\n"
+        "      min_fitness: 1.35\n"
+        "  http:\n"
+        "    simulation_retry_wait: 12.5\n",
         encoding="utf-8",
     )
     script = """
@@ -504,9 +509,9 @@ sys.argv = ["alpha", "--config", sys.argv[1]]
 from alpha.__main__ import _bind_active_config
 _bind_active_config()
 import alpha.main
-from alpha.config._constants_api import SIMULATION_RETRY_WAIT
+from alpha.config._constants_thresholds import SUBMIT_MIN_FITNESS
 from alpha.config.runtime_values import get_runtime_config
-assert SIMULATION_RETRY_WAIT == 12.5
+assert SUBMIT_MIN_FITNESS == 1.35
 assert get_runtime_config().http.simulation_retry_wait == 12.5
 """
 
@@ -598,3 +603,54 @@ def test_load_http_runtime_config_rejects_non_finite_values(
 
     with pytest.raises(ValueError, match=rf"http\.{key} must be finite"):
         load_http_runtime_config()
+
+
+def test_no_yaml_key_read_by_both_runtime_and_import_time_paths() -> None:
+    """Every YAML key must have exactly one reader.
+
+    runtime_values.get_runtime_config() is the only runtime reader of http.*
+    and feedback.feedback_template_min_priority; the import-time constants in
+    config/_constants_*.py must not read the same flat keys, otherwise the two
+    paths can disagree about one setting. The key set mirrors
+    runtime_values.py's HttpRuntimeConfig and load_feedback_template_min_priority.
+    """
+    import ast
+    from pathlib import Path
+
+    runtime_keys = {
+        ("http", "request_timeout"),
+        ("http", "rate_limit_default_wait"),
+        ("http", "polling_default_wait"),
+        ("http", "polling_no_retry_after_wait"),
+        ("http", "server_error_backoff_max"),
+        ("http", "server_error_backoff_step"),
+        ("http", "retry_operation_default_wait"),
+        ("http", "login_retry_wait"),
+        ("http", "simulation_retry_wait"),
+        ("http", "polling_retry_buffer"),
+        ("feedback", "feedback_template_min_priority"),
+    }
+
+    root = Path(__file__).resolve().parents[2]
+    constant_keys: set[tuple[str, ...]] = set()
+    for module_path in (root / "src" / "alpha" / "config").glob("_constants*.py"):
+        tree = ast.parse(module_path.read_text(encoding="utf-8"))
+        for node in ast.walk(tree):
+            if (
+                isinstance(node, ast.Call)
+                and isinstance(node.func, ast.Name)
+                and node.func.id.startswith("_yaml")
+            ):
+                key_args = tuple(
+                    arg.value
+                    for arg in node.args
+                    if isinstance(arg, ast.Constant) and isinstance(arg.value, str)
+                )
+                if key_args:
+                    constant_keys.add(key_args)
+
+    overlap = sorted(runtime_keys & constant_keys)
+    assert overlap == [], (
+        "YAML keys read by both runtime_values and import-time constants: "
+        f"{overlap}; each key must have a single reader"
+    )

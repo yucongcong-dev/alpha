@@ -348,6 +348,45 @@ def dead_symbols_check(root: Path) -> list[str]:
     return []
 
 
+def config_binding_check(root: Path) -> list[str]:
+    """Only the CLI entrypoint may bind --config before importing alpha.main.
+
+    Import-time YAML-backed constants resolve against whichever config is active
+    when their module first loads, so the explicit settings file must be bound
+    in src/alpha/__main__.py before alpha.main is imported. A module-level
+    activate_config_from_argv() anywhere else re-introduces the import side
+    effect this check exists to prevent.
+    """
+    binding_pattern = re.compile(r"activate_config_from_argv\(\)")
+    entry_files = (
+        path
+        for path in _iter_files(root, "src/alpha")
+        if path.name != "__main__.py" and path.suffix == ".py"
+    )
+    errors: list[str] = []
+    matches = _line_matches(root, entry_files, binding_pattern)
+    if matches:
+        errors.append(
+            "[check] --config binding must happen only in src/alpha/__main__.py; "
+            "module-level activate_config_from_argv() re-introduces import side effects"
+        )
+        errors.extend(matches)
+
+    main_import_pattern = re.compile(r"from alpha\.main import|import alpha\.main")
+    non_entry_files = (
+        path
+        for path in _iter_files(root, "src/alpha")
+        if path.name not in {"__main__.py", "main.py"} and path.suffix == ".py"
+    )
+    matches = _line_matches(root, non_entry_files, main_import_pattern)
+    if matches:
+        errors.append(
+            "[check] alpha.main may only be imported from the CLI entrypoint src/alpha/__main__.py"
+        )
+        errors.extend(matches)
+    return errors
+
+
 def config_consistency_check(root: Path) -> list[str]:
     """Validate that settings.yaml global.* mirrors overlapping flat defaults.
 
@@ -496,6 +535,7 @@ CHECKS: dict[str, Check] = {
     "arch-boundary": arch_boundary_check,
     "todo": todo_check,
     "dead-symbols": dead_symbols_check,
+    "config-binding": config_binding_check,
     "config-consistency": config_consistency_check,
     "strategy-tuning-keys": strategy_tuning_keys_check,
 }

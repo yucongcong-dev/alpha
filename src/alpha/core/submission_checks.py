@@ -8,8 +8,8 @@ import logging
 from ..api.api_types import SimulationPayload
 from ..api.client import BrainClient, retry_operation
 from ..api.timing import wait_seconds
-from ..config._constants_api import SIMULATION_RETRY_WAIT
 from ..config._constants_strings import STATUS_SKIPPED
+from ..config.runtime_values import get_runtime_config
 from ..exceptions import BrainAPIError, BrainHTTPError, BrainStopRequested
 from ..models.domain import FailedCheck, FieldTestContext, FieldTestResult
 from ..models.domain_parsers import parse_failed_check
@@ -47,7 +47,7 @@ def check_submission_with_retry(
                 "check submission",
                 _CHECK_SUBMISSION_TRANSPORT_RETRIES,
                 lambda: client.check_alpha_submission(alpha_id),
-                retry_wait_seconds=SIMULATION_RETRY_WAIT,
+                retry_wait_seconds=get_runtime_config().http.simulation_retry_wait,
                 should_abort=should_abort,
             )
         except BrainStopRequested:
@@ -66,7 +66,7 @@ def check_submission_with_retry(
             )
             if attempt < attempts:
                 wait_seconds(
-                    SIMULATION_RETRY_WAIT,
+                    get_runtime_config().http.simulation_retry_wait,
                     f"waiting for submission checks for alpha {alpha_id}",
                     verbose=False,
                     should_abort=should_abort,
@@ -83,7 +83,7 @@ def check_submission_with_retry(
             )
             if attempt < attempts:
                 wait_seconds(
-                    SIMULATION_RETRY_WAIT,
+                    get_runtime_config().http.simulation_retry_wait,
                     f"waiting for submission checks for alpha {alpha_id}",
                     verbose=False,
                     should_abort=should_abort,
@@ -120,7 +120,7 @@ def check_submission_with_retry(
             return last_result
         if attempt < attempts:
             wait_seconds(
-                SIMULATION_RETRY_WAIT,
+                get_runtime_config().http.simulation_retry_wait,
                 f"waiting for submission checks for alpha {alpha_id}",
                 verbose=False,
                 should_abort=should_abort,

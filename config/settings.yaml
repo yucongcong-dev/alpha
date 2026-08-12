@@ -156,8 +156,8 @@ global:
   # --------------------------------------------------------------------------
   # 控制底层 HTTP 请求的超时、退避和等待策略。仅在客户端模块使用。
   http:
-    # 与 config/constants_defaults.yaml 的 http.* 保持一致；这里调整时必须同步
-    # 修改默认值文件，scripts/check_repo.py config-consistency 会强制校验。
+    # http.* 的唯一 YAML 配置源；代码回退默认值见
+    # src/alpha/config/runtime_values.py::_HTTP_DEFAULTS。
     request_timeout: 90.0               # HTTP 请求默认超时 (秒)
     rate_limit_default_wait: 10.0       # 限流触发后默认等待 (秒)
     polling_default_wait: 5.0           # 轮询默认间隔 (秒)

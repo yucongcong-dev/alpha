@@ -7,13 +7,13 @@ import logging
 
 from ..api.api_types import SimulationPayload
 from ..api.client import BrainClient, retry_operation
-from ..config._constants_api import SIMULATION_RETRY_WAIT
 from ..config._constants_strings import (
     API_KEY_PROGRESS,
     API_KEY_STATE,
     API_KEY_STATUS,
     STATUS_SKIPPED,
 )
+from ..config.runtime_values import get_runtime_config
 from ..exceptions import BrainStopRequested
 from ..models.domain import FieldTestContext, FieldTestResult
 from ..models.runtime_config import SimulationStageConfig
@@ -46,7 +46,7 @@ def poll_simulation_with_retry(
             max_queue_seconds=max_queue_seconds,
             should_abort=should_abort,
         ),
-        retry_wait_seconds=SIMULATION_RETRY_WAIT,
+        retry_wait_seconds=get_runtime_config().http.simulation_retry_wait,
         should_abort=should_abort,
     )
 

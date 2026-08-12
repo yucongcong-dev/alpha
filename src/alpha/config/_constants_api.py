@@ -1,13 +1,12 @@
-"""API 端点 + HTTP 超时 + 响应头常量。
+"""API 端点与响应头常量。
 
-来源: config/constants_defaults.yaml 的 api.* / http.* 段。
+来源: config/constants_defaults.yaml 的 api.* 段。
 """
 
 from __future__ import annotations
 
 from ._constants_core import (
     _yaml_dict,
-    _yaml_float,
     _yaml_int,
     _yaml_str,
 )
@@ -43,6 +42,3 @@ VERSION_HEADER: dict[str, str] = _yaml_dict(
 SIM_ACCEPT_HEADER: dict[str, str] = _yaml_dict(
     "api", "headers", "simulation", default={"Accept": "application/json;version=3.0"}
 )
-
-# ---- HTTP 客户端超时 ----
-SIMULATION_RETRY_WAIT: float = _yaml_float("http", "simulation_retry_wait", default=3.0)
