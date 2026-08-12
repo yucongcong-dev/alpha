@@ -29,13 +29,36 @@ def _dataset_runtime_targets(project_root: Path, config: CleanConfig) -> list[Pa
     ]
 
 
+def _dataset_lock_files(project_root: Path, config: CleanConfig) -> list[Path]:
+    """Return advisory lock files left at dataset roots by file transactions."""
+    datasets_dir = project_root / "datasets"
+    if not datasets_dir.is_dir():
+        return []
+
+    if config.dataset_id:
+        dataset_dirs = [datasets_dir / sanitize_dataset_id_for_filename(config.dataset_id)]
+    else:
+        dataset_dirs = [
+            path for path in datasets_dir.iterdir() if path.is_dir() and not path.is_symlink()
+        ]
+
+    return [
+        lock_file
+        for dataset_dir in dataset_dirs
+        for lock_file in dataset_dir.glob("*.lock")
+        if lock_file.is_file()
+    ]
+
+
 def clean_runtime_artifacts(
     config: CleanConfig,
     *,
     project_root: Path = PROJECT_ROOT,
 ) -> int:
     """Remove local runtime artifacts while preserving encrypted credentials by default."""
-    targets = _dataset_runtime_targets(project_root, config)
+    targets = _dataset_runtime_targets(project_root, config) + _dataset_lock_files(
+        project_root, config
+    )
     if not config.dataset_id:
         targets.extend(
             [
