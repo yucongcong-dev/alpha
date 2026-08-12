@@ -6,15 +6,65 @@ from concurrent.futures import ThreadPoolExecutor
 import logging
 
 from ..config.application import ApplicationConfig
+from ..models.domain import TemplateField
 from ..models.runtime_options import RunLoopOptions
+from ..runtime.concurrency import RuntimeConcurrencyState
 from ..runtime.contexts import CheckpointIdentity
-from ..runtime.state import InitializedRunContext
+from ..runtime.state import ExecutionState, InitializedRunContext
 from . import loop_future_support, run_loop_contexts, run_loop_resume, run_loop_rounds
 from .run_loop_seed_phase import SeedPhaseState
 
 logger = logging.getLogger(__name__)
 
 INTERRUPT_METADATA_WAIT_SECONDS = 15.0
+
+
+def _stop_workers_and_save_checkpoint(
+    *,
+    executor: ThreadPoolExecutor,
+    wait_for_workers: bool,
+    execution_state: ExecutionState,
+    runtime_state: RuntimeConcurrencyState,
+    identity: CheckpointIdentity,
+    state_file: str,
+    interrupt_report_file: str,
+    last_field_id: str,
+    fields: list[TemplateField],
+    reason: str,
+) -> None:
+    """Stop pending work, stabilize resumable metadata, and persist recovery state."""
+    execution_state.future_queue.stop_signal.set()
+    cancelled = loop_future_support.cancel_unstarted_futures(execution_state)
+    executor.shutdown(wait=wait_for_workers, cancel_futures=True)
+    unresolved_metadata = 0
+    if not wait_for_workers:
+        unresolved_metadata = loop_future_support.wait_for_inflight_simulation_metadata(
+            execution_state,
+            timeout_seconds=INTERRUPT_METADATA_WAIT_SECONDS,
+        )
+    resumable = sum(
+        1
+        for pending in execution_state.future_queue.pending_futures.values()
+        if pending.simulation_location
+    )
+    logger.warning(
+        "[abort] workers stopped reason=%s cancelled=%d resumable=%d unresolved_metadata=%d",
+        reason,
+        cancelled,
+        resumable,
+        unresolved_metadata,
+    )
+    run_loop_resume.save_runtime_checkpoint(
+        state_file=state_file,
+        interrupt_report_file=interrupt_report_file,
+        completed_field_index=0,
+        execution_state=execution_state,
+        runtime_state=runtime_state,
+        identity=identity,
+        last_field_id=last_field_id,
+        fields=fields,
+        reason=reason,
+    )
 
 
 def run_field_test_loop(
@@ -144,61 +194,34 @@ def run_field_test_loop(
                 completion_ctx=completion_ctx,
             )
         except KeyboardInterrupt:
-            execution_state.future_queue.stop_signal.set()
-            cancelled = loop_future_support.cancel_unstarted_futures(execution_state)
-            executor.shutdown(wait=False, cancel_futures=True)
-            executor_shutdown = True
-            unresolved_metadata = loop_future_support.wait_for_inflight_simulation_metadata(
-                execution_state,
-                timeout_seconds=INTERRUPT_METADATA_WAIT_SECONDS,
-            )
-            logger.warning(
-                "[abort] stopping workers cancelled=%d resumable=%d unresolved_metadata=%d",
-                cancelled,
-                sum(
-                    1
-                    for pending in execution_state.future_queue.pending_futures.values()
-                    if pending.simulation_location
-                ),
-                unresolved_metadata,
-            )
-            run_loop_resume.save_runtime_checkpoint(
-                state_file=state_file,
-                interrupt_report_file=interrupt_report_file,
-                completed_field_index=0,
+            _stop_workers_and_save_checkpoint(
+                executor=executor,
+                wait_for_workers=False,
                 execution_state=execution_state,
                 runtime_state=runtime_state,
                 identity=checkpoint_identity,
+                state_file=state_file,
+                interrupt_report_file=interrupt_report_file,
                 last_field_id=last_field_id,
                 fields=fields,
                 reason="KeyboardInterrupt",
             )
+            executor_shutdown = True
             raise
         except Exception:
-            execution_state.future_queue.stop_signal.set()
-            cancelled = loop_future_support.cancel_unstarted_futures(execution_state)
-            executor.shutdown(wait=True, cancel_futures=True)
-            executor_shutdown = True
-            logger.warning(
-                "[abort] workers stopped after runtime exception cancelled=%d resumable=%d",
-                cancelled,
-                sum(
-                    1
-                    for pending in execution_state.future_queue.pending_futures.values()
-                    if pending.simulation_location
-                ),
-            )
-            run_loop_resume.save_runtime_checkpoint(
-                state_file=state_file,
-                interrupt_report_file=interrupt_report_file,
-                completed_field_index=0,
+            _stop_workers_and_save_checkpoint(
+                executor=executor,
+                wait_for_workers=True,
                 execution_state=execution_state,
                 runtime_state=runtime_state,
                 identity=checkpoint_identity,
+                state_file=state_file,
+                interrupt_report_file=interrupt_report_file,
                 last_field_id=last_field_id,
                 fields=fields,
                 reason="Exception",
             )
+            executor_shutdown = True
             raise
     finally:
         if not executor_shutdown:
