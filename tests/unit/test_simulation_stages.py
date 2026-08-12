@@ -301,3 +301,45 @@ def test_check_submission_stage_success_and_error() -> None:
     assert isinstance(error, FieldTestResult)
     assert error.failed_stage == "check_submission"
     assert error.alpha_id == "alpha-1"
+
+
+def test_create_stage_error_records_concrete_exception_type() -> None:
+    with (
+        patch(
+            "alpha.core.simulation_create.build_simulation_payload",
+            return_value={"settings": {}, "regular": "rank(f1)"},
+        ),
+        patch(
+            "alpha.core.simulation_create.create_simulation_with_retry",
+            side_effect=RuntimeError("create failed"),
+        ),
+    ):
+        result = create_stages.run_simulation_create_stage(
+            _context(),
+            client=object(),  # type: ignore[arg-type]
+            config=build_simulation_stage_config(simulation_create_retries=2),
+        )
+
+    assert isinstance(result, FieldTestResult)
+    assert result.error_type == "RuntimeError"
+
+
+def test_error_type_round_trips_through_persistence_shape() -> None:
+    from alpha.analysis.results_loader import _rows_to_results
+    from alpha.core.simulation_results import handle_stage_error
+    from alpha.exceptions import BrainRateLimitError
+    from alpha.models.domain_serializers import serialize_field_test_result
+
+    result = handle_stage_error(
+        _context(),
+        "simulation",
+        BrainRateLimitError("rate limited", retry_after=9),
+        simulation_id="sim-1",
+    )
+
+    row = serialize_field_test_result(result)
+    assert row["error_type"] == "BrainRateLimitError"
+
+    parsed = _rows_to_results([dict(row)], source="test")[0]
+    assert parsed.error_type == "BrainRateLimitError"
+    assert parsed.failed_stage == "simulation"

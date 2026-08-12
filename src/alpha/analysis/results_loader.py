@@ -100,6 +100,7 @@ def _rows_to_results(rows: list[Any], *, source: str) -> list[FieldTestResult]:
                     updated_at=str(row.get("updated_at", "")),
                     revision=max(1, int(row.get("revision", 1) or 1)),
                     failed_stage=row.get("failed_stage"),
+                    error_type=str(row.get("error_type", "")),
                     failed_checks=[
                         parse_failed_check(check)
                         for check in row.get("failed_checks", [])

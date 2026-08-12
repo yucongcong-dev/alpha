@@ -34,6 +34,7 @@ def build_failure_result(
     failed_checks: Sequence[FailedCheck | dict[str, Any]] | None = None,
     settings: dict[str, Any] | None = None,
     metrics: dict[str, Any] | None = None,
+    error_type: str = "",
 ) -> FieldTestResult:
     return FieldTestResult(
         field_id=field_id,
@@ -57,6 +58,7 @@ def build_failure_result(
         metrics=dict(metrics or {}),
         failed_stage=failed_stage,
         failed_checks=coerce_failed_checks(failed_checks),
+        error_type=error_type,
     )
 
 
@@ -75,6 +77,7 @@ def handle_stage_error(
         message=str(exc),
         simulation_id=simulation_id,
         alpha_id=alpha_id,
+        error_type=type(exc).__qualname__,
     )
 
 

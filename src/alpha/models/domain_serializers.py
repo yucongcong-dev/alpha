@@ -98,6 +98,7 @@ def serialize_field_test_result(result: FieldTestResult) -> ResultRow:
         "updated_at": result.updated_at,
         "revision": result.revision,
         "failed_stage": result.failed_stage,
+        "error_type": result.error_type,
         "failed_checks": (
             [serialize_failed_check(check) for check in result.failed_checks]
             if result.failed_checks

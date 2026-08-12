@@ -126,6 +126,7 @@ class FieldTestResult:
     revision: int = 1
     failed_stage: str | None = None
     failed_checks: list[FailedCheck] | None = None
+    error_type: str = ""
 
     def __str__(self) -> str:
         status_symbol = "✓" if self.submittable else "✗"
@@ -186,6 +187,7 @@ class FieldTestContext:
         status: str = STATUS_ERROR,
         failed_checks: Sequence[FailedCheck] | None = None,
         metrics: dict[str, Any] | None = None,
+        error_type: str = "",
     ) -> FieldTestResult:
         return FieldTestResult(
             field_id=self.field_id,
@@ -209,6 +211,7 @@ class FieldTestContext:
             metrics=dict(self.metrics if metrics is None else metrics),
             failed_stage=failed_stage,
             failed_checks=list(failed_checks or []),
+            error_type=error_type,
         )
 
     def success(
