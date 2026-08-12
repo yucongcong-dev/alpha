@@ -100,15 +100,26 @@ def test_yaml_global_defaults_respect_explicit_cli() -> None:
     assert target.limit == 50
 
 
-def test_runtime_config_sections_consume_every_setting_dest() -> None:
-    """每个设置 dest 都必须被运行时配置 section 消费（第三腿契约）。"""
-    section_source = (ROOT / "src/alpha/config/application_sections.py").read_text(encoding="utf-8")
-    cli_derived = {"run_mode"}  # CLI 边界推导字段，由 cli/arg_resolution 消费
-    missing = [
-        spec.dest
-        for spec in SETTINGS
-        if spec.dest not in cli_derived and spec.dest not in section_source
-    ]
+OPTIONAL_YAML_KEYS = {"start_date", "end_date"}
+
+
+def test_repo_settings_yaml_declares_every_mirrored_setting() -> None:
+    """config/settings.yaml 必须声明每个 YAML 镜像设置，防止误删后静默回退到兜底值。"""
+    import yaml
+
+    settings_path = ROOT / "config" / "settings.yaml"
+    data = yaml.safe_load(settings_path.read_text(encoding="utf-8"))
+    global_cfg = data.get("global", {}) if isinstance(data, dict) else {}
+    missing = []
+    for spec in yaml_default_settings():
+        if spec.dest in OPTIONAL_YAML_KEYS:
+            continue
+        assert spec.yaml is not None
+        section = global_cfg
+        for part in spec.yaml[:-1]:
+            section = section.get(part, {}) if isinstance(section, dict) else {}
+        if not isinstance(section, dict) or spec.yaml[-1] not in section:
+            missing.append((spec.dest, ".".join(spec.yaml)))
     assert missing == []
 
 
