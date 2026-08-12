@@ -75,7 +75,8 @@ def test_main_activates_custom_config_before_yaml_backed_constants(tmp_path) -> 
         [
             sys.executable,
             "-c",
-            "import alpha.main; "
+            "from alpha.__main__ import _bind_active_config; "
+            "_bind_active_config(); "
             "from alpha.config._constants_strings import STATUS_ERROR; "
             "print(STATUS_ERROR)",
             "--config",
@@ -88,6 +89,38 @@ def test_main_activates_custom_config_before_yaml_backed_constants(tmp_path) -> 
     )
 
     assert completed.stdout.strip() == "custom_error_status"
+
+
+def test_importing_main_alone_has_no_argv_side_effect(tmp_path) -> None:
+    """Importing alpha.main must not scan sys.argv or bind a custom config."""
+    config_path = tmp_path / "custom-settings.yaml"
+    config_path.write_text(
+        "global:\n  strings:\n    status:\n      error: custom_error_status\n",
+        encoding="utf-8",
+    )
+    project_root = Path(__file__).resolve().parents[2]
+    env = dict(os.environ)
+    env["PYTHONPATH"] = os.pathsep.join(
+        filter(None, [str(project_root / "src"), env.get("PYTHONPATH", "")])
+    )
+
+    completed = subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            "import alpha.main; "
+            "from alpha.config._constants_strings import STATUS_ERROR; "
+            "print(STATUS_ERROR)",
+            "--config",
+            str(config_path),
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+        env=env,
+    )
+
+    assert completed.stdout.strip() == "error"
 
 
 def test_main_routes_dry_run_around_runtime_bootstrap_and_finalize(monkeypatch) -> None:

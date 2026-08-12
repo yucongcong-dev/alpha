@@ -4,10 +4,6 @@ from __future__ import annotations
 
 import logging
 
-from .config.yaml import activate_config_from_argv
-
-activate_config_from_argv()
-
 from .app import bootstrap, finalize, planning, run_lock, run_loop  # noqa: E402
 from .cli import filters as cli_filters  # noqa: E402
 from .cli import parser  # noqa: E402

@@ -19,8 +19,24 @@ def _python_version_supported() -> bool:
     return sys.version_info >= (3, 10)
 
 
+def _bind_active_config() -> None:
+    """Bind ``--config`` before importing modules with YAML-backed constants.
+
+    Import-time constants in ``alpha.config._constants_*`` read the merged YAML
+    when their module first loads, so the explicit settings file must be bound
+    before ``alpha.main`` (and the modules it imports) is imported. Keeping this
+    in the CLI entrypoint means ``import alpha.main`` itself has no argv side
+    effect.
+    """
+    from .config.yaml import activate_config_from_argv
+
+    activate_config_from_argv()
+
+
 def _run_supported_cli() -> int:
     """Import the Python 3.10+ application only after the version guard passes."""
+    _bind_active_config()
+
     import coloredlogs
 
     from .main import run_cli_entry

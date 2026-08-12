@@ -501,6 +501,8 @@ def test_cli_config_is_bound_before_yaml_backed_constants_import(tmp_path) -> No
     script = """
 import sys
 sys.argv = ["alpha", "--config", sys.argv[1]]
+from alpha.__main__ import _bind_active_config
+_bind_active_config()
 import alpha.main
 from alpha.config._constants_api import SIMULATION_RETRY_WAIT
 from alpha.config.runtime_values import get_runtime_config
