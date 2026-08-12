@@ -348,6 +348,65 @@ def dead_symbols_check(root: Path) -> list[str]:
     return []
 
 
+def config_consistency_check(root: Path) -> list[str]:
+    """Validate that settings.yaml global.* mirrors overlapping flat defaults.
+
+    Import-time constants and runtime values resolve the same logical keys
+    through different YAML layers (the global.* override wins over the flat
+    defaults). Keys present in both layers must stay identical so the shadowed
+    default cannot silently drift from the effective setting.
+    """
+    import yaml  # delayed import to keep check_repo.py self-contained
+
+    def _flatten(d: object, prefix: str = "") -> dict[str, object]:
+        out: dict[str, object] = {}
+        if not isinstance(d, dict):
+            return out
+        for key, value in d.items():
+            full_key = f"{prefix}{key}"
+            if isinstance(value, dict):
+                out.update(_flatten(value, f"{full_key}."))
+            else:
+                out[full_key] = value
+        return out
+
+    settings_path = root / "config" / "settings.yaml"
+    if not settings_path.is_file():
+        return []
+    try:
+        settings = yaml.safe_load(settings_path.read_text(encoding="utf-8")) or {}
+    except Exception as exc:
+        return [f"[check] failed to parse settings.yaml: {exc}"]
+    global_section = settings.get("global")
+    if not isinstance(global_section, dict):
+        return []
+    settings_leaves = _flatten(global_section)
+
+    defaults_leaves: dict[str, object] = {}
+    for name in ("constants_defaults.yaml", "quality_feedback.yaml", "templates.yaml"):
+        config_file = root / "config" / name
+        if not config_file.is_file():
+            continue
+        try:
+            data = yaml.safe_load(config_file.read_text(encoding="utf-8"))
+        except Exception:
+            continue
+        if isinstance(data, dict):
+            defaults_leaves.update(_flatten(data))
+
+    errors: list[str] = []
+    for key in sorted(settings_leaves.keys() & defaults_leaves.keys()):
+        settings_value = settings_leaves[key]
+        defaults_value = defaults_leaves[key]
+        if settings_value != defaults_value:
+            errors.append(
+                f"[check] config key '{key}' differs between settings.yaml global.* "
+                f"({settings_value!r}) and flat defaults ({defaults_value!r}); "
+                "update both files to keep the effective value and fallback in sync"
+            )
+    return errors
+
+
 def strategy_tuning_keys_check(root: Path) -> list[str]:
     """Validate that every tuning_key in strategy_profiles.yaml resolves to a real config path."""
     import yaml  # delayed import to keep check_repo.py self-contained for non-yaml checks
@@ -437,6 +496,7 @@ CHECKS: dict[str, Check] = {
     "arch-boundary": arch_boundary_check,
     "todo": todo_check,
     "dead-symbols": dead_symbols_check,
+    "config-consistency": config_consistency_check,
     "strategy-tuning-keys": strategy_tuning_keys_check,
 }
 

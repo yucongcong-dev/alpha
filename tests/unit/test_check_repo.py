@@ -242,3 +242,36 @@ def test_dead_symbols_check_counts_attribute_references(tmp_path: Path) -> None:
     errors = check_repo.dead_symbols_check(tmp_path)
 
     assert errors == []
+
+
+def test_config_consistency_check_rejects_divergent_overlap(tmp_path: Path) -> None:
+    config_dir = tmp_path / "config"
+    config_dir.mkdir(parents=True)
+    (config_dir / "settings.yaml").write_text(
+        "global:\n  http:\n    polling_retry_buffer: 1.0\n",
+        encoding="utf-8",
+    )
+    (config_dir / "constants_defaults.yaml").write_text(
+        "http:\n  polling_retry_buffer: 0.5\n",
+        encoding="utf-8",
+    )
+
+    errors = check_repo.config_consistency_check(tmp_path)
+
+    assert any("polling_retry_buffer" in error for error in errors)
+    assert any("settings.yaml global.*" in error for error in errors)
+
+
+def test_config_consistency_check_accepts_matching_overlap(tmp_path: Path) -> None:
+    config_dir = tmp_path / "config"
+    config_dir.mkdir(parents=True)
+    (config_dir / "settings.yaml").write_text(
+        "global:\n  http:\n    polling_retry_buffer: 1.0\n",
+        encoding="utf-8",
+    )
+    (config_dir / "constants_defaults.yaml").write_text(
+        "http:\n  polling_retry_buffer: 1.0\n",
+        encoding="utf-8",
+    )
+
+    assert check_repo.config_consistency_check(tmp_path) == []
