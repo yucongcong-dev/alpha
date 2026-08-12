@@ -14,6 +14,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 import logging
+import os
 import time
 from typing import Any
 
@@ -26,9 +27,6 @@ from . import checkpoint_loading as _loading
 from . import checkpoint_payloads as _payloads
 
 __all__ = [
-    "_non_negative_int",
-    "_restore_pending_simulations",
-    "delete_pipeline_state",
     "load_pipeline_state",
     "save_interrupt_report",
     "save_pipeline_state",
@@ -37,14 +35,6 @@ __all__ = [
 logger = logging.getLogger(__name__)
 
 STATE_VERSION = 3
-os = _files.os
-
-_all_pending_contexts = _payloads.all_pending_contexts
-_atomic_save = _files.atomic_save
-delete_pipeline_state = _files.delete_pipeline_state
-_non_negative_int = _payloads.non_negative_int
-_restore_pending_simulations = _payloads.restore_pending_simulations
-_serialize_pending_simulations = _payloads.serialize_pending_simulations
 
 
 # ============================================================================
@@ -91,7 +81,7 @@ def save_pipeline_state(
         "run_fingerprint": identity.run_fingerprint,
         "completed_field_index": completed_field_index,
         "last_field_id": field_id,
-        "pending_simulations": _serialize_pending_simulations(execution_state),
+        "pending_simulations": _payloads.serialize_pending_simulations(execution_state),
         "runtime_max_workers": runtime_state.runtime_max_workers,
         "remaining_cooldown_seconds": round(remaining_cooldown, 3),
         "last_submission_at": execution_state.last_submission_at,
@@ -100,7 +90,7 @@ def save_pipeline_state(
         "completed_at": datetime.now(timezone.utc).isoformat(),
     }
 
-    return _atomic_save(state_file, payload)
+    return _files.atomic_save(state_file, payload)
 
 
 # ============================================================================
@@ -178,7 +168,7 @@ def save_interrupt_report(
         return False
 
     # 收集待处理任务摘要
-    pending_contexts = _all_pending_contexts(execution_state)
+    pending_contexts = _payloads.all_pending_contexts(execution_state)
     pending_summary: list[dict[str, str]] = [
         {
             "field_id": str(meta.field_id),
@@ -202,13 +192,13 @@ def save_interrupt_report(
         "attempted_keys_count": len(execution_state.attempted_keys),
         "pending_count": len(pending_contexts),
         "pending_summary": pending_summary,
-        "pending_simulations": _serialize_pending_simulations(execution_state),
+        "pending_simulations": _payloads.serialize_pending_simulations(execution_state),
         "template_stats": dict(execution_state.template_stats),
         "runtime_max_workers": runtime_state.runtime_max_workers,
         "completed_at": datetime.now(timezone.utc).isoformat(),
     }
 
-    success = _atomic_save(interrupt_report_file, payload)
+    success = _files.atomic_save(interrupt_report_file, payload)
     if success:
         logger.info(
             "[checkpoint] saved interrupt report to %s (pending=%d, reason=%s)",

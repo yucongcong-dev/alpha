@@ -17,7 +17,7 @@ from ..analysis.result_provenance import enrich_results_provenance
 from ..analysis.results_loader import load_existing_results
 from ..analysis.results_persistence import dump_results
 from ..config.application import ApplicationConfig
-from ..core.checkpoint import delete_pipeline_state
+from ..core.checkpoint_files import delete_pipeline_state
 from ..io.results_store import exclusive_results_transaction
 from ..models.runtime_options import ResultWriteOptions
 from ..runtime.state import InitializedRunContext

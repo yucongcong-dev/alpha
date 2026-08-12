@@ -6,10 +6,8 @@ from functools import partial
 import json
 from unittest.mock import patch
 
+from alpha.core import checkpoint_files, checkpoint_payloads
 import alpha.core.checkpoint as checkpoint_module
-from alpha.core.checkpoint import (
-    delete_pipeline_state,
-)
 from alpha.core.checkpoint import (
     load_pipeline_state as _load_pipeline_state,
 )
@@ -19,6 +17,7 @@ from alpha.core.checkpoint import (
 from alpha.core.checkpoint import (
     save_pipeline_state as _save_pipeline_state,
 )
+from alpha.core.checkpoint_files import delete_pipeline_state
 from alpha.runtime.concurrency import RuntimeConcurrencyState
 from alpha.runtime.contexts import CheckpointIdentity, PendingFutureContext
 from alpha.runtime.state import ExecutionState
@@ -359,11 +358,11 @@ def test_load_pipeline_state_rejects_different_run_identity(tmp_path, caplog) ->
 
 
 def test_non_negative_int_rejects_untrusted_values() -> None:
-    assert checkpoint_module._non_negative_int(True) is None
-    assert checkpoint_module._non_negative_int(object()) is None
-    assert checkpoint_module._non_negative_int("invalid") is None
-    assert checkpoint_module._non_negative_int(-1) is None
-    assert checkpoint_module._non_negative_int("3") == 3
+    assert checkpoint_payloads.non_negative_int(True) is None
+    assert checkpoint_payloads.non_negative_int(object()) is None
+    assert checkpoint_payloads.non_negative_int("invalid") is None
+    assert checkpoint_payloads.non_negative_int(-1) is None
+    assert checkpoint_payloads.non_negative_int("3") == 3
 
 
 def test_load_pipeline_state_handles_missing_invalid_and_version_mismatch(tmp_path) -> None:
@@ -442,7 +441,7 @@ def test_load_pipeline_state_rejects_negative_cursor_and_restores_idle_runtime(t
 
 
 def test_restore_pending_simulations_sanitizes_rows_and_derives_simulation_id() -> None:
-    restored, retry_from_start = checkpoint_module._restore_pending_simulations(
+    restored, retry_from_start = checkpoint_payloads.restore_pending_simulations(
         [
             "invalid",
             {"field_id": "missing-required"},
@@ -549,8 +548,8 @@ def test_interrupt_report_and_delete_pipeline_state(tmp_path) -> None:
 
 
 def test_atomic_save_reports_directory_creation_failure(tmp_path, caplog) -> None:
-    with patch("alpha.core.checkpoint.os.makedirs", side_effect=OSError("read only")):
-        assert not checkpoint_module._atomic_save(
+    with patch("alpha.core.checkpoint_files.os.makedirs", side_effect=OSError("read only")):
+        assert not checkpoint_files.atomic_save(
             str(tmp_path / "state.json"),
             {"version": 1},
         )

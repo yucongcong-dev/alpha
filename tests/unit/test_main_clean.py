@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
+from alpha.app.bootstrap import clean_runtime_artifacts
 from alpha.config.application import CleanConfig
-from alpha.main import clean_runtime_artifacts
 
 
 def _clean_config(
