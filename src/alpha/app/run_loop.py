@@ -90,6 +90,7 @@ def run_field_test_loop(
     checkpoint_identity = CheckpointIdentity(
         run_fingerprint=run_ctx.run_fingerprint,
     )
+    execution_resources = run_loop_contexts.resolve_simulation_execution_resources(run_ctx)
 
     fields = run_loop_resume.restore_fields_from_state(
         fields=fields,
@@ -111,7 +112,11 @@ def run_field_test_loop(
     try:
         schedule_context = run_loop_rounds.ScheduleRoundContext(
             simulation_config=run_loop_options.simulation_stage,
-            run_ctx=run_ctx,
+            execution_resources=execution_resources,
+            execution_state=execution_state,
+            runtime_state=runtime_state,
+            filters=run_ctx.filters,
+            historical_state=run_ctx.historical_state,
             executor=executor,
             template_build_ctx=template_build_ctx,
             fields=fields,
@@ -150,7 +155,7 @@ def run_field_test_loop(
         try:
             loop_future_support.submit_resumable_futures(
                 executor=executor,
-                run_ctx=run_ctx,
+                execution_resources=execution_resources,
                 execution_state=execution_state,
                 simulation_config=run_loop_options.simulation_stage,
             )

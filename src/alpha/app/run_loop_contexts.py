@@ -5,8 +5,23 @@ from __future__ import annotations
 from ..core.executor import build_template_build_context
 from ..models.domain import TemplateField
 from ..models.runtime_options import ResultWriteOptions, TemplateBuildOptions
-from ..runtime.contexts import FutureCompletionContext, TemplateBuildContext
+from ..runtime.contexts import (
+    FutureCompletionContext,
+    SimulationExecutionResources,
+    TemplateBuildContext,
+)
 from ..runtime.state import InitializedRunContext
+
+
+def resolve_simulation_execution_resources(
+    run_ctx: InitializedRunContext,
+) -> SimulationExecutionResources:
+    """Expose only the worker resources required by scheduling and resume."""
+    return SimulationExecutionResources(
+        client_factory=run_ctx.client_factory,
+        template_library_fingerprint=run_ctx.template_library_fingerprint,
+        create_semaphore=run_ctx.create_semaphore,
+    )
 
 
 def resolve_future_completion_context(

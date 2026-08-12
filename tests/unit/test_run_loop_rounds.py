@@ -50,8 +50,8 @@ def test_breadth_first_field_progress_keeps_resume_cursor_at_start(tmp_path) -> 
     assert mock_persist.call_args.kwargs == {
         "state_file": str(tmp_path / "state.json"),
         "field_id": "f1",
-        "execution_state": context.run_ctx.execution_state,
-        "runtime_state": context.run_ctx.runtime_state,
+        "execution_state": context.execution_state,
+        "runtime_state": context.runtime_state,
         "identity": CheckpointIdentity("run-fp"),
     }
 
@@ -89,7 +89,7 @@ def test_zero_batch_size_is_normalized_to_breadth_first() -> None:
 def test_queue_exhausted_candidate_is_excluded_from_next_round() -> None:
     context = _build_context(field_template_batch_size=1)
     exhausted_key = ("f1", "t1", "rank(f1)", "settings")
-    context.run_ctx.execution_state.queue_retry_state.exhausted_keys.add(exhausted_key)
+    context.execution_state.queue_retry_state.exhausted_keys.add(exhausted_key)
     captured_attempted: list[set[tuple[str, str, str, str]]] = []
 
     def _capture_pending(*_args, attempted_keys, **_kwargs):
@@ -141,7 +141,7 @@ def test_queue_timeout_invalidates_only_retry_field_template_queue() -> None:
         filtered_templates=0,
         template_count=1,
     )
-    context.run_ctx.execution_state.result_ledger.append(
+    context.execution_state.result_ledger.append(
         FieldTestResult(
             field_id="f1",
             field_type="MATRIX",
@@ -178,7 +178,7 @@ def test_queue_timeout_invalidates_only_retry_field_template_queue() -> None:
 
 def test_submittable_result_does_not_stop_new_round() -> None:
     context = _build_context(field_template_batch_size=1)
-    ledger = context.run_ctx.execution_state.result_ledger
+    ledger = context.execution_state.result_ledger
     ledger.append(
         FieldTestResult(
             field_id="historical",
@@ -207,7 +207,7 @@ def test_submittable_result_does_not_stop_new_round() -> None:
 
 def test_preexisting_stop_signal_skips_round_without_building_fields() -> None:
     context = _build_context(field_template_batch_size=1)
-    context.run_ctx.execution_state.future_queue.stop_signal.set()
+    context.execution_state.future_queue.stop_signal.set()
 
     with patch("alpha.app.run_loop_rounds.schedule_field_round") as mock_schedule:
         result = execute_schedule_round(context, round_index=1)
@@ -476,7 +476,7 @@ def test_dispatch_replans_when_capacity_drain_changes_feedback() -> None:
     )
 
     def _drain_with_result(**_kwargs) -> None:
-        context.run_ctx.execution_state.result_ledger.append(
+        context.execution_state.result_ledger.append(
             FieldTestResult(
                 field_id="f1",
                 field_type="MATRIX",
@@ -552,5 +552,5 @@ def test_dispatch_stops_at_total_simulation_budget_without_aborting_pending() ->
 
     assert stopped is True
     assert context.scheduled_simulations == 1
-    assert context.run_ctx.execution_state.future_queue.stop_signal.is_set() is False
+    assert context.execution_state.future_queue.stop_signal.is_set() is False
     mock_submit.assert_called_once()

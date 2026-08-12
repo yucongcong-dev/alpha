@@ -14,7 +14,12 @@ from ..models.domain import (
 )
 from ..models.domain_types import FieldFeedbackMap
 from ..models.runtime_options import ResultWriteOptions, TemplateBuildOptions
-from ..models.runtime_protocols import RunConfig, TemplateStats
+from ..models.runtime_protocols import (
+    ClientFactoryLike,
+    RunConfig,
+    SemaphoreLike,
+    TemplateStats,
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -26,6 +31,15 @@ class CheckpointIdentity:
     def __post_init__(self) -> None:
         if not self.run_fingerprint:
             raise ValueError("checkpoint run fingerprint cannot be empty")
+
+
+@dataclass(frozen=True)
+class SimulationExecutionResources:
+    """Worker resources required to create or resume remote simulations."""
+
+    client_factory: ClientFactoryLike
+    template_library_fingerprint: str
+    create_semaphore: SemaphoreLike
 
 
 @dataclass

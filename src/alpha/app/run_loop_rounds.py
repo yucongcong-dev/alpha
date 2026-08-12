@@ -15,15 +15,19 @@ from ..core.executor import (
 )
 from ..generators.fields import choose_field_name, choose_field_type
 from ..models.domain import TemplateField
+from ..models.io_types import RunFilters
 from ..models.runtime_config import SimulationStageConfig
 from ..models.runtime_options import SchedulerControlOptions
+from ..runtime.concurrency import RuntimeConcurrencyState
 from ..runtime.contexts import (
     CheckpointIdentity,
     FutureCompletionContext,
+    HistoricalRunState,
+    SimulationExecutionResources,
     TemplateBuildContext,
 )
 from ..runtime.field_template_queue import FieldTemplateQueue
-from ..runtime.state import InitializedRunContext
+from ..runtime.state import ExecutionState
 from ..utils.helpers import first_non_empty
 from .run_loop_dispatch import apply_feedback_refresh, dispatch_templates_for_field
 from .run_loop_feedback import refresh_runtime_feedback
@@ -51,7 +55,11 @@ class ScheduleRoundContext:
     """Stable dependencies shared by every breadth-first scheduling round."""
 
     simulation_config: SimulationStageConfig
-    run_ctx: InitializedRunContext
+    execution_resources: SimulationExecutionResources
+    execution_state: ExecutionState
+    runtime_state: RuntimeConcurrencyState
+    filters: RunFilters
+    historical_state: HistoricalRunState
     executor: ThreadPoolExecutor
     template_build_ctx: TemplateBuildContext
     fields: list[TemplateField]
@@ -67,7 +75,7 @@ class ScheduleRoundContext:
 
     def __post_init__(self) -> None:
         self.field_template_batch_size = max(1, int(self.field_template_batch_size or 0))
-        self.seed_phase.sync(self.run_ctx.execution_state)
+        self.seed_phase.sync(self.execution_state)
 
     def reached_simulation_budget(self) -> bool:
         """Return whether this process has dispatched its configured simulation budget."""
@@ -82,7 +90,7 @@ def execute_schedule_round(
 ) -> ScheduleRoundResult:
     """Execute one scheduling round across every remaining field."""
     scheduler_options = context.scheduler_options
-    execution_state = context.run_ctx.execution_state
+    execution_state = context.execution_state
     progressed_this_round = False
     last_field_id = ""
     context.seed_phase.sync(execution_state)
@@ -146,9 +154,8 @@ def schedule_field_round(
     round_index: int,
 ) -> ScheduleRoundResult:
     """Schedule one field for the current round and persist its progress."""
-    run_ctx = context.run_ctx
-    execution_state = run_ctx.execution_state
-    runtime_state = run_ctx.runtime_state
+    execution_state = context.execution_state
+    runtime_state = context.runtime_state
     result_ledger = execution_state.result_ledger
     field_id = str(first_non_empty(field.field_id, SENTINEL_UNKNOWN))
     field_name = choose_field_name(field)
@@ -162,7 +169,7 @@ def schedule_field_round(
     if should_skip_field(
         field_id,
         field_name,
-        run_ctx.filters,
+        context.filters,
     ):
         seed_resolution_progressed = (
             context.seed_phase.resolve(field_id) if seed_phase_active else False
@@ -189,7 +196,7 @@ def schedule_field_round(
                 execution_state.attempted_keys | execution_state.queue_retry_state.exhausted_keys
             ),
             prior_results=[
-                *run_ctx.historical_state.feedback_results,
+                *context.historical_state.feedback_results,
                 *result_ledger.results,
             ],
             reserved_keys=inflight_template_keys(execution_state.future_queue.pending_futures),

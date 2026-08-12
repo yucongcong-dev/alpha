@@ -66,7 +66,7 @@ def test_full_run_seed_phase_covers_fields_before_refine() -> None:
         assert context.seed_phase.active is True
         assert context.seed_phase.inflight_field_ids == {"f1", "f2"}
 
-        context.run_ctx.execution_state.attempted_keys.update(
+        context.execution_state.attempted_keys.update(
             {
                 ("f1", "seed", "rank(f1)", "settings-0"),
                 ("f2", "seed", "rank(f2)", "settings-0"),
@@ -197,10 +197,10 @@ def test_full_run_seed_phase_skips_resumable_inflight_fields() -> None:
         field_ids=("f1", "f2"),
         seed_phase_enabled=True,
     )
-    context.run_ctx.execution_state.future_queue.replace_resumable_batch(
+    context.execution_state.future_queue.replace_resumable_batch(
         [PendingFutureContext(field_id="f1", simulation_location="/simulations/sim-1")]
     )
-    context.seed_phase.sync(context.run_ctx.execution_state)
+    context.seed_phase.sync(context.execution_state)
     planned_field_ids: list[str] = []
 
     def _pending_for_field(_ctx, field, **_kwargs):
@@ -234,16 +234,16 @@ def test_full_run_seed_inflight_completion_becomes_resolved() -> None:
         seed_phase_enabled=True,
     )
     completed_future: Future[FieldTestResult] = Future()
-    context.run_ctx.execution_state.future_queue.register(
+    context.execution_state.future_queue.register(
         completed_future,
         PendingFutureContext(field_id="f1", simulation_location="/simulations/sim-1"),
     )
-    context.seed_phase.sync(context.run_ctx.execution_state)
+    context.seed_phase.sync(context.execution_state)
     assert context.seed_phase.inflight_field_ids == {"f1"}
 
-    context.run_ctx.execution_state.future_queue.pop_completed(completed_future)
-    context.run_ctx.execution_state.attempted_keys.add(("f1", "seed", "rank(f1)", "settings"))
-    context.seed_phase.sync(context.run_ctx.execution_state)
+    context.execution_state.future_queue.pop_completed(completed_future)
+    context.execution_state.attempted_keys.add(("f1", "seed", "rank(f1)", "settings"))
+    context.seed_phase.sync(context.execution_state)
 
     assert context.seed_phase.inflight_field_ids == set()
     assert context.seed_phase.resolved_field_ids == {"f1"}
@@ -256,7 +256,7 @@ def test_full_run_all_remaining_seeds_inflight_does_not_enter_refine() -> None:
         field_ids=("f1",),
         seed_phase_enabled=True,
     )
-    context.run_ctx.execution_state.future_queue.replace_resumable_batch(
+    context.execution_state.future_queue.replace_resumable_batch(
         [PendingFutureContext(field_id="f1", simulation_location="/simulations/sim-1")]
     )
 

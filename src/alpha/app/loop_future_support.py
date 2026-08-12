@@ -20,8 +20,9 @@ from ..runtime.contexts import (
     CheckpointIdentity,
     FutureCompletionContext,
     PendingFutureContext,
+    SimulationExecutionResources,
 )
-from ..runtime.state import ExecutionState, InitializedRunContext
+from ..runtime.state import ExecutionState
 from .run_loop_resume import save_terminal_pipeline_state
 
 logger = logging.getLogger(__name__)
@@ -152,7 +153,7 @@ def drain_until_capacity(
 def submit_template_future(
     *,
     executor: ThreadPoolExecutor,
-    run_ctx: InitializedRunContext,
+    execution_resources: SimulationExecutionResources,
     execution_state: ExecutionState,
     simulation_config: SimulationStageConfig,
     field: TemplateField,
@@ -204,15 +205,15 @@ def submit_template_future(
 
     future = executor.submit(
         run_field_test_in_worker,
-        run_ctx.client_factory,
+        execution_resources.client_factory,
         simulation_config,
         field_with_template,
         template_name,
         expression,
         variant_fingerprint,
-        run_ctx.template_library_fingerprint,
+        execution_resources.template_library_fingerprint,
         settings_variant,
-        run_ctx.create_semaphore,
+        execution_resources.create_semaphore,
         execution_state.future_queue.stop_signal.is_set,
         _record_simulation_created,
     )
@@ -224,7 +225,7 @@ def submit_template_future(
 def submit_resumable_futures(
     *,
     executor: ThreadPoolExecutor,
-    run_ctx: InitializedRunContext,
+    execution_resources: SimulationExecutionResources,
     execution_state: ExecutionState,
     simulation_config: SimulationStageConfig,
 ) -> int:
@@ -235,10 +236,10 @@ def submit_resumable_futures(
         for pending_context in pending_contexts:
             future = executor.submit(
                 resume_field_test_in_worker,
-                run_ctx.client_factory,
+                execution_resources.client_factory,
                 simulation_config,
                 pending_context,
-                run_ctx.template_library_fingerprint,
+                execution_resources.template_library_fingerprint,
                 execution_state.future_queue.stop_signal.is_set,
             )
             typed_future: Future[FieldTestResult] = future

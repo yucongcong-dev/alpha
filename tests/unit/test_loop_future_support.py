@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from concurrent.futures import Future
 from threading import Semaphore
-from types import SimpleNamespace
 from unittest.mock import patch
 
 from alpha.app.loop_future_support import (
@@ -14,7 +13,7 @@ from alpha.app.loop_future_support import (
     wait_for_inflight_simulation_metadata,
 )
 from alpha.models.domain import FieldTestResult, SettingsVariant, TemplateField
-from alpha.runtime.contexts import PendingFutureContext
+from alpha.runtime.contexts import PendingFutureContext, SimulationExecutionResources
 from alpha.runtime.state import ExecutionState
 from tests.unit.simulation_config_support import build_simulation_stage_config
 
@@ -126,7 +125,7 @@ def test_wait_for_inflight_simulation_metadata_reports_timeout(monkeypatch) -> N
 
 def test_submit_template_future_records_created_simulation_location() -> None:
     execution_state = _execution_state()
-    run_ctx = SimpleNamespace(
+    execution_resources = SimulationExecutionResources(
         client_factory=object(),
         template_library_fingerprint="library-v1",
         create_semaphore=Semaphore(1),
@@ -152,7 +151,7 @@ def test_submit_template_future_records_created_simulation_location() -> None:
     with patch("alpha.app.loop_future_support.run_field_test_in_worker", side_effect=_worker):
         submit_template_future(
             executor=_ImmediateExecutor(),  # type: ignore[arg-type]
-            run_ctx=run_ctx,  # type: ignore[arg-type]
+            execution_resources=execution_resources,
             execution_state=execution_state,
             simulation_config=build_simulation_stage_config(),
             field=field,
@@ -188,14 +187,15 @@ def test_submit_resumable_futures_registers_restored_contexts() -> None:
     )
     execution_state.future_queue.replace_resumable_batch([pending])
     executor = _RecordingExecutor()
-    run_ctx = SimpleNamespace(
+    execution_resources = SimulationExecutionResources(
         client_factory=object(),
         template_library_fingerprint="library-v1",
+        create_semaphore=Semaphore(1),
     )
 
     scheduled = submit_resumable_futures(
         executor=executor,  # type: ignore[arg-type]
-        run_ctx=run_ctx,  # type: ignore[arg-type]
+        execution_resources=execution_resources,
         execution_state=execution_state,
         simulation_config=build_simulation_stage_config(),
     )
@@ -225,15 +225,16 @@ def test_submit_resumable_futures_restores_unsubmitted_contexts_on_failure() -> 
     )
     execution_state.future_queue.replace_resumable_batch([first, second])
     executor = _FailingExecutor()
-    run_ctx = SimpleNamespace(
+    execution_resources = SimulationExecutionResources(
         client_factory=object(),
         template_library_fingerprint="library-v1",
+        create_semaphore=Semaphore(1),
     )
 
     try:
         submit_resumable_futures(
             executor=executor,  # type: ignore[arg-type]
-            run_ctx=run_ctx,  # type: ignore[arg-type]
+            execution_resources=execution_resources,
             execution_state=execution_state,
             simulation_config=build_simulation_stage_config(),
         )

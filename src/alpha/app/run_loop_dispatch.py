@@ -44,10 +44,9 @@ def dispatch_templates_for_field(
     """Dispatch scheduled templates for a single field; return whether a stop was requested."""
     simulation_config = context.simulation_config
     scheduler_options = context.scheduler_options
-    run_ctx = context.run_ctx
-    execution_state = run_ctx.execution_state
+    execution_state = context.execution_state
     result_ledger = execution_state.result_ledger
-    runtime_state = run_ctx.runtime_state
+    runtime_state = context.runtime_state
     for template_index, entry in enumerate(scheduled_templates, start=1):
         if context.reached_simulation_budget():
             logger.info(
@@ -98,7 +97,7 @@ def dispatch_templates_for_field(
         throttle_before_submission(scheduler_options, execution_state)
         submit_template_future(
             executor=context.executor,
-            run_ctx=run_ctx,
+            execution_resources=context.execution_resources,
             execution_state=execution_state,
             simulation_config=simulation_config,
             field=field,
