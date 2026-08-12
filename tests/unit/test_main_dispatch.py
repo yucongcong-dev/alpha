@@ -243,12 +243,10 @@ def test_main_closes_client_factory_when_runtime_pipeline_fails(monkeypatch) -> 
     assert calls == ["initialize", "run", "close"]
 
 
-def test_run_cli_entry_includes_traceback_in_verbose_logging(monkeypatch) -> None:
+def test_run_cli_entry_logs_traceback_by_default(monkeypatch) -> None:
     error_logger = Mock()
-    root_logger = main_module.logging.getLogger()
     monkeypatch.setattr(main_module, "main", Mock(side_effect=RuntimeError("boom")))
     monkeypatch.setattr(main_module, "logger", error_logger)
-    monkeypatch.setattr(root_logger, "isEnabledFor", lambda _level: True)
 
     assert main_module.run_cli_entry() == 1
 

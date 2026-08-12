@@ -335,10 +335,10 @@ def test_retry_operation_retries_regular_exception(monkeypatch) -> None:
     [
         BrainAPIError("api"),
         BrainQueueBusyError("queue"),
-        BrainRateLimitError("rate"),
+        BrainRateLimitError("rate", retry_after=12),
     ],
 )
-def test_retry_operation_does_not_repeat_terminal_api_errors(error: BrainAPIError) -> None:
+def test_retry_operation_preserves_terminal_api_error_type(error: BrainAPIError) -> None:
     attempts = 0
 
     def operation() -> None:
@@ -346,10 +346,21 @@ def test_retry_operation_does_not_repeat_terminal_api_errors(error: BrainAPIErro
         attempts += 1
         raise error
 
-    with pytest.raises(BrainAPIError, match="failed after 1 attempts"):
+    with pytest.raises(BrainAPIError) as exc_info:
         retry_operation("operation", 4, operation, retry_wait_seconds=0)
 
     assert attempts == 1
+    assert exc_info.value is error
+
+
+def test_retry_operation_wraps_exhausted_generic_exception(monkeypatch) -> None:
+    monkeypatch.setattr("alpha.api.retry.wait_seconds", lambda *_args, **_kwargs: None)
+
+    def operation() -> None:
+        raise ValueError("boom")
+
+    with pytest.raises(BrainAPIError, match="failed after 3 attempts"):
+        retry_operation("operation", 3, operation, retry_wait_seconds=0)
 
 
 def test_retry_operation_preserves_http_error_status() -> None:

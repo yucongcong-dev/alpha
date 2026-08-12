@@ -62,11 +62,7 @@ def run_cli_entry() -> int:
         logger.warning("[abort] 用户中断")
         return 130
     except Exception as exc:
-        logger.error(
-            "[error] %s",
-            exc,
-            exc_info=logging.getLogger().isEnabledFor(logging.DEBUG),
-        )
+        logger.error("[error] %s", exc, exc_info=True)
         return 1
 
 

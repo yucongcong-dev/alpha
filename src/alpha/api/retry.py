@@ -9,7 +9,6 @@ from typing import TYPE_CHECKING, TypeVar
 from ..config.runtime_values import get_runtime_config
 from ..exceptions import (
     BrainAPIError,
-    BrainHTTPError,
     BrainQueueBusyError,
     BrainRateLimitError,
     BrainStopRequested,
@@ -104,7 +103,10 @@ def retry_operation(
                 cause=exc,
             )
 
-    if isinstance(last_error, BrainHTTPError):
+    if isinstance(last_error, BrainAPIError):
+        # Terminal API errors keep their concrete type (rate limit, queue busy,
+        # HTTP status, ...) so callers can branch on the specifics; the failed
+        # attempt count is already recorded in the retry warning above.
         raise last_error
     raise BrainAPIError(
         f"{name} failed after {last_attempt} attempts: {last_error}"
