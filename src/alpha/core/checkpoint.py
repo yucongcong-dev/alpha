@@ -86,6 +86,7 @@ def save_pipeline_state(
         "remaining_cooldown_seconds": round(remaining_cooldown, 3),
         "last_submission_at": execution_state.last_submission_at,
         "result_count": len(result_ledger.results),
+        "persisted_result_count": result_ledger.persisted_result_count,
         "attempted_keys_count": len(execution_state.attempted_keys),
         "completed_at": datetime.now(timezone.utc).isoformat(),
     }

@@ -289,7 +289,77 @@ def test_save_pipeline_state_persists_remote_simulation_location(tmp_path) -> No
     payload = json.loads(state_file.read_text(encoding="utf-8"))
     assert saved is True
     assert "template_stats" not in payload
+    assert payload["persisted_result_count"] == 0
     assert payload["pending_simulations"][0]["simulation_location"] == "/simulations/sim-1"
+
+
+def test_load_pipeline_state_uses_local_journal_ahead_of_checkpoint(tmp_path, caplog) -> None:
+    caplog.set_level("INFO")
+    state_file = tmp_path / "state.json"
+    state_file.write_text(
+        _checkpoint_json(
+            {
+                "completed_field_index": 1,
+                "persisted_result_count": 1,
+                "pending_simulations": [
+                    {
+                        "field_id": "f1",
+                        "template_name": "base",
+                        "expression": "rank(f1)",
+                        "settings_fingerprint": "settings-v1",
+                        "simulation_location": "/simulations/sim-1",
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    execution_state = _build_execution_state()
+    execution_state.result_ledger.persisted_result_count = 2
+
+    resumed = load_pipeline_state(
+        str(state_file),
+        runtime_state=RuntimeConcurrencyState(max_workers=2, runtime_max_workers=2),
+        execution_state=execution_state,
+    )
+
+    assert resumed == 1
+    assert len(execution_state.future_queue.resumable_simulations) == 1
+    assert "result journal is ahead of checkpoint" in caplog.text
+
+
+def test_load_pipeline_state_rejects_checkpoint_ahead_of_local_journal(tmp_path, caplog) -> None:
+    state_file = tmp_path / "state.json"
+    state_file.write_text(
+        _checkpoint_json(
+            {
+                "completed_field_index": 1,
+                "persisted_result_count": 2,
+                "pending_simulations": [
+                    {
+                        "field_id": "f1",
+                        "template_name": "base",
+                        "expression": "rank(f1)",
+                        "settings_fingerprint": "settings-v1",
+                        "simulation_location": "/simulations/sim-1",
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    execution_state = _build_execution_state()
+    execution_state.result_ledger.persisted_result_count = 1
+
+    resumed = load_pipeline_state(
+        str(state_file),
+        runtime_state=RuntimeConcurrencyState(max_workers=2, runtime_max_workers=2),
+        execution_state=execution_state,
+    )
+
+    assert resumed == 0
+    assert execution_state.future_queue.resumable_simulations == []
+    assert "result journal is behind checkpoint" in caplog.text
 
 
 def test_load_pipeline_state_skips_resumable_simulation_already_in_results(tmp_path) -> None:

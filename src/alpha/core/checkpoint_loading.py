@@ -115,6 +115,38 @@ def _restore_runtime_cooldown(
         runtime_state.runtime_max_workers = runtime_state.max_workers
 
 
+def _has_compatible_result_journal(
+    payload: dict[str, Any],
+    *,
+    execution_state: ExecutionState,
+    state_file: str,
+    log: logging.Logger,
+) -> bool:
+    """Reject a checkpoint that expects more durable rows than startup loaded."""
+    persisted_result_count = _payloads.non_negative_int(payload.get("persisted_result_count"))
+    if persisted_result_count is None:
+        return True
+    local_result_count = execution_state.result_ledger.persisted_result_count
+    if local_result_count < persisted_result_count:
+        log.warning(
+            "[checkpoint] result journal is behind checkpoint in %s; "
+            "local=%d checkpoint=%d; refusing stale pending simulations",
+            state_file,
+            local_result_count,
+            persisted_result_count,
+        )
+        return False
+    if local_result_count > persisted_result_count:
+        log.info(
+            "[checkpoint] result journal is ahead of checkpoint in %s; "
+            "local=%d checkpoint=%d; using local durable results",
+            state_file,
+            local_result_count,
+            persisted_result_count,
+        )
+    return True
+
+
 def load_pipeline_state(
     state_file: str,
     *,
@@ -136,6 +168,13 @@ def load_pipeline_state(
     saved_identity = str(payload.get("run_fingerprint", "") or "")
     if saved_identity != identity.run_fingerprint:
         log.warning("[checkpoint] run identity mismatch in %s; starting fresh", state_file)
+        return 0
+    if not _has_compatible_result_journal(
+        payload,
+        execution_state=execution_state,
+        state_file=state_file,
+        log=log,
+    ):
         return 0
 
     parsed = _parse_resume_scalars(
