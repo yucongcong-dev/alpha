@@ -330,6 +330,26 @@ def test_raw_request_caps_transport_timeout_to_request_deadline(monkeypatch) -> 
     assert captured["timeout"] == 5.0
 
 
+def test_raw_request_caps_worker_transport_timeout_for_interruptibility() -> None:
+    client = BrainClient(
+        "user@example.com",
+        "secret",
+        request_abort=lambda: False,
+    )
+    captured: dict[str, Any] = {}
+
+    class FakeBackend:
+        def request(self, **kwargs: Any):
+            captured.update(kwargs)
+            return 200, {}, b"ok"
+
+    client._http_backend = FakeBackend()  # type: ignore[assignment]
+
+    client.raw_request("GET", "https://example.test")
+
+    assert captured["timeout"] == 5.0
+
+
 def test_raw_request_stops_before_expired_request_deadline(monkeypatch) -> None:
     client = BrainClient("user@example.com", "secret", request_deadline=100.0)
     monkeypatch.setattr(session_module.time, "monotonic", lambda: 100.0)

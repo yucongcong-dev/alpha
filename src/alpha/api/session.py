@@ -25,6 +25,7 @@ logger = logging.getLogger(__name__)
 _request_throttle_condition = threading.Condition()
 _global_last_request_at: float = 0.0
 _global_rate_limit_until: float = 0.0
+_ABORTABLE_TRANSPORT_TIMEOUT_SECONDS = 5.0
 
 
 def _wait_for_request_slot(
@@ -234,6 +235,11 @@ class BrainSessionMixin:
         request_timeout = self.http_config.request_timeout  # type: ignore[attr-defined]
         if self.request_abort is not None and self.request_abort():
             raise BrainStopRequested("HTTP request aborted because stop was requested")
+        if self.request_abort is not None:
+            # urllib cannot close a request that is still resolving or connecting.
+            # Keep worker attempts short so the caller can observe Ctrl+C between
+            # transient transport retries.
+            request_timeout = min(request_timeout, _ABORTABLE_TRANSPORT_TIMEOUT_SECONDS)
         if self.request_deadline is not None:
             remaining = self.request_deadline - time.monotonic()
             if remaining <= 0:
