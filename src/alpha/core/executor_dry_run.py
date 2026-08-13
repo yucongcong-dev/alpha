@@ -148,6 +148,8 @@ def build_dry_run_plan_summary(
     }
     seed_fields_remaining = 0
     seed_fields_resolved = 0
+    seed_templates_eligible = 0
+    refine_templates_eligible = 0
     explain_counts: Counter[str] = Counter()
     seed_samples: list[DryRunSample] = []
     refine_samples: list[DryRunSample] = []
@@ -202,6 +204,9 @@ def build_dry_run_plan_summary(
                 seed_fields_remaining += 1
         sample_is_seed = full_run and field_id not in attempted_field_ids
         seed_entry = select_seed_candidate(pending_templates) if sample_is_seed else None
+        if seed_entry is not None:
+            seed_templates_eligible += 1
+        refine_templates_eligible += len(pending_templates) - (1 if seed_entry else 0)
         sample_entries = [seed_entry] if seed_entry is not None else pending_templates
         sample_target = seed_samples if sample_is_seed else refine_samples
         for entry in sample_entries:
@@ -226,11 +231,28 @@ def build_dry_run_plan_summary(
     scheduled_templates = (
         min(eligible_templates, simulation_budget) if simulation_budget > 0 else eligible_templates
     )
+    if full_run:
+        if simulation_budget > 0:
+            seed_templates_scheduled = min(seed_templates_eligible, simulation_budget)
+            refine_templates_scheduled = min(
+                refine_templates_eligible,
+                max(0, simulation_budget - seed_templates_scheduled),
+            )
+        else:
+            seed_templates_scheduled = seed_templates_eligible
+            refine_templates_scheduled = refine_templates_eligible
+    else:
+        seed_templates_scheduled = 0
+        refine_templates_scheduled = scheduled_templates
     return DryRunPlanSummary(
         fields_total=len(fields),
         planned_fields=planned_fields,
         eligible_templates=eligible_templates,
+        seed_templates_eligible=seed_templates_eligible,
+        refine_templates_eligible=refine_templates_eligible,
         scheduled_templates=scheduled_templates,
+        seed_templates_scheduled=seed_templates_scheduled,
+        refine_templates_scheduled=refine_templates_scheduled,
         budget_truncated=scheduled_templates < eligible_templates,
         full_run=full_run,
         seed_fields_resolved=seed_fields_resolved,

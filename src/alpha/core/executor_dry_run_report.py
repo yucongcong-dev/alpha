@@ -25,7 +25,11 @@ class DryRunPlanSummary:
     fields_total: int
     planned_fields: int
     eligible_templates: int
+    seed_templates_eligible: int
+    refine_templates_eligible: int
     scheduled_templates: int
+    seed_templates_scheduled: int
+    refine_templates_scheduled: int
     budget_truncated: bool
     full_run: bool
     seed_fields_resolved: int
@@ -49,8 +53,6 @@ def render_dry_run_plan(summary: DryRunPlanSummary, *, log: logging.Logger) -> N
     log.info("[dry-run] scheduled_simulations=%d", summary.scheduled_templates)
     log.info("[dry-run] budget_truncated=%s", str(summary.budget_truncated).lower())
     if summary.full_run:
-        seed_scheduled = min(summary.seed_fields_remaining, summary.scheduled_templates)
-        refine_scheduled = max(0, summary.scheduled_templates - seed_scheduled)
         log.info(
             "[dry-run] full_run_seed resolved=%d remaining=%d budget_sufficient=%s",
             summary.seed_fields_resolved,
@@ -58,9 +60,17 @@ def render_dry_run_plan(summary: DryRunPlanSummary, *, log: logging.Logger) -> N
             str(summary.seed_budget_sufficient).lower(),
         )
         log.info(
+            "[dry-run] full_run_budget seed_eligible=%d refine_eligible=%d "
+            "seed_scheduled=%d refine_scheduled=%d",
+            summary.seed_templates_eligible,
+            summary.refine_templates_eligible,
+            summary.seed_templates_scheduled,
+            summary.refine_templates_scheduled,
+        )
+        log.info(
             "[dry-run] full_run_schedule seed=%d refine=%d",
-            seed_scheduled,
-            refine_scheduled,
+            summary.seed_templates_scheduled,
+            summary.refine_templates_scheduled,
         )
     log.info("[dry-run] filtered_templates=%d", summary.filtered_templates)
     log.info("[dry-run] unactionable_fields=%d", summary.unactionable_fields)

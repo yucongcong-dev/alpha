@@ -517,7 +517,63 @@ def test_print_dry_run_plan_reports_partial_full_run_seed_budget(caplog) -> None
 
     messages = [record.getMessage() for record in caplog.records]
     assert "[dry-run] full_run_seed resolved=0 remaining=2 budget_sufficient=false" in messages
+    assert (
+        "[dry-run] full_run_budget seed_eligible=2 refine_eligible=0 "
+        "seed_scheduled=1 refine_scheduled=0"
+    ) in messages
     assert "[dry-run] full_run_schedule seed=1 refine=0" in messages
+
+
+def test_print_dry_run_plan_allocates_remaining_budget_to_refine(caplog) -> None:
+    fields = [_field("f1"), _field("f2")]
+    entries = [
+        PendingTemplateEntry(
+            template_name="seed",
+            template_family="rank",
+            template_stage="first_order",
+            template_role="default_seed",
+            template_activation_scope="broad",
+            expression="rank(field)",
+            priority=100,
+            settings_variant=SettingsVariant(),
+            variant_fingerprint="seed-settings",
+        ),
+        PendingTemplateEntry(
+            template_name="refine",
+            template_family="rank",
+            template_stage="first_order",
+            template_role="refine_neighbor",
+            template_activation_scope="broad",
+            expression="ts_rank(field, 20)",
+            priority=200,
+            settings_variant=SettingsVariant(),
+            variant_fingerprint="refine-settings",
+        ),
+    ]
+    caplog.set_level(logging.INFO)
+
+    with patch(
+        "alpha.core.executor.build_pending_templates_for_field",
+        return_value=(entries, 0, len(entries)),
+    ):
+        print_dry_run_plan(
+            options=_options(),
+            fields=fields,
+            filters=RunFilters(),
+            template_library={},
+            historical_state=HistoricalRunState(),
+            execution_state=_execution_state(),
+            expression_policy=get_dataset_expression_policy("model16"),
+            full_run=True,
+            max_total_simulations=3,
+            sample_limit=1,
+        )
+
+    messages = [record.getMessage() for record in caplog.records]
+    assert (
+        "[dry-run] full_run_budget seed_eligible=2 refine_eligible=2 "
+        "seed_scheduled=2 refine_scheduled=1"
+    ) in messages
 
 
 def test_print_dry_run_plan_samples_explicit_default_seed(caplog) -> None:
