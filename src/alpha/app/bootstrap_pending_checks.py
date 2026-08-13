@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Iterator
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ThreadPoolExecutor, wait
 from contextlib import contextmanager
 from dataclasses import replace
 from datetime import datetime, timezone
@@ -267,7 +267,8 @@ def _apply_pending_check_refreshes(
     refreshed_count = 0
     attempted_count = 0
     cursor = 0
-    with ThreadPoolExecutor(max_workers=worker_count) as executor:
+    executor = ThreadPoolExecutor(max_workers=worker_count)
+    try:
         while cursor < len(selected_pending):
             if deadline_reached():
                 break
@@ -283,12 +284,23 @@ def _apply_pending_check_refreshes(
                 )
                 for _index, result in batch
             ]
+            remaining_seconds = None if deadline is None else max(0.0, deadline - time.monotonic())
+            done, not_done = wait(futures, timeout=remaining_seconds)
+            done_set = set(done)
             for (index, _result), future in zip(batch, futures, strict=True):
+                if future not in done_set:
+                    continue
                 refreshed, resolved = future.result()
                 refreshed_results[index] = refreshed
                 refreshed_count += int(resolved)
                 attempted_count += 1
+            if not_done:
+                for future in not_done:
+                    future.cancel()
+                break
             cursor += len(batch)
+    finally:
+        executor.shutdown(wait=False, cancel_futures=True)
     return refreshed_count, attempted_count
 
 

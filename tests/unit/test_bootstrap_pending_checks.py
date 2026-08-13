@@ -251,7 +251,7 @@ def test_refresh_pending_check_results_rotates_oldest_attempts(monkeypatch) -> N
 
 def test_refresh_pending_check_results_respects_total_time_budget(monkeypatch) -> None:
     calls = 0
-    monotonic_values = iter([0.0, 0.0, 31.0])
+    clock = {"now": 0.0}
 
     def _pending(*_args, **_kwargs):
         nonlocal calls
@@ -264,7 +264,17 @@ def test_refresh_pending_check_results_respects_total_time_budget(monkeypatch) -
     )
     monkeypatch.setattr(
         "alpha.app.bootstrap_pending_checks.time.monotonic",
-        lambda: next(monotonic_values),
+        lambda: clock["now"],
+    )
+
+    def _complete_first_batch(futures, timeout=None):
+        del timeout
+        clock["now"] = 31.0
+        return {next(iter(futures))}, set()
+
+    monkeypatch.setattr(
+        "alpha.app.bootstrap_pending_checks.wait",
+        _complete_first_batch,
     )
 
     refreshed, count = refresh_pending_check_results(
@@ -312,6 +322,52 @@ def test_refresh_pending_check_results_aborts_retry_at_deadline(monkeypatch) -> 
     assert count == 0
     assert refreshed == [original]
     assert refreshed[0].updated_at == ""
+
+
+def test_refresh_pending_check_results_does_not_wait_for_slow_batch(monkeypatch) -> None:
+    class _SlowFuture:
+        def __init__(self, result):
+            self._result = result
+            self.cancelled = False
+
+        def result(self):
+            raise AssertionError("slow future must not be consumed after timeout")
+
+        def cancel(self):
+            self.cancelled = True
+            return True
+
+    class _Executor:
+        future = None
+
+        def __init__(self, **_kwargs):
+            self.future = _SlowFuture(None)
+
+        def submit(self, *_args, **_kwargs):
+            return self.future
+
+        def shutdown(self, **_kwargs):
+            return None
+
+    monkeypatch.setattr(
+        "alpha.app.bootstrap_pending_checks.ThreadPoolExecutor",
+        _Executor,
+    )
+    monkeypatch.setattr(
+        "alpha.app.bootstrap_pending_checks.wait",
+        lambda futures, timeout=None: (set(), set(futures)),
+    )
+
+    original = _pending_result()
+    refreshed, count = refresh_pending_check_results(
+        object(),
+        [original],
+        retries=1,
+        max_refresh_seconds=30.0,
+    )
+
+    assert refreshed == [original]
+    assert count == 0
 
 
 def test_refresh_pending_check_results_uses_worker_factory_for_parallel_checks(monkeypatch) -> None:
