@@ -87,6 +87,7 @@ class ApplicationConfig:
     runtime_values: RuntimeConfig
     config_sources: Mapping[str, str]
     config_source_chains: Mapping[str, tuple[str, ...]]
+    config_report: Mapping[str, Mapping[str, object]]
 
     @classmethod
     def from_args(cls, args: object, paths: RunPaths) -> ApplicationConfig:
@@ -117,6 +118,13 @@ class ApplicationConfig:
                 {
                     str(key): tuple(str(item) for item in value)
                     for key, value in dict(getattr(args, "_config_source_chains", {})).items()
+                }
+            ),
+            config_report=MappingProxyType(
+                {
+                    str(key): MappingProxyType(dict(value))
+                    for key, value in dict(getattr(args, "_config_report", {})).items()
+                    if isinstance(value, dict)
                 }
             ),
         )

@@ -270,6 +270,17 @@ dataset_profiles:
         "strategy_profile",
         "run_mode",
     )
+    assert args._config_report["max_templates_per_field"] == {
+        "value": 0,
+        "source": "run_mode",
+        "chain": [
+            "parser_default",
+            "global_yaml",
+            "dataset_profile",
+            "strategy_profile",
+            "run_mode",
+        ],
+    }
 
 
 def test_config_source_chain_keeps_explicit_cli_value(monkeypatch, tmp_path) -> None:
@@ -297,6 +308,20 @@ def test_config_source_chain_keeps_explicit_cli_value(monkeypatch, tmp_path) -> 
         "parser_default",
         "cli",
     )
+
+
+def test_config_report_redacts_password(monkeypatch, tmp_path) -> None:
+    clear_yaml_cache()
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        ["alpha", "--dataset-id", "option9", "--password", "plain-secret"],
+    )
+
+    args = parse_args()
+
+    assert args._config_report["password"]["value"] == "<redacted>"
 
 
 def test_cli_preserves_zero_field_template_batch_size_for_config_validation(

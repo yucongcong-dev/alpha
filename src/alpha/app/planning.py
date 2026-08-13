@@ -138,7 +138,7 @@ def run_dry_run_plan(args: ApplicationConfig) -> bool:
 
 def _log_config_sources(args: ApplicationConfig) -> None:
     """Expose the resolved provenance of planning-critical configuration values."""
-    sources = args.config_sources
+    report = args.config_report
     keys = (
         "strategy_profile",
         "run_mode",
@@ -149,11 +149,22 @@ def _log_config_sources(args: ApplicationConfig) -> None:
         "top_fields_by_feedback",
         "max_concurrent_simulations",
     )
-    resolved = " ".join(f"{key}={sources.get(key, 'unknown')}" for key in keys)
-    logger.info("[dry-run] config_sources %s", resolved)
-    chains = " ".join(
-        f"{key}={'->'.join(args.config_source_chains.get(key, ()))}"
+    resolved = " ".join(
+        f"{key}={report.get(key, {}).get('value', '<unknown>')}"
+        f" source={report.get(key, {}).get('source', 'unknown')}"
         for key in keys
-        if key in args.config_source_chains
     )
-    logger.info("[dry-run] config_source_chains %s", chains)
+    logger.info("[dry-run] config_report %s", resolved)
+    chains = " ".join(
+        f"{key}={'->'.join(_report_chain(report[key].get('chain')))}"
+        for key in keys
+        if key in report
+    )
+    logger.info("[dry-run] config_override_chains %s", chains)
+
+
+def _report_chain(value: object) -> list[str]:
+    """Normalize a config report chain for human-readable logging."""
+    if isinstance(value, (list, tuple)):
+        return [str(item) for item in value]
+    return []

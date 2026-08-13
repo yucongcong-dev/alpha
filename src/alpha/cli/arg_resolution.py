@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+from collections.abc import Callable
 from dataclasses import dataclass
 from typing import cast
 
@@ -37,6 +38,17 @@ class ResolvedConfigLayer:
 
     source: str
     values: dict[str, object]
+
+
+@dataclass(frozen=True, slots=True)
+class ConfigLayerDefinition:
+    """声明一个按固定优先级执行的配置层。"""
+
+    source: str
+    resolve: Callable[[], ResolvedConfigLayer]
+
+
+_SENSITIVE_CONFIG_KEYS = frozenset({"password", "authorization", "token", "secret"})
 
 
 @dataclass(slots=True)
@@ -86,6 +98,7 @@ class ResolvedCliConfig:
     values: dict[str, object]
     sources: dict[str, str]
     source_chains: dict[str, tuple[str, ...]]
+    report: dict[str, dict[str, object]]
 
     def apply_to(self, args: argparse.Namespace) -> argparse.Namespace:
         """Apply the completed snapshot once at the CLI boundary."""
@@ -93,6 +106,7 @@ class ResolvedCliConfig:
             setattr(args, key, value)
         args._config_sources = dict(self.sources)
         args._config_source_chains = dict(self.source_chains)
+        args._config_report = dict(self.report)
         return args
 
 
@@ -126,18 +140,67 @@ def _resolve_settings(
     explicit_cli_keys: set[str],
     explicit_cli_options: set[str] | None,
 ) -> ResolvedCliConfig:
-    """Resolve each named configuration layer in precedence order."""
+    """Resolve the declared configuration layer pipeline in precedence order."""
     state = _ConfigResolutionState.from_args(args, explicit_cli_keys=explicit_cli_keys)
-    state.apply(_global_yaml_layer(state, yaml_config, explicit_cli_keys))
-    state.apply(_date_resolution_layer(state, yaml_config))
-    state.apply(_dataset_profile_layer(state, yaml_config, parser_defaults, explicit_cli_keys))
-    state.apply(_strategy_profile_layer(state, yaml_config, explicit_cli_keys))
-    state.apply(_run_mode_layer(state, explicit_cli_keys, explicit_cli_options))
+    layers = (
+        ConfigLayerDefinition(
+            GLOBAL_YAML_SOURCE,
+            lambda: _global_yaml_layer(state, yaml_config, explicit_cli_keys),
+        ),
+        ConfigLayerDefinition(
+            DATE_RESOLUTION_SOURCE,
+            lambda: _date_resolution_layer(state, yaml_config),
+        ),
+        ConfigLayerDefinition(
+            DATASET_PROFILE_SOURCE,
+            lambda: _dataset_profile_layer(
+                state,
+                yaml_config,
+                parser_defaults,
+                explicit_cli_keys,
+            ),
+        ),
+        ConfigLayerDefinition(
+            STRATEGY_PROFILE_SOURCE,
+            lambda: _strategy_profile_layer(state, yaml_config, explicit_cli_keys),
+        ),
+        ConfigLayerDefinition(
+            RUN_MODE_SOURCE,
+            lambda: _run_mode_layer(state, explicit_cli_keys, explicit_cli_options),
+        ),
+    )
+    for layer in layers:
+        resolved_layer = layer.resolve()
+        if resolved_layer.source != layer.source:
+            raise ValueError(
+                f"configuration layer source mismatch: {layer.source!r} != "
+                f"{resolved_layer.source!r}"
+            )
+        state.apply(resolved_layer)
+    source_chains = {key: tuple(chain) for key, chain in state.source_chains.items()}
     return ResolvedCliConfig(
         values=state.values,
         sources=state.sources,
-        source_chains={key: tuple(chain) for key, chain in state.source_chains.items()},
+        source_chains=source_chains,
+        report=build_config_source_report(state.values, state.sources, source_chains),
     )
+
+
+def build_config_source_report(
+    values: dict[str, object],
+    sources: dict[str, str],
+    source_chains: dict[str, tuple[str, ...]],
+) -> dict[str, dict[str, object]]:
+    """Build a final-value/provenance report with sensitive values redacted."""
+    report: dict[str, dict[str, object]] = {}
+    for key, value in values.items():
+        display_value = "<redacted>" if key.casefold() in _SENSITIVE_CONFIG_KEYS else value
+        report[key] = {
+            "value": display_value,
+            "source": sources.get(key, PARSER_DEFAULT_SOURCE),
+            "chain": list(source_chains.get(key, ())),
+        }
+    return report
 
 
 def _global_yaml_layer(
