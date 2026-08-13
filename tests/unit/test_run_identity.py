@@ -7,6 +7,7 @@ import json
 
 import pytest
 
+from alpha.app.bootstrap_fields import prepare_fields_for_research_identity
 from alpha.app.run_identity import (
     build_research_input_fingerprints,
     build_research_run_fingerprint,
@@ -182,6 +183,32 @@ def test_field_fingerprint_ignores_descriptive_and_selection_metadata() -> None:
         )["fields"]
 
     assert fingerprint(first) == fingerprint(second)
+
+
+def test_field_fingerprint_ignores_fields_outside_hard_candidate_pool() -> None:
+    policy = DatasetExpressionPolicy(field_min_coverage=0.8)
+    baseline = [
+        TemplateField("included", "included", "MATRIX", {"coverage": 1.0}),
+        TemplateField("discarded", "discarded", "MATRIX", {"coverage": 0.1}),
+    ]
+    changed = [
+        TemplateField("included", "included", "MATRIX", {"coverage": 1.0}),
+        TemplateField("discarded", "discarded", "MATRIX", {"coverage": 0.2}),
+    ]
+
+    def fingerprint(fields):
+        return build_research_input_fingerprints(
+            filters=RunFilters(),
+            expression_policy=policy,
+            blacklist_payload={},
+            fields=prepare_fields_for_research_identity(
+                fields,
+                filters_dict=RunFilters(),
+                expression_policy=policy,
+            ),
+        )["fields"]
+
+    assert fingerprint(baseline) == fingerprint(changed)
 
 
 @pytest.mark.parametrize(

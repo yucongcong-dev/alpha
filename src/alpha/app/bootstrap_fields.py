@@ -28,6 +28,7 @@ from .bootstrap_field_selection import (
 __all__ = [
     "infer_field_family",
     "prepare_fields_for_execution",
+    "prepare_fields_for_research_identity",
     "resolve_field_selection",
 ]
 
@@ -132,6 +133,48 @@ def _prepare_explicit_fields_for_execution(
         ranked_field_count=len(filtered_fields),
         selected_fields=selected_fields,
     )
+
+
+def prepare_fields_for_research_identity(
+    fields: list[TemplateField],
+    *,
+    filters_dict: RunFilters,
+    expression_policy: DatasetExpressionPolicy,
+) -> list[TemplateField]:
+    """Return only fields that can enter this run's candidate space.
+
+    Explicit research keeps its deliberate no-quality-filter behavior.  Normal
+    research applies the same hard filters as execution, before feedback
+    ranking and offset/limit selection are considered.
+    """
+    candidates: list[TemplateField] = []
+    quality_stats = base_field_stats(0)
+    for field in fields:
+        field_id, field_name = field_identity(field)
+        if filters_dict.include_fields:
+            if (
+                not _is_explicitly_included(field_id, field_name, filters_dict)
+                or field_id in filters_dict.exclude_fields
+                or field_name in filters_dict.exclude_fields
+            ):
+                continue
+        elif field_id in filters_dict.exclude_fields or field_name in filters_dict.exclude_fields:
+            continue
+        values = metadata_values(field)
+        if not filters_dict.include_fields and not passes_quality_filters(
+            values,
+            quality_thresholds(field_name, expression_policy),
+            quality_stats,
+        ):
+            continue
+        candidates.append(
+            field_with_runtime_metadata(
+                field,
+                expression_policy=expression_policy,
+                coverage=values.coverage_for_tags,
+            )
+        )
+    return candidates
 
 
 def prepare_fields_for_execution(

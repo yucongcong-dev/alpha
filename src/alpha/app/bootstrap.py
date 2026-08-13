@@ -29,7 +29,7 @@ from ..runtime.state import InitializedRunContext
 from .bootstrap_cleanup import clean_runtime_artifacts as clean_runtime_artifacts
 from .bootstrap_clients import create_and_login_client, resolve_credentials
 from .bootstrap_field_resources import load_bootstrap_fields, log_field_selection_stats
-from .bootstrap_fields import prepare_fields_for_execution
+from .bootstrap_fields import prepare_fields_for_execution, prepare_fields_for_research_identity
 from .bootstrap_pending_checks import reconcile_pending_check_results
 from .bootstrap_run_context import assemble_initialized_run_context, build_runtime_concurrency
 from .bootstrap_runtime_outputs import (
@@ -131,6 +131,11 @@ def prepare_bootstrap_resources(
         field_fetch_options=field_options.fetch,
     )
     expression_policy = supporting_resources.expression_policy
+    identity_fields = prepare_fields_for_research_identity(
+        list(fields),
+        filters_dict=supporting_resources.filters,
+        expression_policy=expression_policy,
+    )
     effective_run_config = dict(run_config)
     effective_run_config["heuristic_policy"] = {
         "dataset_id": dataset_id,
@@ -142,7 +147,7 @@ def prepare_bootstrap_resources(
         filters=supporting_resources.filters,
         expression_policy=supporting_resources.expression_policy,
         blacklist_payload=supporting_resources.blacklist_payload,
-        fields=fields,
+        fields=identity_fields,
     )
     template_library_fingerprint = stable_fingerprint(supporting_resources.template_library)
     settings_fingerprint = build_settings_fingerprint(template_options)
