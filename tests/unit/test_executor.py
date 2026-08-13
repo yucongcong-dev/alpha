@@ -67,6 +67,7 @@ def test_build_template_context_copies_narrow_options_and_feedback() -> None:
     assert context.exclude_templates == {"raw"}
     assert context.feedback_result_count == 7
     assert context.expression_policy is not None
+    assert context.feedback_template_min_priority == _options().feedback_template_min_priority
 
 
 def test_unexplored_field_gets_one_seed(monkeypatch) -> None:

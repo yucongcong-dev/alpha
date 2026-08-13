@@ -92,6 +92,7 @@ class TemplateBuildContext:
     include_templates: set[str] = field(default_factory=set)
     exclude_templates: set[str] = field(default_factory=set)
     expression_policy: DatasetExpressionPolicy | None = None
+    feedback_template_min_priority: int = 105
     feedback_result_count: int | None = None
     candidate_filter_counts: MutableMapping[str, int] | None = None
 

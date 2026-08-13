@@ -140,6 +140,7 @@ def resolve_template_skip_reason(
         priority,
         field_feedback,
         expression_policy=expression_policy,
+        feedback_template_min_priority=build_ctx.feedback_template_min_priority,
         template_metadata=template_metadata,
     ):
         return "feedback"

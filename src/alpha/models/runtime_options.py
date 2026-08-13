@@ -5,7 +5,11 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
-from ..config.runtime_values import HttpRuntimeConfig, load_http_runtime_config
+from ..config.runtime_values import (
+    HttpRuntimeConfig,
+    load_feedback_template_min_priority,
+    load_http_runtime_config,
+)
 from ..runtime.preset_mode import resolve_preset_mode
 from .runtime_config import SimulationSettingsConfig, SimulationStageConfig
 
@@ -61,6 +65,7 @@ class TemplateBuildOptions(SimulationSettingsConfig):
     similarity_penalty: int = 0
     template_library_file: str = ""
     preset_mode: bool = False
+    feedback_template_min_priority: int = 105
 
     @classmethod
     def from_config(cls, config: ApplicationConfig) -> TemplateBuildOptions:
@@ -87,6 +92,7 @@ class TemplateBuildOptions(SimulationSettingsConfig):
             max_templates_per_family=planning.max_templates_per_family,
             similarity_penalty=planning.similarity_penalty,
             template_library_file=paths.template_library_file,
+            feedback_template_min_priority=load_feedback_template_min_priority(),
             start_date=simulation.start_date,
             end_date=simulation.end_date,
             preset_mode=resolve_preset_mode(

@@ -114,6 +114,7 @@ def build_template_build_context(
         include_templates=filters.include_templates,
         exclude_templates=filters.exclude_templates,
         expression_policy=expression_policy,
+        feedback_template_min_priority=options.feedback_template_min_priority,
     )
     template_build_ctx.feedback_result_count = existing_results_count
     return template_build_ctx

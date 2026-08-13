@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+from types import SimpleNamespace
+
 from alpha.config.models import DatasetExpressionPolicy, FeedbackLoopPolicy, FeedbackPhasePolicy
 from alpha.policy.expression import resolve_feedback_stage
+from alpha.selection import feedback_filters as feedback_filters_module
 from alpha.selection.feedback_filters import (
     should_keep_template_for_feedback,
     should_skip_field_template_family,
@@ -94,6 +97,33 @@ def test_combined_turnover_concentration_prunes_zscore_spread() -> None:
         _feedback(HIGH_TURNOVER=3, CONCENTRATED_WEIGHT=3),
         expression_policy=_policy(),
         template_metadata={"family": "rank_spread"},
+    )
+
+
+def test_feedback_priority_uses_explicit_run_threshold(monkeypatch) -> None:
+    monkeypatch.setattr(
+        feedback_filters_module,
+        "get_runtime_config",
+        lambda: SimpleNamespace(feedback_template_min_priority=0),
+    )
+    feedback = _feedback()
+    policy = _policy()
+
+    assert not should_keep_template_for_feedback(
+        "template",
+        "rank(field)",
+        174,
+        feedback,
+        expression_policy=policy,
+        feedback_template_min_priority=175,
+    )
+    assert should_keep_template_for_feedback(
+        "template",
+        "rank(field)",
+        175,
+        feedback,
+        expression_policy=policy,
+        feedback_template_min_priority=175,
     )
 
 

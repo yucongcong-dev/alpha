@@ -31,6 +31,7 @@ def should_keep_template_for_feedback(
     *,
     dataset_id: str = "",
     expression_policy: DatasetExpressionPolicy | None = None,
+    feedback_template_min_priority: int | None = None,
     template_metadata: TemplateMetadata | None = None,
 ) -> bool:
     """在字段反馈足够后剪掉低信号、低价值的模板。"""
@@ -84,7 +85,9 @@ def should_keep_template_for_feedback(
     ):
         return False
 
-    return priority >= get_runtime_config().feedback_template_min_priority
+    if feedback_template_min_priority is None:
+        feedback_template_min_priority = get_runtime_config().feedback_template_min_priority
+    return priority >= feedback_template_min_priority
 
 
 def should_skip_field_template_family(
