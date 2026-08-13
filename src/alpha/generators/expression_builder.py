@@ -218,10 +218,13 @@ def build_expression_candidates(
     field_name = choose_field_name(field)
     field_type = choose_field_type(field)
     all_fields = list(build_ctx.all_fields)
-    policy = expression_policy or get_dataset_expression_policy(
-        options.dataset_id,
-        default_backfill_window=options.backfill_window,
-        use_curated_heuristics=build_ctx.use_dataset_heuristics,
+    policy = (
+        expression_policy
+        or build_ctx.expression_policy
+        or get_dataset_expression_policy(
+            options.dataset_id,
+            default_backfill_window=options.backfill_window,
+        )
     )
     field_feedback = decay_field_feedback(
         field_feedback,

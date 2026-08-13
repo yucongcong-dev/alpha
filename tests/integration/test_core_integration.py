@@ -543,7 +543,6 @@ class TestContextConsistency:
         assert ctx.global_failed_check_counts == {}
         assert ctx.include_templates == set()
         assert ctx.exclude_templates == set()
-        assert ctx.use_dataset_heuristics is False
 
 
 # ============================================================================

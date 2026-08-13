@@ -48,7 +48,6 @@ def assemble_initialized_run_context(
         template_library=prepared.template_library,
         filters=prepared.filters,
         expression_policy=prepared.expression_policy,
-        use_dataset_heuristics=prepared.use_dataset_heuristics,
         template_library_fingerprint=prepared.template_library_fingerprint,
         settings_fingerprint=prepared.settings_fingerprint,
         run_fingerprint=prepared.run_fingerprint,

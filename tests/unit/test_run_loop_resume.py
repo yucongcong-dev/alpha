@@ -88,7 +88,6 @@ def _build_run_ctx(fields: list[TemplateField]) -> InitializedRunContext:
         template_library={},
         filters=RunFilters(),
         expression_policy=None,
-        use_dataset_heuristics=False,
         template_library_fingerprint="tpl-fp",
         settings_fingerprint="settings-fp",
         run_fingerprint=IDENTITY.run_fingerprint,

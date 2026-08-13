@@ -207,7 +207,6 @@ def prepare_bootstrap_resources(
         template_library=supporting_resources.template_library,
         filters=supporting_resources.filters,
         expression_policy=supporting_resources.expression_policy,
-        use_dataset_heuristics=supporting_resources.expression_policy.use_curated_heuristics,
         template_library_fingerprint=template_library_fingerprint,
         settings_fingerprint=settings_fingerprint,
         run_fingerprint=run_fingerprint,

@@ -91,7 +91,6 @@ class TemplateBuildContext:
     failed_check_counts_by_field_type: dict[str, dict[str, int]] = field(default_factory=dict)
     include_templates: set[str] = field(default_factory=set)
     exclude_templates: set[str] = field(default_factory=set)
-    use_dataset_heuristics: bool = False
     expression_policy: DatasetExpressionPolicy | None = None
     feedback_result_count: int | None = None
     candidate_filter_counts: MutableMapping[str, int] | None = None

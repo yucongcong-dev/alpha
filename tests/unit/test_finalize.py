@@ -26,7 +26,6 @@ def _build_run_ctx(*, client_factory=None) -> InitializedRunContext:
         template_library={},
         filters=RunFilters(),
         expression_policy=None,
-        use_dataset_heuristics=False,
         template_library_fingerprint="tpl-fp",
         settings_fingerprint="settings-fp",
         run_fingerprint="run-fp",

@@ -7,6 +7,7 @@ from alpha.core.template_planning import (
     TemplatePlanningServices,
     resolve_field_template_candidates,
 )
+from alpha.generators.expression_builder import build_expression_candidates
 from alpha.generators.payload import build_settings_fingerprint_from_payload
 from alpha.models.domain import TemplateCandidate, TemplateField
 from alpha.policy.expression import get_dataset_expression_policy
@@ -73,6 +74,28 @@ def test_exploration_candidate_pool_is_not_limited_before_seed_selection() -> No
     assert captured_limits == [(0, 0)]
 
 
+def test_expression_builder_uses_context_policy_when_no_policy_is_passed() -> None:
+    policy = get_dataset_expression_policy("fundamental6")
+    build_ctx = TemplateBuildContext(
+        options=template_build_options(
+            dataset_id="model51",
+            similarity_penalty=0,
+        ),
+        all_fields=[_field("cash_st")],
+        template_library={},
+        expression_policy=policy,
+    )
+
+    candidates = build_expression_candidates(
+        _field("cash_st"),
+        build_ctx,
+        max_templates_per_field=0,
+        max_templates_per_family=0,
+    )
+
+    assert all(item.metadata["policy_version"] == policy.policy_version for item in candidates)
+
+
 def test_build_pending_templates_skips_inflight_duplicate(monkeypatch) -> None:
     settings_payload = {"neutralization": "SUBINDUSTRY", "truncation": 0.08}
     monkeypatch.setattr(
@@ -111,7 +134,6 @@ def test_build_pending_templates_skips_inflight_duplicate(monkeypatch) -> None:
         options=options,
         all_fields=[_field("unsystematic_risk_last_360_days")],
         template_library={},
-        use_dataset_heuristics=False,
         expression_policy=get_dataset_expression_policy("model51"),
     )
 
@@ -189,7 +211,6 @@ def test_build_pending_templates_uses_explicit_template_role(
         all_fields=[_field("cash_st", "VECTOR")],
         field_feedback={"cash_st": {"attempted_templates": 1, "best_score": 0.0}},
         template_library={},
-        use_dataset_heuristics=False,
         expression_policy=get_dataset_expression_policy("fundamental6"),
     )
 
@@ -249,7 +270,6 @@ def test_build_pending_templates_ignores_persisted_registry_recommendation(monke
         all_fields=[_field("cash_st", "VECTOR")],
         field_feedback={"cash_st": {"attempted_templates": 1, "best_score": 0.0}},
         template_library={},
-        use_dataset_heuristics=False,
         expression_policy=get_dataset_expression_policy("fundamental6"),
     )
 
@@ -321,7 +341,6 @@ def test_build_pending_templates_dedupes_same_expression_variant_across_template
         options=options,
         all_fields=[_field("cash_st", "VECTOR")],
         template_library={},
-        use_dataset_heuristics=False,
         expression_policy=get_dataset_expression_policy("fundamental6"),
     )
 

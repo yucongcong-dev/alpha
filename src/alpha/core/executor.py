@@ -113,7 +113,6 @@ def build_template_build_context(
         global_failed_check_counts=historical_state.global_failed_check_counts,
         include_templates=filters.include_templates,
         exclude_templates=filters.exclude_templates,
-        use_dataset_heuristics=expression_policy.use_curated_heuristics,
         expression_policy=expression_policy,
     )
     template_build_ctx.feedback_result_count = existing_results_count

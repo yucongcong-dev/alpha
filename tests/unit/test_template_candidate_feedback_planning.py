@@ -69,7 +69,6 @@ def test_build_pending_templates_skips_attempted_expression_variant_across_templ
         options=options,
         all_fields=[_field("cash_st")],
         template_library={},
-        use_dataset_heuristics=False,
         expression_policy=get_dataset_expression_policy("fundamental6"),
     )
     attempted_keys = {
@@ -139,7 +138,6 @@ def test_build_pending_templates_uses_template_metadata_without_registry_overrid
         options=options,
         all_fields=[_field("cash_st", metadata={"runtime_field_tags": ["high_coverage"]})],
         template_library={},
-        use_dataset_heuristics=False,
         expression_policy=get_dataset_expression_policy("fundamental6"),
     )
 
@@ -211,7 +209,6 @@ def test_event_field_exploration_uses_one_seed_template(monkeypatch) -> None:
         options=options,
         all_fields=[_field("fnd6_cptnewqeventv110_apq")],
         template_library={},
-        use_dataset_heuristics=False,
         expression_policy=get_dataset_expression_policy("fundamental6"),
     )
 
@@ -280,7 +277,6 @@ def test_build_pending_templates_does_not_hard_demote_from_global_stats(monkeypa
                 )
             ]
         },
-        use_dataset_heuristics=False,
         expression_policy=get_dataset_expression_policy("fundamental6"),
     )
 

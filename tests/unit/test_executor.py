@@ -67,7 +67,6 @@ def test_build_template_context_copies_narrow_options_and_feedback() -> None:
     assert context.exclude_templates == {"raw"}
     assert context.feedback_result_count == 7
     assert context.expression_policy is not None
-    assert context.use_dataset_heuristics is context.expression_policy.use_curated_heuristics
 
 
 def test_unexplored_field_gets_one_seed(monkeypatch) -> None:

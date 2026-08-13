@@ -68,7 +68,6 @@ class InitializedRunContext:
     template_library: TemplateLibrary
     filters: RunFilters
     expression_policy: DatasetExpressionPolicy
-    use_dataset_heuristics: bool
     template_library_fingerprint: str
     settings_fingerprint: str
     run_fingerprint: str
