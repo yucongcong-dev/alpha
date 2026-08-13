@@ -305,6 +305,12 @@ Sharpe = sqrt(252) * IR ≈ 15.8 * IR
 
 它们是按流动性分层的集合关系，不只是股票数量不同。
 
+设置层面的可用性（`2026-08-06` 快照）：
+
+- Instrument type 目前只有 `Equity` 可用
+- 所有用户默认可用的 Region 只有 `US` 市场；`Europe` 和 `Asia` 仅对 research
+  consultant 开放，因此普通账号在 `EUR / ASI` 区域模拟通常不可用
+
 ### 7.2 `Weight`
 
 官方解释：
