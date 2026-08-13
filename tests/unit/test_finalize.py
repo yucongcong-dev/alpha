@@ -110,7 +110,8 @@ def test_finalize_run_updates_separate_feedback_output(tmp_path) -> None:
     mock_delete.assert_called_once_with(str(tmp_path / "state.json"))
 
 
-def test_finalize_run_reconciles_pending_checks_before_persisting(tmp_path) -> None:
+def test_finalize_run_reconciles_pending_checks_before_persisting(tmp_path, caplog) -> None:
+    caplog.set_level("INFO")
     pending = FieldTestResult(
         field_id="field_1",
         field_type="MATRIX",
@@ -132,6 +133,7 @@ def test_finalize_run_reconciles_pending_checks_before_persisting(tmp_path) -> N
         submittable=True,
         message="checks passed",
         expression="rank(field_1)",
+        updated_at="2026-08-13T00:00:00Z",
     )
     client_factory = object()
     run_ctx = _build_run_ctx(client_factory=client_factory)
@@ -169,3 +171,4 @@ def test_finalize_run_reconciles_pending_checks_before_persisting(tmp_path) -> N
     )
     assert mock_dump.call_args.args[2] == [resolved]
     assert run_ctx.execution_state.result_ledger.pending_check_count == 0
+    assert "[check-submission-finalize] attempted=1 resolved=1 remaining=0" in caplog.text

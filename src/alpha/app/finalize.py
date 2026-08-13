@@ -45,19 +45,24 @@ def finalize_run(
     results = result_ledger.results
     pending_before = result_ledger.pending_check_count
     if pending_before:
+        original_results = list(results)
         refreshed_results, resolved_count = refresh_pending_check_results(
             run_ctx.client_factory,
-            list(results),
+            original_results,
             retries=args.execution.check_submission_retries,
             refresh_limit=DEFAULT_PENDING_CHECK_REFRESH_LIMIT,
             max_refresh_seconds=DEFAULT_PENDING_CHECK_REFRESH_MAX_SECONDS,
             max_workers=run_ctx.runtime_state.max_workers,
         )
+        attempted_count = sum(
+            before.updated_at != after.updated_at
+            for before, after in zip(original_results, refreshed_results, strict=True)
+        )
         results[:] = refreshed_results
         result_ledger.refresh_metrics()
         logger.info(
             "[check-submission-finalize] attempted=%d resolved=%d remaining=%d",
-            pending_before,
+            attempted_count,
             resolved_count,
             result_ledger.pending_check_count,
         )
