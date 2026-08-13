@@ -582,6 +582,9 @@ Test Period 可以更具体地按下面方式使用：
 
 表达式里的 `group_neutralize(x, group)` 与回测设置的 Neutralization 都会改变持仓结构，但作用范围不同：前者只处理表达式中传入的局部值，Simulation Settings 的 Neutralization 则在平台操作链最后对整个 Alpha 起作用。
 
+> `group_neutralize(...)` 算子与 `neutralization` 设置的逐项边界见
+> [04 的 8.5 小节](04_platform_reference.md#85-truncate-truncation-group_neutralize-neutralization)。
+
 `Neutralization=None` 适合用于分析数据集、验证表达式或做研究对照；正式提交时，如果没有最后一层 `group_neutralize`、`group_normalize` 等平衡处理，可能造成 long/short 失衡和市场风险暴露，不能把 `None` 当成默认提交方案。是否保留双层处理，应通过对照实验和风险暴露检查决定。
 
 官方来源：[Why is it not recommended to submit Neutralization None alphas](https://support.worldquantbrain.com/hc/en-us/articles/13306223024151-Why-is-it-not-recommended-to-submit-Neutralization-None-alphas)；[Difference between group neutralize and Neutralization setting](https://support.worldquantbrain.com/hc/en-us/articles/6425949726487-Difference-between-group-neutralize-and-Neutralization-setting)
