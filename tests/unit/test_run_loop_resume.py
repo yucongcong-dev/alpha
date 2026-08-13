@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 from concurrent.futures import Future
+from dataclasses import replace
 from functools import partial
 import json
 from threading import Semaphore
@@ -411,6 +412,51 @@ def test_run_field_test_loop_interrupts_workers_without_waiting(tmp_path) -> Non
         next(iter(saved_state.future_queue.pending_futures.values())).simulation_location
         == "/simulations/sim-1"
     )
+
+
+def test_run_field_test_loop_interrupts_active_http_requests(tmp_path) -> None:
+    fields = [_field("f1")]
+    run_ctx = _build_run_ctx(fields)
+    args = _build_run_loop_args(tmp_path)
+    aborted: list[bool] = []
+    run_ctx = replace(
+        run_ctx,
+        client_factory=SimpleNamespace(
+            abort_active_requests=lambda: aborted.append(True),
+        ),
+    )
+
+    class FakeExecutor:
+        def shutdown(self, *, wait: bool, cancel_futures: bool = False) -> None:
+            assert (wait, cancel_futures) == (True, True)
+
+    def _interrupt(*_args, **_kwargs):
+        running: Future[object] = Future()
+        assert running.set_running_or_notify_cancel() is True
+        run_ctx.execution_state.future_queue.pending_futures = {
+            running: SimpleNamespace(simulation_location="/simulations/sim-1"),
+        }
+        raise KeyboardInterrupt
+
+    with (
+        patch("alpha.app.run_loop.ThreadPoolExecutor", return_value=FakeExecutor()),
+        patch("alpha.app.run_loop_resume.restore_fields_from_state", return_value=fields),
+        patch(
+            "alpha.app.run_loop_contexts.create_template_build_context",
+            return_value=SimpleNamespace(
+                field_feedback={},
+                global_failed_check_counts={},
+                feedback_result_count=0,
+            ),
+        ),
+        patch("alpha.app.future_submission.submit_resumable_futures"),
+        patch("alpha.app.run_loop_rounds.execute_schedule_round", side_effect=_interrupt),
+        patch("alpha.app.run_loop_resume.save_runtime_checkpoint"),
+        pytest.raises(KeyboardInterrupt),
+    ):
+        run_field_test_loop(args, run_ctx)
+
+    assert aborted == [True]
 
 
 def test_run_field_test_loop_interrupt_drains_completed_futures(tmp_path) -> None:

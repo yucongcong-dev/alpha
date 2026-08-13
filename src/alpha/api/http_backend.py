@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from http.cookiejar import Cookie, CookieJar
+import threading
 from typing import Protocol
 from urllib.request import HTTPCookieProcessor, ProxyHandler, build_opener
 from urllib.request import Request as UrllibRequest
@@ -45,6 +46,10 @@ class HttpBackend(Protocol):
         """Release resources owned by the HTTP backend."""
         ...
 
+    def abort_active_requests(self) -> None:
+        """Interrupt responses currently being read by the backend."""
+        ...
+
 
 class UrllibHttpBackend:
     """基于 urllib.request 的 HTTP 后端（默认兼容实现）。"""
@@ -52,6 +57,8 @@ class UrllibHttpBackend:
     def __init__(self) -> None:
         self._cookies = CookieJar()
         self._opener = build_opener(ProxyHandler({}), HTTPCookieProcessor(self._cookies))
+        self._active_responses: set[object] = set()
+        self._active_responses_lock = threading.Lock()
 
     def request(
         self,
@@ -66,8 +73,17 @@ class UrllibHttpBackend:
 
         request = UrllibRequest(url=url, data=data, headers=headers or {}, method=method)
         try:
-            with self._opener.open(request, timeout=timeout) as response:
+            response = self._opener.open(request, timeout=timeout)
+            with self._active_responses_lock:
+                self._active_responses.add(response)
+            try:
                 return response.getcode(), dict(response.headers.items()), response.read()
+            finally:
+                with self._active_responses_lock:
+                    self._active_responses.discard(response)
+                close = getattr(response, "close", None)
+                if callable(close):
+                    close()
         except HTTPError as exc:
             return exc.code, dict(exc.headers.items()), exc.read()
         except (URLError, TimeoutError) as exc:
@@ -84,3 +100,19 @@ class UrllibHttpBackend:
 
     def close(self) -> None:
         """urllib keeps no explicit connection pool to close."""
+        self.abort_active_requests()
+
+    def abort_active_requests(self) -> None:
+        """Close active responses without marking the backend closed.
+
+        Closing a response from the stopping thread unblocks a worker that is
+        currently reading a long-poll response.  The backend remains reusable
+        for other lifecycle paths until its owner calls ``close``.
+        """
+        with self._active_responses_lock:
+            responses = tuple(self._active_responses)
+        for response in responses:
+            try:
+                response.close()  # type: ignore[attr-defined]
+            except Exception:
+                pass

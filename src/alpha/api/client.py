@@ -72,6 +72,10 @@ class BrainClient(BrainSessionMixin, BrainFieldsMixin, BrainSimulationsMixin, Br
         """Release resources held by the HTTP backend."""
         self._http_backend.close()
 
+    def abort_active_requests(self) -> None:
+        """Interrupt active HTTP reads while keeping the client usable."""
+        self._http_backend.abort_active_requests()
+
     def __enter__(self) -> BrainClient:
         return self
 
@@ -156,3 +160,10 @@ class WorkerClientFactory:
             client.close()
         if hasattr(self._local, "client"):
             del self._local.client
+
+    def abort_active_requests(self) -> None:
+        """Interrupt active requests without closing worker clients."""
+        with self._clients_lock:
+            clients = tuple(self._clients)
+        for client in clients:
+            client.abort_active_requests()

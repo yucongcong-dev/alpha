@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from email.message import Message
 from io import BytesIO
+import threading
 from typing import Any
 from urllib.error import HTTPError, URLError
 
@@ -39,6 +40,24 @@ class _Response:
 
     def read(self) -> bytes:
         return self.body
+
+    def close(self) -> None:
+        return None
+
+
+class _BlockingResponse(_Response):
+    def __init__(self) -> None:
+        super().__init__(200, b"done")
+        self.started = threading.Event()
+        self.closed = threading.Event()
+
+    def read(self) -> bytes:
+        self.started.set()
+        self.closed.wait(timeout=2)
+        return self.body
+
+    def close(self) -> None:
+        self.closed.set()
 
 
 class _Opener:
@@ -82,6 +101,26 @@ def test_urllib_backend_wraps_network_errors() -> None:
 
     with pytest.raises(BrainAPIError, match="offline"):
         backend.request("GET", "https://example.test")
+
+
+def test_urllib_backend_aborts_active_response() -> None:
+    response = _BlockingResponse()
+    backend = UrllibHttpBackend()
+    backend._opener = _Opener(response)  # type: ignore[assignment]
+    result: list[tuple[int, dict[str, str], bytes]] = []
+
+    request_thread = threading.Thread(
+        target=lambda: result.append(backend.request("GET", "https://example.test")),
+    )
+    request_thread.start()
+    assert response.started.wait(timeout=1)
+
+    backend.abort_active_requests()
+
+    request_thread.join(timeout=1)
+    assert not request_thread.is_alive()
+    assert result == [(200, {"Content-Type": "application/json"}, b"done")]
+    assert response.closed.is_set()
 
 
 def test_response_header_matches_names_case_insensitively() -> None:

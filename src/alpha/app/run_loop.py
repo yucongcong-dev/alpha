@@ -9,6 +9,7 @@ from ..config.application import ApplicationConfig
 from ..core.scheduler import drain_completed_futures_with_context
 from ..models.domain import TemplateField
 from ..models.runtime_options import RunLoopOptions, SchedulerControlOptions
+from ..models.runtime_protocols import ClientFactoryLike
 from ..runtime.concurrency import RuntimeConcurrencyState
 from ..runtime.contexts import CheckpointIdentity, FutureCompletionContext
 from ..runtime.state import ExecutionState, InitializedRunContext
@@ -22,6 +23,19 @@ from . import (
 from .run_loop_seed_phase import SeedPhaseState
 
 logger = logging.getLogger(__name__)
+
+_ABORT_REQUEST_GRACE_SECONDS = 0.5
+
+
+def _abort_active_requests(client_factory: ClientFactoryLike) -> None:
+    """Interrupt HTTP reads without taking ownership of client shutdown."""
+    abort = getattr(client_factory, "abort_active_requests", None)
+    if not callable(abort):
+        return
+    try:
+        abort()
+    except Exception:
+        logger.warning("[abort] failed to interrupt active HTTP requests", exc_info=True)
 
 
 def _stop_workers_and_save_checkpoint(
@@ -37,6 +51,7 @@ def _stop_workers_and_save_checkpoint(
     reason: str,
     scheduler_options: SchedulerControlOptions,
     completion_ctx: FutureCompletionContext,
+    client_factory: ClientFactoryLike,
 ) -> None:
     """Stop pending work, stabilize resumable metadata, and persist recovery state."""
     completed_futures = [
@@ -57,6 +72,17 @@ def _stop_workers_and_save_checkpoint(
         )
     execution_state.future_queue.request_stop(abort_workers=True)
     cancelled = future_submission.cancel_unstarted_futures(execution_state)
+    future_submission.wait_for_inflight_simulation_metadata(
+        execution_state,
+        timeout_seconds=_ABORT_REQUEST_GRACE_SECONDS,
+    )
+    if any(
+        future.running() and not future.done()
+        for future in execution_state.future_queue.pending_futures
+    ):
+        # Closing response objects interrupts long-poll reads while preserving
+        # client ownership until every worker has exited below.
+        _abort_active_requests(client_factory)
     # A checkpoint is only safe after every worker has stopped.  In particular,
     # a create request may already have succeeded remotely while its callback
     # has not published the Location yet.  Saving before join can turn that
@@ -240,6 +266,7 @@ def run_field_test_loop(
                 reason="KeyboardInterrupt",
                 scheduler_options=scheduler_options,
                 completion_ctx=completion_ctx,
+                client_factory=run_ctx.client_factory,
             )
             executor_shutdown = True
             raise
@@ -256,6 +283,7 @@ def run_field_test_loop(
                 reason="Exception",
                 scheduler_options=scheduler_options,
                 completion_ctx=completion_ctx,
+                client_factory=run_ctx.client_factory,
             )
             executor_shutdown = True
             raise
