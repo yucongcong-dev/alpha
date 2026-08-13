@@ -1,2 +1,0 @@
-option9_forward_premium_vs_spot
-option9_forward_curve_vs_30

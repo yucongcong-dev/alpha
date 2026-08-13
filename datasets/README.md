@@ -41,13 +41,16 @@ datasets/<dataset_id>/
 | `socialmedia8` | 暂停 | 无 |
 | `pv13` | 暂停 | 无 |
 | `news12` | 暂停 | 无 |
-| `option9` | 探索 | `forward_curve_seed` |
+| `option9` | 暂停 | 无 |
 | `news18` | 暂停 | 无 |
 
-当前现役 explore 数据集是 `option9`，仅运行 `forward_curve_seed`：比较 90/270 日远期价格
-相对现货和 30 日远期价格的期限结构，不恢复已失败的 put/call volume-ratio 假设，也不扫描
-完整字段池。跨市场筛选仍受账号 Region 权限限制；此前 `news18` USA / TOP1000 /
-Delay 0 的四个独立事件种子均已失败，不恢复该 D1/D0 新闻方向。
+当前所有数据集均已暂停，没有现役 preset。`option9` 的 `forward_curve_seed`
+首轮（2026-08-13，`forward_price_90/270` 的 4 个候选）全部失败：Sharpe 0.15~0.55、
+Fitness 0.03~0.12、权重集中度全部 FAIL，期限结构变体 Sub-universe Sharpe 0.12/-0.32；
+该 preset 已随方向关闭删除，结论见
+[option9 README](option9/README.md) 与 [research_history](option9/research_history.md)。
+跨市场筛选仍受账号 Region 权限限制；此前 `news18` USA / TOP1000 / Delay 0 的四个
+独立事件种子均已失败，不恢复该 D1/D0 新闻方向。
 
 2026-08-07 的官网只读筛选还比较了 USA 的 TOP2000、TOP1000、TOP500、TOP200 和
 TOPSP500。D1 均返回同一组 14 个数据集，D0 均返回同一组 11 个数据集；更换 Universe

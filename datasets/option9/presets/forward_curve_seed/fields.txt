@@ -1,3 +1,0 @@
-# Official Data Explorer: 98% coverage, 100% date coverage.
-forward_price_90
-forward_price_270

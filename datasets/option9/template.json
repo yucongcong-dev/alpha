@@ -1,5 +1,5 @@
 {
-  "_comment": "option9 paused after the 2026-07-30 put/call term probe; no active templates remain.",
+  "_comment": "option9 paused after the 2026-08-13 forward-curve seed; no active templates remain. See README.md and research_history.md.",
   "_comment_placeholders": "{field}=字段名",
   "_dataset_id": "option9",
   "default": [],
