@@ -324,7 +324,9 @@ def test_refresh_pending_check_results_aborts_retry_at_deadline(monkeypatch) -> 
     assert refreshed[0].updated_at == ""
 
 
-def test_refresh_pending_check_results_does_not_wait_for_slow_batch(monkeypatch) -> None:
+def test_refresh_pending_check_results_joins_timed_out_batch_before_returning(monkeypatch) -> None:
+    executors = []
+
     class _SlowFuture:
         def __init__(self, result):
             self._result = result
@@ -342,12 +344,14 @@ def test_refresh_pending_check_results_does_not_wait_for_slow_batch(monkeypatch)
 
         def __init__(self, **_kwargs):
             self.future = _SlowFuture(None)
+            self.shutdown_calls: list[dict[str, bool]] = []
+            executors.append(self)
 
         def submit(self, *_args, **_kwargs):
             return self.future
 
         def shutdown(self, **_kwargs):
-            return None
+            self.shutdown_calls.append(_kwargs)
 
     monkeypatch.setattr(
         "alpha.core.pending_check_refresh.ThreadPoolExecutor",
@@ -368,6 +372,7 @@ def test_refresh_pending_check_results_does_not_wait_for_slow_batch(monkeypatch)
 
     assert refreshed == [original]
     assert count == 0
+    assert executors[0].shutdown_calls == [{"wait": True, "cancel_futures": True}]
 
 
 def test_refresh_pending_check_results_uses_worker_factory_for_parallel_checks(monkeypatch) -> None:

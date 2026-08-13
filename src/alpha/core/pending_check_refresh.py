@@ -200,7 +200,10 @@ def _apply_pending_check_refreshes(
                 break
             cursor += len(batch)
     finally:
-        executor.shutdown(wait=False, cancel_futures=True)
+        # A timed-out refresh task still owns a client until its deadline/abort
+        # path returns. Do not let bootstrap/finalize close that client underneath
+        # a live worker.
+        executor.shutdown(wait=True, cancel_futures=True)
     return refreshed_count, attempted_count
 
 
