@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import FrozenInstanceError
+from dataclasses import FrozenInstanceError, replace
 import time
 from types import SimpleNamespace
 
@@ -16,6 +16,7 @@ from alpha.config.application_sections import (
     QualityConfig,
     SimulationConfig,
 )
+from alpha.config.runtime_values import HttpRuntimeConfig, RuntimeConfig
 from alpha.models.domain import FailedCheck, FieldTestContext, FieldTestResult
 from alpha.models.domain_serializers import serialize_field_test_result
 from alpha.models.io_types import RunFilters, RunPaths
@@ -114,6 +115,29 @@ class TestRuntimeOptionBuilders:
             min_request_interval=0.25,
             rate_limit_max_retries=7,
             login_retries=3,
+        )
+
+    def test_runtime_options_use_application_config_snapshot(self) -> None:
+        runtime_values = RuntimeConfig(
+            http=HttpRuntimeConfig(
+                request_timeout=17.0,
+                rate_limit_default_wait=4.0,
+                polling_default_wait=5.0,
+                polling_no_retry_after_wait=1.5,
+                server_error_backoff_max=30.0,
+                server_error_backoff_step=3.0,
+                retry_operation_default_wait=2.0,
+                login_retry_wait=6.0,
+                simulation_retry_wait=7.0,
+                polling_retry_buffer=0.75,
+            ),
+            feedback_template_min_priority=175,
+        )
+        config = replace(_application_config(), runtime_values=runtime_values)
+
+        assert ApiClientOptions.from_config(config).http_config is runtime_values.http
+        assert (
+            RunLoopOptions.from_config(config).template_build.feedback_template_min_priority == 175
         )
 
     def test_result_write_and_field_fetch_options_from_config(self) -> None:

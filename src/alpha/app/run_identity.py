@@ -31,6 +31,7 @@ def _research_config(run_config: RunConfig) -> dict[str, Any]:
             "retries",
             "quality",
             "runtime",
+            "runtime_values",
             "heuristic_policy",
             "input_fingerprints",
         )

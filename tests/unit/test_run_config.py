@@ -86,4 +86,19 @@ def test_run_config_snapshot_captures_research_inputs(monkeypatch, tmp_path) -> 
         "include_templates_file": str(filter_paths["--include-templates-file"]),
         "exclude_templates_file": str(filter_paths["--exclude-templates-file"]),
     }
+    assert snapshot["runtime_values"] == {
+        "http": {
+            "request_timeout": config.runtime_values.http.request_timeout,
+            "rate_limit_default_wait": config.runtime_values.http.rate_limit_default_wait,
+            "polling_default_wait": config.runtime_values.http.polling_default_wait,
+            "polling_no_retry_after_wait": config.runtime_values.http.polling_no_retry_after_wait,
+            "server_error_backoff_max": config.runtime_values.http.server_error_backoff_max,
+            "server_error_backoff_step": config.runtime_values.http.server_error_backoff_step,
+            "retry_operation_default_wait": config.runtime_values.http.retry_operation_default_wait,
+            "login_retry_wait": config.runtime_values.http.login_retry_wait,
+            "simulation_retry_wait": config.runtime_values.http.simulation_retry_wait,
+            "polling_retry_buffer": config.runtime_values.http.polling_retry_buffer,
+        },
+        "feedback_template_min_priority": config.runtime_values.feedback_template_min_priority,
+    }
     assert snapshot["config_source_chains"]["pasteurization"] == ["parser_default", "cli"]

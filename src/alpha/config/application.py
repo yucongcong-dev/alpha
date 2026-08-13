@@ -16,6 +16,7 @@ from .application_sections import (
     RuntimeFlagsConfig,
     SimulationConfig,
 )
+from .runtime_values import RuntimeConfig, get_runtime_config
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -83,6 +84,7 @@ class ApplicationConfig:
     execution: ExecutionConfig
     quality: QualityConfig
     runtime_flags: RuntimeFlagsConfig
+    runtime_values: RuntimeConfig
     config_sources: Mapping[str, str]
     config_source_chains: Mapping[str, tuple[str, ...]]
 
@@ -102,6 +104,9 @@ class ApplicationConfig:
             execution=ExecutionConfig.from_args(args),
             quality=QualityConfig.from_args(args),
             runtime_flags=RuntimeFlagsConfig.from_args(args),
+            # YAML-backed waits and feedback thresholds are part of one resolved
+            # run. Do not let later stages observe edits made while it is running.
+            runtime_values=get_runtime_config(),
             config_sources=MappingProxyType(
                 {
                     str(key): str(value)

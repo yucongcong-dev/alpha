@@ -4,6 +4,7 @@
 
 from __future__ import annotations
 
+from dataclasses import asdict
 from typing import Any
 
 from ..config.application import ApplicationConfig
@@ -103,6 +104,7 @@ def build_run_config_snapshot(
             "verbose": flags.verbose,
             "quiet": flags.quiet,
         },
+        "runtime_values": asdict(config.runtime_values),
         "config_sources": dict(config.config_sources),
         "config_source_chains": {
             key: list(chain) for key, chain in config.config_source_chains.items()
