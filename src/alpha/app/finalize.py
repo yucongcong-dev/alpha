@@ -18,14 +18,14 @@ from ..analysis.results_loader import load_existing_results
 from ..analysis.results_persistence import dump_results
 from ..config.application import ApplicationConfig
 from ..core.checkpoint_files import delete_pipeline_state
-from ..io.results_store import exclusive_results_transaction
-from ..models.runtime_options import ResultWriteOptions
-from ..runtime.state import InitializedRunContext
-from .bootstrap_pending_checks import (
+from ..core.pending_check_refresh import (
     DEFAULT_PENDING_CHECK_REFRESH_LIMIT,
     DEFAULT_PENDING_CHECK_REFRESH_MAX_SECONDS,
     refresh_pending_check_results,
 )
+from ..io.results_store import exclusive_results_transaction
+from ..models.runtime_options import ResultWriteOptions
+from ..runtime.state import InitializedRunContext
 
 logger = logging.getLogger(__name__)
 

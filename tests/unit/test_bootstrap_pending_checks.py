@@ -4,11 +4,11 @@ from __future__ import annotations
 
 from dataclasses import replace
 
-from alpha.app.bootstrap_pending_checks import (
-    reconcile_pending_check_results,
+from alpha.app.bootstrap_pending_checks import reconcile_pending_check_results
+from alpha.config._constants_strings import STATUS_ERROR
+from alpha.core.pending_check_refresh import (
     refresh_pending_check_results,
 )
-from alpha.config._constants_strings import STATUS_ERROR
 from alpha.exceptions import BrainHTTPError, BrainStopRequested
 from alpha.models.domain import FailedCheck, FieldTestResult
 from alpha.runtime.contexts import HistoricalRunState
@@ -108,7 +108,7 @@ def test_reconcile_pending_check_results_persists_run_and_feedback_views(monkeyp
 
 def test_refresh_pending_check_results_replaces_terminal_result(monkeypatch) -> None:
     monkeypatch.setattr(
-        "alpha.app.bootstrap_pending_checks.check_submission_with_retry",
+        "alpha.core.pending_check_refresh.check_submission_with_retry",
         lambda *_args, **_kwargs: (True, "checks passed", []),
     )
 
@@ -123,7 +123,7 @@ def test_refresh_pending_check_results_replaces_terminal_result(monkeypatch) -> 
 def test_refresh_pending_check_results_keeps_still_pending_result(monkeypatch) -> None:
     original = _pending_result()
     monkeypatch.setattr(
-        "alpha.app.bootstrap_pending_checks.check_submission_with_retry",
+        "alpha.core.pending_check_refresh.check_submission_with_retry",
         lambda *_args, **_kwargs: (
             None,
             "checks pending",
@@ -143,7 +143,7 @@ def test_refresh_pending_check_results_terminalizes_permanent_http_error(monkeyp
         raise BrainHTTPError("GET /alphas/missing/check failed: 404", status=404)
 
     monkeypatch.setattr(
-        "alpha.app.bootstrap_pending_checks.check_submission_with_retry",
+        "alpha.core.pending_check_refresh.check_submission_with_retry",
         _missing,
     )
 
@@ -162,7 +162,7 @@ def test_refresh_pending_check_results_skips_rows_without_alpha_id(monkeypatch) 
         raise AssertionError("check_submission should not be called")
 
     monkeypatch.setattr(
-        "alpha.app.bootstrap_pending_checks.check_submission_with_retry",
+        "alpha.core.pending_check_refresh.check_submission_with_retry",
         _unexpected,
     )
 
@@ -178,7 +178,7 @@ def test_refresh_pending_check_results_skips_rows_without_alpha_id(monkeypatch) 
 
 def test_refresh_pending_check_results_recovers_stale_terminal_flag(monkeypatch) -> None:
     monkeypatch.setattr(
-        "alpha.app.bootstrap_pending_checks.check_submission_with_retry",
+        "alpha.core.pending_check_refresh.check_submission_with_retry",
         lambda *_args, **_kwargs: (True, "checks passed", []),
     )
 
@@ -200,7 +200,7 @@ def test_refresh_pending_check_results_respects_startup_budget(monkeypatch) -> N
         return True, "checks passed", []
 
     monkeypatch.setattr(
-        "alpha.app.bootstrap_pending_checks.check_submission_with_retry",
+        "alpha.core.pending_check_refresh.check_submission_with_retry",
         _resolve,
     )
     originals = [_pending_result(alpha_id=f"alpha_{index}") for index in range(3)]
@@ -226,7 +226,7 @@ def test_refresh_pending_check_results_rotates_oldest_attempts(monkeypatch) -> N
         return None, "checks pending", [FailedCheck(name="SELF_CORRELATION", result="PENDING")]
 
     monkeypatch.setattr(
-        "alpha.app.bootstrap_pending_checks.check_submission_with_retry",
+        "alpha.core.pending_check_refresh.check_submission_with_retry",
         _pending,
     )
     originals = [_pending_result(alpha_id=f"alpha_{index}") for index in range(3)]
@@ -259,11 +259,11 @@ def test_refresh_pending_check_results_respects_total_time_budget(monkeypatch) -
         return None, "checks pending", []
 
     monkeypatch.setattr(
-        "alpha.app.bootstrap_pending_checks.check_submission_with_retry",
+        "alpha.core.pending_check_refresh.check_submission_with_retry",
         _pending,
     )
     monkeypatch.setattr(
-        "alpha.app.bootstrap_pending_checks.time.monotonic",
+        "alpha.core.pending_check_refresh.time.monotonic",
         lambda: clock["now"],
     )
 
@@ -273,7 +273,7 @@ def test_refresh_pending_check_results_respects_total_time_budget(monkeypatch) -
         return {next(iter(futures))}, set()
 
     monkeypatch.setattr(
-        "alpha.app.bootstrap_pending_checks.wait",
+        "alpha.core.pending_check_refresh.wait",
         _complete_first_batch,
     )
 
@@ -303,11 +303,11 @@ def test_refresh_pending_check_results_aborts_retry_at_deadline(monkeypatch) -> 
         raise BrainStopRequested("startup refresh deadline reached")
 
     monkeypatch.setattr(
-        "alpha.app.bootstrap_pending_checks.check_submission_with_retry",
+        "alpha.core.pending_check_refresh.check_submission_with_retry",
         _deadline_abort,
     )
     monkeypatch.setattr(
-        "alpha.app.bootstrap_pending_checks.time.monotonic",
+        "alpha.core.pending_check_refresh.time.monotonic",
         lambda: clock["now"],
     )
 
@@ -350,11 +350,11 @@ def test_refresh_pending_check_results_does_not_wait_for_slow_batch(monkeypatch)
             return None
 
     monkeypatch.setattr(
-        "alpha.app.bootstrap_pending_checks.ThreadPoolExecutor",
+        "alpha.core.pending_check_refresh.ThreadPoolExecutor",
         _Executor,
     )
     monkeypatch.setattr(
-        "alpha.app.bootstrap_pending_checks.wait",
+        "alpha.core.pending_check_refresh.wait",
         lambda futures, timeout=None: (set(), set(futures)),
     )
 
@@ -388,7 +388,7 @@ def test_refresh_pending_check_results_uses_worker_factory_for_parallel_checks(m
         return True, "checks passed", []
 
     monkeypatch.setattr(
-        "alpha.app.bootstrap_pending_checks.check_submission_with_retry",
+        "alpha.core.pending_check_refresh.check_submission_with_retry",
         _resolve,
     )
 

@@ -7,12 +7,12 @@ from contextlib import nullcontext
 from threading import Semaphore
 from unittest.mock import patch
 
-from alpha.app.bootstrap_pending_checks import (
+from alpha.app.finalize import finalize_run
+from alpha.config.application import ApplicationConfig
+from alpha.core.pending_check_refresh import (
     DEFAULT_PENDING_CHECK_REFRESH_LIMIT,
     DEFAULT_PENDING_CHECK_REFRESH_MAX_SECONDS,
 )
-from alpha.app.finalize import finalize_run
-from alpha.config.application import ApplicationConfig
 from alpha.models.domain import FieldTestResult
 from alpha.models.io_types import RunFilters, RunPaths
 from alpha.runtime.concurrency import RuntimeConcurrencyState
