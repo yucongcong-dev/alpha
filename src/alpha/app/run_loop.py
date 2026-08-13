@@ -6,10 +6,11 @@ from concurrent.futures import ThreadPoolExecutor
 import logging
 
 from ..config.application import ApplicationConfig
+from ..core.scheduler import drain_completed_futures_with_context
 from ..models.domain import TemplateField
-from ..models.runtime_options import RunLoopOptions
+from ..models.runtime_options import RunLoopOptions, SchedulerControlOptions
 from ..runtime.concurrency import RuntimeConcurrencyState
-from ..runtime.contexts import CheckpointIdentity
+from ..runtime.contexts import CheckpointIdentity, FutureCompletionContext
 from ..runtime.state import ExecutionState, InitializedRunContext
 from . import (
     future_completion,
@@ -34,8 +35,26 @@ def _stop_workers_and_save_checkpoint(
     last_field_id: str,
     fields: list[TemplateField],
     reason: str,
+    scheduler_options: SchedulerControlOptions,
+    completion_ctx: FutureCompletionContext,
 ) -> None:
     """Stop pending work, stabilize resumable metadata, and persist recovery state."""
+    completed_futures = [
+        future
+        for future in execution_state.future_queue.pending_futures
+        if future.done() and not future.cancelled()
+    ]
+    if completed_futures:
+        # Persist results that finished just before the interrupt.  Futures that
+        # finish after abort remain pending so their remote Location can be
+        # checkpointed for polling on the next run.
+        drain_completed_futures_with_context(
+            completed_futures=completed_futures,
+            execution_state=execution_state,
+            scheduler_options=scheduler_options,
+            completion_ctx=completion_ctx,
+            runtime_state=runtime_state,
+        )
     execution_state.future_queue.request_stop(abort_workers=True)
     cancelled = future_submission.cancel_unstarted_futures(execution_state)
     # A checkpoint is only safe after every worker has stopped.  In particular,
@@ -219,6 +238,8 @@ def run_field_test_loop(
                 last_field_id=last_field_id,
                 fields=fields,
                 reason="KeyboardInterrupt",
+                scheduler_options=scheduler_options,
+                completion_ctx=completion_ctx,
             )
             executor_shutdown = True
             raise
@@ -233,6 +254,8 @@ def run_field_test_loop(
                 last_field_id=last_field_id,
                 fields=fields,
                 reason="Exception",
+                scheduler_options=scheduler_options,
+                completion_ctx=completion_ctx,
             )
             executor_shutdown = True
             raise

@@ -413,6 +413,46 @@ def test_run_field_test_loop_interrupts_workers_without_waiting(tmp_path) -> Non
     )
 
 
+def test_run_field_test_loop_interrupt_drains_completed_futures(tmp_path) -> None:
+    fields = [_field("f1")]
+    run_ctx = _build_run_ctx(fields)
+    args = _build_run_loop_args(tmp_path)
+    completed: Future[object] = Future()
+    completed.set_result(SimpleNamespace())
+
+    class FakeExecutor:
+        def shutdown(self, *, wait: bool, cancel_futures: bool = False) -> None:
+            assert (wait, cancel_futures) == (True, True)
+
+    def _interrupt(*_args, **_kwargs):
+        run_ctx.execution_state.future_queue.pending_futures = {
+            completed: SimpleNamespace(simulation_location="/simulations/sim-1"),
+        }
+        raise KeyboardInterrupt
+
+    with (
+        patch("alpha.app.run_loop.ThreadPoolExecutor", return_value=FakeExecutor()),
+        patch("alpha.app.run_loop_resume.restore_fields_from_state", return_value=fields),
+        patch(
+            "alpha.app.run_loop_contexts.create_template_build_context",
+            return_value=SimpleNamespace(
+                field_feedback={},
+                global_failed_check_counts={},
+                feedback_result_count=0,
+            ),
+        ),
+        patch("alpha.app.future_submission.submit_resumable_futures"),
+        patch("alpha.app.run_loop_rounds.execute_schedule_round", side_effect=_interrupt),
+        patch("alpha.app.run_loop.drain_completed_futures_with_context") as mock_drain,
+        patch("alpha.app.run_loop_resume.save_runtime_checkpoint"),
+        pytest.raises(KeyboardInterrupt),
+    ):
+        run_field_test_loop(args, run_ctx)
+
+    mock_drain.assert_called_once()
+    assert mock_drain.call_args.kwargs["completed_futures"] == [completed]
+
+
 def test_run_field_test_loop_waits_for_worker_metadata_before_interrupt_checkpoint(
     tmp_path,
 ) -> None:
