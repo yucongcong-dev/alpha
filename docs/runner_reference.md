@@ -112,6 +112,12 @@ python -m alpha --dataset-id <dataset-id> --limit 1 --run-mode smoke
 候选信号，不代表它已经最优，也不会触发正式提交或自动停止。`PENDING` 结果以
 `submittable=null` 保存，不会被当作通过、失败反馈或 near-pass，但会在后续启动时重新查询终态。
 
+历史 `PENDING` 的刷新是有界保护，不保证一次运行取得所有终态：启动阶段和收尾阶段各自最多
+选择 20 条（按最早 `updated_at` / `created_at` 优先），各自最多等待 30 秒，并遵守
+`check_submission_retries`。未刷新、仍为 `PENDING` 或因时间预算中止的条目会原样保留到结果
+journal，下一次真实运行再继续查询；它们不会重新创建 simulation，也不会被视为 submission
+check 已通过或已失败。
+
 ## 5. 路径、配置与清理
 
 工作区按以下优先级选择：`ALPHA_WORKSPACE_ROOT`、源码仓库（或当前含 `datasets/` 与 `config/` 的目录）、`~/.alpha/`。
