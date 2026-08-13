@@ -104,10 +104,13 @@ def test_current_feedback_index_skips_stable_runs_directory_scan(tmp_path, monke
 
     monkeypatch.setattr("alpha.analysis.feedback_history.Path.glob", unexpected_glob)
 
-    assert _load_dataset_run_results(
-        str(feedback),
-        current_output_path=str(tmp_path / "runs" / "current" / "summary.json"),
-    ) == []
+    assert (
+        _load_dataset_run_results(
+            str(feedback),
+            current_output_path=str(tmp_path / "runs" / "current" / "summary.json"),
+        )
+        == []
+    )
 
 
 def test_missing_feedback_journal_ignores_index_and_rebuilds_from_runs(tmp_path) -> None:

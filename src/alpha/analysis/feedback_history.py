@@ -70,9 +70,13 @@ def _load_dataset_run_results(
         if use_run_index and Path(feedback_output_path).exists()
         else {}
     )
-    if use_run_index and processed_runs and feedback_run_index_is_current(
-        feedback_output_path,
-        runs_root,
+    if (
+        use_run_index
+        and processed_runs
+        and feedback_run_index_is_current(
+            feedback_output_path,
+            runs_root,
+        )
     ):
         return []
     discovered: list[FieldTestResult] = []
