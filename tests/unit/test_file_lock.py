@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Iterator
 from contextlib import contextmanager
+import errno
 from types import SimpleNamespace
 
 import pytest
@@ -61,8 +62,8 @@ def test_exclusive_file_lock_unlocks_after_body_error(monkeypatch, tmp_path) -> 
 def test_exclusive_file_lock_uses_windows_byte_lock(monkeypatch, tmp_path) -> None:
     calls: list[tuple[int, int]] = []
     fake_msvcrt = SimpleNamespace(
-        LK_LOCK=10,
         LK_UNLCK=11,
+        LK_NBLCK=12,
         locking=lambda _fd, mode, size: calls.append((mode, size)),
     )
     monkeypatch.setattr(file_lock.os, "name", "nt")
@@ -71,7 +72,7 @@ def test_exclusive_file_lock_uses_windows_byte_lock(monkeypatch, tmp_path) -> No
     lock_path = tmp_path / "result.lock"
     with file_lock.exclusive_file_lock(str(lock_path)):
         assert lock_path.read_bytes() == b"\0"
-        assert calls[-1] == (fake_msvcrt.LK_LOCK, 1)
+        assert calls[-1] == (fake_msvcrt.LK_NBLCK, 1)
 
     assert calls[-1] == (fake_msvcrt.LK_UNLCK, 1)
 
@@ -128,7 +129,6 @@ def test_exclusive_file_lock_reports_thread_contention(monkeypatch, tmp_path) ->
 def test_exclusive_file_lock_uses_nonblocking_windows_mode(monkeypatch, tmp_path) -> None:
     calls: list[tuple[int, int]] = []
     fake_msvcrt = SimpleNamespace(
-        LK_LOCK=10,
         LK_NBLCK=12,
         LK_UNLCK=11,
         locking=lambda _fd, mode, size: calls.append((mode, size)),
@@ -149,7 +149,6 @@ def test_exclusive_file_lock_maps_nonblocking_windows_contention(monkeypatch, tm
         raise OSError("busy")
 
     fake_msvcrt = SimpleNamespace(
-        LK_LOCK=10,
         LK_NBLCK=12,
         LK_UNLCK=11,
         locking=fail_to_lock,
@@ -172,7 +171,6 @@ def test_exclusive_file_lock_preserves_blocking_os_error(
         raise OSError("filesystem lock failed")
 
     fake_lock_module = SimpleNamespace(
-        LK_LOCK=10,
         LK_NBLCK=12,
         LK_UNLCK=11,
         LOCK_EX=1,
@@ -189,6 +187,29 @@ def test_exclusive_file_lock_preserves_blocking_os_error(
         file_lock.exclusive_file_lock(str(tmp_path / "result.lock")),
     ):
         pass
+
+
+def test_exclusive_file_lock_retries_windows_contention_when_blocking(
+    monkeypatch, tmp_path
+) -> None:
+    calls: list[tuple[int, int]] = []
+    sleeps: list[float] = []
+
+    def lock(_fd: int, mode: int, size: int) -> None:
+        calls.append((mode, size))
+        if len(calls) < 3:
+            raise OSError(errno.EACCES, "busy")
+
+    fake_msvcrt = SimpleNamespace(LK_NBLCK=12, LK_UNLCK=11, locking=lock)
+    monkeypatch.setattr(file_lock.os, "name", "nt")
+    monkeypatch.setattr(file_lock, "import_module", lambda _name: fake_msvcrt)
+    monkeypatch.setattr(file_lock.time, "sleep", sleeps.append)
+
+    with file_lock.exclusive_file_lock(str(tmp_path / "result.lock")):
+        pass
+
+    assert calls == [(12, 1), (12, 1), (12, 1), (11, 1)]
+    assert sleeps == [file_lock._WINDOWS_LOCK_RETRY_SECONDS] * 2
 
 
 def test_exclusive_run_lock_uses_output_scoped_nonblocking_lock(monkeypatch, tmp_path) -> None:

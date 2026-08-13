@@ -22,6 +22,7 @@ from .run_loop_seed_phase import SeedPhaseState
 
 logger = logging.getLogger(__name__)
 
+
 def _stop_workers_and_save_checkpoint(
     *,
     executor: ThreadPoolExecutor,
