@@ -2,7 +2,12 @@
 
 from __future__ import annotations
 
-from alpha.app.bootstrap_fields import infer_field_family, prepare_fields_for_execution
+from alpha.app.bootstrap_fields import (
+    filter_candidate_fields,
+    infer_field_family,
+    prepare_fields_for_execution,
+    prepare_fields_for_research_identity,
+)
 from alpha.models.domain import TemplateField
 from alpha.models.domain_parsers import parse_template_field
 from alpha.models.io_types import RunFilters
@@ -92,6 +97,63 @@ def test_prepare_fields_for_execution_applies_metadata_filters() -> None:
     assert [row.field_id for row in selected] == ["cash_st"]
     assert stats["low_coverage_count"] == 1
     assert stats["filtered_field_count"] == 1
+
+
+def test_identity_and_execution_share_the_same_hard_field_filtering() -> None:
+    fields = _domain_fields(
+        [
+            {
+                "id": "eligible",
+                "coverage": 1.0,
+                "dateCoverage": 1.0,
+                "alphaCount": 100,
+                "userCount": 20,
+            },
+            {
+                "id": "excluded",
+                "coverage": 1.0,
+                "dateCoverage": 1.0,
+                "alphaCount": 100,
+                "userCount": 20,
+            },
+            {
+                "id": "sparse",
+                "coverage": 0.01,
+                "dateCoverage": 1.0,
+                "alphaCount": 100,
+                "userCount": 20,
+            },
+        ]
+    )
+    filters = RunFilters(exclude_fields={"excluded"})
+    policy = get_dataset_expression_policy("new_dataset")
+
+    hard_filtered, stats = filter_candidate_fields(
+        fields,
+        filters_dict=filters,
+        expression_policy=policy,
+    )
+    identity_fields = prepare_fields_for_research_identity(
+        fields,
+        filters_dict=filters,
+        expression_policy=policy,
+    )
+    selected, execution_stats = prepare_fields_for_execution(
+        fields,
+        filters_dict=filters,
+        expression_policy=policy,
+        historical_state=HistoricalRunState(),
+        selection_options=FieldSelectionOptions(limit=0),
+    )
+
+    assert [field.field_id for field in hard_filtered] == ["eligible"]
+    assert [field.field_id for field in identity_fields] == ["eligible"]
+    assert [field.field_id for field in selected] == ["eligible"]
+    assert execution_stats == stats | {
+        "ranked_field_count": 1,
+        "selected_family_count": 1,
+        "selected_unexplored_count": 1,
+    }
 
 
 def test_explicit_include_fields_bypass_metadata_filters_and_feedback_ranking() -> None:

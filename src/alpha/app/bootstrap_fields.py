@@ -26,6 +26,7 @@ from .bootstrap_field_selection import (
 )
 
 __all__ = [
+    "filter_candidate_fields",
     "infer_field_family",
     "prepare_fields_for_execution",
     "prepare_fields_for_research_identity",
@@ -85,6 +86,45 @@ def _finish_field_stats(
     return stats
 
 
+def filter_candidate_fields(
+    fields: list[TemplateField],
+    *,
+    filters_dict: RunFilters,
+    expression_policy: DatasetExpressionPolicy,
+) -> tuple[list[TemplateField], dict[str, int]]:
+    """Apply the hard field filters shared by identity and execution paths."""
+    stats = base_field_stats(len(fields))
+    filtered_fields: list[TemplateField] = []
+    for field in fields:
+        field_id, field_name = field_identity(field)
+        if filters_dict.include_fields:
+            if not _is_explicitly_included(field_id, field_name, filters_dict):
+                stats["prefiltered_count"] += 1
+                continue
+        elif field_id in filters_dict.exclude_fields or field_name in filters_dict.exclude_fields:
+            stats["prefiltered_count"] += 1
+            continue
+        if field_id in filters_dict.exclude_fields or field_name in filters_dict.exclude_fields:
+            stats["prefiltered_count"] += 1
+            continue
+        values = metadata_values(field)
+        if not filters_dict.include_fields and not passes_quality_filters(
+            values,
+            quality_thresholds(field_name, expression_policy),
+            stats,
+        ):
+            continue
+        filtered_fields.append(
+            field_with_runtime_metadata(
+                field,
+                expression_policy=expression_policy,
+                coverage=values.coverage_for_tags,
+            )
+        )
+    stats["filtered_field_count"] = len(filtered_fields)
+    return filtered_fields, stats
+
+
 def _prepare_explicit_fields_for_execution(
     fields: list[TemplateField],
     *,
@@ -95,24 +135,11 @@ def _prepare_explicit_fields_for_execution(
     limit: int,
 ) -> tuple[list[TemplateField], dict[str, int]]:
     """Prepare an explicit include-fields run without metadata or feedback ranking."""
-    stats = base_field_stats(len(fields))
-    filtered_fields: list[TemplateField] = []
-    for field in fields:
-        field_id, field_name = field_identity(field)
-        values = metadata_values(field)
-        if not _is_explicitly_included(field_id, field_name, filters_dict):
-            stats["prefiltered_count"] += 1
-            continue
-        if field_id in filters_dict.exclude_fields or field_name in filters_dict.exclude_fields:
-            stats["prefiltered_count"] += 1
-            continue
-        filtered_fields.append(
-            field_with_runtime_metadata(
-                field,
-                expression_policy=expression_policy,
-                coverage=values.coverage_for_tags,
-            )
-        )
+    filtered_fields, stats = filter_candidate_fields(
+        fields,
+        filters_dict=filters_dict,
+        expression_policy=expression_policy,
+    )
 
     if not filtered_fields:
         return [], stats
@@ -147,33 +174,11 @@ def prepare_fields_for_research_identity(
     research applies the same hard filters as execution, before feedback
     ranking and offset/limit selection are considered.
     """
-    candidates: list[TemplateField] = []
-    quality_stats = base_field_stats(0)
-    for field in fields:
-        field_id, field_name = field_identity(field)
-        if filters_dict.include_fields:
-            if (
-                not _is_explicitly_included(field_id, field_name, filters_dict)
-                or field_id in filters_dict.exclude_fields
-                or field_name in filters_dict.exclude_fields
-            ):
-                continue
-        elif field_id in filters_dict.exclude_fields or field_name in filters_dict.exclude_fields:
-            continue
-        values = metadata_values(field)
-        if not filters_dict.include_fields and not passes_quality_filters(
-            values,
-            quality_thresholds(field_name, expression_policy),
-            quality_stats,
-        ):
-            continue
-        candidates.append(
-            field_with_runtime_metadata(
-                field,
-                expression_policy=expression_policy,
-                coverage=values.coverage_for_tags,
-            )
-        )
+    candidates, _stats = filter_candidate_fields(
+        fields,
+        filters_dict=filters_dict,
+        expression_policy=expression_policy,
+    )
     return candidates
 
 
@@ -187,7 +192,6 @@ def prepare_fields_for_execution(
 ) -> tuple[list[TemplateField], dict[str, int]]:
     """对字段做过滤、排序并最终应用 offset/limit。"""
     top_fields_by_feedback, offset, limit = resolve_field_selection(selection_options)
-    cached_field_count = len(fields)
     if filters_dict.include_fields:
         return _prepare_explicit_fields_for_execution(
             fields,
@@ -198,28 +202,11 @@ def prepare_fields_for_execution(
             limit=limit,
         )
 
-    filtered_fields: list[TemplateField] = []
-    stats = base_field_stats(cached_field_count)
-
-    for field in fields:
-        field_id, field_name = field_identity(field)
-        if field_id in filters_dict.exclude_fields or field_name in filters_dict.exclude_fields:
-            stats["prefiltered_count"] += 1
-            continue
-        values = metadata_values(field)
-        if not passes_quality_filters(
-            values,
-            quality_thresholds(field_name, expression_policy),
-            stats,
-        ):
-            continue
-        filtered_fields.append(
-            field_with_runtime_metadata(
-                field,
-                expression_policy=expression_policy,
-                coverage=values.coverage_for_tags,
-            )
-        )
+    filtered_fields, stats = filter_candidate_fields(
+        fields,
+        filters_dict=filters_dict,
+        expression_policy=expression_policy,
+    )
 
     fields = filtered_fields
     if not fields:
