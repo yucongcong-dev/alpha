@@ -14,6 +14,7 @@ from ..models.domain_types import FieldFeedbackSummary
 from ..policy.expression import get_dataset_expression_policy, resolve_feedback_stage
 from ..runtime.contexts import HistoricalRunState
 from .feedback_run_index import (
+    feedback_run_index_is_current,
     is_indexed_run_current,
     load_feedback_run_index,
     load_summary_run_config,
@@ -69,6 +70,11 @@ def _load_dataset_run_results(
         if use_run_index and Path(feedback_output_path).exists()
         else {}
     )
+    if use_run_index and processed_runs and feedback_run_index_is_current(
+        feedback_output_path,
+        runs_root,
+    ):
+        return []
     discovered: list[FieldTestResult] = []
     for summary_path in sorted(runs_root.glob("*/summary.json")):
         if summary_path.resolve() == current_path:

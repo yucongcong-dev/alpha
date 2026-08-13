@@ -9,7 +9,7 @@ from typing import Any
 from ..io.common import atomic_write_json
 from ..io.output_paths import build_fields_cache_scope_key
 
-RUN_INDEX_SCHEMA_VERSION = 1
+RUN_INDEX_SCHEMA_VERSION = 2
 
 
 def resolve_feedback_layout(feedback_output_path: str) -> tuple[Path, str, Path] | None:
@@ -66,6 +66,21 @@ def load_feedback_run_index(feedback_output_path: str) -> dict[str, dict[str, ob
     return {str(key): value for key, value in entries.items() if isinstance(value, dict)}
 
 
+def feedback_run_index_is_current(feedback_output_path: str, runs_root: Path) -> bool:
+    """Return whether the index was written after the runs directory snapshot."""
+    index_path = feedback_run_index_path(feedback_output_path)
+    try:
+        payload = json.loads(index_path.read_text(encoding="utf-8"))
+        current_mtime_ns = runs_root.stat().st_mtime_ns
+    except (OSError, json.JSONDecodeError):
+        return False
+    return (
+        isinstance(payload, dict)
+        and payload.get("schema_version") == RUN_INDEX_SCHEMA_VERSION
+        and payload.get("runs_root_mtime_ns") == current_mtime_ns
+    )
+
+
 def run_summary_key(summary_path: Path, runs_root: Path) -> str:
     return summary_path.relative_to(runs_root).as_posix()
 
@@ -115,6 +130,7 @@ def persist_feedback_run_index(feedback_output_path: str) -> None:
         str(feedback_run_index_path(feedback_output_path)),
         {
             "schema_version": RUN_INDEX_SCHEMA_VERSION,
+            "runs_root_mtime_ns": runs_root.stat().st_mtime_ns if runs_root.exists() else None,
             "runs": entries,
         },
     )

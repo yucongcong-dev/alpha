@@ -2,8 +2,12 @@
 
 from __future__ import annotations
 
-from alpha.analysis.feedback_history import build_historical_run_state
+from alpha.analysis.feedback_history import (
+    _load_dataset_run_results,
+    build_historical_run_state,
+)
 from alpha.analysis.feedback_run_index import (
+    feedback_run_index_is_current,
     load_feedback_run_index,
     persist_feedback_run_index,
 )
@@ -75,6 +79,8 @@ def test_feedback_index_reuses_unchanged_entry(tmp_path, monkeypatch) -> None:
     _dump(run1, _result("f1"), "run1")
     persist_feedback_run_index(str(feedback))
 
+    assert feedback_run_index_is_current(str(feedback), tmp_path / "runs")
+
     def unexpected_read(_path):
         raise AssertionError("unchanged run summary should not be reparsed")
 
@@ -84,6 +90,24 @@ def test_feedback_index_reuses_unchanged_entry(tmp_path, monkeypatch) -> None:
     )
 
     persist_feedback_run_index(str(feedback))
+
+
+def test_current_feedback_index_skips_stable_runs_directory_scan(tmp_path, monkeypatch) -> None:
+    run1 = tmp_path / "runs" / "run1" / "summary.json"
+    feedback = tmp_path / "feedback" / "usa_top3000_equity_d1" / "summary.json"
+    _dump(run1, _result("f1"), "run1")
+    _dump(feedback, _result("f1"), "feedback")
+    persist_feedback_run_index(str(feedback))
+
+    def unexpected_glob(_path, _pattern):
+        raise AssertionError("stable feedback index should skip run discovery")
+
+    monkeypatch.setattr("alpha.analysis.feedback_history.Path.glob", unexpected_glob)
+
+    assert _load_dataset_run_results(
+        str(feedback),
+        current_output_path=str(tmp_path / "runs" / "current" / "summary.json"),
+    ) == []
 
 
 def test_missing_feedback_journal_ignores_index_and_rebuilds_from_runs(tmp_path) -> None:
