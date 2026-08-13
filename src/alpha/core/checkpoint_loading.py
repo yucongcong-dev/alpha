@@ -9,6 +9,7 @@ import math
 from typing import Any
 
 from ..config._constants_thresholds import CHECKPOINT_RESUME_SAFETY_SECONDS
+from ..exceptions import CheckpointConsistencyError
 from ..runtime.concurrency import RuntimeConcurrencyState
 from ..runtime.contexts import CheckpointIdentity
 from ..runtime.state import ExecutionState
@@ -128,14 +129,19 @@ def _has_compatible_result_journal(
         return True
     local_result_count = execution_state.result_ledger.persisted_result_count
     if local_result_count < persisted_result_count:
-        log.warning(
+        message = (
+            "result journal is behind checkpoint in "
+            f"{state_file}; local={local_result_count} "
+            f"checkpoint={persisted_result_count}"
+        )
+        log.error(
             "[checkpoint] result journal is behind checkpoint in %s; "
             "local=%d checkpoint=%d; refusing stale pending simulations",
             state_file,
             local_result_count,
             persisted_result_count,
         )
-        return False
+        raise CheckpointConsistencyError(message)
     if local_result_count > persisted_result_count:
         log.info(
             "[checkpoint] result journal is ahead of checkpoint in %s; "
@@ -169,13 +175,12 @@ def load_pipeline_state(
     if saved_identity != identity.run_fingerprint:
         log.warning("[checkpoint] run identity mismatch in %s; starting fresh", state_file)
         return 0
-    if not _has_compatible_result_journal(
+    _has_compatible_result_journal(
         payload,
         execution_state=execution_state,
         state_file=state_file,
         log=log,
-    ):
-        return 0
+    )
 
     parsed = _parse_resume_scalars(
         payload,

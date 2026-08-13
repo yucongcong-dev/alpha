@@ -95,3 +95,7 @@ class BrainQueueBusyError(BrainAPIError):
 
 class BrainStopRequested(BrainAPIError):
     """运行时主动停止错误，例如达到停止阈值或收到用户中断。"""
+
+
+class CheckpointConsistencyError(RuntimeError):
+    """Checkpoint 与本地持久化结果不一致，禁止继续自动调度。"""

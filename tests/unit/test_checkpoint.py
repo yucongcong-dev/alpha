@@ -6,6 +6,8 @@ from functools import partial
 import json
 from unittest.mock import patch
 
+import pytest
+
 import alpha.core.checkpoint as checkpoint_module
 from alpha.core.checkpoint import (
     load_pipeline_state as _load_pipeline_state,
@@ -19,6 +21,7 @@ from alpha.core.checkpoint import (
 import alpha.core.checkpoint_files as checkpoint_files
 from alpha.core.checkpoint_files import delete_pipeline_state
 import alpha.core.checkpoint_payloads as checkpoint_payloads
+from alpha.exceptions import CheckpointConsistencyError
 from alpha.runtime.concurrency import RuntimeConcurrencyState
 from alpha.runtime.contexts import CheckpointIdentity, PendingFutureContext
 from alpha.runtime.state import ExecutionState
@@ -351,13 +354,13 @@ def test_load_pipeline_state_rejects_checkpoint_ahead_of_local_journal(tmp_path,
     execution_state = _build_execution_state()
     execution_state.result_ledger.persisted_result_count = 1
 
-    resumed = load_pipeline_state(
-        str(state_file),
-        runtime_state=RuntimeConcurrencyState(max_workers=2, runtime_max_workers=2),
-        execution_state=execution_state,
-    )
+    with pytest.raises(CheckpointConsistencyError, match="result journal is behind checkpoint"):
+        load_pipeline_state(
+            str(state_file),
+            runtime_state=RuntimeConcurrencyState(max_workers=2, runtime_max_workers=2),
+            execution_state=execution_state,
+        )
 
-    assert resumed == 0
     assert execution_state.future_queue.resumable_simulations == []
     assert "result journal is behind checkpoint" in caplog.text
 
