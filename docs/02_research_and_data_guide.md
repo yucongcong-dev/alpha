@@ -326,7 +326,7 @@ X < scale_down(field) && scale_down(field) < Y
 - `alphaCount`
 - `userCount`
 - `crowdedness`
-- `Dataset Value Score`
+- `Dataset Value Score`（含义与边界见 [04 的 Dataset Value Score](04_platform_reference.md#124-dataset-value-score)）
 
 更适合的顺序通常是：
 

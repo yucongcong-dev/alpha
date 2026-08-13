@@ -272,6 +272,20 @@
 
 D0 的门槛更高，因此不能只看绝对 Fitness 数字就断言 D0 优于 D1；还要结合 Delay 匹配、换手和交易成本压力判断。
 
+### 6.5 Sharpe 与 IR 的官方公式
+
+官方把两个指标定义得很具体：
+
+```text
+IR = mean(PnL) / stdev(PnL)
+Sharpe = sqrt(252) * IR ≈ 15.8 * IR
+```
+
+其中 `PnL` 是每日盈亏（美元），`252` 是美股一年的平均交易日数。`IR` 衡量模型预测能力，
+`Sharpe` 是 IR 的年化版本，两者的核心都在“一致性”：表现越一致（低波动）越好，单看
+高收益不够。官方明确这些定义可能与其它教材口径不同，应以 BRAIN 页面公式为准
+（来源：Parameters in the Simulation results，`2026-08-06` 快照）。
+
 ---
 
 ## 7. Universe、Weight、Booksize
@@ -319,6 +333,15 @@ D0 的门槛更高，因此不能只看绝对 Fitness 数字就断言 D0 优于 
 
 - 很多收益率、回撤、资金分配口径，都不是你自己随便定义的
 - 它们是平台统一口径的一部分
+
+`Return` 的官方口径同样依赖半本 booksize：
+
+```text
+Annual Return = Annualized PnL / (0.5 * Book Size)
+```
+
+即平台按“$10M 本金、最高 $20M booksize”的杠杆口径计算表现：利润不复投，亏损由现金
+补回；Returns、Sharpe、Drawdown 都基于 $10M 本金这一底座。
 
 ---
 
@@ -413,6 +436,19 @@ D0 的门槛更高，因此不能只看绝对 Fitness 数字就断言 D0 优于 
 
 研究时仍应优先修正不合理单位，因为“能提交”不等于“经济含义成立”。
 
+### 8.8 `Decay` setting 的官方公式
+
+平台设置里的 `Decay` 对 Alpha 输出做线性衰减，官方公式为：
+
+```text
+Decay_linear(x, n) = (x[t]*n + x[t-1]*(n-1) + ... + x[t-n-1]) / (n + (n-1) + ... + 1)
+```
+
+- `n` 必须是非负整数；负值或非整数会破坏模拟
+- 更大的 `n` 更平滑、换手更低，但也会衰减信号本身
+- 它与表达式算子 `ts_decay_linear(x, d)` 不是同一层：前者是平台在组合层的处理，
+  后者是表达式内部构造的信号（直觉见 [01 的 Decay 章节](01_beginner_guide.md#52-decay)）
+
 ---
 
 ## 9. 交易成本、Turnover、Margin
@@ -439,6 +475,14 @@ D0 的门槛更高，因此不能只看绝对 Fitness 数字就断言 D0 优于 
 对平台而言：
 
 - 它是交易频率和交易成本压力的重要 proxy
+
+官方公式为：
+
+```text
+Turnover = Dollar Trading Value / Booksize
+```
+
+即日换手 = 当日成交金额 / booksize；结果页展示的是整个模拟期的平均日换手。
 
 ### 9.4 `Margin`
 
@@ -685,6 +729,14 @@ subuniverse_sharpe
 [Alpha better suited for Delay 1](https://support.worldquantbrain.com/hc/en-us/articles/19083452017559)
 （复核 2026-07-31）。
 
+官网 D0 页面给出的平台边界（`2026-08-06` 快照）：
+
+- 目前 D0 仅适用于 `USA`、`EUR`、`CHN` 三个区域
+- 只有部分 dataset 提供 D0 字段，需在 Data Explorer 以 `Delay=0` 确认字段可用性
+- 对存在涨跌停的区域（如 CHN），股票触及涨跌停时不应调整该股票的仓位
+- D0 在收盘前交易，可捕获“隔夜收益”和当日最新信息（业绩、并购、回购、宏观新闻），
+  通常换手与成本压力高于 D1；D0 研究动作见 [03 的 D0 章节](03_optimization_and_submission.md#6-d0-alpha-应该单独研究)
+
 ### 13.10 `Max Trade`
 
 `Max Trade` 是模拟设置中的单票交易约束开关，不是文档已确认的固定 submission
@@ -754,7 +806,11 @@ ASI Alpha 还可能接受 Japan Robustness Sharpe 检查。`2026-08-06` 官方�
 
 ### 14.2 `Drawdown`
 
-就是组合从峰值往下回撤的幅度。
+就是组合从峰值往下回撤的幅度。官方公式为：
+
+```text
+Drawdown = 最大峰谷 PnL 回撤（美元） / (0.5 * Book Size)
+```
 
 ### 14.3 PnL 为什么会突然跳
 
