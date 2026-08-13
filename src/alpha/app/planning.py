@@ -26,6 +26,8 @@ def run_dry_run_plan(args: ApplicationConfig) -> bool:
     paths = args.paths
     dataset_id = field_options.dataset_id
 
+    _log_config_sources(args)
+
     supporting_resources = load_supporting_resources(
         dataset_id=dataset_id,
         paths=paths,
@@ -132,3 +134,20 @@ def run_dry_run_plan(args: ApplicationConfig) -> bool:
         max_total_simulations=args.planning.max_total_simulations,
     )
     return True
+
+
+def _log_config_sources(args: ApplicationConfig) -> None:
+    """Expose the resolved provenance of planning-critical configuration values."""
+    sources = args.config_sources
+    keys = (
+        "strategy_profile",
+        "run_mode",
+        "limit",
+        "max_templates_per_field",
+        "max_templates_per_family",
+        "max_total_simulations",
+        "top_fields_by_feedback",
+        "max_concurrent_simulations",
+    )
+    resolved = " ".join(f"{key}={sources.get(key, 'unknown')}" for key in keys)
+    logger.info("[dry-run] config_sources %s", resolved)

@@ -103,4 +103,5 @@ def build_run_config_snapshot(
             "verbose": flags.verbose,
             "quiet": flags.quiet,
         },
+        "config_sources": dict(config.config_sources),
     }

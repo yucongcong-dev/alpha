@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass
+from types import MappingProxyType
 
 from ..models.io_types import RunPaths
 from .application_sections import (
@@ -81,6 +83,7 @@ class ApplicationConfig:
     execution: ExecutionConfig
     quality: QualityConfig
     runtime_flags: RuntimeFlagsConfig
+    config_sources: Mapping[str, str]
 
     @classmethod
     def from_args(cls, args: object, paths: RunPaths) -> ApplicationConfig:
@@ -98,6 +101,12 @@ class ApplicationConfig:
             execution=ExecutionConfig.from_args(args),
             quality=QualityConfig.from_args(args),
             runtime_flags=RuntimeFlagsConfig.from_args(args),
+            config_sources=MappingProxyType(
+                {
+                    str(key): str(value)
+                    for key, value in dict(getattr(args, "_config_sources", {})).items()
+                }
+            ),
         )
 
 

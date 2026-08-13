@@ -7,7 +7,6 @@ import sys
 import pytest
 
 from alpha.cli.parser import parse_args
-from alpha.config._constants_thresholds import FULL_RUN_MAX_TOTAL_SIMULATIONS
 from alpha.config.yaml import get_yaml_config
 
 
@@ -177,7 +176,7 @@ def test_cli_smoke_test_overrides_yaml_false(monkeypatch, tmp_path) -> None:
     assert args.simulation_max_queue_seconds == 300
 
 
-def test_full_run_applies_default_total_simulation_budget(monkeypatch) -> None:
+def test_full_run_rejects_conflicting_explicit_search_limits(monkeypatch) -> None:
     clear_yaml_cache()
     monkeypatch.setattr(
         sys,
@@ -200,14 +199,8 @@ def test_full_run_applies_default_total_simulation_budget(monkeypatch) -> None:
         ],
     )
 
-    args = parse_args()
-
-    assert args.limit == 0
-    assert args.offset == 0
-    assert args.max_templates_per_field == 0
-    assert args.max_templates_per_family == 0
-    assert args.top_fields_by_feedback == 0
-    assert args.max_total_simulations == FULL_RUN_MAX_TOTAL_SIMULATIONS
+    with pytest.raises(ValueError, match="conflicts with explicit options"):
+        parse_args()
 
 
 def test_full_run_allows_explicit_unlimited_total_simulation_budget(monkeypatch) -> None:
@@ -362,7 +355,7 @@ def test_run_mode_smoke_matches_smoke_test(monkeypatch, tmp_path) -> None:
     assert args.max_concurrent_simulations == 1
 
 
-def test_run_mode_full_applies_default_total_simulation_budget(monkeypatch) -> None:
+def test_run_mode_full_rejects_conflicting_explicit_search_limits(monkeypatch) -> None:
     """--run-mode full is the canonical form of --full-run."""
     clear_yaml_cache()
     monkeypatch.setattr(
@@ -371,14 +364,8 @@ def test_run_mode_full_applies_default_total_simulation_budget(monkeypatch) -> N
         ["alpha", "--run-mode", "full", "--offset", "7", "--limit", "4"],
     )
 
-    args = parse_args()
-
-    assert args.run_mode == "full"
-    assert args.full_run is True
-    assert args.smoke_test is False
-    assert args.limit == 0
-    assert args.offset == 0
-    assert args.max_total_simulations == FULL_RUN_MAX_TOTAL_SIMULATIONS
+    with pytest.raises(ValueError, match="conflicts with explicit options"):
+        parse_args()
 
 
 def test_run_mode_normal_overrides_yaml_true(monkeypatch, tmp_path) -> None:

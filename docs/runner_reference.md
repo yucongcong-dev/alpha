@@ -128,9 +128,13 @@ python -m alpha --dataset-id <dataset-id> --limit 1 --run-mode smoke
 
 `config/strategy_profiles.yaml` 同时定义策略说明、常调参数边界和 `runtime_defaults`。
 当前 `refine` 会收窄字段与模板预算，`candidate-focused` 还会聚焦历史反馈字段，但不会因为
-出现 `submittable=true` 就停止；`explore` 不额外改写默认预算。显式 CLI 参数优先于 profile 默认值，
-dataset profile 先于 strategy profile 合并，`--run-mode`（smoke/normal/full）最后按运行模式归一化；旧的 smoke/full 布尔开关作为兼容别名仍可用
-搜索范围。具体生效值以 dry-run 输出和 run config snapshot 为准。
+出现 `submittable=true` 就停止；`explore` 不额外改写默认预算。
+
+配置只在 CLI 边界解析一次，固定优先级为：**显式 CLI > run mode > strategy profile >
+dataset profile > global YAML > parser 默认值**。`--run-mode smoke/full` 是安全契约：若同时传入
+与该模式矛盾的搜索参数，例如 `--run-mode full --limit 20`，命令会明确报错，绝不会静默改写
+你的参数。旧的 smoke/full 布尔开关仍可用作兼容别名。`--dry-run-plan` 会输出关键参数的来源，
+结果文件中的 `run_config.config_sources` 也保留完整来源记录。
 
 ```bash
 # YAML 改动后同步并检查
