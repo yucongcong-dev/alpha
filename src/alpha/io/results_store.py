@@ -16,6 +16,7 @@ from typing import Any
 
 from ..models.domain import FieldTestResult
 from ..models.domain_serializers import serialize_field_test_result
+from .common import fsync_directory
 from .file_lock import exclusive_file_lock
 from .output_paths import build_output_sidecar_paths
 
@@ -134,21 +135,6 @@ def _load_current_journal_state(
     )
 
 
-def _fsync_directory(directory: str) -> None:
-    # On Windows os.open on a directory raises PermissionError so directory-level
-    # fsync is a no-op; per-file os.fsync is sufficient for crash-safety.
-    """Persist a replace operation where directory fsync is supported."""
-    flags = os.O_RDONLY | getattr(os, "O_DIRECTORY", 0)
-    try:
-        directory_fd = os.open(directory, flags)
-    except OSError:
-        return
-    try:
-        os.fsync(directory_fd)
-    finally:
-        os.close(directory_fd)
-
-
 def load_results_rows_from_journal(journal_path: str) -> list[dict[str, Any]]:
     """从 results journal 读取原始结果字典行。"""
     if not os.path.exists(journal_path):
@@ -194,7 +180,7 @@ def initialize_results_journal(output_path: str, results: list[FieldTestResult])
                 handle.flush()
                 os.fsync(handle.fileno())
             os.replace(temp_path, journal_path)
-            _fsync_directory(directory)
+            fsync_directory(directory)
         finally:
             if os.path.exists(temp_path):
                 with suppress(OSError):

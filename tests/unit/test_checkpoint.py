@@ -622,7 +622,7 @@ def test_interrupt_report_and_delete_pipeline_state(tmp_path) -> None:
 
 
 def test_atomic_save_reports_directory_creation_failure(tmp_path, caplog) -> None:
-    with patch("alpha.core.checkpoint_files.os.makedirs", side_effect=OSError("read only")):
+    with patch("alpha.io.common.os.makedirs", side_effect=OSError("read only")):
         assert not checkpoint_files.atomic_save(
             str(tmp_path / "state.json"),
             {"version": 1},
@@ -630,3 +630,16 @@ def test_atomic_save_reports_directory_creation_failure(tmp_path, caplog) -> Non
 
     assert "failed to save" in caplog.text
     assert "read only" in caplog.text
+
+
+def test_atomic_save_syncs_file_and_directory_before_returning(tmp_path) -> None:
+    state_file = tmp_path / "state.json"
+    with (
+        patch("alpha.io.common.os.fsync") as fsync,
+        patch("alpha.io.common.fsync_directory") as fsync_directory,
+    ):
+        assert checkpoint_files.atomic_save(str(state_file), {"version": 1})
+
+    fsync.assert_called_once()
+    fsync_directory.assert_called_once_with(str(tmp_path))
+    assert state_file.exists()

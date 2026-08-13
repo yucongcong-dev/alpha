@@ -22,7 +22,7 @@ DATASETS_DIR = DEFAULT_WORKSPACE.datasets_dir
 
 
 def atomic_write_json(path: str, payload: Any) -> None:
-    """以原子方式写入 JSON，避免中断运行破坏状态文件。"""
+    """Durably write JSON through a same-directory temporary file."""
     if not path:
         return
     directory = os.path.dirname(os.path.abspath(path)) or "."
@@ -31,11 +31,31 @@ def atomic_write_json(path: str, payload: Any) -> None:
     try:
         with os.fdopen(fd, "w", encoding="utf-8") as handle:
             json.dump(payload, handle, ensure_ascii=False, indent=2)
+            handle.flush()
+            os.fsync(handle.fileno())
         os.replace(temp_path, path)
+        fsync_directory(directory)
     finally:
         if os.path.exists(temp_path):
             with suppress(OSError):
                 os.remove(temp_path)
+
+
+def fsync_directory(directory: str) -> None:
+    """Persist a rename where directory fsync is supported.
+
+    Windows cannot open directory handles this way, so its failure is safely a
+    no-op after the replacement file itself has been synced.
+    """
+    flags = os.O_RDONLY | getattr(os, "O_DIRECTORY", 0)
+    try:
+        directory_fd = os.open(directory, flags)
+    except OSError:
+        return
+    try:
+        os.fsync(directory_fd)
+    finally:
+        os.close(directory_fd)
 
 
 def sanitize_dataset_id_for_filename(dataset_id: str) -> str:
