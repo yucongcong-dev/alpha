@@ -135,6 +135,86 @@ def test_research_input_fingerprints_track_field_metadata() -> None:
     assert first_fingerprint["fields"] != second_fingerprint["fields"]
 
 
+def test_field_fingerprint_ignores_descriptive_and_selection_metadata() -> None:
+    first = [
+        TemplateField(
+            "f1",
+            "field_one",
+            "MATRIX",
+            {
+                "coverage": 1.0,
+                "dateCoverage": 1.0,
+                "alphaCount": 12,
+                "userCount": 8,
+                "description": "old description",
+                "selection_rank": 1,
+                "selection_score": 0.9,
+                "selection_family": "cashflow",
+                "selection_reason": "historical_promising",
+            },
+        )
+    ]
+    second = [
+        TemplateField(
+            "f1",
+            "field_one",
+            "MATRIX",
+            {
+                "coverage": 1.0,
+                "dateCoverage": 1.0,
+                "alphaCount": 12,
+                "userCount": 8,
+                "description": "new description",
+                "selection_rank": 99,
+                "selection_score": 0.1,
+                "selection_family": "other",
+                "selection_reason": "unexplored",
+            },
+        )
+    ]
+
+    def fingerprint(fields):
+        return build_research_input_fingerprints(
+            filters=RunFilters(),
+            expression_policy=DatasetExpressionPolicy(),
+            blacklist_payload={},
+            fields=fields,
+        )["fields"]
+
+    assert fingerprint(first) == fingerprint(second)
+
+
+@pytest.mark.parametrize(
+    "metadata",
+    [
+        {"coverage": 0.9},
+        {"dateCoverage": 0.9},
+        {"alphaCount": 13},
+        {"userCount": 9},
+        {"runtime_field_tags": ["event"]},
+    ],
+)
+def test_field_fingerprint_changes_with_research_metadata(metadata) -> None:
+    base_metadata = {
+        "coverage": 1.0,
+        "dateCoverage": 1.0,
+        "alphaCount": 12,
+        "userCount": 8,
+    }
+    first = [TemplateField("f1", "field_one", "MATRIX", base_metadata)]
+    second = [TemplateField("f1", "field_one", "MATRIX", {**base_metadata, **metadata})]
+
+    def fingerprint(fields):
+        return build_research_input_fingerprints(
+            filters=RunFilters(),
+            expression_policy=DatasetExpressionPolicy(),
+            blacklist_payload={},
+            fields=fields,
+        )["fields"]
+
+    assert fingerprint(first) != fingerprint(second)
+
+
 def test_existing_run_identity_rejects_configuration_drift(tmp_path) -> None:
     output_path = tmp_path / "summary.json"
     output_path.write_text(

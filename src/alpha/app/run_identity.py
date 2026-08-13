@@ -19,6 +19,27 @@ from ..policy.types import BlacklistPayload
 GENERATOR_BEHAVIOR_VERSION = 1
 logger = logging.getLogger(__name__)
 
+_FIELD_IDENTITY_METADATA_KEYS = (
+    "coverage",
+    "dateCoverage",
+    "alphaCount",
+    "userCount",
+    "runtime_field_tags",
+)
+
+
+def _field_identity_payload(field: TemplateField) -> dict[str, object]:
+    """Keep only field inputs that can affect filtering or expression building."""
+    metadata = {
+        key: field.metadata[key] for key in _FIELD_IDENTITY_METADATA_KEYS if key in field.metadata
+    }
+    return {
+        "id": field.field_id,
+        "name": field.field_name,
+        "type": field.field_type,
+        "metadata": metadata,
+    }
+
 
 def _research_config(run_config: RunConfig) -> dict[str, Any]:
     """Discard filesystem and presentation settings that do not change research output."""
@@ -89,15 +110,7 @@ def build_research_input_fingerprints(
     }
     if fields is not None:
         field_payload = sorted(
-            (
-                {
-                    "id": field.field_id,
-                    "name": field.field_name,
-                    "type": field.field_type,
-                    "metadata": field.metadata,
-                }
-                for field in fields
-            ),
+            (_field_identity_payload(field) for field in fields),
             key=lambda item: (str(item["id"]), str(item["name"]), str(item["type"])),
         )
         fingerprints["fields"] = stable_fingerprint(field_payload)
