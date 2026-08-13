@@ -87,8 +87,9 @@ app/run_loop.py
   ├─ run_loop_seed_phase.py    # full-run 的 seed 阶段
   ├─ run_loop_resume.py        # checkpoint 续跑
   ├─ run_loop_feedback.py      # 反馈刷新
-  └─ loop_future_support.py    # future 队列/停止信号
-       └─ core/scheduler.py + core/executor.py + core/simulation*.py
+  ├─ future_submission.py      # 新任务提交、恢复任务、停止前元数据等待
+  ├─ future_completion.py      # future 完成、结果消费、容量排空与 checkpoint
+  └─ core/scheduler.py + core/executor.py + core/simulation*.py
 ```
 
 ### scheduler 链（边界拆分示例）
@@ -126,13 +127,13 @@ app/finalize.py
 | checkpoint 恢复重置瞬时队列 | `ExecutionState.reset_transient_queue_state()` |
 | `argparse.Namespace` 只到 CLI 边界 | `cli/*`；运行时代码用 `ApplicationConfig` / `models/runtime_options.py` |
 | 底层不 import `alpha.app`；`alpha.io` 在 analysis 下层 | 由 `scripts/check_repo.py arch-boundary` 强制 |
-| 数据设置单一来源 | `config/settings_spec.py`（CLI / YAML / 运行时共用） |
+| 数据设置单一来源 | `config/settings_spec_*.py`（按职责声明，`settings_spec.py` 统一组合供 CLI / YAML / 运行时共用） |
 
 ## 5. 常见「改哪里」快速索引
 
 | 想做的事 | 文件 |
 | --- | --- |
-| 新增/调整一个 YAML 镜像设置 | `config/settings_spec.py` 加一行 `SettingSpec`（CLI/YAML/运行时自动同步） |
+| 新增/调整一个 YAML 镜像设置 | 按职责编辑 `config/settings_spec_dataset.py`、`settings_spec_planning.py`、`settings_spec_execution.py`、`settings_spec_quality.py` 或 `settings_spec_runtime.py`；`settings_spec.py` 负责统一组合 |
 | 调整某个数据集的运行参数 | `config/dataset_profiles.yaml`（键集合由 `dataset_profile_keys()` 锁定） |
 | 新增模板族 / 表达式规则 | `generators/templates/*` + `policy/expression.py` |
 | 新增提交前检查 | `core/submission_checks.py` + `analysis/failed_checks.py` |
@@ -143,7 +144,7 @@ app/finalize.py
 
 ## 6. 为什么模块这么多（边界设计，不是碎片）
 
-175 个模块 / 约 2.1 万行不是随意拆分，而是三类动机：
+191 个源码模块 / 约 2.3 万行不是随意拆分，而是三类动机：
 
 1. **状态所有权**：`runtime/*` 与 `core/scheduler*` 的拆分直接对应 AGENTS.md 的
    "一个可变状态一个专用 dataclass" 规则，避免 `ExecutionState` 膨胀成万能容器。
