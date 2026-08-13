@@ -104,4 +104,7 @@ def build_run_config_snapshot(
             "quiet": flags.quiet,
         },
         "config_sources": dict(config.config_sources),
+        "config_source_chains": {
+            key: list(chain) for key, chain in config.config_source_chains.items()
+        },
     }

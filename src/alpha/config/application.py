@@ -84,6 +84,7 @@ class ApplicationConfig:
     quality: QualityConfig
     runtime_flags: RuntimeFlagsConfig
     config_sources: Mapping[str, str]
+    config_source_chains: Mapping[str, tuple[str, ...]]
 
     @classmethod
     def from_args(cls, args: object, paths: RunPaths) -> ApplicationConfig:
@@ -105,6 +106,12 @@ class ApplicationConfig:
                 {
                     str(key): str(value)
                     for key, value in dict(getattr(args, "_config_sources", {})).items()
+                }
+            ),
+            config_source_chains=MappingProxyType(
+                {
+                    str(key): tuple(str(item) for item in value)
+                    for key, value in dict(getattr(args, "_config_source_chains", {})).items()
                 }
             ),
         )

@@ -86,3 +86,4 @@ def test_run_config_snapshot_captures_research_inputs(monkeypatch, tmp_path) -> 
         "include_templates_file": str(filter_paths["--include-templates-file"]),
         "exclude_templates_file": str(filter_paths["--exclude-templates-file"]),
     }
+    assert snapshot["config_source_chains"]["pasteurization"] == ["parser_default", "cli"]

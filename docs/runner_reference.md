@@ -134,7 +134,8 @@ python -m alpha --dataset-id <dataset-id> --limit 1 --run-mode smoke
 dataset profile > global YAML > parser 默认值**。`--run-mode smoke/full` 是安全契约：若同时传入
 与该模式矛盾的搜索参数，例如 `--run-mode full --limit 20`，命令会明确报错，绝不会静默改写
 你的参数。旧的 smoke/full 布尔开关仍可用作兼容别名。`--dry-run-plan` 会输出关键参数的来源，
-结果文件中的 `run_config.config_sources` 也保留完整来源记录。
+结果文件中的 `run_config.config_sources` 保存最终来源，
+`run_config.config_source_chains` 保存完整覆盖链。
 
 ```bash
 # YAML 改动后同步并检查

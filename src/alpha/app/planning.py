@@ -151,3 +151,9 @@ def _log_config_sources(args: ApplicationConfig) -> None:
     )
     resolved = " ".join(f"{key}={sources.get(key, 'unknown')}" for key in keys)
     logger.info("[dry-run] config_sources %s", resolved)
+    chains = " ".join(
+        f"{key}={'->'.join(args.config_source_chains.get(key, ()))}"
+        for key in keys
+        if key in args.config_source_chains
+    )
+    logger.info("[dry-run] config_source_chains %s", chains)

@@ -236,6 +236,69 @@ def test_cli_strategy_profile_applies_runtime_defaults(monkeypatch, tmp_path) ->
     assert args.top_fields_by_feedback == 20
 
 
+def test_config_source_chain_records_each_overriding_layer(monkeypatch, tmp_path) -> None:
+    """The parser exposes the complete precedence path for a resolved value."""
+    clear_yaml_cache()
+    config_path = tmp_path / "settings.yaml"
+    config_path.write_text(
+        """
+global:
+  limits:
+    max_templates_per_field: 9
+  runtime:
+    strategy_profile: candidate-focused
+dataset_profiles:
+  fundamental6:
+    max_templates_per_field: 8
+""".strip(),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        ["alpha", "--config", str(config_path), "--dataset-id", "fundamental6", "--full-run"],
+    )
+
+    args = parse_args()
+
+    assert args.max_templates_per_field == 0
+    assert args._config_sources["max_templates_per_field"] == "run_mode"
+    assert args._config_source_chains["max_templates_per_field"] == (
+        "parser_default",
+        "global_yaml",
+        "dataset_profile",
+        "strategy_profile",
+        "run_mode",
+    )
+
+
+def test_config_source_chain_keeps_explicit_cli_value(monkeypatch, tmp_path) -> None:
+    """An explicit CLI value is final and lower-precedence layers do not appear."""
+    clear_yaml_cache()
+    config_path = tmp_path / "settings.yaml"
+    write_config(config_path)
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "alpha",
+            "--config",
+            str(config_path),
+            "--max-concurrent-simulations",
+            "1",
+        ],
+    )
+
+    args = parse_args()
+
+    assert args.max_concurrent_simulations == 1
+    assert args._config_sources["max_concurrent_simulations"] == "cli"
+    assert args._config_source_chains["max_concurrent_simulations"] == (
+        "parser_default",
+        "cli",
+    )
+
+
 def test_cli_preserves_zero_field_template_batch_size_for_config_validation(
     monkeypatch, tmp_path
 ) -> None:
