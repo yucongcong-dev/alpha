@@ -109,6 +109,7 @@ def run_field_test_loop(
 
     executor = ThreadPoolExecutor(max_workers=max_workers)
     executor_shutdown = False
+    last_field_id = ""
     try:
         schedule_context = run_loop_rounds.ScheduleRoundContext(
             simulation_config=run_loop_options.simulation_stage,
@@ -151,7 +152,6 @@ def run_field_test_loop(
                     scheduler_options.max_total_simulations,
                     remaining_seed_fields,
                 )
-        last_field_id = ""
         try:
             loop_future_support.submit_resumable_futures(
                 executor=executor,
