@@ -11,7 +11,13 @@ from ..models.runtime_options import RunLoopOptions
 from ..runtime.concurrency import RuntimeConcurrencyState
 from ..runtime.contexts import CheckpointIdentity
 from ..runtime.state import ExecutionState, InitializedRunContext
-from . import loop_future_support, run_loop_contexts, run_loop_resume, run_loop_rounds
+from . import (
+    future_completion,
+    future_submission,
+    run_loop_contexts,
+    run_loop_resume,
+    run_loop_rounds,
+)
 from .run_loop_seed_phase import SeedPhaseState
 
 logger = logging.getLogger(__name__)
@@ -34,11 +40,11 @@ def _stop_workers_and_save_checkpoint(
 ) -> None:
     """Stop pending work, stabilize resumable metadata, and persist recovery state."""
     execution_state.future_queue.request_stop(abort_workers=True)
-    cancelled = loop_future_support.cancel_unstarted_futures(execution_state)
+    cancelled = future_submission.cancel_unstarted_futures(execution_state)
     executor.shutdown(wait=wait_for_workers, cancel_futures=True)
     unresolved_metadata = 0
     if not wait_for_workers:
-        unresolved_metadata = loop_future_support.wait_for_inflight_simulation_metadata(
+        unresolved_metadata = future_submission.wait_for_inflight_simulation_metadata(
             execution_state,
             timeout_seconds=INTERRUPT_METADATA_WAIT_SECONDS,
         )
@@ -153,7 +159,7 @@ def run_field_test_loop(
                     remaining_seed_fields,
                 )
         try:
-            loop_future_support.submit_resumable_futures(
+            future_submission.submit_resumable_futures(
                 executor=executor,
                 execution_resources=execution_resources,
                 execution_state=execution_state,
@@ -170,7 +176,7 @@ def run_field_test_loop(
                 if round_result.stop_requested:
                     break
                 if not round_result.progressed:
-                    if loop_future_support.drain_next_completion(
+                    if future_completion.drain_next_completion(
                         state_file=state_file,
                         total_fields=total_field_count,
                         last_field_id=last_field_id,
@@ -189,7 +195,7 @@ def run_field_test_loop(
                     )
                     break
 
-            loop_future_support.drain_remaining_futures(
+            future_completion.drain_remaining_futures(
                 state_file=state_file,
                 total_fields=total_field_count,
                 last_field_id=last_field_id,

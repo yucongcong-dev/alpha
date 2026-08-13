@@ -9,7 +9,8 @@ from ..core.scheduler import maybe_restore_runtime_concurrency, throttle_before_
 from ..models.domain import TemplateField
 from ..runtime.contexts import PendingTemplateEntry
 from ..runtime.field_template_queue import FieldTemplateQueue
-from .loop_future_support import drain_until_capacity, submit_template_future
+from .future_completion import drain_until_capacity
+from .future_submission import submit_template_future
 from .run_loop_feedback import RuntimeFeedbackRefresh, refresh_runtime_feedback
 
 if TYPE_CHECKING:
@@ -64,7 +65,6 @@ def dispatch_templates_for_field(
             runtime_state=runtime_state,
             scheduler_options=scheduler_options,
             completion_ctx=context.completion_ctx,
-            field_id=field_id,
         )
         if execution_state.future_queue.should_stop_scheduling():
             return True

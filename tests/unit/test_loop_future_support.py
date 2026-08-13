@@ -6,7 +6,7 @@ from concurrent.futures import Future
 from threading import Semaphore
 from unittest.mock import patch
 
-from alpha.app.loop_future_support import (
+from alpha.app.future_submission import (
     cancel_unstarted_futures,
     submit_resumable_futures,
     submit_template_future,
@@ -76,11 +76,11 @@ def test_wait_for_inflight_simulation_metadata_observes_created_location(monkeyp
     monotonic_values = iter([0.0, 0.0, 0.1])
 
     monkeypatch.setattr(
-        "alpha.app.loop_future_support.time.monotonic",
+        "alpha.app.future_submission.time.monotonic",
         lambda: next(monotonic_values),
     )
     monkeypatch.setattr(
-        "alpha.app.loop_future_support.time.sleep",
+        "alpha.app.future_submission.time.sleep",
         lambda _seconds: setattr(context, "simulation_location", "/simulations/sim-1"),
     )
 
@@ -95,11 +95,11 @@ def test_wait_for_inflight_simulation_metadata_waits_without_default_timeout(mon
     execution_state.future_queue.pending_futures = {running: context}
 
     monkeypatch.setattr(
-        "alpha.app.loop_future_support.time.monotonic",
+        "alpha.app.future_submission.time.monotonic",
         lambda: (_ for _ in ()).throw(AssertionError("default wait must not create a deadline")),
     )
     monkeypatch.setattr(
-        "alpha.app.loop_future_support.time.sleep",
+        "alpha.app.future_submission.time.sleep",
         lambda _seconds: setattr(context, "simulation_location", "/simulations/sim-1"),
     )
 
@@ -115,10 +115,10 @@ def test_wait_for_inflight_simulation_metadata_reports_timeout(monkeypatch) -> N
     monotonic_values = iter([0.0, 0.0, 1.0])
 
     monkeypatch.setattr(
-        "alpha.app.loop_future_support.time.monotonic",
+        "alpha.app.future_submission.time.monotonic",
         lambda: next(monotonic_values),
     )
-    monkeypatch.setattr("alpha.app.loop_future_support.time.sleep", lambda _seconds: None)
+    monkeypatch.setattr("alpha.app.future_submission.time.sleep", lambda _seconds: None)
 
     assert wait_for_inflight_simulation_metadata(execution_state, timeout_seconds=0.5) == 1
 
@@ -148,7 +148,7 @@ def test_submit_template_future_records_created_simulation_location() -> None:
             expression="rank(f1)",
         )
 
-    with patch("alpha.app.loop_future_support.run_field_test_in_worker", side_effect=_worker):
+    with patch("alpha.app.future_submission.run_field_test_in_worker", side_effect=_worker):
         submit_template_future(
             executor=_ImmediateExecutor(),  # type: ignore[arg-type]
             execution_resources=execution_resources,
