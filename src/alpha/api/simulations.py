@@ -14,7 +14,7 @@ from ..config._constants_api import (
     SIMULATIONS_URL,
 )
 from ..config._constants_strings import SIM_TERMINAL_STATES
-from ..config.runtime_values import get_runtime_config
+from ..config.runtime_values import resolve_http_runtime_config
 from ..exceptions import BrainAPIError, BrainQueueBusyError, BrainStopRequested
 from ..utils.helpers import first_non_empty
 from .api_types import SimulationPayload
@@ -209,7 +209,7 @@ class BrainSimulationsMixin:
     ) -> SimulationPayload:
         """轮询单个模拟任务，直到完成或超出排队/等待预算。"""
         url = location if location.startswith("http") else f"{API_BASE}{location}"
-        http_config = getattr(self, "http_config", None) or get_runtime_config().http
+        http_config = resolve_http_runtime_config(self)
         poll_count = 0
         pending_cycles = 0
         started_at = time.monotonic()

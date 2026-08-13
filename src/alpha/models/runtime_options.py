@@ -32,6 +32,7 @@ class ApiClientOptions:
             min_request_interval=config.execution.min_request_interval,
             rate_limit_max_retries=config.execution.rate_limit_max_retries,
             login_retries=config.execution.login_retries,
+            http_config=load_http_runtime_config(),
         )
 
 

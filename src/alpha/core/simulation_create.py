@@ -9,7 +9,7 @@ from typing import Any
 from ..api.api_types import SimulationPayload
 from ..api.client import BrainClient, retry_operation
 from ..config._constants_strings import STATUS_SKIPPED
-from ..config.runtime_values import get_runtime_config
+from ..config.runtime_values import resolve_http_runtime_config
 from ..exceptions import BrainStopRequested
 from ..generators.payload import build_simulation_payload
 from ..models.domain import FieldTestContext, FieldTestResult, SettingsVariant
@@ -43,9 +43,7 @@ def create_simulation_with_retry(
         "create simulation",
         retries,
         lambda: client.create_simulation(payload),
-        retry_wait_seconds=(
-            getattr(client, "http_config", None) or get_runtime_config().http
-        ).simulation_retry_wait,
+        retry_wait_seconds=resolve_http_runtime_config(client).simulation_retry_wait,
         should_abort=should_abort,
     )
     simulation_id_match = re.search(_SIM_ID_REGEX, simulation_location)

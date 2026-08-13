@@ -6,7 +6,7 @@ from collections.abc import Callable
 import logging
 from typing import TYPE_CHECKING, TypeVar
 
-from ..config.runtime_values import get_runtime_config
+from ..config.runtime_values import get_runtime_config, resolve_http_runtime_config
 from ..exceptions import (
     BrainAPIError,
     BrainQueueBusyError,
@@ -126,7 +126,7 @@ def login_with_retry(
 ) -> None:
     """通过统一的重试封装完成客户端登录。"""
     attempts = max(retries, 1)
-    http_config = getattr(client, "http_config", None) or get_runtime_config().http
+    http_config = resolve_http_runtime_config(client)
     login_retry_wait = http_config.login_retry_wait
     try:
         retry_operation(

@@ -13,7 +13,7 @@ from ..config._constants_strings import (
     API_KEY_STATUS,
     STATUS_SKIPPED,
 )
-from ..config.runtime_values import get_runtime_config
+from ..config.runtime_values import resolve_http_runtime_config
 from ..exceptions import BrainStopRequested
 from ..models.domain import FieldTestContext, FieldTestResult
 from ..models.runtime_config import SimulationStageConfig
@@ -46,9 +46,7 @@ def poll_simulation_with_retry(
             max_queue_seconds=max_queue_seconds,
             should_abort=should_abort,
         ),
-        retry_wait_seconds=(
-            getattr(client, "http_config", None) or get_runtime_config().http
-        ).simulation_retry_wait,
+        retry_wait_seconds=resolve_http_runtime_config(client).simulation_retry_wait,
         should_abort=should_abort,
     )
 

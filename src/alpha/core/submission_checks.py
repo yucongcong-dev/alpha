@@ -9,7 +9,7 @@ from ..api.api_types import SimulationPayload
 from ..api.client import BrainClient, retry_operation
 from ..api.timing import wait_seconds
 from ..config._constants_strings import STATUS_SKIPPED
-from ..config.runtime_values import get_runtime_config
+from ..config.runtime_values import resolve_http_runtime_config
 from ..exceptions import BrainAPIError, BrainHTTPError, BrainStopRequested
 from ..models.domain import FailedCheck, FieldTestContext, FieldTestResult
 from ..models.domain_parsers import parse_failed_check
@@ -36,9 +36,7 @@ def check_submission_with_retry(
     should_abort: Callable[[], bool] | None = None,
 ) -> tuple[bool | None, str, list[FailedCheck]]:
     attempts = max(1, int(retries or 0))
-    retry_wait = (
-        getattr(client, "http_config", None) or get_runtime_config().http
-    ).simulation_retry_wait
+    retry_wait = resolve_http_runtime_config(client).simulation_retry_wait
     last_result: tuple[bool | None, str, list[FailedCheck]] = (
         None,
         "checks unavailable",

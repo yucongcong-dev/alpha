@@ -32,6 +32,7 @@ from alpha.config.runtime_values import (
     get_runtime_config,
     load_feedback_template_min_priority,
     load_http_runtime_config,
+    resolve_http_runtime_config,
 )
 from alpha.config.strategy_profiles import load_strategy_profile_schemas
 from alpha.config.yaml import (
@@ -489,6 +490,34 @@ def test_runtime_config_reloads_when_active_yaml_changes(tmp_path) -> None:
         set_active_config_path(original_path or "")
         clear_yaml_caches()
         clear_runtime_config_cache()
+
+
+def test_resolve_http_runtime_config_prefers_client_snapshot(monkeypatch) -> None:
+    frozen = load_http_runtime_config()
+    client = type("Client", (), {"http_config": frozen})()
+    monkeypatch.setattr(
+        "alpha.config.runtime_values.get_runtime_config",
+        lambda: (_ for _ in ()).throw(AssertionError("must not read runtime YAML")),
+    )
+
+    assert resolve_http_runtime_config(client) is frozen
+
+
+def test_resolve_http_runtime_config_keeps_standalone_fallback(monkeypatch) -> None:
+    fallback = load_http_runtime_config()
+
+    class Runtime:
+        http = fallback
+
+    def runtime_config() -> Runtime:
+        return Runtime()
+
+    monkeypatch.setattr(
+        "alpha.config.runtime_values.get_runtime_config",
+        runtime_config,
+    )
+
+    assert resolve_http_runtime_config(object()) is fallback
 
 
 def test_cli_config_is_bound_before_yaml_backed_constants_import(tmp_path) -> None:

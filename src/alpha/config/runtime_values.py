@@ -131,6 +131,14 @@ def load_http_runtime_config() -> HttpRuntimeConfig:
     )
 
 
+def resolve_http_runtime_config(client: object) -> HttpRuntimeConfig:
+    """Use a client's frozen HTTP snapshot, with a standalone-call fallback."""
+    client_config = getattr(client, "http_config", None)
+    if isinstance(client_config, HttpRuntimeConfig):
+        return client_config
+    return get_runtime_config().http
+
+
 def load_feedback_template_min_priority() -> int:
     """Load the single feedback threshold read dynamically at runtime."""
     section = yaml_global_section("feedback")
