@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from typing import cast
 
 from ..config._constants_thresholds import (
-    FULL_RUN_MAX_TOTAL_SIMULATIONS,
+    FULL_RUN_MAX_NEW_SIMULATIONS,
     SMOKE_TEST_MAX_PENDING_CYCLES,
     SMOKE_TEST_MAX_QUEUE_SECONDS,
 )
@@ -288,10 +288,10 @@ def _run_mode_layer(
             top_fields_by_feedback=0,
         )
         if (
-            "max_total_simulations" not in explicit_cli_keys
-            and _as_number(state.values.get("max_total_simulations", 0)) <= 0
+            "max_new_simulations" not in explicit_cli_keys
+            and _as_number(state.values.get("max_new_simulations", 0)) <= 0
         ):
-            updates["max_total_simulations"] = FULL_RUN_MAX_TOTAL_SIMULATIONS
+            updates["max_new_simulations"] = FULL_RUN_MAX_NEW_SIMULATIONS
     return ResolvedConfigLayer(RUN_MODE_SOURCE, updates)
 
 

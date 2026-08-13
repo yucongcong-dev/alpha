@@ -208,12 +208,12 @@ def test_full_run_allows_explicit_unlimited_total_simulation_budget(monkeypatch)
     monkeypatch.setattr(
         sys,
         "argv",
-        ["alpha", "--full-run", "--max-total-simulations", "0"],
+        ["alpha", "--full-run", "--max-new-simulations", "0"],
     )
 
     args = parse_args()
 
-    assert args.max_total_simulations == 0
+    assert args.max_new_simulations == 0
 
 
 def test_cli_strategy_profile_applies_runtime_defaults(monkeypatch, tmp_path) -> None:

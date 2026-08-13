@@ -182,7 +182,7 @@ class SchedulerControlOptions:
     queue_busy_cooldown_seconds: float = 0.0
     queue_busy_retry_limit: int = 0
     sleep_between_fields: float = 0.0
-    max_total_simulations: int = 0
+    max_new_simulations: int = 0
 
     @classmethod
     def from_config(cls, config: ApplicationConfig) -> SchedulerControlOptions:
@@ -190,7 +190,7 @@ class SchedulerControlOptions:
             queue_busy_cooldown_seconds=config.execution.queue_busy_cooldown_seconds,
             queue_busy_retry_limit=config.execution.queue_busy_retry_limit,
             sleep_between_fields=config.planning.sleep_between_fields,
-            max_total_simulations=config.planning.max_total_simulations,
+            max_new_simulations=config.planning.max_new_simulations,
         )
 
 

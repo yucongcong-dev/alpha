@@ -401,7 +401,7 @@ def test_print_dry_run_plan_counts_only_actionable_fields(caplog) -> None:
             execution_state=_execution_state(),
             expression_policy=get_dataset_expression_policy("model16"),
             full_run=False,
-            max_total_simulations=1,
+            max_new_simulations=1,
             sample_limit=1,
         )
 
@@ -472,7 +472,7 @@ def test_print_dry_run_plan_explains_feedback_stage_reasons(caplog) -> None:
             execution_state=_execution_state(),
             expression_policy=get_dataset_expression_policy("model16"),
             full_run=False,
-            max_total_simulations=0,
+            max_new_simulations=0,
             sample_limit=1,
         )
 
@@ -511,7 +511,7 @@ def test_print_dry_run_plan_reports_partial_full_run_seed_budget(caplog) -> None
             execution_state=_execution_state(),
             expression_policy=get_dataset_expression_policy("model16"),
             full_run=True,
-            max_total_simulations=1,
+            max_new_simulations=1,
             sample_limit=1,
         )
 
@@ -565,7 +565,7 @@ def test_print_dry_run_plan_allocates_remaining_budget_to_refine(caplog) -> None
             execution_state=_execution_state(),
             expression_policy=get_dataset_expression_policy("model16"),
             full_run=True,
-            max_total_simulations=3,
+            max_new_simulations=3,
             sample_limit=1,
         )
 
@@ -615,7 +615,7 @@ def test_print_dry_run_plan_samples_explicit_default_seed(caplog) -> None:
             execution_state=_execution_state(),
             expression_policy=get_dataset_expression_policy("model16"),
             full_run=True,
-            max_total_simulations=0,
+            max_new_simulations=0,
             sample_limit=1,
         )
 

@@ -35,7 +35,7 @@ def _scheduler_options(args: object) -> SchedulerControlOptions:
         queue_busy_cooldown_seconds=float(getattr(args, "queue_busy_cooldown_seconds", 0.0)),
         queue_busy_retry_limit=int(getattr(args, "queue_busy_retry_limit", 0)),
         sleep_between_fields=float(getattr(args, "sleep_between_fields", 0.0)),
-        max_total_simulations=int(getattr(args, "max_total_simulations", 0)),
+        max_new_simulations=int(getattr(args, "max_new_simulations", 0)),
     )
 
 

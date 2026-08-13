@@ -24,7 +24,7 @@ RUNTIME_SETTINGS = (
         "",
         "--run-mode",
         choices=RUN_MODE_CHOICES,
-        help="运行模式：smoke=冒烟测试（1 字段/1 模板），normal=常规（默认），full=全量搜索（受 --max-total-simulations 预算限制）；传 normal 可覆盖 YAML runtime.smoke_test/full_run=true",
+        help="运行模式：smoke=冒烟测试（1 字段/1 模板），normal=常规（默认），full=全量搜索（受 --max-new-simulations 预算限制）；传 normal 可覆盖 YAML runtime.smoke_test/full_run=true",
         kind="run_mode",
     ),
     SettingSpec("smoke_test", ("runtime", "smoke_test"), False, section="planning", fallback=False),

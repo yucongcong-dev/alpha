@@ -43,12 +43,12 @@ preset。普通 `--dataset-id fundamental6` 会拒绝运行；这不是永久禁
 ```bash
 python -m alpha --dataset-id fundamental6 \
   --run-mode full \
-  --max-total-simulations 100 \
+  --max-new-simulations 100 \
   --dry-run-plan
 ```
 
 确认计划后移除 `--dry-run-plan` 并设置独立 `--run-name`。预算低于剩余 Seed 字段数时，
-本次只完成部分字段覆盖，不会提前进入 refine。`--max-total-simulations 0` 不能解除暂停。
+本次只完成部分字段覆盖，不会提前进入 refine。`--max-new-simulations 0` 不能解除暂停。
 
 ## 已停止方向
 

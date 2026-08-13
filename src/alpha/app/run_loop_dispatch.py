@@ -53,8 +53,8 @@ def dispatch_templates_for_field(
     for template_index, entry in enumerate(scheduled_templates, start=1):
         if context.reached_simulation_budget():
             logger.info(
-                "[stop] 达到 max-total-simulations=%d",
-                scheduler_options.max_total_simulations,
+                "[stop] 达到 max-new-simulations=%d",
+                scheduler_options.max_new_simulations,
             )
             return True
         if execution_state.future_queue.should_stop_scheduling():

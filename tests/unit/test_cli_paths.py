@@ -365,7 +365,7 @@ def test_explicit_budgeted_full_run_allows_paused_fundamental6(monkeypatch, tmp_
             "--strategy-profile",
             "explore",
             "--full-run",
-            "--max-total-simulations",
+            "--max-new-simulations",
             "100",
         ],
     )
@@ -374,7 +374,7 @@ def test_explicit_budgeted_full_run_allows_paused_fundamental6(monkeypatch, tmp_
     paths = normalize_args_paths(args)
 
     assert args.full_run is True
-    assert args.max_total_simulations == 100
+    assert args.max_new_simulations == 100
     assert paths.template_library_file.replace("\\", "/").endswith(
         "/datasets/fundamental6/template.json"
     )
@@ -393,7 +393,7 @@ def test_run_mode_full_with_budget_allows_paused_fundamental6(monkeypatch, tmp_p
             "fundamental6",
             "--run-mode",
             "full",
-            "--max-total-simulations",
+            "--max-new-simulations",
             "100",
         ],
     )
@@ -403,7 +403,7 @@ def test_run_mode_full_with_budget_allows_paused_fundamental6(monkeypatch, tmp_p
 
     assert args.run_mode == "full"
     assert args.full_run is True
-    assert args.max_total_simulations == 100
+    assert args.max_new_simulations == 100
     assert paths.template_library_file.replace("\\", "/").endswith(
         "/datasets/fundamental6/template.json"
     )
@@ -420,7 +420,7 @@ def test_budgeted_full_run_dry_plan_allows_paused_fundamental6(monkeypatch, tmp_
             "--dataset-id",
             "fundamental6",
             "--full-run",
-            "--max-total-simulations",
+            "--max-new-simulations",
             "25",
             "--dry-run-plan",
         ],
@@ -430,14 +430,14 @@ def test_budgeted_full_run_dry_plan_allows_paused_fundamental6(monkeypatch, tmp_
     normalize_args_paths(args)
 
     assert args.dry_run_plan is True
-    assert args.max_total_simulations == 25
+    assert args.max_new_simulations == 25
 
 
 @pytest.mark.parametrize(
     "extra_args",
     [
         ["--full-run"],
-        ["--full-run", "--max-total-simulations", "0"],
+        ["--full-run", "--max-new-simulations", "0"],
     ],
 )
 def test_paused_full_run_requires_explicit_positive_budget(
@@ -465,7 +465,7 @@ def test_yaml_full_run_does_not_unlock_paused_dataset(monkeypatch, tmp_path) -> 
         """
 global:
   limits:
-    max_total_simulations: 100
+    max_new_simulations: 100
   runtime:
     full_run: true
 dataset_profiles:
@@ -488,7 +488,7 @@ dataset_profiles:
 
     args = parse_args()
     assert args.full_run is True
-    assert args.max_total_simulations == 100
+    assert args.max_new_simulations == 100
     with pytest.raises(ValueError, match="dataset fundamental6 is paused"):
         normalize_args_paths(args)
 
@@ -571,7 +571,7 @@ def test_parse_application_config_is_immutable_and_uses_normalized_paths(
 @pytest.mark.parametrize(
     ("option", "value", "message"),
     [
-        ("--max-total-simulations", "-10", "max_total_simulations cannot be negative"),
+        ("--max-new-simulations", "-10", "max_new_simulations cannot be negative"),
         ("--limit", "-1", "limit cannot be negative"),
         ("--page-size", "0", "page_size must be positive"),
         ("--field-template-batch-size", "0", "field_template_batch_size must be positive"),

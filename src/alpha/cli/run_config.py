@@ -54,7 +54,7 @@ def build_run_config_snapshot(
             "sleep_between_fields": planning.sleep_between_fields,
             "max_templates_per_field": planning.max_templates_per_field,
             "max_templates_per_family": planning.max_templates_per_family,
-            "max_total_simulations": planning.max_total_simulations,
+            "max_new_simulations": planning.max_new_simulations,
             "field_template_batch_size": max(1, planning.field_template_batch_size),
             "similarity_penalty": planning.similarity_penalty,
         },

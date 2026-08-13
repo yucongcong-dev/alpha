@@ -106,7 +106,7 @@ global:
     sleep_between_fields: 3.0      # 字段间休眠 (秒)，增大以降低限流风险
     max_templates_per_field: 6     # 每字段先测试少量高优模板，后续轮次再继续补
     max_templates_per_family: 2    # 每表达式家族保留的最大候选数
-    max_total_simulations: 0       # 本次启动 simulation 总预算，0=不限；full-run 默认使用安全预算
+    max_new_simulations: 0       # 本次启动新建 simulation 预算，0=不限；恢复任务不计入
     field_template_batch_size: 2   # breadth-first 每轮批量，最小为 1
     similarity_penalty: 42  # 模板族相似度优先级惩罚值
 
@@ -195,7 +195,7 @@ global:
     strategy_profile: explore  # explore=广覆盖；refine=反馈邻域；candidate-focused=候选质量收敛
     smoke_test: false      # 冒烟测试模式 (1字段/1模板，快速验证)
     dry_run_plan: false    # 干运行模式 (仅打印计划，不创建模拟)
-    full_run: false        # 全量字段/模板搜索；默认受 max_total_simulations 安全预算限制
+    full_run: false        # 全量字段/模板搜索；默认受 max_new_simulations 安全预算限制
     verbose: false         # 详细日志
     quiet: false           # 安静模式 (仅输出错误)
 

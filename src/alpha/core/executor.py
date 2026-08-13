@@ -249,7 +249,7 @@ def print_dry_run_plan(
     execution_state: ExecutionState,
     expression_policy: DatasetExpressionPolicy,
     full_run: bool,
-    max_total_simulations: int,
+    max_new_simulations: int,
     sample_limit: int = DRY_RUN_SAMPLE_LIMIT,
 ) -> None:
     """
@@ -268,7 +268,7 @@ def print_dry_run_plan(
         expression_policy: bootstrap 阶段冻结的数据集表达式策略。
         sample_limit: 打印样本数量限制。默认为 20。
         full_run: 是否优先安排未完成的 seed 字段。
-        max_total_simulations: 本轮 simulation 预算；0 表示不限制。
+        max_new_simulations: 本轮 simulation 预算；0 表示不限制。
 
     Example:
         >>> print_dry_run_plan(
@@ -280,7 +280,7 @@ def print_dry_run_plan(
         ...     execution_state=state,
         ...     expression_policy=expression_policy,
         ...     full_run=False,
-        ...     max_total_simulations=0,
+        ...     max_new_simulations=0,
         ... )
 
     Note:
@@ -303,5 +303,5 @@ def print_dry_run_plan(
         sample_limit=sample_limit,
         log=logger,
         full_run=full_run,
-        max_total_simulations=max_total_simulations,
+        max_new_simulations=max_new_simulations,
     )

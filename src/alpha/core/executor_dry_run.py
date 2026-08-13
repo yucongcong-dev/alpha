@@ -135,7 +135,7 @@ def build_dry_run_plan_summary(
     resolve_skip_reason: FieldSkipReasonResolver | None,
     build_pending: FieldPendingTemplateBuilder,
     full_run: bool,
-    max_total_simulations: int,
+    max_new_simulations: int,
     sample_limit: int = DRY_RUN_SAMPLE_LIMIT,
 ) -> DryRunPlanSummary:
     """Build the planned queue and its explain counters without rendering output."""
@@ -227,7 +227,7 @@ def build_dry_run_plan_summary(
         if full_run
         else refine_samples[:sample_limit]
     )
-    simulation_budget = max(0, max_total_simulations)
+    simulation_budget = max(0, max_new_simulations)
     scheduled_templates = (
         min(eligible_templates, simulation_budget) if simulation_budget > 0 else eligible_templates
     )
@@ -284,7 +284,7 @@ def print_dry_run_plan(
     resolve_skip_reason: FieldSkipReasonResolver | None,
     build_pending: FieldPendingTemplateBuilder,
     full_run: bool,
-    max_total_simulations: int,
+    max_new_simulations: int,
     sample_limit: int = DRY_RUN_SAMPLE_LIMIT,
     log: logging.Logger = logger,
 ) -> None:
@@ -303,6 +303,6 @@ def print_dry_run_plan(
         build_pending=build_pending,
         sample_limit=sample_limit,
         full_run=full_run,
-        max_total_simulations=max_total_simulations,
+        max_new_simulations=max_new_simulations,
     )
     render_dry_run_plan(summary, log=log)

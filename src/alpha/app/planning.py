@@ -131,7 +131,7 @@ def run_dry_run_plan(args: ApplicationConfig) -> bool:
         execution_state=execution_state,
         expression_policy=supporting_resources.expression_policy,
         full_run=args.planning.full_run,
-        max_total_simulations=args.planning.max_total_simulations,
+        max_new_simulations=args.planning.max_new_simulations,
     )
     return True
 
@@ -145,7 +145,7 @@ def _log_config_sources(args: ApplicationConfig) -> None:
         "limit",
         "max_templates_per_field",
         "max_templates_per_family",
-        "max_total_simulations",
+        "max_new_simulations",
         "top_fields_by_feedback",
         "max_concurrent_simulations",
     )

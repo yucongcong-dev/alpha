@@ -522,7 +522,7 @@ def test_dispatch_stops_at_total_simulation_budget_without_aborting_pending() ->
     context = _build_context(field_template_batch_size=2)
     context.dependencies = replace(
         context.dependencies,
-        scheduler_options=SchedulerControlOptions(max_total_simulations=1),
+        scheduler_options=SchedulerControlOptions(max_new_simulations=1),
     )
     entries = [
         PendingTemplateEntry(

@@ -153,13 +153,13 @@ def run_field_test_loop(
                 remaining_seed_fields,
             )
             if (
-                scheduler_options.max_total_simulations > 0
-                and scheduler_options.max_total_simulations < remaining_seed_fields
+                scheduler_options.max_new_simulations > 0
+                and scheduler_options.max_new_simulations < remaining_seed_fields
             ):
                 logger.warning(
                     "[full-run] simulation budget=%d is below remaining seed fields=%d; "
                     "this run will provide partial seed coverage and will not enter refine",
-                    scheduler_options.max_total_simulations,
+                    scheduler_options.max_new_simulations,
                     remaining_seed_fields,
                 )
         try:

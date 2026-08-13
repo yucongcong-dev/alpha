@@ -129,7 +129,7 @@ class PlanningConfig:
     sleep_between_fields: float
     max_templates_per_field: int
     max_templates_per_family: int
-    max_total_simulations: int
+    max_new_simulations: int
     field_template_batch_size: int
     similarity_penalty: int
     top_fields_by_feedback: int
@@ -142,7 +142,7 @@ class PlanningConfig:
             "offset",
             "max_templates_per_field",
             "max_templates_per_family",
-            "max_total_simulations",
+            "max_new_simulations",
             "similarity_penalty",
             "top_fields_by_feedback",
         ):

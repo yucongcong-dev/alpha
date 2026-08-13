@@ -93,7 +93,7 @@ class ScheduleRoundContext:
 
     def reached_simulation_budget(self) -> bool:
         """Return whether this process has dispatched its configured simulation budget."""
-        budget = self.dependencies.scheduler_options.max_total_simulations
+        budget = self.dependencies.scheduler_options.max_new_simulations
         return budget > 0 and self.runtime.scheduled_simulations >= budget
 
 
@@ -125,9 +125,9 @@ def execute_schedule_round(
     for field_index, field in enumerate(context.fields, start=1):
         if context.reached_simulation_budget():
             logger.info(
-                "[stop] 达到 max-total-simulations=%d seed_fields_unresolved=%d "
+                "[stop] 达到 max-new-simulations=%d seed_fields_unresolved=%d "
                 "seed_fields_inflight=%d",
-                scheduler_options.max_total_simulations,
+                scheduler_options.max_new_simulations,
                 context.runtime.seed_phase.remaining_count,
                 len(context.runtime.seed_phase.inflight_field_ids),
             )

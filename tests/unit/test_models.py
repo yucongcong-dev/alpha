@@ -308,7 +308,7 @@ def test_simulation_config_accepts_account_neutralization_options(
 @pytest.mark.parametrize(
     ("field_name", "value", "message"),
     [
-        ("max_total_simulations", -1, "cannot be negative"),
+        ("max_new_simulations", -1, "cannot be negative"),
         ("limit", -1, "cannot be negative"),
         ("page_size", 0, "must be positive"),
         ("field_template_batch_size", 0, "must be positive"),

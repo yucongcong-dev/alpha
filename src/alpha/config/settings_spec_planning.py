@@ -69,10 +69,10 @@ PLANNING_SETTINGS = (
         help="每个表达式家族保留的最大候选数；0 表示不限制",
     ),
     SettingSpec(
-        "max_total_simulations",
-        ("limits", "max_total_simulations"),
+        "max_new_simulations",
+        ("limits", "max_new_simulations"),
         0,
-        "--max-total-simulations",
+        "--max-new-simulations",
         int,
         section="planning",
         fallback=0,

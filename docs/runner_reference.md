@@ -20,7 +20,7 @@ python -m alpha --dataset-id fundamental2 --template-library-file datasets/funda
 python -m alpha --dataset-id fundamental2 --dry-run-plan
 
 # fundamental6 广泛探索：首次会拉取字段缓存，且必须显式给出 simulation 硬预算
-python -m alpha --dataset-id fundamental6 --run-mode full --max-total-simulations 100
+python -m alpha --dataset-id fundamental6 --run-mode full --max-new-simulations 100
 
 # 聚焦历史上更有希望的字段
 python -m alpha --dataset-id fundamental2 --template-library-file datasets/fundamental2/template.json --top-fields-by-feedback 10 --max-templates-per-field 15
@@ -29,10 +29,11 @@ python -m alpha --dataset-id fundamental2 --template-library-file datasets/funda
 `run` 必须显式传入 `--dataset-id`，避免误跑历史数据集。`clean` 不进入研究配置路径，
 也不要求数据集参数；它会处理所有数据集的可重建运行产物。选择数据集后，
 运行器采用内置默认搜索预算。`--run-mode full` 会枚举更大的字段和模板空间，
-但仍保留 simulation 总预算。运行器先进入 Seed 阶段：历史上没有有效尝试的合格字段
+但仍保留本次进程的新建 simulation 预算。恢复任务只负责轮询已有远端 simulation，
+不消耗新建预算。运行器先进入 Seed 阶段：历史上没有有效尝试的合格字段
 每个最多调度一个候选；只有所有字段都已获得种子尝试或被判定为不可执行后，才进入正常
 refine 轮次。full-run 默认预算由 `config/constants_defaults.yaml` 的
-`full_run.max_total_simulations` 定义；可用 `--max-total-simulations N` 调整，显式传入 `0`
+`full_run.max_new_simulations` 定义；可用 `--max-new-simulations N` 调整，显式传入 `0`
 才会取消总预算。若预算低于剩余 Seed 字段数，运行日志和 dry-run 会明确
 标记 partial seed coverage，并且本次不会提前进入 refine。全量模式只适合有足够时间、
 且明确希望从零开始验证时使用。日常研究应从 `--dry-run-plan` 开始。
