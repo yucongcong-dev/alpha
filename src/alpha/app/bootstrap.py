@@ -124,6 +124,12 @@ def prepare_bootstrap_resources(
         paths=paths,
         backfill_window=template_options.backfill_window,
     )
+    fields = load_bootstrap_fields(
+        dataset_id=dataset_id,
+        bootstrap_client=bootstrap_client,
+        paths=paths,
+        field_fetch_options=field_options.fetch,
+    )
     expression_policy = supporting_resources.expression_policy
     effective_run_config = dict(run_config)
     effective_run_config["heuristic_policy"] = {
@@ -136,6 +142,7 @@ def prepare_bootstrap_resources(
         filters=supporting_resources.filters,
         expression_policy=supporting_resources.expression_policy,
         blacklist_payload=supporting_resources.blacklist_payload,
+        fields=fields,
     )
     template_library_fingerprint = stable_fingerprint(supporting_resources.template_library)
     settings_fingerprint = build_settings_fingerprint(template_options)
@@ -171,21 +178,15 @@ def prepare_bootstrap_resources(
             supporting_resources,
             historical_state=reconciled_historical_state,
         )
-    fields = load_bootstrap_fields(
-        dataset_id=dataset_id,
-        bootstrap_client=bootstrap_client,
-        paths=paths,
-        field_fetch_options=field_options.fetch,
-    )
+    historical_state = supporting_resources.historical_state
     if not fields:
         logger.error("[error] 数据集 %s 未返回任何字段", dataset_id)
         return None
-
     prepared_fields, field_stats = prepare_fields_for_execution(
         list(fields),
         filters_dict=supporting_resources.filters,
         expression_policy=supporting_resources.expression_policy,
-        historical_state=supporting_resources.historical_state,
+        historical_state=historical_state,
         selection_options=field_options.selection,
     )
     log_field_selection_stats(
@@ -210,7 +211,7 @@ def prepare_bootstrap_resources(
         template_library_fingerprint=template_library_fingerprint,
         settings_fingerprint=settings_fingerprint,
         run_fingerprint=run_fingerprint,
-        historical_state=supporting_resources.historical_state,
+        historical_state=historical_state,
         fields=prepared_fields,
         run_config=effective_run_config,
     )

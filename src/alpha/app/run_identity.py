@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import asdict
 import json
 import logging
@@ -10,7 +11,7 @@ from typing import Any
 
 from ..config.models import DatasetExpressionPolicy
 from ..generators.fingerprint import stable_fingerprint
-from ..models.domain import TemplateLibrary
+from ..models.domain import TemplateField, TemplateLibrary
 from ..models.io_types import RunFilters
 from ..models.runtime_protocols import RunConfig
 from ..policy.types import BlacklistPayload
@@ -75,9 +76,10 @@ def build_research_input_fingerprints(
     filters: RunFilters,
     expression_policy: DatasetExpressionPolicy,
     blacklist_payload: BlacklistPayload,
+    fields: Sequence[TemplateField] | None = None,
 ) -> dict[str, str]:
     """Build auditable fingerprints for mutable local research inputs."""
-    return {
+    fingerprints = {
         "include_fields": stable_fingerprint(sorted(filters.include_fields)),
         "exclude_fields": stable_fingerprint(sorted(filters.exclude_fields)),
         "include_templates": stable_fingerprint(sorted(filters.include_templates)),
@@ -85,6 +87,21 @@ def build_research_input_fingerprints(
         "expression_policy": stable_fingerprint(asdict(expression_policy)),
         "blacklist": stable_fingerprint(_research_blacklist(blacklist_payload)),
     }
+    if fields is not None:
+        field_payload = sorted(
+            (
+                {
+                    "id": field.field_id,
+                    "name": field.field_name,
+                    "type": field.field_type,
+                    "metadata": field.metadata,
+                }
+                for field in fields
+            ),
+            key=lambda item: (str(item["id"]), str(item["name"]), str(item["type"])),
+        )
+        fingerprints["fields"] = stable_fingerprint(field_payload)
+    return fingerprints
 
 
 def build_research_run_fingerprint(

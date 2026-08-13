@@ -13,6 +13,7 @@ from alpha.app.run_identity import (
     validate_existing_run_identity,
 )
 from alpha.config.models import DatasetExpressionPolicy
+from alpha.models.domain import TemplateField
 from alpha.models.io_types import RunFilters
 
 
@@ -112,6 +113,26 @@ def test_research_input_fingerprints_track_normalized_content() -> None:
     assert changed["include_fields"] != baseline["include_fields"]
     assert changed["expression_policy"] != baseline["expression_policy"]
     assert changed["blacklist"] != baseline["blacklist"]
+
+
+def test_research_input_fingerprints_track_field_metadata() -> None:
+    first = [TemplateField("f1", "field_one", "MATRIX", {"coverage": 1.0})]
+    second = [TemplateField("f1", "field_one", "MATRIX", {"coverage": 0.9})]
+
+    first_fingerprint = build_research_input_fingerprints(
+        filters=RunFilters(),
+        expression_policy=DatasetExpressionPolicy(),
+        blacklist_payload={},
+        fields=first,
+    )
+    second_fingerprint = build_research_input_fingerprints(
+        filters=RunFilters(),
+        expression_policy=DatasetExpressionPolicy(),
+        blacklist_payload={},
+        fields=second,
+    )
+
+    assert first_fingerprint["fields"] != second_fingerprint["fields"]
 
 
 def test_existing_run_identity_rejects_configuration_drift(tmp_path) -> None:

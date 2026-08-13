@@ -241,7 +241,11 @@ def test_prepare_bootstrap_resources_persists_pending_refresh_before_empty_field
     )
 
     result = prepare_bootstrap_resources(
-        SimpleNamespace(dataset_id="fundamental6", check_submission_retries=1, fetch=None),
+        SimpleNamespace(
+            dataset_id="fundamental6",
+            check_submission_retries=1,
+            fetch=None,
+        ),
         SimpleNamespace(backfill_window=504),
         SimpleNamespace(output="results.json", feedback_output=""),
         object(),
@@ -331,7 +335,11 @@ def test_prepare_bootstrap_resources_refreshes_cross_run_feedback_pending(
     )
 
     result = prepare_bootstrap_resources(
-        SimpleNamespace(dataset_id="fundamental6", check_submission_retries=1, fetch=None),
+        SimpleNamespace(
+            dataset_id="fundamental6",
+            check_submission_retries=1,
+            fetch=None,
+        ),
         SimpleNamespace(backfill_window=504),
         SimpleNamespace(output="run.json", feedback_output="feedback.json"),
         object(),
@@ -363,6 +371,11 @@ def test_prepare_bootstrap_resources_rejects_run_drift_before_reconciliation(
         bootstrap_module,
         "load_bootstrap_supporting_resources",
         lambda **_kwargs: supporting_resources,
+    )
+    monkeypatch.setattr(
+        bootstrap_module,
+        "load_bootstrap_fields",
+        lambda **_kwargs: [TemplateField("f1", "f1", "MATRIX")],
     )
     monkeypatch.setattr(
         bootstrap_module,
@@ -503,6 +516,7 @@ def test_initialize_run_context_uses_application_paths_for_cache_and_credentials
         "exclude_templates",
         "expression_policy",
         "blacklist",
+        "fields",
     }
 
 
