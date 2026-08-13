@@ -28,6 +28,7 @@ def create_and_login_client(
         password,
         min_request_interval=client_options.min_request_interval,
         rate_limit_max_retries=client_options.rate_limit_max_retries,
+        http_config=client_options.http_config,
     )
     initialized = False
     try:

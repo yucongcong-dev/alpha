@@ -46,7 +46,9 @@ def poll_simulation_with_retry(
             max_queue_seconds=max_queue_seconds,
             should_abort=should_abort,
         ),
-        retry_wait_seconds=get_runtime_config().http.simulation_retry_wait,
+        retry_wait_seconds=(
+            getattr(client, "http_config", None) or get_runtime_config().http
+        ).simulation_retry_wait,
         should_abort=should_abort,
     )
 

@@ -8,6 +8,7 @@ import pytest
 
 import alpha.api.client as client_module
 from alpha.api.client import BrainClient, WorkerClientFactory
+from alpha.config.runtime_values import HttpRuntimeConfig
 from alpha.exceptions import BrainHTTPError
 from alpha.models.runtime_options import ApiClientOptions
 
@@ -95,6 +96,41 @@ def test_worker_client_factory_applies_deadline_during_login(monkeypatch) -> Non
         "before_deadline": False,
         "after_deadline": True,
     }
+
+
+def test_worker_client_factory_passes_frozen_http_config(monkeypatch) -> None:
+    http_config = HttpRuntimeConfig(
+        request_timeout=17.0,
+        rate_limit_default_wait=4.0,
+        polling_default_wait=5.0,
+        polling_no_retry_after_wait=1.5,
+        server_error_backoff_max=30.0,
+        server_error_backoff_step=3.0,
+        retry_operation_default_wait=2.0,
+        login_retry_wait=6.0,
+        simulation_retry_wait=7.0,
+        polling_retry_buffer=0.75,
+    )
+    captured: dict[str, object] = {}
+
+    class FakeClient:
+        def __init__(self, *_args, **kwargs) -> None:
+            captured["http_config"] = kwargs["http_config"]
+
+        def close(self) -> None:
+            return None
+
+    monkeypatch.setattr(client_module, "BrainClient", FakeClient)
+    monkeypatch.setattr(client_module, "login_with_retry", lambda *_args, **_kwargs: None)
+    factory = WorkerClientFactory(
+        ApiClientOptions(login_retries=1, http_config=http_config),
+        "user@example.com",
+        "secret",
+    )
+
+    factory.get_client()
+
+    assert captured["http_config"] is http_config
 
 
 def test_fetch_dataset_fields_logs_progress_with_total(monkeypatch, caplog) -> None:

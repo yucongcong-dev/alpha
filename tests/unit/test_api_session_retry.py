@@ -9,6 +9,7 @@ import pytest
 from alpha.api.client import BrainClient
 from alpha.api.retry import login_with_retry, retry_operation
 import alpha.api.session as session_module
+from alpha.config.runtime_values import HttpRuntimeConfig
 from alpha.exceptions import (
     BrainAPIError,
     BrainHTTPError,
@@ -39,6 +40,33 @@ def test_login_sends_basic_authorization_header(monkeypatch) -> None:
 
     assert captured["method"] == "POST"
     assert captured["headers"]["Authorization"] == "Basic dXNlckBleGFtcGxlLmNvbTpzZWNyZXQ="
+
+
+def test_client_uses_injected_http_config_for_request_timeout() -> None:
+    initial = HttpRuntimeConfig(
+        request_timeout=11.0,
+        rate_limit_default_wait=4.0,
+        polling_default_wait=5.0,
+        polling_no_retry_after_wait=1.5,
+        server_error_backoff_max=30.0,
+        server_error_backoff_step=3.0,
+        retry_operation_default_wait=2.0,
+        login_retry_wait=3.0,
+        simulation_retry_wait=3.0,
+        polling_retry_buffer=0.5,
+    )
+    client = BrainClient("user@example.com", "secret", http_config=initial)
+    captured: dict[str, object] = {}
+
+    class FakeBackend:
+        def request(self, **kwargs: object):
+            captured.update(kwargs)
+            return 200, {}, b"ok"
+
+    client._http_backend = FakeBackend()  # type: ignore[assignment]
+    client.raw_request("GET", "https://example.test")
+
+    assert captured["timeout"] == initial.request_timeout
 
 
 def test_login_surfaces_rejected_credentials(monkeypatch) -> None:

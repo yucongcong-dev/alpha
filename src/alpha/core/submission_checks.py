@@ -36,6 +36,9 @@ def check_submission_with_retry(
     should_abort: Callable[[], bool] | None = None,
 ) -> tuple[bool | None, str, list[FailedCheck]]:
     attempts = max(1, int(retries or 0))
+    retry_wait = (
+        getattr(client, "http_config", None) or get_runtime_config().http
+    ).simulation_retry_wait
     last_result: tuple[bool | None, str, list[FailedCheck]] = (
         None,
         "checks unavailable",
@@ -47,7 +50,7 @@ def check_submission_with_retry(
                 "check submission",
                 _CHECK_SUBMISSION_TRANSPORT_RETRIES,
                 lambda: client.check_alpha_submission(alpha_id),
-                retry_wait_seconds=get_runtime_config().http.simulation_retry_wait,
+                retry_wait_seconds=retry_wait,
                 should_abort=should_abort,
             )
         except BrainStopRequested:
@@ -66,7 +69,7 @@ def check_submission_with_retry(
             )
             if attempt < attempts:
                 wait_seconds(
-                    get_runtime_config().http.simulation_retry_wait,
+                    retry_wait,
                     f"waiting for submission checks for alpha {alpha_id}",
                     verbose=False,
                     should_abort=should_abort,
@@ -83,7 +86,7 @@ def check_submission_with_retry(
             )
             if attempt < attempts:
                 wait_seconds(
-                    get_runtime_config().http.simulation_retry_wait,
+                    retry_wait,
                     f"waiting for submission checks for alpha {alpha_id}",
                     verbose=False,
                     should_abort=should_abort,
@@ -120,7 +123,7 @@ def check_submission_with_retry(
             return last_result
         if attempt < attempts:
             wait_seconds(
-                get_runtime_config().http.simulation_retry_wait,
+                retry_wait,
                 f"waiting for submission checks for alpha {alpha_id}",
                 verbose=False,
                 should_abort=should_abort,

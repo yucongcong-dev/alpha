@@ -14,7 +14,6 @@ from ..config._constants_api import (
     AUTH_URL,
     DEFAULT_HEADERS,
 )
-from ..config.runtime_values import get_runtime_config
 from ..exceptions import BrainAPIError, BrainHTTPError, BrainRateLimitError, BrainStopRequested
 from .api_types import ApiParams
 from .http_backend import HttpBackend, response_header
@@ -132,7 +131,7 @@ class BrainSessionMixin:
     ) -> tuple[int, dict[str, str], bytes]:
         """发送带共享头、退避与重试策略的 HTTP 请求。"""
         merged_headers = dict(DEFAULT_HEADERS)
-        http_config = get_runtime_config().http
+        http_config = self.http_config  # type: ignore[attr-defined]
         if headers:
             merged_headers.update(headers)
         retries = self.rate_limit_max_retries if retries is None else max(retries, 1)
@@ -232,7 +231,7 @@ class BrainSessionMixin:
         else:
             request_data = str(data).encode("utf-8")
 
-        request_timeout = get_runtime_config().http.request_timeout
+        request_timeout = self.http_config.request_timeout  # type: ignore[attr-defined]
         if self.request_abort is not None and self.request_abort():
             raise BrainStopRequested("HTTP request aborted because stop was requested")
         if self.request_deadline is not None:

@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
+from ..config.runtime_values import HttpRuntimeConfig, load_http_runtime_config
 from ..runtime.preset_mode import resolve_preset_mode
 from .runtime_config import SimulationSettingsConfig, SimulationStageConfig
 
@@ -19,6 +20,7 @@ class ApiClientOptions:
     min_request_interval: float = 0.0
     rate_limit_max_retries: int = 0
     login_retries: int = 0
+    http_config: HttpRuntimeConfig = field(default_factory=load_http_runtime_config)
 
     @classmethod
     def from_config(cls, config: ApplicationConfig) -> ApiClientOptions:

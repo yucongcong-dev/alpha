@@ -126,7 +126,8 @@ def login_with_retry(
 ) -> None:
     """通过统一的重试封装完成客户端登录。"""
     attempts = max(retries, 1)
-    login_retry_wait = get_runtime_config().http.login_retry_wait
+    http_config = getattr(client, "http_config", None) or get_runtime_config().http
+    login_retry_wait = http_config.login_retry_wait
     try:
         retry_operation(
             "login",

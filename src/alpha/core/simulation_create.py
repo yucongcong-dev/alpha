@@ -43,7 +43,9 @@ def create_simulation_with_retry(
         "create simulation",
         retries,
         lambda: client.create_simulation(payload),
-        retry_wait_seconds=get_runtime_config().http.simulation_retry_wait,
+        retry_wait_seconds=(
+            getattr(client, "http_config", None) or get_runtime_config().http
+        ).simulation_retry_wait,
         should_abort=should_abort,
     )
     simulation_id_match = re.search(_SIM_ID_REGEX, simulation_location)

@@ -123,10 +123,15 @@ class BrainSimulationsMixin:
         status: str,
         default_wait: float,
         no_retry_after_wait: float,
+        retry_buffer: float,
         should_abort: Callable[[], bool] | None,
     ) -> None:
         if retry_after:
-            seconds = polling_retry_after(response_headers, default=default_wait)
+            seconds = polling_retry_after(
+                response_headers,
+                default=default_wait,
+                buffer_seconds=retry_buffer,
+            )
             reason = "simulation pending"
         else:
             seconds = no_retry_after_wait
@@ -152,6 +157,7 @@ class BrainSimulationsMixin:
         max_queue_seconds: float,
         default_wait: float,
         no_retry_after_wait: float,
+        retry_buffer: float,
         should_abort: Callable[[], bool] | None,
     ) -> tuple[bool, int, float | None]:
         body_status = str(first_non_empty(payload.get("status"), payload.get("state"), "")).upper()
@@ -186,6 +192,7 @@ class BrainSimulationsMixin:
             status=body_status or "unknown",
             default_wait=default_wait,
             no_retry_after_wait=no_retry_after_wait,
+            retry_buffer=retry_buffer,
             should_abort=should_abort,
         )
         return False, pending_cycles, pending_started_at
@@ -202,7 +209,7 @@ class BrainSimulationsMixin:
     ) -> SimulationPayload:
         """轮询单个模拟任务，直到完成或超出排队/等待预算。"""
         url = location if location.startswith("http") else f"{API_BASE}{location}"
-        http_config = get_runtime_config().http
+        http_config = getattr(self, "http_config", None) or get_runtime_config().http
         poll_count = 0
         pending_cycles = 0
         started_at = time.monotonic()
@@ -247,6 +254,7 @@ class BrainSimulationsMixin:
                     status=status,
                     default_wait=http_config.polling_default_wait,
                     no_retry_after_wait=http_config.polling_no_retry_after_wait,
+                    retry_buffer=http_config.polling_retry_buffer,
                     should_abort=should_abort,
                 )
                 continue
@@ -264,6 +272,7 @@ class BrainSimulationsMixin:
                 max_queue_seconds=max_queue_seconds,
                 default_wait=http_config.polling_default_wait,
                 no_retry_after_wait=http_config.polling_no_retry_after_wait,
+                retry_buffer=http_config.polling_retry_buffer,
                 should_abort=should_abort,
             )
             if terminal:
