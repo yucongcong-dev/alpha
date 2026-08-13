@@ -214,7 +214,7 @@ def submit_template_future(
         execution_resources.template_library_fingerprint,
         settings_variant,
         execution_resources.create_semaphore,
-        execution_state.future_queue.stop_signal.is_set,
+        execution_state.future_queue.abort_workers.is_set,
         _record_simulation_created,
     )
     execution_state.last_submission_at = time.monotonic()
@@ -240,7 +240,7 @@ def submit_resumable_futures(
                 simulation_config,
                 pending_context,
                 execution_resources.template_library_fingerprint,
-                execution_state.future_queue.stop_signal.is_set,
+                execution_state.future_queue.abort_workers.is_set,
             )
             typed_future: Future[FieldTestResult] = future
             execution_state.future_queue.register(typed_future, pending_context)

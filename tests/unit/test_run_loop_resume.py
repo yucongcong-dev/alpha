@@ -401,7 +401,8 @@ def test_run_field_test_loop_interrupts_workers_without_waiting(tmp_path) -> Non
     ):
         run_field_test_loop(args, run_ctx)
 
-    assert run_ctx.execution_state.future_queue.stop_signal.is_set() is True
+    assert run_ctx.execution_state.future_queue.stop_scheduling.is_set() is True
+    assert run_ctx.execution_state.future_queue.abort_workers.is_set() is True
     assert executor.shutdown_calls == [(False, True)]
     assert queued.cancelled() is True
     assert list(run_ctx.execution_state.future_queue.pending_futures.values()) == [running_context]
@@ -516,7 +517,8 @@ def test_run_field_test_loop_waits_for_worker_metadata_before_exception_checkpoi
     ):
         run_field_test_loop(args, run_ctx)
 
-    assert run_ctx.execution_state.future_queue.stop_signal.is_set() is True
+    assert run_ctx.execution_state.future_queue.stop_scheduling.is_set() is True
+    assert run_ctx.execution_state.future_queue.abort_workers.is_set() is True
     assert executor.shutdown_calls == [(True, True)]
     saved_state = mock_checkpoint.call_args.kwargs["execution_state"]
     assert (

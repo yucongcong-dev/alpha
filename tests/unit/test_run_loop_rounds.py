@@ -205,9 +205,9 @@ def test_submittable_result_does_not_stop_new_round() -> None:
     mock_schedule.assert_called_once()
 
 
-def test_preexisting_stop_signal_skips_round_without_building_fields() -> None:
+def test_preexisting_stop_scheduling_skips_round_without_building_fields() -> None:
     context = _build_context(field_template_batch_size=1)
-    context.execution_state.future_queue.stop_signal.set()
+    context.execution_state.future_queue.stop_scheduling.set()
 
     with patch("alpha.app.run_loop_rounds.schedule_field_round") as mock_schedule:
         result = execute_schedule_round(context, round_index=1)
@@ -552,5 +552,5 @@ def test_dispatch_stops_at_total_simulation_budget_without_aborting_pending() ->
 
     assert stopped is True
     assert context.scheduled_simulations == 1
-    assert context.execution_state.future_queue.stop_signal.is_set() is False
+    assert context.execution_state.future_queue.stop_scheduling.is_set() is False
     mock_submit.assert_called_once()

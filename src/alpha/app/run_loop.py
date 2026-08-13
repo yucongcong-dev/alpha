@@ -33,7 +33,7 @@ def _stop_workers_and_save_checkpoint(
     reason: str,
 ) -> None:
     """Stop pending work, stabilize resumable metadata, and persist recovery state."""
-    execution_state.future_queue.stop_signal.set()
+    execution_state.future_queue.request_stop(abort_workers=True)
     cancelled = loop_future_support.cancel_unstarted_futures(execution_state)
     executor.shutdown(wait=wait_for_workers, cancel_futures=True)
     unresolved_metadata = 0

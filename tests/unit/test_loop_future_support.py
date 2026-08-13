@@ -207,6 +207,46 @@ def test_submit_resumable_futures_registers_restored_contexts() -> None:
     assert executor.calls[0][1][-1]() is False
 
 
+def test_stop_scheduling_does_not_abort_submitted_worker() -> None:
+    execution_state = _execution_state()
+    execution_state.future_queue.stop_scheduling.set()
+    execution_resources = SimulationExecutionResources(
+        client_factory=object(),
+        template_library_fingerprint="library-v1",
+        create_semaphore=Semaphore(1),
+    )
+    executor = _RecordingExecutor()
+    field = TemplateField(
+        field_id="f1",
+        field_name="Field 1",
+        field_type="MATRIX",
+        metadata={"id": "f1", "name": "Field 1", "type": "MATRIX"},
+    )
+
+    submit_template_future(
+        executor=executor,
+        execution_resources=execution_resources,
+        execution_state=execution_state,
+        simulation_config=build_simulation_stage_config(),
+        field=field,
+        field_id="f1",
+        field_name="Field 1",
+        field_type="MATRIX",
+        template_name="base",
+        template_family="base",
+        template_stage="generate",
+        template_role="signal",
+        template_activation_scope="dataset",
+        expression="rank(f1)",
+        settings_variant=SettingsVariant(),
+        variant_fingerprint="settings-v1",
+    )
+
+    assert executor.calls[0][1][-2]() is False
+    execution_state.future_queue.abort_workers.set()
+    assert executor.calls[0][1][-2]() is True
+
+
 def test_submit_resumable_futures_restores_unsubmitted_contexts_on_failure() -> None:
     execution_state = _execution_state()
     first = PendingFutureContext(
