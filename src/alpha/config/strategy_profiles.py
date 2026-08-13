@@ -40,10 +40,12 @@ def normalize_strategy_profile(value: object) -> str:
 def load_strategy_profile_schemas(
     yaml_config: YamlConfig | None = None,
 ) -> dict[str, StrategyProfileSchema]:
-    """Load descriptive strategy profile schemas from merged YAML.
+    """Load strategy profile schemas and their executable runtime defaults.
 
-    The returned schemas document tunable boundaries only. They do not rewrite
-    runtime parameters or expression-policy defaults.
+    ``tuning_keys`` documents the intended tuning boundaries.  The separate
+    ``runtime_defaults`` mapping is executable and is applied by the CLI
+    resolver below explicit CLI values and above dataset/global YAML defaults.
+    Expression-policy defaults remain owned by their dataset policy.
     """
     if yaml_config is None:
         yaml_config = get_yaml_config()
@@ -75,7 +77,7 @@ def get_strategy_profile_runtime_defaults(
     profile: str,
     yaml_config: YamlConfig | None = None,
 ) -> dict[str, object]:
-    """Return flattened runtime defaults for a strategy profile."""
+    """Return the executable flattened runtime defaults for a profile."""
     schemas = load_strategy_profile_schemas(yaml_config)
     schema = schemas.get(normalize_strategy_profile(profile))
     if schema is None:

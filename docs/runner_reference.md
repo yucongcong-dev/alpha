@@ -133,7 +133,9 @@ check 已通过或已失败。
 - `refine`：反馈邻域优化，优先围绕 near-pass 和已知有效结构做小范围变体
 - `candidate-focused`：候选质量收敛，聚焦高反馈字段并继续验证风险、相关性和稳健性
 
-`config/strategy_profiles.yaml` 同时定义策略说明、常调参数边界和 `runtime_defaults`。
+`config/strategy_profiles.yaml` 同时定义策略说明、常调参数边界和可执行的
+`runtime_defaults`；其中 `tuning_keys` 仅用于说明边界，不会单独改写参数，
+而 `runtime_defaults` 会在 CLI 配置解析阶段参与默认值覆盖。
 当前 `refine` 会收窄字段与模板预算，`candidate-focused` 还会聚焦历史反馈字段，但不会因为
 出现 `submittable=true` 就停止；`explore` 不额外改写默认预算。
 
