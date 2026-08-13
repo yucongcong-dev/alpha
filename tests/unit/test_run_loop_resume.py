@@ -403,7 +403,7 @@ def test_run_field_test_loop_interrupts_workers_without_waiting(tmp_path) -> Non
 
     assert run_ctx.execution_state.future_queue.stop_scheduling.is_set() is True
     assert run_ctx.execution_state.future_queue.abort_workers.is_set() is True
-    assert executor.shutdown_calls == [(False, True)]
+    assert executor.shutdown_calls == [(True, True)]
     assert queued.cancelled() is True
     assert list(run_ctx.execution_state.future_queue.pending_futures.values()) == [running_context]
     saved_state = mock_checkpoint.call_args.kwargs["execution_state"]
@@ -425,19 +425,14 @@ def test_run_field_test_loop_waits_for_worker_metadata_before_interrupt_checkpoi
 
     class FakeExecutor:
         def shutdown(self, *, wait: bool, cancel_futures: bool = False) -> None:
-            assert (wait, cancel_futures) == (False, True)
+            assert (wait, cancel_futures) == (True, True)
+            running_context.simulation_location = "/simulations/sim-after-interrupt"
 
     def _interrupt(*_args, **_kwargs):
         run_ctx.execution_state.future_queue.pending_futures = {
             running: running_context,
         }
         raise KeyboardInterrupt
-
-    def _stabilize(execution_state, *, timeout_seconds: float) -> int:
-        assert timeout_seconds == 15.0
-        context = next(iter(execution_state.future_queue.pending_futures.values()))
-        context.simulation_location = "/simulations/sim-after-interrupt"
-        return 0
 
     with (
         patch("alpha.app.run_loop.ThreadPoolExecutor", return_value=FakeExecutor()),
@@ -452,19 +447,11 @@ def test_run_field_test_loop_waits_for_worker_metadata_before_interrupt_checkpoi
         ),
         patch("alpha.app.future_submission.submit_resumable_futures"),
         patch("alpha.app.run_loop_rounds.execute_schedule_round", side_effect=_interrupt),
-        patch(
-            "alpha.app.future_submission.wait_for_inflight_simulation_metadata",
-            side_effect=_stabilize,
-        ) as mock_stabilize,
         patch("alpha.app.run_loop_resume.save_runtime_checkpoint") as mock_checkpoint,
         pytest.raises(KeyboardInterrupt),
     ):
         run_field_test_loop(args, run_ctx)
 
-    mock_stabilize.assert_called_once_with(
-        run_ctx.execution_state,
-        timeout_seconds=15.0,
-    )
     saved_state = mock_checkpoint.call_args.kwargs["execution_state"]
     assert (
         next(iter(saved_state.future_queue.pending_futures.values())).simulation_location

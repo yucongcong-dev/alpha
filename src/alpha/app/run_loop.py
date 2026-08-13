@@ -22,13 +22,9 @@ from .run_loop_seed_phase import SeedPhaseState
 
 logger = logging.getLogger(__name__)
 
-INTERRUPT_METADATA_WAIT_SECONDS = 15.0
-
-
 def _stop_workers_and_save_checkpoint(
     *,
     executor: ThreadPoolExecutor,
-    wait_for_workers: bool,
     execution_state: ExecutionState,
     runtime_state: RuntimeConcurrencyState,
     identity: CheckpointIdentity,
@@ -41,13 +37,16 @@ def _stop_workers_and_save_checkpoint(
     """Stop pending work, stabilize resumable metadata, and persist recovery state."""
     execution_state.future_queue.request_stop(abort_workers=True)
     cancelled = future_submission.cancel_unstarted_futures(execution_state)
-    executor.shutdown(wait=wait_for_workers, cancel_futures=True)
-    unresolved_metadata = 0
-    if not wait_for_workers:
-        unresolved_metadata = future_submission.wait_for_inflight_simulation_metadata(
-            execution_state,
-            timeout_seconds=INTERRUPT_METADATA_WAIT_SECONDS,
-        )
+    # A checkpoint is only safe after every worker has stopped.  In particular,
+    # a create request may already have succeeded remotely while its callback
+    # has not published the Location yet.  Saving before join can turn that
+    # task into a duplicate submission on the next run.
+    executor.shutdown(wait=True, cancel_futures=True)
+    unresolved_metadata = sum(
+        1
+        for pending in execution_state.future_queue.pending_futures.values()
+        if not pending.simulation_location
+    )
     resumable = sum(
         1
         for pending in execution_state.future_queue.pending_futures.values()
@@ -211,7 +210,6 @@ def run_field_test_loop(
         except KeyboardInterrupt:
             _stop_workers_and_save_checkpoint(
                 executor=executor,
-                wait_for_workers=False,
                 execution_state=execution_state,
                 runtime_state=runtime_state,
                 identity=checkpoint_identity,
@@ -226,7 +224,6 @@ def run_field_test_loop(
         except Exception:
             _stop_workers_and_save_checkpoint(
                 executor=executor,
-                wait_for_workers=True,
                 execution_state=execution_state,
                 runtime_state=runtime_state,
                 identity=checkpoint_identity,
