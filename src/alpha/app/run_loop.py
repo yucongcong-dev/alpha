@@ -118,34 +118,38 @@ def run_field_test_loop(
     last_field_id = ""
     try:
         schedule_context = run_loop_rounds.ScheduleRoundContext(
-            simulation_config=run_loop_options.simulation_stage,
-            execution_resources=execution_resources,
-            execution_state=execution_state,
-            runtime_state=runtime_state,
-            filters=run_ctx.filters,
-            historical_state=run_ctx.historical_state,
-            executor=executor,
-            template_build_ctx=template_build_ctx,
-            fields=fields,
-            completion_ctx=completion_ctx,
-            state_file=state_file,
-            field_template_batch_size=field_template_batch_size,
-            scheduler_options=scheduler_options,
-            seed_phase=SeedPhaseState.create(
-                fields,
-                enabled=run_loop_options.full_run,
-                resolved_field_ids={
-                    field_id
-                    for field_id, _template, _expression, _settings in execution_state.attempted_keys
-                },
+            dependencies=run_loop_rounds.ScheduleDependencies(
+                simulation_config=run_loop_options.simulation_stage,
+                execution_resources=execution_resources,
+                filters=run_ctx.filters,
+                historical_state=run_ctx.historical_state,
+                template_build_ctx=template_build_ctx,
+                completion_ctx=completion_ctx,
+                state_file=state_file,
+                scheduler_options=scheduler_options,
             ),
+            runtime=run_loop_rounds.ScheduleRuntime(
+                execution_state=execution_state,
+                runtime_state=runtime_state,
+                executor=executor,
+                field_template_batch_size=field_template_batch_size,
+                seed_phase=SeedPhaseState.create(
+                    fields,
+                    enabled=run_loop_options.full_run,
+                    resolved_field_ids={
+                        field_id
+                        for field_id, _template, _expression, _settings in execution_state.attempted_keys
+                    },
+                ),
+            ),
+            fields=fields,
         )
-        if schedule_context.seed_phase.enabled:
-            remaining_seed_fields = schedule_context.seed_phase.remaining_count
+        if schedule_context.runtime.seed_phase.enabled:
+            remaining_seed_fields = schedule_context.runtime.seed_phase.remaining_count
             logger.info(
                 "[full-run] seed phase fields=%d already_resolved=%d remaining=%d",
-                schedule_context.seed_phase.total_count,
-                schedule_context.seed_phase.resolved_count,
+                schedule_context.runtime.seed_phase.total_count,
+                schedule_context.runtime.seed_phase.resolved_count,
                 remaining_seed_fields,
             )
             if (

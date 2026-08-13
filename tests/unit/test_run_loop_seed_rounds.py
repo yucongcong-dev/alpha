@@ -44,7 +44,7 @@ def test_full_run_seed_phase_covers_fields_before_refine() -> None:
         return False
 
     with (
-        context.executor,
+        context.runtime.executor,
         patch(
             "alpha.app.run_loop_rounds.refresh_runtime_feedback",
             return_value=RuntimeFeedbackRefresh(feedback_changed=False),
@@ -63,10 +63,10 @@ def test_full_run_seed_phase_covers_fields_before_refine() -> None:
         first_round = execute_schedule_round(context, round_index=1)
         assert first_round.progressed is True
         assert dispatched_batches == [("f1", 1), ("f2", 1)]
-        assert context.seed_phase.active is True
-        assert context.seed_phase.inflight_field_ids == {"f1", "f2"}
+        assert context.runtime.seed_phase.active is True
+        assert context.runtime.seed_phase.inflight_field_ids == {"f1", "f2"}
 
-        context.execution_state.attempted_keys.update(
+        context.runtime.execution_state.attempted_keys.update(
             {
                 ("f1", "seed", "rank(f1)", "settings-0"),
                 ("f2", "seed", "rank(f2)", "settings-0"),
@@ -116,7 +116,7 @@ def test_full_run_seed_phase_prefers_default_seed_role() -> None:
         return False
 
     with (
-        context.executor,
+        context.runtime.executor,
         patch(
             "alpha.app.run_loop_rounds.refresh_runtime_feedback",
             return_value=RuntimeFeedbackRefresh(feedback_changed=False),
@@ -135,7 +135,7 @@ def test_full_run_seed_phase_prefers_default_seed_role() -> None:
         execute_schedule_round(context, round_index=1)
 
     assert dispatched == ["generic-seed"]
-    assert list(context.field_template_queues["f1"].entries) == [refine_entry]
+    assert list(context.runtime.field_template_queues["f1"].entries) == [refine_entry]
 
 
 def test_full_run_seed_phase_skips_historically_seeded_fields() -> None:
@@ -168,7 +168,7 @@ def test_full_run_seed_phase_skips_historically_seeded_fields() -> None:
         return False
 
     with (
-        context.executor,
+        context.runtime.executor,
         patch(
             "alpha.app.run_loop_rounds.refresh_runtime_feedback",
             return_value=RuntimeFeedbackRefresh(feedback_changed=False),
@@ -187,8 +187,8 @@ def test_full_run_seed_phase_skips_historically_seeded_fields() -> None:
         execute_schedule_round(context, round_index=1)
 
     assert planned_field_ids == ["f2"]
-    assert context.seed_phase.active is True
-    assert context.seed_phase.inflight_field_ids == {"f2"}
+    assert context.runtime.seed_phase.active is True
+    assert context.runtime.seed_phase.inflight_field_ids == {"f2"}
 
 
 def test_full_run_seed_phase_skips_resumable_inflight_fields() -> None:
@@ -197,10 +197,10 @@ def test_full_run_seed_phase_skips_resumable_inflight_fields() -> None:
         field_ids=("f1", "f2"),
         seed_phase_enabled=True,
     )
-    context.execution_state.future_queue.replace_resumable_batch(
+    context.runtime.execution_state.future_queue.replace_resumable_batch(
         [PendingFutureContext(field_id="f1", simulation_location="/simulations/sim-1")]
     )
-    context.seed_phase.sync(context.execution_state)
+    context.runtime.seed_phase.sync(context.runtime.execution_state)
     planned_field_ids: list[str] = []
 
     def _pending_for_field(_ctx, field, **_kwargs):
@@ -208,7 +208,7 @@ def test_full_run_seed_phase_skips_resumable_inflight_fields() -> None:
         return [], 0, 0
 
     with (
-        context.executor,
+        context.runtime.executor,
         patch(
             "alpha.app.run_loop_rounds.refresh_runtime_feedback",
             return_value=RuntimeFeedbackRefresh(feedback_changed=False),
@@ -224,8 +224,8 @@ def test_full_run_seed_phase_skips_resumable_inflight_fields() -> None:
 
     assert planned_field_ids == ["f2"]
     assert result.progressed is True
-    assert context.seed_phase.active is True
-    assert context.seed_phase.inflight_field_ids == {"f1"}
+    assert context.runtime.seed_phase.active is True
+    assert context.runtime.seed_phase.inflight_field_ids == {"f1"}
 
 
 def test_full_run_seed_inflight_completion_becomes_resolved() -> None:
@@ -234,20 +234,20 @@ def test_full_run_seed_inflight_completion_becomes_resolved() -> None:
         seed_phase_enabled=True,
     )
     completed_future: Future[FieldTestResult] = Future()
-    context.execution_state.future_queue.register(
+    context.runtime.execution_state.future_queue.register(
         completed_future,
         PendingFutureContext(field_id="f1", simulation_location="/simulations/sim-1"),
     )
-    context.seed_phase.sync(context.execution_state)
-    assert context.seed_phase.inflight_field_ids == {"f1"}
+    context.runtime.seed_phase.sync(context.runtime.execution_state)
+    assert context.runtime.seed_phase.inflight_field_ids == {"f1"}
 
-    context.execution_state.future_queue.pop_completed(completed_future)
-    context.execution_state.attempted_keys.add(("f1", "seed", "rank(f1)", "settings"))
-    context.seed_phase.sync(context.execution_state)
+    context.runtime.execution_state.future_queue.pop_completed(completed_future)
+    context.runtime.execution_state.attempted_keys.add(("f1", "seed", "rank(f1)", "settings"))
+    context.runtime.seed_phase.sync(context.runtime.execution_state)
 
-    assert context.seed_phase.inflight_field_ids == set()
-    assert context.seed_phase.resolved_field_ids == {"f1"}
-    assert context.seed_phase.active is False
+    assert context.runtime.seed_phase.inflight_field_ids == set()
+    assert context.runtime.seed_phase.resolved_field_ids == {"f1"}
+    assert context.runtime.seed_phase.active is False
 
 
 def test_full_run_all_remaining_seeds_inflight_does_not_enter_refine() -> None:
@@ -256,19 +256,19 @@ def test_full_run_all_remaining_seeds_inflight_does_not_enter_refine() -> None:
         field_ids=("f1",),
         seed_phase_enabled=True,
     )
-    context.execution_state.future_queue.replace_resumable_batch(
+    context.runtime.execution_state.future_queue.replace_resumable_batch(
         [PendingFutureContext(field_id="f1", simulation_location="/simulations/sim-1")]
     )
 
     with (
-        context.executor,
+        context.runtime.executor,
         patch("alpha.app.run_loop_rounds.build_pending_templates_for_field") as mock_build,
     ):
         result = execute_schedule_round(context, round_index=1)
 
     assert result.progressed is False
     assert result.stop_requested is False
-    assert context.seed_phase.active is True
+    assert context.runtime.seed_phase.active is True
     mock_build.assert_not_called()
 
 
@@ -310,7 +310,7 @@ def test_full_run_unactionable_seed_fields_advance_to_refine() -> None:
         return False
 
     with (
-        context.executor,
+        context.runtime.executor,
         patch(
             "alpha.app.run_loop_rounds.refresh_runtime_feedback",
             return_value=RuntimeFeedbackRefresh(feedback_changed=False),
@@ -328,7 +328,7 @@ def test_full_run_unactionable_seed_fields_advance_to_refine() -> None:
     ):
         seed_round = execute_schedule_round(context, round_index=1)
         assert seed_round.progressed is True
-        assert context.seed_phase.active is False
+        assert context.runtime.seed_phase.active is False
 
         refine_round = execute_schedule_round(context, round_index=2)
 

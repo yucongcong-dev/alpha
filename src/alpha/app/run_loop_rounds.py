@@ -38,7 +38,7 @@ logger = logging.getLogger(__name__)
 
 
 def _checkpoint_identity(context: ScheduleRoundContext) -> CheckpointIdentity:
-    return CheckpointIdentity(run_fingerprint=context.completion_ctx.run_fingerprint)
+    return CheckpointIdentity(run_fingerprint=context.dependencies.completion_ctx.run_fingerprint)
 
 
 @dataclass(frozen=True)
@@ -50,37 +50,51 @@ class ScheduleRoundResult:
     last_field_id: str
 
 
-@dataclass
-class ScheduleRoundContext:
-    """Stable dependencies shared by every breadth-first scheduling round."""
+@dataclass(frozen=True)
+class ScheduleDependencies:
+    """Immutable resources and policy shared by every scheduling round."""
 
     simulation_config: SimulationStageConfig
     execution_resources: SimulationExecutionResources
-    execution_state: ExecutionState
-    runtime_state: RuntimeConcurrencyState
     filters: RunFilters
     historical_state: HistoricalRunState
-    executor: ThreadPoolExecutor
     template_build_ctx: TemplateBuildContext
-    fields: list[TemplateField]
     completion_ctx: FutureCompletionContext
     state_file: str
+    scheduler_options: SchedulerControlOptions
+
+
+@dataclass
+class ScheduleRuntime:
+    """Mutable scheduling state owned by one breadth-first run."""
+
+    execution_state: ExecutionState
+    runtime_state: RuntimeConcurrencyState
+    executor: ThreadPoolExecutor
     field_template_batch_size: int
-    scheduler_options: SchedulerControlOptions = dataclass_field(
-        default_factory=SchedulerControlOptions
-    )
     scheduled_simulations: int = 0
     field_template_queues: dict[str, FieldTemplateQueue] = dataclass_field(default_factory=dict)
     seed_phase: SeedPhaseState = dataclass_field(default_factory=SeedPhaseState)
 
+
+@dataclass
+class ScheduleRoundContext:
+    """Round input plus explicitly owned mutable scheduling state."""
+
+    dependencies: ScheduleDependencies
+    runtime: ScheduleRuntime
+    fields: list[TemplateField]
+
     def __post_init__(self) -> None:
-        self.field_template_batch_size = max(1, int(self.field_template_batch_size or 0))
-        self.seed_phase.sync(self.execution_state)
+        self.runtime.field_template_batch_size = max(
+            1, int(self.runtime.field_template_batch_size or 0)
+        )
+        self.runtime.seed_phase.sync(self.runtime.execution_state)
 
     def reached_simulation_budget(self) -> bool:
         """Return whether this process has dispatched its configured simulation budget."""
-        budget = self.scheduler_options.max_total_simulations
-        return budget > 0 and self.scheduled_simulations >= budget
+        budget = self.dependencies.scheduler_options.max_total_simulations
+        return budget > 0 and self.runtime.scheduled_simulations >= budget
 
 
 def execute_schedule_round(
@@ -89,11 +103,11 @@ def execute_schedule_round(
     round_index: int,
 ) -> ScheduleRoundResult:
     """Execute one scheduling round across every remaining field."""
-    scheduler_options = context.scheduler_options
-    execution_state = context.execution_state
+    scheduler_options = context.dependencies.scheduler_options
+    execution_state = context.runtime.execution_state
     progressed_this_round = False
     last_field_id = ""
-    context.seed_phase.sync(execution_state)
+    context.runtime.seed_phase.sync(execution_state)
     if execution_state.future_queue.should_stop_scheduling():
         return ScheduleRoundResult(
             progressed=False,
@@ -103,8 +117,8 @@ def execute_schedule_round(
     logger.info(
         "[schedule] round=%d phase=%s breadth-first batch_size=%d fields=%d",
         round_index,
-        context.seed_phase.phase_name,
-        context.field_template_batch_size,
+        context.runtime.seed_phase.phase_name,
+        context.runtime.field_template_batch_size,
         len(context.fields),
     )
 
@@ -114,8 +128,8 @@ def execute_schedule_round(
                 "[stop] 达到 max-total-simulations=%d seed_fields_unresolved=%d "
                 "seed_fields_inflight=%d",
                 scheduler_options.max_total_simulations,
-                context.seed_phase.remaining_count,
-                len(context.seed_phase.inflight_field_ids),
+                context.runtime.seed_phase.remaining_count,
+                len(context.runtime.seed_phase.inflight_field_ids),
             )
             return ScheduleRoundResult(
                 progressed=progressed_this_round,
@@ -154,28 +168,30 @@ def schedule_field_round(
     round_index: int,
 ) -> ScheduleRoundResult:
     """Schedule one field for the current round and persist its progress."""
-    execution_state = context.execution_state
-    runtime_state = context.runtime_state
+    execution_state = context.runtime.execution_state
+    runtime_state = context.runtime.runtime_state
     result_ledger = execution_state.result_ledger
     field_id = str(first_non_empty(field.field_id, SENTINEL_UNKNOWN))
     field_name = choose_field_name(field)
     field_type = choose_field_type(field)
-    seed_phase_active = context.seed_phase.active
-    if context.seed_phase.should_wait_or_skip(field_id):
+    seed_phase_active = context.runtime.seed_phase.active
+    if context.runtime.seed_phase.should_wait_or_skip(field_id):
         return ScheduleRoundResult(progressed=False, stop_requested=False, last_field_id=field_id)
-    feedback_refresh = refresh_runtime_feedback(context.template_build_ctx, result_ledger.results)
+    feedback_refresh = refresh_runtime_feedback(
+        context.dependencies.template_build_ctx, result_ledger.results
+    )
     apply_feedback_refresh(context, feedback_refresh)
 
     if should_skip_field(
         field_id,
         field_name,
-        context.filters,
+        context.dependencies.filters,
     ):
         seed_resolution_progressed = (
-            context.seed_phase.resolve(field_id) if seed_phase_active else False
+            context.runtime.seed_phase.resolve(field_id) if seed_phase_active else False
         )
         persist_replanning_checkpoint(
-            state_file=context.state_file,
+            state_file=context.dependencies.state_file,
             field_id=field_id,
             execution_state=execution_state,
             runtime_state=runtime_state,
@@ -187,16 +203,16 @@ def schedule_field_round(
             last_field_id=field_id,
         )
 
-    template_queue = context.field_template_queues.get(field_id)
+    template_queue = context.runtime.field_template_queues.get(field_id)
     if template_queue is None:
         pending_templates, filtered_templates, template_count = build_pending_templates_for_field(
-            context.template_build_ctx,
+            context.dependencies.template_build_ctx,
             field,
             attempted_keys=(
                 execution_state.attempted_keys | execution_state.queue_retry_state.exhausted_keys
             ),
             prior_results=[
-                *context.historical_state.feedback_results,
+                *context.dependencies.historical_state.feedback_results,
                 *result_ledger.results,
             ],
             reserved_keys=inflight_template_keys(execution_state.future_queue.pending_futures),
@@ -206,11 +222,11 @@ def schedule_field_round(
             filtered_templates=filtered_templates,
             template_count=template_count,
         )
-        context.field_template_queues[field_id] = template_queue
+        context.runtime.field_template_queues[field_id] = template_queue
     pending_count = len(template_queue.entries)
     seed_resolution_progressed = False
     if seed_phase_active and pending_count == 0:
-        seed_resolution_progressed = context.seed_phase.resolve(field_id)
+        seed_resolution_progressed = context.runtime.seed_phase.resolve(field_id)
     logger.debug(
         "[progress] 字段 %d/%d field_id=%s templates=%d pending=%d filtered=%d",
         field_index,
@@ -224,7 +240,7 @@ def schedule_field_round(
     scheduled_templates = (
         template_queue.peek_seed()
         if seed_phase_active
-        else template_queue.peek(context.field_template_batch_size)
+        else template_queue.peek(context.runtime.field_template_batch_size)
     )
     deferred_templates = max(0, pending_count - len(scheduled_templates))
     progressed = bool(scheduled_templates) or seed_resolution_progressed
@@ -248,9 +264,9 @@ def schedule_field_round(
         template_queue=template_queue,
     )
     if seed_phase_active and len(template_queue.entries) < queue_count_before_dispatch:
-        context.seed_phase.mark_inflight(field_id)
+        context.runtime.seed_phase.mark_inflight(field_id)
     persist_replanning_checkpoint(
-        state_file=context.state_file,
+        state_file=context.dependencies.state_file,
         field_id=field_id,
         execution_state=execution_state,
         runtime_state=runtime_state,

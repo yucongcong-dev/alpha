@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
 from unittest.mock import MagicMock, patch
 
 from alpha.app.run_loop_dispatch import dispatch_templates_for_field
@@ -26,7 +27,7 @@ def test_breadth_first_field_progress_keeps_resume_cursor_at_start(tmp_path) -> 
     )
 
     with (
-        context.executor,
+        context.runtime.executor,
         patch(
             "alpha.app.run_loop_rounds.refresh_runtime_feedback",
             return_value=RuntimeFeedbackRefresh(feedback_changed=False),
@@ -50,8 +51,8 @@ def test_breadth_first_field_progress_keeps_resume_cursor_at_start(tmp_path) -> 
     assert mock_persist.call_args.kwargs == {
         "state_file": str(tmp_path / "state.json"),
         "field_id": "f1",
-        "execution_state": context.execution_state,
-        "runtime_state": context.runtime_state,
+        "execution_state": context.runtime.execution_state,
+        "runtime_state": context.runtime.runtime_state,
         "identity": CheckpointIdentity("run-fp"),
     }
 
@@ -59,10 +60,10 @@ def test_breadth_first_field_progress_keeps_resume_cursor_at_start(tmp_path) -> 
 def test_zero_batch_size_is_normalized_to_breadth_first() -> None:
     context = _build_context(field_template_batch_size=0)
 
-    assert context.field_template_batch_size == 1
+    assert context.runtime.field_template_batch_size == 1
 
     with (
-        context.executor,
+        context.runtime.executor,
         patch(
             "alpha.app.run_loop_rounds.refresh_runtime_feedback",
             return_value=RuntimeFeedbackRefresh(feedback_changed=False),
@@ -89,7 +90,7 @@ def test_zero_batch_size_is_normalized_to_breadth_first() -> None:
 def test_queue_exhausted_candidate_is_excluded_from_next_round() -> None:
     context = _build_context(field_template_batch_size=1)
     exhausted_key = ("f1", "t1", "rank(f1)", "settings")
-    context.execution_state.queue_retry_state.exhausted_keys.add(exhausted_key)
+    context.runtime.execution_state.queue_retry_state.exhausted_keys.add(exhausted_key)
     captured_attempted: list[set[tuple[str, str, str, str]]] = []
 
     def _capture_pending(*_args, attempted_keys, **_kwargs):
@@ -97,7 +98,7 @@ def test_queue_exhausted_candidate_is_excluded_from_next_round() -> None:
         return [], 0, 0
 
     with (
-        context.executor,
+        context.runtime.executor,
         patch(
             "alpha.app.run_loop_rounds.refresh_runtime_feedback",
             return_value=RuntimeFeedbackRefresh(feedback_changed=False),
@@ -123,8 +124,9 @@ def test_queue_exhausted_candidate_is_excluded_from_next_round() -> None:
 
 def test_queue_timeout_invalidates_only_retry_field_template_queue() -> None:
     context = _build_context(field_template_batch_size=1)
-    context.template_build_ctx = TemplateBuildContext(options=MagicMock())
-    context.template_build_ctx.feedback_result_count = 0
+    template_build_ctx = TemplateBuildContext(options=MagicMock())
+    template_build_ctx.feedback_result_count = 0
+    context.dependencies = replace(context.dependencies, template_build_ctx=template_build_ctx)
     stale_entry = PendingTemplateEntry(
         template_name="stale",
         template_family="rank",
@@ -136,12 +138,12 @@ def test_queue_timeout_invalidates_only_retry_field_template_queue() -> None:
         settings_variant=SettingsVariant(),
         variant_fingerprint="settings",
     )
-    context.field_template_queues["f1"] = FieldTemplateQueue.create(
+    context.runtime.field_template_queues["f1"] = FieldTemplateQueue.create(
         [stale_entry],
         filtered_templates=0,
         template_count=1,
     )
-    context.execution_state.result_ledger.append(
+    context.runtime.execution_state.result_ledger.append(
         FieldTestResult(
             field_id="f1",
             field_type="MATRIX",
@@ -155,7 +157,7 @@ def test_queue_timeout_invalidates_only_retry_field_template_queue() -> None:
     )
 
     with (
-        context.executor,
+        context.runtime.executor,
         patch("alpha.app.run_loop_rounds.should_skip_field", return_value=False),
         patch(
             "alpha.app.run_loop_rounds.build_pending_templates_for_field",
@@ -173,12 +175,12 @@ def test_queue_timeout_invalidates_only_retry_field_template_queue() -> None:
         )
 
     mock_build.assert_called_once()
-    assert not context.field_template_queues["f1"].entries
+    assert not context.runtime.field_template_queues["f1"].entries
 
 
 def test_submittable_result_does_not_stop_new_round() -> None:
     context = _build_context(field_template_batch_size=1)
-    ledger = context.execution_state.result_ledger
+    ledger = context.runtime.execution_state.result_ledger
     ledger.append(
         FieldTestResult(
             field_id="historical",
@@ -207,7 +209,7 @@ def test_submittable_result_does_not_stop_new_round() -> None:
 
 def test_preexisting_stop_scheduling_skips_round_without_building_fields() -> None:
     context = _build_context(field_template_batch_size=1)
-    context.execution_state.future_queue.stop_scheduling.set()
+    context.runtime.execution_state.future_queue.stop_scheduling.set()
 
     with patch("alpha.app.run_loop_rounds.schedule_field_round") as mock_schedule:
         result = execute_schedule_round(context, round_index=1)
@@ -220,7 +222,7 @@ def test_skipped_field_persists_progress_without_building_templates() -> None:
     context = _build_context(field_template_batch_size=1)
 
     with (
-        context.executor,
+        context.runtime.executor,
         patch(
             "alpha.app.run_loop_rounds.refresh_runtime_feedback",
             return_value=RuntimeFeedbackRefresh(feedback_changed=False),
@@ -260,7 +262,7 @@ def test_breadth_first_round_dispatches_only_configured_batch() -> None:
     ]
 
     with (
-        context.executor,
+        context.runtime.executor,
         patch(
             "alpha.app.run_loop_rounds.refresh_runtime_feedback",
             return_value=RuntimeFeedbackRefresh(feedback_changed=False),
@@ -289,7 +291,7 @@ def test_breadth_first_round_dispatches_only_configured_batch() -> None:
 
 def test_breadth_first_reuses_cached_field_template_queue() -> None:
     context = _build_context(field_template_batch_size=1)
-    context.template_build_ctx.feedback_result_count = 0
+    context.dependencies.template_build_ctx.feedback_result_count = 0
     entries = [
         PendingTemplateEntry(
             template_name=f"template-{index}",
@@ -306,7 +308,7 @@ def test_breadth_first_reuses_cached_field_template_queue() -> None:
     ]
 
     with (
-        context.executor,
+        context.runtime.executor,
         patch(
             "alpha.app.run_loop_rounds.refresh_runtime_feedback",
             return_value=RuntimeFeedbackRefresh(feedback_changed=False),
@@ -336,12 +338,12 @@ def test_breadth_first_reuses_cached_field_template_queue() -> None:
         "rank(f1) + 0",
         "rank(f1) + 1",
     ]
-    assert not context.field_template_queues["f1"].entries
+    assert not context.runtime.field_template_queues["f1"].entries
 
 
 def test_feedback_change_invalidates_cached_field_template_queue() -> None:
     context = _build_context(field_template_batch_size=1)
-    context.template_build_ctx.feedback_result_count = 0
+    context.dependencies.template_build_ctx.feedback_result_count = 0
     initial_entries = [
         PendingTemplateEntry(
             template_name=f"initial-{index}",
@@ -381,7 +383,7 @@ def test_feedback_change_invalidates_cached_field_template_queue() -> None:
         return RuntimeFeedbackRefresh(feedback_changed=False)
 
     with (
-        context.executor,
+        context.runtime.executor,
         patch(
             "alpha.app.run_loop_rounds.refresh_runtime_feedback",
             side_effect=_refresh_feedback,
@@ -464,19 +466,19 @@ def test_dispatch_replans_when_capacity_drain_changes_feedback() -> None:
         )
         for index in range(2)
     ]
-    context.field_template_queues["f1"] = FieldTemplateQueue.create(
+    context.runtime.field_template_queues["f1"] = FieldTemplateQueue.create(
         entries,
         filtered_templates=0,
         template_count=2,
     )
-    context.field_template_queues["f2"] = FieldTemplateQueue.create(
+    context.runtime.field_template_queues["f2"] = FieldTemplateQueue.create(
         entries,
         filtered_templates=0,
         template_count=2,
     )
 
     def _drain_with_result(**_kwargs) -> None:
-        context.execution_state.result_ledger.append(
+        context.runtime.execution_state.result_ledger.append(
             FieldTestResult(
                 field_id="f1",
                 field_type="MATRIX",
@@ -508,17 +510,20 @@ def test_dispatch_replans_when_capacity_drain_changes_feedback() -> None:
             field_name="f1",
             field_type="MATRIX",
             scheduled_templates=entries,
-            template_queue=context.field_template_queues["f1"],
+            template_queue=context.runtime.field_template_queues["f1"],
         )
 
     assert stopped is False
-    assert set(context.field_template_queues) == {"f2"}
+    assert set(context.runtime.field_template_queues) == {"f2"}
     mock_submit.assert_not_called()
 
 
 def test_dispatch_stops_at_total_simulation_budget_without_aborting_pending() -> None:
     context = _build_context(field_template_batch_size=2)
-    context.scheduler_options = SchedulerControlOptions(max_total_simulations=1)
+    context.dependencies = replace(
+        context.dependencies,
+        scheduler_options=SchedulerControlOptions(max_total_simulations=1),
+    )
     entries = [
         PendingTemplateEntry(
             template_name=f"template-{index}",
@@ -535,7 +540,7 @@ def test_dispatch_stops_at_total_simulation_budget_without_aborting_pending() ->
     ]
 
     with (
-        context.executor,
+        context.runtime.executor,
         patch("alpha.app.run_loop_dispatch.maybe_restore_runtime_concurrency"),
         patch("alpha.app.run_loop_dispatch.drain_until_capacity"),
         patch("alpha.app.run_loop_dispatch.throttle_before_submission"),
@@ -551,6 +556,6 @@ def test_dispatch_stops_at_total_simulation_budget_without_aborting_pending() ->
         )
 
     assert stopped is True
-    assert context.scheduled_simulations == 1
-    assert context.execution_state.future_queue.stop_scheduling.is_set() is False
+    assert context.runtime.scheduled_simulations == 1
+    assert context.runtime.execution_state.future_queue.stop_scheduling.is_set() is False
     mock_submit.assert_called_once()

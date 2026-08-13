@@ -25,11 +25,11 @@ def apply_feedback_refresh(
 ) -> None:
     """Invalidate cached field queues affected by newly consumed runtime feedback."""
     if feedback_refresh.invalidate_all:
-        context.field_template_queues.clear()
+        context.runtime.field_template_queues.clear()
         return
     invalidated_field_ids = feedback_refresh.changed_field_ids | feedback_refresh.retry_field_ids
     for field_id in invalidated_field_ids:
-        context.field_template_queues.pop(field_id, None)
+        context.runtime.field_template_queues.pop(field_id, None)
 
 
 def dispatch_templates_for_field(
@@ -43,11 +43,13 @@ def dispatch_templates_for_field(
     template_queue: FieldTemplateQueue | None = None,
 ) -> bool:
     """Dispatch scheduled templates for a single field; return whether a stop was requested."""
-    simulation_config = context.simulation_config
-    scheduler_options = context.scheduler_options
-    execution_state = context.execution_state
+    dependencies = context.dependencies
+    runtime = context.runtime
+    simulation_config = dependencies.simulation_config
+    scheduler_options = dependencies.scheduler_options
+    execution_state = runtime.execution_state
     result_ledger = execution_state.result_ledger
-    runtime_state = context.runtime_state
+    runtime_state = runtime.runtime_state
     for template_index, entry in enumerate(scheduled_templates, start=1):
         if context.reached_simulation_budget():
             logger.info(
@@ -64,13 +66,13 @@ def dispatch_templates_for_field(
             executor_state=execution_state,
             runtime_state=runtime_state,
             scheduler_options=scheduler_options,
-            completion_ctx=context.completion_ctx,
+            completion_ctx=dependencies.completion_ctx,
         )
         if execution_state.future_queue.should_stop_scheduling():
             return True
         if len(result_ledger.results) != result_count_before_drain:
             feedback_refresh = refresh_runtime_feedback(
-                context.template_build_ctx,
+                dependencies.template_build_ctx,
                 result_ledger.results,
             )
             apply_feedback_refresh(context, feedback_refresh)
@@ -96,8 +98,8 @@ def dispatch_templates_for_field(
         )
         throttle_before_submission(scheduler_options, execution_state)
         submit_template_future(
-            executor=context.executor,
-            execution_resources=context.execution_resources,
+            executor=runtime.executor,
+            execution_resources=dependencies.execution_resources,
             execution_state=execution_state,
             simulation_config=simulation_config,
             field=field,
@@ -116,5 +118,5 @@ def dispatch_templates_for_field(
         )
         if template_queue is not None:
             template_queue.consume(entry)
-        context.scheduled_simulations += 1
+        runtime.scheduled_simulations += 1
     return False

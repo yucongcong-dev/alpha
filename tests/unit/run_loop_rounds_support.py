@@ -5,10 +5,11 @@ from __future__ import annotations
 from concurrent.futures import ThreadPoolExecutor
 from unittest.mock import MagicMock
 
-from alpha.app.run_loop_rounds import ScheduleRoundContext
+from alpha.app.run_loop_rounds import ScheduleDependencies, ScheduleRoundContext, ScheduleRuntime
 from alpha.app.run_loop_seed_phase import SeedPhaseState
 from alpha.models.domain import TemplateField
 from alpha.models.io_types import RunFilters
+from alpha.models.runtime_options import SchedulerControlOptions
 from alpha.runtime.concurrency import RuntimeConcurrencyState
 from alpha.runtime.contexts import (
     FutureCompletionContext,
@@ -36,26 +37,33 @@ def build_round_context(
         template_library_fingerprint="tpl-fp",
         create_semaphore=MagicMock(),
     )
+    template_build_ctx = MagicMock(spec=TemplateBuildContext)
+    completion_ctx = FutureCompletionContext(
+        settings_fingerprint="settings-fp",
+        template_library_fingerprint="tpl-fp",
+        run_fingerprint="run-fp",
+    )
     return ScheduleRoundContext(
-        simulation_config=build_simulation_stage_config(),
-        execution_resources=execution_resources,
-        execution_state=execution_state,
-        runtime_state=runtime_state,
-        filters=RunFilters(),
-        historical_state=HistoricalRunState(),
-        executor=ThreadPoolExecutor(max_workers=1),
-        template_build_ctx=MagicMock(spec=TemplateBuildContext),
+        dependencies=ScheduleDependencies(
+            simulation_config=build_simulation_stage_config(),
+            execution_resources=execution_resources,
+            filters=RunFilters(),
+            historical_state=HistoricalRunState(),
+            template_build_ctx=template_build_ctx,
+            completion_ctx=completion_ctx,
+            state_file=state_file,
+            scheduler_options=SchedulerControlOptions(),
+        ),
+        runtime=ScheduleRuntime(
+            execution_state=execution_state,
+            runtime_state=runtime_state,
+            executor=ThreadPoolExecutor(max_workers=1),
+            field_template_batch_size=field_template_batch_size,
+            seed_phase=SeedPhaseState.create(
+                fields,
+                enabled=seed_phase_enabled,
+                resolved_field_ids=seed_resolved_field_ids,
+            ),
+        ),
         fields=fields,
-        completion_ctx=FutureCompletionContext(
-            settings_fingerprint="settings-fp",
-            template_library_fingerprint="tpl-fp",
-            run_fingerprint="run-fp",
-        ),
-        state_file=state_file,
-        field_template_batch_size=field_template_batch_size,
-        seed_phase=SeedPhaseState.create(
-            fields,
-            enabled=seed_phase_enabled,
-            resolved_field_ids=seed_resolved_field_ids,
-        ),
     )
