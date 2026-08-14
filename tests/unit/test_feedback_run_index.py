@@ -92,17 +92,19 @@ def test_feedback_index_reuses_unchanged_entry(tmp_path, monkeypatch) -> None:
     persist_feedback_run_index(str(feedback))
 
 
-def test_current_feedback_index_skips_stable_runs_directory_scan(tmp_path, monkeypatch) -> None:
+def test_current_feedback_index_checks_signatures_without_parsing_summaries(
+    tmp_path, monkeypatch
+) -> None:
     run1 = tmp_path / "runs" / "run1" / "summary.json"
     feedback = tmp_path / "feedback" / "usa_top3000_equity_d1" / "summary.json"
     _dump(run1, _result("f1"), "run1")
     _dump(feedback, _result("f1"), "feedback")
     persist_feedback_run_index(str(feedback))
 
-    def unexpected_glob(_path, _pattern):
-        raise AssertionError("stable feedback index should skip run discovery")
+    def unexpected_load(*_args, **_kwargs):
+        raise AssertionError("stable feedback index should not parse run summaries")
 
-    monkeypatch.setattr("alpha.analysis.feedback_history.Path.glob", unexpected_glob)
+    monkeypatch.setattr("alpha.analysis.feedback_history.load_existing_results", unexpected_load)
 
     assert (
         _load_dataset_run_results(
@@ -111,6 +113,25 @@ def test_current_feedback_index_skips_stable_runs_directory_scan(tmp_path, monke
         )
         == []
     )
+
+
+def test_changed_summary_invalidates_feedback_index(tmp_path) -> None:
+    run1 = tmp_path / "runs" / "run1" / "summary.json"
+    feedback = tmp_path / "feedback" / "usa_top3000_equity_d1" / "summary.json"
+    _dump(run1, _result("f1"), "run1")
+    _dump(feedback, _result("f1"), "feedback")
+    persist_feedback_run_index(str(feedback))
+    assert feedback_run_index_is_current(str(feedback), tmp_path / "runs")
+
+    _dump(run1, _result("f2"), "run1")
+
+    assert not feedback_run_index_is_current(str(feedback), tmp_path / "runs")
+    state = build_historical_run_state(
+        str(tmp_path / "runs" / "current" / "summary.json"),
+        str(feedback),
+    )
+
+    assert {result.field_id for result in state.feedback_results} == {"f1", "f2"}
 
 
 def test_missing_feedback_journal_ignores_index_and_rebuilds_from_runs(tmp_path) -> None:
