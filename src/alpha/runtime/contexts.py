@@ -79,22 +79,80 @@ class PendingTemplateEntry:
 
 
 @dataclass
-class TemplateBuildContext:
-    """模板队列构建的只读上下文数据类。"""
+class TemplateSourceContext:
+    """Stable template sources, options, and selection policy."""
 
     options: TemplateBuildOptions
     template_library_file: str = ""
     all_fields: Sequence[TemplateField] = field(default_factory=list)
     template_library: TemplateLibrary = field(default_factory=dict)
-    field_feedback: FieldFeedbackMap = field(default_factory=dict)
-    global_failed_check_counts: dict[str, int] = field(default_factory=dict)
-    failed_check_counts_by_field_type: dict[str, dict[str, int]] = field(default_factory=dict)
     include_templates: set[str] = field(default_factory=set)
     exclude_templates: set[str] = field(default_factory=set)
     expression_policy: DatasetExpressionPolicy | None = None
+
+
+@dataclass
+class TemplateFeedbackContext:
+    """Mutable feedback and explanation state for template planning."""
+
+    field_feedback: FieldFeedbackMap = field(default_factory=dict)
+    global_failed_check_counts: dict[str, int] = field(default_factory=dict)
+    failed_check_counts_by_field_type: dict[str, dict[str, int]] = field(default_factory=dict)
     feedback_template_min_priority: int = 105
     feedback_result_count: int | None = None
     candidate_filter_counts: MutableMapping[str, int] | None = None
+
+
+@dataclass(init=False)
+class TemplateBuildContext:
+    """Combined source and feedback contexts used by template planning."""
+
+    source: TemplateSourceContext
+    feedback: TemplateFeedbackContext
+
+    def __init__(
+        self,
+        *,
+        source: TemplateSourceContext | None = None,
+        feedback: TemplateFeedbackContext | None = None,
+        # Keep construction concise for internal tests while storage remains nested.
+        options: TemplateBuildOptions | None = None,
+        template_library_file: str = "",
+        all_fields: Sequence[TemplateField] | None = None,
+        template_library: TemplateLibrary | None = None,
+        field_feedback: FieldFeedbackMap | None = None,
+        global_failed_check_counts: dict[str, int] | None = None,
+        failed_check_counts_by_field_type: dict[str, dict[str, int]] | None = None,
+        include_templates: set[str] | None = None,
+        exclude_templates: set[str] | None = None,
+        expression_policy: DatasetExpressionPolicy | None = None,
+        feedback_template_min_priority: int = 105,
+        feedback_result_count: int | None = None,
+        candidate_filter_counts: MutableMapping[str, int] | None = None,
+    ) -> None:
+        if source is None:
+            if options is None:
+                raise TypeError("TemplateBuildContext requires source or options")
+            source = TemplateSourceContext(
+                options=options,
+                template_library_file=template_library_file,
+                all_fields=all_fields or [],
+                template_library=template_library or {},
+                include_templates=include_templates or set(),
+                exclude_templates=exclude_templates or set(),
+                expression_policy=expression_policy,
+            )
+        if feedback is None:
+            feedback = TemplateFeedbackContext(
+                field_feedback=field_feedback or {},
+                global_failed_check_counts=global_failed_check_counts or {},
+                failed_check_counts_by_field_type=failed_check_counts_by_field_type or {},
+                feedback_template_min_priority=feedback_template_min_priority,
+                feedback_result_count=feedback_result_count,
+                candidate_filter_counts=candidate_filter_counts,
+            )
+        self.source = source
+        self.feedback = feedback
 
 
 @dataclass

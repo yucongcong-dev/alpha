@@ -37,7 +37,7 @@ def build_round_context(
         template_library_fingerprint="tpl-fp",
         create_semaphore=MagicMock(),
     )
-    template_build_ctx = MagicMock(spec=TemplateBuildContext)
+    template_build_ctx = TemplateBuildContext(options=MagicMock())
     completion_ctx = FutureCompletionContext(
         settings_fingerprint="settings-fp",
         template_library_fingerprint="tpl-fp",

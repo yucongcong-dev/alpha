@@ -35,9 +35,12 @@ def is_template_selected_by_filters(
     template_name: str,
 ) -> bool:
     """Return whether a template survives explicit include/exclude name filters."""
-    if build_ctx.include_templates and template_name not in build_ctx.include_templates:
+    if (
+        build_ctx.source.include_templates
+        and template_name not in build_ctx.source.include_templates
+    ):
         return False
-    return template_name not in build_ctx.exclude_templates
+    return template_name not in build_ctx.source.exclude_templates
 
 
 def should_skip_expression_by_history(
@@ -125,7 +128,7 @@ def resolve_template_skip_reason(
     template_metadata = template.metadata
     if not is_template_selected_by_filters(build_ctx, template_name):
         return "name_filter"
-    if build_ctx.options.preset_mode:
+    if build_ctx.source.options.preset_mode:
         if should_skip_expression_by_history(
             field_id,
             template_name,
@@ -140,7 +143,7 @@ def resolve_template_skip_reason(
         priority,
         field_feedback,
         expression_policy=expression_policy,
-        feedback_template_min_priority=build_ctx.feedback_template_min_priority,
+        feedback_template_min_priority=build_ctx.feedback.feedback_template_min_priority,
         template_metadata=template_metadata,
     ):
         return "feedback"

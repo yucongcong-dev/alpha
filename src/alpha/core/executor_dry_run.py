@@ -81,11 +81,11 @@ def _record_feedback_explain_counts(
     field_id: str,
 ) -> None:
     """Record why one field enters generate or resimulate planning."""
-    expression_policy = build_ctx.expression_policy or get_dataset_expression_policy(
-        build_ctx.options.dataset_id,
-        default_backfill_window=build_ctx.options.backfill_window,
+    expression_policy = build_ctx.source.expression_policy or get_dataset_expression_policy(
+        build_ctx.source.options.dataset_id,
+        default_backfill_window=build_ctx.source.options.backfill_window,
     )
-    raw_feedback = build_ctx.field_feedback.get(field_id)
+    raw_feedback = build_ctx.feedback.field_feedback.get(field_id)
     field_feedback = decay_field_feedback(
         raw_feedback,
         half_life_days=expression_policy.field_feedback_half_life_days,
@@ -162,7 +162,7 @@ def build_dry_run_plan_summary(
         expression_policy=expression_policy,
         existing_results_count=len(execution_state.result_ledger.results),
     )
-    build_ctx.candidate_filter_counts = explain_counts
+    build_ctx.feedback.candidate_filter_counts = explain_counts
 
     for field in fields:
         field_id = str(first_non_empty(field.field_id, SENTINEL_UNKNOWN))

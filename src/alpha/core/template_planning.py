@@ -114,15 +114,15 @@ def _resolve_field_planning_policy(
     field: TemplateField,
 ) -> tuple[str, str, TemplateFeedback | None, DatasetExpressionPolicy]:
     """Resolve the stable policy inputs shared by candidate and variant planning."""
-    options = build_ctx.options
+    options = build_ctx.source.options
     field_id = str(first_non_empty(field.field_id, SENTINEL_UNKNOWN))
     field_name = choose_field_name(field)
-    expression_policy = build_ctx.expression_policy or get_dataset_expression_policy(
+    expression_policy = build_ctx.source.expression_policy or get_dataset_expression_policy(
         options.dataset_id,
         default_backfill_window=options.backfill_window,
     )
     field_feedback = decay_field_feedback(
-        build_ctx.field_feedback.get(field_id),
+        build_ctx.feedback.field_feedback.get(field_id),
         half_life_days=expression_policy.field_feedback_half_life_days,
     )
     return field_id, field_name, field_feedback, expression_policy
@@ -168,7 +168,7 @@ def resolve_field_template_candidates(
 ) -> tuple[list[TemplateCandidate], TemplateFeedback, DatasetExpressionPolicy]:
     """为单个字段解析模板候选、字段反馈和表达式策略。"""
     active_services = services or build_template_planning_services()
-    options = build_ctx.options
+    options = build_ctx.source.options
     _field_id, field_name, field_feedback, expression_policy = _resolve_field_planning_policy(
         build_ctx,
         field,
@@ -209,7 +209,7 @@ def build_pending_template_variants(
 ) -> list[PendingTemplateEntry]:
     """把模板候选展开为真正待执行的 settings 变体队列。"""
     active_services = services or build_template_planning_services()
-    options = build_ctx.options
+    options = build_ctx.source.options
     field_id, _field_name, _policy_feedback, expression_policy = _resolve_field_planning_policy(
         build_ctx,
         field,
@@ -224,7 +224,7 @@ def build_pending_template_variants(
     seen_resimulate_expressions: set[tuple[str, str]] = set()
     max_setting_variants = (
         1
-        if build_ctx.options.preset_mode
+        if build_ctx.source.options.preset_mode
         else choose_settings_variant_budget(
             field_feedback,
             expression_policy=expression_policy,

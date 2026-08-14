@@ -537,12 +537,12 @@ class TestContextConsistency:
     def test_template_build_context_defaults(self) -> None:
         """TemplateBuildContext 默认值正确。"""
         ctx = TemplateBuildContext(options=TemplateBuildOptions(**_DEFAULT_SIM_SETTINGS))
-        assert ctx.all_fields == []
-        assert ctx.template_library == {}
-        assert ctx.field_feedback == {}
-        assert ctx.global_failed_check_counts == {}
-        assert ctx.include_templates == set()
-        assert ctx.exclude_templates == set()
+        assert ctx.source.all_fields == []
+        assert ctx.source.template_library == {}
+        assert ctx.feedback.field_feedback == {}
+        assert ctx.feedback.global_failed_check_counts == {}
+        assert ctx.source.include_templates == set()
+        assert ctx.source.exclude_templates == set()
 
 
 # ============================================================================

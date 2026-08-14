@@ -35,6 +35,8 @@ from ..runtime.contexts import (
     PendingFutureContext,
     PendingTemplateEntry,
     TemplateBuildContext,
+    TemplateFeedbackContext,
+    TemplateSourceContext,
 )
 from ..runtime.preset_mode import resolve_preset_mode
 from ..runtime.state import ExecutionState
@@ -105,18 +107,22 @@ def build_template_build_context(
         ),
     )
     template_build_ctx = TemplateBuildContext(
-        options=options,
-        template_library_file=options.template_library_file,
-        all_fields=fields,
-        template_library=template_library,
-        field_feedback=historical_state.field_feedback,
-        global_failed_check_counts=historical_state.global_failed_check_counts,
-        include_templates=filters.include_templates,
-        exclude_templates=filters.exclude_templates,
-        expression_policy=expression_policy,
-        feedback_template_min_priority=options.feedback_template_min_priority,
+        source=TemplateSourceContext(
+            options=options,
+            template_library_file=options.template_library_file,
+            all_fields=fields,
+            template_library=template_library,
+            include_templates=filters.include_templates,
+            exclude_templates=filters.exclude_templates,
+            expression_policy=expression_policy,
+        ),
+        feedback=TemplateFeedbackContext(
+            field_feedback=historical_state.field_feedback,
+            global_failed_check_counts=historical_state.global_failed_check_counts,
+            feedback_template_min_priority=options.feedback_template_min_priority,
+        ),
     )
-    template_build_ctx.feedback_result_count = existing_results_count
+    template_build_ctx.feedback.feedback_result_count = existing_results_count
     return template_build_ctx
 
 
@@ -188,7 +194,7 @@ def build_pending_templates_for_field(
     # fallback pools so blacklisted seeds cannot collapse broad coverage back
     # onto one high-priority structure.
     planning_ctx = build_ctx
-    is_exploration = not field_feedback and not planning_ctx.options.preset_mode
+    is_exploration = not field_feedback and not planning_ctx.source.options.preset_mode
     planning_templates = (
         _ordered_exploration_templates(templates, field_id=field_id)
         if is_exploration

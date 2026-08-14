@@ -17,7 +17,7 @@ def _record_candidate_blacklist_filter(
     build_ctx: TemplateBuildContext,
     reason: str,
 ) -> None:
-    counts = build_ctx.candidate_filter_counts
+    counts = build_ctx.feedback.candidate_filter_counts
     if counts is None:
         return
     normalized = reason.strip().lower().replace("+", "_").replace(":", "_").replace("-", "_")

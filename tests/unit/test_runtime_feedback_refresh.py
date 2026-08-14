@@ -44,9 +44,11 @@ def test_refresh_runtime_feedback_rebuilds_feedback_from_current_results() -> No
 
     assert refresh.feedback_changed is True
     assert refresh.invalidate_all is True
-    assert build_ctx.field_feedback["cash_st"]["attempted_templates"] == 1
-    assert build_ctx.field_feedback["cash_st"]["best_template_stage"] == "group_second_order"
-    assert build_ctx.global_failed_check_counts["LOW_SHARPE"] == 1
+    assert build_ctx.feedback.field_feedback["cash_st"]["attempted_templates"] == 1
+    assert (
+        build_ctx.feedback.field_feedback["cash_st"]["best_template_stage"] == "group_second_order"
+    )
+    assert build_ctx.feedback.global_failed_check_counts["LOW_SHARPE"] == 1
 
 
 def test_refresh_runtime_feedback_preserves_seed_feedback_and_only_adds_new_results() -> None:
@@ -67,7 +69,7 @@ def test_refresh_runtime_feedback_preserves_seed_feedback_and_only_adds_new_resu
         },
         global_failed_check_counts={"LOW_FITNESS": 2},
     )
-    build_ctx.feedback_result_count = 1
+    build_ctx.feedback.feedback_result_count = 1
     results = [
         FieldTestResult(
             field_id="existing_output_field",
@@ -97,15 +99,15 @@ def test_refresh_runtime_feedback_preserves_seed_feedback_and_only_adds_new_resu
     assert refresh.changed_field_ids == frozenset({"new_field"})
     assert refresh_runtime_feedback(build_ctx, results).feedback_changed is False
 
-    assert build_ctx.field_feedback["seed_field"]["attempted_templates"] == 3
-    assert build_ctx.field_feedback["new_field"]["attempted_templates"] == 1
-    assert build_ctx.global_failed_check_counts["LOW_FITNESS"] == 2
-    assert build_ctx.global_failed_check_counts["LOW_SHARPE"] == 1
+    assert build_ctx.feedback.field_feedback["seed_field"]["attempted_templates"] == 3
+    assert build_ctx.feedback.field_feedback["new_field"]["attempted_templates"] == 1
+    assert build_ctx.feedback.global_failed_check_counts["LOW_FITNESS"] == 2
+    assert build_ctx.feedback.global_failed_check_counts["LOW_SHARPE"] == 1
 
 
 def test_refresh_runtime_feedback_invalidates_retry_field_for_queue_timeout() -> None:
     build_ctx = TemplateBuildContext(options=TemplateBuildOptions(**_DEFAULT_SIM_SETTINGS))
-    build_ctx.feedback_result_count = 0
+    build_ctx.feedback.feedback_result_count = 0
     results = [
         FieldTestResult(
             field_id="queued_field",
@@ -124,13 +126,13 @@ def test_refresh_runtime_feedback_invalidates_retry_field_for_queue_timeout() ->
     assert refresh.feedback_changed is False
     assert refresh.changed_field_ids == frozenset()
     assert refresh.retry_field_ids == frozenset({"queued_field"})
-    assert build_ctx.feedback_result_count == 1
-    assert build_ctx.field_feedback == {}
+    assert build_ctx.feedback.feedback_result_count == 1
+    assert build_ctx.feedback.field_feedback == {}
 
 
 def test_refresh_runtime_feedback_invalidates_retry_field_for_worker_failure() -> None:
     build_ctx = TemplateBuildContext(options=TemplateBuildOptions(**_DEFAULT_SIM_SETTINGS))
-    build_ctx.feedback_result_count = 0
+    build_ctx.feedback.feedback_result_count = 0
     results = [
         FieldTestResult(
             field_id="failed_field",
@@ -149,4 +151,4 @@ def test_refresh_runtime_feedback_invalidates_retry_field_for_worker_failure() -
     assert refresh.feedback_changed is False
     assert refresh.changed_field_ids == frozenset()
     assert refresh.retry_field_ids == frozenset({"failed_field"})
-    assert build_ctx.field_feedback == {}
+    assert build_ctx.feedback.field_feedback == {}

@@ -127,7 +127,7 @@ def test_queue_exhausted_candidate_is_excluded_from_next_round() -> None:
 def test_queue_timeout_invalidates_only_retry_field_template_queue() -> None:
     context = _build_context(field_template_batch_size=1)
     template_build_ctx = TemplateBuildContext(options=MagicMock())
-    template_build_ctx.feedback_result_count = 0
+    template_build_ctx.feedback.feedback_result_count = 0
     context.dependencies = replace(context.dependencies, template_build_ctx=template_build_ctx)
     stale_entry = PendingTemplateEntry(
         template_name="stale",
@@ -319,7 +319,7 @@ def test_breadth_first_round_dispatches_only_configured_batch() -> None:
 
 def test_breadth_first_reuses_cached_field_template_queue() -> None:
     context = _build_context(field_template_batch_size=1)
-    context.dependencies.template_build_ctx.feedback_result_count = 0
+    context.dependencies.template_build_ctx.feedback.feedback_result_count = 0
     entries = [
         PendingTemplateEntry(
             template_name=f"template-{index}",
@@ -371,7 +371,7 @@ def test_breadth_first_reuses_cached_field_template_queue() -> None:
 
 def test_feedback_change_invalidates_cached_field_template_queue() -> None:
     context = _build_context(field_template_batch_size=1)
-    context.dependencies.template_build_ctx.feedback_result_count = 0
+    context.dependencies.template_build_ctx.feedback.feedback_result_count = 0
     initial_entries = [
         PendingTemplateEntry(
             template_name=f"initial-{index}",

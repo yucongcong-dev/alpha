@@ -214,13 +214,13 @@ def build_expression_candidates(
     expression_policy: DatasetExpressionPolicy | None = None,
 ) -> list[TemplateCandidate]:
     """为单个字段构建、变异、多样化并排序表达式候选。"""
-    options = build_ctx.options
+    options = build_ctx.source.options
     field_name = choose_field_name(field)
     field_type = choose_field_type(field)
-    all_fields = list(build_ctx.all_fields)
+    all_fields = list(build_ctx.source.all_fields)
     policy = (
         expression_policy
-        or build_ctx.expression_policy
+        or build_ctx.source.expression_policy
         or get_dataset_expression_policy(
             options.dataset_id,
             default_backfill_window=options.backfill_window,
@@ -235,19 +235,19 @@ def build_expression_candidates(
     is_event_field = _is_event_field(field_name, policy)
     backfill_window = options.backfill_window
     preset_mode = bool(options.preset_mode) or resolve_preset_mode(
-        template_library_file=build_ctx.template_library_file,
+        template_library_file=build_ctx.source.template_library_file,
     )
 
     closed_candidate_library = (
         _is_closed_candidate_library(
-            build_ctx.template_library_file,
+            build_ctx.source.template_library_file,
             dataset_id=policy.dataset_id,
             policy=policy,
         )
         or preset_mode
     )
     raw_templates = _select_template_items(
-        build_ctx.template_library, field_type, policy.dataset_id
+        build_ctx.source.template_library, field_type, policy.dataset_id
     )
     templates = build_library_candidates(
         [item for item in raw_templates if isinstance(item, TemplateLibraryItem)],
@@ -277,7 +277,7 @@ def build_expression_candidates(
         if _template_scope_allowed(
             item,
             feedback_stage=feedback_stage,
-            template_library_file=build_ctx.template_library_file,
+            template_library_file=build_ctx.source.template_library_file,
         )
     ]
     templates = [item for item in templates if _template_supports_field_tags(item, field_view)]

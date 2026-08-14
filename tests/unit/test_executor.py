@@ -60,14 +60,16 @@ def test_build_template_context_copies_narrow_options_and_feedback() -> None:
         existing_results_count=7,
     )
 
-    assert context.options.dataset_id == "model16"
-    assert context.template_library_file.endswith("model16/template.json")
-    assert context.field_feedback == history.field_feedback
-    assert context.include_templates == {"rank"}
-    assert context.exclude_templates == {"raw"}
-    assert context.feedback_result_count == 7
-    assert context.expression_policy is not None
-    assert context.feedback_template_min_priority == _options().feedback_template_min_priority
+    assert context.source.options.dataset_id == "model16"
+    assert context.source.template_library_file.endswith("model16/template.json")
+    assert context.feedback.field_feedback == history.field_feedback
+    assert context.source.include_templates == {"rank"}
+    assert context.source.exclude_templates == {"raw"}
+    assert context.feedback.feedback_result_count == 7
+    assert context.source.expression_policy is not None
+    assert (
+        context.feedback.feedback_template_min_priority == _options().feedback_template_min_priority
+    )
 
 
 def test_unexplored_field_gets_one_seed(monkeypatch) -> None:
