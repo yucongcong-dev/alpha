@@ -8,6 +8,7 @@ from unittest.mock import MagicMock, patch
 from alpha.app.run_loop_dispatch import dispatch_templates_for_field
 from alpha.app.run_loop_feedback import RuntimeFeedbackRefresh
 from alpha.app.run_loop_rounds import (
+    FieldSchedulingSession,
     ScheduleRoundResult,
     execute_schedule_round,
     schedule_field_round,
@@ -241,6 +242,30 @@ def test_skipped_field_persists_progress_without_building_templates() -> None:
 
     assert result == ScheduleRoundResult(False, False, "f1")
     mock_build.assert_not_called()
+    assert mock_persist.call_args.kwargs["field_id"] == "f1"
+
+
+def test_field_scheduling_session_runs_skipped_field_lifecycle() -> None:
+    context = _build_context(field_template_batch_size=1)
+
+    with (
+        context.runtime.executor,
+        patch(
+            "alpha.app.run_loop_rounds.refresh_runtime_feedback",
+            return_value=RuntimeFeedbackRefresh(feedback_changed=False),
+        ),
+        patch("alpha.app.run_loop_rounds.should_skip_field", return_value=True),
+        patch("alpha.app.run_loop_rounds.persist_replanning_checkpoint") as mock_persist,
+    ):
+        result = FieldSchedulingSession(
+            context=context,
+            field=context.fields[0],
+            field_index=1,
+            total_fields=1,
+            round_index=1,
+        ).execute()
+
+    assert result == ScheduleRoundResult(False, False, "f1")
     assert mock_persist.call_args.kwargs["field_id"] == "f1"
 
 
