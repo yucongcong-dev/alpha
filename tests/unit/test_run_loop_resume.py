@@ -350,12 +350,14 @@ def test_run_field_test_loop_replans_after_pending_seed_completion(tmp_path) -> 
         patch(
             "alpha.app.future_completion.drain_next_completion", side_effect=_drain_next
         ) as mock_drain,
+        patch("alpha.app.run_loop_rounds.refresh_completed_feedback") as mock_feedback,
         patch("alpha.app.future_completion.drain_remaining_futures"),
     ):
         run_field_test_loop(args, run_ctx)
 
     assert mock_drain.call_count == 2
     assert mock_round.call_count == 2
+    mock_feedback.assert_called_once()
 
 
 def test_run_field_test_loop_interrupts_workers_without_waiting(tmp_path) -> None:

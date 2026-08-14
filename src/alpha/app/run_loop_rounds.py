@@ -30,7 +30,7 @@ from ..runtime.field_template_queue import FieldTemplateQueue
 from ..runtime.state import ExecutionState
 from ..utils.helpers import first_non_empty
 from .run_loop_dispatch import apply_feedback_refresh, dispatch_templates_for_field
-from .run_loop_feedback import refresh_runtime_feedback
+from .run_loop_feedback import RuntimeFeedbackRefresh, refresh_runtime_feedback
 from .run_loop_resume import persist_replanning_checkpoint
 from .run_loop_seed_phase import SeedPhaseState
 
@@ -95,6 +95,16 @@ class ScheduleRoundContext:
         """Return whether this process has dispatched its configured simulation budget."""
         budget = self.dependencies.scheduler_options.max_new_simulations
         return budget > 0 and self.runtime.scheduled_simulations >= budget
+
+
+def refresh_completed_feedback(context: ScheduleRoundContext) -> RuntimeFeedbackRefresh:
+    """Refresh feedback after a completion drain and invalidate affected queues."""
+    feedback_refresh = refresh_runtime_feedback(
+        context.dependencies.template_build_ctx,
+        context.runtime.execution_state.result_ledger.results,
+    )
+    apply_feedback_refresh(context, feedback_refresh)
+    return feedback_refresh
 
 
 def execute_schedule_round(
@@ -205,7 +215,6 @@ class FieldSchedulingSession:
         """Run the field's scheduling lifecycle and persist its final state."""
         if self.context.runtime.seed_phase.should_wait_or_skip(self.field_id):
             return self._result(progressed=False)
-        self._refresh_feedback()
         if should_skip_field(
             self.field_id,
             self.field_name,
@@ -259,13 +268,6 @@ class FieldSchedulingSession:
             self.context.runtime.seed_phase.mark_inflight(self.field_id)
         self._persist_checkpoint()
         return self._result(progressed=progressed, stop_requested=stop_requested)
-
-    def _refresh_feedback(self) -> None:
-        feedback_refresh = refresh_runtime_feedback(
-            self.context.dependencies.template_build_ctx,
-            self.execution_state.result_ledger.results,
-        )
-        apply_feedback_refresh(self.context, feedback_refresh)
 
     def _template_queue(self) -> FieldTemplateQueue:
         template_queue = self.context.runtime.field_template_queues.get(self.field_id)

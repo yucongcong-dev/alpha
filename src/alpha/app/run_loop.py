@@ -234,6 +234,7 @@ def run_field_test_loop(
                         completion_ctx=completion_ctx,
                         runtime_state=runtime_state,
                     ):
+                        run_loop_rounds.refresh_completed_feedback(schedule_context)
                         logger.info(
                             "[schedule] completed pending work after round=%d; replanning",
                             round_index,

@@ -11,6 +11,7 @@ from alpha.app.run_loop_rounds import (
     FieldSchedulingSession,
     ScheduleRoundResult,
     execute_schedule_round,
+    refresh_completed_feedback,
     schedule_field_round,
 )
 from alpha.models.domain import FieldTestResult, SettingsVariant
@@ -156,6 +157,7 @@ def test_queue_timeout_invalidates_only_retry_field_template_queue() -> None:
             expression="rank(f1)",
         )
     )
+    refresh_completed_feedback(context)
 
     with (
         context.runtime.executor,
@@ -253,7 +255,7 @@ def test_field_scheduling_session_runs_skipped_field_lifecycle() -> None:
         patch(
             "alpha.app.run_loop_rounds.refresh_runtime_feedback",
             return_value=RuntimeFeedbackRefresh(feedback_changed=False),
-        ),
+        ) as mock_refresh,
         patch("alpha.app.run_loop_rounds.should_skip_field", return_value=True),
         patch("alpha.app.run_loop_rounds.persist_replanning_checkpoint") as mock_persist,
     ):
@@ -267,6 +269,7 @@ def test_field_scheduling_session_runs_skipped_field_lifecycle() -> None:
 
     assert result == ScheduleRoundResult(False, False, "f1")
     assert mock_persist.call_args.kwargs["field_id"] == "f1"
+    mock_refresh.assert_not_called()
 
 
 def test_breadth_first_round_dispatches_only_configured_batch() -> None:
@@ -394,24 +397,14 @@ def test_feedback_change_invalidates_cached_field_template_queue() -> None:
         settings_variant=SettingsVariant(),
         variant_fingerprint="refreshed",
     )
-    refresh_calls = 0
-
-    def _refresh_feedback(template_build_ctx, _results) -> RuntimeFeedbackRefresh:
-        nonlocal refresh_calls
-        refresh_calls += 1
-        if refresh_calls == 2:
-            template_build_ctx.feedback_result_count = 1
-            return RuntimeFeedbackRefresh(
-                feedback_changed=True,
-                changed_field_ids=frozenset({"f1"}),
-            )
-        return RuntimeFeedbackRefresh(feedback_changed=False)
-
     with (
         context.runtime.executor,
         patch(
             "alpha.app.run_loop_rounds.refresh_runtime_feedback",
-            side_effect=_refresh_feedback,
+            return_value=RuntimeFeedbackRefresh(
+                feedback_changed=True,
+                changed_field_ids=frozenset({"f1"}),
+            ),
         ),
         patch("alpha.app.run_loop_rounds.should_skip_field", return_value=False),
         patch(
@@ -435,6 +428,8 @@ def test_feedback_change_invalidates_cached_field_template_queue() -> None:
                 total_fields=1,
                 round_index=round_index,
             )
+            if round_index == 1:
+                refresh_completed_feedback(context)
 
     assert mock_build.call_count == 2
     assert [call.kwargs["expression"] for call in mock_submit.call_args_list] == [
