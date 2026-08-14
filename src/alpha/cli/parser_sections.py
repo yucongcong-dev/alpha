@@ -69,9 +69,12 @@ def add_base_arguments(parser: argparse.ArgumentParser) -> None:
     parser.add_argument(
         "command",
         nargs="?",
-        choices=("run", "clean"),
+        choices=("run", "clean", "check-submissions"),
         default="run",
-        help=("运行命令：run=执行 Alpha 流程（默认），clean=清理本地运行文件"),
+        help=(
+            "运行命令：run=执行 Alpha 流程（默认），clean=清理本地运行文件，"
+            "check-submissions=仅刷新已有 Alpha 的 Submission Check"
+        ),
     )
     parser.add_argument(
         "--config",
@@ -185,6 +188,28 @@ def add_api_runtime_arguments(parser: argparse.ArgumentParser) -> None:
     """Add API retry/concurrency/runtime wait arguments."""
     add_settings(parser, settings_by_yaml_section("concurrency"))
     add_settings(parser, settings_by_yaml_section("retries"))
+
+
+def add_pending_check_refresh_arguments(parser: argparse.ArgumentParser) -> None:
+    """Add bounded polling controls for the check-submissions command."""
+    parser.add_argument(
+        "--pending-check-limit",
+        type=int,
+        default=0,
+        help="每轮最多刷新多少条待处理 Check；0 表示所有待处理结果",
+    )
+    parser.add_argument(
+        "--pending-check-max-seconds",
+        type=float,
+        default=900.0,
+        help="check-submissions 的最长轮询时间（秒，默认 900）",
+    )
+    parser.add_argument(
+        "--pending-check-workers",
+        type=int,
+        default=1,
+        help="并发 Submission Check 查询数（默认 1）",
+    )
 
 
 def add_precheck_arguments(parser: argparse.ArgumentParser) -> None:

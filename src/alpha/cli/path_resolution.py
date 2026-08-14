@@ -126,9 +126,14 @@ def _validate_paused_dataset(args: argparse.Namespace) -> None:
 
 
 def _validate_dataset_selection(args: argparse.Namespace) -> None:
-    """Reject a run without an explicit dataset selection."""
+    """Reject a stateful command without an explicit dataset selection."""
+    command = str(getattr(args, "command", "run") or "run")
+    if command not in {"run", "check-submissions"}:
+        return
+    if "dataset_id" not in _explicit_cli_keys(args):
+        raise ValueError(f"--dataset-id is required for {command} command")
     if not str(getattr(args, "dataset_id", "") or "").strip():
-        raise ValueError("--dataset-id is required for run command")
+        raise ValueError(f"--dataset-id is required for {command} command")
 
 
 def normalize_args_paths(args: argparse.Namespace) -> RunPaths:

@@ -231,6 +231,31 @@ class ExecutionConfig:
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
+class PendingCheckRefreshConfig:
+    """Bounded polling controls used by the check-submissions command."""
+
+    refresh_limit: int
+    max_refresh_seconds: float
+    max_workers: int
+
+    def __post_init__(self) -> None:
+        if self.refresh_limit < 0:
+            raise ValueError("pending_check_limit cannot be negative")
+        if not math.isfinite(self.max_refresh_seconds) or self.max_refresh_seconds <= 0:
+            raise ValueError("pending_check_max_seconds must be positive and finite")
+        if self.max_workers <= 0:
+            raise ValueError("pending_check_workers must be positive")
+
+    @classmethod
+    def from_args(cls, args: object) -> PendingCheckRefreshConfig:
+        return cls(
+            refresh_limit=int(_value(args, "pending_check_limit", 0) or 0),
+            max_refresh_seconds=float(_value(args, "pending_check_max_seconds", 900.0)),
+            max_workers=int(_value(args, "pending_check_workers", 1) or 1),
+        )
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
 class QualityConfig:
     min_sharpe: float
     min_fitness: float

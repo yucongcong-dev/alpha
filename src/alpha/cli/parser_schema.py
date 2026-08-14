@@ -12,6 +12,7 @@ from .parser_sections import (
     add_dataset_arguments,
     add_file_filter_arguments,
     add_output_logging_arguments,
+    add_pending_check_refresh_arguments,
     add_precheck_arguments,
     add_run_mode_arguments,
     add_search_arguments,
@@ -63,6 +64,7 @@ def build_parser() -> argparse.ArgumentParser:
     add_search_arguments(parser)
     add_file_filter_arguments(parser)
     add_api_runtime_arguments(parser)
+    add_pending_check_refresh_arguments(parser)
     add_precheck_arguments(parser)
     add_output_logging_arguments(parser)
     return parser

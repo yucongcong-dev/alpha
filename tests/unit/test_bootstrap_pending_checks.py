@@ -106,6 +106,44 @@ def test_reconcile_pending_check_results_persists_run_and_feedback_views(monkeyp
     assert indexed == ["feedback.json"]
 
 
+def test_reconcile_pending_check_results_forwards_check_only_refresh_budget(monkeypatch) -> None:
+    state = HistoricalRunState(feedback_results=[_pending_result()])
+    received: dict[str, object] = {}
+
+    def _refresh(*_args, **kwargs):
+        received.update(kwargs)
+        return list(state.feedback_results), 0
+
+    monkeypatch.setattr(
+        "alpha.app.bootstrap_pending_checks.refresh_pending_check_results",
+        _refresh,
+    )
+
+    reconcile_pending_check_results(
+        object(),
+        state,
+        retries=2,
+        output_file="run.json",
+        feedback_output="feedback.json",
+        dataset_id="fundamental6",
+        settings_fingerprint="settings",
+        template_library_fingerprint="library",
+        run_config={},
+        refresh_limit=0,
+        max_refresh_seconds=900,
+        max_workers=1,
+        repeat_until_terminal=True,
+    )
+
+    assert received == {
+        "retries": 2,
+        "refresh_limit": 0,
+        "max_refresh_seconds": 900,
+        "max_workers": 1,
+        "repeat_until_terminal": True,
+    }
+
+
 def test_refresh_pending_check_results_replaces_terminal_result(monkeypatch) -> None:
     monkeypatch.setattr(
         "alpha.core.pending_check_refresh.check_submission_with_retry",
@@ -136,6 +174,40 @@ def test_refresh_pending_check_results_keeps_still_pending_result(monkeypatch) -
     assert count == 0
     assert refreshed[0].submittable is None
     assert refreshed[0].updated_at
+
+
+def test_refresh_pending_check_results_retries_pending_rows_with_backoff(monkeypatch) -> None:
+    calls = 0
+    waits: list[float] = []
+
+    def _check(*_args, **_kwargs):
+        nonlocal calls
+        calls += 1
+        if calls == 1:
+            return None, "checks pending", [FailedCheck(name="SELF_CORRELATION", result="PENDING")]
+        return True, "checks passed", []
+
+    monkeypatch.setattr(
+        "alpha.core.pending_check_refresh.check_submission_with_retry",
+        _check,
+    )
+    monkeypatch.setattr(
+        "alpha.core.pending_check_refresh.wait_seconds",
+        lambda seconds, *_args, **_kwargs: waits.append(seconds),
+    )
+
+    refreshed, count = refresh_pending_check_results(
+        object(),
+        [_pending_result()],
+        retries=1,
+        max_refresh_seconds=30,
+        repeat_until_terminal=True,
+    )
+
+    assert calls == 2
+    assert waits == [3.0]
+    assert count == 1
+    assert refreshed[0].submittable is True
 
 
 def test_refresh_pending_check_results_terminalizes_permanent_http_error(monkeypatch) -> None:

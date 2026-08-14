@@ -32,6 +32,37 @@ def test_clean_command_parses(monkeypatch) -> None:
     assert args.dry_run_clean is True
 
 
+def test_check_submissions_parses_without_paused_dataset_research_entry(
+    monkeypatch, tmp_path
+) -> None:
+    clear_yaml_cache()
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        ["alpha", "check-submissions", "--dataset-id", "fundamental6", "--run-name", "batch"],
+    )
+
+    config = parse_application_config()
+
+    assert config.command == "check-submissions"
+    assert config.pending_check_refresh.refresh_limit == 0
+    assert config.pending_check_refresh.max_refresh_seconds == 900.0
+    assert config.pending_check_refresh.max_workers == 1
+    assert config.paths.output.replace("\\", "/").endswith(
+        "/datasets/fundamental6/runs/batch/summary.json"
+    )
+
+
+def test_check_submissions_requires_explicit_dataset_id(monkeypatch, tmp_path) -> None:
+    clear_yaml_cache()
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(sys, "argv", ["alpha", "check-submissions"])
+
+    with pytest.raises(ValueError, match="--dataset-id is required for check-submissions command"):
+        parse_application_config()
+
+
 def test_normalize_args_paths_requires_dataset_id(monkeypatch, tmp_path) -> None:
     clear_yaml_cache()
     monkeypatch.chdir(tmp_path)

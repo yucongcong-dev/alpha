@@ -8,10 +8,12 @@ from contextlib import contextmanager
 from dataclasses import replace
 from datetime import datetime, timezone
 import logging
+import math
 import time
 from typing import cast
 
 from ..api.client import BrainClient
+from ..api.timing import wait_seconds
 from ..config._constants_strings import STATUS_ERROR
 from ..exceptions import BrainHTTPError, BrainStopRequested
 from ..models.domain import FieldTestResult
@@ -23,6 +25,8 @@ logger = logging.getLogger(__name__)
 
 DEFAULT_PENDING_CHECK_REFRESH_LIMIT = 20
 DEFAULT_PENDING_CHECK_REFRESH_MAX_SECONDS = 30.0
+DEFAULT_PENDING_CHECK_BACKOFF_SECONDS = 3.0
+MAX_PENDING_CHECK_BACKOFF_SECONDS = 60.0
 
 
 def _utc_now_iso() -> str:
@@ -215,27 +219,77 @@ def refresh_pending_check_results(
     refresh_limit: int = DEFAULT_PENDING_CHECK_REFRESH_LIMIT,
     max_refresh_seconds: float = DEFAULT_PENDING_CHECK_REFRESH_MAX_SECONDS,
     max_workers: int = 1,
+    repeat_until_terminal: bool = False,
 ) -> tuple[list[FieldTestResult], int]:
-    """Resolve historical PENDING checks without recreating their simulations."""
+    """Resolve historical PENDING checks without recreating their simulations.
+
+    Live-run bootstrap/finalize calls intentionally make one bounded pass.  The
+    dedicated ``check-submissions`` command sets ``repeat_until_terminal`` so
+    unresolved rows are revisited with an exponential backoff until the shared
+    deadline is reached.
+    """
+    if refresh_limit < 0:
+        raise ValueError("refresh_limit cannot be negative")
+    if not math.isfinite(max_refresh_seconds) or max_refresh_seconds <= 0:
+        raise ValueError("max_refresh_seconds must be positive")
+    if max_workers <= 0:
+        raise ValueError("max_workers must be positive")
     refreshed_results = list(results)
-    deadline = time.monotonic() + max_refresh_seconds if max_refresh_seconds > 0 else None
+    deadline = time.monotonic() + max_refresh_seconds
     pending_results = _ordered_pending_check_results(results)
     if not pending_results:
         return refreshed_results, 0
 
     selected_pending = pending_results[:refresh_limit] if refresh_limit > 0 else pending_results
-    refreshed_count, attempted_count = _apply_pending_check_refreshes(
-        client,
-        selected_pending,
-        refreshed_results,
-        retries=retries,
-        max_workers=max_workers,
-        deadline=deadline,
-    )
-    deferred_count = len(pending_results) - attempted_count
+    selected_indexes = tuple(index for index, _result in selected_pending)
+    refreshed_count = 0
+    attempted_indexes: set[int] = set()
+    cycle = 0
+    while True:
+        current_pending = [
+            (index, refreshed_results[index])
+            for index in selected_indexes
+            if has_pending_checks(refreshed_results[index]) and refreshed_results[index].alpha_id
+        ]
+        if not current_pending or time.monotonic() >= deadline:
+            break
+        resolved_count, attempted_count = _apply_pending_check_refreshes(
+            client,
+            current_pending,
+            refreshed_results,
+            retries=retries,
+            max_workers=max_workers,
+            deadline=deadline,
+        )
+        refreshed_count += resolved_count
+        attempted_indexes.update(index for index, _result in current_pending[:attempted_count])
+        if not repeat_until_terminal or attempted_count < len(current_pending):
+            break
+        if not any(has_pending_checks(refreshed_results[index]) for index in selected_indexes):
+            break
+
+        remaining_seconds = deadline - time.monotonic()
+        if remaining_seconds <= 0:
+            break
+        backoff_seconds = min(
+            DEFAULT_PENDING_CHECK_BACKOFF_SECONDS * (2**cycle),
+            MAX_PENDING_CHECK_BACKOFF_SECONDS,
+            remaining_seconds,
+        )
+        cycle += 1
+        try:
+            wait_seconds(
+                backoff_seconds,
+                "waiting before the next pending submission-check refresh",
+                should_abort=lambda: time.monotonic() >= deadline,
+            )
+        except BrainStopRequested:
+            break
+
+    deferred_count = len(pending_results) - len(attempted_indexes)
     if deferred_count:
         logger.info(
-            "[check-submission-resume] deferred %d pending results after startup budget "
+            "[check-submission-resume] deferred %d pending results after refresh budget "
             "limit=%d max_seconds=%.1f",
             deferred_count,
             refresh_limit,

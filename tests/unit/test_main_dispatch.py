@@ -163,6 +163,43 @@ def test_main_routes_clean_before_run_logging_and_bootstrap(monkeypatch) -> None
     assert main_module.main() == 0
 
 
+def test_main_routes_check_submissions_around_runtime_pipeline(monkeypatch) -> None:
+    paths = SimpleNamespace(output="results.json")
+    config = SimpleNamespace(
+        command="check-submissions",
+        paths=paths,
+        planning=SimpleNamespace(dry_run_plan=False),
+        runtime_flags=SimpleNamespace(verbose=False, quiet=False),
+    )
+    calls: list[str] = []
+
+    class RecordingLock:
+        def __enter__(self):
+            calls.append("lock")
+
+        def __exit__(self, *_args: object) -> None:
+            calls.append("unlock")
+
+    monkeypatch.setattr(main_module.parser, "parse_application_config", lambda: config)
+    monkeypatch.setattr(main_module, "_configure_application_logging", lambda _config: None)
+    monkeypatch.setattr(main_module.run_lock, "exclusive_run_lock", lambda _path: RecordingLock())
+    monkeypatch.setattr(
+        main_module.submission_check_refresh,
+        "refresh_submission_checks",
+        lambda _config: calls.append("refresh") or True,
+    )
+
+    def _unexpected(*_args, **_kwargs):
+        raise AssertionError("check-submissions must not enter the simulation pipeline")
+
+    monkeypatch.setattr(main_module.bootstrap, "initialize_run_context", _unexpected)
+    monkeypatch.setattr(main_module.run_loop, "run_field_test_loop", _unexpected)
+    monkeypatch.setattr(main_module.finalize, "finalize_run", _unexpected)
+
+    assert main_module.main() == 0
+    assert calls == ["lock", "refresh", "unlock"]
+
+
 def test_main_runs_runtime_pipeline_and_closes_client_factory(monkeypatch) -> None:
     _disable_logging_setup(monkeypatch)
     paths = object()

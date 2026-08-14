@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 
-from .app import bootstrap, finalize, planning, run_lock, run_loop
+from .app import bootstrap, finalize, planning, run_lock, run_loop, submission_check_refresh
 from .cli import filters as cli_filters
 from .cli import parser
 from .config.application import ApplicationConfig, CleanConfig
@@ -14,7 +14,9 @@ logger = logging.getLogger(__name__)
 
 def _configure_application_logging(config: ApplicationConfig) -> None:
     """Configure console/file logging once after the CLI boundary is parsed."""
-    writes_runtime_log = config.command == "run" and not config.planning.dry_run_plan
+    writes_runtime_log = config.command == "check-submissions" or (
+        config.command == "run" and not config.planning.dry_run_plan
+    )
     cli_filters.setup_runtime_logging(
         config.paths.log_file if writes_runtime_log else "",
         verbose=config.runtime_flags.verbose,
@@ -38,6 +40,9 @@ def main() -> int:
     if isinstance(config, CleanConfig):
         return bootstrap.clean_runtime_artifacts(config)
     _configure_application_logging(config)
+    if config.command == "check-submissions":
+        with run_lock.exclusive_run_lock(config.paths.output):
+            return 0 if submission_check_refresh.refresh_submission_checks(config) else 1
     if config.planning.dry_run_plan:
         return 0 if planning.run_dry_run_plan(config) else 1
 

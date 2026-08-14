@@ -28,6 +28,27 @@ from ..models.domain_parsers import parse_failed_check
 logger = logging.getLogger(__name__)
 
 
+def load_result_summary_metadata(path: str) -> dict[str, Any]:
+    """Read stable summary metadata without loading research inputs or journals.
+
+    Check-only refreshes preserve the identity metadata of the existing run;
+    they must not reconstruct it by fetching fields or templates.
+    """
+    if not path or not os.path.exists(path):
+        return {}
+    payload = _load_summary_payload(path, repair_corrupt_summary=False)
+    if payload is None:
+        return {}
+    run_config = payload.get("run_config")
+    return {
+        "dataset_id": str(payload.get("dataset_id", "") or ""),
+        "settings_fingerprint": str(payload.get("settings_fingerprint", "") or ""),
+        "template_library_fingerprint": str(payload.get("template_library_fingerprint", "") or ""),
+        "run_fingerprint": str(payload.get("run_fingerprint", "") or ""),
+        "run_config": dict(run_config) if isinstance(run_config, dict) else {},
+    }
+
+
 def _default_results_journal_path(path: str) -> str:
     """为主结果文件派生默认 journal 路径。"""
     return build_output_sidecar_paths(path)["results_journal"]

@@ -11,6 +11,7 @@ from .application_sections import (
     CredentialsConfig,
     DatasetConfig,
     ExecutionConfig,
+    PendingCheckRefreshConfig,
     PlanningConfig,
     QualityConfig,
     RuntimeFlagsConfig,
@@ -82,6 +83,7 @@ class ApplicationConfig:
     simulation: SimulationConfig
     planning: PlanningConfig
     execution: ExecutionConfig
+    pending_check_refresh: PendingCheckRefreshConfig
     quality: QualityConfig
     runtime_flags: RuntimeFlagsConfig
     runtime_values: RuntimeConfig
@@ -103,6 +105,7 @@ class ApplicationConfig:
             simulation=SimulationConfig.from_args(args),
             planning=PlanningConfig.from_args(args),
             execution=ExecutionConfig.from_args(args),
+            pending_check_refresh=PendingCheckRefreshConfig.from_args(args),
             quality=QualityConfig.from_args(args),
             runtime_flags=RuntimeFlagsConfig.from_args(args),
             # YAML-backed waits and feedback thresholds are part of one resolved
