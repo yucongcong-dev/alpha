@@ -55,18 +55,6 @@ def documented_cli_flags() -> set[str]:
             text=True,
         )
         flags.update(CLI_FLAG_PATTERN.findall(completed.stdout))
-    # Deprecated aliases are intentionally hidden from normal help but remain
-    # accepted during the migration window.  Include their parser metadata so
-    # documenting the migration does not look like an invalid option.
-    if str(ROOT / "src") not in sys.path:
-        sys.path.insert(0, str(ROOT / "src"))
-    from alpha.cli.parser_schema import build_legacy_options_parser
-
-    flags.update(
-        option
-        for action in build_legacy_options_parser()._actions
-        for option in action.option_strings
-    )
     return flags
 
 

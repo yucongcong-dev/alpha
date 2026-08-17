@@ -8,7 +8,7 @@
 # 快速索引:
 #   1. 模拟设置 (Simulation Settings)  —— 与官网参数一一对应
 #   2. 运维参数 (Operational)          —— 字段筛选、并发、重试、过滤、质量、HTTP、反馈
-#   3. 运行时开关 (Runtime)            —— smoke_test, full_run 等
+#   3. 运行时开关 (Runtime)            —— run_mode, dry_run_plan 等
 #   4. 数据集 Profiles (Dataset Profiles) —— 各数据集的专属参数
 # ============================================================================
 
@@ -189,14 +189,12 @@ global:
     expr_mutation_extend_threshold: 0.15  # 表达式额外 nearpass 变异阈值
 
   # --------------------------------------------------------------------------
-  # 运行时开关 —— 运行模式请优先使用 CLI --run-mode；smoke_test/full_run
-  # 仅保留为旧 YAML 的兼容别名。
+  # 运行时开关
   # --------------------------------------------------------------------------
   runtime:
     strategy_profile: explore  # explore=广覆盖；refine=反馈邻域；candidate-focused=候选质量收敛
-    smoke_test: false      # 旧 YAML 兼容：请改用 CLI --run-mode smoke
+    run_mode: normal           # smoke=冒烟测试；normal=常规；full=全量搜索
     dry_run_plan: false    # 干运行模式 (仅打印计划，不创建模拟)
-    full_run: false        # 旧 YAML 兼容：请改用 CLI --run-mode full
     verbose: false         # 详细日志
     quiet: false           # 安静模式 (仅输出错误)
 

@@ -121,7 +121,7 @@ python -m alpha check-submissions --dataset-id fundamental6 \
 ```
 
 该命令按 `alpha_id` 去重，把 `PENDING` 与接口暂不可用分开处理，使用有界退避直到终态或时间预算耗尽。
-旧的 `--smoke-test`、`--full-run` 等布尔开关仍暂时兼容，但会提示改用 `--run-mode`；不同命令的帮助和
+运行模式统一通过 `--run-mode` 指定；不同命令的帮助和
 参数边界是独立的，误把 run-only 参数传给 `clean` 或 `check-submissions` 会被拒绝。
 
 历史 `PENDING` 的刷新是有界保护，不保证一次运行取得所有终态：启动阶段和收尾阶段各自最多

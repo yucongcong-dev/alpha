@@ -393,7 +393,8 @@ def test_explicit_budgeted_full_run_allows_paused_fundamental6(monkeypatch, tmp_
             "fundamental6",
             "--strategy-profile",
             "explore",
-            "--full-run",
+            "--run-mode",
+            "full",
             "--max-new-simulations",
             "100",
         ],
@@ -402,7 +403,7 @@ def test_explicit_budgeted_full_run_allows_paused_fundamental6(monkeypatch, tmp_
     args = parse_args()
     paths = normalize_args_paths(args)
 
-    assert args.full_run is True
+    assert args.run_mode == "full"
     assert args.max_new_simulations == 100
     assert paths.template_library_file.replace("\\", "/").endswith(
         "/datasets/fundamental6/template.json"
@@ -410,7 +411,7 @@ def test_explicit_budgeted_full_run_allows_paused_fundamental6(monkeypatch, tmp_
 
 
 def test_run_mode_full_with_budget_allows_paused_fundamental6(monkeypatch, tmp_path) -> None:
-    """Canonical --run-mode full must unlock a paused dataset like --full-run."""
+    """Canonical --run-mode full unlocks a paused dataset with a budget."""
     clear_yaml_cache()
     monkeypatch.chdir(tmp_path)
     monkeypatch.setattr(
@@ -431,7 +432,6 @@ def test_run_mode_full_with_budget_allows_paused_fundamental6(monkeypatch, tmp_p
     paths = normalize_args_paths(args)
 
     assert args.run_mode == "full"
-    assert args.full_run is True
     assert args.max_new_simulations == 100
     assert paths.template_library_file.replace("\\", "/").endswith(
         "/datasets/fundamental6/template.json"
@@ -448,7 +448,8 @@ def test_budgeted_full_run_dry_plan_allows_paused_fundamental6(monkeypatch, tmp_
             "alpha",
             "--dataset-id",
             "fundamental6",
-            "--full-run",
+            "--run-mode",
+            "full",
             "--max-new-simulations",
             "25",
             "--dry-run-plan",
@@ -465,8 +466,8 @@ def test_budgeted_full_run_dry_plan_allows_paused_fundamental6(monkeypatch, tmp_
 @pytest.mark.parametrize(
     "extra_args",
     [
-        ["--full-run"],
-        ["--full-run", "--max-new-simulations", "0"],
+        ["--run-mode", "full"],
+        ["--run-mode", "full", "--max-new-simulations", "0"],
     ],
 )
 def test_paused_full_run_requires_explicit_positive_budget(
@@ -486,7 +487,9 @@ def test_paused_full_run_requires_explicit_positive_budget(
         normalize_args_paths(parse_args())
 
 
-def test_yaml_full_run_does_not_unlock_paused_dataset(monkeypatch, tmp_path) -> None:
+def test_yaml_without_explicit_full_mode_does_not_unlock_paused_dataset(
+    monkeypatch, tmp_path
+) -> None:
     clear_yaml_cache()
     monkeypatch.chdir(tmp_path)
     config_path = tmp_path / "settings.yaml"
@@ -496,7 +499,7 @@ global:
   limits:
     max_new_simulations: 100
   runtime:
-    full_run: true
+    run_mode: normal
 dataset_profiles:
   fundamental6:
     paused: true
@@ -516,7 +519,7 @@ dataset_profiles:
     )
 
     args = parse_args()
-    assert args.full_run is True
+    assert args.run_mode == "normal"
     assert args.max_new_simulations == 100
     with pytest.raises(ValueError, match="dataset fundamental6 is paused"):
         normalize_args_paths(args)

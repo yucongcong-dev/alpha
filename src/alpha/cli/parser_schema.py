@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import argparse
 from typing import Any
-import warnings
 
 from .parser_sections import (
     add_api_runtime_arguments,
@@ -25,13 +24,6 @@ from .parser_sections import (
 )
 
 _COMMANDS = frozenset({"run", "clean", "check-submissions"})
-_DEPRECATED_OPTIONS = {
-    "--smoke-test": "--run-mode smoke",
-    "--no-smoke-test": "--run-mode normal",
-    "--full-run": "--run-mode full",
-    "--no-full-run": "--run-mode normal",
-    "--legacy-similarity-penalty": "--similarity-penalty",
-}
 
 
 def _new_parser(*, description: str, add_help: bool = True) -> argparse.ArgumentParser:
@@ -117,14 +109,9 @@ def _add_compatibility_defaults(parser: argparse.ArgumentParser) -> None:
     )
 
 
-def build_legacy_options_parser() -> argparse.ArgumentParser:
-    """Build an option-only parser for old scripts using cross-command flags.
-
-    It is deliberately not used for help or normal parsing. ``parse_args``
-    invokes it only for options rejected by the active command parser, then
-    preserves their historical values while emitting a deprecation warning.
-    """
-    parser = _new_parser(description="兼容旧版 alpha 参数", add_help=False)
+def build_option_scanner_parser() -> argparse.ArgumentParser:
+    """Build an option-only parser used to identify command tokens safely."""
+    parser = _new_parser(description="alpha option scanner", add_help=False)
     add_credentials_arguments(parser)
     add_dataset_arguments(parser)
     add_run_mode_arguments(parser)
@@ -150,20 +137,13 @@ def build_parser(*, command: str | None = None) -> argparse.ArgumentParser:
 def collect_parser_defaults(parser: argparse.ArgumentParser) -> dict[str, Any]:
     """Collect the values argparse produces when no options are supplied."""
     # argparse keeps parser-level defaults separately and applies the first
-    # action for a destination. Using setdefault preserves that behavior for
-    # aliases, whose later action defaults are commonly ``None``.
+    # action for a destination.
     defaults: dict[str, Any] = dict(parser._defaults)
     for action in parser._actions:
         if not action.dest or action.dest == "help" or action.default is argparse.SUPPRESS:
             continue
         defaults.setdefault(action.dest, action.default)
     return defaults
-
-
-def collect_explicit_cli_options(parser: argparse.ArgumentParser, argv: list[str]) -> set[str]:
-    """Collect raw option strings explicitly provided on the command line."""
-    known_options = {option for action in parser._actions for option in action.option_strings}
-    return {token.split("=", 1)[0] for token in argv if token.split("=", 1)[0] in known_options}
 
 
 def collect_explicit_cli_keys(parser: argparse.ArgumentParser, argv: list[str]) -> set[str]:
@@ -191,11 +171,11 @@ def command_from_argv(
 ) -> str:
     """Return the selected command while preserving implicit ``run``.
 
-    ``parser`` remains an optional compatibility hook. The default scanner
-    uses the option-only compatibility schema so values such as
+    ``parser`` remains an optional testing hook. The default scanner
+    uses the option-only schema so values such as
     ``--run-name clean`` can never be mistaken for a command token.
     """
-    parser = parser or build_legacy_options_parser()
+    parser = parser or build_option_scanner_parser()
     option_actions = _option_actions(parser)
     index = 0
     while index < len(argv):
@@ -230,14 +210,3 @@ def command_from_argv(
             while index < len(argv) and not argv[index].startswith("-"):
                 index += 1
     return "run"
-
-
-def warn_deprecated_options(options: set[str]) -> None:
-    """Emit one actionable warning for each legacy option used."""
-    for option in sorted(options & _DEPRECATED_OPTIONS.keys()):
-        replacement = _DEPRECATED_OPTIONS[option]
-        warnings.warn(
-            f"{option} 已废弃，请改用 {replacement}。",
-            DeprecationWarning,
-            stacklevel=3,
-        )

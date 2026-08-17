@@ -219,9 +219,7 @@ class TestRuntimeOptionBuilders:
         assert options.simulation_stage.min_sharpe == 1.5
 
     def test_planning_config_stores_one_canonical_run_mode(self) -> None:
-        config = PlanningConfig.from_args(
-            SimpleNamespace(run_mode="full", smoke_test=True, full_run=False)
-        )
+        config = PlanningConfig.from_args(SimpleNamespace(run_mode="full"))
 
         assert config.run_mode is RunMode.FULL
         assert config.full_run is True

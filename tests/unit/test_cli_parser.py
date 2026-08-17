@@ -27,7 +27,6 @@ global:
     max_templates_per_field: 0
   runtime:
     strategy_profile: refine
-    smoke_test: false
 dataset_profiles:
   fundamental6:
     max_concurrent_simulations: 3
@@ -153,14 +152,6 @@ def test_parse_args_keeps_explicit_command_boundaries(monkeypatch, command, opti
         parse_args()
 
 
-def test_legacy_run_mode_alias_emits_actionable_deprecation_warning(monkeypatch) -> None:
-    clear_yaml_cache()
-    monkeypatch.setattr(sys, "argv", ["alpha", "--smoke-test"])
-
-    with pytest.warns(DeprecationWarning, match=r"--smoke-test.*--run-mode smoke"):
-        assert parse_args().smoke_test is True
-
-
 @pytest.mark.parametrize(
     ("argv", "expected"),
     [
@@ -262,23 +253,6 @@ global:
     assert parse_args().max_trade == "OFF"
 
 
-def test_cli_smoke_test_overrides_yaml_false(monkeypatch, tmp_path) -> None:
-    """--smoke-test must not be reset by runtime.smoke_test=false in YAML."""
-    clear_yaml_cache()
-    config_path = tmp_path / "settings.yaml"
-    write_config(config_path)
-    monkeypatch.setattr(sys, "argv", ["alpha", "--config", str(config_path), "--smoke-test"])
-
-    args = parse_args()
-
-    assert args.smoke_test is True
-    assert args.limit == 1
-    assert args.max_templates_per_field == 1
-    assert args.max_concurrent_simulations == 1
-    assert args.simulation_max_pending_cycles == 60
-    assert args.simulation_max_queue_seconds == 300
-
-
 def test_full_run_rejects_conflicting_explicit_search_limits(monkeypatch) -> None:
     clear_yaml_cache()
     monkeypatch.setattr(
@@ -288,7 +262,8 @@ def test_full_run_rejects_conflicting_explicit_search_limits(monkeypatch) -> Non
             "alpha",
             "--strategy-profile",
             "candidate-focused",
-            "--full-run",
+            "--run-mode",
+            "full",
             "--offset",
             "7",
             "--limit",
@@ -311,7 +286,7 @@ def test_full_run_allows_explicit_unlimited_total_simulation_budget(monkeypatch)
     monkeypatch.setattr(
         sys,
         "argv",
-        ["alpha", "--full-run", "--max-new-simulations", "0"],
+        ["alpha", "--run-mode", "full", "--max-new-simulations", "0"],
     )
 
     args = parse_args()
@@ -359,7 +334,15 @@ dataset_profiles:
     monkeypatch.setattr(
         sys,
         "argv",
-        ["alpha", "--config", str(config_path), "--dataset-id", "fundamental6", "--full-run"],
+        [
+            "alpha",
+            "--config",
+            str(config_path),
+            "--dataset-id",
+            "fundamental6",
+            "--run-mode",
+            "full",
+        ],
     )
 
     args = parse_args()
@@ -496,41 +479,8 @@ global:
     assert args.quiet is False
 
 
-def test_cli_no_run_mode_overrides_yaml_true(monkeypatch, tmp_path) -> None:
-    """Run-mode booleans should also support explicit disabling."""
-    clear_yaml_cache()
-    config_path = tmp_path / "settings.yaml"
-    config_path.write_text(
-        """
-global:
-  runtime:
-    smoke_test: true
-    full_run: true
-""".strip(),
-        encoding="utf-8",
-    )
-    monkeypatch.setattr(
-        sys,
-        "argv",
-        ["alpha", "--config", str(config_path), "--no-smoke-test", "--no-full-run"],
-    )
-
-    args = parse_args()
-
-    assert args.smoke_test is False
-    assert args.full_run is False
-
-
-def test_legacy_similarity_penalty_alias_still_parses(monkeypatch) -> None:
-    """旧 CLI 标志 --legacy-similarity-penalty 必须继续映射到 similarity_penalty。"""
-    clear_yaml_cache()
-    monkeypatch.setattr(sys, "argv", ["alpha", "--legacy-similarity-penalty", "5"])
-
-    assert parse_args().similarity_penalty == 5
-
-
 def test_run_mode_smoke_matches_smoke_test(monkeypatch, tmp_path) -> None:
-    """--run-mode smoke is the canonical form of --smoke-test."""
+    """--run-mode smoke applies smoke-test safety limits."""
     clear_yaml_cache()
     config_path = tmp_path / "settings.yaml"
     write_config(config_path)
@@ -539,15 +489,13 @@ def test_run_mode_smoke_matches_smoke_test(monkeypatch, tmp_path) -> None:
     args = parse_args()
 
     assert args.run_mode == "smoke"
-    assert args.smoke_test is True
-    assert args.full_run is False
     assert args.limit == 1
     assert args.max_templates_per_field == 1
     assert args.max_concurrent_simulations == 1
 
 
 def test_run_mode_full_rejects_conflicting_explicit_search_limits(monkeypatch) -> None:
-    """--run-mode full is the canonical form of --full-run."""
+    """--run-mode full rejects contradictory explicit search limits."""
     clear_yaml_cache()
     monkeypatch.setattr(
         sys,
@@ -560,15 +508,14 @@ def test_run_mode_full_rejects_conflicting_explicit_search_limits(monkeypatch) -
 
 
 def test_run_mode_normal_overrides_yaml_true(monkeypatch, tmp_path) -> None:
-    """--run-mode normal replaces --no-smoke-test --no-full-run for YAML overrides."""
+    """--run-mode normal selects the regular planning mode."""
     clear_yaml_cache()
     config_path = tmp_path / "settings.yaml"
     config_path.write_text(
         """
 global:
   runtime:
-    smoke_test: true
-    full_run: true
+    dry_run_plan: false
 """.strip(),
         encoding="utf-8",
     )
@@ -579,30 +526,3 @@ global:
     args = parse_args()
 
     assert args.run_mode == "normal"
-    assert args.smoke_test is False
-    assert args.full_run is False
-
-
-@pytest.mark.parametrize(
-    "argv",
-    [
-        ["--smoke-test", "--no-smoke-test"],
-        ["--full-run", "--no-full-run"],
-    ],
-)
-def test_conflicting_run_mode_aliases_rejected(monkeypatch, argv) -> None:
-    """Self-contradictory legacy run-mode flags must fail loudly."""
-    clear_yaml_cache()
-    monkeypatch.setattr(sys, "argv", ["alpha", *argv])
-
-    with pytest.raises(ValueError, match="不能同时使用"):
-        parse_args()
-
-
-def test_run_mode_conflicts_with_legacy_alias(monkeypatch) -> None:
-    """--run-mode and its legacy aliases are mutually exclusive at parse time."""
-    clear_yaml_cache()
-    monkeypatch.setattr(sys, "argv", ["alpha", "--run-mode", "smoke", "--smoke-test"])
-
-    with pytest.raises(SystemExit):
-        parse_args()

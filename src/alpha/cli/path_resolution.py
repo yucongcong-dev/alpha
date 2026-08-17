@@ -105,9 +105,8 @@ def _validate_paused_dataset(args: argparse.Namespace) -> None:
     if bool(getattr(args, "dry_run_plan", False)):
         return
 
-    explicit_full_run = bool(getattr(args, "full_run", False)) and (
-        "full_run" in explicit_keys
-        or ("run_mode" in explicit_keys and str(getattr(args, "run_mode", "") or "") == "full")
+    explicit_full_run = (
+        "run_mode" in explicit_keys and str(getattr(args, "run_mode", "") or "") == "full"
     )
     if explicit_full_run:
         budget_is_explicit = "max_new_simulations" in explicit_keys
@@ -115,13 +114,13 @@ def _validate_paused_dataset(args: argparse.Namespace) -> None:
         if budget_is_explicit and budget > 0:
             return
         raise ValueError(
-            f"dataset {args.dataset_id} is paused; --full-run requires an explicit positive "
+            f"dataset {args.dataset_id} is paused; --run-mode full requires an explicit positive "
             "--max-new-simulations budget"
         )
 
     raise ValueError(
         f"dataset {args.dataset_id} is paused; provide an explicit template/include file, "
-        "or use --full-run with a positive --max-new-simulations budget"
+        "or use --run-mode full with a positive --max-new-simulations budget"
     )
 
 

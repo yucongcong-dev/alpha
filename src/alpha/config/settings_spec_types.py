@@ -27,8 +27,6 @@ class SettingSpec:
     fallback: Any = _UNSET
     or_default: Any = _UNSET
     coerce: bool = True
-    cli_aliases: tuple[str, ...] = ()
-    yaml_aliases: tuple[tuple[str, ...], ...] = ()
 
 
 def setting_or_default(spec: SettingSpec) -> Any:

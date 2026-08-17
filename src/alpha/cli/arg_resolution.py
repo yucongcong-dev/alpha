@@ -116,7 +116,6 @@ def resolve_cli_args(
     *,
     parser_defaults: dict[str, object],
     explicit_cli_keys: set[str],
-    explicit_cli_options: set[str] | None = None,
 ) -> argparse.Namespace:
     """Resolve every configuration layer once, then apply one final snapshot."""
     if "config" in explicit_cli_keys:
@@ -127,7 +126,6 @@ def resolve_cli_args(
         yaml_config=get_yaml_config(),
         parser_defaults=parser_defaults,
         explicit_cli_keys=explicit_cli_keys,
-        explicit_cli_options=explicit_cli_options,
     )
     args._explicit_cli_keys = frozenset(explicit_cli_keys)
     return resolved.apply_to(args)
@@ -139,7 +137,6 @@ def _resolve_settings(
     yaml_config: dict[str, object] | None,
     parser_defaults: dict[str, object],
     explicit_cli_keys: set[str],
-    explicit_cli_options: set[str] | None,
 ) -> ResolvedCliConfig:
     """Resolve the declared configuration layer pipeline in precedence order."""
     state = _ConfigResolutionState.from_args(args, explicit_cli_keys=explicit_cli_keys)
@@ -167,7 +164,7 @@ def _resolve_settings(
         ),
         ConfigLayerDefinition(
             RUN_MODE_SOURCE,
-            lambda: _run_mode_layer(state, explicit_cli_keys, explicit_cli_options),
+            lambda: _run_mode_layer(state, explicit_cli_keys),
         ),
     )
     for layer in layers:
@@ -231,11 +228,6 @@ def _global_yaml_layer(
         if spec.dest in explicit_cli_keys or spec.yaml is None:
             continue
         value = lookup(spec.yaml)
-        if value is missing:
-            for alias in spec.yaml_aliases:
-                value = lookup(alias)
-                if value is not missing:
-                    break
         if value is not missing and spec.dest in state.values:
             updates[spec.dest] = value
     return ResolvedConfigLayer(GLOBAL_YAML_SOURCE, updates)
@@ -306,27 +298,10 @@ def _strategy_profile_layer(
 def _run_mode_layer(
     state: _ConfigResolutionState,
     explicit_cli_keys: set[str],
-    explicit_cli_options: set[str] | None,
 ) -> ResolvedConfigLayer:
     """Return mode defaults after rejecting contradictory explicit options."""
-    options = explicit_cli_options or set()
-    if "--smoke-test" in options and "--no-smoke-test" in options:
-        raise ValueError("--smoke-test 与 --no-smoke-test 不能同时使用；请改用 --run-mode")
-    if "--full-run" in options and "--no-full-run" in options:
-        raise ValueError("--full-run 与 --no-full-run 不能同时使用；请改用 --run-mode")
-
-    run_mode = RunMode.from_value(_resolve_run_mode(state.values, explicit_cli_keys, options))
+    run_mode = RunMode.from_value(_resolve_run_mode(state.values))
     updates: dict[str, object] = {"run_mode": run_mode}
-    updates.update(
-        {
-            key: value
-            for key, value in (
-                ("smoke_test", run_mode is RunMode.SMOKE),
-                ("full_run", run_mode is RunMode.FULL),
-            )
-            if key not in explicit_cli_keys
-        }
-    )
 
     if run_mode is RunMode.SMOKE:
         _reject_mode_conflicts(state.values, explicit_cli_keys, mode="smoke")
@@ -359,25 +334,9 @@ def _run_mode_layer(
     return ResolvedConfigLayer(RUN_MODE_SOURCE, updates)
 
 
-def _resolve_run_mode(
-    values: dict[str, object],
-    explicit_cli_keys: set[str],
-    options: set[str],
-) -> str:
-    """Resolve the canonical mode from CLI, legacy aliases, or YAML booleans."""
-    if "run_mode" in explicit_cli_keys:
-        return str(values.get("run_mode", "normal") or "normal")
-    if "--smoke-test" in options:
-        return "smoke"
-    if "--full-run" in options:
-        return "full"
-    if "--no-smoke-test" in options or "--no-full-run" in options:
-        return "normal"
-    if bool(values.get("smoke_test", False)):
-        return "smoke"
-    if bool(values.get("full_run", False)):
-        return "full"
-    return "normal"
+def _resolve_run_mode(values: dict[str, object]) -> str:
+    """Resolve the canonical mode from CLI or YAML configuration."""
+    return str(values.get("run_mode", "normal") or "normal")
 
 
 def _add_mode_defaults(

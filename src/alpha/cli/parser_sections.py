@@ -69,14 +69,6 @@ def add_settings(
             choices=spec.choices or None,
             help=argparse.SUPPRESS if hide_help else spec.help,
         )
-        for alias in spec.cli_aliases:
-            parser.add_argument(
-                alias,
-                dest=spec.dest,
-                type=spec.arg_type,
-                choices=spec.choices or None,
-                help=argparse.SUPPRESS,
-            )
 
 
 def add_base_arguments(parser: Any, *, command: str = "run") -> None:
@@ -151,35 +143,6 @@ def add_run_mode_arguments(parser: Any) -> None:
         dest="run_mode",
         default=run_mode.default,
         help=run_mode.help,
-    )
-    # 兼容旧脚本的隐藏别名；新代码请使用 --run-mode。
-    run_mode_group.add_argument(
-        "--smoke-test",
-        action="store_true",
-        dest="smoke_test",
-        default=False,
-        help=argparse.SUPPRESS,
-    )
-    run_mode_group.add_argument(
-        "--full-run",
-        action="store_true",
-        dest="full_run",
-        default=False,
-        help=argparse.SUPPRESS,
-    )
-    arguments.add_argument(
-        "--no-smoke-test",
-        action="store_false",
-        dest="smoke_test",
-        default=False,
-        help=argparse.SUPPRESS,
-    )
-    arguments.add_argument(
-        "--no-full-run",
-        action="store_false",
-        dest="full_run",
-        default=False,
-        help=argparse.SUPPRESS,
     )
 
 

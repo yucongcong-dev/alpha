@@ -159,24 +159,17 @@ class PlanningConfig:
     def from_args(cls, args: object) -> PlanningConfig:
         values = section_args("planning", args)
         raw_mode = _value(args, "run_mode", "")
-        if not raw_mode:
-            # Keep direct callers that still provide the old YAML booleans
-            # working while ensuring the runtime stores only RunMode.
-            if bool(_value(args, "smoke_test", False)):
-                raw_mode = RunMode.SMOKE.value
-            elif bool(_value(args, "full_run", False)):
-                raw_mode = RunMode.FULL.value
         values["run_mode"] = RunMode.from_value(raw_mode)
         return cls(**values)
 
     @property
     def smoke_test(self) -> bool:
-        """Compatibility view for snapshots and older callers."""
+        """Whether this resolved plan uses smoke-test limits."""
         return self.run_mode is RunMode.SMOKE
 
     @property
     def full_run(self) -> bool:
-        """Compatibility view for full-run scheduling behavior."""
+        """Whether this resolved plan uses full-run scheduling."""
         return self.run_mode is RunMode.FULL
 
 

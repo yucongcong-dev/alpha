@@ -97,8 +97,6 @@ PLANNING_SETTINGS = (
         int,
         section="planning",
         fallback=0,
-        cli_aliases=("--legacy-similarity-penalty",),
-        yaml_aliases=(("limits", "legacy_similarity_penalty"),),
         help="应用于 raw/group-rank/simple-ratio 等模板的优先级惩罚",
     ),
     SettingSpec(
