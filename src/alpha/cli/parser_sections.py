@@ -7,7 +7,12 @@ import os
 from typing import Any
 
 from ..config._constants_thresholds import DEFAULT_DATASET_ID
-from ..config.settings_spec import SettingSpec, get_setting, settings_by_yaml_section
+from ..config.settings_spec import (
+    SettingSpec,
+    get_setting,
+    section_settings,
+    settings_by_yaml_section,
+)
 from .constants import DEFAULT_CREDS_FILE, DEFAULT_CREDS_KEY_FILE
 
 
@@ -65,18 +70,15 @@ def add_settings(parser: Any, specs: tuple[SettingSpec, ...]) -> None:
             )
 
 
-def add_base_arguments(parser: Any) -> None:
-    """Add command and config arguments."""
+def add_base_arguments(parser: Any, *, command: str = "run") -> None:
+    """Add one command parser's positional command and shared config option."""
     arguments = parser.add_argument_group("命令与配置")
     arguments.add_argument(
         "command",
         nargs="?",
-        choices=("run", "clean", "check-submissions"),
-        default="run",
-        help=(
-            "运行命令：run=执行 Alpha 流程（默认），clean=清理本地运行文件，"
-            "check-submissions=仅刷新已有 Alpha 的 Submission Check"
-        ),
+        choices=(command,),
+        default=command,
+        help=("执行 Alpha 流程（默认）" if command == "run" else f"执行 {command} 命令"),
     )
     arguments.add_argument(
         "--config",
@@ -100,14 +102,31 @@ def add_credentials_arguments(parser: Any) -> None:
     arguments.add_argument("--password", default=os.getenv("WQB_PASSWORD"), help="用户密码")
 
 
-def add_dataset_arguments(parser: Any) -> None:
-    """Add dataset and simulation settings arguments."""
-    arguments = parser.add_argument_group("数据集与模拟设置")
+def _add_dataset_id_argument(arguments: Any) -> None:
     arguments.add_argument(
         "--dataset-id",
         default=DEFAULT_DATASET_ID,
         help="数据集 ID；run/clean 命令必须显式指定",
     )
+
+
+def add_dataset_selector_arguments(parser: Any) -> None:
+    """Add the dataset selector used by clean and submission-check commands."""
+    arguments = parser.add_argument_group("数据集")
+    _add_dataset_id_argument(arguments)
+
+
+def add_dataset_context_arguments(parser: Any) -> None:
+    """Add a dataset selector plus path-affecting platform context options."""
+    arguments = parser.add_argument_group("数据集与运行上下文")
+    _add_dataset_id_argument(arguments)
+    add_settings(arguments, section_settings("dataset"))
+
+
+def add_dataset_arguments(parser: Any) -> None:
+    """Add the full dataset and simulation surface for the run command."""
+    arguments = parser.add_argument_group("数据集与模拟设置")
+    _add_dataset_id_argument(arguments)
     add_settings(arguments, settings_by_yaml_section("simulation"))
 
 
@@ -193,11 +212,33 @@ def add_file_filter_arguments(parser: Any) -> None:
     add_settings(arguments, settings_by_yaml_section("filters"))
 
 
+def add_feedback_output_argument(parser: Any) -> None:
+    """Add the feedback aggregate path used by submission-check refresh."""
+    arguments = parser.add_argument_group("反馈结果")
+    arguments.add_argument(
+        "--feedback-output", default="", help="历史结果 JSON 文件；默认使用 --output"
+    )
+
+
 def add_api_runtime_arguments(parser: Any) -> None:
     """Add API retry/concurrency/runtime wait arguments."""
     arguments = parser.add_argument_group("API、并发与重试（高级）")
     add_settings(arguments, settings_by_yaml_section("concurrency"))
     add_settings(arguments, settings_by_yaml_section("retries"))
+
+
+def add_submission_check_api_arguments(parser: Any) -> None:
+    """Add only the API controls used while refreshing submission checks."""
+    arguments = parser.add_argument_group("API 与重试")
+    add_settings(
+        arguments,
+        (
+            get_setting("min_request_interval"),
+            get_setting("rate_limit_max_retries"),
+            get_setting("login_retries"),
+            get_setting("check_submission_retries"),
+        ),
+    )
 
 
 def add_pending_check_refresh_arguments(parser: Any) -> None:
@@ -231,7 +272,7 @@ def add_precheck_arguments(parser: Any) -> None:
 
 
 def add_output_logging_arguments(parser: Any) -> None:
-    """Add output, logging, and clean arguments."""
+    """Add output and logging arguments used by run/check-submissions."""
     output_arguments = parser.add_argument_group("输出与日志")
     output_arguments.add_argument(
         "--output", default="", help="结果 JSON 输出文件路径（留空则根据 dataset_id 自动生成）"
@@ -243,6 +284,10 @@ def add_output_logging_arguments(parser: Any) -> None:
     )
     add_settings(output_arguments, (get_setting("verbose"), get_setting("quiet")))
     output_arguments.add_argument("--log-file", default="", help="日志文件路径")
+
+
+def add_clean_arguments(parser: Any) -> None:
+    """Add the destructive-operation controls exclusive to clean."""
     clean_arguments = parser.add_argument_group("clean 命令")
     clean_arguments.add_argument(
         "--include-credentials",

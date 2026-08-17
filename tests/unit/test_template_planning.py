@@ -7,7 +7,11 @@ import alpha.core.template_planning as template_planning
 from alpha.core.template_planning import build_pending_template_variants
 from alpha.models.domain import TemplateCandidate, TemplateField
 from alpha.models.runtime_options import TemplateBuildOptions
-from alpha.runtime.contexts import TemplateBuildContext
+from alpha.runtime.contexts import (
+    TemplateBuildContext,
+    TemplateFeedbackContext,
+    TemplateSourceContext,
+)
 
 _DEFAULT_SIM_SETTINGS = {
     "region": "USA",
@@ -51,7 +55,10 @@ def test_low_level_planning_services_read_current_module_dependencies(monkeypatc
 
 def test_preset_mode_limits_settings_variants_to_baseline() -> None:
     build_ctx = TemplateBuildContext(
-        options=TemplateBuildOptions(**_DEFAULT_SIM_SETTINGS, preset_mode=True)
+        source=TemplateSourceContext(
+            options=TemplateBuildOptions(**_DEFAULT_SIM_SETTINGS, preset_mode=True)
+        ),
+        feedback=TemplateFeedbackContext(),
     )
     pending = build_pending_template_variants(
         build_ctx,
@@ -74,17 +81,20 @@ def test_preset_mode_limits_settings_variants_to_baseline() -> None:
 
 def test_resimulate_budget_prioritizes_decay_variants() -> None:
     build_ctx = TemplateBuildContext(
-        options=TemplateBuildOptions(**_DEFAULT_SIM_SETTINGS),
-        expression_policy=DatasetExpressionPolicy(
-            feedback_loop_policy=FeedbackLoopPolicy(
-                generate=FeedbackPhasePolicy(settings_variant_budget=1),
-                resimulate=FeedbackPhasePolicy(
-                    min_attempted_templates=3,
-                    min_best_score=0.5,
-                    settings_variant_budget=3,
+        source=TemplateSourceContext(
+            options=TemplateBuildOptions(**_DEFAULT_SIM_SETTINGS),
+            expression_policy=DatasetExpressionPolicy(
+                feedback_loop_policy=FeedbackLoopPolicy(
+                    generate=FeedbackPhasePolicy(settings_variant_budget=1),
+                    resimulate=FeedbackPhasePolicy(
+                        min_attempted_templates=3,
+                        min_best_score=0.5,
+                        settings_variant_budget=3,
+                    ),
                 ),
             ),
         ),
+        feedback=TemplateFeedbackContext(),
     )
     pending = build_pending_template_variants(
         build_ctx,
@@ -108,17 +118,20 @@ def test_resimulate_budget_prioritizes_decay_variants() -> None:
 
 def test_resimulate_budget_can_include_full_settings_variant_set() -> None:
     build_ctx = TemplateBuildContext(
-        options=TemplateBuildOptions(**_DEFAULT_SIM_SETTINGS),
-        expression_policy=DatasetExpressionPolicy(
-            feedback_loop_policy=FeedbackLoopPolicy(
-                generate=FeedbackPhasePolicy(settings_variant_budget=1),
-                resimulate=FeedbackPhasePolicy(
-                    min_attempted_templates=3,
-                    min_best_score=0.5,
-                    settings_variant_budget=5,
+        source=TemplateSourceContext(
+            options=TemplateBuildOptions(**_DEFAULT_SIM_SETTINGS),
+            expression_policy=DatasetExpressionPolicy(
+                feedback_loop_policy=FeedbackLoopPolicy(
+                    generate=FeedbackPhasePolicy(settings_variant_budget=1),
+                    resimulate=FeedbackPhasePolicy(
+                        min_attempted_templates=3,
+                        min_best_score=0.5,
+                        settings_variant_budget=5,
+                    ),
                 ),
             ),
         ),
+        feedback=TemplateFeedbackContext(),
     )
     pending = build_pending_template_variants(
         build_ctx,

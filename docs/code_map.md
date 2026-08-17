@@ -26,13 +26,13 @@ python -m alpha
 | `cli/` | CLI 边界：解析、参数优先级、路径解析、配置快照 | `parser.py`、`parser_sections.py`、`arg_resolution.py` |
 | `config/` | 配置：YAML 加载、声明式设置表、不可变快照、策略 profile | `settings_spec.py`、`yaml_sources.py`、`application.py`、`application_sections.py` |
 | `app/` | 运行编排：bootstrap 初始化、run loop、finalize、dry-run 计划 | `bootstrap.py`、`planning.py`、`run_loop.py`、`finalize.py` |
-| `core/` | 运行引擎：scheduler、executor、simulation 阶段、checkpoint、提交检查 | `scheduler.py`、`executor.py`、`simulation*.py`、`submission_checks.py` |
+| `core/` | 运行引擎：scheduler、executor、simulation 阶段、checkpoint、提交检查 | `scheduler_draining.py`、`scheduler_concurrency.py`、`executor.py`、`simulation*.py`、`submission_checks.py`、`pending_check_refresh.py` |
 | `runtime/` | 共享可变运行状态与窄调度状态（所有权见 AGENTS.md） | `state.py`、`concurrency.py`、`future_queue.py`、`queue_retry.py`、`result_ledger.py` |
 | `api/` | Brain API 客户端：HTTP、会话、字段/模拟/Alpha、重试 | `client.py`、`session.py`、`fields.py`、`simulations.py`、`retry.py` |
-| `analysis/` | 结果/反馈分析：加载、持久化、聚合、诊断、报告 | `results_loader.py`、`feedback_*.py`、`failed_checks.py`、`report_builder.py` |
+| `analysis/` | 结果/反馈分析：加载、持久化、聚合、诊断、报告 | `results_loader.py`、`results_persistence.py`、`feedback_*.py`、`failed_checks.py`、`report_builder.py` |
 | `generators/` | 表达式与模板生成：字段、ratio/matrix、变体、指纹 | `expression_builder.py`、`fields.py`、`payload.py`、`templates/*` |
 | `policy/` | 表达式策略与黑名单（长期策略资产，只读执行） | `expression.py`、`blacklist_store.py`、`template_blacklist.py` |
-| `models/` | 领域类型与窄配置 dataclass（跨层传递的最小契约） | `domain*.py`、`runtime_options.py`、`runtime_protocols.py` |
+| `models/` | 领域类型与窄配置 dataclass（跨层传递的最小契约） | `domain*.py`、`submission_check.py`、`runtime_options.py`、`runtime_protocols.py` |
 | `io/` | 底层 IO：凭证、文件锁、结果存储、输出路径、Windows DPAPI | `credentials.py`、`file_lock.py`、`results_store.py`、`output_paths.py` |
 | `selection/` `utils/` | 字段筛选辅助 / 通用小工具 | `feedback_filters.py`、`helpers.py` |
 
@@ -89,15 +89,14 @@ app/run_loop.py
   ├─ run_loop_feedback.py      # 反馈刷新
   ├─ future_submission.py      # 新任务提交、恢复任务、停止前元数据等待
   ├─ future_completion.py      # future 完成、结果消费、容量排空与 checkpoint
-  └─ core/scheduler.py + core/executor.py + core/simulation*.py
+  └─ core/scheduler_draining.py + core/scheduler_concurrency.py + core/executor.py + core/simulation*.py
 ```
 
 ### scheduler 链（边界拆分示例）
 
 ```text
-core/scheduler.py               # 对外调度入口
+core/scheduler_draining.py      # 排空/完成推进（调度主入口）
   ├─ scheduler_queue.py         # 候选队列
-  ├─ scheduler_draining.py      # 排空/完成推进
   ├─ scheduler_concurrency.py   # 运行时并发状态
   ├─ scheduler_completion.py    # future -> 结果行
   └─ scheduler_decisions.py     # 纯决策函数（与副作用分离）
@@ -144,7 +143,7 @@ app/finalize.py
 
 ## 6. 为什么模块这么多（边界设计，不是碎片）
 
-184 个源码模块 / 约 2.26 万行不是随意拆分，而是三类动机：
+184 个源码模块 / 约 2.28 万行不是随意拆分，而是三类动机：
 
 1. **状态所有权**：`runtime/*` 与 `core/scheduler*` 的拆分直接对应 AGENTS.md 的
    "一个可变状态一个专用 dataclass" 规则，避免 `ExecutionState` 膨胀成万能容器。
@@ -169,6 +168,9 @@ app/finalize.py
 | 字段（数据集数据字段） | `models/domain.py::TemplateField` | API 字段元数据 + 选择/质量元数据 |
 | 模板（候选表达式结构） | `models/domain.py::TemplateCandidate` / `TemplateLibraryItem` | 一个表达式模板候选 / 模板库条目 |
 | 检查项 | `models/domain.py::FailedCheck` | 一次 submission check：name/value/limit/result |
+| Submission Check 结果 | `models/submission_check.py::SubmissionCheckOutcome` | 将通过、失败、PENDING、接口不可用和终态错误统一成不可变观察值 |
+| PENDING 刷新服务 | `core/pending_check_refresh.py::PendingCheckService` | 按 Alpha ID 去重，并在有界预算内退避刷新，不创建新 simulation |
+| 结果持久化上下文 | `analysis/results_persistence.py::ResultPersistenceContext` | 统一结果路径、运行身份、配置快照与 metadata scope |
 | 设置变体 | `models/domain.py::SettingsVariant` | 一次模拟的 settings 覆盖（不可变值对象） |
 | 字段测试上下文 | `models/domain.py::FieldTestContext` | 单次 字段×模板 执行上下文，产出 FieldTestResult |
 | 结果聚合 | `runtime/result_ledger.py::ResultLedgerState` | 唯一权威结果序列 + 派生计数 |

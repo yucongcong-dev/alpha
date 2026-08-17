@@ -6,8 +6,7 @@ from concurrent.futures import ThreadPoolExecutor
 import logging
 
 from ..config.application import ApplicationConfig
-from ..core.scheduler import drain_completed_futures_with_context
-from ..models.domain import TemplateField
+from ..core.scheduler_draining import drain_completed_futures_with_context
 from ..models.runtime_options import RunLoopOptions, SchedulerControlOptions
 from ..models.runtime_protocols import ClientFactoryLike
 from ..runtime.concurrency import RuntimeConcurrencyState
@@ -46,8 +45,7 @@ def _stop_workers_and_save_checkpoint(
     identity: CheckpointIdentity,
     state_file: str,
     interrupt_report_file: str,
-    last_field_id: str,
-    fields: list[TemplateField],
+    diagnostic_field_id: str,
     reason: str,
     scheduler_options: SchedulerControlOptions,
     completion_ctx: FutureCompletionContext,
@@ -108,12 +106,10 @@ def _stop_workers_and_save_checkpoint(
     run_loop_resume.save_runtime_checkpoint(
         state_file=state_file,
         interrupt_report_file=interrupt_report_file,
-        completed_field_index=0,
         execution_state=execution_state,
         runtime_state=runtime_state,
         identity=identity,
-        last_field_id=last_field_id,
-        fields=fields,
+        diagnostic_field_id=diagnostic_field_id,
         reason=reason,
     )
 
@@ -129,7 +125,6 @@ def run_field_test_loop(
     runtime_state = run_ctx.runtime_state
     execution_state = run_ctx.execution_state
     fields = list(run_ctx.fields)
-    total_field_count = len(fields)
     max_workers = runtime_state.max_workers
     run_loop_options = RunLoopOptions.from_config(args)
     field_template_batch_size = run_loop_options.field_template_batch_size
@@ -227,8 +222,6 @@ def run_field_test_loop(
                 if not round_result.progressed:
                     if future_completion.drain_next_completion(
                         state_file=state_file,
-                        total_fields=total_field_count,
-                        last_field_id=last_field_id,
                         execution_state=execution_state,
                         scheduler_options=scheduler_options,
                         completion_ctx=completion_ctx,
@@ -247,8 +240,6 @@ def run_field_test_loop(
 
             future_completion.drain_remaining_futures(
                 state_file=state_file,
-                total_fields=total_field_count,
-                last_field_id=last_field_id,
                 execution_state=execution_state,
                 runtime_state=runtime_state,
                 scheduler_options=scheduler_options,
@@ -262,8 +253,7 @@ def run_field_test_loop(
                 identity=checkpoint_identity,
                 state_file=state_file,
                 interrupt_report_file=interrupt_report_file,
-                last_field_id=last_field_id,
-                fields=fields,
+                diagnostic_field_id=last_field_id,
                 reason="KeyboardInterrupt",
                 scheduler_options=scheduler_options,
                 completion_ctx=completion_ctx,
@@ -279,8 +269,7 @@ def run_field_test_loop(
                 identity=checkpoint_identity,
                 state_file=state_file,
                 interrupt_report_file=interrupt_report_file,
-                last_field_id=last_field_id,
-                fields=fields,
+                diagnostic_field_id=last_field_id,
                 reason="Exception",
                 scheduler_options=scheduler_options,
                 completion_ctx=completion_ctx,

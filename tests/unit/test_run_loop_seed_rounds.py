@@ -40,7 +40,7 @@ def test_full_run_seed_phase_covers_fields_before_refine() -> None:
     def _consume_dispatch(*, field_id, scheduled_templates, template_queue, **_kwargs):
         dispatched_batches.append((field_id, len(scheduled_templates)))
         for _entry in scheduled_templates:
-            template_queue.consume_one()
+            template_queue.consume(_entry)
         return False
 
     with (
@@ -164,7 +164,7 @@ def test_full_run_seed_phase_skips_historically_seeded_fields() -> None:
 
     def _consume_dispatch(*, scheduled_templates, template_queue, **_kwargs):
         assert len(scheduled_templates) == 1
-        template_queue.consume_one()
+        template_queue.consume(scheduled_templates[0])
         return False
 
     with (
@@ -306,7 +306,7 @@ def test_full_run_unactionable_seed_fields_advance_to_refine() -> None:
         if scheduled_templates:
             dispatched_field_ids.append(field_id)
         for _entry in scheduled_templates:
-            template_queue.consume_one()
+            template_queue.consume(_entry)
         return False
 
     with (

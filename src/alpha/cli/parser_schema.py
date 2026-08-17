@@ -1,145 +1,160 @@
-"""CLI parser schema assembly."""
+"""Command-specific CLI parser assembly and compatibility handling."""
 
 from __future__ import annotations
 
 import argparse
 from typing import Any
+import warnings
 
 from .parser_sections import (
     add_api_runtime_arguments,
     add_base_arguments,
+    add_clean_arguments,
     add_credentials_arguments,
     add_dataset_arguments,
+    add_dataset_context_arguments,
+    add_dataset_selector_arguments,
+    add_feedback_output_argument,
     add_file_filter_arguments,
     add_output_logging_arguments,
     add_pending_check_refresh_arguments,
     add_precheck_arguments,
     add_run_mode_arguments,
     add_search_arguments,
+    add_submission_check_api_arguments,
 )
 
 _COMMANDS = frozenset({"run", "clean", "check-submissions"})
-_CLEAN_HELP_DESTS = frozenset(
-    {
-        "command",
-        "config",
-        "dataset_id",
-        "include_credentials",
-        "all_datasets",
-        "confirm_clean",
-        "dry_run_clean",
-    }
-)
-_CHECK_SUBMISSIONS_HELP_DESTS = frozenset(
-    {
-        "command",
-        "config",
-        "creds_file",
-        "creds_key_file",
-        "email",
-        "password",
-        "dataset_id",
-        "min_request_interval",
-        "rate_limit_max_retries",
-        "login_retries",
-        "check_submission_retries",
-        "pending_check_limit",
-        "pending_check_max_seconds",
-        "pending_check_workers",
-        "feedback_output",
-        "output",
-        "run_name",
-        "verbose",
-        "quiet",
-        "log_file",
-    }
-)
+_DEPRECATED_OPTIONS = {
+    "--smoke-test": "--run-mode smoke",
+    "--no-smoke-test": "--run-mode normal",
+    "--full-run": "--run-mode full",
+    "--no-full-run": "--run-mode normal",
+    "--legacy-similarity-penalty": "--similarity-penalty",
+}
 
 
-class _CommandHelpProxy:
-    """Apply command-specific help visibility while preserving parse compatibility."""
-
-    def __init__(
-        self,
-        container: Any,
-        visible_dests: frozenset[str] | None,
-    ) -> None:
-        self._container = container
-        self._visible_dests = visible_dests
-
-    def _destination(self, args: tuple[object, ...], kwargs: dict[str, object]) -> str:
-        explicit_dest = kwargs.get("dest")
-        if isinstance(explicit_dest, str):
-            return explicit_dest
-        for argument in args:
-            if isinstance(argument, str) and not argument.startswith("-"):
-                return argument
-        for argument in args:
-            if isinstance(argument, str) and argument.startswith("--"):
-                return argument[2:].split("=", 1)[0].replace("-", "_")
-        return ""
-
-    def add_argument(self, *args: object, **kwargs: object) -> object:
-        if (
-            self._visible_dests is not None
-            and self._destination(args, kwargs) not in self._visible_dests
-        ):
-            kwargs["help"] = argparse.SUPPRESS
-        return self._container.add_argument(*args, **kwargs)
-
-    def add_argument_group(self, *args: object, **kwargs: object) -> _CommandHelpProxy:
-        group = self._container.add_argument_group(*args, **kwargs)
-        return _CommandHelpProxy(group, self._visible_dests)
-
-    def add_mutually_exclusive_group(
-        self,
-        **kwargs: object,
-    ) -> _CommandHelpProxy | _ConditionalMutexProxy:
-        if self._visible_dests is None:
-            group = self._container.add_mutually_exclusive_group(**kwargs)
-            return _CommandHelpProxy(group, self._visible_dests)
-        return _ConditionalMutexProxy(self._container, self._visible_dests, kwargs)
-
-    def __getattr__(self, name: str) -> object:
-        return getattr(self._container, name)
+def _new_parser(*, description: str, add_help: bool = True) -> argparse.ArgumentParser:
+    return argparse.ArgumentParser(
+        prog="alpha",
+        description=description,
+        allow_abbrev=False,
+        add_help=add_help,
+    )
 
 
-class _ConditionalMutexProxy:
-    """Avoid empty hidden mutex groups in command-specific help output."""
+def _build_parser_for_command(command: str) -> argparse.ArgumentParser:
+    """Build the strict parser for exactly one command.
 
-    def __init__(
-        self,
-        container: Any,
-        visible_dests: frozenset[str],
-        kwargs: dict[str, object],
-    ) -> None:
-        self._container = container
-        self._visible_dests = visible_dests
-        self._kwargs = kwargs
-        self._group: _CommandHelpProxy | None = None
+    The command is represented by a one-choice positional argument instead of
+    an argparse subparser.  This keeps the long-standing ``alpha --limit 10``
+    implicit-run form while making each explicit command's accepted options
+    and help output independent.
+    """
+    if command not in _COMMANDS:
+        raise ValueError(f"unsupported command: {command}")
 
-    def add_argument(self, *args: object, **kwargs: object) -> object:
-        destination = _CommandHelpProxy(self._container, self._visible_dests)._destination(
-            args,
-            kwargs,
+    parser = _new_parser(
+        description=(
+            "测试 WorldQuant Brain 数据集中的所有字段并筛选可提交的 Alpha。"
+            "可用命令：run（默认）、clean、check-submissions。"
+            if command == "run"
+            else (
+                "清理 Alpha Runner 的本地运行产物。"
+                if command == "clean"
+                else "刷新已有 Alpha 的 Submission Check，不创建新的 simulation。"
+            )
         )
-        if destination not in self._visible_dests:
-            kwargs["help"] = argparse.SUPPRESS
-            return self._container.add_argument(*args, **kwargs)
-        if self._group is None:
-            group = self._container.add_mutually_exclusive_group(**self._kwargs)
-            self._group = _CommandHelpProxy(group, self._visible_dests)
-        return self._group.add_argument(*args, **kwargs)
+    )
+    add_base_arguments(parser, command=command)
+
+    if command == "run":
+        add_credentials_arguments(parser)
+        add_dataset_arguments(parser)
+        add_run_mode_arguments(parser)
+        add_search_arguments(parser)
+        add_file_filter_arguments(parser)
+        add_api_runtime_arguments(parser)
+        add_pending_check_refresh_arguments(parser)
+        add_precheck_arguments(parser)
+        add_output_logging_arguments(parser)
+        return parser
+
+    if command == "clean":
+        add_dataset_selector_arguments(parser)
+        add_clean_arguments(parser)
+        return parser
+
+    # check-submissions intentionally exposes only controls that affect the
+    # refresh request. Its namespace still receives run defaults below so the
+    # shared ApplicationConfig boundary remains stable for old callers.
+    add_credentials_arguments(parser)
+    add_dataset_context_arguments(parser)
+    add_submission_check_api_arguments(parser)
+    add_pending_check_refresh_arguments(parser)
+    add_feedback_output_argument(parser)
+    add_output_logging_arguments(parser)
+    return parser
+
+
+def _run_parser_defaults() -> dict[str, Any]:
+    """Return defaults for fields consumed by the shared config boundary."""
+    return collect_parser_defaults(_build_parser_for_command("run"))
+
+
+def _add_compatibility_defaults(parser: argparse.ArgumentParser) -> None:
+    """Seed non-run parsers with non-CLI runtime defaults.
+
+    These are parser defaults, not hidden options: a clean/check command cannot
+    accidentally configure a run-only setting, but typed config construction
+    can still rely on one complete namespace shape.
+    """
+    existing = collect_parser_defaults(parser)
+    parser.set_defaults(
+        **{key: value for key, value in _run_parser_defaults().items() if key not in existing}
+    )
+
+
+def build_legacy_options_parser() -> argparse.ArgumentParser:
+    """Build an option-only parser for old scripts using cross-command flags.
+
+    It is deliberately not used for help or normal parsing. ``parse_args``
+    invokes it only for options rejected by the active command parser, then
+    preserves their historical values while emitting a deprecation warning.
+    """
+    parser = _new_parser(description="兼容旧版 alpha 参数", add_help=False)
+    add_credentials_arguments(parser)
+    add_dataset_arguments(parser)
+    add_run_mode_arguments(parser)
+    add_search_arguments(parser)
+    add_file_filter_arguments(parser)
+    add_api_runtime_arguments(parser)
+    add_pending_check_refresh_arguments(parser)
+    add_precheck_arguments(parser)
+    add_output_logging_arguments(parser)
+    add_clean_arguments(parser)
+    return parser
+
+
+def build_parser(*, command: str | None = None) -> argparse.ArgumentParser:
+    """Build a strict parser for ``command`` (implicit ``run`` by default)."""
+    active_command = command or "run"
+    parser = _build_parser_for_command(active_command)
+    if active_command != "run":
+        _add_compatibility_defaults(parser)
+    return parser
 
 
 def collect_parser_defaults(parser: argparse.ArgumentParser) -> dict[str, Any]:
-    """Collect argparse dest -> default value mapping."""
-    defaults: dict[str, Any] = {}
+    """Collect the values argparse produces when no options are supplied."""
+    # argparse keeps parser-level defaults separately and applies the first
+    # action for a destination. Using setdefault preserves that behavior for
+    # aliases, whose later action defaults are commonly ``None``.
+    defaults: dict[str, Any] = dict(parser._defaults)
     for action in parser._actions:
-        dest = getattr(action, "dest", None)
-        if not dest or dest == "help":
+        if not action.dest or action.dest == "help" or action.default is argparse.SUPPRESS:
             continue
-        defaults[dest] = action.default
+        defaults.setdefault(action.dest, action.default)
     return defaults
 
 
@@ -163,20 +178,23 @@ def collect_explicit_cli_keys(parser: argparse.ArgumentParser, argv: list[str]) 
     return explicit_keys
 
 
+def _option_actions(parser: argparse.ArgumentParser) -> dict[str, argparse.Action]:
+    return {option: action for action in parser._actions for option in action.option_strings}
+
+
 def command_from_argv(
     argv: list[str],
     *,
     parser: argparse.ArgumentParser | None = None,
 ) -> str:
-    """Return the selected positional command while preserving implicit ``run``.
+    """Return the selected command while preserving implicit ``run``.
 
-    Scan using argparse's action metadata so option values such as
-    ``--run-name clean`` are not mistaken for the command token.
+    ``parser`` remains an optional compatibility hook. The default scanner
+    uses the option-only compatibility schema so values such as
+    ``--run-name clean`` can never be mistaken for a command token.
     """
-    parser = parser or build_parser()
-    option_actions = {
-        option: action for action in parser._actions for option in action.option_strings
-    }
+    parser = parser or build_legacy_options_parser()
+    option_actions = _option_actions(parser)
     index = 0
     while index < len(argv):
         token = argv[index]
@@ -212,37 +230,12 @@ def command_from_argv(
     return "run"
 
 
-def build_parser(*, command: str | None = None) -> argparse.ArgumentParser:
-    """Build the compatibility parser with command-specific help visibility.
-
-    Options outside the active command's help remain accepted temporarily so
-    existing scripts keep working while the typed configuration boundary is
-    shared by all commands.
-    """
-    parser = argparse.ArgumentParser(
-        prog="alpha",
-        description=(
-            "测试 WorldQuant Brain 数据集中的所有字段并筛选可提交的 Alpha。"
-            "使用 `alpha <command> --help` 查看该命令的参数。"
-        ),
-        allow_abbrev=False,
-    )
-    visible_dests = (
-        _CLEAN_HELP_DESTS
-        if command == "clean"
-        else _CHECK_SUBMISSIONS_HELP_DESTS
-        if command == "check-submissions"
-        else None
-    )
-    command_parser = _CommandHelpProxy(parser, visible_dests)
-    add_base_arguments(command_parser)
-    add_credentials_arguments(command_parser)
-    add_dataset_arguments(command_parser)
-    add_run_mode_arguments(command_parser)
-    add_search_arguments(command_parser)
-    add_file_filter_arguments(command_parser)
-    add_api_runtime_arguments(command_parser)
-    add_pending_check_refresh_arguments(command_parser)
-    add_precheck_arguments(command_parser)
-    add_output_logging_arguments(command_parser)
-    return parser
+def warn_deprecated_options(options: set[str]) -> None:
+    """Emit one actionable warning for each legacy option used."""
+    for option in sorted(options & _DEPRECATED_OPTIONS.keys()):
+        replacement = _DEPRECATED_OPTIONS[option]
+        warnings.warn(
+            f"{option} 已废弃，请改用 {replacement}。",
+            DeprecationWarning,
+            stacklevel=3,
+        )

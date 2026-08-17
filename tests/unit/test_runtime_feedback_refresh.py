@@ -5,7 +5,11 @@ from __future__ import annotations
 from alpha.app.run_loop_feedback import refresh_runtime_feedback
 from alpha.models.domain import FailedCheck, FieldTestResult
 from alpha.models.runtime_options import TemplateBuildOptions
-from alpha.runtime.contexts import TemplateBuildContext
+from alpha.runtime.contexts import (
+    TemplateBuildContext,
+    TemplateFeedbackContext,
+    TemplateSourceContext,
+)
 
 _DEFAULT_SIM_SETTINGS = {
     "region": "USA",
@@ -24,7 +28,10 @@ _DEFAULT_SIM_SETTINGS = {
 
 def test_refresh_runtime_feedback_rebuilds_feedback_from_current_results() -> None:
     """Same-process results should be converted into fresh field/global feedback."""
-    build_ctx = TemplateBuildContext(options=TemplateBuildOptions(**_DEFAULT_SIM_SETTINGS))
+    build_ctx = TemplateBuildContext(
+        source=TemplateSourceContext(options=TemplateBuildOptions(**_DEFAULT_SIM_SETTINGS)),
+        feedback=TemplateFeedbackContext(),
+    )
     results = [
         FieldTestResult(
             field_id="cash_st",
@@ -54,20 +61,22 @@ def test_refresh_runtime_feedback_rebuilds_feedback_from_current_results() -> No
 def test_refresh_runtime_feedback_preserves_seed_feedback_and_only_adds_new_results() -> None:
     """Seeded feedback from a dedicated feedback file should not be overwritten at runtime."""
     build_ctx = TemplateBuildContext(
-        options=TemplateBuildOptions(**_DEFAULT_SIM_SETTINGS),
-        field_feedback={
-            "seed_field": {
-                "field_name": "seed_field",
-                "best_score": 0.8,
-                "best_expression": "rank(seed_field)",
-                "best_template_name": "seed_tpl",
-                "best_template_family": "seed_family",
-                "best_template_stage": "seed_stage",
-                "attempted_templates": 3,
-                "failed_check_counts": {"LOW_FITNESS": 2},
-            }
-        },
-        global_failed_check_counts={"LOW_FITNESS": 2},
+        source=TemplateSourceContext(options=TemplateBuildOptions(**_DEFAULT_SIM_SETTINGS)),
+        feedback=TemplateFeedbackContext(
+            field_feedback={
+                "seed_field": {
+                    "field_name": "seed_field",
+                    "best_score": 0.8,
+                    "best_expression": "rank(seed_field)",
+                    "best_template_name": "seed_tpl",
+                    "best_template_family": "seed_family",
+                    "best_template_stage": "seed_stage",
+                    "attempted_templates": 3,
+                    "failed_check_counts": {"LOW_FITNESS": 2},
+                }
+            },
+            global_failed_check_counts={"LOW_FITNESS": 2},
+        ),
     )
     build_ctx.feedback.feedback_result_count = 1
     results = [
@@ -106,7 +115,10 @@ def test_refresh_runtime_feedback_preserves_seed_feedback_and_only_adds_new_resu
 
 
 def test_refresh_runtime_feedback_invalidates_retry_field_for_queue_timeout() -> None:
-    build_ctx = TemplateBuildContext(options=TemplateBuildOptions(**_DEFAULT_SIM_SETTINGS))
+    build_ctx = TemplateBuildContext(
+        source=TemplateSourceContext(options=TemplateBuildOptions(**_DEFAULT_SIM_SETTINGS)),
+        feedback=TemplateFeedbackContext(),
+    )
     build_ctx.feedback.feedback_result_count = 0
     results = [
         FieldTestResult(
@@ -131,7 +143,10 @@ def test_refresh_runtime_feedback_invalidates_retry_field_for_queue_timeout() ->
 
 
 def test_refresh_runtime_feedback_invalidates_retry_field_for_worker_failure() -> None:
-    build_ctx = TemplateBuildContext(options=TemplateBuildOptions(**_DEFAULT_SIM_SETTINGS))
+    build_ctx = TemplateBuildContext(
+        source=TemplateSourceContext(options=TemplateBuildOptions(**_DEFAULT_SIM_SETTINGS)),
+        feedback=TemplateFeedbackContext(),
+    )
     build_ctx.feedback.feedback_result_count = 0
     results = [
         FieldTestResult(

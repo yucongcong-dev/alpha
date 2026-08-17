@@ -163,7 +163,6 @@ exclude = ["tests/"]
 [[tool.mypy.overrides]]
 module = [
     "alpha.core.simulation",
-    "alpha.core.scheduler",
     "alpha.generators.expression_builder",
 ]
 warn_return_any = true

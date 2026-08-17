@@ -13,7 +13,11 @@ from alpha.generators.templates.library_loader import load_template_library
 from alpha.generators.templates.library_store import ensure_dataset_template_library
 from alpha.models.domain_parsers import parse_template_field
 from alpha.models.runtime_options import TemplateBuildOptions
-from alpha.runtime.contexts import TemplateBuildContext
+from alpha.runtime.contexts import (
+    TemplateBuildContext,
+    TemplateFeedbackContext,
+    TemplateSourceContext,
+)
 
 
 def test_ensure_dataset_template_library_raises_when_missing(tmp_path) -> None:
@@ -106,21 +110,24 @@ def test_build_expression_candidates_respects_template_field_tags(tmp_path) -> N
     )
 
     build_ctx = TemplateBuildContext(
-        options=TemplateBuildOptions(
-            region="USA",
-            universe="TOP3000",
-            instrument_type="EQUITY",
-            delay=1,
-            decay=4,
-            neutralization="SUBINDUSTRY",
-            truncation=0.08,
-            pasteurization="ON",
-            unit_handling="VERIFY",
-            nan_handling="OFF",
-            language="FASTEXPR",
-            dataset_id="model16",
+        source=TemplateSourceContext(
+            options=TemplateBuildOptions(
+                region="USA",
+                universe="TOP3000",
+                instrument_type="EQUITY",
+                delay=1,
+                decay=4,
+                neutralization="SUBINDUSTRY",
+                truncation=0.08,
+                pasteurization="ON",
+                unit_handling="VERIFY",
+                nan_handling="OFF",
+                language="FASTEXPR",
+                dataset_id="model16",
+            ),
+            template_library=load_template_library(str(template_file), default_backfill_window=504),
         ),
-        template_library=load_template_library(str(template_file), default_backfill_window=504),
+        feedback=TemplateFeedbackContext(),
     )
     field = parse_template_field(
         {
@@ -169,22 +176,25 @@ def test_build_expression_candidates_skip_refine_only_templates_in_default_libra
     )
 
     build_ctx = TemplateBuildContext(
-        options=TemplateBuildOptions(
-            region="USA",
-            universe="TOP3000",
-            instrument_type="EQUITY",
-            delay=1,
-            decay=4,
-            neutralization="SUBINDUSTRY",
-            truncation=0.08,
-            pasteurization="ON",
-            unit_handling="VERIFY",
-            nan_handling="OFF",
-            language="FASTEXPR",
-            dataset_id="fundamental6",
+        source=TemplateSourceContext(
+            options=TemplateBuildOptions(
+                region="USA",
+                universe="TOP3000",
+                instrument_type="EQUITY",
+                delay=1,
+                decay=4,
+                neutralization="SUBINDUSTRY",
+                truncation=0.08,
+                pasteurization="ON",
+                unit_handling="VERIFY",
+                nan_handling="OFF",
+                language="FASTEXPR",
+                dataset_id="fundamental6",
+            ),
+            template_library_file=str(template_file),
+            template_library=load_template_library(str(template_file), default_backfill_window=504),
         ),
-        template_library_file=str(template_file),
-        template_library=load_template_library(str(template_file), default_backfill_window=504),
+        feedback=TemplateFeedbackContext(),
     )
     field = parse_template_field({"id": "cash_st", "type": "VECTOR"})
 
@@ -229,22 +239,25 @@ def test_build_expression_candidates_include_refine_only_templates_in_explicit_p
     )
 
     build_ctx = TemplateBuildContext(
-        options=TemplateBuildOptions(
-            region="USA",
-            universe="TOP3000",
-            instrument_type="EQUITY",
-            delay=1,
-            decay=4,
-            neutralization="SUBINDUSTRY",
-            truncation=0.08,
-            pasteurization="ON",
-            unit_handling="VERIFY",
-            nan_handling="OFF",
-            language="FASTEXPR",
-            dataset_id="fundamental6",
+        source=TemplateSourceContext(
+            options=TemplateBuildOptions(
+                region="USA",
+                universe="TOP3000",
+                instrument_type="EQUITY",
+                delay=1,
+                decay=4,
+                neutralization="SUBINDUSTRY",
+                truncation=0.08,
+                pasteurization="ON",
+                unit_handling="VERIFY",
+                nan_handling="OFF",
+                language="FASTEXPR",
+                dataset_id="fundamental6",
+            ),
+            template_library_file=str(template_file),
+            template_library=load_template_library(str(template_file), default_backfill_window=504),
         ),
-        template_library_file=str(template_file),
-        template_library=load_template_library(str(template_file), default_backfill_window=504),
+        feedback=TemplateFeedbackContext(),
     )
     field = parse_template_field({"id": "cash_st", "type": "VECTOR"})
 

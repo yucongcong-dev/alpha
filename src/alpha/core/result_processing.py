@@ -11,9 +11,13 @@ from collections.abc import Callable
 from copy import deepcopy
 from dataclasses import dataclass
 import logging
-from typing import Any, Protocol
+from typing import Any, Protocol, cast
 
 from ..analysis.result_identity import result_identity
+from ..analysis.results_persistence import (
+    IncrementalResultSnapshot,
+    ResultPersistenceContext,
+)
 from ..analysis.template_stats import update_template_stats_with_result
 from ..config._constants_strings import (
     STATUS_ERROR,
@@ -38,23 +42,12 @@ class IncrementalResultsWriter(Protocol):
 
     def __call__(
         self,
-        path: str,
-        dataset_id: str,
+        context: ResultPersistenceContext,
         new_results: list[FieldTestResult],
         *,
-        persisted_result_count: int,
-        tested: int,
-        unique_fields_tested: int,
-        submittable_count: int,
-        error_count: int,
-        queue_timeout_count: int,
-        settings_fingerprint: str,
-        template_library_fingerprint: str,
-        run_fingerprint: str = "",
-        run_config: dict[str, Any] | None = None,
+        snapshot: IncrementalResultSnapshot,
         template_registry_summary: list[dict[str, Any]] | None = None,
         template_stats: TemplateStats | None = None,
-        pending_check_count: int = 0,
     ) -> int: ...
 
 
@@ -65,18 +58,18 @@ class ResultProcessingServices:
     is_attempted_result: Callable[[FieldTestResult], bool]
     result_identity: Callable[[FieldTestResult], ResultIdentity]
     update_template_stats_with_result: Callable[[TemplateStats, FieldTestResult], TemplateStats]
-    dump_results_incremental: IncrementalResultsWriter
+    persist_results_incremental: IncrementalResultsWriter
 
 
 def build_result_processing_services() -> ResultProcessingServices:
     """Resolve current module/I/O dependencies so runtime overrides remain effective."""
-    from ..analysis.results_persistence import dump_results_incremental
+    from ..analysis.results_persistence import persist_results_incremental
 
     return ResultProcessingServices(
         is_attempted_result=is_attempted_result,
         result_identity=result_identity,
         update_template_stats_with_result=update_template_stats_with_result,
-        dump_results_incremental=dump_results_incremental,
+        persist_results_incremental=cast(IncrementalResultsWriter, persist_results_incremental),
     )
 
 
@@ -174,21 +167,26 @@ def persist_incremental_result(
     if existing_template_stats is not None:
         prospective_template_stats[result.template_name] = deepcopy(existing_template_stats)
     services.update_template_stats_with_result(prospective_template_stats, result)
-    persisted_result_count = services.dump_results_incremental(
-        result_write_options.output_path,
-        result_write_options.dataset_id,
-        [result],
-        persisted_result_count=ledger.persisted_result_count,
-        tested=len(ledger.results) + 1,
-        unique_fields_tested=len(metrics.unique_field_ids),
-        submittable_count=metrics.submittable_count,
-        error_count=metrics.error_count,
-        queue_timeout_count=metrics.queue_timeout_count,
-        pending_check_count=metrics.pending_check_count,
+    persistence_context = ResultPersistenceContext(
+        output_path=result_write_options.output_path,
+        dataset_id=result_write_options.dataset_id,
         settings_fingerprint=completion_ctx.settings_fingerprint,
         template_library_fingerprint=completion_ctx.template_library_fingerprint,
         run_fingerprint=completion_ctx.run_fingerprint,
-        run_config=completion_ctx.run_config,
+        run_config=dict(completion_ctx.run_config or {}),
+    )
+    persisted_result_count = services.persist_results_incremental(
+        persistence_context,
+        [result],
+        snapshot=IncrementalResultSnapshot(
+            persisted_result_count=ledger.persisted_result_count,
+            tested=len(ledger.results) + 1,
+            unique_fields_tested=len(metrics.unique_field_ids),
+            submittable_count=metrics.submittable_count,
+            error_count=metrics.error_count,
+            queue_timeout_count=metrics.queue_timeout_count,
+            pending_check_count=metrics.pending_check_count,
+        ),
         template_stats=prospective_template_stats,
     )
     return persisted_result_count, prospective_template_stats

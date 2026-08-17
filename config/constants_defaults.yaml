@@ -3,7 +3,9 @@
 # ============================================================================
 # 本文件维护基础运行常量默认值。
 # 质量/反馈与模板相关默认值分别维护在 quality_feedback.yaml 和 templates.yaml。
-# 运行时按 constants_defaults → 专用 defaults → settings.yaml 的优先级合并。
+# 本文件是 api/simulation/expression/sentinel 等基础段的唯一 canonical owner；
+# 质量反馈和模板段分别归属 quality_feedback.yaml / templates.yaml。
+# 运行时按各段 canonical default → settings.yaml 的优先级合并。
 # 修改此文件后保存，下次运行自动生效。
 # ============================================================================
 

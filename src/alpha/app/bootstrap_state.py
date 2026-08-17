@@ -2,7 +2,11 @@
 
 from __future__ import annotations
 
-from ..analysis.results_persistence import dump_results_incremental
+from ..analysis.results_persistence import (
+    IncrementalResultSnapshot,
+    ResultPersistenceContext,
+    persist_results_incremental,
+)
 from ..io.results_store import ensure_results_journal
 from ..models.runtime_protocols import RunConfig
 from ..runtime.contexts import HistoricalRunState
@@ -41,21 +45,26 @@ def build_execution_state(
         result_ledger.results,
     )
     metrics = result_ledger.metrics
-    result_ledger.persisted_result_count = dump_results_incremental(
-        output_file,
-        dataset_id,
-        [],
-        persisted_result_count=result_ledger.persisted_result_count,
-        tested=len(result_ledger.results),
-        unique_fields_tested=len(metrics.unique_field_ids),
-        submittable_count=metrics.submittable_count,
-        error_count=metrics.error_count,
-        queue_timeout_count=metrics.queue_timeout_count,
-        pending_check_count=metrics.pending_check_count,
+    persistence_context = ResultPersistenceContext(
+        output_path=output_file,
+        dataset_id=dataset_id,
         settings_fingerprint=settings_fingerprint,
         template_library_fingerprint=template_library_fingerprint,
         run_fingerprint=run_fingerprint,
         run_config=run_config,
+    )
+    result_ledger.persisted_result_count = persist_results_incremental(
+        persistence_context,
+        [],
+        snapshot=IncrementalResultSnapshot(
+            persisted_result_count=result_ledger.persisted_result_count,
+            tested=len(result_ledger.results),
+            unique_fields_tested=len(metrics.unique_field_ids),
+            submittable_count=metrics.submittable_count,
+            error_count=metrics.error_count,
+            queue_timeout_count=metrics.queue_timeout_count,
+            pending_check_count=metrics.pending_check_count,
+        ),
         template_stats=execution_state.template_stats,
     )
     return execution_state

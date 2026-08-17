@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from alpha.analysis.analysis_sync import ensure_analysis_synced
 from alpha.analysis.report_builder import build_results_summary_payload
-from alpha.analysis.results_persistence import dump_results
+from alpha.analysis.results_persistence import ResultPersistenceContext, persist_results
 from alpha.analysis.template_registry_rules import compile_template_registry_summary
 from alpha.analysis.template_stats import compile_template_stats
 from alpha.models.domain import FailedCheck, FieldTestResult
@@ -171,9 +171,13 @@ def test_ensure_analysis_synced_skips_invalid_main_summary_shape(tmp_path) -> No
 def test_ensure_analysis_synced_only_rebuilds_derived_sidecars(tmp_path) -> None:
     """Startup repair must not rewrite the authoritative journal or main summary."""
     output_path = tmp_path / "results.json"
-    dump_results(
-        str(output_path),
-        "fundamental6",
+    persist_results(
+        ResultPersistenceContext(
+            output_path=str(output_path),
+            dataset_id="fundamental6",
+            settings_fingerprint="settings",
+            template_library_fingerprint="templates",
+        ),
         [
             FieldTestResult(
                 field_id="field_derived",
@@ -185,8 +189,6 @@ def test_ensure_analysis_synced_only_rebuilds_derived_sidecars(tmp_path) -> None
                 expression="rank(field_derived)",
             )
         ],
-        settings_fingerprint="settings",
-        template_library_fingerprint="templates",
         include_analysis=False,
     )
     journal_path = tmp_path / "results_results.jsonl"

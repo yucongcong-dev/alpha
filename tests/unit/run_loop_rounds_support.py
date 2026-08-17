@@ -16,6 +16,8 @@ from alpha.runtime.contexts import (
     HistoricalRunState,
     SimulationExecutionResources,
     TemplateBuildContext,
+    TemplateFeedbackContext,
+    TemplateSourceContext,
 )
 from alpha.runtime.state import ExecutionState
 from tests.unit.simulation_config_support import build_simulation_stage_config
@@ -37,7 +39,10 @@ def build_round_context(
         template_library_fingerprint="tpl-fp",
         create_semaphore=MagicMock(),
     )
-    template_build_ctx = TemplateBuildContext(options=MagicMock())
+    template_build_ctx = TemplateBuildContext(
+        source=TemplateSourceContext(options=MagicMock()),
+        feedback=TemplateFeedbackContext(),
+    )
     completion_ctx = FutureCompletionContext(
         settings_fingerprint="settings-fp",
         template_library_fingerprint="tpl-fp",

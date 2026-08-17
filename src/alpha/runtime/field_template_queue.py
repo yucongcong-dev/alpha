@@ -58,8 +58,3 @@ class FieldTemplateQueue:
             self.entries.remove(entry)
         except ValueError:
             return
-
-    def consume_one(self) -> None:
-        """Advance past one successfully dispatched entry."""
-        if self.entries:
-            self.entries.popleft()

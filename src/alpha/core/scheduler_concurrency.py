@@ -6,6 +6,7 @@ from collections.abc import Callable
 import logging
 import time
 
+from ..api.timing import wait_seconds
 from ..models.runtime_options import SchedulerControlOptions
 from ..runtime.concurrency import RuntimeConcurrencyState
 from ..runtime.state import ExecutionState
@@ -21,7 +22,7 @@ logger = logging.getLogger(__name__)
 def maybe_restore_runtime_concurrency(
     state: RuntimeConcurrencyState,
     *,
-    log: logging.Logger = logger,
+    log: logging.Logger | None = None,
 ) -> None:
     """Restore configured concurrency after an expired congestion cooldown."""
     if should_restore_runtime_concurrency(
@@ -32,7 +33,7 @@ def maybe_restore_runtime_concurrency(
     ):
         state.runtime_max_workers = state.max_workers
         state.cooldown_until = 0.0
-        log.info(
+        (log or logger).info(
             "[cooldown] restored runtime concurrency to %d",
             state.runtime_max_workers,
         )
@@ -42,7 +43,7 @@ def apply_congestion_cooldown(
     options: SchedulerControlOptions,
     state: RuntimeConcurrencyState,
     *,
-    log: logging.Logger = logger,
+    log: logging.Logger | None = None,
 ) -> None:
     """Switch temporarily to single-worker mode after queue congestion."""
     state.runtime_max_workers = 1
@@ -50,7 +51,7 @@ def apply_congestion_cooldown(
         now=time.monotonic(),
         cooldown_seconds=options.queue_busy_cooldown_seconds,
     )
-    log.info(
+    (log or logger).info(
         "[cooldown] detected queue congestion, runtime concurrency -> 1 for %.0fs",
         options.queue_busy_cooldown_seconds,
     )
@@ -60,7 +61,7 @@ def throttle_before_submission(
     options: SchedulerControlOptions,
     execution_state: ExecutionState,
     *,
-    wait: Callable[[float, str], None],
+    wait: Callable[[float, str], None] | None = None,
 ) -> None:
     """Wait before the next submission when the configured interval requires it."""
     remaining = submission_throttle_delay(
@@ -69,4 +70,4 @@ def throttle_before_submission(
         now=time.monotonic(),
     )
     if remaining > 0:
-        wait(remaining, "before next template submission")
+        (wait or wait_seconds)(remaining, "before next template submission")

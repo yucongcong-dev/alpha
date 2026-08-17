@@ -15,21 +15,34 @@ from ..analysis.feedback_run_index import persist_feedback_run_index
 from ..analysis.result_identity import merge_latest_results_by_identity, merge_results_for_update
 from ..analysis.result_provenance import enrich_results_provenance
 from ..analysis.results_loader import load_existing_results
-from ..analysis.results_persistence import dump_results
+from ..analysis.results_persistence import ResultPersistenceContext, persist_results
 from ..config.application import ApplicationConfig
 from ..core.checkpoint_files import delete_pipeline_state
 from ..core.pending_check_refresh import (
     DEFAULT_PENDING_CHECK_REFRESH_LIMIT,
     DEFAULT_PENDING_CHECK_REFRESH_MAX_SECONDS,
-    refresh_pending_check_results,
+    PendingCheckRefreshOptions,
+    PendingCheckService,
 )
 from ..io.results_store import exclusive_results_transaction
+from ..models.domain import FieldTestResult
 from ..models.domain_serializers import serialize_field_test_result
 from ..models.result_predicates import needs_submission_check_refresh
 from ..models.runtime_options import ResultWriteOptions
 from ..runtime.state import InitializedRunContext
 
 logger = logging.getLogger(__name__)
+
+
+def _persist_result_view(
+    context: ResultPersistenceContext,
+    results: list[FieldTestResult],
+    *,
+    rebuild_journal: bool = True,
+) -> None:
+    """Bridge the run orchestrator to the context-first persistence boundary."""
+
+    persist_results(context, results, rebuild_journal=rebuild_journal)
 
 
 def finalize_run(
@@ -45,18 +58,29 @@ def finalize_run(
     state_file = paths.state_file
     result_ledger = execution_state.result_ledger
     results = result_ledger.results
+    persistence_context = ResultPersistenceContext(
+        output_path=output_path,
+        dataset_id=write_options.dataset_id,
+        settings_fingerprint=run_ctx.settings_fingerprint,
+        template_library_fingerprint=run_ctx.template_library_fingerprint,
+        run_fingerprint=run_ctx.run_fingerprint,
+        run_config=run_ctx.run_config,
+    )
     journal_rows_before = [serialize_field_test_result(result) for result in results]
     refreshable_before = sum(needs_submission_check_refresh(result) for result in results)
     if refreshable_before:
         original_results = list(results)
-        refreshed_results, resolved_count = refresh_pending_check_results(
+        refresh_result = PendingCheckService(
             run_ctx.client_factory,
-            original_results,
-            retries=args.execution.check_submission_retries,
-            refresh_limit=DEFAULT_PENDING_CHECK_REFRESH_LIMIT,
-            max_refresh_seconds=DEFAULT_PENDING_CHECK_REFRESH_MAX_SECONDS,
-            max_workers=run_ctx.runtime_state.max_workers,
-        )
+            PendingCheckRefreshOptions(
+                retries=args.execution.check_submission_retries,
+                refresh_limit=DEFAULT_PENDING_CHECK_REFRESH_LIMIT,
+                max_refresh_seconds=DEFAULT_PENDING_CHECK_REFRESH_MAX_SECONDS,
+                max_workers=run_ctx.runtime_state.max_workers,
+            ),
+        ).refresh(original_results)
+        refreshed_results = refresh_result.results
+        resolved_count = refresh_result.resolved_count
         attempted_count = sum(
             before.updated_at != after.updated_at
             for before, after in zip(original_results, refreshed_results, strict=True)
@@ -84,14 +108,9 @@ def finalize_run(
         metrics.submittable_count,
         metrics.error_count,
     )
-    dump_results(
-        output_path,
-        write_options.dataset_id,
+    _persist_result_view(
+        persistence_context,
         results,
-        settings_fingerprint=run_ctx.settings_fingerprint,
-        template_library_fingerprint=run_ctx.template_library_fingerprint,
-        run_fingerprint=run_ctx.run_fingerprint,
-        run_config=run_ctx.run_config,
         rebuild_journal=rebuild_run_journal,
     )
     if feedback_output_path and feedback_output_path != output_path:
@@ -104,15 +123,12 @@ def finalize_run(
                 feedback_results,
                 results,
             )
-            dump_results(
-                feedback_output_path,
-                write_options.dataset_id,
+            _persist_result_view(
+                persistence_context.for_output(
+                    feedback_output_path,
+                    metadata_scope="feedback",
+                ),
                 feedback_results,
-                settings_fingerprint=run_ctx.settings_fingerprint,
-                template_library_fingerprint=run_ctx.template_library_fingerprint,
-                run_fingerprint=run_ctx.run_fingerprint,
-                run_config=run_ctx.run_config,
-                metadata_scope="feedback",
             )
             persist_feedback_run_index(feedback_output_path)
         logger.info(

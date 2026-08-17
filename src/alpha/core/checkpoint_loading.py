@@ -43,9 +43,8 @@ def _parse_resume_scalars(
     state_file: str,
     runtime_state: RuntimeConcurrencyState,
     log: logging.Logger,
-) -> tuple[int, float, int, float] | None:
+) -> tuple[float, int, float] | None:
     try:
-        completed_index = int(payload.get("completed_field_index", 0))
         remaining = float(payload.get("remaining_cooldown_seconds", 0))
         runtime_max_workers = int(payload.get("runtime_max_workers", runtime_state.max_workers))
         last_submission = float(payload.get("last_submission_at", 0))
@@ -61,15 +60,7 @@ def _parse_resume_scalars(
         )
         remaining = 0.0
 
-    if completed_index < 0:
-        log.warning(
-            "[checkpoint] invalid negative completed index in %s: %d",
-            state_file,
-            completed_index,
-        )
-        return None
-
-    return completed_index, remaining, runtime_max_workers, last_submission
+    return remaining, runtime_max_workers, last_submission
 
 
 def _restore_resumable_simulations(
@@ -122,11 +113,11 @@ def _has_compatible_result_journal(
     execution_state: ExecutionState,
     state_file: str,
     log: logging.Logger,
-) -> bool:
+) -> None:
     """Reject a checkpoint that expects more durable rows than startup loaded."""
     persisted_result_count = _payloads.non_negative_int(payload.get("persisted_result_count"))
     if persisted_result_count is None:
-        return True
+        return
     local_result_count = execution_state.result_ledger.persisted_result_count
     if local_result_count < persisted_result_count:
         message = (
@@ -150,7 +141,6 @@ def _has_compatible_result_journal(
             local_result_count,
             persisted_result_count,
         )
-    return True
 
 
 def load_pipeline_state(
@@ -162,7 +152,7 @@ def load_pipeline_state(
     state_version: int,
     monotonic: Callable[[], float],
     log: logging.Logger = logger,
-) -> int:
+) -> None:
     """Load persisted checkpoint state into runtime and execution state objects."""
     payload = _load_checkpoint_payload(
         state_file,
@@ -170,11 +160,11 @@ def load_pipeline_state(
         log=log,
     )
     if payload is None:
-        return 0
+        return
     saved_identity = str(payload.get("run_fingerprint", "") or "")
     if saved_identity != identity.run_fingerprint:
         log.warning("[checkpoint] run identity mismatch in %s; starting fresh", state_file)
-        return 0
+        return
     _has_compatible_result_journal(
         payload,
         execution_state=execution_state,
@@ -189,8 +179,15 @@ def load_pipeline_state(
         log=log,
     )
     if parsed is None:
-        return 0
-    completed_index, remaining, runtime_max_workers, last_submission = parsed
+        return
+    remaining, runtime_max_workers, last_submission = parsed
+
+    if "completed_field_index" in payload:
+        log.info(
+            "[checkpoint] ignoring legacy field cursor in %s; "
+            "breadth-first scheduling replans from durable results",
+            state_file,
+        )
 
     # 平台拥塞是瞬时全局状态，不从 checkpoint 恢复字段级跳过信息。
     execution_state.reset_transient_queue_state()
@@ -200,9 +197,9 @@ def load_pipeline_state(
         execution_state=execution_state,
     )
     if retry_from_start:
-        completed_index = 0
         log.warning(
-            "[checkpoint] %d pending simulations had no Location; restarting field scheduling",
+            "[checkpoint] %d pending simulations had no Location; "
+            "they will be eligible for rescheduling",
             retry_from_start,
         )
 
@@ -220,17 +217,11 @@ def load_pipeline_state(
         )
 
     log.info(
-        "[checkpoint] resumed from state_file=%s completed=%d "
-        "results=%d attempted=%d resumable=%d already_completed=%d retry_from_start=%d "
-        "cooldown=%.1fs",
+        "[checkpoint] resumed from state_file=%s resumable=%d "
+        "already_completed=%d retry_from_start=%d cooldown=%.1fs",
         state_file,
-        completed_index,
-        payload.get("result_count", 0),
-        payload.get("attempted_keys_count", 0),
         len(execution_state.future_queue.resumable_simulations),
         already_completed,
         retry_from_start,
         remaining,
     )
-
-    return completed_index

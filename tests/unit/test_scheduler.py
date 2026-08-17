@@ -1,7 +1,7 @@
 """
 并发调度与拥塞控制模块单元测试（pytest 风格）
 
-测试 alpha.core.scheduler 中的核心函数，覆盖拥塞控制和并发管理边界条件。
+测试 scheduler_concurrency / scheduler_queue / scheduler_draining 中的核心函数，覆盖拥塞控制和并发管理边界条件。
 使用 conftest.py 中的共享 fixtures 消除重复 setup 和 MagicMock 风险。
 """
 
@@ -12,17 +12,17 @@ from concurrent.futures import Future
 import time
 from unittest.mock import patch
 
-from alpha.core.scheduler import (
+from alpha.core.scheduler_concurrency import (
     apply_congestion_cooldown,
-    drain_completed_futures,
     maybe_restore_runtime_concurrency,
-    register_queue_busy_template,
     throttle_before_submission,
 )
 from alpha.core.scheduler_decisions import (
     should_restore_runtime_concurrency,
     submission_throttle_delay,
 )
+from alpha.core.scheduler_draining import drain_completed_futures
+from alpha.core.scheduler_queue import register_queue_busy_template
 from alpha.models.runtime_options import ResultWriteOptions, SchedulerControlOptions
 from alpha.runtime.concurrency import RuntimeConcurrencyState
 from alpha.runtime.contexts import PendingFutureContext
@@ -110,7 +110,7 @@ class TestMaybeRestoreRuntimeConcurrency:
             runtime_max_workers=2,
             cooldown_until=max(0.001, time.monotonic() / 2),
         )
-        with patch("alpha.core.scheduler.logger") as mock_logger:
+        with patch("alpha.core.scheduler_concurrency.logger") as mock_logger:
             maybe_restore_runtime_concurrency(state)
             assert state.runtime_max_workers == 10
             assert any(
@@ -222,7 +222,7 @@ class TestThrottleBeforeSubmission:
         empty_execution_state: ExecutionState,
     ) -> None:
         scheduler_args.sleep_between_fields = 0
-        with patch("alpha.core.scheduler.wait_seconds") as mock_wait:
+        with patch("alpha.core.scheduler_concurrency.wait_seconds") as mock_wait:
             throttle_before_submission(_scheduler_options(scheduler_args), empty_execution_state)
             mock_wait.assert_not_called()
 
@@ -231,7 +231,7 @@ class TestThrottleBeforeSubmission:
         scheduler_args: MockArgs,
         empty_execution_state: ExecutionState,
     ) -> None:
-        with patch("alpha.core.scheduler.wait_seconds") as mock_wait:
+        with patch("alpha.core.scheduler_concurrency.wait_seconds") as mock_wait:
             throttle_before_submission(_scheduler_options(scheduler_args), empty_execution_state)
             mock_wait.assert_not_called()
 
@@ -240,7 +240,7 @@ class TestThrottleBeforeSubmission:
         scheduler_args: MockArgs,
         execution_state_after_submit: ExecutionState,
     ) -> None:
-        with patch("alpha.core.scheduler.wait_seconds") as mock_wait:
+        with patch("alpha.core.scheduler_concurrency.wait_seconds") as mock_wait:
             throttle_before_submission(
                 _scheduler_options(scheduler_args), execution_state_after_submit
             )
@@ -251,7 +251,7 @@ class TestThrottleBeforeSubmission:
         scheduler_args: MockArgs,
         execution_state_long_ago_submit: ExecutionState,
     ) -> None:
-        with patch("alpha.core.scheduler.wait_seconds") as mock_wait:
+        with patch("alpha.core.scheduler_concurrency.wait_seconds") as mock_wait:
             throttle_before_submission(
                 _scheduler_options(scheduler_args), execution_state_long_ago_submit
             )
@@ -263,7 +263,7 @@ class TestThrottleBeforeSubmission:
             last_submission_at=time.monotonic(),  # 刚刚提交
         )
         args = MockArgs(sleep_between_fields=0)
-        with patch("alpha.core.scheduler.wait_seconds") as mock_wait:
+        with patch("alpha.core.scheduler_concurrency.wait_seconds") as mock_wait:
             throttle_before_submission(_scheduler_options(args), state)
             mock_wait.assert_not_called()
 
@@ -342,7 +342,7 @@ def test_drain_completed_futures_prefers_explicit_result_write_options(tmp_path)
     )
 
     with patch(
-        "alpha.core.scheduler.apply_completed_result", return_value=({}, False, None)
+        "alpha.core.scheduler_draining.apply_completed_result", return_value=({}, False, None)
     ) as mock_apply:
         drain_completed_futures(
             completed_futures=[future],

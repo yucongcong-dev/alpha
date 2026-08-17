@@ -72,7 +72,7 @@ def test_normalize_args_paths_requires_dataset_id(monkeypatch, tmp_path) -> None
         normalize_args_paths(parse_args())
 
 
-def test_parse_clean_config_ignores_invalid_run_settings(monkeypatch, tmp_path) -> None:
+def test_parse_clean_config_rejects_run_settings(monkeypatch, tmp_path) -> None:
     clear_yaml_cache()
     monkeypatch.chdir(tmp_path)
     monkeypatch.setattr(
@@ -81,10 +81,8 @@ def test_parse_clean_config_ignores_invalid_run_settings(monkeypatch, tmp_path) 
         ["alpha", "clean", "--dry-run-clean", "--backfill-window", "0"],
     )
 
-    config = parse_application_config()
-
-    assert isinstance(config, CleanConfig)
-    assert config.dry_run_clean is True
+    with pytest.raises(SystemExit):
+        parse_application_config()
 
 
 def test_clean_does_not_load_explicit_run_config(monkeypatch, tmp_path) -> None:

@@ -300,7 +300,6 @@ class FieldSchedulingSession:
     def _persist_checkpoint(self) -> None:
         persist_replanning_checkpoint(
             state_file=self.context.dependencies.state_file,
-            field_id=self.field_id,
             execution_state=self.execution_state,
             runtime_state=self.runtime_state,
             identity=_checkpoint_identity(self.context),

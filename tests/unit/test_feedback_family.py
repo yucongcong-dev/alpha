@@ -11,7 +11,7 @@ from alpha.analysis.feedback_history import (
     rebuild_historical_run_state,
 )
 from alpha.analysis.results_loader import load_existing_results
-from alpha.analysis.results_persistence import dump_results
+from alpha.analysis.results_persistence import ResultPersistenceContext, persist_results
 from alpha.generators.variants import build_setting_variants
 from alpha.models.domain import FailedCheck, FieldTestResult
 from alpha.policy.expression import get_dataset_expression_policy, resolve_feedback_stage
@@ -111,12 +111,14 @@ def test_build_historical_run_state_uses_dataset_feedback_across_runs(tmp_path) 
         settings_fingerprint="settings-v1",
         failed_checks=[FailedCheck(name="LOW_SHARPE", value=0.2)],
     )
-    dump_results(
-        str(feedback_output),
-        "fundamental6",
+    persist_results(
+        ResultPersistenceContext(
+            output_path=str(feedback_output),
+            dataset_id="fundamental6",
+            settings_fingerprint="settings",
+            template_library_fingerprint="templates",
+        ),
         [historical],
-        settings_fingerprint="settings",
-        template_library_fingerprint="templates",
         include_analysis=False,
     )
 

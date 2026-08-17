@@ -41,18 +41,33 @@ def local_link_target(raw_target: str) -> str:
 
 
 def documented_cli_flags() -> set[str]:
-    """Return the CLI options exposed by the current parser help."""
+    """Return options exposed by the run and command-specific parser help."""
     env = dict(os.environ)
     env["PYTHONPATH"] = str(ROOT / "src")
-    completed = subprocess.run(
-        [sys.executable, "-m", "alpha", "--help"],
-        cwd=ROOT,
-        env=env,
-        check=True,
-        capture_output=True,
-        text=True,
+    flags: set[str] = set()
+    for command_args in ([], ["clean"], ["check-submissions"]):
+        completed = subprocess.run(
+            [sys.executable, "-m", "alpha", *command_args, "--help"],
+            cwd=ROOT,
+            env=env,
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+        flags.update(CLI_FLAG_PATTERN.findall(completed.stdout))
+    # Deprecated aliases are intentionally hidden from normal help but remain
+    # accepted during the migration window.  Include their parser metadata so
+    # documenting the migration does not look like an invalid option.
+    if str(ROOT / "src") not in sys.path:
+        sys.path.insert(0, str(ROOT / "src"))
+    from alpha.cli.parser_schema import build_legacy_options_parser
+
+    flags.update(
+        option
+        for action in build_legacy_options_parser()._actions
+        for option in action.option_strings
     )
-    return set(CLI_FLAG_PATTERN.findall(completed.stdout))
+    return flags
 
 
 def _concrete_repo_paths(line: str) -> set[str]:

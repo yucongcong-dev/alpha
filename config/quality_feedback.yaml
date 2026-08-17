@@ -3,6 +3,8 @@
 # ============================================================================
 # Thresholds used by local metric diagnostics, feedback-driven template generation,
 # analysis summaries, checkpointing, and smoke-test safety limits.
+# This file is the canonical owner of these top-level sections; do not mirror
+# them in constants_defaults.yaml or templates.yaml.
 
 quality:
   submit:

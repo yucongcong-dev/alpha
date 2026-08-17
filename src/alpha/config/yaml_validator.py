@@ -13,7 +13,12 @@ from .strategy_profile_schema import (
     validate_runtime_defaults,
 )
 from .types import YamlConfig
-from .yaml_sources import DEFAULT_CONFIG_NAMES, load_default_yamls, load_yaml_file
+from .yaml_sources import (
+    DEFAULT_CONFIG_NAMES,
+    load_default_yamls,
+    load_yaml_file,
+    validate_default_yaml_ownership,
+)
 
 _schema_lock = threading.RLock()
 _schema_keys_cache: dict[str, set[str]] | None = None
@@ -274,6 +279,7 @@ def validate_merged_config(config: Any, resolved_files: dict[str, str]) -> list[
     schema_keys = _get_schema_keys(resolved_files)
 
     warnings: list[str] = []
+    warnings.extend(validate_default_yaml_ownership(resolved_files))
     warnings.extend(_validate_top_level_keys(config, schema_keys))
     warnings.extend(_validate_global_section(config, resolved_files))
     warnings.extend(_validate_cross_consistency(config, resolved_files))

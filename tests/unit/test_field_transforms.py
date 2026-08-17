@@ -12,7 +12,11 @@ from alpha.generators.field_transforms import (
 from alpha.generators.templates.library_loader import load_template_library
 from alpha.models.runtime_options import TemplateBuildOptions
 from alpha.policy.expression import get_dataset_expression_policy
-from alpha.runtime.contexts import TemplateBuildContext
+from alpha.runtime.contexts import (
+    TemplateBuildContext,
+    TemplateFeedbackContext,
+    TemplateSourceContext,
+)
 
 _DEFAULT_SIM_SETTINGS = {
     "region": "USA",
@@ -66,11 +70,14 @@ def test_build_expression_candidates_uses_preprocessed_raw_field_view() -> None:
     policy = get_dataset_expression_policy("fundamental6")
     template_library = {"default": []}
     build_ctx = TemplateBuildContext(
-        options=TemplateBuildOptions(
-            **_DEFAULT_SIM_SETTINGS, dataset_id="fundamental6", similarity_penalty=0
+        source=TemplateSourceContext(
+            options=TemplateBuildOptions(
+                **_DEFAULT_SIM_SETTINGS, dataset_id="fundamental6", similarity_penalty=0
+            ),
+            all_fields=[{"id": "assets_curr", "type": "MATRIX"}],
+            template_library=template_library,
         ),
-        all_fields=[{"id": "assets_curr", "type": "MATRIX"}],
-        template_library=template_library,
+        feedback=TemplateFeedbackContext(),
     )
     candidates = build_expression_candidates(
         field={"id": "cash_st", "type": "MATRIX"},
@@ -98,11 +105,14 @@ def test_fundamental6_matrix_templates_use_preprocessed_field_view() -> None:
         "datasets/fundamental6/template.json", default_backfill_window=504
     )
     build_ctx = TemplateBuildContext(
-        options=TemplateBuildOptions(
-            **_DEFAULT_SIM_SETTINGS, dataset_id="fundamental6", similarity_penalty=0
+        source=TemplateSourceContext(
+            options=TemplateBuildOptions(
+                **_DEFAULT_SIM_SETTINGS, dataset_id="fundamental6", similarity_penalty=0
+            ),
+            all_fields=[{"id": "assets_curr", "type": "MATRIX"}],
+            template_library=template_library,
         ),
-        all_fields=[{"id": "assets_curr", "type": "MATRIX"}],
-        template_library=template_library,
+        feedback=TemplateFeedbackContext(),
     )
     candidates = build_expression_candidates(
         field={"id": "cash_st", "type": "MATRIX"},
@@ -125,11 +135,14 @@ def test_model16_templates_include_bucket_groups() -> None:
         "datasets/model16/template.json", default_backfill_window=504
     )
     build_ctx = TemplateBuildContext(
-        options=TemplateBuildOptions(
-            **_DEFAULT_SIM_SETTINGS, dataset_id="model16", similarity_penalty=0
+        source=TemplateSourceContext(
+            options=TemplateBuildOptions(
+                **_DEFAULT_SIM_SETTINGS, dataset_id="model16", similarity_penalty=0
+            ),
+            all_fields=[{"id": "quality_score", "type": "MATRIX"}],
+            template_library=template_library,
         ),
-        all_fields=[{"id": "quality_score", "type": "MATRIX"}],
-        template_library=template_library,
+        feedback=TemplateFeedbackContext(),
     )
     candidates = build_expression_candidates(
         field={"id": "value_score", "type": "MATRIX"},
@@ -150,11 +163,14 @@ def test_model51_templates_include_bucket_groups() -> None:
         "datasets/model51/template.json", default_backfill_window=504
     )
     build_ctx = TemplateBuildContext(
-        options=TemplateBuildOptions(
-            **_DEFAULT_SIM_SETTINGS, dataset_id="model51", similarity_penalty=0
+        source=TemplateSourceContext(
+            options=TemplateBuildOptions(
+                **_DEFAULT_SIM_SETTINGS, dataset_id="model51", similarity_penalty=0
+            ),
+            all_fields=[{"id": "market_beta", "type": "MATRIX"}],
+            template_library=template_library,
         ),
-        all_fields=[{"id": "market_beta", "type": "MATRIX"}],
-        template_library=template_library,
+        feedback=TemplateFeedbackContext(),
     )
     candidates = build_expression_candidates(
         field={"id": "risk_metric", "type": "MATRIX"},

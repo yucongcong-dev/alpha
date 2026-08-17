@@ -47,7 +47,7 @@ def _yaml_val(*keys: str, default: Any = None, cast: type | None = str) -> Any:
 
     查找顺序：
       1. global.<keys> — config/settings.yaml 中的用户覆盖（高优先级）
-      2. <keys> — config/constants_defaults.yaml 中的基础默认值
+      2. <keys> — 对应 canonical default YAML 文件中的基础默认值
       3. 代码内 default
 
     cast=None 表示不做类型转换，直接返回 YAML 原始值。
@@ -68,7 +68,7 @@ def _yaml_val(*keys: str, default: Any = None, cast: type | None = str) -> Any:
         _warn_once(
             key_path,
             "YAML 配置 key '%s' 未找到，使用代码默认值。"
-            "建议在 config/constants_defaults.yaml 中添加此项。",
+            "建议在对应的 config 默认 YAML 文件中添加此项。",
             key_path,
         )
         return default

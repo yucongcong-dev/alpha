@@ -10,7 +10,12 @@ import shutil
 import pytest
 
 from alpha.analysis.results_loader import load_existing_results
-from alpha.analysis.results_persistence import dump_results, dump_results_incremental
+from alpha.analysis.results_persistence import (
+    IncrementalResultSnapshot,
+    ResultPersistenceContext,
+    persist_results,
+    persist_results_incremental,
+)
 from alpha.io.results_store import (
     JOURNAL_CHECKSUM_FIELD,
     JOURNAL_SCHEMA_FIELD,
@@ -38,29 +43,33 @@ def _append_process_batch(journal_path: str, batch_index: int) -> None:
     _append_results_journal(journal_path, results)
 
 
-def test_dump_results_is_policy_side_effect_free(tmp_path) -> None:
+def test_persist_results_is_policy_side_effect_free(tmp_path) -> None:
     """The persistence layer must not trigger policy updates."""
-    dump_results(
-        str(tmp_path / "results.json"),
-        "fundamental6",
+    persist_results(
+        ResultPersistenceContext(
+            output_path=str(tmp_path / "results.json"),
+            dataset_id="fundamental6",
+            settings_fingerprint="settings",
+            template_library_fingerprint="templates",
+        ),
         [],
-        settings_fingerprint="settings",
-        template_library_fingerprint="templates",
     )
 
     assert (tmp_path / "results.json").exists()
 
 
-def test_dump_results_can_skip_analysis_sidecar_for_intermediate_flushes(tmp_path) -> None:
+def test_persist_results_can_skip_analysis_sidecar_for_intermediate_flushes(tmp_path) -> None:
     """Intermediate flushes should be able to persist raw results without full analysis rebuild."""
     output_path = tmp_path / "results.json"
 
-    dump_results(
-        str(output_path),
-        "fundamental6",
+    persist_results(
+        ResultPersistenceContext(
+            output_path=str(output_path),
+            dataset_id="fundamental6",
+            settings_fingerprint="settings",
+            template_library_fingerprint="templates",
+        ),
         [],
-        settings_fingerprint="settings",
-        template_library_fingerprint="templates",
         include_analysis=False,
     )
 
@@ -396,7 +405,7 @@ def test_concurrent_processes_share_the_journal_lock(tmp_path) -> None:
     assert len({row["field_id"] for row in rows}) == 20
 
 
-def test_dump_results_persists_metrics_settings_and_portable_journal_reference(tmp_path) -> None:
+def test_persist_results_persists_metrics_settings_and_portable_journal_reference(tmp_path) -> None:
     run_dir = tmp_path / "run-a"
     output_path = run_dir / "summary.json"
     result = FieldTestResult(
@@ -410,12 +419,14 @@ def test_dump_results_persists_metrics_settings_and_portable_journal_reference(t
         settings={"decay": 4, "neutralization": "SUBINDUSTRY"},
         metrics={"sharpe": 1.42, "fitness": 1.11, "turnover": 0.18},
     )
-    dump_results(
-        str(output_path),
-        "fundamental6",
+    persist_results(
+        ResultPersistenceContext(
+            output_path=str(output_path),
+            dataset_id="fundamental6",
+            settings_fingerprint="settings",
+            template_library_fingerprint="templates",
+        ),
         [result],
-        settings_fingerprint="settings",
-        template_library_fingerprint="templates",
         include_analysis=False,
     )
 
@@ -430,7 +441,7 @@ def test_dump_results_persists_metrics_settings_and_portable_journal_reference(t
     assert loaded[0].metrics["sharpe"] == 1.42
 
 
-def test_dump_results_can_reuse_an_unchanged_journal(tmp_path) -> None:
+def test_persist_results_can_reuse_an_unchanged_journal(tmp_path) -> None:
     output_path = tmp_path / "results.json"
     result = FieldTestResult(
         field_id="field_reuse",
@@ -445,12 +456,14 @@ def test_dump_results_can_reuse_an_unchanged_journal(tmp_path) -> None:
     journal_path = tmp_path / "results_results.jsonl"
     original_journal = journal_path.read_text(encoding="utf-8")
 
-    dump_results(
-        str(output_path),
-        "fundamental6",
+    persist_results(
+        ResultPersistenceContext(
+            output_path=str(output_path),
+            dataset_id="fundamental6",
+            settings_fingerprint="settings",
+            template_library_fingerprint="templates",
+        ),
         [result],
-        settings_fingerprint="settings",
-        template_library_fingerprint="templates",
         include_analysis=False,
         rebuild_journal=False,
     )
@@ -459,38 +472,42 @@ def test_dump_results_can_reuse_an_unchanged_journal(tmp_path) -> None:
     assert load_existing_results(str(output_path))[0].field_id == "field_reuse"
 
 
-def test_dump_results_marks_feedback_aggregate_metadata_scope(tmp_path) -> None:
+def test_persist_results_marks_feedback_aggregate_metadata_scope(tmp_path) -> None:
     output_path = tmp_path / "datasets" / "fundamental6" / "feedback" / "usa_d1" / "summary.json"
 
-    dump_results(
-        str(output_path),
-        "fundamental6",
+    persist_results(
+        ResultPersistenceContext(
+            output_path=str(output_path),
+            dataset_id="fundamental6",
+            settings_fingerprint="settings",
+            template_library_fingerprint="templates",
+        ),
         [],
-        settings_fingerprint="settings",
-        template_library_fingerprint="templates",
         include_analysis=False,
     )
 
     assert json.loads(output_path.read_text(encoding="utf-8"))["metadata_scope"] == "feedback"
 
 
-def test_dump_results_accepts_explicit_scope_for_custom_feedback_path(tmp_path) -> None:
+def test_persist_results_accepts_explicit_scope_for_custom_feedback_path(tmp_path) -> None:
     output_path = tmp_path / "custom-feedback.json"
 
-    dump_results(
-        str(output_path),
-        "fundamental6",
+    persist_results(
+        ResultPersistenceContext(
+            output_path=str(output_path),
+            dataset_id="fundamental6",
+            settings_fingerprint="settings",
+            template_library_fingerprint="templates",
+            metadata_scope="feedback",
+        ),
         [],
-        settings_fingerprint="settings",
-        template_library_fingerprint="templates",
-        metadata_scope="feedback",
         include_analysis=False,
     )
 
     assert json.loads(output_path.read_text(encoding="utf-8"))["metadata_scope"] == "feedback"
 
 
-def test_dump_results_reuses_template_stats_for_analysis(tmp_path, monkeypatch) -> None:
+def test_persist_results_reuses_template_stats_for_analysis(tmp_path, monkeypatch) -> None:
     output_path = tmp_path / "results.json"
     result = FieldTestResult(
         field_id="field_stats",
@@ -517,18 +534,20 @@ def test_dump_results_reuses_template_stats_for_analysis(tmp_path, monkeypatch) 
         ),
     )
 
-    dump_results(
-        str(output_path),
-        "fundamental6",
+    persist_results(
+        ResultPersistenceContext(
+            output_path=str(output_path),
+            dataset_id="fundamental6",
+            settings_fingerprint="settings",
+            template_library_fingerprint="templates",
+        ),
         [result],
-        settings_fingerprint="settings",
-        template_library_fingerprint="templates",
     )
 
     assert calls == 1
 
 
-def test_dump_results_incremental_writes_lightweight_summary(tmp_path) -> None:
+def test_persist_results_incremental_writes_lightweight_summary(tmp_path) -> None:
     """Incremental flushes should append new rows without embedding all results in summary."""
     output_path = tmp_path / "results.json"
     result = FieldTestResult(
@@ -543,20 +562,24 @@ def test_dump_results_incremental_writes_lightweight_summary(tmp_path) -> None:
         expression="rank(field_2)",
     )
 
-    persisted = dump_results_incremental(
-        str(output_path),
-        "fundamental6",
+    persisted = persist_results_incremental(
+        ResultPersistenceContext(
+            output_path=str(output_path),
+            dataset_id="fundamental6",
+            settings_fingerprint="settings",
+            template_library_fingerprint="templates",
+            run_fingerprint="run-fp",
+            run_config={"mode": "incremental"},
+        ),
         [result],
-        persisted_result_count=0,
-        tested=1,
-        unique_fields_tested=1,
-        submittable_count=1,
-        error_count=0,
-        queue_timeout_count=0,
-        settings_fingerprint="settings",
-        template_library_fingerprint="templates",
-        run_fingerprint="run-fp",
-        run_config={"mode": "incremental"},
+        snapshot=IncrementalResultSnapshot(
+            persisted_result_count=0,
+            tested=1,
+            unique_fields_tested=1,
+            submittable_count=1,
+            error_count=0,
+            queue_timeout_count=0,
+        ),
         template_registry_summary=[
             {
                 "template_name": "tpl",
@@ -576,7 +599,7 @@ def test_dump_results_incremental_writes_lightweight_summary(tmp_path) -> None:
     assert load_existing_results(str(output_path))[0].field_id == "field_2"
 
 
-def test_dump_results_incremental_can_flip_existing_summary_to_journal_mode(tmp_path) -> None:
+def test_persist_results_incremental_can_flip_existing_summary_to_journal_mode(tmp_path) -> None:
     """Bootstrapping a run should switch the main summary to journal mode before new results arrive."""
     output_path = tmp_path / "results.json"
     result = FieldTestResult(
@@ -589,27 +612,33 @@ def test_dump_results_incremental_can_flip_existing_summary_to_journal_mode(tmp_
         expression="rank(field_3)",
     )
 
-    dump_results(
-        str(output_path),
-        "fundamental6",
+    persist_results(
+        ResultPersistenceContext(
+            output_path=str(output_path),
+            dataset_id="fundamental6",
+            settings_fingerprint="settings",
+            template_library_fingerprint="templates",
+        ),
         [result],
-        settings_fingerprint="settings",
-        template_library_fingerprint="templates",
         include_analysis=False,
     )
     persisted = initialize_results_journal(str(output_path), [result])
-    persisted = dump_results_incremental(
-        str(output_path),
-        "fundamental6",
+    persisted = persist_results_incremental(
+        ResultPersistenceContext(
+            output_path=str(output_path),
+            dataset_id="fundamental6",
+            settings_fingerprint="settings",
+            template_library_fingerprint="templates",
+        ),
         [],
-        persisted_result_count=persisted,
-        tested=1,
-        unique_fields_tested=1,
-        submittable_count=0,
-        error_count=0,
-        queue_timeout_count=0,
-        settings_fingerprint="settings",
-        template_library_fingerprint="templates",
+        snapshot=IncrementalResultSnapshot(
+            persisted_result_count=persisted,
+            tested=1,
+            unique_fields_tested=1,
+            submittable_count=0,
+            error_count=0,
+            queue_timeout_count=0,
+        ),
     )
 
     payload = json.loads(output_path.read_text(encoding="utf-8"))

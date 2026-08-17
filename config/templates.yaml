@@ -3,6 +3,8 @@
 # ============================================================================
 # Template priorities, adaptive priority adjustments, ratio partner heuristics,
 # and built-in expression snippets.
+# This file is the canonical owner of templates/ratio/partner sections; do not
+# mirror them in constants_defaults.yaml or quality_feedback.yaml.
 
 templates:
   legacy_matrix:

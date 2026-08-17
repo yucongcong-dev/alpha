@@ -112,6 +112,18 @@ python -m alpha --dataset-id <dataset-id> --limit 1 --run-mode smoke
 候选信号，不代表它已经最优，也不会触发正式提交或自动停止。`PENDING` 结果以
 `submittable=null` 保存，不会被当作通过、失败反馈或 near-pass，但会在后续启动时重新查询终态。
 
+如果只想刷新已有结果，可使用独立的 `check-submissions` 命令：
+
+```bash
+# 只读取已有 Alpha 详情；不会发现字段、创建 simulation 或触发新的 Check Submission
+python -m alpha check-submissions --dataset-id fundamental6 \
+  --pending-check-max-seconds 900 --pending-check-workers 1
+```
+
+该命令按 `alpha_id` 去重，把 `PENDING` 与接口暂不可用分开处理，使用有界退避直到终态或时间预算耗尽。
+旧的 `--smoke-test`、`--full-run` 等布尔开关仍暂时兼容，但会提示改用 `--run-mode`；不同命令的帮助和
+参数边界是独立的，误把 run-only 参数传给 `clean` 或 `check-submissions` 会被拒绝。
+
 历史 `PENDING` 的刷新是有界保护，不保证一次运行取得所有终态：启动阶段和收尾阶段各自最多
 选择 20 条（按最早 `updated_at` / `created_at` 优先），各自最多等待 30 秒，并遵守
 `check_submission_retries`。它只重试传输失败或空响应；收到语义 `PENDING` 后，后续刷新改读

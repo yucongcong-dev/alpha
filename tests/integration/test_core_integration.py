@@ -17,7 +17,7 @@ import pytest
 
 from alpha.core.execution_filters import resolve_field_skip_reason
 from alpha.core.executor import should_skip_expression_by_history, should_skip_field
-from alpha.core.scheduler import (
+from alpha.core.scheduler_draining import (
     drain_completed_futures,
     handle_completed_future,
 )
@@ -35,6 +35,8 @@ from alpha.runtime.contexts import (
     FutureCompletionContext,
     PendingFutureContext,
     TemplateBuildContext,
+    TemplateFeedbackContext,
+    TemplateSourceContext,
 )
 from alpha.runtime.state import ExecutionState
 from alpha.utils.helpers import first_non_empty
@@ -126,7 +128,7 @@ class TestCongestionSignalPropagation:
         )
 
         with (
-            patch("alpha.analysis.results_persistence.dump_results_incremental"),
+            patch("alpha.analysis.results_persistence.persist_results_incremental"),
         ):
             _stats, congestion_detected, queue_busy_key = handle_completed_future(
                 future,
@@ -181,7 +183,7 @@ class TestCongestionSignalPropagation:
         )
 
         with (
-            patch("alpha.analysis.results_persistence.dump_results_incremental"),
+            patch("alpha.analysis.results_persistence.persist_results_incremental"),
         ):
             _stats, congestion_detected, _queue_busy_key = handle_completed_future(
                 future,
@@ -364,7 +366,7 @@ class TestDrainCompletedFuturesFlow:
         }
 
         with (
-            patch("alpha.analysis.results_persistence.dump_results_incremental"),
+            patch("alpha.analysis.results_persistence.persist_results_incremental"),
             patch("alpha.core.result_processing.is_attempted_result", return_value=True),
             patch(
                 "alpha.core.result_processing.result_identity",
@@ -419,7 +421,7 @@ class TestDrainCompletedFuturesFlow:
         }
 
         with (
-            patch("alpha.analysis.results_persistence.dump_results_incremental"),
+            patch("alpha.analysis.results_persistence.persist_results_incremental"),
             patch("alpha.core.result_processing.is_attempted_result", return_value=False),
         ):
             drain_completed_futures(
@@ -447,18 +449,18 @@ class TestDrainCompletedFuturesFlow:
         future.result.side_effect = RuntimeError("worker crash")
 
         empty_execution_state.future_queue.pending_futures = {
-            future: {
-                "field_id": "f1",
-                "field_type": "MATRIX",
-                "field_name": "test",
-                "template_name": "tpl",
-                "expression": "rank(test)",
-                "settings_fingerprint": "abc",
-            }
+            future: PendingFutureContext(
+                field_id="f1",
+                field_type="MATRIX",
+                field_name="test",
+                template_name="tpl",
+                expression="rank(test)",
+                settings_fingerprint="abc",
+            )
         }
 
         with (
-            patch("alpha.analysis.results_persistence.dump_results_incremental"),
+            patch("alpha.analysis.results_persistence.persist_results_incremental"),
             patch("alpha.core.result_processing.is_attempted_result", return_value=False),
         ):
             drain_completed_futures(
@@ -536,7 +538,10 @@ class TestContextConsistency:
 
     def test_template_build_context_defaults(self) -> None:
         """TemplateBuildContext 默认值正确。"""
-        ctx = TemplateBuildContext(options=TemplateBuildOptions(**_DEFAULT_SIM_SETTINGS))
+        ctx = TemplateBuildContext(
+            source=TemplateSourceContext(options=TemplateBuildOptions(**_DEFAULT_SIM_SETTINGS)),
+            feedback=TemplateFeedbackContext(),
+        )
         assert ctx.source.all_fields == []
         assert ctx.source.template_library == {}
         assert ctx.feedback.field_feedback == {}

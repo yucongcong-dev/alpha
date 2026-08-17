@@ -38,10 +38,6 @@ class FutureQueueState:
         """Return whether new work must no longer be scheduled."""
         return self.stop_scheduling.is_set()
 
-    def should_abort_workers(self) -> bool:
-        """Return whether running workers should abort their current stage."""
-        return self.abort_workers.is_set()
-
     def request_stop(self, *, abort_workers: bool) -> None:
         """Stop new scheduling and optionally abort already running workers."""
         self.stop_scheduling.set()

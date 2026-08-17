@@ -15,7 +15,13 @@ from alpha.models.domain import SettingsVariant, TemplateCandidate, TemplateFiel
 from alpha.models.io_types import RunFilters
 from alpha.models.runtime_options import TemplateBuildOptions
 from alpha.policy.expression import get_dataset_expression_policy
-from alpha.runtime.contexts import HistoricalRunState, PendingTemplateEntry, TemplateBuildContext
+from alpha.runtime.contexts import (
+    HistoricalRunState,
+    PendingTemplateEntry,
+    TemplateBuildContext,
+    TemplateFeedbackContext,
+    TemplateSourceContext,
+)
 from alpha.runtime.state import ExecutionState
 
 from .template_build_options_support import template_build_options
@@ -81,9 +87,12 @@ def test_unexplored_field_gets_one_seed(monkeypatch) -> None:
         metadata={"family": "rank", "activation_scope": "broad"},
     )
     context = TemplateBuildContext(
-        options=_options(),
-        all_fields=[field],
-        expression_policy=get_dataset_expression_policy("model16"),
+        source=TemplateSourceContext(
+            options=_options(),
+            all_fields=[field],
+            expression_policy=get_dataset_expression_policy("model16"),
+        ),
+        feedback=TemplateFeedbackContext(),
     )
     monkeypatch.setattr(
         "alpha.core.executor.resolve_field_template_candidates",
@@ -116,9 +125,12 @@ def test_unexplored_field_prefers_explicit_seed_over_high_priority_refine(monkey
         metadata={"role": "default_seed", "activation_scope": "broad"},
     )
     context = TemplateBuildContext(
-        options=_options(),
-        all_fields=[field],
-        expression_policy=get_dataset_expression_policy("model16"),
+        source=TemplateSourceContext(
+            options=_options(),
+            all_fields=[field],
+            expression_policy=get_dataset_expression_policy("model16"),
+        ),
+        feedback=TemplateFeedbackContext(),
     )
     monkeypatch.setattr(
         "alpha.core.executor.resolve_field_template_candidates",
@@ -150,8 +162,11 @@ def test_unexplored_fields_rotate_across_explicit_seed_templates(monkeypatch) ->
         for index in range(3)
     ]
     context = TemplateBuildContext(
-        options=_options(),
-        expression_policy=get_dataset_expression_policy("model16"),
+        source=TemplateSourceContext(
+            options=_options(),
+            expression_policy=get_dataset_expression_policy("model16"),
+        ),
+        feedback=TemplateFeedbackContext(),
     )
     monkeypatch.setattr(
         "alpha.core.executor.resolve_field_template_candidates",
@@ -186,8 +201,11 @@ def test_unexplored_fields_rotate_across_fallback_templates(monkeypatch) -> None
         for index in range(4)
     ]
     context = TemplateBuildContext(
-        options=_options(),
-        expression_policy=get_dataset_expression_policy("model16"),
+        source=TemplateSourceContext(
+            options=_options(),
+            expression_policy=get_dataset_expression_policy("model16"),
+        ),
+        feedback=TemplateFeedbackContext(),
     )
     monkeypatch.setattr(
         "alpha.core.executor.resolve_field_template_candidates",
@@ -220,10 +238,13 @@ def test_template_skip_reason_explains_name_filter() -> None:
         metadata={"family": "rank", "activation_scope": "broad"},
     )
     context = TemplateBuildContext(
-        options=_options(),
-        all_fields=[field],
-        include_templates={"other"},
-        expression_policy=get_dataset_expression_policy("model16"),
+        source=TemplateSourceContext(
+            options=_options(),
+            all_fields=[field],
+            include_templates={"other"},
+            expression_policy=get_dataset_expression_policy("model16"),
+        ),
+        feedback=TemplateFeedbackContext(),
     )
 
     assert (
@@ -249,9 +270,12 @@ def test_template_skip_reason_explains_blacklist_match(monkeypatch) -> None:
         metadata={"family": "rank", "stage": "first_order"},
     )
     context = TemplateBuildContext(
-        options=_options(),
-        all_fields=[field],
-        expression_policy=get_dataset_expression_policy("model16"),
+        source=TemplateSourceContext(
+            options=_options(),
+            all_fields=[field],
+            expression_policy=get_dataset_expression_policy("model16"),
+        ),
+        feedback=TemplateFeedbackContext(),
     )
     monkeypatch.setattr(
         "alpha.selection.feedback_filters._is_blacklisted_template",
@@ -285,10 +309,13 @@ def test_build_pending_templates_records_name_filter_reason(monkeypatch) -> None
         metadata={"family": "rank", "activation_scope": "broad"},
     )
     context = TemplateBuildContext(
-        options=_options(),
-        all_fields=[field],
-        include_templates={"other"},
-        expression_policy=get_dataset_expression_policy("model16"),
+        source=TemplateSourceContext(
+            options=_options(),
+            all_fields=[field],
+            include_templates={"other"},
+            expression_policy=get_dataset_expression_policy("model16"),
+        ),
+        feedback=TemplateFeedbackContext(),
     )
     monkeypatch.setattr(
         "alpha.core.executor.resolve_field_template_candidates",
@@ -323,9 +350,12 @@ def test_build_pending_templates_records_blacklist_reason(monkeypatch) -> None:
         metadata={"family": "rank", "stage": "first_order"},
     )
     context = TemplateBuildContext(
-        options=_options(),
-        all_fields=[field],
-        expression_policy=get_dataset_expression_policy("model16"),
+        source=TemplateSourceContext(
+            options=_options(),
+            all_fields=[field],
+            expression_policy=get_dataset_expression_policy("model16"),
+        ),
+        feedback=TemplateFeedbackContext(),
     )
     monkeypatch.setattr(
         "alpha.core.executor.resolve_field_template_candidates",
@@ -383,7 +413,10 @@ def test_print_dry_run_plan_counts_only_actionable_fields(caplog) -> None:
     with (
         patch(
             "alpha.core.executor.build_template_build_context",
-            return_value=TemplateBuildContext(options=options),
+            return_value=TemplateBuildContext(
+                source=TemplateSourceContext(options=options),
+                feedback=TemplateFeedbackContext(),
+            ),
         ),
         patch(
             "alpha.core.executor.should_skip_field",

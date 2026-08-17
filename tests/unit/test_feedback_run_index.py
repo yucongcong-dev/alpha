@@ -11,7 +11,7 @@ from alpha.analysis.feedback_run_index import (
     load_feedback_run_index,
     persist_feedback_run_index,
 )
-from alpha.analysis.results_persistence import dump_results
+from alpha.analysis.results_persistence import ResultPersistenceContext, persist_results
 from alpha.models.domain import FieldTestResult
 
 
@@ -41,13 +41,15 @@ def _run_config(run_name: str) -> dict[str, object]:
 
 
 def _dump(path, result: FieldTestResult, run_name: str) -> None:
-    dump_results(
-        str(path),
-        "model16",
+    persist_results(
+        ResultPersistenceContext(
+            output_path=str(path),
+            dataset_id="model16",
+            settings_fingerprint="settings",
+            template_library_fingerprint="templates",
+            run_config=_run_config(run_name),
+        ),
         [result],
-        settings_fingerprint="settings",
-        template_library_fingerprint="templates",
-        run_config=_run_config(run_name),
         include_analysis=False,
     )
 

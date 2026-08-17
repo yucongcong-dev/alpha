@@ -20,12 +20,12 @@ def test_build_result_processing_services_reads_current_dependencies(monkeypatch
         return 7
 
     monkeypatch.setattr(result_processing, "is_attempted_result", attempted)
-    monkeypatch.setattr(results_persistence, "dump_results_incremental", writer)
+    monkeypatch.setattr(results_persistence, "persist_results_incremental", writer)
 
     services = result_processing.build_result_processing_services()
 
     assert services.is_attempted_result is attempted
-    assert services.dump_results_incremental is writer
+    assert services.persist_results_incremental is writer
     assert services.result_identity is result_processing.result_identity
 
 
@@ -52,7 +52,7 @@ def test_failed_result_persistence_does_not_commit_runtime_state(monkeypatch, tm
     def fail_writer(*_args, **_kwargs):
         raise OSError("summary write failed")
 
-    monkeypatch.setattr(results_persistence, "dump_results_incremental", fail_writer)
+    monkeypatch.setattr(results_persistence, "persist_results_incremental", fail_writer)
     try:
         result_processing.apply_completed_result(
             result, completion_ctx=context, execution_state=state
@@ -67,7 +67,7 @@ def test_failed_result_persistence_does_not_commit_runtime_state(monkeypatch, tm
     assert state.template_stats == {}
     assert state.attempted_keys == set()
 
-    monkeypatch.setattr(results_persistence, "dump_results_incremental", lambda *_a, **_k: 1)
+    monkeypatch.setattr(results_persistence, "persist_results_incremental", lambda *_a, **_k: 1)
     result_processing.apply_completed_result(result, completion_ctx=context, execution_state=state)
     assert state.result_ledger.results == [result]
     assert state.result_ledger.persisted_result_count == 1
@@ -97,7 +97,7 @@ def test_worker_failure_is_persisted_without_marking_candidate_attempted(
         settings_fingerprint="settings",
         template_library_fingerprint="templates",
     )
-    monkeypatch.setattr(results_persistence, "dump_results_incremental", lambda *_a, **_k: 1)
+    monkeypatch.setattr(results_persistence, "persist_results_incremental", lambda *_a, **_k: 1)
 
     _template_stats, _congestion_detected, retry_key = result_processing.apply_completed_result(
         result,

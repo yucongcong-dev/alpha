@@ -6,7 +6,11 @@ from alpha.core.executor import build_pending_templates_for_field
 from alpha.generators.payload import build_settings_fingerprint_from_payload
 from alpha.models.domain import TemplateCandidate, TemplateField, TemplateLibraryItem
 from alpha.policy.expression import get_dataset_expression_policy
-from alpha.runtime.contexts import TemplateBuildContext
+from alpha.runtime.contexts import (
+    TemplateBuildContext,
+    TemplateFeedbackContext,
+    TemplateSourceContext,
+)
 
 from .template_build_options_support import template_build_options
 
@@ -66,10 +70,13 @@ def test_build_pending_templates_skips_attempted_expression_variant_across_templ
         language="FASTEXPR",
     )
     build_ctx = TemplateBuildContext(
-        options=options,
-        all_fields=[_field("cash_st")],
-        template_library={},
-        expression_policy=get_dataset_expression_policy("fundamental6"),
+        source=TemplateSourceContext(
+            options=options,
+            all_fields=[_field("cash_st")],
+            template_library={},
+            expression_policy=get_dataset_expression_policy("fundamental6"),
+        ),
+        feedback=TemplateFeedbackContext(),
     )
     attempted_keys = {
         (
@@ -135,10 +142,13 @@ def test_build_pending_templates_uses_template_metadata_without_registry_overrid
         language="FASTEXPR",
     )
     build_ctx = TemplateBuildContext(
-        options=options,
-        all_fields=[_field("cash_st", metadata={"runtime_field_tags": ["high_coverage"]})],
-        template_library={},
-        expression_policy=get_dataset_expression_policy("fundamental6"),
+        source=TemplateSourceContext(
+            options=options,
+            all_fields=[_field("cash_st", metadata={"runtime_field_tags": ["high_coverage"]})],
+            template_library={},
+            expression_policy=get_dataset_expression_policy("fundamental6"),
+        ),
+        feedback=TemplateFeedbackContext(),
     )
 
     pending, disabled, total = build_pending_templates_for_field(
@@ -206,10 +216,13 @@ def test_event_field_exploration_uses_one_seed_template(monkeypatch) -> None:
         language="FASTEXPR",
     )
     build_ctx = TemplateBuildContext(
-        options=options,
-        all_fields=[_field("fnd6_cptnewqeventv110_apq")],
-        template_library={},
-        expression_policy=get_dataset_expression_policy("fundamental6"),
+        source=TemplateSourceContext(
+            options=options,
+            all_fields=[_field("fnd6_cptnewqeventv110_apq")],
+            template_library={},
+            expression_policy=get_dataset_expression_policy("fundamental6"),
+        ),
+        feedback=TemplateFeedbackContext(),
     )
 
     pending, _disabled, total = build_pending_templates_for_field(
@@ -262,22 +275,26 @@ def test_build_pending_templates_does_not_hard_demote_from_global_stats(monkeypa
         language="FASTEXPR",
     )
     build_ctx = TemplateBuildContext(
-        options=options,
-        all_fields=[_field("cash_st")],
-        field_feedback={"cash_st": {"attempted_templates": 1, "best_score": -999.0}},
-        template_library={
-            "default": [
-                TemplateLibraryItem(
-                    name="weak_template",
-                    expression="rank({field})",
-                    priority=1000,
-                    family="mean_spread",
-                    stage="first_order",
-                    metadata={"role": "default_seed", "activation_scope": "broad"},
-                )
-            ]
-        },
-        expression_policy=get_dataset_expression_policy("fundamental6"),
+        source=TemplateSourceContext(
+            options=options,
+            all_fields=[_field("cash_st")],
+            template_library={
+                "default": [
+                    TemplateLibraryItem(
+                        name="weak_template",
+                        expression="rank({field})",
+                        priority=1000,
+                        family="mean_spread",
+                        stage="first_order",
+                        metadata={"role": "default_seed", "activation_scope": "broad"},
+                    )
+                ]
+            },
+            expression_policy=get_dataset_expression_policy("fundamental6"),
+        ),
+        feedback=TemplateFeedbackContext(
+            field_feedback={"cash_st": {"attempted_templates": 1, "best_score": -999.0}}
+        ),
     )
 
     pending, disabled, total = build_pending_templates_for_field(

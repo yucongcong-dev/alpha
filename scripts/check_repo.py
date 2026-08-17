@@ -445,7 +445,7 @@ def config_binding_check(root: Path) -> list[str]:
 
 
 def config_consistency_check(root: Path) -> list[str]:
-    """Validate that settings.yaml global.* mirrors overlapping flat defaults.
+    """Validate mirrored overrides and unique canonical default-section ownership.
 
     Import-time constants and runtime values resolve the same logical keys
     through different YAML layers (the global.* override wins over the flat
@@ -466,19 +466,19 @@ def config_consistency_check(root: Path) -> list[str]:
                 out[full_key] = value
         return out
 
+    settings_leaves: dict[str, object] = {}
     settings_path = root / "config" / "settings.yaml"
-    if not settings_path.is_file():
-        return []
-    try:
-        settings = yaml.safe_load(settings_path.read_text(encoding="utf-8")) or {}
-    except Exception as exc:
-        return [f"[check] failed to parse settings.yaml: {exc}"]
-    global_section = settings.get("global")
-    if not isinstance(global_section, dict):
-        return []
-    settings_leaves = _flatten(global_section)
+    if settings_path.is_file():
+        try:
+            settings = yaml.safe_load(settings_path.read_text(encoding="utf-8")) or {}
+        except Exception as exc:
+            return [f"[check] failed to parse settings.yaml: {exc}"]
+        global_section = settings.get("global")
+        if isinstance(global_section, dict):
+            settings_leaves = _flatten(global_section)
 
     defaults_leaves: dict[str, object] = {}
+    default_section_owners: dict[str, list[str]] = {}
     for name in ("constants_defaults.yaml", "quality_feedback.yaml", "templates.yaml"):
         config_file = root / "config" / name
         if not config_file.is_file():
@@ -488,9 +488,17 @@ def config_consistency_check(root: Path) -> list[str]:
         except Exception:
             continue
         if isinstance(data, dict):
+            for section in data:
+                default_section_owners.setdefault(str(section), []).append(name)
             defaults_leaves.update(_flatten(data))
 
     errors: list[str] = []
+    errors.extend(
+        f"[check] default YAML section '{section}' is defined by "
+        f"{', '.join(owners)}; keep one canonical owner to avoid order-dependent overrides"
+        for section, owners in sorted(default_section_owners.items())
+        if len(owners) > 1
+    )
     for key in sorted(settings_leaves.keys() & defaults_leaves.keys()):
         settings_value = settings_leaves[key]
         defaults_value = defaults_leaves[key]

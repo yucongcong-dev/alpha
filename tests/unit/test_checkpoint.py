@@ -46,21 +46,21 @@ def _build_execution_state() -> ExecutionState:
     return ExecutionState.create()
 
 
-def test_load_pipeline_state_ignores_invalid_completed_index(tmp_path) -> None:
-    """Invalid numeric fields in state payload should fall back to fresh start."""
+def test_load_pipeline_state_ignores_legacy_invalid_completed_index(tmp_path, caplog) -> None:
+    """Legacy cursor metadata must not prevent recovery."""
+    caplog.set_level("INFO")
     state_file = tmp_path / "state.json"
     state_file.write_text(
         _checkpoint_json({"completed_field_index": "oops"}),
         encoding="utf-8",
     )
 
-    resumed = load_pipeline_state(
+    load_pipeline_state(
         str(state_file),
         runtime_state=RuntimeConcurrencyState(max_workers=2, runtime_max_workers=2),
         execution_state=_build_execution_state(),
     )
-
-    assert resumed == 0
+    assert "ignoring legacy field cursor" in caplog.text
 
 
 def test_load_pipeline_state_ignores_invalid_cooldown_shape(tmp_path) -> None:
@@ -76,13 +76,11 @@ def test_load_pipeline_state_ignores_invalid_cooldown_shape(tmp_path) -> None:
         encoding="utf-8",
     )
 
-    resumed = load_pipeline_state(
+    load_pipeline_state(
         str(state_file),
         runtime_state=RuntimeConcurrencyState(max_workers=2, runtime_max_workers=2),
         execution_state=_build_execution_state(),
     )
-
-    assert resumed == 0
 
 
 def test_load_pipeline_state_preserves_result_derived_stats_with_zero_cursor(tmp_path) -> None:
@@ -118,13 +116,12 @@ def test_load_pipeline_state_preserves_result_derived_stats_with_zero_cursor(tmp
     )
     runtime_state = RuntimeConcurrencyState(max_workers=4, runtime_max_workers=4)
 
-    resumed = load_pipeline_state(
+    load_pipeline_state(
         str(state_file),
         runtime_state=runtime_state,
         execution_state=execution_state,
     )
 
-    assert resumed == 0
     assert execution_state.queue_retry_state.retry_counts == {}
     assert execution_state.template_stats == {"current": {"attempted": 4, "submittable": 1}}
     assert execution_state.attempted_keys == set()
@@ -169,13 +166,12 @@ def test_load_pipeline_state_ignores_legacy_template_stats(tmp_path) -> None:
     )
     runtime_state = RuntimeConcurrencyState(max_workers=4, runtime_max_workers=4)
 
-    resumed = load_pipeline_state(
+    load_pipeline_state(
         str(state_file),
         runtime_state=runtime_state,
         execution_state=execution_state,
     )
 
-    assert resumed == 0
     assert execution_state.queue_retry_state.retry_counts == {}
     assert execution_state.template_stats == {"current": {"attempted": 5, "simulated": 4}}
     assert runtime_state.runtime_max_workers == 1
@@ -254,13 +250,12 @@ def test_load_pipeline_state_retries_legacy_pending_entries_without_location(tmp
     )
     execution_state = _build_execution_state()
 
-    resumed = load_pipeline_state(
+    load_pipeline_state(
         str(state_file),
         runtime_state=RuntimeConcurrencyState(max_workers=2, runtime_max_workers=2),
         execution_state=execution_state,
     )
 
-    assert resumed == 0
     assert execution_state.attempted_keys == set()
     assert execution_state.future_queue.resumable_simulations == []
 
@@ -283,15 +278,17 @@ def test_save_pipeline_state_persists_remote_simulation_location(tmp_path) -> No
 
     saved = save_pipeline_state(
         str(state_file),
-        completed_field_index=1,
         execution_state=execution_state,
         runtime_state=RuntimeConcurrencyState(max_workers=2, runtime_max_workers=2),
-        field_id="f1",
     )
 
     payload = json.loads(state_file.read_text(encoding="utf-8"))
     assert saved is True
     assert "template_stats" not in payload
+    assert "completed_field_index" not in payload
+    assert "last_field_id" not in payload
+    assert "result_count" not in payload
+    assert "attempted_keys_count" not in payload
     assert payload["persisted_result_count"] == 0
     assert payload["pending_simulations"][0]["simulation_location"] == "/simulations/sim-1"
 
@@ -320,13 +317,12 @@ def test_load_pipeline_state_uses_local_journal_ahead_of_checkpoint(tmp_path, ca
     execution_state = _build_execution_state()
     execution_state.result_ledger.persisted_result_count = 2
 
-    resumed = load_pipeline_state(
+    load_pipeline_state(
         str(state_file),
         runtime_state=RuntimeConcurrencyState(max_workers=2, runtime_max_workers=2),
         execution_state=execution_state,
     )
 
-    assert resumed == 1
     assert len(execution_state.future_queue.resumable_simulations) == 1
     assert "result journal is ahead of checkpoint" in caplog.text
 
@@ -388,13 +384,12 @@ def test_load_pipeline_state_skips_resumable_simulation_already_in_results(tmp_p
     execution_state = _build_execution_state()
     execution_state.attempted_keys.add(("f1", "base", "rank(f1)", "settings-v1"))
 
-    resumed = load_pipeline_state(
+    load_pipeline_state(
         str(state_file),
         runtime_state=RuntimeConcurrencyState(max_workers=2, runtime_max_workers=2),
         execution_state=execution_state,
     )
 
-    assert resumed == 1
     assert execution_state.future_queue.resumable_simulations == []
 
 
@@ -419,14 +414,13 @@ def test_load_pipeline_state_rejects_different_run_identity(tmp_path, caplog) ->
     )
     execution_state = _build_execution_state()
 
-    resumed = _load_pipeline_state(
+    _load_pipeline_state(
         str(state_file),
         runtime_state=RuntimeConcurrencyState(max_workers=2, runtime_max_workers=2),
         execution_state=execution_state,
         identity=CheckpointIdentity("run-other"),
     )
 
-    assert resumed == 0
     assert execution_state.future_queue.resumable_simulations == []
     assert "run identity mismatch" in caplog.text
 
@@ -442,50 +436,38 @@ def test_non_negative_int_rejects_untrusted_values() -> None:
 def test_load_pipeline_state_handles_missing_invalid_and_version_mismatch(tmp_path) -> None:
     runtime_state = RuntimeConcurrencyState(max_workers=2, runtime_max_workers=2)
 
-    assert (
-        load_pipeline_state(
-            "",
-            runtime_state=runtime_state,
-            execution_state=_build_execution_state(),
-        )
-        == 0
+    load_pipeline_state(
+        "",
+        runtime_state=runtime_state,
+        execution_state=_build_execution_state(),
     )
     invalid_json = tmp_path / "invalid.json"
     invalid_json.write_text("{", encoding="utf-8")
-    assert (
-        load_pipeline_state(
-            str(invalid_json),
-            runtime_state=runtime_state,
-            execution_state=_build_execution_state(),
-        )
-        == 0
+    load_pipeline_state(
+        str(invalid_json),
+        runtime_state=runtime_state,
+        execution_state=_build_execution_state(),
     )
     wrong_version = tmp_path / "wrong-version.json"
     wrong_version.write_text(json.dumps({"version": 99}), encoding="utf-8")
-    assert (
-        load_pipeline_state(
-            str(wrong_version),
-            runtime_state=runtime_state,
-            execution_state=_build_execution_state(),
-        )
-        == 0
+    load_pipeline_state(
+        str(wrong_version),
+        runtime_state=runtime_state,
+        execution_state=_build_execution_state(),
     )
 
 
-def test_load_pipeline_state_rejects_negative_cursor_and_restores_idle_runtime(tmp_path) -> None:
+def test_load_pipeline_state_ignores_legacy_cursor_and_restores_idle_runtime(tmp_path) -> None:
     negative = tmp_path / "negative.json"
     negative.write_text(
         _checkpoint_json({"completed_field_index": -1}),
         encoding="utf-8",
     )
     runtime_state = RuntimeConcurrencyState(max_workers=3, runtime_max_workers=1)
-    assert (
-        load_pipeline_state(
-            str(negative),
-            runtime_state=runtime_state,
-            execution_state=_build_execution_state(),
-        )
-        == 0
+    load_pipeline_state(
+        str(negative),
+        runtime_state=runtime_state,
+        execution_state=_build_execution_state(),
     )
 
     idle = tmp_path / "idle.json"
@@ -502,13 +484,12 @@ def test_load_pipeline_state_rejects_negative_cursor_and_restores_idle_runtime(t
     )
     execution_state = _build_execution_state()
     with patch("alpha.core.checkpoint.time.monotonic", return_value=100.0):
-        resumed = load_pipeline_state(
+        load_pipeline_state(
             str(idle),
             runtime_state=runtime_state,
             execution_state=execution_state,
         )
 
-    assert resumed == 2
     assert runtime_state.runtime_max_workers == 3
     assert runtime_state.cooldown_until == 0
     assert execution_state.last_submission_at >= 0
@@ -562,7 +543,6 @@ def test_save_pipeline_state_handles_empty_path_and_persists_cooldown(tmp_path) 
 
     assert not save_pipeline_state(
         "",
-        completed_field_index=0,
         execution_state=execution_state,
         runtime_state=runtime_state,
     )
@@ -570,10 +550,8 @@ def test_save_pipeline_state_handles_empty_path_and_persists_cooldown(tmp_path) 
     with patch("alpha.core.checkpoint.time.monotonic", return_value=100.0):
         assert save_pipeline_state(
             str(state_file),
-            completed_field_index=1,
             execution_state=execution_state,
             runtime_state=runtime_state,
-            field_id="f1",
         )
 
     payload = json.loads(state_file.read_text(encoding="utf-8"))
@@ -608,11 +586,12 @@ def test_interrupt_report_and_delete_pipeline_state(tmp_path) -> None:
         execution_state=execution_state,
         runtime_state=runtime_state,
         field_id="f1",
-        remaining_fields=3,
         reason="KeyboardInterrupt",
     )
     payload = json.loads(report.read_text(encoding="utf-8"))
     assert payload["reason"] == "KeyboardInterrupt"
+    assert payload["field_id"] == "f1"
+    assert "remaining_fields" not in payload
     assert payload["pending_count"] == 1
     assert payload["pending_summary"][0]["simulation_id"] == "sim-1"
 

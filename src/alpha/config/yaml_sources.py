@@ -10,12 +10,15 @@ from .types import YamlConfig
 
 PROJECT_ROOT = DEFAULT_WORKSPACE.config_dir.parent
 
-DEFAULT_CONFIG_NAMES: set[str] = {
+DEFAULT_CONFIG_FILE_NAMES: tuple[str, ...] = (
     "constants_defaults",
     "quality_feedback_defaults",
     "template_defaults",
-}
-"""Logical names for code-level default YAML files."""
+)
+"""Logical names for code-level default YAML files, in canonical order."""
+
+DEFAULT_CONFIG_NAMES: frozenset[str] = frozenset(DEFAULT_CONFIG_FILE_NAMES)
+"""Set form used by schema validation when selecting default sources."""
 
 YAML_FILES: list[tuple[str, list[str]]] = [
     ("constants_defaults", ["config/constants_defaults.yaml"]),
@@ -88,6 +91,41 @@ def load_yaml_file(path: str) -> YamlConfig:
         pass
 
     return {}
+
+
+def default_yaml_section_owners(
+    resolved_files: dict[str, str],
+) -> dict[str, tuple[str, ...]]:
+    """Return the canonical owner(s) for each top-level default section.
+
+    The three code-level default files are deliberately split by
+    responsibility.  A top-level section appearing in more than one of them
+    would make ``deep_merge`` silently choose whichever file happens to be
+    loaded later, so ownership is kept explicit and auditable.
+    """
+    owners: dict[str, list[str]] = {}
+    for name in DEFAULT_CONFIG_FILE_NAMES:
+        path = resolved_files.get(name)
+        if not path:
+            continue
+        data = load_yaml_file(path)
+        for section in data:
+            owners.setdefault(str(section), []).append(name)
+    return {section: tuple(names) for section, names in owners.items()}
+
+
+def validate_default_yaml_ownership(resolved_files: dict[str, str]) -> list[str]:
+    """Report default sections that have more than one canonical source."""
+    conflicts = [
+        (section, names)
+        for section, names in default_yaml_section_owners(resolved_files).items()
+        if len(names) > 1
+    ]
+    return [
+        f"默认 YAML section '{section}' 同时定义在 {', '.join(names)}；"
+        "请保留一个 canonical owner，避免按文件顺序静默覆盖。"
+        for section, names in sorted(conflicts)
+    ]
 
 
 def validate_explicit_yaml_file(path: str) -> str:

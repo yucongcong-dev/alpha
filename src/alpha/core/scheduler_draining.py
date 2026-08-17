@@ -16,7 +16,8 @@ from ..runtime.queue_retry import QueueRetryKey
 from ..runtime.state import ExecutionState
 from . import scheduler_concurrency as _concurrency
 from . import scheduler_queue as _queue
-from .scheduler_completion import build_completion_context
+from .result_processing import apply_completed_result
+from .scheduler_completion import build_completion_context, resolve_completed_future_result
 
 logger = logging.getLogger(__name__)
 
@@ -41,6 +42,34 @@ class CompletedFutureHandler(Protocol):
     ) -> DrainResult: ...
 
 
+def handle_completed_future(
+    future: Future[FieldTestResult],
+    *,
+    completion_ctx: FutureCompletionContext,
+    execution_state: ExecutionState,
+) -> DrainResult:
+    """Persist one completed worker future and return scheduler signals.
+
+    This is the canonical completion handler used by the draining helpers.
+    Keeping it beside the batch drain logic avoids a second forwarding entry
+    point in ``core.scheduler_draining`` and makes the callback dependency explicit for
+    tests or alternative persistence implementations.
+    """
+    context = execution_state.future_queue.pending_futures[future]
+    result = resolve_completed_future_result(
+        future,
+        context=context,
+        template_library_fingerprint=completion_ctx.template_library_fingerprint,
+    )
+    template_stats, congestion_detected, queue_busy_key = apply_completed_result(
+        result,
+        completion_ctx=completion_ctx,
+        execution_state=execution_state,
+    )
+    execution_state.future_queue.pop_completed(future)
+    return DrainResult(template_stats, congestion_detected, queue_busy_key)
+
+
 def drain_completed_futures(
     *,
     completed_futures: Sequence[Future[FieldTestResult]],
@@ -51,7 +80,7 @@ def drain_completed_futures(
     template_library_fingerprint: str,
     run_config: RunConfig | None,
     runtime_state: RuntimeConcurrencyState,
-    handle_completed: CompletedFutureHandler,
+    handle_completed: CompletedFutureHandler = handle_completed_future,
     log: logging.Logger = logger,
 ) -> TemplateStats:
     """Build completion context and consume completed worker futures."""
@@ -79,7 +108,7 @@ def drain_completed_futures_with_context(
     scheduler_options: SchedulerControlOptions,
     completion_ctx: FutureCompletionContext,
     runtime_state: RuntimeConcurrencyState,
-    handle_completed: CompletedFutureHandler,
+    handle_completed: CompletedFutureHandler = handle_completed_future,
     log: logging.Logger = logger,
 ) -> TemplateStats:
     """Consume completed futures using a prebuilt immutable completion context."""

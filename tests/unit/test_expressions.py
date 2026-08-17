@@ -26,7 +26,11 @@ from alpha.generators.templates.wrappers import (
 from alpha.models.domain import TemplateLibraryItem
 from alpha.models.runtime_options import TemplateBuildOptions
 from alpha.policy.expression import get_dataset_expression_policy
-from alpha.runtime.contexts import TemplateBuildContext
+from alpha.runtime.contexts import (
+    TemplateBuildContext,
+    TemplateFeedbackContext,
+    TemplateSourceContext,
+)
 
 _DEFAULT_SIM_SETTINGS = {
     "region": "USA",
@@ -138,9 +142,12 @@ def test_build_expression_candidates_preserve_generated_metadata() -> None:
     template_library = {"default": []}
 
     build_ctx = TemplateBuildContext(
-        options=TemplateBuildOptions(**_DEFAULT_SIM_SETTINGS, similarity_penalty=0),
-        all_fields=[field],
-        template_library=template_library,
+        source=TemplateSourceContext(
+            options=TemplateBuildOptions(**_DEFAULT_SIM_SETTINGS, similarity_penalty=0),
+            all_fields=[field],
+            template_library=template_library,
+        ),
+        feedback=TemplateFeedbackContext(),
     )
     candidates = build_expression_candidates(
         field,
@@ -170,14 +177,17 @@ def test_preset_mode_uses_template_library_as_closed_candidate_set() -> None:
     }
 
     build_ctx = TemplateBuildContext(
-        options=TemplateBuildOptions(
-            **_DEFAULT_SIM_SETTINGS,
-            dataset_id="fundamental6",
-            similarity_penalty=0,
-            preset_mode=True,
+        source=TemplateSourceContext(
+            options=TemplateBuildOptions(
+                **_DEFAULT_SIM_SETTINGS,
+                dataset_id="fundamental6",
+                similarity_penalty=0,
+                preset_mode=True,
+            ),
+            all_fields=all_fields,
+            template_library=template_library,
         ),
-        all_fields=all_fields,
-        template_library=template_library,
+        feedback=TemplateFeedbackContext(),
     )
     candidates = build_expression_candidates(
         field,
@@ -210,15 +220,17 @@ def test_candidate_generation_records_blacklist_reason(monkeypatch) -> None:
         ]
     }
     build_ctx = TemplateBuildContext(
-        options=TemplateBuildOptions(
-            **_DEFAULT_SIM_SETTINGS,
-            dataset_id="fundamental6",
-            similarity_penalty=0,
-            preset_mode=True,
+        source=TemplateSourceContext(
+            options=TemplateBuildOptions(
+                **_DEFAULT_SIM_SETTINGS,
+                dataset_id="fundamental6",
+                similarity_penalty=0,
+                preset_mode=True,
+            ),
+            all_fields=[field],
+            template_library=template_library,
         ),
-        all_fields=[field],
-        template_library=template_library,
-        candidate_filter_counts=filter_counts,
+        feedback=TemplateFeedbackContext(candidate_filter_counts=filter_counts),
     )
     monkeypatch.setattr(
         "alpha.generators.templates.library_candidates.runtime_blacklist_match_reason",
@@ -245,18 +257,21 @@ def test_build_expression_candidates_skip_unsupported_grouping_fields() -> None:
     )
     field = {"id": "cash_st", "type": "MATRIX"}
     build_ctx = TemplateBuildContext(
-        options=TemplateBuildOptions(**_DEFAULT_SIM_SETTINGS, similarity_penalty=0),
-        all_fields=[field],
-        template_library={
-            "default": [
-                TemplateLibraryItem(
-                    name="requires_subindustry",
-                    expression="group_rank({field}, subindustry)",
-                    priority=100,
-                )
-            ]
-        },
-        template_library_file="datasets/fundamental6/template.json",
+        source=TemplateSourceContext(
+            options=TemplateBuildOptions(**_DEFAULT_SIM_SETTINGS, similarity_penalty=0),
+            all_fields=[field],
+            template_library={
+                "default": [
+                    TemplateLibraryItem(
+                        name="requires_subindustry",
+                        expression="group_rank({field}, subindustry)",
+                        priority=100,
+                    )
+                ]
+            },
+            template_library_file="datasets/fundamental6/template.json",
+        ),
+        feedback=TemplateFeedbackContext(),
     )
 
     candidates = build_expression_candidates(
@@ -311,10 +326,13 @@ def test_fundamental6_default_policy_does_not_auto_expand_financial_ratio_templa
     ]
 
     build_ctx = TemplateBuildContext(
-        options=TemplateBuildOptions(**_DEFAULT_SIM_SETTINGS, similarity_penalty=0),
-        all_fields=all_fields,
-        template_library_file="datasets/fundamental6/template.json",
-        template_library={"default": []},
+        source=TemplateSourceContext(
+            options=TemplateBuildOptions(**_DEFAULT_SIM_SETTINGS, similarity_penalty=0),
+            all_fields=all_fields,
+            template_library_file="datasets/fundamental6/template.json",
+            template_library={"default": []},
+        ),
+        feedback=TemplateFeedbackContext(),
     )
     candidates = build_expression_candidates(
         field,
@@ -336,9 +354,12 @@ def test_fundamental6_default_template_library_is_closed_for_vector_fields() -> 
     template_library = load_template_library(str(template_file), default_backfill_window=504)
 
     build_ctx = TemplateBuildContext(
-        options=TemplateBuildOptions(**_DEFAULT_SIM_SETTINGS, similarity_penalty=0),
-        all_fields=[field],
-        template_library=template_library,
+        source=TemplateSourceContext(
+            options=TemplateBuildOptions(**_DEFAULT_SIM_SETTINGS, similarity_penalty=0),
+            all_fields=[field],
+            template_library=template_library,
+        ),
+        feedback=TemplateFeedbackContext(),
     )
     candidates = build_expression_candidates(
         field,
@@ -410,12 +431,15 @@ def test_fundamental6_refine_vector_templates_do_not_double_wrap_vec_avg(
     template_library = load_template_library(str(template_file), default_backfill_window=504)
 
     build_ctx = TemplateBuildContext(
-        options=TemplateBuildOptions(
-            **_DEFAULT_SIM_SETTINGS, dataset_id="fundamental6", similarity_penalty=0
+        source=TemplateSourceContext(
+            options=TemplateBuildOptions(
+                **_DEFAULT_SIM_SETTINGS, dataset_id="fundamental6", similarity_penalty=0
+            ),
+            all_fields=[field],
+            template_library_file=str(template_file),
+            template_library=template_library,
         ),
-        all_fields=[field],
-        template_library_file=str(template_file),
-        template_library=template_library,
+        feedback=TemplateFeedbackContext(),
     )
     candidates = build_expression_candidates(
         field,

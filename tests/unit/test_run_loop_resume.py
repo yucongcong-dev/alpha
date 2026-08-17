@@ -27,9 +27,6 @@ from alpha.app.run_loop_resume import (
 from alpha.app.run_loop_resume import (
     save_runtime_checkpoint as _save_runtime_checkpoint,
 )
-from alpha.app.run_loop_resume import (
-    save_terminal_pipeline_state as _save_terminal_pipeline_state,
-)
 from alpha.app.run_loop_rounds import ScheduleRoundResult
 from alpha.config.application import ApplicationConfig
 from alpha.models.domain import TemplateField
@@ -40,6 +37,7 @@ from alpha.runtime.contexts import (
     CheckpointIdentity,
     FutureCompletionContext,
     HistoricalRunState,
+    PendingFutureContext,
 )
 from alpha.runtime.state import ExecutionState, InitializedRunContext
 
@@ -47,7 +45,6 @@ IDENTITY = CheckpointIdentity("run-fp")
 persist_replanning_checkpoint = partial(_persist_replanning_checkpoint, identity=IDENTITY)
 restore_fields_from_state = partial(_restore_fields_from_state, identity=IDENTITY)
 save_runtime_checkpoint = partial(_save_runtime_checkpoint, identity=IDENTITY)
-save_terminal_pipeline_state = partial(_save_terminal_pipeline_state, identity=IDENTITY)
 
 
 def _checkpoint_json(completed_field_index: int) -> str:
@@ -154,7 +151,7 @@ def _build_run_loop_args(tmp_path, **overrides) -> ApplicationConfig:
     return ApplicationConfig.from_args(args, paths)
 
 
-def test_restore_fields_from_state_returns_empty_when_all_fields_completed(tmp_path) -> None:
+def test_restore_fields_from_state_keeps_all_fields_for_legacy_terminal_cursor(tmp_path) -> None:
     state_file = tmp_path / "state.json"
     state_file.write_text(
         _checkpoint_json(2),
@@ -169,7 +166,7 @@ def test_restore_fields_from_state_returns_empty_when_all_fields_completed(tmp_p
         execution_state=_build_execution_state(),
     )
 
-    assert restored_fields == []
+    assert restored_fields == fields
 
 
 def test_restore_fields_from_state_ignores_legacy_partial_cursor(tmp_path) -> None:
@@ -190,17 +187,17 @@ def test_restore_fields_from_state_ignores_legacy_partial_cursor(tmp_path) -> No
     assert restored_fields == fields
 
 
-def test_persist_replanning_checkpoint_keeps_cursor_at_zero(tmp_path) -> None:
-    """Breadth-first rounds must not mark partially processed fields complete."""
+def test_persist_replanning_checkpoint_writes_only_recovery_state(tmp_path) -> None:
+    """Breadth-first checkpoints must not contain legacy cursor metadata."""
     with patch("alpha.app.run_loop_resume.save_pipeline_state") as mock_save:
         persist_replanning_checkpoint(
             state_file=str(tmp_path / "state.json"),
-            field_id="f3",
             execution_state=_build_execution_state(),
             runtime_state=RuntimeConcurrencyState(max_workers=2, runtime_max_workers=2),
         )
 
-    assert mock_save.call_args.kwargs["completed_field_index"] == 0
+    assert "completed_field_index" not in mock_save.call_args.kwargs
+    assert "field_id" not in mock_save.call_args.kwargs
 
 
 def test_persist_replanning_checkpoint_raises_when_write_fails(tmp_path) -> None:
@@ -210,16 +207,15 @@ def test_persist_replanning_checkpoint_raises_when_write_fails(tmp_path) -> None
     ):
         persist_replanning_checkpoint(
             state_file=str(tmp_path / "state.json"),
-            field_id="f1",
             execution_state=_build_execution_state(),
             runtime_state=RuntimeConcurrencyState(max_workers=1, runtime_max_workers=1),
         )
 
 
-def test_drain_remaining_futures_persists_total_field_count(tmp_path) -> None:
+def test_drain_remaining_futures_persists_recovery_state(tmp_path) -> None:
     future = object()
     execution_state = _build_execution_state()
-    execution_state.future_queue.pending_futures = {future: {"field_id": "f1"}}
+    execution_state.future_queue.pending_futures = {future: PendingFutureContext(field_id="f1")}
 
     def _drain(*, execution_state, **_kwargs):
         execution_state.future_queue.pending_futures.clear()
@@ -229,25 +225,24 @@ def test_drain_remaining_futures_persists_total_field_count(tmp_path) -> None:
         patch(
             "alpha.app.future_completion.drain_completed_futures_with_context", side_effect=_drain
         ),
-        patch("alpha.app.run_loop_resume.save_pipeline_state") as mock_save,
+        patch("alpha.app.future_completion.save_pipeline_state") as mock_save,
     ):
         drain_remaining_futures(
             state_file=str(tmp_path / "state.json"),
-            total_fields=5,
-            last_field_id="f5",
             execution_state=execution_state,
             runtime_state=RuntimeConcurrencyState(max_workers=2, runtime_max_workers=2),
             scheduler_options=SchedulerControlOptions(),
             completion_ctx=_completion_context(),
         )
 
-    assert mock_save.call_args.kwargs["completed_field_index"] == 5
+    assert "completed_field_index" not in mock_save.call_args.kwargs
+    assert "field_id" not in mock_save.call_args.kwargs
 
 
-def test_drain_next_completion_keeps_replanning_cursor_at_zero(tmp_path) -> None:
+def test_drain_next_completion_persists_recovery_state(tmp_path) -> None:
     future = object()
     execution_state = _build_execution_state()
-    execution_state.future_queue.pending_futures = {future: {"field_id": "f1"}}
+    execution_state.future_queue.pending_futures = {future: PendingFutureContext(field_id="f1")}
 
     def _drain(*, execution_state, **_kwargs):
         execution_state.future_queue.pending_futures.clear()
@@ -262,8 +257,6 @@ def test_drain_next_completion_keeps_replanning_cursor_at_zero(tmp_path) -> None
         assert (
             drain_next_completion(
                 state_file=str(tmp_path / "state.json"),
-                total_fields=5,
-                last_field_id="f1",
                 execution_state=execution_state,
                 scheduler_options=SimpleNamespace(),
                 completion_ctx=_completion_context(),
@@ -272,7 +265,8 @@ def test_drain_next_completion_keeps_replanning_cursor_at_zero(tmp_path) -> None
             is True
         )
 
-    assert mock_save.call_args.kwargs["completed_field_index"] == 0
+    assert "completed_field_index" not in mock_save.call_args.kwargs
+    assert "field_id" not in mock_save.call_args.kwargs
 
 
 def test_run_field_test_loop_persists_progress_for_skipped_fields(tmp_path) -> None:
@@ -367,8 +361,8 @@ def test_run_field_test_loop_interrupts_workers_without_waiting(tmp_path) -> Non
     running: Future[object] = Future()
     queued: Future[object] = Future()
     assert running.set_running_or_notify_cancel() is True
-    running_context = SimpleNamespace(simulation_location="/simulations/sim-1")
-    queued_context = SimpleNamespace(simulation_location="")
+    running_context = PendingFutureContext(simulation_location="/simulations/sim-1")
+    queued_context = PendingFutureContext(simulation_location="")
 
     class FakeExecutor:
         def __init__(self) -> None:
@@ -436,7 +430,7 @@ def test_run_field_test_loop_interrupts_active_http_requests(tmp_path) -> None:
         running: Future[object] = Future()
         assert running.set_running_or_notify_cancel() is True
         run_ctx.execution_state.future_queue.pending_futures = {
-            running: SimpleNamespace(simulation_location="/simulations/sim-1"),
+            running: PendingFutureContext(simulation_location="/simulations/sim-1"),
         }
         raise KeyboardInterrupt
 
@@ -474,7 +468,7 @@ def test_run_field_test_loop_interrupt_drains_completed_futures(tmp_path) -> Non
 
     def _interrupt(*_args, **_kwargs):
         run_ctx.execution_state.future_queue.pending_futures = {
-            completed: SimpleNamespace(simulation_location="/simulations/sim-1"),
+            completed: PendingFutureContext(simulation_location="/simulations/sim-1"),
         }
         raise KeyboardInterrupt
 
@@ -509,7 +503,7 @@ def test_run_field_test_loop_waits_for_worker_metadata_before_interrupt_checkpoi
     args = _build_run_loop_args(tmp_path)
     running: Future[object] = Future()
     assert running.set_running_or_notify_cancel() is True
-    running_context = SimpleNamespace(simulation_location="")
+    running_context = PendingFutureContext(simulation_location="")
 
     class FakeExecutor:
         def shutdown(self, *, wait: bool, cancel_futures: bool = False) -> None:
@@ -555,7 +549,7 @@ def test_run_field_test_loop_waits_for_worker_metadata_before_exception_checkpoi
     args = _build_run_loop_args(tmp_path)
     running: Future[object] = Future()
     assert running.set_running_or_notify_cancel() is True
-    running_context = SimpleNamespace(simulation_location="")
+    running_context = PendingFutureContext(simulation_location="")
 
     class FakeExecutor:
         def __init__(self) -> None:
@@ -614,16 +608,15 @@ def test_save_runtime_checkpoint_updates_resumable_pipeline_state(tmp_path) -> N
         save_runtime_checkpoint(
             state_file=str(tmp_path / "state.json"),
             interrupt_report_file=str(tmp_path / "checkpoint.json"),
-            completed_field_index=1,
             execution_state=execution_state,
             runtime_state=runtime_state,
-            last_field_id="f1",
-            fields=[_field("f1"), _field("f2")],
+            diagnostic_field_id="f1",
             reason="KeyboardInterrupt",
         )
 
-    assert mock_state.call_args.kwargs["completed_field_index"] == 1
-    assert mock_state.call_args.kwargs["field_id"] == "f1"
+    assert "completed_field_index" not in mock_state.call_args.kwargs
+    assert "field_id" not in mock_state.call_args.kwargs
+    assert mock_interrupt_report.call_args.kwargs["field_id"] == "f1"
     assert mock_interrupt_report.call_args.kwargs["reason"] == "KeyboardInterrupt"
 
 
@@ -638,27 +631,11 @@ def test_save_runtime_checkpoint_logs_failed_writes_without_masking_abort(
         save_runtime_checkpoint(
             state_file=str(tmp_path / "state.json"),
             interrupt_report_file=str(tmp_path / "interrupt.json"),
-            completed_field_index=0,
             execution_state=_build_execution_state(),
             runtime_state=RuntimeConcurrencyState(max_workers=1, runtime_max_workers=1),
-            last_field_id="f1",
-            fields=[_field("f1")],
+            diagnostic_field_id="f1",
             reason="KeyboardInterrupt",
         )
 
     assert "runtime state was not saved" in caplog.text
     assert "interrupt report was not saved" in caplog.text
-
-
-def test_save_terminal_pipeline_state_raises_when_write_fails(tmp_path) -> None:
-    with (
-        patch("alpha.app.run_loop_resume.save_pipeline_state", return_value=False),
-        pytest.raises(RuntimeError, match="failed to save terminal pipeline state"),
-    ):
-        save_terminal_pipeline_state(
-            state_file=str(tmp_path / "state.json"),
-            total_fields=1,
-            last_field_id="f1",
-            execution_state=_build_execution_state(),
-            runtime_state=RuntimeConcurrencyState(max_workers=1, runtime_max_workers=1),
-        )

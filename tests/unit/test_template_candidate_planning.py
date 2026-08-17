@@ -11,7 +11,12 @@ from alpha.generators.expression_builder import build_expression_candidates
 from alpha.generators.payload import build_settings_fingerprint_from_payload
 from alpha.models.domain import TemplateCandidate, TemplateField
 from alpha.policy.expression import get_dataset_expression_policy
-from alpha.runtime.contexts import PendingFutureContext, TemplateBuildContext
+from alpha.runtime.contexts import (
+    PendingFutureContext,
+    TemplateBuildContext,
+    TemplateFeedbackContext,
+    TemplateSourceContext,
+)
 
 from .template_build_options_support import template_build_options
 
@@ -56,8 +61,11 @@ def test_exploration_candidate_pool_is_not_limited_before_seed_selection() -> No
         language="FASTEXPR",
     )
     build_ctx = TemplateBuildContext(
-        options=options,
-        expression_policy=get_dataset_expression_policy("fundamental6"),
+        source=TemplateSourceContext(
+            options=options,
+            expression_policy=get_dataset_expression_policy("fundamental6"),
+        ),
+        feedback=TemplateFeedbackContext(),
     )
     services = TemplatePlanningServices(
         build_expression_candidates=build_candidates,
@@ -77,13 +85,16 @@ def test_exploration_candidate_pool_is_not_limited_before_seed_selection() -> No
 def test_expression_builder_uses_context_policy_when_no_policy_is_passed() -> None:
     policy = get_dataset_expression_policy("fundamental6")
     build_ctx = TemplateBuildContext(
-        options=template_build_options(
-            dataset_id="model51",
-            similarity_penalty=0,
+        source=TemplateSourceContext(
+            options=template_build_options(
+                dataset_id="model51",
+                similarity_penalty=0,
+            ),
+            all_fields=[_field("cash_st")],
+            template_library={},
+            expression_policy=policy,
         ),
-        all_fields=[_field("cash_st")],
-        template_library={},
-        expression_policy=policy,
+        feedback=TemplateFeedbackContext(),
     )
 
     candidates = build_expression_candidates(
@@ -131,10 +142,13 @@ def test_build_pending_templates_skips_inflight_duplicate(monkeypatch) -> None:
         language="FASTEXPR",
     )
     build_ctx = TemplateBuildContext(
-        options=options,
-        all_fields=[_field("unsystematic_risk_last_360_days")],
-        template_library={},
-        expression_policy=get_dataset_expression_policy("model51"),
+        source=TemplateSourceContext(
+            options=options,
+            all_fields=[_field("unsystematic_risk_last_360_days")],
+            template_library={},
+            expression_policy=get_dataset_expression_policy("model51"),
+        ),
+        feedback=TemplateFeedbackContext(),
     )
 
     pending_futures = {
@@ -207,11 +221,15 @@ def test_build_pending_templates_uses_explicit_template_role(
         language="FASTEXPR",
     )
     build_ctx = TemplateBuildContext(
-        options=options,
-        all_fields=[_field("cash_st", "VECTOR")],
-        field_feedback={"cash_st": {"attempted_templates": 1, "best_score": 0.0}},
-        template_library={},
-        expression_policy=get_dataset_expression_policy("fundamental6"),
+        source=TemplateSourceContext(
+            options=options,
+            all_fields=[_field("cash_st", "VECTOR")],
+            template_library={},
+            expression_policy=get_dataset_expression_policy("fundamental6"),
+        ),
+        feedback=TemplateFeedbackContext(
+            field_feedback={"cash_st": {"attempted_templates": 1, "best_score": 0.0}}
+        ),
     )
 
     pending, disabled, total = build_pending_templates_for_field(
@@ -266,11 +284,15 @@ def test_build_pending_templates_ignores_persisted_registry_recommendation(monke
         language="FASTEXPR",
     )
     build_ctx = TemplateBuildContext(
-        options=options,
-        all_fields=[_field("cash_st", "VECTOR")],
-        field_feedback={"cash_st": {"attempted_templates": 1, "best_score": 0.0}},
-        template_library={},
-        expression_policy=get_dataset_expression_policy("fundamental6"),
+        source=TemplateSourceContext(
+            options=options,
+            all_fields=[_field("cash_st", "VECTOR")],
+            template_library={},
+            expression_policy=get_dataset_expression_policy("fundamental6"),
+        ),
+        feedback=TemplateFeedbackContext(
+            field_feedback={"cash_st": {"attempted_templates": 1, "best_score": 0.0}}
+        ),
     )
 
     pending, disabled, total = build_pending_templates_for_field(
@@ -338,10 +360,13 @@ def test_build_pending_templates_dedupes_same_expression_variant_across_template
         language="FASTEXPR",
     )
     build_ctx = TemplateBuildContext(
-        options=options,
-        all_fields=[_field("cash_st", "VECTOR")],
-        template_library={},
-        expression_policy=get_dataset_expression_policy("fundamental6"),
+        source=TemplateSourceContext(
+            options=options,
+            all_fields=[_field("cash_st", "VECTOR")],
+            template_library={},
+            expression_policy=get_dataset_expression_policy("fundamental6"),
+        ),
+        feedback=TemplateFeedbackContext(),
     )
 
     pending, disabled, total = build_pending_templates_for_field(

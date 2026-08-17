@@ -277,6 +277,26 @@ def test_config_consistency_check_accepts_matching_overlap(tmp_path: Path) -> No
     assert check_repo.config_consistency_check(tmp_path) == []
 
 
+def test_config_consistency_check_rejects_duplicate_default_section_owner(
+    tmp_path: Path,
+) -> None:
+    config_dir = tmp_path / "config"
+    config_dir.mkdir(parents=True)
+    (config_dir / "settings.yaml").write_text("global: {}\n", encoding="utf-8")
+    (config_dir / "constants_defaults.yaml").write_text(
+        "api:\n  base_url: https://example.test\n",
+        encoding="utf-8",
+    )
+    (config_dir / "quality_feedback.yaml").write_text(
+        "api:\n  request_timeout: 10\n",
+        encoding="utf-8",
+    )
+
+    errors = check_repo.config_consistency_check(tmp_path)
+
+    assert any("default YAML section 'api'" in error for error in errors)
+
+
 def test_config_binding_check_rejects_module_level_binding(tmp_path: Path) -> None:
     module_file = tmp_path / "src" / "alpha" / "config" / "yaml.py"
     module_file.parent.mkdir(parents=True)

@@ -7,12 +7,10 @@ from contextlib import nullcontext
 from threading import Semaphore
 from unittest.mock import patch
 
+import alpha.app.finalize as finalize_module
 from alpha.app.finalize import finalize_run
 from alpha.config.application import ApplicationConfig
-from alpha.core.pending_check_refresh import (
-    DEFAULT_PENDING_CHECK_REFRESH_LIMIT,
-    DEFAULT_PENDING_CHECK_REFRESH_MAX_SECONDS,
-)
+from alpha.core.pending_check_refresh import PendingCheckRefreshResult
 from alpha.models.domain import FieldTestResult
 from alpha.models.io_types import RunFilters, RunPaths
 from alpha.runtime.concurrency import RuntimeConcurrencyState
@@ -58,12 +56,12 @@ def test_finalize_run_uses_application_paths(monkeypatch, tmp_path) -> None:
     run_ctx = _build_run_ctx()
 
     with (
-        patch("alpha.app.finalize.dump_results") as mock_dump,
+        patch("alpha.app.finalize.persist_results") as mock_persist,
         patch("alpha.app.finalize.delete_pipeline_state") as mock_delete,
     ):
         finalize_run(_build_config(args, run_paths), run_ctx)
 
-    assert mock_dump.call_args.args[0] == str(tmp_path / "normalized-results.json")
+    assert mock_persist.call_args.args[0].output_path == str(tmp_path / "normalized-results.json")
     assert mock_delete.call_args.args[0] == str(tmp_path / "state.json")
 
 
@@ -93,7 +91,7 @@ def test_finalize_run_updates_separate_feedback_output(tmp_path) -> None:
     )
 
     with (
-        patch("alpha.app.finalize.dump_results") as mock_dump,
+        patch("alpha.app.finalize.persist_results") as mock_persist,
         patch("alpha.app.finalize.load_existing_results", return_value=[]),
         patch("alpha.app.finalize.exclusive_results_transaction", return_value=nullcontext()),
         patch("alpha.app.finalize.persist_feedback_run_index") as mock_persist_index,
@@ -101,12 +99,12 @@ def test_finalize_run_updates_separate_feedback_output(tmp_path) -> None:
     ):
         finalize_run(_build_config(args, run_paths), run_ctx)
 
-    assert [call.args[0] for call in mock_dump.call_args_list] == [
+    assert [call.args[0].output_path for call in mock_persist.call_args_list] == [
         str(tmp_path / "results.json"),
         str(tmp_path / "feedback.json"),
     ]
-    assert mock_dump.call_args_list[-1].args[2] == [result]
-    assert mock_dump.call_args_list[-1].kwargs["metadata_scope"] == "feedback"
+    assert mock_persist.call_args_list[-1].args[1] == [result]
+    assert mock_persist.call_args_list[-1].args[0].metadata_scope == "feedback"
     mock_persist_index.assert_called_once_with(str(tmp_path / "feedback.json"))
     mock_delete.assert_called_once_with(str(tmp_path / "state.json"))
 
@@ -153,23 +151,21 @@ def test_finalize_run_reconciles_pending_checks_before_persisting(tmp_path, capl
     )
 
     with (
-        patch(
-            "alpha.app.finalize.refresh_pending_check_results",
-            return_value=([resolved], 1),
+        patch.object(
+            finalize_module.PendingCheckService,
+            "refresh",
+            return_value=PendingCheckRefreshResult(
+                results=[resolved],
+                resolved_count=1,
+                attempted_alpha_ids=frozenset({"alpha_1"}),
+            ),
         ) as mock_refresh,
-        patch("alpha.app.finalize.dump_results") as mock_dump,
+        patch("alpha.app.finalize.persist_results") as mock_persist,
         patch("alpha.app.finalize.delete_pipeline_state"),
     ):
         finalize_run(_build_config(args, run_paths), run_ctx)
 
-    mock_refresh.assert_called_once_with(
-        client_factory,
-        [pending],
-        retries=3,
-        refresh_limit=DEFAULT_PENDING_CHECK_REFRESH_LIMIT,
-        max_refresh_seconds=DEFAULT_PENDING_CHECK_REFRESH_MAX_SECONDS,
-        max_workers=1,
-    )
-    assert mock_dump.call_args.args[2] == [resolved]
+    mock_refresh.assert_called_once_with([pending])
+    assert mock_persist.call_args.args[1] == [resolved]
     assert run_ctx.execution_state.result_ledger.pending_check_count == 0
     assert "[check-submission-finalize] attempted=1 resolved=1 remaining=0" in caplog.text

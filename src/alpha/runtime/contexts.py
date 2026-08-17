@@ -90,35 +90,6 @@ class TemplateSourceContext:
     exclude_templates: set[str] = field(default_factory=set)
     expression_policy: DatasetExpressionPolicy | None = None
 
-    @classmethod
-    def from_legacy(
-        cls,
-        *,
-        options: TemplateBuildOptions,
-        template_library_file: str = "",
-        all_fields: Sequence[TemplateField] | None = None,
-        template_library: TemplateLibrary | None = None,
-        include_templates: set[str] | None = None,
-        exclude_templates: set[str] | None = None,
-        expression_policy: DatasetExpressionPolicy | None = None,
-    ) -> TemplateSourceContext:
-        """Build the source half of the historical flat context arguments.
-
-        ``TemplateBuildContext`` still accepts the pre-split constructor for
-        compatibility with existing callers.  Keeping the translation here
-        makes ``TemplateSourceContext`` the owner of its defaults while the
-        combined context only chooses between nested and legacy construction.
-        """
-        return cls(
-            options=options,
-            template_library_file=template_library_file,
-            all_fields=all_fields or [],
-            template_library=template_library or {},
-            include_templates=include_templates or set(),
-            exclude_templates=exclude_templates or set(),
-            expression_policy=expression_policy,
-        )
-
 
 @dataclass
 class TemplateFeedbackContext:
@@ -131,83 +102,13 @@ class TemplateFeedbackContext:
     feedback_result_count: int | None = None
     candidate_filter_counts: MutableMapping[str, int] | None = None
 
-    @classmethod
-    def from_legacy(
-        cls,
-        *,
-        field_feedback: FieldFeedbackMap | None = None,
-        global_failed_check_counts: dict[str, int] | None = None,
-        failed_check_counts_by_field_type: dict[str, dict[str, int]] | None = None,
-        feedback_template_min_priority: int = 105,
-        feedback_result_count: int | None = None,
-        candidate_filter_counts: MutableMapping[str, int] | None = None,
-    ) -> TemplateFeedbackContext:
-        """Build the feedback half of the historical flat context arguments."""
-        return cls(
-            field_feedback=field_feedback or {},
-            global_failed_check_counts=global_failed_check_counts or {},
-            failed_check_counts_by_field_type=failed_check_counts_by_field_type or {},
-            feedback_template_min_priority=feedback_template_min_priority,
-            feedback_result_count=feedback_result_count,
-            candidate_filter_counts=candidate_filter_counts,
-        )
 
-
-@dataclass(init=False)
+@dataclass(kw_only=True)
 class TemplateBuildContext:
-    """Combined source and feedback contexts used by template planning.
-
-    Production callers construct the nested contexts explicitly.  The flat
-    keyword arguments remain a compatibility adapter for focused callers and
-    delegate their defaults to the owning sub-contexts.
-    """
+    """Combined source and feedback contexts used by template planning."""
 
     source: TemplateSourceContext
     feedback: TemplateFeedbackContext
-
-    def __init__(
-        self,
-        *,
-        source: TemplateSourceContext | None = None,
-        feedback: TemplateFeedbackContext | None = None,
-        # Compatibility form for callers not yet using the nested contexts.
-        options: TemplateBuildOptions | None = None,
-        template_library_file: str = "",
-        all_fields: Sequence[TemplateField] | None = None,
-        template_library: TemplateLibrary | None = None,
-        field_feedback: FieldFeedbackMap | None = None,
-        global_failed_check_counts: dict[str, int] | None = None,
-        failed_check_counts_by_field_type: dict[str, dict[str, int]] | None = None,
-        include_templates: set[str] | None = None,
-        exclude_templates: set[str] | None = None,
-        expression_policy: DatasetExpressionPolicy | None = None,
-        feedback_template_min_priority: int = 105,
-        feedback_result_count: int | None = None,
-        candidate_filter_counts: MutableMapping[str, int] | None = None,
-    ) -> None:
-        if source is None:
-            if options is None:
-                raise TypeError("TemplateBuildContext requires source or options")
-            source = TemplateSourceContext.from_legacy(
-                options=options,
-                template_library_file=template_library_file,
-                all_fields=all_fields,
-                template_library=template_library,
-                include_templates=include_templates,
-                exclude_templates=exclude_templates,
-                expression_policy=expression_policy,
-            )
-        if feedback is None:
-            feedback = TemplateFeedbackContext.from_legacy(
-                field_feedback=field_feedback,
-                global_failed_check_counts=global_failed_check_counts,
-                failed_check_counts_by_field_type=failed_check_counts_by_field_type,
-                feedback_template_min_priority=feedback_template_min_priority,
-                feedback_result_count=feedback_result_count,
-                candidate_filter_counts=candidate_filter_counts,
-            )
-        self.source = source
-        self.feedback = feedback
 
 
 @dataclass

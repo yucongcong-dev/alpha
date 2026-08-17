@@ -16,7 +16,13 @@ from alpha.app.run_loop_rounds import (
 )
 from alpha.models.domain import FieldTestResult, SettingsVariant
 from alpha.models.runtime_options import SchedulerControlOptions
-from alpha.runtime.contexts import CheckpointIdentity, PendingTemplateEntry, TemplateBuildContext
+from alpha.runtime.contexts import (
+    CheckpointIdentity,
+    PendingTemplateEntry,
+    TemplateBuildContext,
+    TemplateFeedbackContext,
+    TemplateSourceContext,
+)
 from alpha.runtime.field_template_queue import FieldTemplateQueue
 from tests.unit.run_loop_rounds_support import build_round_context as _build_context
 
@@ -52,7 +58,6 @@ def test_breadth_first_field_progress_keeps_resume_cursor_at_start(tmp_path) -> 
 
     assert mock_persist.call_args.kwargs == {
         "state_file": str(tmp_path / "state.json"),
-        "field_id": "f1",
         "execution_state": context.runtime.execution_state,
         "runtime_state": context.runtime.runtime_state,
         "identity": CheckpointIdentity("run-fp"),
@@ -86,7 +91,7 @@ def test_zero_batch_size_is_normalized_to_breadth_first() -> None:
             round_index=1,
         )
 
-    assert mock_persist.call_args.kwargs["field_id"] == "f1"
+    assert "field_id" not in mock_persist.call_args.kwargs
 
 
 def test_queue_exhausted_candidate_is_excluded_from_next_round() -> None:
@@ -126,7 +131,10 @@ def test_queue_exhausted_candidate_is_excluded_from_next_round() -> None:
 
 def test_queue_timeout_invalidates_only_retry_field_template_queue() -> None:
     context = _build_context(field_template_batch_size=1)
-    template_build_ctx = TemplateBuildContext(options=MagicMock())
+    template_build_ctx = TemplateBuildContext(
+        source=TemplateSourceContext(options=MagicMock()),
+        feedback=TemplateFeedbackContext(),
+    )
     template_build_ctx.feedback.feedback_result_count = 0
     context.dependencies = replace(context.dependencies, template_build_ctx=template_build_ctx)
     stale_entry = PendingTemplateEntry(
@@ -244,7 +252,7 @@ def test_skipped_field_persists_progress_without_building_templates() -> None:
 
     assert result == ScheduleRoundResult(False, False, "f1")
     mock_build.assert_not_called()
-    assert mock_persist.call_args.kwargs["field_id"] == "f1"
+    assert "field_id" not in mock_persist.call_args.kwargs
 
 
 def test_field_scheduling_session_runs_skipped_field_lifecycle() -> None:
@@ -268,7 +276,7 @@ def test_field_scheduling_session_runs_skipped_field_lifecycle() -> None:
         ).execute()
 
     assert result == ScheduleRoundResult(False, False, "f1")
-    assert mock_persist.call_args.kwargs["field_id"] == "f1"
+    assert "field_id" not in mock_persist.call_args.kwargs
     mock_refresh.assert_not_called()
 
 

@@ -91,6 +91,38 @@ def test_clean_help_hides_simulation_and_submission_controls() -> None:
     assert "--pending-check-limit" not in help_text
 
 
+def test_command_parsers_reject_options_outside_their_surface() -> None:
+    """The strict command parser is separate from the legacy compatibility path."""
+    with pytest.raises(SystemExit):
+        build_parser(command="clean").parse_args(["--decay", "4"])
+
+    with pytest.raises(SystemExit):
+        build_parser(command="check-submissions").parse_args(["--max-templates-per-field", "2"])
+
+
+@pytest.mark.parametrize(
+    ("command", "option_args"),
+    [
+        ("clean", ["--limit", "1"]),
+        ("check-submissions", ["--max-templates-per-field", "2"]),
+    ],
+)
+def test_parse_args_keeps_explicit_command_boundaries(monkeypatch, command, option_args) -> None:
+    clear_yaml_cache()
+    monkeypatch.setattr(sys, "argv", ["alpha", command, *option_args])
+
+    with pytest.raises(SystemExit):
+        parse_args()
+
+
+def test_legacy_run_mode_alias_emits_actionable_deprecation_warning(monkeypatch) -> None:
+    clear_yaml_cache()
+    monkeypatch.setattr(sys, "argv", ["alpha", "--smoke-test"])
+
+    with pytest.warns(DeprecationWarning, match=r"--smoke-test.*--run-mode smoke"):
+        assert parse_args().smoke_test is True
+
+
 @pytest.mark.parametrize(
     ("argv", "expected"),
     [

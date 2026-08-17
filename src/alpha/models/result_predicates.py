@@ -11,33 +11,31 @@ from ..config._constants_strings import (
     STATUS_SKIPPED,
 )
 from .domain import FieldTestResult
+from .submission_check import SubmissionCheckOutcome, SubmissionCheckState
 
 
 def has_pending_checks(result: FieldTestResult) -> bool:
     """Return whether the platform reported a semantic PENDING check.
 
-    A transport/API response with no usable checks is deliberately not treated
-    as semantic PENDING.  Callers that own a bounded retry budget should use
-    :func:`needs_submission_check_refresh` instead.
+    This is a row-level diagnostic: a persisted result can contain both a
+    confirmed FAIL and a still-PENDING informational row.  Callers that own a
+    refresh budget should use :func:`needs_submission_check_refresh`, which
+    classifies the whole observation and correctly treats that mixed result as
+    terminal.
     """
     if any(str(check.result or "").upper() == "PENDING" for check in result.failed_checks or []):
         return True
-    if result.submittable is False:
-        return False
-    message = str(result.message or "").strip().lower()
-    return message == "checks pending"
+    return str(result.message or "").strip().lower() == "checks pending"
 
 
 def is_submission_check_unavailable(result: FieldTestResult) -> bool:
     """Return whether a submission-check read exhausted its transport budget."""
-    if result.submittable is not None or has_pending_checks(result):
-        return False
-    return str(result.message or "").strip().lower() == "checks unavailable"
+    return SubmissionCheckOutcome.from_result(result).state is SubmissionCheckState.UNAVAILABLE
 
 
 def needs_submission_check_refresh(result: FieldTestResult) -> bool:
     """Return whether a persisted result should receive a bounded status refresh."""
-    return has_pending_checks(result) or is_submission_check_unavailable(result)
+    return SubmissionCheckOutcome.from_result(result).needs_refresh
 
 
 def is_queue_timeout_result(result: FieldTestResult) -> bool:

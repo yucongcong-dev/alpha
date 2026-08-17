@@ -5,7 +5,7 @@
 负责任务队列构建、字段过滤和干运行计划等功能。
 
 实际的模拟生命周期管理由 simulation.py 负责，
-并发调度与拥塞控制由 scheduler.py 负责。
+并发调度与拥塞控制由 scheduler_draining.py 与 scheduler_concurrency.py 负责。
 
 模块内容：
     - 模板队列构建函数

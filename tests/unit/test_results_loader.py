@@ -8,7 +8,7 @@ import shutil
 import pytest
 
 from alpha.analysis.results_loader import load_existing_results
-from alpha.analysis.results_persistence import dump_results
+from alpha.analysis.results_persistence import ResultPersistenceContext, persist_results
 from alpha.io.results_store import initialize_results_journal
 from alpha.models.domain import FailedCheck, FieldTestResult
 
@@ -154,12 +154,14 @@ def test_load_existing_results_preserves_template_role_metadata(tmp_path) -> Non
         )
     ]
 
-    dump_results(
-        str(output_path),
-        "fundamental6",
+    persist_results(
+        ResultPersistenceContext(
+            output_path=str(output_path),
+            dataset_id="fundamental6",
+            settings_fingerprint="settings",
+            template_library_fingerprint="templates",
+        ),
         results,
-        settings_fingerprint="settings",
-        template_library_fingerprint="templates",
         include_analysis=False,
     )
 
@@ -172,9 +174,13 @@ def test_load_existing_results_preserves_template_role_metadata(tmp_path) -> Non
 def test_load_existing_results_recovers_moved_legacy_absolute_journal(tmp_path) -> None:
     run_dir = tmp_path / "legacy-run"
     output_path = run_dir / "summary.json"
-    dump_results(
-        str(output_path),
-        "fundamental6",
+    persist_results(
+        ResultPersistenceContext(
+            output_path=str(output_path),
+            dataset_id="fundamental6",
+            settings_fingerprint="settings",
+            template_library_fingerprint="templates",
+        ),
         [
             FieldTestResult(
                 field_id="field_legacy",
@@ -185,8 +191,6 @@ def test_load_existing_results_recovers_moved_legacy_absolute_journal(tmp_path) 
                 expression="rank(field_legacy)",
             )
         ],
-        settings_fingerprint="settings",
-        template_library_fingerprint="templates",
         include_analysis=False,
     )
     summary = json.loads(output_path.read_text(encoding="utf-8"))
@@ -214,12 +218,14 @@ def test_load_existing_results_preserves_self_correlation_pending_metadata(tmp_p
         ],
     )
 
-    dump_results(
-        str(output_path),
-        "fundamental6",
+    persist_results(
+        ResultPersistenceContext(
+            output_path=str(output_path),
+            dataset_id="fundamental6",
+            settings_fingerprint="settings",
+            template_library_fingerprint="templates",
+        ),
         [result],
-        settings_fingerprint="settings",
-        template_library_fingerprint="templates",
         include_analysis=False,
     )
 

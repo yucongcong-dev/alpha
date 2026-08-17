@@ -5,7 +5,10 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING
 
-from ..core.scheduler import maybe_restore_runtime_concurrency, throttle_before_submission
+from ..core.scheduler_concurrency import (
+    maybe_restore_runtime_concurrency,
+    throttle_before_submission,
+)
 from ..models.domain import TemplateField
 from ..runtime.contexts import PendingTemplateEntry
 from ..runtime.field_template_queue import FieldTemplateQueue

@@ -14,6 +14,7 @@ from ..exceptions import BrainAPIError, BrainHTTPError, BrainStopRequested
 from ..models.domain import FailedCheck, FieldTestContext, FieldTestResult
 from ..models.domain_parsers import parse_failed_check
 from ..models.runtime_config import SimulationStageConfig
+from ..models.submission_check import SubmissionCheckOutcome
 from .simulation_parsing import (
     extract_checks,
     extract_failed_checks,
@@ -28,7 +29,7 @@ logger = logging.getLogger(__name__)
 _CHECK_SUBMISSION_TRANSPORT_RETRIES = 2
 
 
-def _read_submission_checks_with_retry(
+def _read_submission_check_outcome_with_retry(
     client: BrainClient,
     alpha_id: str,
     retries: int,
@@ -36,14 +37,13 @@ def _read_submission_checks_with_retry(
     fetch_checks: Callable[[str], SimulationPayload],
     operation_name: str,
     should_abort: Callable[[], bool] | None = None,
-) -> tuple[bool | None, str, list[FailedCheck]]:
+) -> SubmissionCheckOutcome:
     """Fetch one submission-check state, retrying only unavailable responses."""
     attempts = max(1, int(retries or 0))
     retry_wait = resolve_http_runtime_config(client).simulation_retry_wait
-    last_result: tuple[bool | None, str, list[FailedCheck]] = (
+    last_result = SubmissionCheckOutcome.from_observation(
         None,
         "checks unavailable",
-        [],
     )
     for attempt in range(1, attempts + 1):
         try:
@@ -59,7 +59,10 @@ def _read_submission_checks_with_retry(
         except BrainHTTPError as exc:
             if exc.is_permanent_client_error:
                 raise
-            last_result = None, "checks unavailable", []
+            last_result = SubmissionCheckOutcome.from_observation(
+                None,
+                "checks unavailable",
+            )
             logger.warning(
                 "[check-submission] alpha_id=%s attempt=%d/%d unavailable http_status=%d: %s",
                 alpha_id,
@@ -77,7 +80,10 @@ def _read_submission_checks_with_retry(
                 )
             continue
         except BrainAPIError as exc:
-            last_result = None, "checks unavailable", []
+            last_result = SubmissionCheckOutcome.from_observation(
+                None,
+                "checks unavailable",
+            )
             logger.warning(
                 "[check-submission] alpha_id=%s attempt=%d/%d unavailable: %s",
                 alpha_id,
@@ -111,7 +117,11 @@ def _read_submission_checks_with_retry(
             if submittable
             else "checks failed"
         )
-        last_result = submittable, message, unresolved_checks
+        last_result = SubmissionCheckOutcome.from_observation(
+            submittable,
+            message,
+            unresolved_checks,
+        )
         logger.debug(
             "[check-submission] alpha_id=%s attempt=%d/%d submittable=%s message=%s",
             alpha_id,
@@ -134,6 +144,27 @@ def _read_submission_checks_with_retry(
                 should_abort=should_abort,
             )
     return last_result
+
+
+def _read_submission_checks_with_retry(
+    client: BrainClient,
+    alpha_id: str,
+    retries: int,
+    *,
+    fetch_checks: Callable[[str], SimulationPayload],
+    operation_name: str,
+    should_abort: Callable[[], bool] | None = None,
+) -> tuple[bool | None, str, list[FailedCheck]]:
+    """Compatibility tuple adapter for simulation-stage callers."""
+
+    return _read_submission_check_outcome_with_retry(
+        client,
+        alpha_id,
+        retries,
+        fetch_checks=fetch_checks,
+        operation_name=operation_name,
+        should_abort=should_abort,
+    ).as_legacy_tuple()
 
 
 def check_submission_with_retry(

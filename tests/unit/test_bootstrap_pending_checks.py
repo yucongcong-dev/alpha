@@ -8,7 +8,11 @@ from alpha.app.bootstrap_pending_checks import reconcile_pending_check_results
 from alpha.config._constants_strings import STATUS_ERROR
 import alpha.core.pending_check_refresh as pending_check_refresh
 from alpha.core.pending_check_refresh import (
-    refresh_pending_check_results,
+    DEFAULT_PENDING_CHECK_REFRESH_LIMIT,
+    DEFAULT_PENDING_CHECK_REFRESH_MAX_SECONDS,
+    PendingCheckRefreshOptions,
+    PendingCheckRefreshResult,
+    PendingCheckService,
 )
 from alpha.exceptions import BrainHTTPError, BrainStopRequested
 from alpha.models.domain import FailedCheck, FieldTestResult
@@ -36,13 +40,42 @@ def _pending_result(
     )
 
 
+def _refresh_result(
+    results: list[FieldTestResult], resolved_count: int
+) -> PendingCheckRefreshResult:
+    return PendingCheckRefreshResult(results=list(results), resolved_count=resolved_count)
+
+
+def _refresh_pending(
+    client,
+    results: list[FieldTestResult],
+    *,
+    retries: int,
+    refresh_limit: int = DEFAULT_PENDING_CHECK_REFRESH_LIMIT,
+    max_refresh_seconds: float = DEFAULT_PENDING_CHECK_REFRESH_MAX_SECONDS,
+    max_workers: int = 1,
+    repeat_until_terminal: bool = False,
+) -> tuple[list[FieldTestResult], int]:
+    outcome = PendingCheckService(
+        client,
+        PendingCheckRefreshOptions(
+            retries=retries,
+            refresh_limit=refresh_limit,
+            max_refresh_seconds=max_refresh_seconds,
+            max_workers=max_workers,
+            repeat_until_terminal=repeat_until_terminal,
+        ),
+    ).refresh(results)
+    return outcome.results, outcome.resolved_count
+
+
 def test_reconcile_pending_check_results_returns_original_state_when_unchanged(
     monkeypatch,
 ) -> None:
     state = HistoricalRunState(feedback_results=[_pending_result()])
     monkeypatch.setattr(
-        "alpha.app.bootstrap_pending_checks.refresh_pending_check_results",
-        lambda *_args, **_kwargs: (list(state.feedback_results), 0),
+        "alpha.app.bootstrap_pending_checks.PendingCheckService.refresh",
+        lambda _service, _results: _refresh_result(state.feedback_results, 0),
     )
 
     reconciled = reconcile_pending_check_results(
@@ -76,8 +109,8 @@ def test_reconcile_pending_check_results_persists_run_and_feedback_views(monkeyp
     persisted: list[dict[str, object]] = []
     indexed: list[str] = []
     monkeypatch.setattr(
-        "alpha.app.bootstrap_pending_checks.refresh_pending_check_results",
-        lambda *_args, **_kwargs: ([refreshed], 1),
+        "alpha.app.bootstrap_pending_checks.PendingCheckService.refresh",
+        lambda _service, _results: _refresh_result([refreshed], 1),
     )
     monkeypatch.setattr(
         "alpha.app.bootstrap_pending_checks.persist_reconciled_historical_results",
@@ -132,8 +165,8 @@ def test_reconcile_pending_check_results_does_not_replace_terminal_run_result(
     )
     persisted: list[dict[str, object]] = []
     monkeypatch.setattr(
-        "alpha.app.bootstrap_pending_checks.refresh_pending_check_results",
-        lambda *_args, **_kwargs: ([refreshed_historical], 1),
+        "alpha.app.bootstrap_pending_checks.PendingCheckService.refresh",
+        lambda _service, _results: _refresh_result([refreshed_historical], 1),
     )
     monkeypatch.setattr(
         "alpha.app.bootstrap_pending_checks.persist_reconciled_historical_results",
@@ -185,13 +218,17 @@ def test_reconcile_pending_check_results_refreshes_run_pending_missing_from_feed
     )
     checked_alpha_ids: list[str | None] = []
 
-    def _refresh(_client, results, **_kwargs):
+    def _refresh(_service, results):
         checked_alpha_ids.extend(result.alpha_id for result in results)
-        return [refreshed_run_pending], 1
+        return None
+
+    def _refresh_and_result(service, results):
+        _refresh(service, results)
+        return _refresh_result([refreshed_run_pending], 1)
 
     monkeypatch.setattr(
-        "alpha.app.bootstrap_pending_checks.refresh_pending_check_results",
-        _refresh,
+        "alpha.app.bootstrap_pending_checks.PendingCheckService.refresh",
+        _refresh_and_result,
     )
     monkeypatch.setattr(
         "alpha.app.bootstrap_pending_checks.persist_reconciled_historical_results",
@@ -238,13 +275,17 @@ def test_reconcile_pending_check_results_deduplicates_overlapping_alpha_ids(
     )
     checked: list[str | None] = []
 
-    def _refresh(_client, results, **_kwargs):
+    def _refresh(_service, results):
         checked.extend(result.alpha_id for result in results)
-        return [refreshed], 1
+        return None
+
+    def _refresh_and_result(service, results):
+        _refresh(service, results)
+        return _refresh_result([refreshed], 1)
 
     monkeypatch.setattr(
-        "alpha.app.bootstrap_pending_checks.refresh_pending_check_results",
-        _refresh,
+        "alpha.app.bootstrap_pending_checks.PendingCheckService.refresh",
+        _refresh_and_result,
     )
     monkeypatch.setattr(
         "alpha.app.bootstrap_pending_checks.persist_reconciled_historical_results",
@@ -278,12 +319,21 @@ def test_reconcile_pending_check_results_forwards_check_only_refresh_budget(monk
     state = HistoricalRunState(feedback_results=[_pending_result()])
     received: dict[str, object] = {}
 
-    def _refresh(*_args, **kwargs):
-        received.update(kwargs)
-        return list(state.feedback_results), 0
+    def _refresh(service, _results):
+        options = service._options
+        received.update(
+            {
+                "retries": options.retries,
+                "refresh_limit": options.refresh_limit,
+                "max_refresh_seconds": options.max_refresh_seconds,
+                "max_workers": options.max_workers,
+                "repeat_until_terminal": options.repeat_until_terminal,
+            }
+        )
+        return _refresh_result(state.feedback_results, 0)
 
     monkeypatch.setattr(
-        "alpha.app.bootstrap_pending_checks.refresh_pending_check_results",
+        "alpha.app.bootstrap_pending_checks.PendingCheckService.refresh",
         _refresh,
     )
 
@@ -312,13 +362,13 @@ def test_reconcile_pending_check_results_forwards_check_only_refresh_budget(monk
     }
 
 
-def test_refresh_pending_check_results_replaces_terminal_result(monkeypatch) -> None:
+def test_pending_check_service_replaces_terminal_result(monkeypatch) -> None:
     monkeypatch.setattr(
         "alpha.core.pending_check_refresh.read_submission_status_with_retry",
         lambda *_args, **_kwargs: (True, "checks passed", []),
     )
 
-    refreshed, count = refresh_pending_check_results(object(), [_pending_result()], retries=3)
+    refreshed, count = _refresh_pending(object(), [_pending_result()], retries=3)
 
     assert count == 1
     assert refreshed[0].submittable is True
@@ -326,7 +376,7 @@ def test_refresh_pending_check_results_replaces_terminal_result(monkeypatch) -> 
     assert refreshed[0].failed_checks == []
 
 
-def test_refresh_pending_check_results_keeps_still_pending_result(monkeypatch) -> None:
+def test_pending_check_service_keeps_still_pending_result(monkeypatch) -> None:
     original = _pending_result()
     monkeypatch.setattr(
         "alpha.core.pending_check_refresh.read_submission_status_with_retry",
@@ -337,14 +387,14 @@ def test_refresh_pending_check_results_keeps_still_pending_result(monkeypatch) -
         ),
     )
 
-    refreshed, count = refresh_pending_check_results(object(), [original], retries=2)
+    refreshed, count = _refresh_pending(object(), [original], retries=2)
 
     assert count == 0
     assert refreshed[0].submittable is None
     assert refreshed[0].updated_at
 
 
-def test_refresh_pending_check_results_retries_transport_unavailable_result(monkeypatch) -> None:
+def test_pending_check_service_retries_transport_unavailable_result(monkeypatch) -> None:
     original = replace(
         _pending_result(),
         failed_checks=[],
@@ -355,14 +405,14 @@ def test_refresh_pending_check_results_retries_transport_unavailable_result(monk
         lambda *_args, **_kwargs: (True, "checks passed", []),
     )
 
-    refreshed, count = refresh_pending_check_results(object(), [original], retries=1)
+    refreshed, count = _refresh_pending(object(), [original], retries=1)
 
     assert count == 1
     assert refreshed[0].submittable is True
     assert refreshed[0].message == "checks passed"
 
 
-def test_refresh_pending_check_results_locally_terminalizes_failed_pending_result(
+def test_pending_check_service_locally_terminalizes_failed_pending_result(
     monkeypatch,
 ) -> None:
     original = replace(
@@ -381,7 +431,7 @@ def test_refresh_pending_check_results_locally_terminalizes_failed_pending_resul
         _unexpected,
     )
 
-    refreshed, count = refresh_pending_check_results(object(), [original], retries=2)
+    refreshed, count = _refresh_pending(object(), [original], retries=2)
 
     assert count == 1
     assert refreshed[0].submittable is False
@@ -392,7 +442,7 @@ def test_refresh_pending_check_results_locally_terminalizes_failed_pending_resul
     assert refreshed[0].updated_at
 
 
-def test_refresh_pending_check_results_retries_pending_rows_with_backoff(monkeypatch) -> None:
+def test_pending_check_service_retries_pending_rows_with_backoff(monkeypatch) -> None:
     calls = 0
     waits: list[float] = []
 
@@ -412,7 +462,7 @@ def test_refresh_pending_check_results_retries_pending_rows_with_backoff(monkeyp
         lambda seconds, *_args, **_kwargs: waits.append(seconds),
     )
 
-    refreshed, count = refresh_pending_check_results(
+    refreshed, count = _refresh_pending(
         object(),
         [_pending_result()],
         retries=1,
@@ -426,7 +476,7 @@ def test_refresh_pending_check_results_retries_pending_rows_with_backoff(monkeyp
     assert refreshed[0].submittable is True
 
 
-def test_refresh_pending_check_results_terminalizes_permanent_http_error(monkeypatch) -> None:
+def test_pending_check_service_terminalizes_permanent_http_error(monkeypatch) -> None:
     def _missing(*_args, **_kwargs):
         raise BrainHTTPError("GET /alphas/missing/check failed: 404", status=404)
 
@@ -435,7 +485,7 @@ def test_refresh_pending_check_results_terminalizes_permanent_http_error(monkeyp
         _missing,
     )
 
-    refreshed, count = refresh_pending_check_results(object(), [_pending_result()], retries=2)
+    refreshed, count = _refresh_pending(object(), [_pending_result()], retries=2)
 
     assert count == 1
     assert refreshed[0].status == STATUS_ERROR
@@ -445,7 +495,7 @@ def test_refresh_pending_check_results_terminalizes_permanent_http_error(monkeyp
     assert "404" in refreshed[0].message
 
 
-def test_refresh_pending_check_results_skips_rows_without_alpha_id(monkeypatch) -> None:
+def test_pending_check_service_skips_rows_without_alpha_id(monkeypatch) -> None:
     def _unexpected(*_args, **_kwargs):
         raise AssertionError("check_submission should not be called")
 
@@ -454,7 +504,7 @@ def test_refresh_pending_check_results_skips_rows_without_alpha_id(monkeypatch) 
         _unexpected,
     )
 
-    refreshed, count = refresh_pending_check_results(
+    refreshed, count = _refresh_pending(
         object(),
         [_pending_result(alpha_id=None)],
         retries=2,
@@ -464,14 +514,14 @@ def test_refresh_pending_check_results_skips_rows_without_alpha_id(monkeypatch) 
     assert refreshed[0].alpha_id is None
 
 
-def test_refresh_pending_check_results_recovers_stale_terminal_flag(monkeypatch) -> None:
+def test_pending_check_service_recovers_stale_terminal_flag(monkeypatch) -> None:
     monkeypatch.setattr(
         "alpha.core.pending_check_refresh.read_submission_status_with_retry",
         lambda *_args, **_kwargs: (True, "checks passed", []),
     )
 
     original = _pending_result(submittable=False)
-    refreshed, count = refresh_pending_check_results(object(), [original], retries=2)
+    refreshed, count = _refresh_pending(object(), [original], retries=2)
 
     assert count == 1
     assert refreshed[0].submittable is True
@@ -479,7 +529,7 @@ def test_refresh_pending_check_results_recovers_stale_terminal_flag(monkeypatch)
     assert refreshed[0].failed_checks == []
 
 
-def test_refresh_pending_check_results_respects_startup_budget(monkeypatch) -> None:
+def test_pending_check_service_respects_startup_budget(monkeypatch) -> None:
     calls = 0
 
     def _resolve(*_args, **_kwargs):
@@ -493,7 +543,7 @@ def test_refresh_pending_check_results_respects_startup_budget(monkeypatch) -> N
     )
     originals = [_pending_result(alpha_id=f"alpha_{index}") for index in range(3)]
 
-    refreshed, count = refresh_pending_check_results(
+    refreshed, count = _refresh_pending(
         object(),
         originals,
         retries=2,
@@ -506,7 +556,7 @@ def test_refresh_pending_check_results_respects_startup_budget(monkeypatch) -> N
     assert refreshed[1:] == originals[1:]
 
 
-def test_refresh_pending_check_results_rotates_oldest_attempts(monkeypatch) -> None:
+def test_pending_check_service_rotates_oldest_attempts(monkeypatch) -> None:
     checked_alpha_ids: list[str] = []
 
     def _pending(_client, alpha_id, _retries, **_kwargs):
@@ -519,13 +569,13 @@ def test_refresh_pending_check_results_rotates_oldest_attempts(monkeypatch) -> N
     )
     originals = [_pending_result(alpha_id=f"alpha_{index}") for index in range(3)]
 
-    first_results, _ = refresh_pending_check_results(
+    first_results, _ = _refresh_pending(
         object(),
         originals,
         retries=1,
         refresh_limit=1,
     )
-    second_results, _ = refresh_pending_check_results(
+    second_results, _ = _refresh_pending(
         object(),
         first_results,
         retries=1,
@@ -537,7 +587,7 @@ def test_refresh_pending_check_results_rotates_oldest_attempts(monkeypatch) -> N
     assert second_results[1].updated_at
 
 
-def test_refresh_pending_check_results_respects_total_time_budget(monkeypatch) -> None:
+def test_pending_check_service_respects_total_time_budget(monkeypatch) -> None:
     calls = 0
     clock = {"now": 0.0}
 
@@ -565,7 +615,7 @@ def test_refresh_pending_check_results_respects_total_time_budget(monkeypatch) -
         _complete_first_batch,
     )
 
-    refreshed, count = refresh_pending_check_results(
+    refreshed, count = _refresh_pending(
         object(),
         [_pending_result(alpha_id="alpha_0"), _pending_result(alpha_id="alpha_1")],
         retries=1,
@@ -579,7 +629,7 @@ def test_refresh_pending_check_results_respects_total_time_budget(monkeypatch) -
     assert refreshed[1].updated_at == ""
 
 
-def test_refresh_pending_check_results_aborts_retry_at_deadline(monkeypatch) -> None:
+def test_pending_check_service_aborts_retry_at_deadline(monkeypatch) -> None:
     clock = {"now": 0.0}
     callbacks = []
     original = _pending_result()
@@ -599,7 +649,7 @@ def test_refresh_pending_check_results_aborts_retry_at_deadline(monkeypatch) -> 
         lambda: clock["now"],
     )
 
-    refreshed, count = refresh_pending_check_results(
+    refreshed, count = _refresh_pending(
         object(),
         [original],
         retries=3,
@@ -612,7 +662,7 @@ def test_refresh_pending_check_results_aborts_retry_at_deadline(monkeypatch) -> 
     assert refreshed[0].updated_at == ""
 
 
-def test_refresh_pending_check_results_joins_timed_out_batch_before_returning(monkeypatch) -> None:
+def test_pending_check_service_joins_timed_out_batch_before_returning(monkeypatch) -> None:
     executors = []
 
     class _SlowFuture:
@@ -651,7 +701,7 @@ def test_refresh_pending_check_results_joins_timed_out_batch_before_returning(mo
     )
 
     original = _pending_result()
-    refreshed, count = refresh_pending_check_results(
+    refreshed, count = _refresh_pending(
         object(),
         [original],
         retries=1,
@@ -663,7 +713,7 @@ def test_refresh_pending_check_results_joins_timed_out_batch_before_returning(mo
     assert executors[0].shutdown_calls == [{"wait": True, "cancel_futures": True}]
 
 
-def test_refresh_pending_check_results_tracks_the_actual_completed_indexes(monkeypatch) -> None:
+def test_pending_check_service_tracks_the_actual_completed_indexes(monkeypatch) -> None:
     class _Future:
         def __init__(self, result=None, *, done: bool):
             self.result_value = result
@@ -714,7 +764,7 @@ def test_refresh_pending_check_results_tracks_the_actual_completed_indexes(monke
     assert attempted_indexes == {1}
 
 
-def test_refresh_pending_check_results_uses_worker_factory_for_parallel_checks(monkeypatch) -> None:
+def test_pending_check_service_uses_worker_factory_for_parallel_checks(monkeypatch) -> None:
     clients: list[object] = []
     deadlines: list[float | None] = []
 
@@ -736,7 +786,7 @@ def test_refresh_pending_check_results_uses_worker_factory_for_parallel_checks(m
         _resolve,
     )
 
-    refreshed, count = refresh_pending_check_results(
+    refreshed, count = _refresh_pending(
         _Factory(),
         [_pending_result(alpha_id="alpha_0"), _pending_result(alpha_id="alpha_1")],
         retries=1,
