@@ -7,10 +7,12 @@ from alpha.models.result_predicates import (
     is_feedback_eligible_result,
     is_informative_result,
     is_retryable_infrastructure_result,
+    is_submission_check_unavailable,
+    needs_submission_check_refresh,
 )
 
 
-def test_checks_unavailable_remain_resumable() -> None:
+def test_checks_unavailable_is_refreshable_but_not_semantic_pending() -> None:
     result = FieldTestResult(
         field_id="cashflow_op",
         field_type="MATRIX",
@@ -21,7 +23,9 @@ def test_checks_unavailable_remain_resumable() -> None:
         message="checks unavailable",
     )
 
-    assert has_pending_checks(result) is True
+    assert has_pending_checks(result) is False
+    assert is_submission_check_unavailable(result) is True
+    assert needs_submission_check_refresh(result) is True
 
 
 def test_pending_check_remains_resumable_even_with_terminal_flag() -> None:

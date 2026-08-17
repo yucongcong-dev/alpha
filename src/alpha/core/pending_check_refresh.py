@@ -17,7 +17,7 @@ from ..api.timing import wait_seconds
 from ..config._constants_strings import STATUS_ERROR
 from ..exceptions import BrainHTTPError, BrainStopRequested
 from ..models.domain import FieldTestResult
-from ..models.result_predicates import has_pending_checks
+from ..models.result_predicates import needs_submission_check_refresh
 from ..models.runtime_protocols import ClientFactoryLike
 from .submission_checks import read_submission_status_with_retry
 
@@ -56,10 +56,84 @@ def _ordered_pending_check_results(
     pending_results = [
         (index, result)
         for index, result in enumerate(results)
-        if has_pending_checks(result) and result.alpha_id
+        if needs_submission_check_refresh(result) and result.alpha_id
     ]
     pending_results.sort(key=lambda item: (item[1].updated_at or item[1].created_at, item[0]))
     return pending_results
+
+
+def _candidate_preference(result: FieldTestResult) -> tuple[float, int]:
+    """Prefer the newest persisted observation when alpha IDs overlap."""
+    timestamps: list[float] = []
+    for value in (result.updated_at, result.created_at):
+        if not value:
+            continue
+        try:
+            timestamps.append(datetime.fromisoformat(value.replace("Z", "+00:00")).timestamp())
+        except ValueError:
+            continue
+    return (max(timestamps, default=0.0), max(1, int(result.revision or 1)))
+
+
+def select_submission_check_refresh_candidates(
+    *result_groups: list[FieldTestResult],
+) -> list[FieldTestResult]:
+    """Return one refresh target per Alpha ID across all persisted views.
+
+    The same Alpha can appear in the current-run and feedback journals.  The
+    refresh operation is keyed by Alpha ID, so choosing one representative
+    avoids duplicate GETs while preserving each view's own result metadata.
+    """
+    candidates: dict[str, FieldTestResult] = {}
+    for results in result_groups:
+        for result in results:
+            alpha_id = result.alpha_id
+            if not alpha_id or not needs_submission_check_refresh(result):
+                continue
+            current = candidates.get(alpha_id)
+            if current is None or _candidate_preference(result) > _candidate_preference(current):
+                candidates[alpha_id] = result
+    return list(candidates.values())
+
+
+def _apply_submission_check_observation(
+    original: FieldTestResult,
+    refreshed: FieldTestResult,
+) -> FieldTestResult:
+    """Copy only check-observation fields into a view's original result row."""
+    return replace(
+        original,
+        status=refreshed.status,
+        submittable=refreshed.submittable,
+        message=refreshed.message,
+        updated_at=refreshed.updated_at,
+        failed_stage=refreshed.failed_stage,
+        failed_checks=refreshed.failed_checks,
+        error_type=refreshed.error_type,
+    )
+
+
+def project_submission_check_refresh(
+    results: list[FieldTestResult],
+    refreshed_results: list[FieldTestResult],
+) -> list[FieldTestResult]:
+    """Project refreshed check observations back onto one persisted view."""
+    refreshed_by_alpha_id = {
+        result.alpha_id: result for result in refreshed_results if result.alpha_id
+    }
+    projected: list[FieldTestResult] = []
+    for result in results:
+        refreshed = (
+            refreshed_by_alpha_id.get(result.alpha_id)
+            if result.alpha_id and needs_submission_check_refresh(result)
+            else None
+        )
+        projected.append(
+            _apply_submission_check_observation(result, refreshed)
+            if refreshed is not None
+            else result
+        )
+    return projected
 
 
 @contextmanager
@@ -178,7 +252,7 @@ def _apply_pending_check_refreshes(
     retries: int,
     max_workers: int,
     deadline: float | None,
-) -> tuple[int, int]:
+) -> tuple[int, set[int]]:
     worker_count = min(len(selected_pending), max(1, int(max_workers or 1)))
 
     def deadline_reached() -> bool:
@@ -186,7 +260,7 @@ def _apply_pending_check_refreshes(
 
     should_abort = deadline_reached if deadline is not None else None
     refreshed_count = 0
-    attempted_count = 0
+    attempted_indexes: set[int] = set()
     cursor = 0
     executor = ThreadPoolExecutor(max_workers=worker_count)
     try:
@@ -214,7 +288,7 @@ def _apply_pending_check_refreshes(
                 refreshed, resolved = future.result()
                 refreshed_results[index] = refreshed
                 refreshed_count += int(resolved)
-                attempted_count += 1
+                attempted_indexes.add(index)
             if not_done:
                 for future in not_done:
                     future.cancel()
@@ -225,7 +299,7 @@ def _apply_pending_check_refreshes(
         # path returns. Do not let bootstrap/finalize close that client underneath
         # a live worker.
         executor.shutdown(wait=True, cancel_futures=True)
-    return refreshed_count, attempted_count
+    return refreshed_count, attempted_indexes
 
 
 def refresh_pending_check_results(
@@ -275,11 +349,12 @@ def refresh_pending_check_results(
         current_pending = [
             (index, refreshed_results[index])
             for index in selected_indexes
-            if has_pending_checks(refreshed_results[index]) and refreshed_results[index].alpha_id
+            if needs_submission_check_refresh(refreshed_results[index])
+            and refreshed_results[index].alpha_id
         ]
         if not current_pending or time.monotonic() >= deadline:
             break
-        resolved_count, attempted_count = _apply_pending_check_refreshes(
+        resolved_count, attempted_batch = _apply_pending_check_refreshes(
             client,
             current_pending,
             refreshed_results,
@@ -288,10 +363,12 @@ def refresh_pending_check_results(
             deadline=deadline,
         )
         refreshed_count += resolved_count
-        attempted_indexes.update(index for index, _result in current_pending[:attempted_count])
-        if not repeat_until_terminal or attempted_count < len(current_pending):
+        attempted_indexes.update(attempted_batch)
+        if not repeat_until_terminal or len(attempted_batch) < len(current_pending):
             break
-        if not any(has_pending_checks(refreshed_results[index]) for index in selected_indexes):
+        if not any(
+            needs_submission_check_refresh(refreshed_results[index]) for index in selected_indexes
+        ):
             break
 
         remaining_seconds = deadline - time.monotonic()

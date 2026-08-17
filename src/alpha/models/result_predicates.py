@@ -14,13 +14,30 @@ from .domain import FieldTestResult
 
 
 def has_pending_checks(result: FieldTestResult) -> bool:
-    """Return whether any persisted submission check is still unresolved."""
+    """Return whether the platform reported a semantic PENDING check.
+
+    A transport/API response with no usable checks is deliberately not treated
+    as semantic PENDING.  Callers that own a bounded retry budget should use
+    :func:`needs_submission_check_refresh` instead.
+    """
     if any(str(check.result or "").upper() == "PENDING" for check in result.failed_checks or []):
         return True
     if result.submittable is False:
         return False
     message = str(result.message or "").strip().lower()
-    return message in {"checks pending", "checks unavailable"}
+    return message == "checks pending"
+
+
+def is_submission_check_unavailable(result: FieldTestResult) -> bool:
+    """Return whether a submission-check read exhausted its transport budget."""
+    if result.submittable is not None or has_pending_checks(result):
+        return False
+    return str(result.message or "").strip().lower() == "checks unavailable"
+
+
+def needs_submission_check_refresh(result: FieldTestResult) -> bool:
+    """Return whether a persisted result should receive a bounded status refresh."""
+    return has_pending_checks(result) or is_submission_check_unavailable(result)
 
 
 def is_queue_timeout_result(result: FieldTestResult) -> bool:
@@ -52,4 +69,8 @@ def is_informative_result(result: FieldTestResult) -> bool:
 
 def is_feedback_eligible_result(result: FieldTestResult) -> bool:
     """Return whether a terminal result may influence adaptive research feedback."""
-    return is_informative_result(result) and not has_pending_checks(result)
+    return (
+        is_informative_result(result)
+        and not has_pending_checks(result)
+        and not is_submission_check_unavailable(result)
+    )

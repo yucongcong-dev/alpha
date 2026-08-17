@@ -135,3 +135,51 @@ def test_refresh_submission_checks_reconciles_pending_run_missing_from_feedback(
 
     assert refresh_submission_checks(config) is True
     assert reconciled == [True]
+
+
+def test_refresh_submission_checks_does_not_reuse_feedback_aggregate_identity(
+    monkeypatch,
+) -> None:
+    config = _config()
+    pending_state = HistoricalRunState(feedback_results=[_pending_result()])
+    bootstrap_client = SimpleNamespace(close=lambda: None)
+    client_factory = SimpleNamespace(close=lambda: None)
+    reconciled: dict[str, object] = {}
+
+    monkeypatch.setattr(
+        "alpha.app.submission_check_refresh.load_result_summary_metadata",
+        lambda path: (
+            {}
+            if path == "run.json"
+            else {
+                "dataset_id": "fundamental6",
+                "metadata_scope": "feedback",
+                "settings_fingerprint": "old-settings",
+                "template_library_fingerprint": "old-templates",
+                "run_fingerprint": "old-run",
+                "run_config": {"run": {"name": "old"}},
+            }
+        ),
+    )
+    monkeypatch.setattr(
+        "alpha.app.submission_check_refresh.build_historical_run_state",
+        lambda *_args, **_kwargs: pending_state,
+    )
+    monkeypatch.setattr(
+        "alpha.app.submission_check_refresh.resolve_credentials",
+        lambda _options: ("email", "password"),
+    )
+    monkeypatch.setattr(
+        "alpha.app.submission_check_refresh.create_and_login_client",
+        lambda *_args: (bootstrap_client, client_factory),
+    )
+    monkeypatch.setattr(
+        "alpha.app.submission_check_refresh.reconcile_pending_check_results",
+        lambda *_args, **kwargs: reconciled.update(kwargs) or pending_state,
+    )
+
+    assert refresh_submission_checks(config) is True
+    assert reconciled["settings_fingerprint"] == ""
+    assert reconciled["template_library_fingerprint"] == ""
+    assert reconciled["run_fingerprint"] == ""
+    assert reconciled["run_config"] == {}

@@ -10,7 +10,7 @@ from ..analysis.results_loader import load_result_summary_metadata
 from ..cli.run_config import build_run_config_snapshot
 from ..config.application import ApplicationConfig
 from ..models.domain import FieldTestResult
-from ..models.result_predicates import has_pending_checks
+from ..models.result_predicates import needs_submission_check_refresh
 from ..models.runtime_options import ApiClientOptions, CredentialLoadOptions
 from .bootstrap_clients import create_and_login_client, resolve_credentials
 from .bootstrap_pending_checks import reconcile_pending_check_results
@@ -24,7 +24,7 @@ def _pending_alpha_ids(*result_groups: list[FieldTestResult]) -> set[str]:
         result.alpha_id
         for results in result_groups
         for result in results
-        if result.alpha_id and has_pending_checks(result)
+        if result.alpha_id and needs_submission_check_refresh(result)
     }
 
 
@@ -32,7 +32,19 @@ def _persistence_metadata(config: ApplicationConfig) -> dict[str, object]:
     """Use the existing summary identity, falling back only when none exists."""
     output_metadata = load_result_summary_metadata(config.paths.output)
     feedback_metadata = load_result_summary_metadata(config.paths.feedback_output)
-    metadata = output_metadata or feedback_metadata
+    metadata = output_metadata
+    if not metadata and feedback_metadata:
+        # A feedback summary is a cross-run cache, not the identity of one
+        # simulation.  Keep its dataset scope but do not reuse its run config
+        # or fingerprints as the current run's persistence metadata.
+        metadata = {
+            "dataset_id": feedback_metadata.get("dataset_id", ""),
+            "metadata_scope": "feedback",
+            "settings_fingerprint": "",
+            "template_library_fingerprint": "",
+            "run_fingerprint": "",
+            "run_config": {},
+        }
     persisted_dataset_id = str(metadata.get("dataset_id", "") or "")
     if persisted_dataset_id and persisted_dataset_id != config.dataset.dataset_id:
         raise ValueError(

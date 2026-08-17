@@ -12,11 +12,12 @@ from ..api.client import BrainClient
 from ..core.pending_check_refresh import (
     DEFAULT_PENDING_CHECK_REFRESH_LIMIT,
     DEFAULT_PENDING_CHECK_REFRESH_MAX_SECONDS,
+    project_submission_check_refresh,
     refresh_pending_check_results,
+    select_submission_check_refresh_candidates,
 )
 from ..io.results_store import exclusive_results_transaction
 from ..models.domain import FieldTestResult
-from ..models.result_predicates import has_pending_checks
 from ..models.runtime_protocols import ClientFactoryLike, RunConfig
 from ..runtime.contexts import HistoricalRunState
 
@@ -32,6 +33,7 @@ def persist_reconciled_historical_results(
     template_library_fingerprint: str,
     run_config: RunConfig,
     run_fingerprint: str = "",
+    metadata_scope: str = "run",
 ) -> None:
     """Persist startup reconciliation before later bootstrap stages may return early."""
     with exclusive_results_transaction(output_file):
@@ -43,6 +45,7 @@ def persist_reconciled_historical_results(
             template_library_fingerprint=template_library_fingerprint,
             run_fingerprint=run_fingerprint,
             run_config=run_config,
+            metadata_scope=metadata_scope,
         )
 
 
@@ -66,32 +69,23 @@ def reconcile_pending_check_results(
     """Refresh pending checks and persist every historical view that changed."""
     existing_results = historical_state.existing_results
     feedback_results = historical_state.feedback_results
-    feedback_pending_alpha_ids = {
-        result.alpha_id
-        for result in feedback_results
-        if has_pending_checks(result) and result.alpha_id
-    }
-    extra_existing_pending_results = [
-        result
-        for result in existing_results
-        if has_pending_checks(result)
-        and result.alpha_id
-        and result.alpha_id not in feedback_pending_alpha_ids
-    ]
-    refresh_input_results = [*feedback_results, *extra_existing_pending_results]
+    refresh_input_results = select_submission_check_refresh_candidates(
+        feedback_results,
+        existing_results,
+    )
     if (
         refresh_limit is None
         and max_refresh_seconds is None
         and max_workers is None
         and not repeat_until_terminal
     ):
-        refreshed_feedback_results, refreshed_count = refresh_pending_check_results(
+        refreshed_candidates, refreshed_count = refresh_pending_check_results(
             client,
             refresh_input_results,
             retries=retries,
         )
     else:
-        refreshed_feedback_results, refreshed_count = refresh_pending_check_results(
+        refreshed_candidates, refreshed_count = refresh_pending_check_results(
             client,
             refresh_input_results,
             retries=retries,
@@ -106,24 +100,14 @@ def reconcile_pending_check_results(
             max_workers=1 if max_workers is None else max_workers,
             repeat_until_terminal=repeat_until_terminal,
         )
-    refreshed_all_results = refreshed_feedback_results
-    refreshed_feedback_results = refreshed_all_results[: len(feedback_results)]
-    refreshed_by_alpha_id = {
-        result.alpha_id: result for result in refreshed_feedback_results if result.alpha_id
-    }
-    refreshed_by_alpha_id.update(
-        {
-            result.alpha_id: result
-            for result in refreshed_all_results[len(feedback_results) :]
-            if result.alpha_id
-        }
+    refreshed_feedback_results = project_submission_check_refresh(
+        feedback_results,
+        refreshed_candidates,
     )
-    refreshed_existing_results = [
-        refreshed_by_alpha_id.get(result.alpha_id, result)
-        if has_pending_checks(result) and result.alpha_id
-        else result
-        for result in existing_results
-    ]
+    refreshed_existing_results = project_submission_check_refresh(
+        existing_results,
+        refreshed_candidates,
+    )
     if (
         refreshed_feedback_results == feedback_results
         and refreshed_existing_results == existing_results
@@ -146,6 +130,7 @@ def reconcile_pending_check_results(
             template_library_fingerprint=template_library_fingerprint,
             run_config=run_config,
             run_fingerprint=run_fingerprint,
+            metadata_scope="run",
         )
     if (
         feedback_output
@@ -160,6 +145,7 @@ def reconcile_pending_check_results(
             template_library_fingerprint=template_library_fingerprint,
             run_config=run_config,
             run_fingerprint=run_fingerprint,
+            metadata_scope="feedback",
         )
         persist_feedback_run_index(feedback_output)
     if refreshed_count:
