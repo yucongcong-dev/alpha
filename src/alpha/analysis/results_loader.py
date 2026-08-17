@@ -42,6 +42,7 @@ def load_result_summary_metadata(path: str) -> dict[str, Any]:
     run_config = payload.get("run_config")
     return {
         "dataset_id": str(payload.get("dataset_id", "") or ""),
+        "metadata_scope": str(payload.get("metadata_scope", "run") or "run"),
         "settings_fingerprint": str(payload.get("settings_fingerprint", "") or ""),
         "template_library_fingerprint": str(payload.get("template_library_fingerprint", "") or ""),
         "run_fingerprint": str(payload.get("run_fingerprint", "") or ""),

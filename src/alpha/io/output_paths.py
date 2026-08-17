@@ -103,6 +103,12 @@ def build_output_sidecar_paths(output_path: str) -> dict[str, str]:
     }
 
 
+def is_feedback_output_path(output_path: str) -> bool:
+    """Return whether a summary path belongs to the dataset feedback cache."""
+    output = Path(output_path)
+    return output.parent.name == "feedback" or output.parent.parent.name == "feedback"
+
+
 def cleanup_legacy_sidecar_files(output_path: str, *, verbose: bool = False) -> None:
     """删除旧版分散 summary 文件，避免保留过时输出。"""
     output = Path(output_path)

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import os
+from typing import Any
 
 from ..config._constants_thresholds import DEFAULT_DATASET_ID
 from ..config.settings_spec import SettingSpec, get_setting, settings_by_yaml_section
@@ -11,7 +12,7 @@ from .constants import DEFAULT_CREDS_FILE, DEFAULT_CREDS_KEY_FILE
 
 
 def add_bool_argument(
-    parser: argparse.ArgumentParser,
+    parser: Any,
     name: str,
     *,
     dest: str,
@@ -32,7 +33,7 @@ def add_bool_argument(
     )
 
 
-def add_settings(parser: argparse.ArgumentParser, specs: tuple[SettingSpec, ...]) -> None:
+def add_settings(parser: Any, specs: tuple[SettingSpec, ...]) -> None:
     """从声明式设置表生成一组 argparse 参数。"""
     for spec in specs:
         assert spec.cli is not None
@@ -64,9 +65,10 @@ def add_settings(parser: argparse.ArgumentParser, specs: tuple[SettingSpec, ...]
             )
 
 
-def add_base_arguments(parser: argparse.ArgumentParser) -> None:
+def add_base_arguments(parser: Any) -> None:
     """Add command and config arguments."""
-    parser.add_argument(
+    arguments = parser.add_argument_group("命令与配置")
+    arguments.add_argument(
         "command",
         nargs="?",
         choices=("run", "clean", "check-submissions"),
@@ -76,40 +78,45 @@ def add_base_arguments(parser: argparse.ArgumentParser) -> None:
             "check-submissions=仅刷新已有 Alpha 的 Submission Check"
         ),
     )
-    parser.add_argument(
+    arguments.add_argument(
         "--config",
         default="",
         help="YAML 配置文件路径（留空自动搜索 config/settings.yaml）。所有参数可在此文件中配置。",
     )
 
 
-def add_credentials_arguments(parser: argparse.ArgumentParser) -> None:
+def add_credentials_arguments(parser: Any) -> None:
     """Add credential source arguments."""
-    parser.add_argument("--creds-file", default=DEFAULT_CREDS_FILE, help="本地 JSON 凭证文件路径")
-    parser.add_argument(
+    arguments = parser.add_argument_group("凭证")
+    arguments.add_argument(
+        "--creds-file", default=DEFAULT_CREDS_FILE, help="本地 JSON 凭证文件路径"
+    )
+    arguments.add_argument(
         "--creds-key-file",
         default=DEFAULT_CREDS_KEY_FILE,
         help="用于加密/解密凭证文件的密钥文件路径",
     )
-    parser.add_argument("--email", default=os.getenv("WQB_EMAIL"), help="用户邮箱")
-    parser.add_argument("--password", default=os.getenv("WQB_PASSWORD"), help="用户密码")
+    arguments.add_argument("--email", default=os.getenv("WQB_EMAIL"), help="用户邮箱")
+    arguments.add_argument("--password", default=os.getenv("WQB_PASSWORD"), help="用户密码")
 
 
-def add_dataset_arguments(parser: argparse.ArgumentParser) -> None:
+def add_dataset_arguments(parser: Any) -> None:
     """Add dataset and simulation settings arguments."""
-    parser.add_argument(
+    arguments = parser.add_argument_group("数据集与模拟设置")
+    arguments.add_argument(
         "--dataset-id",
         default=DEFAULT_DATASET_ID,
         help="数据集 ID；run/clean 命令必须显式指定",
     )
-    add_settings(parser, settings_by_yaml_section("simulation"))
+    add_settings(arguments, settings_by_yaml_section("simulation"))
 
 
-def add_run_mode_arguments(parser: argparse.ArgumentParser) -> None:
+def add_run_mode_arguments(parser: Any) -> None:
     """Add run-mode toggles."""
-    add_settings(parser, (get_setting("strategy_profile"),))
+    arguments = parser.add_argument_group("运行模式")
+    add_settings(arguments, (get_setting("strategy_profile"),))
     run_mode = get_setting("run_mode")
-    run_mode_group = parser.add_mutually_exclusive_group()
+    run_mode_group = arguments.add_mutually_exclusive_group()
     run_mode_group.add_argument(
         "--run-mode",
         choices=run_mode.choices,
@@ -132,14 +139,14 @@ def add_run_mode_arguments(parser: argparse.ArgumentParser) -> None:
         default=False,
         help=argparse.SUPPRESS,
     )
-    parser.add_argument(
+    arguments.add_argument(
         "--no-smoke-test",
         action="store_false",
         dest="smoke_test",
         default=False,
         help=argparse.SUPPRESS,
     )
-    parser.add_argument(
+    arguments.add_argument(
         "--no-full-run",
         action="store_false",
         dest="full_run",
@@ -148,63 +155,67 @@ def add_run_mode_arguments(parser: argparse.ArgumentParser) -> None:
     )
 
 
-def add_search_arguments(parser: argparse.ArgumentParser) -> None:
+def add_search_arguments(parser: Any) -> None:
     """Add field/template search-space arguments."""
-    add_settings(parser, settings_by_yaml_section("limits"))
+    arguments = parser.add_argument_group("搜索范围")
+    add_settings(arguments, settings_by_yaml_section("limits"))
 
 
-def add_file_filter_arguments(parser: argparse.ArgumentParser) -> None:
+def add_file_filter_arguments(parser: Any) -> None:
     """Add template/data file and include/exclude filter arguments."""
-    parser.add_argument(
+    arguments = parser.add_argument_group("研究输入与过滤")
+    arguments.add_argument(
         "--template-library-file",
         default="",
         help="本地 JSON 模板库文件路径；留空则根据 dataset_id 自动选择",
     )
-    parser.add_argument(
+    arguments.add_argument(
         "--feedback-output", default="", help="用于反馈排序的历史结果 JSON 文件；默认使用 --output"
     )
-    parser.add_argument(
+    arguments.add_argument(
         "--fields-cache-file",
         default="",
         help="本地 JSON 字段缓存文件路径（留空则根据 dataset_id 自动生成）",
     )
-    add_settings(parser, (get_setting("dry_run_plan"),))
-    parser.add_argument(
+    add_settings(arguments, (get_setting("dry_run_plan"),))
+    arguments.add_argument(
         "--include-fields-file", default="", help="包含字段 ID/名称的文本文件，每行一个"
     )
-    parser.add_argument(
+    arguments.add_argument(
         "--exclude-fields-file", default="", help="排除字段 ID/名称的文本文件，每行一个"
     )
-    parser.add_argument(
+    arguments.add_argument(
         "--include-templates-file", default="", help="包含模板名称的文本文件，每行一个"
     )
-    parser.add_argument(
+    arguments.add_argument(
         "--exclude-templates-file", default="", help="排除模板名称的文本文件，每行一个"
     )
-    add_settings(parser, settings_by_yaml_section("filters"))
+    add_settings(arguments, settings_by_yaml_section("filters"))
 
 
-def add_api_runtime_arguments(parser: argparse.ArgumentParser) -> None:
+def add_api_runtime_arguments(parser: Any) -> None:
     """Add API retry/concurrency/runtime wait arguments."""
-    add_settings(parser, settings_by_yaml_section("concurrency"))
-    add_settings(parser, settings_by_yaml_section("retries"))
+    arguments = parser.add_argument_group("API、并发与重试（高级）")
+    add_settings(arguments, settings_by_yaml_section("concurrency"))
+    add_settings(arguments, settings_by_yaml_section("retries"))
 
 
-def add_pending_check_refresh_arguments(parser: argparse.ArgumentParser) -> None:
+def add_pending_check_refresh_arguments(parser: Any) -> None:
     """Add bounded polling controls for the check-submissions command."""
-    parser.add_argument(
+    arguments = parser.add_argument_group("Submission Check 刷新")
+    arguments.add_argument(
         "--pending-check-limit",
         type=int,
         default=0,
         help="每轮最多刷新多少条待处理 Check；0 表示所有待处理结果",
     )
-    parser.add_argument(
+    arguments.add_argument(
         "--pending-check-max-seconds",
         type=float,
         default=900.0,
         help="check-submissions 的最长轮询时间（秒，默认 900）",
     )
-    parser.add_argument(
+    arguments.add_argument(
         "--pending-check-workers",
         type=int,
         default=1,
@@ -212,40 +223,43 @@ def add_pending_check_refresh_arguments(parser: argparse.ArgumentParser) -> None
     )
 
 
-def add_precheck_arguments(parser: argparse.ArgumentParser) -> None:
+def add_precheck_arguments(parser: Any) -> None:
     """Add local metric diagnostic threshold arguments."""
-    add_settings(parser, settings_by_yaml_section("quality"))
-    add_settings(parser, settings_by_yaml_section("expression"))
+    arguments = parser.add_argument_group("质量与表达式诊断")
+    add_settings(arguments, settings_by_yaml_section("quality"))
+    add_settings(arguments, settings_by_yaml_section("expression"))
 
 
-def add_output_logging_arguments(parser: argparse.ArgumentParser) -> None:
+def add_output_logging_arguments(parser: Any) -> None:
     """Add output, logging, and clean arguments."""
-    parser.add_argument(
+    output_arguments = parser.add_argument_group("输出与日志")
+    output_arguments.add_argument(
         "--output", default="", help="结果 JSON 输出文件路径（留空则根据 dataset_id 自动生成）"
     )
-    parser.add_argument(
+    output_arguments.add_argument(
         "--run-name",
         default="default",
         help="默认运行目录名；仅在未显式传入 --output 时生效",
     )
-    add_settings(parser, (get_setting("verbose"), get_setting("quiet")))
-    parser.add_argument("--log-file", default="", help="日志文件路径")
-    parser.add_argument(
+    add_settings(output_arguments, (get_setting("verbose"), get_setting("quiet")))
+    output_arguments.add_argument("--log-file", default="", help="日志文件路径")
+    clean_arguments = parser.add_argument_group("clean 命令")
+    clean_arguments.add_argument(
         "--include-credentials",
         action="store_true",
         help="全局 clean 同时删除 .credentials/；必须与 --all-datasets 一起使用",
     )
-    parser.add_argument(
+    clean_arguments.add_argument(
         "--all-datasets",
         action="store_true",
         help="clean 命令覆盖所有数据集和遗留根目录运行产物",
     )
-    parser.add_argument(
+    clean_arguments.add_argument(
         "--confirm-clean",
         action="store_true",
         help="确认执行 clean；未提供时只预览将删除的路径",
     )
-    parser.add_argument(
+    clean_arguments.add_argument(
         "--dry-run-clean",
         action="store_true",
         help="显式预览 clean 命令会删除的路径，不实际删除",

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from alpha.analysis.analysis_sync import ensure_analysis_synced
+from alpha.analysis.report_builder import build_results_summary_payload
 from alpha.analysis.results_persistence import dump_results
 from alpha.analysis.template_registry_rules import compile_template_registry_summary
 from alpha.analysis.template_stats import compile_template_stats
@@ -26,6 +27,40 @@ def test_compile_template_stats_excludes_self_correlation_pending_results() -> N
     )
 
     assert stats == {}
+
+
+def test_summary_builder_can_skip_embedded_rows_without_serializing_non_submittable_results(
+    monkeypatch,
+) -> None:
+    result = FieldTestResult(
+        field_id="field_non_submittable",
+        field_type="MATRIX",
+        field_name="field_non_submittable",
+        template_name="tpl",
+        status="simulated",
+        submittable=False,
+        expression="rank(field_non_submittable)",
+    )
+    monkeypatch.setattr(
+        "alpha.analysis.report_builder.serialize_field_test_result",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(
+            AssertionError("non-submittable rows should not be serialized")
+        ),
+    )
+
+    summary, analysis_inputs = build_results_summary_payload(
+        "fundamental6",
+        [result],
+        settings_fingerprint="settings",
+        template_library_fingerprint="templates",
+        run_fingerprint="run",
+        run_config={},
+        results_journal_path="results.jsonl",
+        include_embedded_results=False,
+    )
+
+    assert "results" not in summary
+    assert analysis_inputs["submittable_results"] == []
 
 
 def test_compile_template_registry_summary_reports_weak_template_stats() -> None:

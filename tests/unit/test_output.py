@@ -15,6 +15,7 @@ from alpha.io.results_store import (
     JOURNAL_CHECKSUM_FIELD,
     JOURNAL_SCHEMA_FIELD,
     _append_results_journal,
+    ensure_results_journal,
     initialize_results_journal,
     load_results_rows_from_journal,
 )
@@ -99,6 +100,29 @@ def test_initialize_results_journal_and_load_existing_results(tmp_path) -> None:
 
     assert len(loaded) == 1
     assert loaded[0].field_id == "field_1"
+
+
+def test_ensure_results_journal_reuses_matching_journal(tmp_path, monkeypatch) -> None:
+    output_path = tmp_path / "results.json"
+    result = FieldTestResult(
+        field_id="field_existing",
+        field_type="MATRIX",
+        field_name="field_existing",
+        template_name="tpl",
+        status="simulated",
+        submittable=False,
+        expression="rank(field_existing)",
+    )
+    initialize_results_journal(str(output_path), [result])
+
+    monkeypatch.setattr(
+        "alpha.io.results_store.initialize_results_journal",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(
+            AssertionError("matching journal should not be rebuilt")
+        ),
+    )
+
+    assert ensure_results_journal(str(output_path), [result]) == 1
 
 
 def test_append_results_journal_ignores_empty_batch(tmp_path) -> None:
@@ -404,6 +428,104 @@ def test_dump_results_persists_metrics_settings_and_portable_journal_reference(t
 
     assert loaded[0].settings["neutralization"] == "SUBINDUSTRY"
     assert loaded[0].metrics["sharpe"] == 1.42
+
+
+def test_dump_results_can_reuse_an_unchanged_journal(tmp_path) -> None:
+    output_path = tmp_path / "results.json"
+    result = FieldTestResult(
+        field_id="field_reuse",
+        field_type="MATRIX",
+        field_name="field_reuse",
+        template_name="tpl",
+        status="simulated",
+        submittable=False,
+        expression="rank(field_reuse)",
+    )
+    initialize_results_journal(str(output_path), [result])
+    journal_path = tmp_path / "results_results.jsonl"
+    original_journal = journal_path.read_text(encoding="utf-8")
+
+    dump_results(
+        str(output_path),
+        "fundamental6",
+        [result],
+        settings_fingerprint="settings",
+        template_library_fingerprint="templates",
+        include_analysis=False,
+        rebuild_journal=False,
+    )
+
+    assert journal_path.read_text(encoding="utf-8") == original_journal
+    assert load_existing_results(str(output_path))[0].field_id == "field_reuse"
+
+
+def test_dump_results_marks_feedback_aggregate_metadata_scope(tmp_path) -> None:
+    output_path = tmp_path / "datasets" / "fundamental6" / "feedback" / "usa_d1" / "summary.json"
+
+    dump_results(
+        str(output_path),
+        "fundamental6",
+        [],
+        settings_fingerprint="settings",
+        template_library_fingerprint="templates",
+        include_analysis=False,
+    )
+
+    assert json.loads(output_path.read_text(encoding="utf-8"))["metadata_scope"] == "feedback"
+
+
+def test_dump_results_accepts_explicit_scope_for_custom_feedback_path(tmp_path) -> None:
+    output_path = tmp_path / "custom-feedback.json"
+
+    dump_results(
+        str(output_path),
+        "fundamental6",
+        [],
+        settings_fingerprint="settings",
+        template_library_fingerprint="templates",
+        metadata_scope="feedback",
+        include_analysis=False,
+    )
+
+    assert json.loads(output_path.read_text(encoding="utf-8"))["metadata_scope"] == "feedback"
+
+
+def test_dump_results_reuses_template_stats_for_analysis(tmp_path, monkeypatch) -> None:
+    output_path = tmp_path / "results.json"
+    result = FieldTestResult(
+        field_id="field_stats",
+        field_type="MATRIX",
+        field_name="field_stats",
+        template_name="tpl",
+        status="simulated",
+        submittable=True,
+        expression="rank(field_stats)",
+    )
+    stats = {"tpl": {"attempted": 1, "simulated": 1, "submittable": 1}}
+    calls = 0
+
+    def _compile(_results):
+        nonlocal calls
+        calls += 1
+        return stats
+
+    monkeypatch.setattr("alpha.analysis.results_persistence.compile_template_stats", _compile)
+    monkeypatch.setattr(
+        "alpha.analysis.report_builder.compile_template_stats",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(
+            AssertionError("analysis should reuse the precomputed template stats")
+        ),
+    )
+
+    dump_results(
+        str(output_path),
+        "fundamental6",
+        [result],
+        settings_fingerprint="settings",
+        template_library_fingerprint="templates",
+    )
+
+    assert calls == 1
 
 
 def test_dump_results_incremental_writes_lightweight_summary(tmp_path) -> None:

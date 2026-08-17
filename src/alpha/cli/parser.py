@@ -12,17 +12,22 @@ from .parser_schema import (
     collect_explicit_cli_keys,
     collect_explicit_cli_options,
     collect_parser_defaults,
+    command_from_argv,
 )
 from .path_resolution import normalize_args_paths as _normalize_args_paths
 
 
 def parse_args() -> argparse.Namespace:
     """Parse CLI arguments and apply YAML/profile/run-mode overrides."""
+    argv = sys.argv[1:]
     parser = build_parser()
+    command = command_from_argv(argv, parser=parser)
+    if command != "run":
+        parser = build_parser(command=command)
 
     parser_defaults = collect_parser_defaults(parser)
-    explicit_cli_keys = collect_explicit_cli_keys(parser, sys.argv[1:])
-    explicit_cli_options = collect_explicit_cli_options(parser, sys.argv[1:])
+    explicit_cli_keys = collect_explicit_cli_keys(parser, argv)
+    explicit_cli_options = collect_explicit_cli_options(parser, argv)
     args = parser.parse_args()
     args._explicit_cli_keys = frozenset(explicit_cli_keys)
     args._explicit_cli_options = frozenset(explicit_cli_options)

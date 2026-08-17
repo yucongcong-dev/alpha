@@ -8,14 +8,20 @@ from pathlib import Path
 from typing import Any
 
 from ..io.common import atomic_write_json
-from ..io.output_paths import build_output_sidecar_paths, cleanup_legacy_sidecar_files
+from ..io.output_paths import (
+    build_output_sidecar_paths,
+    cleanup_legacy_sidecar_files,
+    is_feedback_output_path,
+)
 from ..io.results_store import (
     _append_results_journal,
+    ensure_results_journal,
     exclusive_results_transaction,
     initialize_results_journal,
 )
 from ..models.domain import FieldTestResult
 from .report_builder import build_analysis_payload, build_results_summary_payload
+from .template_registry_rules import compile_template_registry_summary
 from .template_registry_sidecars import (
     persist_template_registry_summary,
     sync_template_registry_sidecars,
@@ -40,6 +46,9 @@ def dump_results(
     run_fingerprint: str = "",
     run_config: dict[str, Any] | None = None,
     include_analysis: bool = True,
+    rebuild_journal: bool = True,
+    include_embedded_results: bool = False,
+    metadata_scope: str | None = None,
 ) -> None:
     """Persist the authoritative journal and its derived result views."""
     sidecar_paths = build_output_sidecar_paths(path)
@@ -51,15 +60,32 @@ def dump_results(
         run_fingerprint=run_fingerprint,
         run_config=run_config,
         results_journal_path=_portable_journal_reference(path, sidecar_paths["results_journal"]),
+        include_embedded_results=include_embedded_results,
     )
-    summary["results_embedded"] = False
-    summary.pop("results", None)
+    summary["results_embedded"] = include_embedded_results
+    summary["metadata_scope"] = metadata_scope or (
+        "feedback" if is_feedback_output_path(path) else "run"
+    )
     template_stats = compile_template_stats(results)
-    initialize_results_journal(path, results)
+    template_registry_summary = compile_template_registry_summary(template_stats)
+    if rebuild_journal:
+        initialize_results_journal(path, results)
+    else:
+        ensure_results_journal(path, results)
     atomic_write_json(path, summary)
-    sync_template_registry_sidecars(path, template_stats=template_stats)
+    sync_template_registry_sidecars(
+        path,
+        summary_rows=template_registry_summary,
+        template_stats=template_stats,
+    )
     if include_analysis:
-        analysis = build_analysis_payload(results, summary, analysis_inputs)
+        analysis = build_analysis_payload(
+            results,
+            summary,
+            analysis_inputs,
+            template_stats=template_stats,
+            template_registry_summary=template_registry_summary,
+        )
         atomic_write_json(sidecar_paths["analysis"], analysis)
     cleanup_legacy_sidecar_files(path)
     logger.info(
@@ -90,6 +116,7 @@ def dump_results_incremental(
     template_registry_summary: list[dict[str, Any]] | None = None,
     template_stats: dict[str, dict[str, Any]] | None = None,
     pending_check_count: int = 0,
+    metadata_scope: str | None = None,
 ) -> int:
     """Append new journal rows and persist lightweight derived views."""
     sidecar_paths = build_output_sidecar_paths(path)
@@ -116,6 +143,8 @@ def dump_results_incremental(
             "queue_timeouts": queue_timeout_count,
             "pending_checks": pending_check_count,
             "results_embedded": False,
+            "metadata_scope": metadata_scope
+            or ("feedback" if is_feedback_output_path(path) else "run"),
             "results_journal": _portable_journal_reference(path, sidecar_paths["results_journal"]),
         }
         atomic_write_json(path, summary)

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from ..analysis.results_persistence import dump_results_incremental
-from ..io.results_store import initialize_results_journal
+from ..io.results_store import ensure_results_journal
 from ..models.runtime_protocols import RunConfig
 from ..runtime.contexts import HistoricalRunState
 from ..runtime.state import ExecutionState
@@ -36,7 +36,7 @@ def build_execution_state(
         historical_state=historical_state,
     )
     result_ledger = execution_state.result_ledger
-    result_ledger.persisted_result_count = initialize_results_journal(
+    result_ledger.persisted_result_count = ensure_results_journal(
         output_file,
         result_ledger.results,
     )

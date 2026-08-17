@@ -16,6 +16,7 @@ from ..io.common import atomic_write_json
 from ..io.output_paths import build_output_sidecar_paths
 from .report_builder import build_analysis_payload, build_results_summary_payload
 from .results_loader import load_existing_results
+from .template_registry_rules import compile_template_registry_summary
 from .template_registry_sidecars import sync_template_registry_sidecars
 from .template_stats import compile_template_stats
 
@@ -73,11 +74,21 @@ def ensure_analysis_synced(output_path: str) -> None:
         results_journal_path=os.path.relpath(
             sidecar_paths["results_journal"], start=Path(output_path).parent
         ),
+        include_embedded_results=False,
     )
-    analysis = build_analysis_payload(results, derived_summary, analysis_inputs)
+    template_stats = compile_template_stats(results)
+    template_registry_summary = compile_template_registry_summary(template_stats)
+    analysis = build_analysis_payload(
+        results,
+        derived_summary,
+        analysis_inputs,
+        template_stats=template_stats,
+        template_registry_summary=template_registry_summary,
+    )
     atomic_write_json(sidecar_paths["analysis"], analysis)
     sync_template_registry_sidecars(
         output_path,
-        template_stats=compile_template_stats(results),
+        summary_rows=template_registry_summary,
+        template_stats=template_stats,
     )
     logger.info("[analysis] rebuilt analysis from main results: %s", sidecar_paths["analysis"])

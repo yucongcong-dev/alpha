@@ -24,6 +24,8 @@ from ..core.pending_check_refresh import (
     refresh_pending_check_results,
 )
 from ..io.results_store import exclusive_results_transaction
+from ..models.domain_serializers import serialize_field_test_result
+from ..models.result_predicates import needs_submission_check_refresh
 from ..models.runtime_options import ResultWriteOptions
 from ..runtime.state import InitializedRunContext
 
@@ -43,8 +45,9 @@ def finalize_run(
     state_file = paths.state_file
     result_ledger = execution_state.result_ledger
     results = result_ledger.results
-    pending_before = result_ledger.pending_check_count
-    if pending_before:
+    journal_rows_before = [serialize_field_test_result(result) for result in results]
+    refreshable_before = sum(needs_submission_check_refresh(result) for result in results)
+    if refreshable_before:
         original_results = list(results)
         refreshed_results, resolved_count = refresh_pending_check_results(
             run_ctx.client_factory,
@@ -64,13 +67,16 @@ def finalize_run(
             "[check-submission-finalize] attempted=%d resolved=%d remaining=%d",
             attempted_count,
             resolved_count,
-            result_ledger.pending_check_count,
+            sum(needs_submission_check_refresh(result) for result in results),
         )
     enrich_results_provenance(
         results,
         output_path=output_path,
         run_config=run_ctx.run_config,
     )
+    rebuild_run_journal = journal_rows_before != [
+        serialize_field_test_result(result) for result in results
+    ]
     metrics = result_ledger.metrics
     logger.info(
         "[done] 测试完成：tested=%d submittable=%d errors=%d",
@@ -86,6 +92,7 @@ def finalize_run(
         template_library_fingerprint=run_ctx.template_library_fingerprint,
         run_fingerprint=run_ctx.run_fingerprint,
         run_config=run_ctx.run_config,
+        rebuild_journal=rebuild_run_journal,
     )
     if feedback_output_path and feedback_output_path != output_path:
         with exclusive_results_transaction(feedback_output_path):
@@ -105,6 +112,7 @@ def finalize_run(
                 template_library_fingerprint=run_ctx.template_library_fingerprint,
                 run_fingerprint=run_ctx.run_fingerprint,
                 run_config=run_ctx.run_config,
+                metadata_scope="feedback",
             )
             persist_feedback_run_index(feedback_output_path)
         logger.info(

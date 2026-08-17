@@ -106,6 +106,7 @@ def test_finalize_run_updates_separate_feedback_output(tmp_path) -> None:
         str(tmp_path / "feedback.json"),
     ]
     assert mock_dump.call_args_list[-1].args[2] == [result]
+    assert mock_dump.call_args_list[-1].kwargs["metadata_scope"] == "feedback"
     mock_persist_index.assert_called_once_with(str(tmp_path / "feedback.json"))
     mock_delete.assert_called_once_with(str(tmp_path / "state.json"))
 

@@ -7,6 +7,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from typing import Any
 
 from ..config._constants_strings import STATUS_ERROR
@@ -38,6 +39,7 @@ def build_results_summary_payload(
     run_fingerprint: str,
     run_config: dict[str, Any] | None,
     results_journal_path: str,
+    include_embedded_results: bool = True,
 ) -> tuple[SummaryPayload, AnalysisInputs]:
     """单次遍历构建主结果 summary 及 analysis 所需的中间聚合数据。"""
     results_dicts: list[ResultRow] = []
@@ -50,13 +52,18 @@ def build_results_summary_payload(
     pending_check_count = 0
 
     for result in results:
-        item = serialize_field_test_result(result)
-        results_dicts.append(item)
         field_ids.add(result.field_id)
 
         if result.submittable:
+            item = serialize_field_test_result(result)
             submittable_count += 1
             submittable_results.append(item)
+        elif include_embedded_results:
+            item = serialize_field_test_result(result)
+        else:
+            item = None
+        if include_embedded_results and item is not None:
+            results_dicts.append(item)
         if result.status == STATUS_ERROR:
             error_count += 1
         if is_queue_timeout_result(result):
@@ -89,8 +96,9 @@ def build_results_summary_payload(
         "pending_checks": pending_check_count,
         "template_registry_embedded": False,
         "results_journal": results_journal_path,
-        "results": results_dicts,
     }
+    if include_embedded_results:
+        summary["results"] = results_dicts
     analysis_inputs = {
         "submittable_results": submittable_results,
         "failed_checks_summary": failed_checks_summary,
@@ -102,10 +110,20 @@ def build_analysis_payload(
     results: list[FieldTestResult],
     summary: SummaryPayload,
     analysis_inputs: AnalysisInputs,
+    *,
+    template_stats: Mapping[str, Mapping[str, Any]] | None = None,
+    template_registry_summary: list[dict[str, Any]] | None = None,
 ) -> AnalysisPayload:
     """基于完整结果和 summary 构建 analysis sidecar 内容。"""
     template_performance_summary = compile_template_performance_summary(results)
-    template_registry_summary = compile_template_registry_summary(compile_template_stats(results))
+    resolved_template_stats = (
+        template_stats if template_stats is not None else compile_template_stats(results)
+    )
+    resolved_template_registry_summary = (
+        template_registry_summary
+        if template_registry_summary is not None
+        else compile_template_registry_summary(resolved_template_stats)
+    )
     field_performance_summary = compile_field_performance_summary(results)
     failed_check_leaderboard = compile_failed_check_leaderboard(results)
     near_pass_summary = compile_near_pass_summary(results)
@@ -130,6 +148,6 @@ def build_analysis_payload(
         "near_pass_summary": near_pass_summary,
         "optimization_hints": optimization_hints,
         "template_performance_summary": template_performance_summary,
-        "template_registry_summary": template_registry_summary,
+        "template_registry_summary": resolved_template_registry_summary,
         "field_performance_summary": field_performance_summary,
     }

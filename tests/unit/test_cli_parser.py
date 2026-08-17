@@ -7,6 +7,7 @@ import sys
 import pytest
 
 from alpha.cli.parser import parse_args
+from alpha.cli.parser_schema import build_parser, command_from_argv
 from alpha.config.yaml import get_yaml_config
 
 
@@ -69,6 +70,38 @@ def test_default_field_page_size_prefers_stability(monkeypatch) -> None:
     monkeypatch.setattr(sys, "argv", ["alpha"])
 
     assert parse_args().page_size == 20
+
+
+def test_check_submissions_help_shows_only_refresh_controls() -> None:
+    help_text = build_parser(command="check-submissions").format_help()
+
+    assert "--pending-check-limit" in help_text
+    assert "--check-submission-retries" in help_text
+    assert "--decay" not in help_text
+    assert "--max-templates-per-field" not in help_text
+    assert "--dry-run-clean" not in help_text
+
+
+def test_clean_help_hides_simulation_and_submission_controls() -> None:
+    help_text = build_parser(command="clean").format_help()
+
+    assert "--dry-run-clean" in help_text
+    assert "--all-datasets" in help_text
+    assert "--decay" not in help_text
+    assert "--pending-check-limit" not in help_text
+
+
+@pytest.mark.parametrize(
+    ("argv", "expected"),
+    [
+        (["clean", "--help"], "clean"),
+        (["--run-name", "clean", "--help"], "run"),
+        (["--output", "check-submissions", "--help"], "run"),
+        (["--dataset-id", "fundamental6", "check-submissions", "--help"], "check-submissions"),
+    ],
+)
+def test_command_from_argv_ignores_option_values(argv, expected) -> None:
+    assert command_from_argv(argv) == expected
 
 
 def test_dataset_profile_can_reduce_field_page_size(monkeypatch, tmp_path) -> None:

@@ -189,6 +189,28 @@ def initialize_results_journal(output_path: str, results: list[FieldTestResult])
     return len(results)
 
 
+def ensure_results_journal(output_path: str, results: list[FieldTestResult]) -> int:
+    """Reuse an already-canonical journal and rebuild only when it diverges.
+
+    Bootstrap and finalization often see the same result list that was already
+    appended incrementally.  Reading and comparing that journal is enough to
+    preserve the append-only source of truth; a full atomic replacement is
+    reserved for a missing, corrupt, legacy, or genuinely changed journal.
+    """
+    journal_path = build_output_sidecar_paths(output_path)["results_journal"]
+    if not os.path.exists(journal_path):
+        return initialize_results_journal(output_path, results)
+    try:
+        rows = load_results_rows_from_journal(journal_path)
+    except (OSError, ValueError, json.JSONDecodeError):
+        return initialize_results_journal(output_path, results)
+    expected_rows = [_journal_row_payload(result) for result in results]
+    if rows == expected_rows:
+        _remember_journal_state(journal_path, row_count=len(rows))
+        return len(rows)
+    return initialize_results_journal(output_path, results)
+
+
 def _append_results_journal(
     journal_path: str,
     results: list[FieldTestResult],
