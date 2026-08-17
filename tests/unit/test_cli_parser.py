@@ -153,6 +153,48 @@ def test_parse_args_keeps_explicit_command_boundaries(monkeypatch, command, opti
 
 
 @pytest.mark.parametrize(
+    "argv",
+    [
+        ["--smoke-test"],
+        ["--no-smoke-test"],
+        ["--full-run"],
+        ["--no-full-run"],
+        ["--legacy-similarity-penalty", "5"],
+    ],
+)
+def test_removed_cli_aliases_are_rejected(monkeypatch, argv) -> None:
+    clear_yaml_cache()
+    monkeypatch.setattr(sys, "argv", ["alpha", *argv])
+
+    with pytest.raises(SystemExit):
+        parse_args()
+
+
+@pytest.mark.parametrize(
+    ("yaml_key", "yaml_value", "replacement"),
+    [
+        ("smoke_test", "true", "runtime.run_mode: smoke"),
+        ("full_run", "true", "runtime.run_mode: full"),
+        ("legacy_similarity_penalty", "5", "limits.similarity_penalty"),
+    ],
+)
+def test_removed_yaml_aliases_fail_with_their_replacement(
+    monkeypatch, tmp_path, yaml_key, yaml_value, replacement
+) -> None:
+    clear_yaml_cache()
+    config_path = tmp_path / "settings.yaml"
+    section = "runtime" if yaml_key in {"smoke_test", "full_run"} else "limits"
+    config_path.write_text(
+        f"global:\n  {section}:\n    {yaml_key}: {yaml_value}\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(sys, "argv", ["alpha", "--config", str(config_path)])
+
+    with pytest.raises(ValueError, match=replacement):
+        parse_args()
+
+
+@pytest.mark.parametrize(
     ("argv", "expected"),
     [
         (["clean", "--help"], "clean"),

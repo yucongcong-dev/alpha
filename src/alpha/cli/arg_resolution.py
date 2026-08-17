@@ -31,6 +31,11 @@ DATE_RESOLUTION_SOURCE = "date_resolution"
 DATASET_PROFILE_SOURCE = "dataset_profile"
 STRATEGY_PROFILE_SOURCE = "strategy_profile"
 RUN_MODE_SOURCE = "run_mode"
+_REMOVED_YAML_OPTIONS = {
+    ("runtime", "smoke_test"): "runtime.run_mode: smoke",
+    ("runtime", "full_run"): "runtime.run_mode: full",
+    ("limits", "legacy_similarity_penalty"): "limits.similarity_penalty",
+}
 
 
 @dataclass(frozen=True, slots=True)
@@ -210,6 +215,7 @@ def _global_yaml_layer(
     global_config = (yaml_config or {}).get("global", {})
     if not isinstance(global_config, dict):
         return ResolvedConfigLayer(GLOBAL_YAML_SOURCE, {})
+    _reject_removed_yaml_options(global_config)
 
     missing = object()
 
@@ -231,6 +237,14 @@ def _global_yaml_layer(
         if value is not missing and spec.dest in state.values:
             updates[spec.dest] = value
     return ResolvedConfigLayer(GLOBAL_YAML_SOURCE, updates)
+
+
+def _reject_removed_yaml_options(global_config: dict[str, object]) -> None:
+    """Reject removed YAML aliases instead of silently ignoring their values."""
+    for (section_name, key), replacement in _REMOVED_YAML_OPTIONS.items():
+        section = global_config.get(section_name)
+        if isinstance(section, dict) and key in section:
+            raise ValueError(f"global.{section_name}.{key} 已移除；请改用 global.{replacement}")
 
 
 def _date_resolution_layer(
