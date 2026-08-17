@@ -23,7 +23,7 @@ from .yaml_sources import (
 _schema_lock = threading.RLock()
 _schema_keys_cache: dict[str, set[str]] | None = None
 
-GLOBAL_KNOWN_KEYS = {
+_NESTED_CONFIG_SECTIONS = {
     "simulation",
     "limits",
     "concurrency",
@@ -150,47 +150,57 @@ def _validate_global_section(config: YamlConfig, resolved_files: dict[str, str])
         return []
 
     global_section = config.get("global", {})
-    if not isinstance(global_section, dict):
+    if isinstance(global_section, dict):
         return []
-
-    return [
-        f"YAML global 段存在未知 key '{gkey}'，已知 key: {sorted(GLOBAL_KNOWN_KEYS)}"
-        for gkey in global_section
-        if gkey not in GLOBAL_KNOWN_KEYS
-    ]
+    return ["YAML global 段必须是 mapping。"]
 
 
-def global_leaf_key_schema() -> dict[str, frozenset[str]]:
-    """Return the declared flat keys accepted below each ``global`` section."""
+def global_leaf_path_schema() -> frozenset[tuple[str, ...]]:
+    """Return every nested configuration path accepted below ``global``.
+
+    The canonical default YAML owns static values, while ``SettingSpec`` owns
+    CLI-resolved values.  Their union keeps both configuration paths valid and
+    lets the validator reject a typo at its actual nested location.
+    """
     from .settings_spec import yaml_default_settings
+    from .yaml_sources import resolve_all_yaml_files
 
-    schema: dict[str, set[str]] = {}
+    paths = _collect_leaf_paths(load_default_yamls(resolve_all_yaml_files()))
     for spec in yaml_default_settings():
-        if spec.yaml is None or len(spec.yaml) != 2:
-            continue
-        section, key = spec.yaml
-        schema.setdefault(section, set()).add(key)
+        if spec.yaml is not None:
+            paths.add(spec.yaml)
     for section, keys in _GLOBAL_EXTRA_LEAF_KEYS.items():
-        schema.setdefault(section, set()).update(keys)
-    return {section: frozenset(keys) for section, keys in schema.items()}
+        paths.update((section, key) for key in keys)
+    return frozenset(paths)
 
 
 def validate_global_leaf_keys(global_config: dict[str, object]) -> list[str]:
-    """Report unknown or malformed configuration leaves below ``global``."""
-    schema = global_leaf_key_schema()
+    """Report unknown or malformed nested configuration leaves below ``global``."""
+    allowed_paths = global_leaf_path_schema()
+    mapping_paths = {path[:depth] for path in allowed_paths for depth in range(1, len(path))}
     warnings: list[str] = []
+
+    def visit(path: tuple[str, ...], value: object) -> None:
+        display_path = f"global.{'.'.join(path)}"
+        if isinstance(value, dict):
+            if path in allowed_paths:
+                warnings.append(f"{display_path} 必须是标量值，不能是 mapping。")
+                return
+            if path not in mapping_paths:
+                warnings.append(f"{display_path} 是未知配置路径。")
+                return
+            for key, nested_value in value.items():
+                visit((*path, str(key)), nested_value)
+            return
+        if path in allowed_paths:
+            return
+        if path in mapping_paths:
+            warnings.append(f"{display_path} 必须是 mapping。")
+            return
+        warnings.append(f"{display_path} 是未知配置路径。")
+
     for section, value in global_config.items():
-        allowed_keys = schema.get(section)
-        if allowed_keys is None:
-            continue
-        if not isinstance(value, dict):
-            warnings.append(f"global.{section} 必须是 mapping。")
-            continue
-        unknown_keys = sorted(set(value) - allowed_keys)
-        if unknown_keys:
-            warnings.append(
-                f"global.{section} 存在未知 key {unknown_keys}，已知 key: {sorted(allowed_keys)}"
-            )
+        visit((str(section),), value)
     return warnings
 
 
@@ -259,7 +269,7 @@ def _validate_nested_paths(config: YamlConfig) -> list[str]:
         if section in skip_sections or not isinstance(section_data, dict):
             continue
 
-        if section in GLOBAL_KNOWN_KEYS:
+        if section in _NESTED_CONFIG_SECTIONS:
             leaf_paths = _collect_leaf_paths(section_data, (section,))
             warnings.extend(
                 f"嵌套过深: {' > '.join(path)}，请检查默认 YAML 中 {section} 段的结构。"

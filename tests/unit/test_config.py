@@ -314,6 +314,23 @@ global:
     )
 
 
+def test_global_leaf_schema_reports_unknown_nested_key(tmp_path) -> None:
+    config_path = tmp_path / "settings.yaml"
+    config_path.write_text(
+        """
+global:
+  quality:
+    submit:
+      min_fitnes: 1.35
+""".strip(),
+        encoding="utf-8",
+    )
+
+    warnings = validate_yaml_config(str(config_path))
+
+    assert "global.quality.submit.min_fitnes 是未知配置路径。" in warnings
+
+
 def test_strategy_profile_schema_validates_keys_and_runtime_default_types(tmp_path) -> None:
     config_path = tmp_path / "settings.yaml"
     config_path.write_text(

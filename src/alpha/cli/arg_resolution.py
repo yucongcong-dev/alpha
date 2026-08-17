@@ -215,7 +215,7 @@ def _global_yaml_layer(
     """Return global YAML values below every explicit CLI value."""
     global_config = (yaml_config or {}).get("global", {})
     if not isinstance(global_config, dict):
-        return ResolvedConfigLayer(GLOBAL_YAML_SOURCE, {})
+        raise ValueError("YAML global 段必须是 mapping。")
     _reject_removed_yaml_options(global_config)
     validation_errors = validate_global_leaf_keys(global_config)
     if validation_errors:

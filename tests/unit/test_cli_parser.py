@@ -211,6 +211,23 @@ global:
         parse_args()
 
 
+def test_nested_global_default_override_is_accepted(monkeypatch, tmp_path) -> None:
+    clear_yaml_cache()
+    config_path = tmp_path / "settings.yaml"
+    config_path.write_text(
+        """
+global:
+  quality:
+    submit:
+      min_fitness: 1.35
+""".strip(),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(sys, "argv", ["alpha", "--config", str(config_path)])
+
+    assert parse_args().min_fitness == 1.0
+
+
 @pytest.mark.parametrize(
     ("argv", "expected"),
     [
