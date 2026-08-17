@@ -15,6 +15,7 @@ from ..models.runtime_options import (
 from .bootstrap_fields import prepare_fields_for_execution
 from .bootstrap_state import create_execution_state
 from .bootstrap_supporting_resources import load_supporting_resources
+from .run_lock import is_run_lock_held
 
 logger = logging.getLogger(__name__)
 
@@ -27,6 +28,20 @@ def run_dry_run_plan(args: ApplicationConfig) -> bool:
     dataset_id = field_options.dataset_id
 
     _log_config_sources(args)
+    try:
+        if is_run_lock_held(paths.output):
+            logger.error(
+                "[dry-run] run output is active at %s; retry after the live run completes",
+                paths.output,
+            )
+            return False
+    except OSError as exc:
+        logger.error(
+            "[dry-run] cannot safely inspect the run lock for %s: %s",
+            paths.output,
+            exc,
+        )
+        return False
 
     supporting_resources = load_supporting_resources(
         dataset_id=dataset_id,

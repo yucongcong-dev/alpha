@@ -162,3 +162,15 @@ def test_dry_run_plan_fails_without_matching_local_cache(monkeypatch, tmp_path) 
     monkeypatch.setattr("alpha.app.planning.load_fields_cache", lambda *_args, **_kwargs: [])
 
     assert run_dry_run_plan(args) is False
+
+
+def test_dry_run_plan_refuses_an_active_output(monkeypatch, tmp_path) -> None:
+    paths = _paths(tmp_path)
+    args = _config(paths)
+    monkeypatch.setattr("alpha.app.planning.is_run_lock_held", lambda _path: True)
+    monkeypatch.setattr(
+        "alpha.app.planning.load_supporting_resources",
+        lambda **_kwargs: (_ for _ in ()).throw(AssertionError("must not read active output")),
+    )
+
+    assert run_dry_run_plan(args) is False

@@ -6,7 +6,11 @@ from collections.abc import Iterator
 from contextlib import contextmanager
 from pathlib import Path
 
-from ..io.file_lock import FileLockUnavailableError, exclusive_file_lock
+from ..io.file_lock import (
+    FileLockUnavailableError,
+    exclusive_file_lock,
+    is_exclusive_file_lock_held,
+)
 
 
 def runtime_cleanup_lock_path(output_path: str) -> str | None:
@@ -16,6 +20,11 @@ def runtime_cleanup_lock_path(output_path: str) -> str | None:
         if ancestor.name == "runs":
             return str(ancestor.parent / ".runtime-clean.lock")
     return None
+
+
+def is_run_lock_held(output_path: str) -> bool:
+    """Read an existing output lock without creating a lock file."""
+    return is_exclusive_file_lock_held(f"{output_path}.run.lock")
 
 
 @contextmanager

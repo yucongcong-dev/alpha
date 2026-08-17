@@ -10,7 +10,11 @@ import shutil
 from ..cli.constants import PROJECT_ROOT
 from ..config.application import CleanConfig
 from ..io.common import sanitize_dataset_id_for_filename
-from ..io.file_lock import FileLockUnavailableError, exclusive_file_lock
+from ..io.file_lock import (
+    FileLockUnavailableError,
+    exclusive_file_lock,
+    is_exclusive_file_lock_held,
+)
 
 
 def _selected_dataset_dirs(project_root: Path, config: CleanConfig) -> list[Path]:
@@ -58,9 +62,9 @@ def _active_run_locks(dataset_dirs: list[Path]) -> list[Path]:
             if not lock_path.is_file():
                 continue
             try:
-                with exclusive_file_lock(str(lock_path), blocking=False):
-                    pass
-            except (FileLockUnavailableError, OSError):
+                if is_exclusive_file_lock_held(str(lock_path)):
+                    active.append(lock_path)
+            except OSError:
                 active.append(lock_path)
     return active
 

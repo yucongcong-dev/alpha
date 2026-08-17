@@ -126,6 +126,13 @@ def test_exclusive_file_lock_reports_thread_contention(monkeypatch, tmp_path) ->
         pass
 
 
+def test_lock_probe_does_not_create_missing_lock_file(tmp_path) -> None:
+    lock_path = tmp_path / "missing.lock"
+
+    assert file_lock.is_exclusive_file_lock_held(str(lock_path)) is False
+    assert not lock_path.exists()
+
+
 def test_exclusive_file_lock_uses_nonblocking_windows_mode(monkeypatch, tmp_path) -> None:
     calls: list[tuple[int, int]] = []
     fake_msvcrt = SimpleNamespace(
@@ -252,3 +259,11 @@ def test_exclusive_run_lock_rejects_runtime_cleanup_gate(tmp_path) -> None:
         run_lock.exclusive_run_lock(str(output_path)),
     ):
         pass
+
+
+def test_run_lock_probe_detects_an_active_output_lock(tmp_path) -> None:
+    output_path = tmp_path / "summary.json"
+    lock_path = f"{output_path}.run.lock"
+
+    with file_lock.exclusive_file_lock(lock_path):
+        assert run_lock.is_run_lock_held(str(output_path)) is True

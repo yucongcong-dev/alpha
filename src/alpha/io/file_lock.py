@@ -26,6 +26,42 @@ def _thread_lock(lock_path: str) -> threading.RLock:
         return _FILE_LOCKS.setdefault(canonical_path, threading.RLock())
 
 
+def is_exclusive_file_lock_held(lock_path: str) -> bool:
+    """Return whether an existing lock file is held, without changing the filesystem."""
+    if not os.path.isfile(lock_path):
+        return False
+    try:
+        mode = "r+b" if os.name == "nt" else "rb"
+        with open(lock_path, mode) as lock_handle:
+            if os.name == "nt":
+                # ``msvcrt.locking`` needs an existing byte range. Windows lock
+                # files created by ``exclusive_file_lock`` always contain one.
+                if lock_handle.seek(0, os.SEEK_END) == 0:
+                    return False
+                lock_handle.seek(0)
+                msvcrt = cast(Any, import_module("msvcrt"))
+                try:
+                    msvcrt.locking(lock_handle.fileno(), msvcrt.LK_NBLCK, 1)
+                except OSError as exc:
+                    if exc.errno in {errno.EACCES, errno.EAGAIN}:
+                        return True
+                    raise
+                msvcrt.locking(lock_handle.fileno(), msvcrt.LK_UNLCK, 1)
+                return False
+
+            fcntl = cast(Any, import_module("fcntl"))
+            try:
+                fcntl.flock(lock_handle.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+            except OSError as exc:
+                if isinstance(exc, BlockingIOError) or exc.errno in {errno.EACCES, errno.EAGAIN}:
+                    return True
+                raise
+            fcntl.flock(lock_handle.fileno(), fcntl.LOCK_UN)
+            return False
+    except FileNotFoundError:
+        return False
+
+
 def _acquire_windows_lock(lock_handle: Any, msvcrt: Any, *, blocking: bool) -> None:
     """Acquire a Windows byte-range lock with the same blocking contract as flock."""
     while True:
