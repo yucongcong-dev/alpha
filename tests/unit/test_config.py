@@ -554,13 +554,18 @@ def test_cli_config_is_bound_before_yaml_backed_constants_import(tmp_path) -> No
     script = """
 import sys
 sys.argv = ["alpha", "--config", sys.argv[1]]
-from alpha.__main__ import _bind_active_config
-_bind_active_config()
 import alpha.main
-from alpha.config._constants_thresholds import SUBMIT_MIN_FITNESS
-from alpha.config.runtime_values import get_runtime_config
-assert SUBMIT_MIN_FITNESS == 1.35
-assert get_runtime_config().http.simulation_retry_wait == 12.5
+
+def inspect_bound_config():
+    from alpha.config._constants_thresholds import SUBMIT_MIN_FITNESS
+    from alpha.config.runtime_values import get_runtime_config
+
+    assert SUBMIT_MIN_FITNESS == 1.35
+    assert get_runtime_config().http.simulation_retry_wait == 12.5
+    return 0
+
+alpha.main.main = inspect_bound_config
+assert alpha.main.run_cli_entry() == 0
 """
 
     completed = subprocess.run(

@@ -3,17 +3,18 @@
 from __future__ import annotations
 
 import logging
+from typing import TYPE_CHECKING
 
-from .app import bootstrap, finalize, planning, run_lock, run_loop, submission_check_refresh
-from .cli import filters as cli_filters
-from .cli import parser
-from .config.application import ApplicationConfig, CleanConfig
+if TYPE_CHECKING:
+    from .config.application import ApplicationConfig
 
 logger = logging.getLogger(__name__)
 
 
 def _configure_application_logging(config: ApplicationConfig) -> None:
     """Configure console/file logging once after the CLI boundary is parsed."""
+    from .cli import filters as cli_filters
+
     writes_runtime_log = config.command == "check-submissions" or (
         config.command == "run" and not config.planning.dry_run_plan
     )
@@ -36,6 +37,12 @@ def main() -> int:
     Returns:
         int: 退出状态码（0=正常, 1=错误, 130=用户中断）。
     """
+    # These modules import YAML-backed constants.  ``run_cli_entry`` binds the
+    # explicit settings file before this dispatcher reaches them.
+    from .app import bootstrap, finalize, planning, run_lock, run_loop, submission_check_refresh
+    from .cli import parser
+    from .config.application import CleanConfig
+
     config = parser.parse_application_config()
     if isinstance(config, CleanConfig):
         return bootstrap.clean_runtime_artifacts(config)
@@ -62,6 +69,11 @@ def main() -> int:
 def run_cli_entry() -> int:
     """Run the main entrypoint with top-level CLI error handling."""
     try:
+        # Keep raw argv handling at the CLI dispatcher.  ``__main__`` only
+        # performs interpreter/logging setup before it delegates here.
+        from .config.yaml import activate_config_from_argv
+
+        activate_config_from_argv()
         return main()
     except KeyboardInterrupt:
         logger.warning("[abort] 用户中断")

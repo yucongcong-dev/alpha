@@ -307,7 +307,7 @@ def test_config_binding_check_rejects_module_level_binding(tmp_path: Path) -> No
 
     errors = check_repo.config_binding_check(tmp_path)
 
-    assert any("__main__.py" in error for error in errors)
+    assert any("main.py" in error for error in errors)
     assert any("src/alpha/config/yaml.py:2" in error for error in errors)
 
 
@@ -321,15 +321,18 @@ def test_config_binding_check_rejects_non_entry_import_of_main(tmp_path: Path) -
     assert any("alpha.main may only be imported" in error for error in errors)
 
 
-def test_config_binding_check_accepts_entrypoint_binding(tmp_path: Path) -> None:
+def test_config_binding_check_accepts_main_dispatch_binding(tmp_path: Path) -> None:
     entry_file = tmp_path / "src" / "alpha" / "__main__.py"
     entry_file.parent.mkdir(parents=True)
     entry_file.write_text(
-        "def _bind_active_config() -> None:\n    activate_config_from_argv()\n",
+        "from .main import run_cli_entry\n",
         encoding="utf-8",
     )
     main_file = tmp_path / "src" / "alpha" / "main.py"
-    main_file.write_text("def run_cli_entry() -> int:\n    return 0\n", encoding="utf-8")
+    main_file.write_text(
+        "def run_cli_entry() -> int:\n    activate_config_from_argv()\n    return 0\n",
+        encoding="utf-8",
+    )
 
     assert check_repo.config_binding_check(tmp_path) == []
 

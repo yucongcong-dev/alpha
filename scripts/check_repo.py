@@ -406,25 +406,25 @@ def acl_boundary_check(root: Path) -> list[str]:
 
 
 def config_binding_check(root: Path) -> list[str]:
-    """Only the CLI entrypoint may bind --config before importing alpha.main.
+    """Only the CLI dispatcher may bind ``--config`` from raw argv.
 
     Import-time YAML-backed constants resolve against whichever config is active
-    when their module first loads, so the explicit settings file must be bound
-    in src/alpha/__main__.py before alpha.main is imported. A module-level
-    activate_config_from_argv() anywhere else re-introduces the import side
-    effect this check exists to prevent.
+    when their module first loads, so ``alpha.main.run_cli_entry`` binds the
+    explicit settings file before dispatch imports the application modules.
+    ``alpha.__main__`` must remain limited to interpreter/logging setup and
+    delegation. Binding elsewhere re-introduces an import-order side effect.
     """
     binding_pattern = re.compile(r"activate_config_from_argv\(\)")
     entry_files = (
         path
         for path in _iter_files(root, "src/alpha")
-        if path.name != "__main__.py" and path.suffix == ".py"
+        if path.name not in {"__main__.py", "main.py"} and path.suffix == ".py"
     )
     errors: list[str] = []
     matches = _line_matches(root, entry_files, binding_pattern)
     if matches:
         errors.append(
-            "[check] --config binding must happen only in src/alpha/__main__.py; "
+            "[check] --config binding must happen only in src/alpha/main.py; "
             "module-level activate_config_from_argv() re-introduces import side effects"
         )
         errors.extend(matches)
