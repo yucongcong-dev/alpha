@@ -21,6 +21,7 @@ from ..config.strategy_profiles import (
 )
 from ..config.yaml import get_yaml_config, set_active_config_path
 from ..config.yaml_sources import validate_explicit_yaml_file
+from ..config.yaml_validator import validate_global_leaf_keys
 from ..models.runtime_config import RunMode
 
 DATASET_PROFILE_KEYS = dataset_profile_keys()
@@ -216,6 +217,9 @@ def _global_yaml_layer(
     if not isinstance(global_config, dict):
         return ResolvedConfigLayer(GLOBAL_YAML_SOURCE, {})
     _reject_removed_yaml_options(global_config)
+    validation_errors = validate_global_leaf_keys(global_config)
+    if validation_errors:
+        raise ValueError("; ".join(validation_errors))
 
     missing = object()
 

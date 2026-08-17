@@ -36,6 +36,38 @@ GLOBAL_KNOWN_KEYS = {
     "runtime",
 }
 
+_GLOBAL_EXTRA_LEAF_KEYS: dict[str, frozenset[str]] = {
+    "simulation": frozenset({"testPeriodYears", "testPeriodMonths"}),
+    "http": frozenset(
+        {
+            "request_timeout",
+            "rate_limit_default_wait",
+            "polling_default_wait",
+            "polling_no_retry_after_wait",
+            "server_error_backoff_max",
+            "server_error_backoff_step",
+            "retry_operation_default_wait",
+            "login_retry_wait",
+            "simulation_retry_wait",
+            "polling_retry_buffer",
+        }
+    ),
+    "feedback": frozenset(
+        {
+            "mutation_highscore_threshold",
+            "template_min_priority",
+            "feedback_mutation_highscore_threshold",
+            "feedback_template_min_priority",
+            "delta_std_priority_boost",
+            "expr_nearpass_boost_threshold",
+            "expr_iter_boost_threshold",
+            "expr_ratio_penalty_threshold",
+            "expr_fail_penalty_threshold",
+            "expr_mutation_extend_threshold",
+        }
+    ),
+}
+
 
 def clear_schema_cache() -> None:
     """Clear cached schema keys after YAML cache invalidation."""
@@ -126,6 +158,40 @@ def _validate_global_section(config: YamlConfig, resolved_files: dict[str, str])
         for gkey in global_section
         if gkey not in GLOBAL_KNOWN_KEYS
     ]
+
+
+def global_leaf_key_schema() -> dict[str, frozenset[str]]:
+    """Return the declared flat keys accepted below each ``global`` section."""
+    from .settings_spec import yaml_default_settings
+
+    schema: dict[str, set[str]] = {}
+    for spec in yaml_default_settings():
+        if spec.yaml is None or len(spec.yaml) != 2:
+            continue
+        section, key = spec.yaml
+        schema.setdefault(section, set()).add(key)
+    for section, keys in _GLOBAL_EXTRA_LEAF_KEYS.items():
+        schema.setdefault(section, set()).update(keys)
+    return {section: frozenset(keys) for section, keys in schema.items()}
+
+
+def validate_global_leaf_keys(global_config: dict[str, object]) -> list[str]:
+    """Report unknown or malformed configuration leaves below ``global``."""
+    schema = global_leaf_key_schema()
+    warnings: list[str] = []
+    for section, value in global_config.items():
+        allowed_keys = schema.get(section)
+        if allowed_keys is None:
+            continue
+        if not isinstance(value, dict):
+            warnings.append(f"global.{section} 必须是 mapping。")
+            continue
+        unknown_keys = sorted(set(value) - allowed_keys)
+        if unknown_keys:
+            warnings.append(
+                f"global.{section} 存在未知 key {unknown_keys}，已知 key: {sorted(allowed_keys)}"
+            )
+    return warnings
 
 
 def _validate_cross_consistency(
@@ -282,6 +348,9 @@ def validate_merged_config(config: Any, resolved_files: dict[str, str]) -> list[
     warnings.extend(validate_default_yaml_ownership(resolved_files))
     warnings.extend(_validate_top_level_keys(config, schema_keys))
     warnings.extend(_validate_global_section(config, resolved_files))
+    global_section = config.get("global", {})
+    if isinstance(global_section, dict):
+        warnings.extend(validate_global_leaf_keys(global_section))
     warnings.extend(_validate_cross_consistency(config, resolved_files))
     warnings.extend(_validate_strategy_profiles_section(config))
     warnings.extend(_validate_nested_paths(config))

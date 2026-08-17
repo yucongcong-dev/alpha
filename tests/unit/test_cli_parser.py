@@ -194,6 +194,23 @@ def test_removed_yaml_aliases_fail_with_their_replacement(
         parse_args()
 
 
+def test_unknown_global_leaf_key_fails_instead_of_using_a_default(monkeypatch, tmp_path) -> None:
+    clear_yaml_cache()
+    config_path = tmp_path / "settings.yaml"
+    config_path.write_text(
+        """
+global:
+  limits:
+    max_new_simluations: 10
+""".strip(),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(sys, "argv", ["alpha", "--config", str(config_path)])
+
+    with pytest.raises(ValueError, match=r"global\.limits.*max_new_simluations"):
+        parse_args()
+
+
 @pytest.mark.parametrize(
     ("argv", "expected"),
     [

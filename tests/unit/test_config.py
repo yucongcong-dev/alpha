@@ -294,6 +294,25 @@ strategy_profiles:
     assert any("runtime_defaults 存在未知 section 'magic'" in warning for warning in warnings)
 
 
+def test_global_leaf_schema_reports_unknown_operational_key(tmp_path) -> None:
+    config_path = tmp_path / "settings.yaml"
+    config_path.write_text(
+        """
+global:
+  concurrency:
+    max_concurrent_simluations: 5
+""".strip(),
+        encoding="utf-8",
+    )
+
+    warnings = validate_yaml_config(str(config_path))
+
+    assert any(
+        "global.concurrency" in warning and "max_concurrent_simluations" in warning
+        for warning in warnings
+    )
+
+
 def test_strategy_profile_schema_validates_keys_and_runtime_default_types(tmp_path) -> None:
     config_path = tmp_path / "settings.yaml"
     config_path.write_text(
