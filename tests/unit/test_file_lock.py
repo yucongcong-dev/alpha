@@ -240,3 +240,15 @@ def test_exclusive_run_lock_explains_contention(monkeypatch, tmp_path) -> None:
         run_lock.exclusive_run_lock(str(tmp_path / "summary.json")),
     ):
         pass
+
+
+def test_exclusive_run_lock_rejects_runtime_cleanup_gate(tmp_path) -> None:
+    output_path = tmp_path / "datasets" / "demo" / "runs" / "nightly" / "summary.json"
+    cleanup_lock = output_path.parents[2] / ".runtime-clean.lock"
+
+    with (
+        file_lock.exclusive_file_lock(str(cleanup_lock)),
+        pytest.raises(RuntimeError, match="runtime cleanup"),
+        run_lock.exclusive_run_lock(str(output_path)),
+    ):
+        pass

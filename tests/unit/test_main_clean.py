@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+import pytest
+
 from alpha.app.bootstrap import clean_runtime_artifacts
 from alpha.config.application import CleanConfig
+from alpha.io.file_lock import exclusive_file_lock
 
 
 def _clean_config(
@@ -105,3 +108,18 @@ def test_explicit_dry_run_keeps_files(tmp_path) -> None:
 
     assert clean_runtime_artifacts(config, project_root=tmp_path) == 0
     assert (tmp_path / "datasets" / "option9" / "runs").exists()
+
+
+def test_confirmed_clean_refuses_active_run(tmp_path) -> None:
+    _create_dataset_runtime(tmp_path, "fundamental6")
+    output_path = tmp_path / "datasets" / "fundamental6" / "runs" / "live" / "summary.json"
+    output_path.parent.mkdir(parents=True)
+    run_lock_path = f"{output_path}.run.lock"
+
+    with exclusive_file_lock(run_lock_path), pytest.raises(RuntimeError, match="active runtime"):
+        clean_runtime_artifacts(
+            _clean_config(dataset_id="fundamental6", confirm_clean=True),
+            project_root=tmp_path,
+        )
+
+    assert (tmp_path / "datasets" / "fundamental6" / "runs").exists()

@@ -4,8 +4,18 @@ from __future__ import annotations
 
 from collections.abc import Iterator
 from contextlib import contextmanager
+from pathlib import Path
 
 from ..io.file_lock import FileLockUnavailableError, exclusive_file_lock
+
+
+def runtime_cleanup_lock_path(output_path: str) -> str | None:
+    """Return the dataset-level cleanup gate for a standard run output."""
+    output = Path(output_path).expanduser().resolve()
+    for ancestor in (output.parent, *output.parents):
+        if ancestor.name == "runs":
+            return str(ancestor.parent / ".runtime-clean.lock")
+    return None
 
 
 @contextmanager
@@ -14,6 +24,16 @@ def exclusive_run_lock(output_path: str) -> Iterator[None]:
     lock_path = f"{output_path}.run.lock"
     try:
         with exclusive_file_lock(lock_path, blocking=False):
+            cleanup_lock_path = runtime_cleanup_lock_path(output_path)
+            if cleanup_lock_path:
+                try:
+                    with exclusive_file_lock(cleanup_lock_path, blocking=False):
+                        pass
+                except FileLockUnavailableError as exc:
+                    raise RuntimeError(
+                        f"runtime cleanup is already active for {output_path}; "
+                        "retry after cleanup completes"
+                    ) from exc
             yield
     except FileLockUnavailableError as exc:
         raise RuntimeError(
