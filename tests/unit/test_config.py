@@ -502,6 +502,20 @@ def test_get_yaml_config_reloads_when_file_changes(tmp_path) -> None:
     assert second["global"]["limits"]["limit"] == 25
 
 
+def test_get_yaml_config_reloads_when_content_changes_with_same_stat_metadata(tmp_path) -> None:
+    config_path = tmp_path / "settings.yaml"
+    config_path.write_text("global:\n  limits:\n    limit: 10\n", encoding="utf-8")
+    first = get_yaml_config(str(config_path))
+    original_stat = config_path.stat()
+
+    config_path.write_text("global:\n  limits:\n    limit: 20\n", encoding="utf-8")
+    os.utime(config_path, ns=(original_stat.st_atime_ns, original_stat.st_mtime_ns))
+    second = get_yaml_config(str(config_path))
+
+    assert first["global"]["limits"]["limit"] == 10
+    assert second["global"]["limits"]["limit"] == 20
+
+
 def test_yaml_validation_is_scoped_to_each_cached_path(monkeypatch, tmp_path) -> None:
     first_path = tmp_path / "first.yaml"
     second_path = tmp_path / "second.yaml"

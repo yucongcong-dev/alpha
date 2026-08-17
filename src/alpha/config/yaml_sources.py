@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import os
 from typing import cast
 
@@ -195,27 +196,31 @@ def load_default_yamls(resolved_files: dict[str, str]) -> YamlConfig:
     return merged
 
 
-def config_file_signature(path: str | None) -> tuple[int, int] | None:
-    """Return a file signature as (mtime_ns, size)."""
+def config_file_signature(path: str | None) -> tuple[int, int, str] | None:
+    """Return a file signature as ``(mtime_ns, size, content_digest)``."""
     if not path or not os.path.isfile(path):
         return None
     try:
+        digest = hashlib.blake2b(digest_size=16)
+        with open(path, "rb") as handle:
+            for chunk in iter(lambda: handle.read(64 * 1024), b""):
+                digest.update(chunk)
         stat = os.stat(path)
     except OSError:
         return None
-    return (stat.st_mtime_ns, stat.st_size)
+    return (stat.st_mtime_ns, stat.st_size, digest.hexdigest())
 
 
 def all_files_signature(
     settings_path: str | None = None,
-) -> tuple[tuple[str, int, int], ...] | None:
+) -> tuple[tuple[str, int, int, str], ...] | None:
     """Return an aggregate signature for all resolved YAML files."""
-    sigs: list[tuple[str, int, int]] = []
+    sigs: list[tuple[str, int, int, str]] = []
     resolved_files = resolve_all_yaml_files(settings_path)
 
     for path in resolved_files.values():
         sig = config_file_signature(path)
         if sig:
-            sigs.append((path, sig[0], sig[1]))
+            sigs.append((path, sig[0], sig[1], sig[2]))
 
     return tuple(sigs) if sigs else None

@@ -30,7 +30,7 @@ from .yaml_validator import clear_schema_cache, validate_merged_config
 
 _log = logging.getLogger("alpha.config.yaml")
 
-_ConfigSignature = tuple[tuple[str, int, int], ...] | None
+_ConfigSignature = tuple[tuple[str, int, int, str], ...] | None
 
 
 @dataclass(frozen=True, slots=True)
@@ -71,7 +71,7 @@ def get_active_config_path() -> str | None:
 
 def get_yaml_config_version(
     config_path: str = "",
-) -> tuple[str, tuple[tuple[str, int, int], ...] | None]:
+) -> tuple[str, _ConfigSignature]:
     """Return a cache token that changes when any active YAML source changes."""
     explicit_path = os.path.abspath(os.path.expanduser(config_path)) if config_path else None
     settings_path = explicit_path or get_active_config_path() or _resolve_yaml_path()
