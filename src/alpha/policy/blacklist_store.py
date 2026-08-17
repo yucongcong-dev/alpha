@@ -31,7 +31,7 @@ from .types import (
 
 logger = logging.getLogger(__name__)
 
-_BLACKLIST_PATH_CACHE: dict[str, str] = {}
+_BLACKLIST_PATH_CACHE: dict[tuple[str, str], str] = {}
 
 
 def _resolve_datasets_root(datasets_root: str = "") -> str:
@@ -41,13 +41,18 @@ def _resolve_datasets_root(datasets_root: str = "") -> str:
     return str(Path(datasets_root).expanduser().resolve())
 
 
+def _blacklist_cache_key(dataset_id: str, datasets_root: str = "") -> tuple[str, str]:
+    """Bind cached paths to both the dataset and its resolved workspace root."""
+    return dataset_id, _resolve_datasets_root(datasets_root)
+
+
 def resolve_blacklist_path(dataset_id: str, *, datasets_root: str = "") -> str:
     """按数据集解析统一黑名单路径。"""
-    cache_key = f"{dataset_id}|{datasets_root}" if datasets_root else dataset_id
+    cache_key = _blacklist_cache_key(dataset_id, datasets_root)
     if cache_key in _BLACKLIST_PATH_CACHE:
         return _BLACKLIST_PATH_CACHE[cache_key]
     dataset_key = sanitize_dataset_id_for_filename(dataset_id)
-    resolved_path = Path(_resolve_datasets_root(datasets_root)) / dataset_key / "blacklist.json"
+    resolved_path = Path(cache_key[1]) / dataset_key / "blacklist.json"
     resolved = str(resolved_path)
     _BLACKLIST_PATH_CACHE[cache_key] = resolved
     return resolved
@@ -71,8 +76,11 @@ def invalidate_blacklist_path_cache(dataset_id: str = "", *, datasets_root: str 
     if not dataset_id:
         _BLACKLIST_PATH_CACHE.clear()
         return
-    cache_key = f"{dataset_id}|{datasets_root}" if datasets_root else dataset_id
-    _BLACKLIST_PATH_CACHE.pop(cache_key, None)
+    if datasets_root:
+        _BLACKLIST_PATH_CACHE.pop(_blacklist_cache_key(dataset_id, datasets_root), None)
+        return
+    for cache_key in [key for key in _BLACKLIST_PATH_CACHE if key[0] == dataset_id]:
+        _BLACKLIST_PATH_CACHE.pop(cache_key, None)
 
 
 def build_default_blacklist(dataset_id: str) -> BlacklistPayload:

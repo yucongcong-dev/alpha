@@ -7,9 +7,11 @@ import json
 from alpha.generators.templates.variation_common import (
     is_blacklisted_template as _is_blacklisted_template,
 )
+from alpha.policy.blacklist_context import set_active_datasets_root
 from alpha.policy.blacklist_store import (
     ensure_template_blacklist_file,
     normalize_blacklist_payload,
+    resolve_blacklist_path,
 )
 from alpha.policy.template_blacklist import invalidate_blacklist_cache
 
@@ -24,6 +26,22 @@ def test_ensure_template_blacklist_file_creates_empty_dataset_file(tmp_path) -> 
     assert payload["dataset_id"] == "custom_ds"
     assert payload["learned_templates"] == []
     assert payload["expression_rules"] == []
+
+
+def test_blacklist_path_cache_tracks_the_active_datasets_root(tmp_path) -> None:
+    """Switching workspaces must not reuse the previous dataset blacklist path."""
+    first_root = tmp_path / "first" / "datasets"
+    second_root = tmp_path / "second" / "datasets"
+    try:
+        set_active_datasets_root(str(first_root))
+        first_path = resolve_blacklist_path("custom_ds")
+        set_active_datasets_root(str(second_root))
+        second_path = resolve_blacklist_path("custom_ds")
+
+        assert first_path == str(first_root / "custom_ds" / "blacklist.json")
+        assert second_path == str(second_root / "custom_ds" / "blacklist.json")
+    finally:
+        invalidate_blacklist_cache()
 
 
 def test_normalize_blacklist_payload_ignores_removed_schema_keys() -> None:
