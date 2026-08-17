@@ -149,6 +149,6 @@ EXECUTION_SETTINGS = (
         int,
         section="execution",
         fallback=0,
-        help="Check Submission 状态轮询次数",
+        help="Check Submission 请求或空响应的重试次数",
     ),
 )

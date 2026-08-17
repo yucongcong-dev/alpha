@@ -19,7 +19,7 @@ from ..exceptions import BrainHTTPError, BrainStopRequested
 from ..models.domain import FieldTestResult
 from ..models.result_predicates import has_pending_checks
 from ..models.runtime_protocols import ClientFactoryLike
-from .submission_checks import check_submission_with_retry
+from .submission_checks import read_submission_status_with_retry
 
 logger = logging.getLogger(__name__)
 
@@ -31,6 +31,23 @@ MAX_PENDING_CHECK_BACKOFF_SECONDS = 60.0
 
 def _utc_now_iso() -> str:
     return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+
+
+def _terminalize_failed_pending_result(result: FieldTestResult) -> FieldTestResult:
+    """Close legacy mixed FAIL/PENDING results without another platform request."""
+    if result.status != "simulated" or result.submittable is not None:
+        return result
+    checks = list(result.failed_checks or [])
+    check_results = {str(check.result or "").upper() for check in checks}
+    if "FAIL" not in check_results or "PENDING" not in check_results:
+        return result
+    return replace(
+        result,
+        submittable=False,
+        message="checks failed",
+        failed_checks=[check for check in checks if str(check.result or "").upper() == "FAIL"],
+        updated_at=_utc_now_iso(),
+    )
 
 
 def _ordered_pending_check_results(
@@ -82,7 +99,7 @@ def _refresh_pending_check_result(
     checked_at = _utc_now_iso()
     try:
         with _refresh_client(client, request_deadline=request_deadline) as refresh_client:
-            submittable, message, failed_checks = check_submission_with_retry(
+            submittable, message, failed_checks = read_submission_status_with_retry(
                 refresh_client,
                 alpha_id,
                 retries,
@@ -234,11 +251,20 @@ def refresh_pending_check_results(
         raise ValueError("max_refresh_seconds must be positive")
     if max_workers <= 0:
         raise ValueError("max_workers must be positive")
-    refreshed_results = list(results)
+    refreshed_results = [_terminalize_failed_pending_result(result) for result in results]
+    terminalized_count = sum(
+        original != refreshed
+        for original, refreshed in zip(results, refreshed_results, strict=True)
+    )
+    if terminalized_count:
+        logger.info(
+            "[check-submission-resume] locally terminalized %d results with explicit failed checks",
+            terminalized_count,
+        )
     deadline = time.monotonic() + max_refresh_seconds
-    pending_results = _ordered_pending_check_results(results)
+    pending_results = _ordered_pending_check_results(refreshed_results)
     if not pending_results:
-        return refreshed_results, 0
+        return refreshed_results, terminalized_count
 
     selected_pending = pending_results[:refresh_limit] if refresh_limit > 0 else pending_results
     selected_indexes = tuple(index for index, _result in selected_pending)
@@ -295,4 +321,4 @@ def refresh_pending_check_results(
             refresh_limit,
             max_refresh_seconds,
         )
-    return refreshed_results, refreshed_count
+    return refreshed_results, refreshed_count + terminalized_count

@@ -127,6 +127,7 @@ def test_check_submission_response_contract() -> None:
     assert [c.name for c in failed] == ["IS_CONCENTRATED_WEIGHT"]
     assert [c.name for c in pending] == ["IS_TURNOVER"]
     assert extract_pending_checks(payload)[0].name == "IS_TURNOVER"
+    assert is_submittable_from_checks(checks) is False
 
 
 def test_fields_pagination_contract() -> None:

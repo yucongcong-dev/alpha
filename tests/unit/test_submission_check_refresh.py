@@ -101,3 +101,37 @@ def test_refresh_submission_checks_uses_only_existing_results_and_closes_clients
     assert reconciled["max_workers"] == 1
     assert reconciled["repeat_until_terminal"] is True
     assert closed == ["bootstrap", "factory"]
+
+
+def test_refresh_submission_checks_reconciles_pending_run_missing_from_feedback(
+    monkeypatch,
+) -> None:
+    config = _config()
+    pending_state = HistoricalRunState(existing_results=[_pending_result()])
+    bootstrap_client = SimpleNamespace()
+    client_factory = SimpleNamespace()
+    reconciled: list[object] = []
+
+    monkeypatch.setattr(
+        "alpha.app.submission_check_refresh.load_result_summary_metadata",
+        lambda _path: {"dataset_id": "fundamental6"},
+    )
+    monkeypatch.setattr(
+        "alpha.app.submission_check_refresh.build_historical_run_state",
+        lambda *_args, **_kwargs: pending_state,
+    )
+    monkeypatch.setattr(
+        "alpha.app.submission_check_refresh.resolve_credentials",
+        lambda _options: ("email", "password"),
+    )
+    monkeypatch.setattr(
+        "alpha.app.submission_check_refresh.create_and_login_client",
+        lambda *_args: (bootstrap_client, client_factory),
+    )
+    monkeypatch.setattr(
+        "alpha.app.submission_check_refresh.reconcile_pending_check_results",
+        lambda *_args, **_kwargs: reconciled.append(True) or pending_state,
+    )
+
+    assert refresh_submission_checks(config) is True
+    assert reconciled == [True]

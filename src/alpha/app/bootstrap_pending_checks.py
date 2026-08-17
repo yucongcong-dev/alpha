@@ -7,7 +7,6 @@ import logging
 
 from ..analysis.feedback_history import rebuild_historical_run_state
 from ..analysis.feedback_run_index import persist_feedback_run_index
-from ..analysis.result_identity import result_identity
 from ..analysis.results_persistence import dump_results
 from ..api.client import BrainClient
 from ..core.pending_check_refresh import (
@@ -17,6 +16,7 @@ from ..core.pending_check_refresh import (
 )
 from ..io.results_store import exclusive_results_transaction
 from ..models.domain import FieldTestResult
+from ..models.result_predicates import has_pending_checks
 from ..models.runtime_protocols import ClientFactoryLike, RunConfig
 from ..runtime.contexts import HistoricalRunState
 
@@ -66,6 +66,19 @@ def reconcile_pending_check_results(
     """Refresh pending checks and persist every historical view that changed."""
     existing_results = historical_state.existing_results
     feedback_results = historical_state.feedback_results
+    feedback_pending_alpha_ids = {
+        result.alpha_id
+        for result in feedback_results
+        if has_pending_checks(result) and result.alpha_id
+    }
+    extra_existing_pending_results = [
+        result
+        for result in existing_results
+        if has_pending_checks(result)
+        and result.alpha_id
+        and result.alpha_id not in feedback_pending_alpha_ids
+    ]
+    refresh_input_results = [*feedback_results, *extra_existing_pending_results]
     if (
         refresh_limit is None
         and max_refresh_seconds is None
@@ -74,13 +87,13 @@ def reconcile_pending_check_results(
     ):
         refreshed_feedback_results, refreshed_count = refresh_pending_check_results(
             client,
-            feedback_results,
+            refresh_input_results,
             retries=retries,
         )
     else:
         refreshed_feedback_results, refreshed_count = refresh_pending_check_results(
             client,
-            feedback_results,
+            refresh_input_results,
             retries=retries,
             refresh_limit=(
                 DEFAULT_PENDING_CHECK_REFRESH_LIMIT if refresh_limit is None else refresh_limit
@@ -93,15 +106,30 @@ def reconcile_pending_check_results(
             max_workers=1 if max_workers is None else max_workers,
             repeat_until_terminal=repeat_until_terminal,
         )
-    if refreshed_feedback_results == feedback_results:
+    refreshed_all_results = refreshed_feedback_results
+    refreshed_feedback_results = refreshed_all_results[: len(feedback_results)]
+    refreshed_by_alpha_id = {
+        result.alpha_id: result for result in refreshed_feedback_results if result.alpha_id
+    }
+    refreshed_by_alpha_id.update(
+        {
+            result.alpha_id: result
+            for result in refreshed_all_results[len(feedback_results) :]
+            if result.alpha_id
+        }
+    )
+    refreshed_existing_results = [
+        refreshed_by_alpha_id.get(result.alpha_id, result)
+        if has_pending_checks(result) and result.alpha_id
+        else result
+        for result in existing_results
+    ]
+    if (
+        refreshed_feedback_results == feedback_results
+        and refreshed_existing_results == existing_results
+    ):
         return historical_state
 
-    refreshed_by_identity = {
-        result_identity(result): result for result in refreshed_feedback_results
-    }
-    refreshed_existing_results = [
-        refreshed_by_identity.get(result_identity(result), result) for result in existing_results
-    ]
     refreshed_state = rebuild_historical_run_state(
         replace(
             historical_state,
@@ -119,11 +147,15 @@ def reconcile_pending_check_results(
             run_config=run_config,
             run_fingerprint=run_fingerprint,
         )
-    if feedback_output and feedback_output != output_file:
+    if (
+        feedback_output
+        and feedback_output != output_file
+        and refreshed_state.feedback_results != feedback_results
+    ):
         persist_reconciled_historical_results(
             output_file=feedback_output,
             dataset_id=dataset_id,
-            results=refreshed_feedback_results,
+            results=refreshed_state.feedback_results,
             settings_fingerprint=settings_fingerprint,
             template_library_fingerprint=template_library_fingerprint,
             run_config=run_config,

@@ -28,13 +28,16 @@ logger = logging.getLogger(__name__)
 _CHECK_SUBMISSION_TRANSPORT_RETRIES = 2
 
 
-def check_submission_with_retry(
+def _read_submission_checks_with_retry(
     client: BrainClient,
     alpha_id: str,
     retries: int,
     *,
+    fetch_checks: Callable[[str], SimulationPayload],
+    operation_name: str,
     should_abort: Callable[[], bool] | None = None,
 ) -> tuple[bool | None, str, list[FailedCheck]]:
+    """Fetch one submission-check state, retrying only unavailable responses."""
     attempts = max(1, int(retries or 0))
     retry_wait = resolve_http_runtime_config(client).simulation_retry_wait
     last_result: tuple[bool | None, str, list[FailedCheck]] = (
@@ -45,9 +48,9 @@ def check_submission_with_retry(
     for attempt in range(1, attempts + 1):
         try:
             submission_check = retry_operation(
-                "check submission",
+                operation_name,
                 _CHECK_SUBMISSION_TRANSPORT_RETRIES,
-                lambda: client.check_alpha_submission(alpha_id),
+                lambda: fetch_checks(alpha_id),
                 retry_wait_seconds=retry_wait,
                 should_abort=should_abort,
             )
@@ -117,7 +120,11 @@ def check_submission_with_retry(
             submittable,
             message,
         )
-        if submittable is not None:
+        # A semantic PENDING is a valid platform response, not a transport
+        # failure.  Repeating the Check Submission endpoint immediately can
+        # retrigger the same server-side work; the caller owns its later
+        # status-refresh cadence.
+        if checks:
             return last_result
         if attempt < attempts:
             wait_seconds(
@@ -127,6 +134,50 @@ def check_submission_with_retry(
                 should_abort=should_abort,
             )
     return last_result
+
+
+def check_submission_with_retry(
+    client: BrainClient,
+    alpha_id: str,
+    retries: int,
+    *,
+    should_abort: Callable[[], bool] | None = None,
+) -> tuple[bool | None, str, list[FailedCheck]]:
+    """Trigger the platform Check Submission action once per semantic response."""
+
+    def fetch_checks(requested_alpha_id: str) -> SimulationPayload:
+        return client.check_alpha_submission(requested_alpha_id)
+
+    return _read_submission_checks_with_retry(
+        client,
+        alpha_id,
+        retries,
+        fetch_checks=fetch_checks,
+        operation_name="check submission",
+        should_abort=should_abort,
+    )
+
+
+def read_submission_status_with_retry(
+    client: BrainClient,
+    alpha_id: str,
+    retries: int,
+    *,
+    should_abort: Callable[[], bool] | None = None,
+) -> tuple[bool | None, str, list[FailedCheck]]:
+    """Read persisted Alpha details without re-triggering Check Submission."""
+
+    def fetch_checks(requested_alpha_id: str) -> SimulationPayload:
+        return client.get_alpha_detail(requested_alpha_id)
+
+    return _read_submission_checks_with_retry(
+        client,
+        alpha_id,
+        retries,
+        fetch_checks=fetch_checks,
+        operation_name="read submission status",
+        should_abort=should_abort,
+    )
 
 
 def run_check_submission_stage(

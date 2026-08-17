@@ -168,10 +168,10 @@ def is_submittable_from_checks(checks: list[FailedCheck]) -> bool | None:
     if not checks:
         return None
     results = {str(check.result or "").upper() for check in checks}
-    if _RESULT_PENDING in results:
-        return None
     if _RESULT_FAIL in results:
         return False
+    if _RESULT_PENDING in results:
+        return None
     if results != {_RESULT_PASS}:
         return None
     return True

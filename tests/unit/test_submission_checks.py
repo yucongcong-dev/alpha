@@ -10,7 +10,10 @@ from alpha.core.simulation_parsing import (
     extract_pending_checks,
     is_submittable_from_checks,
 )
-from alpha.core.submission_checks import check_submission_with_retry
+from alpha.core.submission_checks import (
+    check_submission_with_retry,
+    read_submission_status_with_retry,
+)
 from alpha.exceptions import BrainHTTPError, BrainStopRequested, BrainTransientError
 from alpha.models.domain import FailedCheck
 
@@ -134,7 +137,7 @@ class TestIsSubmittableFromChecks:
             is None
         )
 
-    def test_pending_takes_precedence_over_failure(self) -> None:
+    def test_failure_takes_precedence_over_unrelated_pending_check(self) -> None:
         assert (
             is_submittable_from_checks(
                 [
@@ -142,7 +145,7 @@ class TestIsSubmittableFromChecks:
                     FailedCheck(name="SELF_CORRELATION", result="PENDING"),
                 ]
             )
-            is None
+            is False
         )
 
     def test_empty_list(self) -> None:
@@ -224,7 +227,7 @@ class TestCheckSubmissionWithRetry:
             [FailedCheck(name="SELF_CORRELATION", result="FAIL", value=0.91, limit=0.7)],
         )
 
-    def test_failure_waits_for_unrelated_pending_checks(self, monkeypatch) -> None:
+    def test_failure_does_not_retrigger_for_unrelated_pending_checks(self, monkeypatch) -> None:
         calls = 0
 
         class DummyClient:
@@ -245,17 +248,16 @@ class TestCheckSubmissionWithRetry:
 
         result = check_submission_with_retry(DummyClient(), "alpha_1", retries=3)
 
-        assert calls == 3
+        assert calls == 1
         assert result == (
-            None,
-            "checks pending",
+            False,
+            "checks failed",
             [
                 FailedCheck(name="LOW_FITNESS", result="FAIL", value=0.9, limit=1.0),
-                FailedCheck(name="SELF_CORRELATION", result="PENDING"),
             ],
         )
 
-    def test_pending_checks_are_polled_until_terminal(self, monkeypatch) -> None:
+    def test_pending_check_does_not_immediately_retrigger_platform_work(self, monkeypatch) -> None:
         responses = iter(
             [
                 {"is": {"checks": [{"name": "SELF_CORRELATION", "result": "PENDING"}]}},
@@ -280,12 +282,12 @@ class TestCheckSubmissionWithRetry:
         )
 
         assert check_submission_with_retry(DummyClient(), "alpha_1", retries=3) == (
-            True,
-            "checks passed",
-            [],
+            None,
+            "checks pending",
+            [FailedCheck(name="SELF_CORRELATION", result="PENDING")],
         )
-        assert waits == ["waiting for submission checks for alpha alpha_1"]
-        assert transport_attempts == [2, 2]
+        assert waits == []
+        assert transport_attempts == [2]
 
     def test_api_failure_remains_unresolved(self, monkeypatch) -> None:
         transport_attempts: list[int] = []
@@ -395,4 +397,22 @@ class TestCheckSubmissionWithRetry:
             "checks pending",
             [FailedCheck(name="SELF_CORRELATION", result="PENDING")],
         )
-        assert calls == 2
+        assert calls == 1
+
+    def test_status_refresh_reads_alpha_detail_without_retriggering_check(
+        self, monkeypatch
+    ) -> None:
+        class DummyClient:
+            def check_alpha_submission(self, _alpha_id: str) -> dict[str, object]:
+                raise AssertionError("status refresh must not retrigger Check Submission")
+
+            def get_alpha_detail(self, _alpha_id: str) -> dict[str, object]:
+                return {"is": {"checks": [{"name": "SELF_CORRELATION", "result": "PASS"}]}}
+
+        monkeypatch.setattr("alpha.core.submission_checks.retry_operation", lambda *a, **k: a[2]())
+
+        assert read_submission_status_with_retry(DummyClient(), "alpha_1", retries=3) == (
+            True,
+            "checks passed",
+            [],
+        )

@@ -114,9 +114,11 @@ python -m alpha --dataset-id <dataset-id> --limit 1 --run-mode smoke
 
 历史 `PENDING` 的刷新是有界保护，不保证一次运行取得所有终态：启动阶段和收尾阶段各自最多
 选择 20 条（按最早 `updated_at` / `created_at` 优先），各自最多等待 30 秒，并遵守
-`check_submission_retries`。未刷新、仍为 `PENDING` 或因时间预算中止的条目会原样保留到结果
-journal，下一次真实运行再继续查询；它们不会重新创建 simulation，也不会被视为 submission
-check 已通过或已失败。
+`check_submission_retries`。它只重试传输失败或空响应；收到语义 `PENDING` 后，后续刷新改读
+Alpha 详情，不会反复触发网页的 Check Submission 动作。未刷新、仍为 `PENDING` 或因时间预算
+中止的条目会原样保留到结果 journal，下一次真实运行再继续查询；它们不会重新创建 simulation，
+也不会被视为 submission check 已通过或已失败。若同一响应已经包含明确 `FAIL`，该 Alpha 会立即
+归为不可提交，不会再因为无关的自相关 `PENDING` 占用刷新队列。
 
 ## 5. 路径、配置与清理
 

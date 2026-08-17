@@ -106,6 +106,117 @@ def test_reconcile_pending_check_results_persists_run_and_feedback_views(monkeyp
     assert indexed == ["feedback.json"]
 
 
+def test_reconcile_pending_check_results_does_not_replace_terminal_run_result(
+    monkeypatch,
+) -> None:
+    terminal = replace(
+        _pending_result(alpha_id="alpha_terminal"),
+        status=STATUS_ERROR,
+        submittable=False,
+        message="simulation failed",
+        failed_stage="simulation",
+        failed_checks=[],
+    )
+    historical_pending = _pending_result(alpha_id="alpha_historical")
+    refreshed_historical = replace(
+        historical_pending,
+        submittable=True,
+        message="checks passed",
+        failed_checks=[],
+        updated_at="2026-08-06T00:00:00Z",
+    )
+    state = HistoricalRunState(
+        existing_results=[terminal],
+        feedback_results=[historical_pending],
+    )
+    persisted: list[dict[str, object]] = []
+    monkeypatch.setattr(
+        "alpha.app.bootstrap_pending_checks.refresh_pending_check_results",
+        lambda *_args, **_kwargs: ([refreshed_historical], 1),
+    )
+    monkeypatch.setattr(
+        "alpha.app.bootstrap_pending_checks.persist_reconciled_historical_results",
+        lambda **kwargs: persisted.append(kwargs),
+    )
+    monkeypatch.setattr(
+        "alpha.app.bootstrap_pending_checks.persist_feedback_run_index",
+        lambda _path: None,
+    )
+
+    reconciled = reconcile_pending_check_results(
+        object(),
+        state,
+        retries=2,
+        output_file="run.json",
+        feedback_output="feedback.json",
+        dataset_id="fundamental6",
+        settings_fingerprint="settings",
+        template_library_fingerprint="library",
+        run_config={},
+    )
+
+    assert reconciled.existing_results == [terminal]
+    assert [entry["output_file"] for entry in persisted] == ["feedback.json"]
+
+
+def test_reconcile_pending_check_results_refreshes_run_pending_missing_from_feedback(
+    monkeypatch,
+) -> None:
+    feedback_terminal = replace(
+        _pending_result(alpha_id="alpha_feedback"),
+        field_id="field_feedback",
+        field_name="field_feedback",
+        submittable=False,
+        message="checks failed",
+        failed_checks=[],
+    )
+    run_pending = _pending_result(alpha_id="alpha_run")
+    refreshed_run_pending = replace(
+        run_pending,
+        submittable=True,
+        message="checks passed",
+        failed_checks=[],
+        updated_at="2026-08-06T00:00:00Z",
+    )
+    state = HistoricalRunState(
+        existing_results=[run_pending],
+        feedback_results=[feedback_terminal],
+    )
+    checked_alpha_ids: list[str | None] = []
+
+    def _refresh(_client, results, **_kwargs):
+        checked_alpha_ids.extend(result.alpha_id for result in results)
+        return [feedback_terminal, refreshed_run_pending], 1
+
+    monkeypatch.setattr(
+        "alpha.app.bootstrap_pending_checks.refresh_pending_check_results",
+        _refresh,
+    )
+    monkeypatch.setattr(
+        "alpha.app.bootstrap_pending_checks.persist_reconciled_historical_results",
+        lambda **_kwargs: None,
+    )
+    monkeypatch.setattr(
+        "alpha.app.bootstrap_pending_checks.persist_feedback_run_index",
+        lambda _path: None,
+    )
+
+    reconciled = reconcile_pending_check_results(
+        object(),
+        state,
+        retries=2,
+        output_file="run.json",
+        feedback_output="feedback.json",
+        dataset_id="fundamental6",
+        settings_fingerprint="settings",
+        template_library_fingerprint="library",
+        run_config={},
+    )
+
+    assert checked_alpha_ids == ["alpha_feedback", "alpha_run"]
+    assert reconciled.existing_results == [refreshed_run_pending]
+
+
 def test_reconcile_pending_check_results_forwards_check_only_refresh_budget(monkeypatch) -> None:
     state = HistoricalRunState(feedback_results=[_pending_result()])
     received: dict[str, object] = {}
@@ -146,7 +257,7 @@ def test_reconcile_pending_check_results_forwards_check_only_refresh_budget(monk
 
 def test_refresh_pending_check_results_replaces_terminal_result(monkeypatch) -> None:
     monkeypatch.setattr(
-        "alpha.core.pending_check_refresh.check_submission_with_retry",
+        "alpha.core.pending_check_refresh.read_submission_status_with_retry",
         lambda *_args, **_kwargs: (True, "checks passed", []),
     )
 
@@ -161,7 +272,7 @@ def test_refresh_pending_check_results_replaces_terminal_result(monkeypatch) -> 
 def test_refresh_pending_check_results_keeps_still_pending_result(monkeypatch) -> None:
     original = _pending_result()
     monkeypatch.setattr(
-        "alpha.core.pending_check_refresh.check_submission_with_retry",
+        "alpha.core.pending_check_refresh.read_submission_status_with_retry",
         lambda *_args, **_kwargs: (
             None,
             "checks pending",
@@ -173,6 +284,36 @@ def test_refresh_pending_check_results_keeps_still_pending_result(monkeypatch) -
 
     assert count == 0
     assert refreshed[0].submittable is None
+    assert refreshed[0].updated_at
+
+
+def test_refresh_pending_check_results_locally_terminalizes_failed_pending_result(
+    monkeypatch,
+) -> None:
+    original = replace(
+        _pending_result(),
+        failed_checks=[
+            FailedCheck(name="LOW_FITNESS", result="FAIL", value=0.9, limit=1.0),
+            FailedCheck(name="SELF_CORRELATION", result="PENDING"),
+        ],
+    )
+
+    def _unexpected(*_args, **_kwargs):
+        raise AssertionError("a decisively failed Alpha must not be refreshed")
+
+    monkeypatch.setattr(
+        "alpha.core.pending_check_refresh.read_submission_status_with_retry",
+        _unexpected,
+    )
+
+    refreshed, count = refresh_pending_check_results(object(), [original], retries=2)
+
+    assert count == 1
+    assert refreshed[0].submittable is False
+    assert refreshed[0].message == "checks failed"
+    assert refreshed[0].failed_checks == [
+        FailedCheck(name="LOW_FITNESS", result="FAIL", value=0.9, limit=1.0)
+    ]
     assert refreshed[0].updated_at
 
 
@@ -188,7 +329,7 @@ def test_refresh_pending_check_results_retries_pending_rows_with_backoff(monkeyp
         return True, "checks passed", []
 
     monkeypatch.setattr(
-        "alpha.core.pending_check_refresh.check_submission_with_retry",
+        "alpha.core.pending_check_refresh.read_submission_status_with_retry",
         _check,
     )
     monkeypatch.setattr(
@@ -215,7 +356,7 @@ def test_refresh_pending_check_results_terminalizes_permanent_http_error(monkeyp
         raise BrainHTTPError("GET /alphas/missing/check failed: 404", status=404)
 
     monkeypatch.setattr(
-        "alpha.core.pending_check_refresh.check_submission_with_retry",
+        "alpha.core.pending_check_refresh.read_submission_status_with_retry",
         _missing,
     )
 
@@ -234,7 +375,7 @@ def test_refresh_pending_check_results_skips_rows_without_alpha_id(monkeypatch) 
         raise AssertionError("check_submission should not be called")
 
     monkeypatch.setattr(
-        "alpha.core.pending_check_refresh.check_submission_with_retry",
+        "alpha.core.pending_check_refresh.read_submission_status_with_retry",
         _unexpected,
     )
 
@@ -250,7 +391,7 @@ def test_refresh_pending_check_results_skips_rows_without_alpha_id(monkeypatch) 
 
 def test_refresh_pending_check_results_recovers_stale_terminal_flag(monkeypatch) -> None:
     monkeypatch.setattr(
-        "alpha.core.pending_check_refresh.check_submission_with_retry",
+        "alpha.core.pending_check_refresh.read_submission_status_with_retry",
         lambda *_args, **_kwargs: (True, "checks passed", []),
     )
 
@@ -272,7 +413,7 @@ def test_refresh_pending_check_results_respects_startup_budget(monkeypatch) -> N
         return True, "checks passed", []
 
     monkeypatch.setattr(
-        "alpha.core.pending_check_refresh.check_submission_with_retry",
+        "alpha.core.pending_check_refresh.read_submission_status_with_retry",
         _resolve,
     )
     originals = [_pending_result(alpha_id=f"alpha_{index}") for index in range(3)]
@@ -298,7 +439,7 @@ def test_refresh_pending_check_results_rotates_oldest_attempts(monkeypatch) -> N
         return None, "checks pending", [FailedCheck(name="SELF_CORRELATION", result="PENDING")]
 
     monkeypatch.setattr(
-        "alpha.core.pending_check_refresh.check_submission_with_retry",
+        "alpha.core.pending_check_refresh.read_submission_status_with_retry",
         _pending,
     )
     originals = [_pending_result(alpha_id=f"alpha_{index}") for index in range(3)]
@@ -331,7 +472,7 @@ def test_refresh_pending_check_results_respects_total_time_budget(monkeypatch) -
         return None, "checks pending", []
 
     monkeypatch.setattr(
-        "alpha.core.pending_check_refresh.check_submission_with_retry",
+        "alpha.core.pending_check_refresh.read_submission_status_with_retry",
         _pending,
     )
     monkeypatch.setattr(
@@ -375,7 +516,7 @@ def test_refresh_pending_check_results_aborts_retry_at_deadline(monkeypatch) -> 
         raise BrainStopRequested("startup refresh deadline reached")
 
     monkeypatch.setattr(
-        "alpha.core.pending_check_refresh.check_submission_with_retry",
+        "alpha.core.pending_check_refresh.read_submission_status_with_retry",
         _deadline_abort,
     )
     monkeypatch.setattr(
@@ -465,7 +606,7 @@ def test_refresh_pending_check_results_uses_worker_factory_for_parallel_checks(m
         return True, "checks passed", []
 
     monkeypatch.setattr(
-        "alpha.core.pending_check_refresh.check_submission_with_retry",
+        "alpha.core.pending_check_refresh.read_submission_status_with_retry",
         _resolve,
     )
 

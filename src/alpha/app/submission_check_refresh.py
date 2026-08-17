@@ -9,12 +9,23 @@ from ..analysis.feedback_history import build_historical_run_state
 from ..analysis.results_loader import load_result_summary_metadata
 from ..cli.run_config import build_run_config_snapshot
 from ..config.application import ApplicationConfig
+from ..models.domain import FieldTestResult
 from ..models.result_predicates import has_pending_checks
 from ..models.runtime_options import ApiClientOptions, CredentialLoadOptions
 from .bootstrap_clients import create_and_login_client, resolve_credentials
 from .bootstrap_pending_checks import reconcile_pending_check_results
 
 logger = logging.getLogger(__name__)
+
+
+def _pending_alpha_ids(*result_groups: list[FieldTestResult]) -> set[str]:
+    """Return the distinct persisted Alpha IDs that can still be refreshed."""
+    return {
+        result.alpha_id
+        for results in result_groups
+        for result in results
+        if result.alpha_id and has_pending_checks(result)
+    }
 
 
 def _persistence_metadata(config: ApplicationConfig) -> dict[str, object]:
@@ -48,7 +59,12 @@ def refresh_submission_checks(config: ApplicationConfig) -> bool:
         paths.feedback_output,
         repair_corrupt_summary=False,
     )
-    pending_before = sum(has_pending_checks(result) for result in historical_state.feedback_results)
+    pending_before = len(
+        _pending_alpha_ids(
+            historical_state.feedback_results,
+            historical_state.existing_results,
+        )
+    )
     if not pending_before:
         logger.info("[check-submissions] no pending submission checks")
         return True
@@ -93,7 +109,12 @@ def refresh_submission_checks(config: ApplicationConfig) -> bool:
         with suppress(Exception):
             client_factory.close()
 
-    pending_after = sum(has_pending_checks(result) for result in refreshed_state.feedback_results)
+    pending_after = len(
+        _pending_alpha_ids(
+            refreshed_state.feedback_results,
+            refreshed_state.existing_results,
+        )
+    )
     logger.info(
         "[check-submissions] pending_before=%d resolved=%d pending_after=%d",
         pending_before,
