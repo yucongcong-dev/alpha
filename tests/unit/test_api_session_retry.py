@@ -358,24 +358,20 @@ def test_raw_request_stops_before_expired_request_deadline(monkeypatch) -> None:
         client.raw_request("GET", "https://example.test")
 
 
-def test_retry_operation_retries_regular_exception(monkeypatch) -> None:
+def test_retry_operation_does_not_retry_unknown_exception(monkeypatch) -> None:
     attempts = 0
-    waits: list[float] = []
 
-    def operation() -> str:
+    def operation() -> None:
         nonlocal attempts
         attempts += 1
-        if attempts < 3:
-            raise ValueError("temporary")
-        return "ok"
+        raise ValueError("unexpected bug")
 
-    monkeypatch.setattr(
-        "alpha.api.retry.wait_seconds", lambda seconds, *_args: waits.append(seconds)
-    )
+    monkeypatch.setattr("alpha.api.retry.wait_seconds", lambda *_args, **_kwargs: None)
 
-    assert retry_operation("operation", 3, operation, retry_wait_seconds=0.25) == "ok"
-    assert attempts == 3
-    assert waits == [0.25, 0.25]
+    with pytest.raises(ValueError, match="unexpected bug"):
+        retry_operation("operation", 3, operation, retry_wait_seconds=0.25)
+
+    assert attempts == 1
 
 
 @pytest.mark.parametrize(
@@ -399,16 +395,6 @@ def test_retry_operation_preserves_terminal_api_error_type(error: BrainAPIError)
 
     assert attempts == 1
     assert exc_info.value is error
-
-
-def test_retry_operation_wraps_exhausted_generic_exception(monkeypatch) -> None:
-    monkeypatch.setattr("alpha.api.retry.wait_seconds", lambda *_args, **_kwargs: None)
-
-    def operation() -> None:
-        raise ValueError("boom")
-
-    with pytest.raises(BrainAPIError, match="failed after 3 attempts"):
-        retry_operation("operation", 3, operation, retry_wait_seconds=0)
 
 
 def test_retry_operation_preserves_http_error_status() -> None:
@@ -471,7 +457,7 @@ def test_login_with_retry_distinguishes_invalid_credentials(monkeypatch) -> None
 def test_login_with_retry_preserves_operational_context(monkeypatch) -> None:
     class FakeClient:
         def login(self) -> None:
-            raise RuntimeError("network unavailable")
+            raise BrainTransientError("network unavailable")
 
     monkeypatch.setattr("alpha.api.retry.wait_seconds", lambda *_args, **_kwargs: None)
 

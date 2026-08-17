@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 _T = TypeVar("_T")
 
 
-def _retry_disposition(error: Exception) -> tuple[str, bool]:
+def _retry_disposition(error: BrainAPIError) -> tuple[str, bool]:
     """Return the log label and whether one failure is retryable here."""
     if isinstance(error, BrainRateLimitError):
         return "rate limited", False
@@ -32,9 +32,7 @@ def _retry_disposition(error: Exception) -> tuple[str, bool]:
         return "queue busy", False
     if isinstance(error, BrainTransientError):
         return "transport failure", True
-    if isinstance(error, BrainAPIError):
-        return "terminal API error", False
-    return "failed", True
+    return "terminal API error", False
 
 
 def _raise_if_aborted(name: str, should_abort: Callable[[], bool] | None) -> None:
@@ -73,17 +71,15 @@ def retry_operation(
     if retry_wait_seconds is None:
         retry_wait_seconds = get_runtime_config().http.retry_operation_default_wait
     attempts = max(retries, 1)
-    last_error: Exception | None = None
-    last_attempt = 0
+    last_error: BrainAPIError | None = None
 
     for attempt in range(1, attempts + 1):
-        last_attempt = attempt
         _raise_if_aborted(name, should_abort)
         try:
             return func()
         except BrainStopRequested:
             raise
-        except Exception as exc:
+        except BrainAPIError as exc:
             last_error = exc
             disposition, retryable = _retry_disposition(exc)
             logger.warning(
@@ -102,15 +98,17 @@ def retry_operation(
                 should_abort,
                 cause=exc,
             )
+        except Exception:
+            # A retry is only safe after the API layer has explicitly
+            # classified the failure as transient.  Propagating unknown
+            # exceptions preserves their type and traceback for diagnosis.
+            raise
 
-    if isinstance(last_error, BrainAPIError):
-        # Terminal API errors keep their concrete type (rate limit, queue busy,
-        # HTTP status, ...) so callers can branch on the specifics; the failed
-        # attempt count is already recorded in the retry warning above.
-        raise last_error
-    raise BrainAPIError(
-        f"{name} failed after {last_attempt} attempts: {last_error}"
-    ) from last_error
+    assert last_error is not None
+    # Terminal API errors keep their concrete type (rate limit, queue busy,
+    # HTTP status, ...) so callers can branch on the specifics; the failed
+    # attempt count is already recorded in the retry warning above.
+    raise last_error
 
 
 def is_invalid_credentials_error(error: Exception) -> bool:
