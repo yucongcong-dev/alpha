@@ -156,6 +156,29 @@ def test_identity_and_execution_share_the_same_hard_field_filtering() -> None:
     }
 
 
+def test_exclude_fields_override_explicit_include_fields() -> None:
+    fields = _domain_fields(
+        [
+            {
+                "id": "blocked",
+                "coverage": 1.0,
+                "dateCoverage": 1.0,
+                "alphaCount": 100,
+                "userCount": 20,
+            }
+        ]
+    )
+
+    filtered, stats = filter_candidate_fields(
+        fields,
+        filters_dict=RunFilters(include_fields={"blocked"}, exclude_fields={"blocked"}),
+        expression_policy=get_dataset_expression_policy("new_dataset"),
+    )
+
+    assert filtered == []
+    assert stats["prefiltered_count"] == 1
+
+
 def test_explicit_include_fields_bypass_metadata_filters_and_feedback_ranking() -> None:
     """Preset field lists are closed sets and should not be rewritten by strategy ranking."""
     fields = [

@@ -97,11 +97,11 @@ def filter_candidate_fields(
     filtered_fields: list[TemplateField] = []
     for field in fields:
         field_id, field_name = field_identity(field)
-        if filters_dict.include_fields:
-            if not _is_explicitly_included(field_id, field_name, filters_dict):
-                stats["prefiltered_count"] += 1
-                continue
-        elif field_id in filters_dict.exclude_fields or field_name in filters_dict.exclude_fields:
+        if filters_dict.include_fields and not _is_explicitly_included(
+            field_id,
+            field_name,
+            filters_dict,
+        ):
             stats["prefiltered_count"] += 1
             continue
         if field_id in filters_dict.exclude_fields or field_name in filters_dict.exclude_fields:
