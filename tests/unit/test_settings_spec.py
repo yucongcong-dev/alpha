@@ -6,7 +6,6 @@ from pathlib import Path
 from types import SimpleNamespace
 
 from alpha.cli.parser_schema import build_parser, collect_parser_defaults
-from alpha.config.defaults import apply_yaml_global_defaults
 from alpha.config.settings_spec import SETTINGS, dataset_profile_keys, yaml_default_settings
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -69,43 +68,6 @@ def test_bool_pair_settings_expose_no_variants() -> None:
 def test_dataset_profile_keys_match_profile_config() -> None:
     """dataset profile 可覆盖的 dest 集合必须与 dataset_profiles.yaml 的键一致。"""
     assert set(dataset_profile_keys()) == EXPECTED_DATASET_PROFILE_KEYS
-
-
-def test_yaml_global_defaults_merge_every_section() -> None:
-    """global 各 section 的每个设置都应被 YAML 合并应用到目标对象。"""
-    sentinel = {spec.dest: f"<{spec.dest}>" for spec in yaml_default_settings()}
-    global_cfg: dict[str, object] = {"global": {}}
-    assert isinstance(global_cfg["global"], dict)
-    for spec in yaml_default_settings():
-        assert spec.yaml is not None
-        section = global_cfg["global"]
-        for part in spec.yaml[:-1]:
-            assert isinstance(section, dict)
-            section = section.setdefault(part, {})
-        assert isinstance(section, dict)
-        section[spec.yaml[-1]] = sentinel[spec.dest]
-
-    target = SimpleNamespace(**{spec.dest: None for spec in SETTINGS})
-    apply_yaml_global_defaults(target, global_cfg, set())
-
-    applied = {dest: getattr(target, dest) for dest in sentinel}
-    assert applied == sentinel
-
-
-def test_yaml_alias_keys_still_merge() -> None:
-    """旧版 YAML 键（legacy_similarity_penalty）必须经别名继续合并。"""
-    global_cfg = {"global": {"limits": {"legacy_similarity_penalty": 7}}}
-    target = SimpleNamespace(similarity_penalty=None)
-    apply_yaml_global_defaults(target, global_cfg, set())
-    assert target.similarity_penalty == 7
-
-
-def test_yaml_global_defaults_respect_explicit_cli() -> None:
-    """CLI 显式传参时，YAML 默认值不得覆盖。"""
-    global_cfg = {"global": {"limits": {"limit": 300}}}
-    target = SimpleNamespace(limit=50)
-    apply_yaml_global_defaults(target, global_cfg, {"limit"})
-    assert target.limit == 50
 
 
 OPTIONAL_YAML_KEYS = {"start_date", "end_date"}

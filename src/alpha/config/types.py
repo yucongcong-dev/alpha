@@ -7,54 +7,7 @@
 
 from __future__ import annotations
 
-from enum import Enum
-from typing import Any, Optional, TypedDict
-
-
-class ConfigSource(Enum):
-    """配置来源枚举"""
-
-    CODE_CONSTANTS = "code_constants"  # 代码常量 (最低优先级)
-    CONSTANTS_DEFAULTS = "constants_defaults"  # 代码级默认值
-    TEMPLATES = "templates"  # 模板默认值
-    QUALITY_FEEDBACK = "quality_feedback"  # 质量反馈默认值
-    DATASET_PROFILES = "dataset_profiles"  # 数据集profile
-    EXPRESSION_POLICIES = "expression_policies"  # 数据集策略
-    SETTINGS = "settings"  # 主配置文件
-    CUSTOM_CONFIG = "custom_config"  # 自定义配置文件
-    RUNTIME_OVERRIDE = "runtime_override"  # 运行时覆盖
-    COMMAND_LINE = "command_line"  # 命令行参数 (最高优先级)
-
-    @classmethod
-    def from_yaml_name(cls, name: str) -> Optional[ConfigSource]:
-        """从YAML文件名转换为ConfigSource"""
-        mapping = {
-            "constants_defaults": cls.CONSTANTS_DEFAULTS,
-            "template_defaults": cls.TEMPLATES,
-            "quality_feedback_defaults": cls.QUALITY_FEEDBACK,
-            "dataset_profiles": cls.DATASET_PROFILES,
-            "expression_policies": cls.EXPRESSION_POLICIES,
-            "settings": cls.SETTINGS,
-        }
-        return mapping.get(name)
-
-    @property
-    def priority(self) -> int:
-        """获取配置源优先级（数值越大优先级越高）"""
-        priority_map = {
-            self.CODE_CONSTANTS: 10,
-            self.CONSTANTS_DEFAULTS: 20,
-            self.TEMPLATES: 30,
-            self.QUALITY_FEEDBACK: 40,
-            self.DATASET_PROFILES: 50,
-            self.EXPRESSION_POLICIES: 60,
-            self.SETTINGS: 70,
-            self.CUSTOM_CONFIG: 80,
-            self.RUNTIME_OVERRIDE: 90,
-            self.COMMAND_LINE: 100,
-        }
-        return priority_map[self]
-
+from typing import Any, TypedDict
 
 YamlConfig = dict[str, Any]
 """完整合并 YAML 配置（dict 提供灵活的键名访问）。"""
@@ -75,15 +28,6 @@ class DatasetProfile(TypedDict, total=False):
     simulation_max_wait_seconds: float
     simulation_max_queue_seconds: float
     queue_busy_cooldown_seconds: float
-
-
-class StrategyProfileSchema(TypedDict, total=False):
-    """顶层策略 profile 的说明性 schema。"""
-
-    purpose: str
-    primary_goal: str
-    tuning_keys: dict[str, list[str]]
-    notes: list[str]
 
 
 class ExpressionPolicyOverrides(TypedDict, total=False):

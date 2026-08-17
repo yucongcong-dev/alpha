@@ -124,6 +124,9 @@ def test_build_historical_run_state_uses_dataset_feedback_across_runs(tmp_path) 
 
     assert state.feedback_results == [historical]
     assert ("cash_st", "weak_template", "rank(cash_st)", "settings-v1") in state.attempted_keys
+    assert state.template_stats["weak_template"]["attempted"] == 1
+    assert state.field_feedback["cash_st"]["attempted_templates"] == 1
+    assert state.global_failed_check_counts == {"LOW_SHARPE": 1}
 
 
 def test_rebuild_historical_run_state_refreshes_all_derived_feedback() -> None:
@@ -159,6 +162,8 @@ def test_rebuild_historical_run_state_refreshes_all_derived_feedback() -> None:
     rebuilt = rebuild_historical_run_state(state, [resolved])
 
     assert rebuilt.feedback_results == [resolved]
+    assert rebuilt.attempted_keys == {("cash_st", "candidate", "rank(cash_st)", "settings-v1")}
+    assert rebuilt.template_stats["candidate"]["attempted"] == 1
     assert rebuilt.field_feedback["cash_st"]["submittable_templates"] == 1
     assert rebuilt.global_failed_check_counts == {}
 

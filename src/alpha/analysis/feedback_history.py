@@ -10,7 +10,8 @@ from pathlib import Path
 from ..config._constants_strings import FEEDBACK_STAGE_RESIMULATE
 from ..config.models import DatasetExpressionPolicy
 from ..models.domain import FieldTestResult
-from ..models.domain_types import FieldFeedbackSummary
+from ..models.domain_types import FieldFeedbackMap, FieldFeedbackSummary
+from ..models.runtime_protocols import TemplateStats
 from ..policy.expression import get_dataset_expression_policy, resolve_feedback_stage
 from ..runtime.contexts import HistoricalRunState
 from .feedback_run_index import (
@@ -29,6 +30,23 @@ from .results_loader import load_existing_results
 from .template_stats import compile_template_stats
 
 logger = logging.getLogger(__name__)
+
+
+def _derive_historical_feedback_state(
+    feedback_results: list[FieldTestResult],
+) -> tuple[
+    set[tuple[str, str, str, str]],
+    TemplateStats,
+    FieldFeedbackMap,
+    dict[str, int],
+]:
+    """Build the feedback-derived state shared by initial load and refresh."""
+    return (
+        attempted_template_keys(feedback_results),
+        compile_template_stats(feedback_results),
+        compile_field_feedback(feedback_results),
+        compile_global_failed_check_counts(feedback_results),
+    )
 
 
 def _load_rebuildable_feedback_results(
@@ -141,10 +159,12 @@ def build_historical_run_state(
         discovered_run_results,
         existing_results,
     )
-    attempted_keys = attempted_template_keys(feedback_results)
-    template_stats = compile_template_stats(feedback_results)
-    field_feedback = compile_field_feedback(feedback_results)
-    global_failed_check_counts = compile_global_failed_check_counts(feedback_results)
+    (
+        attempted_keys,
+        template_stats,
+        field_feedback,
+        global_failed_check_counts,
+    ) = _derive_historical_feedback_state(feedback_results)
     return HistoricalRunState(
         existing_results=existing_results,
         feedback_results=feedback_results,
@@ -161,15 +181,20 @@ def rebuild_historical_run_state(
 ) -> HistoricalRunState:
     """Recompute derived history after in-memory result reconciliation."""
     feedback_results = merge_latest_results_by_identity(state.feedback_results, existing_results)
-    template_stats = compile_template_stats(feedback_results)
+    (
+        attempted_keys,
+        template_stats,
+        field_feedback,
+        global_failed_check_counts,
+    ) = _derive_historical_feedback_state(feedback_results)
     return replace(
         state,
         existing_results=existing_results,
         feedback_results=feedback_results,
-        attempted_keys=attempted_template_keys(feedback_results),
+        attempted_keys=attempted_keys,
         template_stats=template_stats,
-        field_feedback=compile_field_feedback(feedback_results),
-        global_failed_check_counts=compile_global_failed_check_counts(feedback_results),
+        field_feedback=field_feedback,
+        global_failed_check_counts=global_failed_check_counts,
     )
 
 

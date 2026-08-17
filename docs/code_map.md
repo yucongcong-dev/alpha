@@ -24,7 +24,7 @@ python -m alpha
 | 包 | 职责 | 典型文件 |
 | --- | --- | --- |
 | `cli/` | CLI 边界：解析、参数优先级、路径解析、配置快照 | `parser.py`、`parser_sections.py`、`arg_resolution.py` |
-| `config/` | 配置：YAML 加载、声明式设置表、不可变快照、策略 profile | `settings_spec.py`、`defaults.py`、`application.py`、`application_sections.py` |
+| `config/` | 配置：YAML 加载、声明式设置表、不可变快照、策略 profile | `settings_spec.py`、`yaml_sources.py`、`application.py`、`application_sections.py` |
 | `app/` | 运行编排：bootstrap 初始化、run loop、finalize、dry-run 计划 | `bootstrap.py`、`planning.py`、`run_loop.py`、`finalize.py` |
 | `core/` | 运行引擎：scheduler、executor、simulation 阶段、checkpoint、提交检查 | `scheduler.py`、`executor.py`、`simulation*.py`、`submission_checks.py` |
 | `runtime/` | 共享可变运行状态与窄调度状态（所有权见 AGENTS.md） | `state.py`、`concurrency.py`、`future_queue.py`、`queue_retry.py`、`result_ledger.py` |
@@ -42,8 +42,8 @@ python -m alpha
 
 ```text
 cli/parser_sections.py  ── 读 ──┐
-config/defaults.py      ── 读 ──┼──> config/settings_spec.py（声明式设置表，单一来源）
-cli/arg_resolution.py   ── 读 ──┘          │
+cli/arg_resolution.py   ── 读 ──┼──> config/settings_spec.py（声明式设置表，单一来源）
+config/yaml_sources.py  ── 读 ──┘          │
                                           v
                       config/application.py（不可变 ApplicationConfig）
                                           │
@@ -144,7 +144,7 @@ app/finalize.py
 
 ## 6. 为什么模块这么多（边界设计，不是碎片）
 
-191 个源码模块 / 约 2.3 万行不是随意拆分，而是三类动机：
+184 个源码模块 / 约 2.26 万行不是随意拆分，而是三类动机：
 
 1. **状态所有权**：`runtime/*` 与 `core/scheduler*` 的拆分直接对应 AGENTS.md 的
    "一个可变状态一个专用 dataclass" 规则，避免 `ExecutionState` 膨胀成万能容器。
