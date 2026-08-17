@@ -3,10 +3,37 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from enum import Enum
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from ..config.application import ApplicationConfig
+
+
+class RunMode(str, Enum):
+    """Canonical execution mode used after CLI resolution."""
+
+    SMOKE = "smoke"
+    NORMAL = "normal"
+    FULL = "full"
+
+    def __str__(self) -> str:
+        """Keep logs, snapshots, and legacy string comparisons readable."""
+        return self.value
+
+    @classmethod
+    def from_value(cls, value: object) -> RunMode:
+        """Normalize strings and already-resolved enum values at one boundary."""
+        if isinstance(value, cls):
+            return value
+        normalized = str(value or cls.NORMAL.value).strip().lower()
+        try:
+            return cls(normalized)
+        except ValueError as exc:
+            allowed = ", ".join(mode.value for mode in cls)
+            raise ValueError(
+                f"unsupported run_mode: {normalized!r}; expected one of {allowed}"
+            ) from exc
 
 
 @dataclass(frozen=True, kw_only=True)

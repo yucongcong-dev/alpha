@@ -160,6 +160,10 @@ dataset profile > global YAML > parser 默认值**。`--run-mode smoke/full` 是
 结果文件中的 `run_config.config_sources` 保存最终来源，
 `run_config.config_source_chains` 保存完整覆盖链。
 
+默认 `python -m alpha --help` 只展示日常研究所需的命令、模式、搜索范围、输入过滤和输出参数。
+并发、HTTP 重试、质量阈值和启动阶段的 PENDING 刷新控制属于高级运维配置，应优先在
+`config/settings.yaml` 中维护；为兼容既有脚本，这些 CLI 覆盖参数仍可解析，但不再占用默认帮助输出。
+
 ```bash
 # YAML 改动后同步并检查
 make sync-config

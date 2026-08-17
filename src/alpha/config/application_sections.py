@@ -8,6 +8,7 @@ import math
 import re
 from typing import Any
 
+from ..models.runtime_config import RunMode
 from .settings_spec import section_args
 from .strategy_profiles import normalize_strategy_profile
 
@@ -120,8 +121,7 @@ class SimulationConfig:
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class PlanningConfig:
-    smoke_test: bool
-    full_run: bool
+    run_mode: RunMode
     dry_run_plan: bool
     limit: int
     offset: int
@@ -157,7 +157,27 @@ class PlanningConfig:
 
     @classmethod
     def from_args(cls, args: object) -> PlanningConfig:
-        return cls(**section_args("planning", args))
+        values = section_args("planning", args)
+        raw_mode = _value(args, "run_mode", "")
+        if not raw_mode:
+            # Keep direct callers that still provide the old YAML booleans
+            # working while ensuring the runtime stores only RunMode.
+            if bool(_value(args, "smoke_test", False)):
+                raw_mode = RunMode.SMOKE.value
+            elif bool(_value(args, "full_run", False)):
+                raw_mode = RunMode.FULL.value
+        values["run_mode"] = RunMode.from_value(raw_mode)
+        return cls(**values)
+
+    @property
+    def smoke_test(self) -> bool:
+        """Compatibility view for snapshots and older callers."""
+        return self.run_mode is RunMode.SMOKE
+
+    @property
+    def full_run(self) -> bool:
+        """Compatibility view for full-run scheduling behavior."""
+        return self.run_mode is RunMode.FULL
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)

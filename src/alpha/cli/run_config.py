@@ -98,6 +98,7 @@ def build_run_config_snapshot(
         },
         "runtime": {
             "strategy_profile": normalize_strategy_profile(flags.strategy_profile),
+            "run_mode": str(planning.run_mode),
             "smoke_test": planning.smoke_test,
             "dry_run_plan": planning.dry_run_plan,
             "full_run": planning.full_run,

@@ -91,6 +91,44 @@ def test_clean_help_hides_simulation_and_submission_controls() -> None:
     assert "--pending-check-limit" not in help_text
 
 
+def test_run_help_prioritizes_common_research_controls() -> None:
+    """Standard run help should not bury the common workflow in expert knobs."""
+    help_text = build_parser(command="run").format_help()
+
+    assert "--dataset-id" in help_text
+    assert "--run-mode" in help_text
+    assert "--dry-run-plan" in help_text
+    assert "--max-new-simulations" in help_text
+    assert "--max-concurrent-simulations" not in help_text
+    assert "--simulation-create-retries" not in help_text
+    assert "--pending-check-limit" not in help_text
+    assert "--min-sharpe" not in help_text
+
+
+def test_run_accepts_hidden_advanced_overrides(monkeypatch) -> None:
+    """Existing scripts can retain advanced CLI overrides after help is simplified."""
+    clear_yaml_cache()
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "alpha",
+            "--max-concurrent-simulations",
+            "2",
+            "--simulation-create-retries",
+            "4",
+            "--min-sharpe",
+            "1.5",
+        ],
+    )
+
+    args = parse_args()
+
+    assert args.max_concurrent_simulations == 2
+    assert args.simulation_create_retries == 4
+    assert args.min_sharpe == 1.5
+
+
 def test_command_parsers_reject_options_outside_their_surface() -> None:
     """The strict command parser is separate from the legacy compatibility path."""
     with pytest.raises(SystemExit):

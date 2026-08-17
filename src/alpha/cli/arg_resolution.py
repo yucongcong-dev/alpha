@@ -21,6 +21,7 @@ from ..config.strategy_profiles import (
 )
 from ..config.yaml import get_yaml_config, set_active_config_path
 from ..config.yaml_sources import validate_explicit_yaml_file
+from ..models.runtime_config import RunMode
 
 DATASET_PROFILE_KEYS = dataset_profile_keys()
 PARSER_DEFAULT_SOURCE = "parser_default"
@@ -314,20 +315,20 @@ def _run_mode_layer(
     if "--full-run" in options and "--no-full-run" in options:
         raise ValueError("--full-run 与 --no-full-run 不能同时使用；请改用 --run-mode")
 
-    run_mode = _resolve_run_mode(state.values, explicit_cli_keys, options)
+    run_mode = RunMode.from_value(_resolve_run_mode(state.values, explicit_cli_keys, options))
     updates: dict[str, object] = {"run_mode": run_mode}
     updates.update(
         {
             key: value
             for key, value in (
-                ("smoke_test", run_mode == "smoke"),
-                ("full_run", run_mode == "full"),
+                ("smoke_test", run_mode is RunMode.SMOKE),
+                ("full_run", run_mode is RunMode.FULL),
             )
             if key not in explicit_cli_keys
         }
     )
 
-    if run_mode == "smoke":
+    if run_mode is RunMode.SMOKE:
         _reject_mode_conflicts(state.values, explicit_cli_keys, mode="smoke")
         _add_mode_defaults(
             updates,
@@ -339,7 +340,7 @@ def _run_mode_layer(
             simulation_max_pending_cycles=SMOKE_TEST_MAX_PENDING_CYCLES,
             simulation_max_queue_seconds=SMOKE_TEST_MAX_QUEUE_SECONDS,
         )
-    elif run_mode == "full":
+    elif run_mode is RunMode.FULL:
         _reject_mode_conflicts(state.values, explicit_cli_keys, mode="full")
         _add_mode_defaults(
             updates,

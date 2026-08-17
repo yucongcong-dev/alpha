@@ -20,6 +20,7 @@ from alpha.config.runtime_values import HttpRuntimeConfig, RuntimeConfig
 from alpha.models.domain import FailedCheck, FieldTestContext, FieldTestResult
 from alpha.models.domain_serializers import serialize_field_test_result
 from alpha.models.io_types import RunFilters, RunPaths
+from alpha.models.runtime_config import RunMode
 from alpha.models.runtime_options import (
     ApiClientOptions,
     BootstrapFieldOptions,
@@ -216,6 +217,15 @@ class TestRuntimeOptionBuilders:
         assert options.simulation_stage.simulation_max_wait_seconds == 0.5
         assert options.simulation_stage.simulation_max_queue_seconds == 0.75
         assert options.simulation_stage.min_sharpe == 1.5
+
+    def test_planning_config_stores_one_canonical_run_mode(self) -> None:
+        config = PlanningConfig.from_args(
+            SimpleNamespace(run_mode="full", smoke_test=True, full_run=False)
+        )
+
+        assert config.run_mode is RunMode.FULL
+        assert config.full_run is True
+        assert config.smoke_test is False
 
 
 @pytest.mark.parametrize(

@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 
 from ..config.runtime_values import HttpRuntimeConfig, load_http_runtime_config
 from ..runtime.preset_mode import resolve_preset_mode
-from .runtime_config import SimulationSettingsConfig, SimulationStageConfig
+from .runtime_config import RunMode, SimulationSettingsConfig, SimulationStageConfig
 
 if TYPE_CHECKING:
     from ..config.application import ApplicationConfig
@@ -202,8 +202,13 @@ class RunLoopOptions:
     simulation_stage: SimulationStageConfig
     result_write: ResultWriteOptions
     scheduler: SchedulerControlOptions
+    run_mode: RunMode = RunMode.NORMAL
     field_template_batch_size: int = 0
-    full_run: bool = False
+
+    @property
+    def full_run(self) -> bool:
+        """Compatibility view for seed-phase scheduling."""
+        return self.run_mode is RunMode.FULL
 
     @classmethod
     def from_config(cls, config: ApplicationConfig) -> RunLoopOptions:
@@ -213,6 +218,6 @@ class RunLoopOptions:
             simulation_stage=SimulationStageConfig.from_application_config(config),
             result_write=ResultWriteOptions.from_config(config),
             scheduler=SchedulerControlOptions.from_config(config),
+            run_mode=config.planning.run_mode,
             field_template_batch_size=max(1, config.planning.field_template_batch_size),
-            full_run=config.planning.full_run,
         )

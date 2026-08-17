@@ -24,21 +24,29 @@ def add_bool_argument(
     default: bool = False,
     help_enable: str,
     help_disable: str,
+    hide_help: bool = False,
 ) -> None:
     """Add a boolean CLI option pair that can both enable and disable YAML defaults."""
+    visible_help = argparse.SUPPRESS if hide_help else help_enable
+    visible_disable_help = argparse.SUPPRESS if hide_help else help_disable
     group = parser.add_mutually_exclusive_group()
-    group.add_argument(name, action="store_true", dest=dest, default=default, help=help_enable)
+    group.add_argument(name, action="store_true", dest=dest, default=default, help=visible_help)
     positive_name = name[2:] if name.startswith("--") else name
     group.add_argument(
         f"--no-{positive_name}",
         action="store_false",
         dest=dest,
         default=default,
-        help=help_disable,
+        help=visible_disable_help,
     )
 
 
-def add_settings(parser: Any, specs: tuple[SettingSpec, ...]) -> None:
+def add_settings(
+    parser: Any,
+    specs: tuple[SettingSpec, ...],
+    *,
+    hide_help: bool = False,
+) -> None:
     """从声明式设置表生成一组 argparse 参数。"""
     for spec in specs:
         assert spec.cli is not None
@@ -50,6 +58,7 @@ def add_settings(parser: Any, specs: tuple[SettingSpec, ...]) -> None:
                 default=spec.default,
                 help_enable=spec.help,
                 help_disable=spec.help_disable,
+                hide_help=hide_help,
             )
             continue
         parser.add_argument(
@@ -58,7 +67,7 @@ def add_settings(parser: Any, specs: tuple[SettingSpec, ...]) -> None:
             default=spec.default,
             type=spec.arg_type,
             choices=spec.choices or None,
-            help=spec.help,
+            help=argparse.SUPPRESS if hide_help else spec.help,
         )
         for alias in spec.cli_aliases:
             parser.add_argument(
@@ -220,11 +229,13 @@ def add_feedback_output_argument(parser: Any) -> None:
     )
 
 
-def add_api_runtime_arguments(parser: Any) -> None:
+def add_api_runtime_arguments(parser: Any, *, visible: bool = True) -> None:
     """Add API retry/concurrency/runtime wait arguments."""
-    arguments = parser.add_argument_group("API、并发与重试（高级）")
-    add_settings(arguments, settings_by_yaml_section("concurrency"))
-    add_settings(arguments, settings_by_yaml_section("retries"))
+    arguments = parser.add_argument_group(
+        "API、并发与重试（高级）" if visible else argparse.SUPPRESS
+    )
+    add_settings(arguments, settings_by_yaml_section("concurrency"), hide_help=not visible)
+    add_settings(arguments, settings_by_yaml_section("retries"), hide_help=not visible)
 
 
 def add_submission_check_api_arguments(parser: Any) -> None:
@@ -241,34 +252,36 @@ def add_submission_check_api_arguments(parser: Any) -> None:
     )
 
 
-def add_pending_check_refresh_arguments(parser: Any) -> None:
+def add_pending_check_refresh_arguments(parser: Any, *, visible: bool = True) -> None:
     """Add bounded polling controls for the check-submissions command."""
-    arguments = parser.add_argument_group("Submission Check 刷新")
+    arguments = parser.add_argument_group("Submission Check 刷新" if visible else argparse.SUPPRESS)
     arguments.add_argument(
         "--pending-check-limit",
         type=int,
         default=0,
-        help="每轮最多刷新多少条待处理 Check；0 表示所有待处理结果",
+        help=(
+            "每轮最多刷新多少条待处理 Check；0 表示所有待处理结果" if visible else argparse.SUPPRESS
+        ),
     )
     arguments.add_argument(
         "--pending-check-max-seconds",
         type=float,
         default=900.0,
-        help="check-submissions 的最长轮询时间（秒，默认 900）",
+        help="check-submissions 的最长轮询时间（秒，默认 900）" if visible else argparse.SUPPRESS,
     )
     arguments.add_argument(
         "--pending-check-workers",
         type=int,
         default=1,
-        help="并发 Submission Check 查询数（默认 1）",
+        help="并发 Submission Check 查询数（默认 1）" if visible else argparse.SUPPRESS,
     )
 
 
-def add_precheck_arguments(parser: Any) -> None:
+def add_precheck_arguments(parser: Any, *, visible: bool = True) -> None:
     """Add local metric diagnostic threshold arguments."""
-    arguments = parser.add_argument_group("质量与表达式诊断")
-    add_settings(arguments, settings_by_yaml_section("quality"))
-    add_settings(arguments, settings_by_yaml_section("expression"))
+    arguments = parser.add_argument_group("质量与表达式诊断" if visible else argparse.SUPPRESS)
+    add_settings(arguments, settings_by_yaml_section("quality"), hide_help=not visible)
+    add_settings(arguments, settings_by_yaml_section("expression"), hide_help=not visible)
 
 
 def add_output_logging_arguments(parser: Any) -> None:

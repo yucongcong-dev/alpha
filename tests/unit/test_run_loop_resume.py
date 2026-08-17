@@ -277,7 +277,7 @@ def test_run_field_test_loop_persists_progress_for_skipped_fields(tmp_path) -> N
     with (
         patch("alpha.app.run_loop_resume.restore_fields_from_state", return_value=fields),
         patch(
-            "alpha.app.run_loop_contexts.create_template_build_context",
+            "alpha.app.run_loop.create_template_build_context",
             return_value=SimpleNamespace(
                 field_feedback={},
                 global_failed_check_counts={},
@@ -324,7 +324,7 @@ def test_run_field_test_loop_replans_after_pending_seed_completion(tmp_path) -> 
     with (
         patch("alpha.app.run_loop_resume.restore_fields_from_state", return_value=fields),
         patch(
-            "alpha.app.run_loop_contexts.create_template_build_context",
+            "alpha.app.run_loop.create_template_build_context",
             return_value=SimpleNamespace(
                 field_feedback={},
                 global_failed_check_counts={},
@@ -384,7 +384,7 @@ def test_run_field_test_loop_interrupts_workers_without_waiting(tmp_path) -> Non
         patch("alpha.app.run_loop.ThreadPoolExecutor", return_value=executor),
         patch("alpha.app.run_loop_resume.restore_fields_from_state", return_value=fields),
         patch(
-            "alpha.app.run_loop_contexts.create_template_build_context",
+            "alpha.app.run_loop.create_template_build_context",
             return_value=SimpleNamespace(
                 field_feedback={},
                 global_failed_check_counts={},
@@ -438,7 +438,7 @@ def test_run_field_test_loop_interrupts_active_http_requests(tmp_path) -> None:
         patch("alpha.app.run_loop.ThreadPoolExecutor", return_value=FakeExecutor()),
         patch("alpha.app.run_loop_resume.restore_fields_from_state", return_value=fields),
         patch(
-            "alpha.app.run_loop_contexts.create_template_build_context",
+            "alpha.app.run_loop.create_template_build_context",
             return_value=SimpleNamespace(
                 field_feedback={},
                 global_failed_check_counts={},
@@ -476,7 +476,7 @@ def test_run_field_test_loop_interrupt_drains_completed_futures(tmp_path) -> Non
         patch("alpha.app.run_loop.ThreadPoolExecutor", return_value=FakeExecutor()),
         patch("alpha.app.run_loop_resume.restore_fields_from_state", return_value=fields),
         patch(
-            "alpha.app.run_loop_contexts.create_template_build_context",
+            "alpha.app.run_loop.create_template_build_context",
             return_value=SimpleNamespace(
                 field_feedback={},
                 global_failed_check_counts={},
@@ -520,7 +520,7 @@ def test_run_field_test_loop_waits_for_worker_metadata_before_interrupt_checkpoi
         patch("alpha.app.run_loop.ThreadPoolExecutor", return_value=FakeExecutor()),
         patch("alpha.app.run_loop_resume.restore_fields_from_state", return_value=fields),
         patch(
-            "alpha.app.run_loop_contexts.create_template_build_context",
+            "alpha.app.run_loop.create_template_build_context",
             return_value=SimpleNamespace(
                 field_feedback={},
                 global_failed_check_counts={},
@@ -572,7 +572,7 @@ def test_run_field_test_loop_waits_for_worker_metadata_before_exception_checkpoi
         patch("alpha.app.run_loop.ThreadPoolExecutor", return_value=executor),
         patch("alpha.app.run_loop_resume.restore_fields_from_state", return_value=fields),
         patch(
-            "alpha.app.run_loop_contexts.create_template_build_context",
+            "alpha.app.run_loop.create_template_build_context",
             return_value=SimpleNamespace(
                 field_feedback={},
                 global_failed_check_counts={},

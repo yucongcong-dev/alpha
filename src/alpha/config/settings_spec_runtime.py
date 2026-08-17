@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
+from ..models.runtime_config import RunMode
 from .settings_spec_types import SettingSpec
 from .strategy_profiles import STRATEGY_PROFILE_CHOICES
 
-RUN_MODE_CHOICES = ("smoke", "normal", "full")
+RUN_MODE_CHOICES = tuple(mode.value for mode in RunMode)
 
 RUNTIME_SETTINGS = (
     SettingSpec(
@@ -21,13 +22,18 @@ RUNTIME_SETTINGS = (
     SettingSpec(
         "run_mode",
         None,
-        "",
+        RunMode.NORMAL.value,
         "--run-mode",
+        section="planning",
+        fallback=RunMode.NORMAL.value,
         choices=RUN_MODE_CHOICES,
         help="运行模式：smoke=冒烟测试（1 字段/1 模板），normal=常规（默认），full=全量搜索（受 --max-new-simulations 预算限制）；传 normal 可覆盖 YAML runtime.smoke_test/full_run=true",
         kind="run_mode",
     ),
-    SettingSpec("smoke_test", ("runtime", "smoke_test"), False, section="planning", fallback=False),
+    # These YAML keys remain readable for one compatibility window, but are
+    # deliberately not part of the typed planning section.  RunMode is the
+    # sole internal representation after CLI resolution.
+    SettingSpec("smoke_test", ("runtime", "smoke_test"), False, fallback=False),
     SettingSpec(
         "dry_run_plan",
         ("runtime", "dry_run_plan"),
@@ -39,7 +45,7 @@ RUNTIME_SETTINGS = (
         help="仅打印计划，不创建模拟",
         help_disable="关闭干运行模式（覆盖 YAML runtime.dry_run_plan=true）",
     ),
-    SettingSpec("full_run", ("runtime", "full_run"), False, section="planning", fallback=False),
+    SettingSpec("full_run", ("runtime", "full_run"), False, fallback=False),
     SettingSpec(
         "verbose",
         ("runtime", "verbose"),

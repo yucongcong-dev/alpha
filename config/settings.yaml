@@ -189,13 +189,14 @@ global:
     expr_mutation_extend_threshold: 0.15  # 表达式额外 nearpass 变异阈值
 
   # --------------------------------------------------------------------------
-  # 运行时开关 —— 对应 CLI --smoke-test / --dry-run-plan / --full-run / --verbose / --quiet
+  # 运行时开关 —— 运行模式请优先使用 CLI --run-mode；smoke_test/full_run
+  # 仅保留为旧 YAML 的兼容别名。
   # --------------------------------------------------------------------------
   runtime:
     strategy_profile: explore  # explore=广覆盖；refine=反馈邻域；candidate-focused=候选质量收敛
-    smoke_test: false      # 冒烟测试模式 (1字段/1模板，快速验证)
+    smoke_test: false      # 旧 YAML 兼容：请改用 CLI --run-mode smoke
     dry_run_plan: false    # 干运行模式 (仅打印计划，不创建模拟)
-    full_run: false        # 全量字段/模板搜索；默认受 max_new_simulations 安全预算限制
+    full_run: false        # 旧 YAML 兼容：请改用 CLI --run-mode full
     verbose: false         # 详细日志
     quiet: false           # 安静模式 (仅输出错误)
 

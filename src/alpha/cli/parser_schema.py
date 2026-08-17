@@ -74,9 +74,11 @@ def _build_parser_for_command(command: str) -> argparse.ArgumentParser:
         add_run_mode_arguments(parser)
         add_search_arguments(parser)
         add_file_filter_arguments(parser)
-        add_api_runtime_arguments(parser)
-        add_pending_check_refresh_arguments(parser)
-        add_precheck_arguments(parser)
+        # Keep scripting overrides compatible, but make the normal run help
+        # profile-first. Advanced transport/quality knobs belong in YAML.
+        add_api_runtime_arguments(parser, visible=False)
+        add_pending_check_refresh_arguments(parser, visible=False)
+        add_precheck_arguments(parser, visible=False)
         add_output_logging_arguments(parser)
         return parser
 

@@ -418,15 +418,15 @@ def test_initialize_run_context_uses_application_paths_for_cache_and_credentials
     captured: dict[str, str] = {}
 
     monkeypatch.setattr(
-        "alpha.app.bootstrap_runtime_outputs.cleanup_legacy_sidecar_files",
+        "alpha.app.bootstrap.cleanup_legacy_sidecar_files",
         lambda *_args, **_kwargs: None,
     )
     monkeypatch.setattr(
-        "alpha.app.bootstrap_runtime_outputs.ensure_analysis_synced",
+        "alpha.app.bootstrap.ensure_analysis_synced",
         lambda *_args, **_kwargs: None,
     )
     monkeypatch.setattr(
-        "alpha.app.bootstrap_runtime_outputs.build_run_config_snapshot",
+        "alpha.app.bootstrap.build_run_config_snapshot",
         lambda *_args, **_kwargs: {},
     )
     monkeypatch.setattr(
@@ -534,11 +534,11 @@ def test_initialize_run_context_shares_application_paths_with_resource_loaders(
     captured: dict[str, object] = {}
 
     monkeypatch.setattr(
-        "alpha.app.bootstrap_runtime_outputs.cleanup_legacy_sidecar_files",
+        "alpha.app.bootstrap.cleanup_legacy_sidecar_files",
         lambda *_args, **_kwargs: None,
     )
     monkeypatch.setattr(
-        "alpha.app.bootstrap_runtime_outputs.ensure_analysis_synced",
+        "alpha.app.bootstrap.ensure_analysis_synced",
         lambda *_args, **_kwargs: None,
     )
 
@@ -546,9 +546,7 @@ def test_initialize_run_context_shares_application_paths_with_resource_loaders(
         captured["run_paths"] = run_paths
         return {"paths": {"output": run_paths.output}}
 
-    monkeypatch.setattr(
-        "alpha.app.bootstrap_runtime_outputs.build_run_config_snapshot", _capture_run_config
-    )
+    monkeypatch.setattr("alpha.app.bootstrap.build_run_config_snapshot", _capture_run_config)
     monkeypatch.setattr(
         "alpha.app.bootstrap_supporting_resources.ensure_dataset_template_library",
         lambda template_library_file, _dataset_id: template_library_file,

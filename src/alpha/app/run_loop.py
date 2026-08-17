@@ -6,16 +6,27 @@ from concurrent.futures import ThreadPoolExecutor
 import logging
 
 from ..config.application import ApplicationConfig
+from ..core.executor import build_template_build_context
 from ..core.scheduler_draining import drain_completed_futures_with_context
-from ..models.runtime_options import RunLoopOptions, SchedulerControlOptions
+from ..models.domain import TemplateField
+from ..models.runtime_options import (
+    ResultWriteOptions,
+    RunLoopOptions,
+    SchedulerControlOptions,
+    TemplateBuildOptions,
+)
 from ..models.runtime_protocols import ClientFactoryLike
 from ..runtime.concurrency import RuntimeConcurrencyState
-from ..runtime.contexts import CheckpointIdentity, FutureCompletionContext
+from ..runtime.contexts import (
+    CheckpointIdentity,
+    FutureCompletionContext,
+    SimulationExecutionResources,
+    TemplateBuildContext,
+)
 from ..runtime.state import ExecutionState, InitializedRunContext
 from . import (
     future_completion,
     future_submission,
-    run_loop_contexts,
     run_loop_resume,
     run_loop_rounds,
 )
@@ -24,6 +35,50 @@ from .run_loop_seed_phase import SeedPhaseState
 logger = logging.getLogger(__name__)
 
 _ABORT_REQUEST_GRACE_SECONDS = 0.5
+
+
+def resolve_simulation_execution_resources(
+    run_ctx: InitializedRunContext,
+) -> SimulationExecutionResources:
+    """Expose only the worker resources required by scheduling and resume."""
+    return SimulationExecutionResources(
+        client_factory=run_ctx.client_factory,
+        template_library_fingerprint=run_ctx.template_library_fingerprint,
+        create_semaphore=run_ctx.create_semaphore,
+    )
+
+
+def resolve_future_completion_context(
+    run_ctx: InitializedRunContext,
+    result_write_options: ResultWriteOptions,
+) -> FutureCompletionContext:
+    """Build the shared completion context once for the whole run loop."""
+    return FutureCompletionContext(
+        result_write_options=result_write_options,
+        settings_fingerprint=run_ctx.settings_fingerprint,
+        template_library_fingerprint=run_ctx.template_library_fingerprint,
+        run_fingerprint=run_ctx.run_fingerprint,
+        run_config=run_ctx.run_config,
+    )
+
+
+def create_template_build_context(
+    *,
+    options: TemplateBuildOptions,
+    run_ctx: InitializedRunContext,
+    fields: list[TemplateField],
+    existing_results_count: int,
+) -> TemplateBuildContext:
+    """Construct the template build context and seed its feedback cache count."""
+    return build_template_build_context(
+        options=options,
+        fields=fields,
+        template_library=run_ctx.template_library,
+        historical_state=run_ctx.historical_state,
+        filters=run_ctx.filters,
+        expression_policy=run_ctx.expression_policy,
+        existing_results_count=existing_results_count,
+    )
 
 
 def _abort_active_requests(client_factory: ClientFactoryLike) -> None:
@@ -130,13 +185,11 @@ def run_field_test_loop(
     field_template_batch_size = run_loop_options.field_template_batch_size
     scheduler_options = run_loop_options.scheduler
     result_write_options = run_loop_options.result_write
-    completion_ctx = run_loop_contexts.resolve_future_completion_context(
-        run_ctx, result_write_options
-    )
+    completion_ctx = resolve_future_completion_context(run_ctx, result_write_options)
     checkpoint_identity = CheckpointIdentity(
         run_fingerprint=run_ctx.run_fingerprint,
     )
-    execution_resources = run_loop_contexts.resolve_simulation_execution_resources(run_ctx)
+    execution_resources = resolve_simulation_execution_resources(run_ctx)
 
     fields = run_loop_resume.restore_fields_from_state(
         fields=fields,
@@ -146,7 +199,7 @@ def run_field_test_loop(
         identity=checkpoint_identity,
     )
 
-    template_build_ctx = run_loop_contexts.create_template_build_context(
+    template_build_ctx = create_template_build_context(
         options=run_loop_options.template_build,
         run_ctx=run_ctx,
         fields=fields,

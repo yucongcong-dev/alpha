@@ -71,17 +71,15 @@ app/bootstrap.py
   ├─ bootstrap_fields.py             # 字段预处理（含 field_quality/field_families 辅助）
   ├─ bootstrap_pending_checks.py     # 恢复未决 Check Submission
   ├─ bootstrap_supporting_resources.py / bootstrap_types.py
-  ├─ bootstrap_run_context.py        # 组装 InitializedRunContext + 并发资源
+  ├─ bootstrap.py                    # 输出准备、组装 InitializedRunContext + 并发资源
   ├─ bootstrap_state.py              # 构建 ExecutionState
-  ├─ run_identity.py                 # run/checkpoint 指纹
-  └─ bootstrap_runtime_outputs.py    # 输出路径与运行配置快照副作用
+  └─ run_identity.py                 # run/checkpoint 指纹
 ```
 
 ### run loop 链
 
 ```text
 app/run_loop.py
-  ├─ run_loop_contexts.py      # 上下文构造
   ├─ run_loop_rounds.py        # 每轮调度（入口）
   ├─ run_loop_dispatch.py      # 单字段派发
   ├─ run_loop_seed_phase.py    # full-run 的 seed 阶段
@@ -143,7 +141,7 @@ app/finalize.py
 
 ## 6. 为什么模块这么多（边界设计，不是碎片）
 
-184 个源码模块 / 约 2.28 万行不是随意拆分，而是三类动机：
+181 个源码模块 / 约 2.27 万行不是随意拆分，而是三类动机：
 
 1. **状态所有权**：`runtime/*` 与 `core/scheduler*` 的拆分直接对应 AGENTS.md 的
    "一个可变状态一个专用 dataclass" 规则，避免 `ExecutionState` 膨胀成万能容器。

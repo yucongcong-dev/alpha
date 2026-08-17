@@ -12,11 +12,16 @@ from __future__ import annotations
 
 from dataclasses import replace
 import logging
+import threading
 
+from ..analysis.analysis_sync import ensure_analysis_synced
 from ..api.client import BrainClient
+from ..cli.run_config import build_run_config_snapshot
 from ..config.application import ApplicationConfig
+from ..config.application_sections import ExecutionConfig
 from ..generators.fingerprint import stable_fingerprint
 from ..generators.payload import build_settings_fingerprint
+from ..io.output_paths import cleanup_legacy_sidecar_files
 from ..models.io_types import RunPaths
 from ..models.runtime_options import (
     ApiClientOptions,
@@ -24,20 +29,17 @@ from ..models.runtime_options import (
     CredentialLoadOptions,
     TemplateBuildOptions,
 )
-from ..models.runtime_protocols import RunConfig
-from ..runtime.state import InitializedRunContext
+from ..models.runtime_protocols import ClientFactoryLike, RunConfig
+from ..runtime.concurrency import RuntimeConcurrencyState
+from ..runtime.state import ExecutionState, InitializedRunContext
 from .bootstrap_cleanup import clean_runtime_artifacts as clean_runtime_artifacts
 from .bootstrap_clients import create_and_login_client, resolve_credentials
 from .bootstrap_field_resources import load_bootstrap_fields, log_field_selection_stats
 from .bootstrap_fields import prepare_fields_for_execution, prepare_fields_for_research_identity
 from .bootstrap_pending_checks import reconcile_pending_check_results
-from .bootstrap_run_context import assemble_initialized_run_context, build_runtime_concurrency
-from .bootstrap_runtime_outputs import (
-    prepare_runtime_outputs,
-)
 from .bootstrap_state import build_execution_state
 from .bootstrap_supporting_resources import load_bootstrap_supporting_resources
-from .bootstrap_types import PreparedBootstrapResources
+from .bootstrap_types import PreparedBootstrapResources, RuntimeConcurrencyResources
 from .run_identity import (
     build_research_input_fingerprints,
     build_research_run_fingerprint,
@@ -45,6 +47,62 @@ from .run_identity import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+def prepare_runtime_outputs(config: ApplicationConfig) -> RunConfig:
+    """Prepare output side effects and capture the resolved run configuration."""
+    paths = config.paths
+    cleanup_legacy_sidecar_files(paths.output, verbose=True)
+    ensure_analysis_synced(paths.output)
+    run_config = build_run_config_snapshot(config, paths)
+    logger.info("[config] 运行配置将嵌入主结果文件")
+    return run_config
+
+
+def build_runtime_concurrency(
+    config: ExecutionConfig,
+) -> RuntimeConcurrencyResources:
+    """Build runtime concurrency state and the creation semaphore."""
+    max_workers = max(1, int(config.max_concurrent_simulations or 0))
+    runtime_state = RuntimeConcurrencyState(
+        max_workers=max_workers,
+        runtime_max_workers=max_workers,
+    )
+    max_create_workers = max(1, int(config.max_concurrent_creates or 0))
+    create_semaphore = threading.Semaphore(max_create_workers)
+    logger.info("[config] max_concurrent_simulations=%d", max_workers)
+    logger.info("[config] max_concurrent_creates=%d", max_create_workers)
+    logger.info("[config] simulation_max_pending_cycles=%d", config.simulation_max_pending_cycles)
+    return RuntimeConcurrencyResources(
+        runtime_state=runtime_state,
+        create_semaphore=create_semaphore,
+    )
+
+
+def assemble_initialized_run_context(
+    *,
+    client_factory: ClientFactoryLike,
+    prepared: PreparedBootstrapResources,
+    execution_state: ExecutionState,
+    runtime_state: RuntimeConcurrencyState,
+    create_semaphore: threading.Semaphore,
+) -> InitializedRunContext:
+    """Assemble the final initialized run context from bootstrap-owned parts."""
+    return InitializedRunContext(
+        client_factory=client_factory,
+        template_library=prepared.template_library,
+        filters=prepared.filters,
+        expression_policy=prepared.expression_policy,
+        template_library_fingerprint=prepared.template_library_fingerprint,
+        settings_fingerprint=prepared.settings_fingerprint,
+        run_fingerprint=prepared.run_fingerprint,
+        historical_state=prepared.historical_state,
+        fields=prepared.fields,
+        execution_state=execution_state,
+        runtime_state=runtime_state,
+        create_semaphore=create_semaphore,
+        run_config=prepared.run_config,
+    )
 
 
 def initialize_run_context(args: ApplicationConfig) -> InitializedRunContext | None:
