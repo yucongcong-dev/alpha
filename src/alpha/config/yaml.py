@@ -90,7 +90,7 @@ def activate_config_from_argv(argv: list[str] | None = None) -> str | None:
             return set_active_config_path(tokens[index + 1])
         if token.startswith("--config="):
             return set_active_config_path(token.split("=", 1)[1])
-    return get_active_config_path()
+    return set_active_config_path()
 
 
 def clear_yaml_caches() -> None:

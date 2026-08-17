@@ -125,6 +125,53 @@ def test_importing_main_alone_has_no_argv_side_effect(tmp_path) -> None:
     assert completed.stdout.strip() == "error"
 
 
+def test_run_cli_entry_rejects_switching_config_sources_in_one_process(tmp_path) -> None:
+    first_config = tmp_path / "first.yaml"
+    second_config = tmp_path / "second.yaml"
+    first_config.write_text(
+        "global:\n  strings:\n    status:\n      error: first_config\n",
+        encoding="utf-8",
+    )
+    second_config.write_text(
+        "global:\n  strings:\n    status:\n      error: second_config\n",
+        encoding="utf-8",
+    )
+    project_root = Path(__file__).resolve().parents[2]
+    env = dict(os.environ)
+    env["PYTHONPATH"] = os.pathsep.join(
+        filter(None, [str(project_root / "src"), env.get("PYTHONPATH", "")])
+    )
+    script = """
+import sys
+import alpha.main
+
+def inspect_constant():
+    from alpha.config._constants_strings import STATUS_ERROR
+
+    print(STATUS_ERROR)
+    return 0
+
+alpha.main.main = inspect_constant
+first_config, second_config = sys.argv[1:]
+sys.argv = ["alpha", "--config", first_config]
+assert alpha.main.run_cli_entry() == 0
+sys.argv = ["alpha", "--config", second_config]
+assert alpha.main.run_cli_entry() == 1
+"""
+
+    completed = subprocess.run(
+        [sys.executable, "-c", script, str(first_config), str(second_config)],
+        check=False,
+        capture_output=True,
+        text=True,
+        env=env,
+    )
+
+    assert completed.returncode == 0, completed.stderr
+    assert completed.stdout.strip() == "first_config"
+    assert "只能运行一份 YAML 配置" in completed.stderr
+
+
 def test_main_routes_dry_run_around_runtime_bootstrap_and_finalize(monkeypatch) -> None:
     _disable_logging_setup(monkeypatch)
     paths = object()
