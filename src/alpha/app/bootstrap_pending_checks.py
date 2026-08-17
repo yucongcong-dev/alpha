@@ -7,6 +7,8 @@ import logging
 
 from ..analysis.feedback_history import rebuild_historical_run_state
 from ..analysis.feedback_run_index import persist_feedback_run_index
+from ..analysis.result_identity import merge_latest_results_by_identity
+from ..analysis.results_loader import load_existing_results
 from ..analysis.results_persistence import ResultPersistenceContext, persist_results
 from ..api.client import BrainClient
 from ..core.pending_check_refresh import (
@@ -35,9 +37,26 @@ def persist_reconciled_historical_results(
     run_config: RunConfig,
     run_fingerprint: str = "",
     metadata_scope: str = "run",
-) -> None:
+    merge_with_latest: bool = False,
+) -> list[FieldTestResult]:
     """Persist startup reconciliation before later bootstrap stages may return early."""
+    persisted_results = results
     with exclusive_results_transaction(output_file):
+        if merge_with_latest:
+            try:
+                latest_results = load_existing_results(
+                    output_file,
+                    repair_corrupt_summary=False,
+                )
+            except ValueError as exc:
+                logger.warning(
+                    "[check-submission-resume] could not reload latest feedback %s; "
+                    "using the in-memory refresh: %s",
+                    output_file,
+                    exc,
+                )
+                latest_results = []
+            persisted_results = merge_latest_results_by_identity(latest_results, results)
         persist_results(
             ResultPersistenceContext(
                 output_path=output_file,
@@ -48,8 +67,9 @@ def persist_reconciled_historical_results(
                 run_config=run_config,
                 metadata_scope=metadata_scope,
             ),
-            results,
+            persisted_results,
         )
+    return persisted_results
 
 
 def reconcile_pending_check_results(
@@ -131,7 +151,7 @@ def reconcile_pending_check_results(
         and feedback_output != output_file
         and refreshed_state.feedback_results != feedback_results
     ):
-        persist_reconciled_historical_results(
+        persisted_feedback_results = persist_reconciled_historical_results(
             output_file=feedback_output,
             dataset_id=dataset_id,
             results=refreshed_state.feedback_results,
@@ -140,7 +160,16 @@ def reconcile_pending_check_results(
             run_config=run_config,
             run_fingerprint=run_fingerprint,
             metadata_scope="feedback",
+            merge_with_latest=True,
         )
+        if persisted_feedback_results is not None:
+            refreshed_state = rebuild_historical_run_state(
+                replace(
+                    refreshed_state,
+                    feedback_results=persisted_feedback_results,
+                ),
+                refreshed_existing_results,
+            )
         persist_feedback_run_index(feedback_output)
     if refreshed_count:
         logger.info(

@@ -4,7 +4,12 @@ from __future__ import annotations
 
 from dataclasses import replace
 
-from alpha.app.bootstrap_pending_checks import reconcile_pending_check_results
+from alpha.analysis.results_loader import load_existing_results
+from alpha.analysis.results_persistence import ResultPersistenceContext, persist_results
+from alpha.app.bootstrap_pending_checks import (
+    persist_reconciled_historical_results,
+    reconcile_pending_check_results,
+)
 from alpha.config._constants_strings import STATUS_ERROR
 import alpha.core.pending_check_refresh as pending_check_refresh
 from alpha.core.pending_check_refresh import (
@@ -138,6 +143,51 @@ def test_reconcile_pending_check_results_persists_run_and_feedback_views(monkeyp
     assert [entry["output_file"] for entry in persisted] == ["run.json", "feedback.json"]
     assert all(entry["settings_fingerprint"] == "settings" for entry in persisted)
     assert indexed == ["feedback.json"]
+
+
+def test_reconciled_feedback_persistence_merges_newer_locked_snapshot(tmp_path) -> None:
+    """A stale refresh must not overwrite a newer feedback observation."""
+    feedback_path = tmp_path / "feedback" / "scope" / "summary.json"
+    stale = replace(
+        _pending_result(),
+        updated_at="2026-08-06T00:00:00Z",
+    )
+    latest = replace(
+        stale,
+        submittable=True,
+        message="checks passed",
+        failed_checks=[],
+        updated_at="2026-08-06T00:00:01Z",
+    )
+    persist_results(
+        ResultPersistenceContext(
+            output_path=str(feedback_path),
+            dataset_id="fundamental6",
+            settings_fingerprint="settings",
+            template_library_fingerprint="library",
+            metadata_scope="feedback",
+        ),
+        [latest],
+        include_analysis=False,
+    )
+
+    persisted = persist_reconciled_historical_results(
+        output_file=str(feedback_path),
+        dataset_id="fundamental6",
+        results=[stale],
+        settings_fingerprint="settings",
+        template_library_fingerprint="library",
+        run_config={},
+        metadata_scope="feedback",
+        merge_with_latest=True,
+    )
+
+    assert persisted[0].submittable is True
+    assert persisted[0].message == "checks passed"
+    assert persisted[0].updated_at == latest.updated_at
+    loaded = load_existing_results(str(feedback_path))
+    assert loaded[0].submittable is True
+    assert loaded[0].updated_at == latest.updated_at
 
 
 def test_reconcile_pending_check_results_does_not_replace_terminal_run_result(
