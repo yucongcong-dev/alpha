@@ -7,11 +7,11 @@ discovery/loading lives in ``yaml_sources``; schema validation lives in
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 import logging
 import os
 import sys
 import threading
-from typing import cast
 
 from .types import YamlConfig
 from .yaml_sources import (
@@ -30,9 +30,20 @@ from .yaml_validator import clear_schema_cache, validate_merged_config
 
 _log = logging.getLogger("alpha.config.yaml")
 
+_ConfigSignature = tuple[tuple[str, int, int], ...] | None
+
+
+@dataclass(frozen=True, slots=True)
+class _ValidatedConfigEntry:
+    """One validated merged configuration snapshot for a source signature."""
+
+    path: str | None
+    signature: _ConfigSignature
+    data: YamlConfig
+
+
 _config_lock = threading.RLock()
-_config_cache: dict[str, YamlConfig] = {}
-_config_validated: bool = False
+_config_cache: _ValidatedConfigEntry | None = None
 _active_config_path: str | None = None
 
 
@@ -43,12 +54,12 @@ def set_active_config_path(config_path: str = "") -> str | None:
     lower-level modules then call :func:`get_yaml_config` without needing to
     carry the path independently.
     """
-    global _active_config_path, _config_validated
+    global _active_config_path, _config_cache
     resolved = os.path.abspath(os.path.expanduser(config_path)) if config_path else None
     with _config_lock:
         if resolved != _active_config_path:
             _active_config_path = resolved
-            _config_validated = False
+            _config_cache = None
     return resolved
 
 
@@ -84,10 +95,9 @@ def activate_config_from_argv(argv: list[str] | None = None) -> str | None:
 
 def clear_yaml_caches() -> None:
     """Clear all YAML config caches and force reload on next access."""
-    global _config_validated
+    global _config_cache
     with _config_lock:
-        _config_cache.clear()
-        _config_validated = False
+        _config_cache = None
     clear_schema_cache()
 
 
@@ -99,36 +109,34 @@ def validate_yaml_config(config_path: str = "") -> list[str]:
 
 
 def get_yaml_config(config_path: str = "") -> YamlConfig:
-    """Return cached merged YAML config, reloading when any source file changes."""
-    global _config_validated
+    """Return one validated snapshot, reloading when its sources change.
+
+    The cache retains only the most recently requested path.  A CLI process has
+    one active configuration, while explicit one-off reads remain correct
+    without retaining an unbounded collection of path-specific snapshots.
+    """
+    global _config_cache
 
     explicit_path = os.path.abspath(os.path.expanduser(config_path)) if config_path else None
     settings_path = explicit_path or get_active_config_path() or _resolve_yaml_path()
-    cache_key = settings_path or "__missing__"
     signature = _all_files_signature(settings_path)
 
     with _config_lock:
-        cached_entry = _config_cache.get(cache_key)
-        if (
-            isinstance(cached_entry, dict)
-            and cached_entry.get("signature") == signature
-            and isinstance(cached_entry.get("data"), dict)
+        cached_entry = _config_cache
+        if cached_entry is not None and (
+            cached_entry.path == settings_path and cached_entry.signature == signature
         ):
-            return cast(YamlConfig, cached_entry["data"])
+            return cached_entry.data
 
         data = _load_all_yamls(settings_path)
-
-        if not _config_validated:
-            resolved_files = _resolve_all_yaml_files(settings_path)
-            validation_warnings = validate_merged_config(data, resolved_files)
-            if validation_warnings:
-                for warning in validation_warnings:
-                    _log.warning("[schema] %s", warning)
-            _config_validated = True
-
-        _config_cache[cache_key] = {
-            "path": settings_path,
-            "signature": signature,
-            "data": data,
-        }
+        resolved_files = _resolve_all_yaml_files(settings_path)
+        validation_warnings = validate_merged_config(data, resolved_files)
+        if validation_warnings:
+            for warning in validation_warnings:
+                _log.warning("[schema] %s", warning)
+        _config_cache = _ValidatedConfigEntry(
+            path=settings_path,
+            signature=signature,
+            data=data,
+        )
         return data

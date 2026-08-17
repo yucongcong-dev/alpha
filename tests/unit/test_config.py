@@ -35,6 +35,7 @@ from alpha.config.runtime_values import (
     resolve_http_runtime_config,
 )
 from alpha.config.strategy_profiles import load_strategy_profile_schemas
+import alpha.config.yaml as yaml_module
 from alpha.config.yaml import (
     clear_yaml_caches,
     get_active_config_path,
@@ -482,6 +483,27 @@ def test_get_yaml_config_reloads_when_file_changes(tmp_path) -> None:
 
     assert first["global"]["limits"]["limit"] == 10
     assert second["global"]["limits"]["limit"] == 25
+
+
+def test_yaml_validation_is_scoped_to_each_cached_path(monkeypatch, tmp_path) -> None:
+    first_path = tmp_path / "first.yaml"
+    second_path = tmp_path / "second.yaml"
+    first_path.write_text("global:\n  limits:\n    limit: 10\n", encoding="utf-8")
+    second_path.write_text("global:\n  limits:\n    limit: 20\n", encoding="utf-8")
+    validated_limits: list[int] = []
+
+    def record_validation(data, _resolved_files) -> list[str]:
+        validated_limits.append(data["global"]["limits"]["limit"])
+        return []
+
+    clear_yaml_caches()
+    monkeypatch.setattr(yaml_module, "validate_merged_config", record_validation)
+
+    get_yaml_config(str(first_path))
+    get_yaml_config(str(second_path))
+    get_yaml_config(str(first_path))
+
+    assert validated_limits == [10, 20, 10]
 
 
 def test_runtime_config_reloads_when_active_yaml_changes(tmp_path) -> None:
