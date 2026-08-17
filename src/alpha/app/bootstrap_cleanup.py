@@ -24,9 +24,7 @@ def _selected_dataset_dirs(project_root: Path, config: CleanConfig) -> list[Path
     if config.dataset_id:
         dataset_dir = datasets_dir / sanitize_dataset_id_for_filename(config.dataset_id)
         return [dataset_dir] if dataset_dir.is_dir() else []
-    return [
-        path for path in datasets_dir.iterdir() if path.is_dir() and not path.is_symlink()
-    ]
+    return [path for path in datasets_dir.iterdir() if path.is_dir() and not path.is_symlink()]
 
 
 def _dataset_runtime_targets(project_root: Path, config: CleanConfig) -> list[Path]:
@@ -82,7 +80,9 @@ def _exclusive_cleanup_gates(dataset_dirs: list[Path]) -> Iterator[None]:
                     )
                 )
         except FileLockUnavailableError as exc:
-            raise RuntimeError("runtime cleanup is already active; retry after it completes") from exc
+            raise RuntimeError(
+                "runtime cleanup is already active; retry after it completes"
+            ) from exc
         yield
 
 

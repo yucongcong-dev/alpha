@@ -133,6 +133,92 @@ def test_lock_probe_does_not_create_missing_lock_file(tmp_path) -> None:
     assert not lock_path.exists()
 
 
+def test_lock_probe_uses_and_releases_windows_byte_lock(monkeypatch, tmp_path) -> None:
+    calls: list[tuple[int, int]] = []
+    fake_msvcrt = SimpleNamespace(
+        LK_NBLCK=12,
+        LK_UNLCK=11,
+        locking=lambda _fd, mode, size: calls.append((mode, size)),
+    )
+    lock_path = tmp_path / "result.lock"
+    monkeypatch.setattr(file_lock.os, "name", "nt")
+    monkeypatch.setattr(file_lock, "import_module", lambda _name: fake_msvcrt)
+
+    lock_path.touch()
+    assert file_lock.is_exclusive_file_lock_held(str(lock_path)) is False
+    assert calls == []
+
+    lock_path.write_bytes(b"x")
+    assert file_lock.is_exclusive_file_lock_held(str(lock_path)) is False
+    assert calls == [(fake_msvcrt.LK_NBLCK, 1), (fake_msvcrt.LK_UNLCK, 1)]
+
+
+def test_lock_probe_detects_windows_byte_lock_contention(monkeypatch, tmp_path) -> None:
+    def fail_to_lock(_fd: int, _mode: int, _size: int) -> None:
+        raise OSError(errno.EACCES, "busy")
+
+    fake_msvcrt = SimpleNamespace(LK_NBLCK=12, LK_UNLCK=11, locking=fail_to_lock)
+    lock_path = tmp_path / "result.lock"
+    lock_path.write_bytes(b"x")
+    monkeypatch.setattr(file_lock.os, "name", "nt")
+    monkeypatch.setattr(file_lock, "import_module", lambda _name: fake_msvcrt)
+
+    assert file_lock.is_exclusive_file_lock_held(str(lock_path)) is True
+
+
+def test_lock_probe_uses_and_releases_posix_flock(monkeypatch, tmp_path) -> None:
+    calls: list[int] = []
+    fake_fcntl = SimpleNamespace(
+        LOCK_EX=1,
+        LOCK_NB=4,
+        LOCK_UN=2,
+        flock=lambda _fd, operation: calls.append(operation),
+    )
+    lock_path = tmp_path / "result.lock"
+    lock_path.write_bytes(b"x")
+    monkeypatch.setattr(file_lock.os, "name", "posix")
+    monkeypatch.setattr(file_lock, "import_module", lambda _name: fake_fcntl)
+
+    assert file_lock.is_exclusive_file_lock_held(str(lock_path)) is False
+    assert calls == [fake_fcntl.LOCK_EX | fake_fcntl.LOCK_NB, fake_fcntl.LOCK_UN]
+
+
+@pytest.mark.parametrize("platform_name", ["nt", "posix"])
+def test_lock_probe_preserves_unexpected_os_error(monkeypatch, tmp_path, platform_name) -> None:
+    def fail_to_lock(*_args: object) -> None:
+        raise OSError(errno.EIO, "filesystem lock failed")
+
+    fake_lock_module = SimpleNamespace(
+        LK_NBLCK=12,
+        LK_UNLCK=11,
+        LOCK_EX=1,
+        LOCK_NB=4,
+        LOCK_UN=2,
+        locking=fail_to_lock,
+        flock=fail_to_lock,
+    )
+    lock_path = tmp_path / "result.lock"
+    lock_path.write_bytes(b"x")
+    monkeypatch.setattr(file_lock.os, "name", platform_name)
+    monkeypatch.setattr(file_lock, "import_module", lambda _name: fake_lock_module)
+
+    with pytest.raises(OSError, match="filesystem lock failed"):
+        file_lock.is_exclusive_file_lock_held(str(lock_path))
+
+
+def test_lock_probe_handles_lock_file_removed_after_existence_check(monkeypatch, tmp_path) -> None:
+    lock_path = tmp_path / "result.lock"
+    lock_path.write_bytes(b"x")
+
+    def removed_file(*_args: object, **_kwargs: object) -> None:
+        raise FileNotFoundError
+
+    monkeypatch.setattr(file_lock.os.path, "isfile", lambda _path: True)
+    monkeypatch.setattr(file_lock, "open", removed_file, raising=False)
+
+    assert file_lock.is_exclusive_file_lock_held(str(lock_path)) is False
+
+
 def test_exclusive_file_lock_uses_nonblocking_windows_mode(monkeypatch, tmp_path) -> None:
     calls: list[tuple[int, int]] = []
     fake_msvcrt = SimpleNamespace(
