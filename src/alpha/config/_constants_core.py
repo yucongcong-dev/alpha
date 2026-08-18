@@ -80,15 +80,10 @@ def _yaml_val(*keys: str, default: Any = None, cast: type | None = str) -> Any:
         if cast is bool:
             return bool(node)
         return cast(node)
-    except (TypeError, ValueError):
-        _warn_once(
-            key_path,
-            "配置 key '%s' 值类型转换失败 (cast=%s, got=%r)，使用默认值。",
-            key_path,
-            cast.__name__,
-            type(node).__name__,
-        )
-        return default
+    except (TypeError, ValueError) as exc:
+        raise ValueError(
+            f"YAML 配置 key '{key_path}' 的值 {node!r} 无法转换为 {cast.__name__}"
+        ) from exc
 
 
 def _yaml_int(*keys: str, default: int = 0) -> int:

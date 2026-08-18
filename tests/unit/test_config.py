@@ -20,6 +20,7 @@ from alpha.config._constants_api import (
     SIM_ACCEPT_HEADER,
     VERSION_HEADER,
 )
+from alpha.config._constants_core import _yaml_val
 from alpha.config._constants_thresholds import DEFAULT_DATASET_ID
 from alpha.config.expression_policy_coercion import coerce_expression_policy_override
 from alpha.config.expression_policy_merging import (
@@ -523,6 +524,16 @@ def test_load_yaml_file_rejects_non_mapping_top_level(tmp_path) -> None:
 
     with pytest.raises(ValueError, match="顶层必须是 mapping"):
         load_yaml_file(str(config_path))
+
+
+def test_yaml_val_rejects_uncoercible_value(monkeypatch) -> None:
+    monkeypatch.setattr(
+        "alpha.config.yaml.get_yaml_config",
+        lambda config_path="": {"global": {"quality": {"submit": {"min_fitness": "wrong"}}}},
+    )
+
+    with pytest.raises(ValueError, match="min_fitness"):
+        _yaml_val("quality", "submit", "min_fitness", cast=float)
 
 
 def test_get_yaml_config_reloads_when_content_changes_with_same_stat_metadata(tmp_path) -> None:
