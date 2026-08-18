@@ -161,7 +161,7 @@ def validate_explicit_yaml_file(path: str) -> str:
 def deep_merge(base: YamlConfig, override: YamlConfig, max_depth: int = 6) -> YamlConfig:
     """Deep-merge dictionaries with override winning."""
     if max_depth <= 0:
-        return cast(YamlConfig, dict(override))
+        raise ValueError("YAML 配置嵌套层级超过合并上限，请检查配置文件结构。")
     result: YamlConfig = cast(YamlConfig, dict(base))
     for key, value in override.items():
         if key in result and isinstance(result[key], dict) and isinstance(value, dict):

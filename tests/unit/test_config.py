@@ -44,7 +44,7 @@ from alpha.config.yaml import (
     set_active_config_path,
     validate_yaml_config,
 )
-from alpha.config.yaml_sources import load_yaml_file
+from alpha.config.yaml_sources import deep_merge, load_yaml_file
 from alpha.config.yaml_validator import _get_schema_keys, clear_schema_cache
 from alpha.policy.expression import (
     get_dataset_expression_policy,
@@ -525,6 +525,14 @@ def test_load_yaml_file_rejects_non_mapping_top_level(tmp_path) -> None:
 
     with pytest.raises(ValueError, match="顶层必须是 mapping"):
         load_yaml_file(str(config_path))
+
+
+def test_deep_merge_rejects_excessive_nesting() -> None:
+    base = {"a": {"b": {"c": {"d": {"e": {"f": {"g": 0}}}}}}}
+    override = {"a": {"b": {"c": {"d": {"e": {"f": {"g": 1}}}}}}}
+
+    with pytest.raises(ValueError, match="嵌套层级超过合并上限"):
+        deep_merge(base, override)
 
 
 def test_yaml_val_rejects_uncoercible_value(monkeypatch) -> None:
