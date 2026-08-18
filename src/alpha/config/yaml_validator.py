@@ -22,7 +22,7 @@ from .yaml_sources import (
 )
 
 _schema_lock = threading.RLock()
-_SchemaSignature = tuple[tuple[str, tuple[int, int, str] | None], ...]
+_SchemaSignature = tuple[tuple[str, tuple[int, int, int] | None], ...]
 _schema_keys_cache: tuple[_SchemaSignature, dict[str, set[str]]] | None = None
 
 _NESTED_CONFIG_SECTIONS = {

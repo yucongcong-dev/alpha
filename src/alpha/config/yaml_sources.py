@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import hashlib
 import os
 from typing import cast
 
@@ -203,26 +202,27 @@ def load_default_yamls(resolved_files: dict[str, str]) -> YamlConfig:
     return merged
 
 
-def config_file_signature(path: str | None) -> tuple[int, int, str] | None:
-    """Return a file signature as ``(mtime_ns, size, content_digest)``."""
+def config_file_signature(path: str | None) -> tuple[int, int, int] | None:
+    """Return a file signature as ``(mtime_ns, ctime_ns, size)``.
+
+    ``ctime_ns`` is the inode change time on POSIX, so overwriting a file with
+    the same size and then restoring its mtime still changes the signature,
+    without requiring a full content read on every cache lookup.
+    """
     if not path or not os.path.isfile(path):
         return None
     try:
-        digest = hashlib.blake2b(digest_size=16)
-        with open(path, "rb") as handle:
-            for chunk in iter(lambda: handle.read(64 * 1024), b""):
-                digest.update(chunk)
         stat = os.stat(path)
     except OSError:
         return None
-    return (stat.st_mtime_ns, stat.st_size, digest.hexdigest())
+    return (stat.st_mtime_ns, stat.st_ctime_ns, stat.st_size)
 
 
 def all_files_signature(
     settings_path: str | None = None,
-) -> tuple[tuple[str, int, int, str], ...] | None:
+) -> tuple[tuple[str, int, int, int], ...] | None:
     """Return an aggregate signature for all resolved YAML files."""
-    sigs: list[tuple[str, int, int, str]] = []
+    sigs: list[tuple[str, int, int, int]] = []
     resolved_files = resolve_all_yaml_files(settings_path)
 
     for path in resolved_files.values():

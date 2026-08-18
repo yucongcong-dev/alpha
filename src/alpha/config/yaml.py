@@ -30,7 +30,7 @@ from .yaml_validator import clear_schema_cache, validate_merged_config
 
 _log = logging.getLogger("alpha.config.yaml")
 
-_ConfigSignature = tuple[tuple[str, int, int, str], ...] | None
+_ConfigSignature = tuple[tuple[str, int, int, int], ...] | None
 
 
 @dataclass(frozen=True, slots=True)

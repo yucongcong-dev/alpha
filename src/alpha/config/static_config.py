@@ -9,6 +9,7 @@ configuration.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from threading import Lock
 
 from ._constants_core import (
     _yaml_dict,
@@ -696,6 +697,7 @@ class StaticConfig:
         )
 
 
+_constants_lock = Lock()
 _constants_cache: StaticConfig | None = None
 _constants_source: object = None
 
@@ -704,17 +706,19 @@ def get_static_config() -> StaticConfig:
     """Return the resolved static configuration snapshot, cached per YAML source."""
     global _constants_cache, _constants_source
     active_source = get_yaml_config_version()
-    if _constants_cache is None or _constants_source != active_source:
-        _constants_cache = StaticConfig._build()
-        _constants_source = active_source
-    return _constants_cache
+    with _constants_lock:
+        if _constants_cache is None or _constants_source != active_source:
+            _constants_cache = StaticConfig._build()
+            _constants_source = active_source
+        return _constants_cache
 
 
 def clear_static_config_cache() -> None:
     """Force the next ``get_static_config()`` call to rebuild from YAML."""
     global _constants_cache, _constants_source
-    _constants_cache = None
-    _constants_source = None
+    with _constants_lock:
+        _constants_cache = None
+        _constants_source = None
 
 
 __all__ = ["StaticConfig", "clear_static_config_cache", "get_static_config"]

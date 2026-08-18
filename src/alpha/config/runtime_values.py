@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 import math
+from threading import Lock
 from typing import Any
 
 from .yaml import get_yaml_config, get_yaml_config_version
@@ -166,6 +167,7 @@ class RuntimeConfig:
     feedback_template_min_priority: int
 
 
+_runtime_config_lock = Lock()
 _runtime_config_cache: RuntimeConfig | None = None
 _runtime_config_source: object | None = None
 
@@ -182,14 +184,16 @@ def get_runtime_config() -> RuntimeConfig:
     """获取仍需动态读取的运行时配置（惰性构建 + 缓存）。"""
     global _runtime_config_cache, _runtime_config_source
     active_source = get_yaml_config_version()
-    if _runtime_config_cache is None or _runtime_config_source != active_source:
-        _runtime_config_cache = _build_runtime_config()
-        _runtime_config_source = active_source
-    return _runtime_config_cache
+    with _runtime_config_lock:
+        if _runtime_config_cache is None or _runtime_config_source != active_source:
+            _runtime_config_cache = _build_runtime_config()
+            _runtime_config_source = active_source
+        return _runtime_config_cache
 
 
 def clear_runtime_config_cache() -> None:
     """清除运行时配置缓存，强制下次访问重新加载。"""
     global _runtime_config_cache, _runtime_config_source
-    _runtime_config_cache = None
-    _runtime_config_source = None
+    with _runtime_config_lock:
+        _runtime_config_cache = None
+        _runtime_config_source = None
