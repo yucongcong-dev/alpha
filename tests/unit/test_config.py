@@ -545,6 +545,13 @@ def test_yaml_val_rejects_uncoercible_value(monkeypatch) -> None:
         _yaml_val("quality", "submit", "min_fitness", cast=float)
 
 
+def test_yaml_val_rejects_missing_default_key(monkeypatch) -> None:
+    monkeypatch.setattr("alpha.config.yaml.get_yaml_config", lambda config_path="": {})
+
+    with pytest.raises(ValueError, match=r"min_fitness.*缺失"):
+        _yaml_val("quality", "submit", "min_fitness", cast=float)
+
+
 def test_schema_keys_cache_refreshes_when_sources_change(tmp_path) -> None:
     first = tmp_path / "first.yaml"
     second = tmp_path / "second.yaml"

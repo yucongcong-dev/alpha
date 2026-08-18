@@ -6,27 +6,7 @@
 
 from __future__ import annotations
 
-import logging
-import threading
 from typing import Any
-
-_log = logging.getLogger("alpha.config")
-
-# 线程安全的缺失 key 警告记录，防止重复日志 + 无限增长
-_MISSING_KEY_LOCK: threading.Lock = threading.Lock()
-_MISSING_KEY_WARNED: set[str] = set()
-_MISSING_KEY_WARNED_MAX: int = 200  # 超过此上限后停止记录（防止内存泄漏）
-
-
-def _warn_once(key_path: str, template: str, *fmt_args: object) -> None:
-    """线程安全：每个 key_path 仅警告一次，达到上限后静默。"""
-    with _MISSING_KEY_LOCK:
-        if len(_MISSING_KEY_WARNED) >= _MISSING_KEY_WARNED_MAX:
-            return
-        if key_path in _MISSING_KEY_WARNED:
-            return
-        _MISSING_KEY_WARNED.add(key_path)
-    _log.warning(template, *fmt_args)
 
 
 def _resolve_yaml_key(yaml_data: dict[str, Any], keys: tuple[str, ...]) -> Any:
@@ -48,9 +28,9 @@ def _yaml_val(*keys: str, default: Any = None, cast: type | None = str) -> Any:
     查找顺序：
       1. global.<keys> — config/settings.yaml 中的用户覆盖（高优先级）
       2. <keys> — 对应 canonical default YAML 文件中的基础默认值
-      3. 代码内 default
 
-    cast=None 表示不做类型转换，直接返回 YAML 原始值。
+    任一 canonical default YAML 若缺少该 key，会被视为配置漂移并直接报错，
+    避免静默退回代码默认值。cast=None 表示不做类型转换，直接返回原始值。
     """
     from .yaml import get_yaml_config
 
@@ -65,13 +45,9 @@ def _yaml_val(*keys: str, default: Any = None, cast: type | None = str) -> Any:
         node = _resolve_yaml_key(yaml_data, keys)
 
     if node is None:
-        _warn_once(
-            key_path,
-            "YAML 配置 key '%s' 未找到，使用代码默认值。"
-            "建议在对应的 config 默认 YAML 文件中添加此项。",
-            key_path,
+        raise ValueError(
+            f"YAML 配置 key '{key_path}' 在默认配置中缺失，请恢复 config 默认 YAML 中的对应项。"
         )
-        return default
 
     if cast is None:
         return node
