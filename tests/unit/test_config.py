@@ -45,6 +45,7 @@ from alpha.config.yaml import (
     validate_yaml_config,
 )
 from alpha.config.yaml_sources import load_yaml_file
+from alpha.config.yaml_validator import _get_schema_keys, clear_schema_cache
 from alpha.policy.expression import (
     get_dataset_expression_policy,
     use_curated_heuristics_for_dataset,
@@ -534,6 +535,20 @@ def test_yaml_val_rejects_uncoercible_value(monkeypatch) -> None:
 
     with pytest.raises(ValueError, match="min_fitness"):
         _yaml_val("quality", "submit", "min_fitness", cast=float)
+
+
+def test_schema_keys_cache_refreshes_when_sources_change(tmp_path) -> None:
+    first = tmp_path / "first.yaml"
+    second = tmp_path / "second.yaml"
+    first.write_text("section_a:\n  a: 1\n", encoding="utf-8")
+    second.write_text("section_b:\n  b: 2\n", encoding="utf-8")
+
+    clear_schema_cache()
+
+    assert _get_schema_keys({"template_defaults": str(first)})["template_defaults"] == {"section_a"}
+    assert _get_schema_keys({"template_defaults": str(second)})["template_defaults"] == {
+        "section_b"
+    }
 
 
 def test_get_yaml_config_reloads_when_content_changes_with_same_stat_metadata(tmp_path) -> None:

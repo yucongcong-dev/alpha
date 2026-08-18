@@ -15,13 +15,15 @@ from .strategy_profile_schema import (
 from .types import YamlConfig
 from .yaml_sources import (
     DEFAULT_CONFIG_NAMES,
+    config_file_signature,
     load_default_yamls,
     load_yaml_file,
     validate_default_yaml_ownership,
 )
 
 _schema_lock = threading.RLock()
-_schema_keys_cache: dict[str, set[str]] | None = None
+_SchemaSignature = tuple[tuple[str, tuple[int, int, str] | None], ...]
+_schema_keys_cache: tuple[_SchemaSignature, dict[str, set[str]]] | None = None
 
 _NESTED_CONFIG_SECTIONS = {
     "simulation",
@@ -76,6 +78,13 @@ def clear_schema_cache() -> None:
         _schema_keys_cache = None
 
 
+def _resolved_files_signature(resolved_files: dict[str, str]) -> _SchemaSignature:
+    """Build a content-sensitive signature for the resolved YAML sources."""
+    return tuple(
+        (name, config_file_signature(path)) for name, path in sorted(resolved_files.items())
+    )
+
+
 def _collect_leaf_paths(data: Any, prefix: tuple[str, ...] = ()) -> set[tuple[str, ...]]:
     """Collect all leaf key paths in a nested dict."""
     paths: set[tuple[str, ...]] = set()
@@ -105,9 +114,10 @@ def _collect_all_string_keys(data: Any) -> set[str]:
 def _get_schema_keys(resolved_files: dict[str, str]) -> dict[str, set[str]]:
     """Extract top-level keys from actual YAML source files."""
     global _schema_keys_cache
+    signature = _resolved_files_signature(resolved_files)
     with _schema_lock:
-        if _schema_keys_cache is not None:
-            return _schema_keys_cache
+        if _schema_keys_cache is not None and _schema_keys_cache[0] == signature:
+            return _schema_keys_cache[1]
 
         keys_by_file: dict[str, set[str]] = {}
         keys_by_file["settings"] = {"global", "dataset_profiles", "expression_policies"}
@@ -123,7 +133,7 @@ def _get_schema_keys(resolved_files: dict[str, str]) -> dict[str, set[str]]:
                 if isinstance(data, dict):
                     keys_by_file[name] = set(data.keys())
 
-        _schema_keys_cache = keys_by_file
+        _schema_keys_cache = (signature, keys_by_file)
         return keys_by_file
 
 
