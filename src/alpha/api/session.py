@@ -20,6 +20,9 @@ from .timing import doubled_retry_after, wait_seconds
 logger = logging.getLogger(__name__)
 
 _request_throttle_condition = threading.Condition()
+# These are intentionally process-wide: every client in a run shares the same
+# ``min_request_interval``, so one global "last request" timestamp enforces a
+# process-level minimum spacing and a shared 429 embargo across workers.
 _global_last_request_at: float = 0.0
 _global_rate_limit_until: float = 0.0
 _ABORTABLE_TRANSPORT_TIMEOUT_SECONDS = 5.0

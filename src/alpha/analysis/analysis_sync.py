@@ -57,7 +57,11 @@ def ensure_analysis_synced(output_path: str) -> None:
                     != summary.get("template_library_fingerprint")
                     or analysis.get("run_fingerprint") != summary.get("run_fingerprint")
                 )
-        except Exception:
+        except (OSError, ValueError) as exc:
+            logger.debug(
+                "[analysis] analysis sidecar is unreadable; rebuilding: %s",
+                exc,
+            )
             should_rebuild = True
 
     if not should_rebuild:
