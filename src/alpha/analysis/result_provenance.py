@@ -2,16 +2,11 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
 from ..models.domain import FieldTestResult
-
-
-def utc_now_iso() -> str:
-    """Return a stable UTC timestamp suitable for persisted result ordering."""
-    return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+from ..utils.helpers import utc_now_iso
 
 
 def portable_source_summary(output_path: str) -> str:

@@ -308,6 +308,8 @@ class StaticConfig:
     default_simulation_max_queue_seconds: int
     default_queue_busy_cooldown_seconds: int
     default_dataset_id: str
+    default_start_date: str
+    default_end_date: str
     truncation_web_default: float
     truncation_tighter_max: float
     partner_self_match_penalty: int
@@ -609,6 +611,8 @@ class StaticConfig:
                 "default_profile", "queue_busy_cooldown_seconds", default=120
             ),
             default_dataset_id=_yaml_str("simulation", "default_dataset_id", default="model51"),
+            default_start_date=_yaml_str("simulation", "default_start_date", default="2020-01-01"),
+            default_end_date=_yaml_str("simulation", "default_end_date", default="2025-12-31"),
             truncation_web_default=_yaml_float(
                 "simulation", "truncation", "web_default", default=0.08
             ),

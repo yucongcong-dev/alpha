@@ -12,7 +12,6 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
 import logging
 import os
 import time
@@ -22,6 +21,7 @@ from ..config.static_config import get_static_config
 from ..runtime.concurrency import RuntimeConcurrencyState
 from ..runtime.contexts import CheckpointIdentity
 from ..runtime.state import ExecutionState
+from ..utils.helpers import utc_now_iso
 from . import checkpoint_files as _files
 from . import checkpoint_loading as _loading
 from . import checkpoint_payloads as _payloads
@@ -184,7 +184,7 @@ def save_interrupt_report(
         "pending_simulations": _payloads.serialize_pending_simulations(execution_state),
         "template_stats": dict(execution_state.template_stats),
         "runtime_max_workers": runtime_state.runtime_max_workers,
-        "completed_at": datetime.now(timezone.utc).isoformat(),
+        "completed_at": utc_now_iso(),
     }
 
     success = _files.atomic_save(interrupt_report_file, payload)

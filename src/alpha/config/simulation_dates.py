@@ -6,11 +6,11 @@ import calendar
 from datetime import date
 from typing import Any
 
+from .static_config import get_static_config
+
 MONTHS_PER_YEAR = 12
 DEFAULT_TEST_PERIOD_YEARS = 1
 DEFAULT_TEST_PERIOD_MONTHS = 0
-DEFAULT_START_DATE = "2020-01-01"
-DEFAULT_END_DATE = "2025-12-31"
 
 
 def resolve_simulation_dates(
@@ -41,6 +41,6 @@ def resolve_simulation_dates(
                 resolved_end = current.isoformat()
 
     return (
-        resolved_start or str(config.get("startDate") or DEFAULT_START_DATE),
-        resolved_end or str(config.get("endDate") or DEFAULT_END_DATE),
+        resolved_start or str(config.get("startDate") or get_static_config().default_start_date),
+        resolved_end or str(config.get("endDate") or get_static_config().default_end_date),
     )

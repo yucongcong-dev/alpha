@@ -10,7 +10,13 @@
 
 from __future__ import annotations
 
+from datetime import datetime, timezone
 from typing import Any
+
+
+def utc_now_iso() -> str:
+    """Return the current UTC time as an ISO-8601 string with a ``Z`` suffix."""
+    return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
 
 
 def first_non_empty(*values: Any) -> Any | None:

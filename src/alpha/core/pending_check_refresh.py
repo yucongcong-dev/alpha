@@ -20,6 +20,7 @@ from ..models.domain import FieldTestResult
 from ..models.result_predicates import needs_submission_check_refresh
 from ..models.runtime_protocols import ClientFactoryLike
 from ..models.submission_check import SubmissionCheckOutcome, SubmissionCheckState
+from ..utils.helpers import utc_now_iso
 from .submission_checks import read_submission_status_with_retry
 
 logger = logging.getLogger(__name__)
@@ -109,10 +110,6 @@ class PendingCheckService:
         )
 
 
-def _utc_now_iso() -> str:
-    return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
-
-
 def _terminalize_failed_pending_result(result: FieldTestResult) -> FieldTestResult:
     """Close legacy mixed FAIL/PENDING results without another platform request."""
     outcome = SubmissionCheckOutcome.from_result(result)
@@ -127,7 +124,7 @@ def _terminalize_failed_pending_result(result: FieldTestResult) -> FieldTestResu
         submittable=False,
         message="checks failed",
         failed_checks=[check for check in checks if str(check.result or "").upper() == "FAIL"],
-        updated_at=_utc_now_iso(),
+        updated_at=utc_now_iso(),
     )
 
 
@@ -254,7 +251,7 @@ def _refresh_pending_check_result(
     alpha_id = result.alpha_id
     if not alpha_id:
         return result, False
-    checked_at = _utc_now_iso()
+    checked_at = utc_now_iso()
     try:
         with _refresh_client(client, request_deadline=request_deadline) as refresh_client:
             submittable, message, failed_checks = read_submission_status_with_retry(
