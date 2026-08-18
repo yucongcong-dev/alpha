@@ -107,7 +107,10 @@ class UrllibHttpBackend:
 
         Closing a response from the stopping thread unblocks a worker that is
         currently reading a long-poll response.  The backend remains reusable
-        for other lifecycle paths until its owner calls ``close``.
+        for other lifecycle paths until its owner calls ``close``.  urllib
+        cannot interrupt a request that is still resolving DNS, connecting, or
+        waiting for response headers; callers mitigate that window by capping
+        the per-request timeout before those phases.
         """
         with self._active_responses_lock:
             responses = tuple(self._active_responses)

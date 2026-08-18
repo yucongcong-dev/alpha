@@ -150,8 +150,11 @@ def _candidate_preference(result: FieldTestResult) -> tuple[float, int]:
         if not value:
             continue
         try:
-            timestamps.append(datetime.fromisoformat(value.replace("Z", "+00:00")).timestamp())
-        except ValueError:
+            parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+            if parsed.tzinfo is None:
+                parsed = parsed.replace(tzinfo=timezone.utc)
+            timestamps.append(parsed.timestamp())
+        except (TypeError, ValueError):
             continue
     return (max(timestamps, default=0.0), max(1, int(result.revision or 1)))
 

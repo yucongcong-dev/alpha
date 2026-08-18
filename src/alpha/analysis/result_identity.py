@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 from dataclasses import replace
-from datetime import datetime
+from datetime import datetime, timezone
 
 from ..models.domain import FieldTestResult
 from ..models.result_predicates import (
@@ -39,7 +39,7 @@ def merge_latest_results_by_identity(
             existing = merged.get(identity)
             if existing is None or _should_replace_with_observation(existing, result):
                 merged[identity] = result
-    return list(merged.values())
+    return sorted(merged.values(), key=result_identity)
 
 
 def merge_results_for_update(
@@ -62,14 +62,17 @@ def merge_results_for_update(
             update,
             revision=max(update.revision, existing.revision + 1),
         )
-    return list(merged.values())
+    return sorted(merged.values(), key=result_identity)
 
 
 def _parse_timestamp(value: str) -> float:
     if not value:
         return 0.0
     try:
-        return datetime.fromisoformat(value.replace("Z", "+00:00")).timestamp()
+        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+        if parsed.tzinfo is None:
+            parsed = parsed.replace(tzinfo=timezone.utc)
+        return parsed.timestamp()
     except ValueError:
         return 0.0
 

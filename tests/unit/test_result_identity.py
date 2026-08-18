@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from alpha.analysis.result_identity import (
+    _parse_timestamp,
     attempted_template_keys,
     merge_latest_results_by_identity,
     merge_results_for_update,
@@ -96,6 +97,22 @@ def test_attempted_keys_exclude_retryable_worker_failure() -> None:
 
     assert result_identity(worker_failure) not in attempted
     assert result_identity(terminal_check_error) in attempted
+
+
+def test_merge_output_is_deterministically_ordered() -> None:
+    a = _result(field_id="a")
+    b = _result(field_id="b")
+    c = _result(field_id="c")
+
+    forward = merge_latest_results_by_identity([c, a, b])
+    reverse = merge_latest_results_by_identity([b, a, c])
+
+    assert [result.field_id for result in forward] == ["a", "b", "c"]
+    assert [result.field_id for result in reverse] == ["a", "b", "c"]
+
+
+def test_parse_timestamp_treats_naive_as_utc() -> None:
+    assert _parse_timestamp("2026-01-01T00:00:00") == _parse_timestamp("2026-01-01T00:00:00Z")
 
 
 def test_enrich_results_provenance_fills_scope_and_portable_source(tmp_path) -> None:
