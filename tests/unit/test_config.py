@@ -43,6 +43,7 @@ from alpha.config.yaml import (
     set_active_config_path,
     validate_yaml_config,
 )
+from alpha.config.yaml_sources import load_yaml_file
 from alpha.policy.expression import (
     get_dataset_expression_policy,
     use_curated_heuristics_for_dataset,
@@ -500,6 +501,28 @@ def test_get_yaml_config_reloads_when_file_changes(tmp_path) -> None:
 
     assert first["global"]["limits"]["limit"] == 10
     assert second["global"]["limits"]["limit"] == 25
+
+
+def test_load_yaml_file_returns_empty_mapping_for_missing_file(tmp_path) -> None:
+    missing_path = tmp_path / "missing.yaml"
+
+    assert load_yaml_file(str(missing_path)) == {}
+
+
+def test_load_yaml_file_rejects_malformed_yaml(tmp_path) -> None:
+    config_path = tmp_path / "broken.yaml"
+    config_path.write_text("global: [broken", encoding="utf-8")
+
+    with pytest.raises(ValueError, match="无法读取 YAML 配置"):
+        load_yaml_file(str(config_path))
+
+
+def test_load_yaml_file_rejects_non_mapping_top_level(tmp_path) -> None:
+    config_path = tmp_path / "list.yaml"
+    config_path.write_text("- not\n- a\n- mapping\n", encoding="utf-8")
+
+    with pytest.raises(ValueError, match="顶层必须是 mapping"):
+        load_yaml_file(str(config_path))
 
 
 def test_get_yaml_config_reloads_when_content_changes_with_same_stat_metadata(tmp_path) -> None:

@@ -74,7 +74,12 @@ def resolve_yaml_path() -> str | None:
 
 
 def load_yaml_file(path: str) -> YamlConfig:
-    """Load one YAML file. Missing or invalid files return an empty dict."""
+    """Load one YAML file.
+
+    A missing file yields an empty mapping.  A present file that cannot be
+    parsed or is not a top-level mapping raises ``ValueError`` so configuration
+    errors fail loudly instead of silently dropping defaults.
+    """
     try:
         import yaml
     except ImportError:
@@ -86,12 +91,14 @@ def load_yaml_file(path: str) -> YamlConfig:
     try:
         with open(path, encoding="utf-8") as fh:
             data = yaml.safe_load(fh)
-        if isinstance(data, dict):
-            return data
-    except (yaml.YAMLError, UnicodeDecodeError, OSError):
-        pass
+    except (yaml.YAMLError, UnicodeDecodeError, OSError) as exc:
+        raise ValueError(f"无法读取 YAML 配置 {path}: {exc}") from exc
 
-    return {}
+    if data is None:
+        return {}
+    if not isinstance(data, dict):
+        raise ValueError(f"YAML 配置 {path} 顶层必须是 mapping，而不是 {type(data).__name__}")
+    return data
 
 
 def default_yaml_section_owners(
