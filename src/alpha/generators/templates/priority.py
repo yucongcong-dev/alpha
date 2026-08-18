@@ -15,14 +15,16 @@ from .candidates import _coerce_template_candidate, _make_template_candidate
 from .classification import classify_expression_family
 from .metadata import TemplateMetadataMap
 
-_SIMILARITY_PENALTY_OFFSETS: dict[str, int] = {
-    "legacy_level": get_static_config().similarity_penalty_offset_legacy_level,
-    "legacy_group_level": get_static_config().similarity_penalty_offset_legacy_group_level,
-    "legacy_ratio": get_static_config().similarity_penalty_offset_legacy_ratio,
-    "legacy_neg_ratio": get_static_config().similarity_penalty_offset_legacy_neg_ratio,
-    "group_ratio_level": get_static_config().similarity_penalty_offset_group_ratio_level,
-}
-"""家族名到相似度惩罚减免值的映射。"""
+
+def _similarity_penalty_offsets() -> dict[str, int]:
+    """家族名到相似度惩罚减免值的映射。"""
+    return {
+        "legacy_level": get_static_config().similarity_penalty_offset_legacy_level,
+        "legacy_group_level": get_static_config().similarity_penalty_offset_legacy_group_level,
+        "legacy_ratio": get_static_config().similarity_penalty_offset_legacy_ratio,
+        "legacy_neg_ratio": get_static_config().similarity_penalty_offset_legacy_neg_ratio,
+        "group_ratio_level": get_static_config().similarity_penalty_offset_group_ratio_level,
+    }
 
 
 def apply_similarity_penalty(
@@ -50,7 +52,7 @@ def apply_similarity_penalty(
             template.expression,
             template.metadata,
         )
-        offset = _SIMILARITY_PENALTY_OFFSETS.get(family)
+        offset = _similarity_penalty_offsets().get(family)
         penalty = max(similarity_penalty - offset, 0) if offset is not None else 0
         penalized.append(
             _make_template_candidate(

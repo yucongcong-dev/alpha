@@ -9,12 +9,14 @@ from ..config.static_config import get_static_config
 from ..models.domain import FieldTestResult
 from ..models.result_predicates import has_pending_checks, is_queue_timeout_result
 
-_FAILED_CHECK_COUNTERS = {
-    get_static_config().check_low_sharpe: get_static_config().stat_field_low_sharpe,
-    get_static_config().check_low_fitness: get_static_config().stat_field_low_fitness,
-    get_static_config().check_concentrated_weight: get_static_config().stat_field_concentrated_weight,
-    get_static_config().check_low_sub_universe_sharpe: get_static_config().stat_field_low_sub_universe_sharpe,
-}
+
+def _failed_check_counters() -> dict[str, str]:
+    return {
+        get_static_config().check_low_sharpe: get_static_config().stat_field_low_sharpe,
+        get_static_config().check_low_fitness: get_static_config().stat_field_low_fitness,
+        get_static_config().check_concentrated_weight: get_static_config().stat_field_concentrated_weight,
+        get_static_config().check_low_sub_universe_sharpe: get_static_config().stat_field_low_sub_universe_sharpe,
+    }
 
 
 def _new_template_stat() -> dict[str, Any]:
@@ -56,7 +58,7 @@ def _update_template_metadata(stat: dict[str, Any], result: FieldTestResult) -> 
 
 def _update_failed_check_counts(stat: dict[str, Any], result: FieldTestResult) -> None:
     failed_check_names = {check.name for check in result.failed_checks or []}
-    for check_name, counter_name in _FAILED_CHECK_COUNTERS.items():
+    for check_name, counter_name in _failed_check_counters().items():
         if check_name in failed_check_names:
             stat[counter_name] += 1
 

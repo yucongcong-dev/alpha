@@ -12,18 +12,20 @@ from typing import cast
 from .static_config import get_static_config
 from .types import DatasetProfile, YamlConfig
 
-DEFAULT_PROFILE: DatasetProfile = {
-    "min_request_interval": get_static_config().default_min_request_interval,
-    "sleep_between_fields": get_static_config().default_sleep_between_fields,
-    "max_concurrent_simulations": get_static_config().default_max_concurrent_simulations,
-    "max_concurrent_creates": get_static_config().default_max_concurrent_creates,
-    "max_templates_per_field": get_static_config().default_max_templates_per_field,
-    "field_template_batch_size": get_static_config().default_field_template_batch_size,
-    "simulation_max_wait_seconds": get_static_config().default_simulation_max_wait_seconds,
-    "simulation_max_queue_seconds": get_static_config().default_simulation_max_queue_seconds,
-    "queue_busy_cooldown_seconds": get_static_config().default_queue_busy_cooldown_seconds,
-}
-"""未在 YAML dataset_profiles 中匹配时使用的默认运行参数。"""
+
+def _default_profile() -> DatasetProfile:
+    """未在 YAML dataset_profiles 中匹配时使用的默认运行参数。"""
+    return {
+        "min_request_interval": get_static_config().default_min_request_interval,
+        "sleep_between_fields": get_static_config().default_sleep_between_fields,
+        "max_concurrent_simulations": get_static_config().default_max_concurrent_simulations,
+        "max_concurrent_creates": get_static_config().default_max_concurrent_creates,
+        "max_templates_per_field": get_static_config().default_max_templates_per_field,
+        "field_template_batch_size": get_static_config().default_field_template_batch_size,
+        "simulation_max_wait_seconds": get_static_config().default_simulation_max_wait_seconds,
+        "simulation_max_queue_seconds": get_static_config().default_simulation_max_queue_seconds,
+        "queue_busy_cooldown_seconds": get_static_config().default_queue_busy_cooldown_seconds,
+    }
 
 
 def get_dataset_profile(
@@ -31,7 +33,7 @@ def get_dataset_profile(
     yaml_config: YamlConfig | None = None,
 ) -> DatasetProfile:
     """返回指定数据集的运行参数配置。"""
-    profile = dict(DEFAULT_PROFILE)
+    profile = dict(_default_profile())
     if yaml_config:
         yaml_profiles = yaml_config.get("dataset_profiles", {})
         if isinstance(yaml_profiles, dict):
