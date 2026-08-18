@@ -433,18 +433,11 @@ def test_non_negative_int_rejects_untrusted_values() -> None:
     assert checkpoint_payloads.non_negative_int("3") == 3
 
 
-def test_load_pipeline_state_handles_missing_invalid_and_version_mismatch(tmp_path) -> None:
+def test_load_pipeline_state_handles_missing_and_version_mismatch(tmp_path) -> None:
     runtime_state = RuntimeConcurrencyState(max_workers=2, runtime_max_workers=2)
 
     load_pipeline_state(
         "",
-        runtime_state=runtime_state,
-        execution_state=_build_execution_state(),
-    )
-    invalid_json = tmp_path / "invalid.json"
-    invalid_json.write_text("{", encoding="utf-8")
-    load_pipeline_state(
-        str(invalid_json),
         runtime_state=runtime_state,
         execution_state=_build_execution_state(),
     )
@@ -455,6 +448,30 @@ def test_load_pipeline_state_handles_missing_invalid_and_version_mismatch(tmp_pa
         runtime_state=runtime_state,
         execution_state=_build_execution_state(),
     )
+
+
+def test_load_pipeline_state_rejects_corrupt_state_file(tmp_path) -> None:
+    invalid_json = tmp_path / "invalid.json"
+    invalid_json.write_text("{", encoding="utf-8")
+
+    with pytest.raises(CheckpointConsistencyError, match="无法读取 checkpoint"):
+        load_pipeline_state(
+            str(invalid_json),
+            runtime_state=RuntimeConcurrencyState(max_workers=2, runtime_max_workers=2),
+            execution_state=_build_execution_state(),
+        )
+
+
+def test_load_pipeline_state_rejects_non_object_state_file(tmp_path) -> None:
+    invalid_json = tmp_path / "list.json"
+    invalid_json.write_text(json.dumps(["not", "a", "dict"]), encoding="utf-8")
+
+    with pytest.raises(CheckpointConsistencyError, match="必须是 JSON 对象"):
+        load_pipeline_state(
+            str(invalid_json),
+            runtime_state=RuntimeConcurrencyState(max_workers=2, runtime_max_workers=2),
+            execution_state=_build_execution_state(),
+        )
 
 
 def test_load_pipeline_state_ignores_legacy_cursor_and_restores_idle_runtime(tmp_path) -> None:

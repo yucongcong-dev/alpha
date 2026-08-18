@@ -27,11 +27,14 @@ def _load_checkpoint_payload(
     try:
         with open(state_file, encoding="utf-8") as handle:
             payload = json.load(handle)
-    except Exception as exc:
-        log.warning("[checkpoint] failed to read state file %s: %s", state_file, exc)
-        return None
+    except (OSError, ValueError) as exc:
+        raise CheckpointConsistencyError(
+            f"无法读取 checkpoint 状态文件 {state_file}: {exc}"
+        ) from exc
 
-    if not isinstance(payload, dict) or payload.get("version") != state_version:
+    if not isinstance(payload, dict):
+        raise CheckpointConsistencyError(f"checkpoint 状态文件 {state_file} 顶层必须是 JSON 对象")
+    if payload.get("version") != state_version:
         log.info("[checkpoint] state file version mismatch, starting fresh")
         return None
     return payload
