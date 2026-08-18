@@ -7,12 +7,7 @@
 
 from __future__ import annotations
 
-from ...config._constants_strings import (
-    TEMPLATE_STAGE_EVENT_CONDITIONED,
-    TEMPLATE_STAGE_FIRST_ORDER,
-    TEMPLATE_STAGE_GROUP_SECOND_ORDER,
-    UNKNOWN_FAMILY,
-)
+from ...config.static_config import get_static_config
 from ...models.domain_types import TemplateMetadata
 
 
@@ -79,7 +74,7 @@ def classify_expression_family(
     if "ts_mean" in lower_expr and "/" in lower_expr:
         return "mean_ratio"
     prefix = lower_name.split("_", 1)[0]
-    return prefix or UNKNOWN_FAMILY
+    return prefix or get_static_config().unknown_family
 
 
 def classify_template_stage(
@@ -104,13 +99,13 @@ def classify_template_stage(
             return explicit_stage
         layer = str(metadata.get("layer", "")).strip().lower()
         if layer in {"group", "composite", "set", "account"}:
-            return TEMPLATE_STAGE_GROUP_SECOND_ORDER
+            return get_static_config().template_stage_group_second_order
         if "event" in layer:
-            return TEMPLATE_STAGE_EVENT_CONDITIONED
+            return get_static_config().template_stage_event_conditioned
     lower_name = template_name.lower()
     lower_expr = expression.lower()
     if "event" in lower_name or "event" in lower_expr:
-        return TEMPLATE_STAGE_EVENT_CONDITIONED
+        return get_static_config().template_stage_event_conditioned
     family = classify_expression_family(template_name, expression, metadata)
     if family in {
         "group_rank_delta",
@@ -121,10 +116,10 @@ def classify_template_stage(
         "legacy_group_level",
         "neutralize_decay",
     }:
-        return TEMPLATE_STAGE_GROUP_SECOND_ORDER
+        return get_static_config().template_stage_group_second_order
     if "group_rank(" in lower_expr or "group_neutralize(" in lower_expr:
-        return TEMPLATE_STAGE_GROUP_SECOND_ORDER
-    return TEMPLATE_STAGE_FIRST_ORDER
+        return get_static_config().template_stage_group_second_order
+    return get_static_config().template_stage_first_order
 
 
 def is_legacy_family(

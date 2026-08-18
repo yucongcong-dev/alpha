@@ -8,7 +8,7 @@ import logging
 from pathlib import Path
 import time
 
-from ..config._constants_strings import DATE_FORMAT_ISO
+from ..config.static_config import get_static_config
 from ..io.common import (
     DATASETS_DIR,
     sanitize_dataset_id_for_filename,
@@ -94,7 +94,7 @@ def build_output_sidecar_paths(output_path: str) -> dict[str, str]:
     base_name = output.stem or "results"
     if not output.suffix:
         base_name = output.name or "results"
-    log_date = time.strftime(DATE_FORMAT_ISO)
+    log_date = time.strftime(get_static_config().date_format_iso)
     return {
         "analysis": str(base_dir / f"{base_name}_analysis.json"),
         "template_registry": str(base_dir / f"{base_name}_template_registry.json"),

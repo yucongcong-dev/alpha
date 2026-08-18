@@ -9,29 +9,19 @@ from __future__ import annotations
 
 from typing import cast
 
-from ._constants_thresholds import (
-    DEFAULT_FIELD_TEMPLATE_BATCH_SIZE,
-    DEFAULT_MAX_CONCURRENT_CREATES,
-    DEFAULT_MAX_CONCURRENT_SIMULATIONS,
-    DEFAULT_MAX_TEMPLATES_PER_FIELD,
-    DEFAULT_MIN_REQUEST_INTERVAL,
-    DEFAULT_QUEUE_BUSY_COOLDOWN_SECONDS,
-    DEFAULT_SIMULATION_MAX_QUEUE_SECONDS,
-    DEFAULT_SIMULATION_MAX_WAIT_SECONDS,
-    DEFAULT_SLEEP_BETWEEN_FIELDS,
-)
+from .static_config import get_static_config
 from .types import DatasetProfile, YamlConfig
 
 DEFAULT_PROFILE: DatasetProfile = {
-    "min_request_interval": DEFAULT_MIN_REQUEST_INTERVAL,
-    "sleep_between_fields": DEFAULT_SLEEP_BETWEEN_FIELDS,
-    "max_concurrent_simulations": DEFAULT_MAX_CONCURRENT_SIMULATIONS,
-    "max_concurrent_creates": DEFAULT_MAX_CONCURRENT_CREATES,
-    "max_templates_per_field": DEFAULT_MAX_TEMPLATES_PER_FIELD,
-    "field_template_batch_size": DEFAULT_FIELD_TEMPLATE_BATCH_SIZE,
-    "simulation_max_wait_seconds": DEFAULT_SIMULATION_MAX_WAIT_SECONDS,
-    "simulation_max_queue_seconds": DEFAULT_SIMULATION_MAX_QUEUE_SECONDS,
-    "queue_busy_cooldown_seconds": DEFAULT_QUEUE_BUSY_COOLDOWN_SECONDS,
+    "min_request_interval": get_static_config().default_min_request_interval,
+    "sleep_between_fields": get_static_config().default_sleep_between_fields,
+    "max_concurrent_simulations": get_static_config().default_max_concurrent_simulations,
+    "max_concurrent_creates": get_static_config().default_max_concurrent_creates,
+    "max_templates_per_field": get_static_config().default_max_templates_per_field,
+    "field_template_batch_size": get_static_config().default_field_template_batch_size,
+    "simulation_max_wait_seconds": get_static_config().default_simulation_max_wait_seconds,
+    "simulation_max_queue_seconds": get_static_config().default_simulation_max_queue_seconds,
+    "queue_busy_cooldown_seconds": get_static_config().default_queue_busy_cooldown_seconds,
 }
 """未在 YAML dataset_profiles 中匹配时使用的默认运行参数。"""
 

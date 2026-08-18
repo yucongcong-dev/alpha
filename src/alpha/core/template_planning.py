@@ -13,11 +13,8 @@ from typing import Protocol
 
 from ..analysis.feedback_history import choose_settings_variant_budget
 from ..analysis.field_stats import decay_field_feedback
-from ..config._constants_strings import (
-    FEEDBACK_STAGE_RESIMULATE,
-    SENTINEL_UNKNOWN,
-)
 from ..config.models import DatasetExpressionPolicy
+from ..config.static_config import get_static_config
 from ..generators.expression_builder import (
     build_expression_candidates,
     limit_templates,
@@ -115,7 +112,7 @@ def _resolve_field_planning_policy(
 ) -> tuple[str, str, TemplateFeedback | None, DatasetExpressionPolicy]:
     """Resolve the stable policy inputs shared by candidate and variant planning."""
     options = build_ctx.source.options
-    field_id = str(first_non_empty(field.field_id, SENTINEL_UNKNOWN))
+    field_id = str(first_non_empty(field.field_id, get_static_config().sentinel_unknown))
     field_name = choose_field_name(field)
     expression_policy = build_ctx.source.expression_policy or get_dataset_expression_policy(
         options.dataset_id,
@@ -238,7 +235,7 @@ def build_pending_template_variants(
         template_metadata = template.metadata
         expression_key = (field_id, expression)
         if (
-            feedback_stage == FEEDBACK_STAGE_RESIMULATE
+            feedback_stage == get_static_config().feedback_stage_resimulate
             and expression_key in seen_resimulate_expressions
         ):
             continue
@@ -287,7 +284,10 @@ def build_pending_template_variants(
                 )
             )
             appended_expression_variant = True
-        if feedback_stage == FEEDBACK_STAGE_RESIMULATE and appended_expression_variant:
+        if (
+            feedback_stage == get_static_config().feedback_stage_resimulate
+            and appended_expression_variant
+        ):
             seen_resimulate_expressions.add(expression_key)
     pending_templates.sort(
         key=lambda item: (

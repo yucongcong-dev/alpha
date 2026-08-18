@@ -9,16 +9,7 @@ import re
 from typing import Any
 
 from ..api.api_types import ApiPayload, CheckResultDict
-from ..config._constants_strings import (
-    API_KEY_DETAIL,
-    API_KEY_ERROR,
-    API_KEY_MESSAGE,
-    SENTINEL_UNKNOWN_CHECK,
-)
-from ..config._constants_thresholds import (
-    FAILURE_SUMMARY_MAX_LEN,
-    MAX_FAILED_CHECK_NAMES,
-)
+from ..config.static_config import get_static_config
 from ..models.domain import FailedCheck
 from ..utils.helpers import first_non_empty
 
@@ -179,13 +170,15 @@ def is_submittable_from_checks(checks: list[FailedCheck]) -> bool | None:
 
 def summarize_failure(payload: ApiPayload | list[Any] | Any) -> str:
     if not isinstance(payload, dict):
-        text = json.dumps(payload, ensure_ascii=False)[:FAILURE_SUMMARY_MAX_LEN]
+        text = json.dumps(payload, ensure_ascii=False)[
+            : get_static_config().failure_summary_max_len
+        ]
         return text or "unknown error"
 
     detail = first_non_empty(
-        payload.get(API_KEY_DETAIL),
-        payload.get(API_KEY_MESSAGE),
-        payload.get(API_KEY_ERROR),
+        payload.get(get_static_config().api_key_detail),
+        payload.get(get_static_config().api_key_message),
+        payload.get(get_static_config().api_key_error),
     )
     if detail:
         return str(detail)
@@ -194,12 +187,12 @@ def summarize_failure(payload: ApiPayload | list[Any] | Any) -> str:
     failed = [check for check in checks if str(check.get(_KEY_RESULT, "")).upper() == _RESULT_FAIL]
     if failed:
         names = ", ".join(
-            str(check.get(_KEY_NAME, SENTINEL_UNKNOWN_CHECK))
-            for check in failed[:MAX_FAILED_CHECK_NAMES]
+            str(check.get(_KEY_NAME, get_static_config().sentinel_unknown_check))
+            for check in failed[: get_static_config().max_failed_check_names]
         )
         return f"failed checks: {names}"
 
-    text = json.dumps(payload, ensure_ascii=False)[:FAILURE_SUMMARY_MAX_LEN]
+    text = json.dumps(payload, ensure_ascii=False)[: get_static_config().failure_summary_max_len]
     return text or "unknown error"
 
 

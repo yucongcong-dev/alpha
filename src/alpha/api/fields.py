@@ -5,10 +5,7 @@ from __future__ import annotations
 import logging
 from typing import cast
 
-from ..config._constants_api import (
-    DATA_FIELDS_URL,
-    VERSION_HEADER,
-)
+from ..config.static_config import get_static_config
 from ..exceptions import BrainAPIError, BrainHTTPError
 from .api_types import ApiPayload, FieldInfoDict
 from .payloads import extract_total, normalize_results, safe_json_bytes
@@ -148,9 +145,9 @@ class BrainFieldsMixin:
             try:
                 _, _, content = self.request(  # type: ignore[attr-defined]
                     "GET",
-                    DATA_FIELDS_URL,
+                    get_static_config().data_fields_url,
                     params=params,
-                    headers=VERSION_HEADER,
+                    headers=get_static_config().version_header,
                     expected={200},
                 )
                 logger.info("[data] data-fields query accepted: %s", params)

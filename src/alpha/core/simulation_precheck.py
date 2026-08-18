@@ -2,21 +2,10 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from ..api.api_types import CheckResultDict, SimulationPayload
-from ..config._constants_thresholds import (
-    CHECK_CONCENTRATED_WEIGHT,
-    CHECK_HIGH_TURNOVER,
-    CHECK_LOW_FITNESS,
-    CHECK_LOW_SHARPE,
-    CHECK_LOW_TURNOVER,
-    SUBMIT_MAX_TURNOVER,
-    SUBMIT_MAX_WEIGHT,
-    SUBMIT_MIN_FITNESS,
-    SUBMIT_MIN_SHARPE,
-    SUBMIT_MIN_TURNOVER,
-)
+from ..config.static_config import get_static_config
 
 _RESULT_FAIL: str = "FAIL"
 _KEY_CONCENTRATED_WEIGHT: str = "concentratedWeight"
@@ -34,11 +23,11 @@ _KEY_VALUE: str = "value"
 
 @dataclass
 class PrecheckConfig:
-    min_sharpe: float = SUBMIT_MIN_SHARPE
-    min_fitness: float = SUBMIT_MIN_FITNESS
-    min_turnover: float = SUBMIT_MIN_TURNOVER
-    max_turnover: float = SUBMIT_MAX_TURNOVER
-    max_weight: float = SUBMIT_MAX_WEIGHT
+    min_sharpe: float = field(default_factory=lambda: get_static_config().submit_min_sharpe)
+    min_fitness: float = field(default_factory=lambda: get_static_config().submit_min_fitness)
+    min_turnover: float = field(default_factory=lambda: get_static_config().submit_min_turnover)
+    max_turnover: float = field(default_factory=lambda: get_static_config().submit_max_turnover)
+    max_weight: float = field(default_factory=lambda: get_static_config().submit_max_weight)
 
 
 def _resolve_precheck_config(
@@ -100,16 +89,18 @@ def _metric_failures(
         or is_section.get(_KEY_CONCENTRATED_WEIGHT)
     )
     if isinstance(sharpe, (int, float)) and sharpe < config.min_sharpe:
-        add_failure(CHECK_LOW_SHARPE, sharpe, config.min_sharpe)
+        add_failure(get_static_config().check_low_sharpe, sharpe, config.min_sharpe)
     if isinstance(fitness, (int, float)) and fitness < config.min_fitness:
-        add_failure(CHECK_LOW_FITNESS, fitness, config.min_fitness)
+        add_failure(get_static_config().check_low_fitness, fitness, config.min_fitness)
     if isinstance(turnover, (int, float)):
         if turnover < config.min_turnover:
-            add_failure(CHECK_LOW_TURNOVER, turnover, config.min_turnover)
+            add_failure(get_static_config().check_low_turnover, turnover, config.min_turnover)
         elif turnover > config.max_turnover:
-            add_failure(CHECK_HIGH_TURNOVER, turnover, config.max_turnover)
+            add_failure(get_static_config().check_high_turnover, turnover, config.max_turnover)
     if isinstance(max_stock_weight, (int, float)) and max_stock_weight > config.max_weight:
-        add_failure(CHECK_CONCENTRATED_WEIGHT, max_stock_weight, config.max_weight)
+        add_failure(
+            get_static_config().check_concentrated_weight, max_stock_weight, config.max_weight
+        )
     return failures
 
 

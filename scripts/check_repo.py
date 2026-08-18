@@ -134,9 +134,16 @@ def removed_compat_file_check(root: Path) -> list[str]:
     facade_helper = root / "src" / "alpha" / "_facade.py"
     if facade_helper.is_file():
         removed.append(facade_helper)
-    constants_facade = root / "src" / "alpha" / "config" / "constants.py"
-    if constants_facade.is_file():
-        removed.append(constants_facade)
+    removed_constants = [
+        root / "src" / "alpha" / "config" / name
+        for name in (
+            "_constants_api.py",
+            "_constants_strings.py",
+            "_constants_thresholds.py",
+            "_constants_templates.py",
+        )
+    ]
+    removed.extend(path for path in removed_constants if path.is_file())
     if removed:
         return [
             "[check] compatibility aggregate files were removed; import concrete modules",
@@ -204,10 +211,11 @@ def compat_import_check(root: Path) -> list[str]:
         for match in _line_matches(root, config_files, config_pattern)
     )
     constants_pattern = re.compile(
-        r"from alpha\.config\.constants import|from \.{1,3}config\.constants import"
+        r"from alpha\.config\._constants_(api|strings|thresholds|templates)|"
+        r"from \.{1,3}config\._constants_(api|strings|thresholds|templates)"
     )
     errors.extend(
-        f"[check] import concrete _constants_* modules instead of constants facade\n{match}"
+        f"[check] import alpha.config.static_config instead of removed _constants_* modules\n{match}"
         for match in _line_matches(
             root,
             (*_iter_files(root, "src/alpha"), *_iter_files(root, "tests")),
@@ -215,11 +223,11 @@ def compat_import_check(root: Path) -> list[str]:
         )
     )
     errors.extend(
-        f"[check] import concrete _constants_* modules instead of constants facade\n{match}"
+        f"[check] import alpha.config.static_config instead of removed _constants_* modules\n{match}"
         for match in _line_matches(
             root,
             _iter_files(root, "src/alpha/config"),
-            re.compile(r"from \.constants import"),
+            re.compile(r"from \._constants_(api|strings|thresholds|templates)"),
         )
     )
     return errors

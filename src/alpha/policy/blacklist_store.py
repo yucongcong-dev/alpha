@@ -13,10 +13,7 @@ from pathlib import Path
 import time
 from typing import cast
 
-from ..config._constants_strings import (
-    BLACKLIST_SCHEMA_VERSION,
-    DATE_FORMAT_ISO,
-)
+from ..config.static_config import get_static_config
 from ..io.common import (
     atomic_write_json,
     sanitize_dataset_id_for_filename,
@@ -85,14 +82,14 @@ def invalidate_blacklist_path_cache(dataset_id: str = "", *, datasets_root: str 
 
 def build_default_blacklist(dataset_id: str) -> BlacklistPayload:
     return {
-        "_version": BLACKLIST_SCHEMA_VERSION,
+        "_version": get_static_config().blacklist_schema_version,
         "_comment": (
             f"Template blacklist for {dataset_id}. "
             "learned_templates stores dataset-specific learned exclusions; "
             "expression_rules stores explicit expression pattern blocks."
         ),
-        "_created": time.strftime(DATE_FORMAT_ISO),
-        "_updated": time.strftime(DATE_FORMAT_ISO),
+        "_created": time.strftime(get_static_config().date_format_iso),
+        "_updated": time.strftime(get_static_config().date_format_iso),
         "dataset_id": dataset_id,
         LEARNED_BLACKLIST_KEY: [],
         PATTERN_RULES_KEY: [],

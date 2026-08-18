@@ -5,21 +5,7 @@ from __future__ import annotations
 from collections.abc import Sequence
 from typing import Any
 
-from ..config._constants_strings import SENTINEL_UNKNOWN_CHECK
-from ..config._constants_thresholds import (
-    CHECK_CONCENTRATED_WEIGHT,
-    CHECK_HIGH_TURNOVER,
-    CHECK_LOW_FITNESS,
-    CHECK_LOW_SHARPE,
-    CHECK_LOW_SUB_UNIVERSE_SHARPE,
-    CHECK_LOW_TURNOVER,
-    FAILED_CHECK_EPSILON,
-    FAILED_CHECK_MAX_EXAMPLE_IDS,
-    OPTIMIZATION_HINT_TOP_N,
-    STATS_DEFAULT_SCORE,
-    STATS_FAILED_CHECK_DEFAULT_SCORE,
-    STATS_NEARPASS_SUMMARY_LIMIT,
-)
+from ..config.static_config import get_static_config
 from ..models.domain import FailedCheck, FieldTestResult, ResultRow
 from ..models.result_predicates import is_informative_result
 
@@ -39,7 +25,7 @@ def score_failed_checks(failed_checks: Sequence[FailedCheck] | None) -> float:
     """根据失败检查项估计一个 Alpha 距离可提交状态还有多近。"""
     checks = list(failed_checks or [])
     if not checks:
-        return STATS_FAILED_CHECK_DEFAULT_SCORE
+        return get_static_config().stats_failed_check_default_score
 
     score = 0.0
     counted = 0
@@ -62,14 +48,14 @@ def _score_failed_checks_without_limits(checks: Sequence[FailedCheck]) -> float:
         value = check.value
         if not isinstance(value, (int, float)):
             continue
-        name = check.name or SENTINEL_UNKNOWN_CHECK
+        name = check.name or get_static_config().sentinel_unknown_check
         counted += 1
         if name.startswith("LOW_"):
             score += max(float(value), 0.0)
         else:
             score += 1.0 / (1.0 + max(float(value), 0.0))
     if counted == 0:
-        return STATS_FAILED_CHECK_DEFAULT_SCORE
+        return get_static_config().stats_failed_check_default_score
     return score / counted
 
 
@@ -80,7 +66,7 @@ def failed_check_closeness(check: FailedCheck) -> float | None:
     if not isinstance(value, (int, float)) or not isinstance(limit, (int, float)):
         return None
     gap = failed_check_gap(check)
-    scale = max(abs(limit), FAILED_CHECK_EPSILON)
+    scale = max(abs(limit), get_static_config().failed_check_epsilon)
     if gap is None:
         return None
     return min(1.0, max(0.0, 1.0 - (gap / scale)))
@@ -88,7 +74,7 @@ def failed_check_closeness(check: FailedCheck) -> float | None:
 
 def failed_check_gap(check: FailedCheck) -> float | None:
     """计算失败检查到阈值的原始差距，正数表示还差多少。"""
-    name = check.name or SENTINEL_UNKNOWN_CHECK
+    name = check.name or get_static_config().sentinel_unknown_check
     value = check.value
     limit = check.limit
     if not isinstance(value, (int, float)) or not isinstance(limit, (int, float)):
@@ -116,7 +102,7 @@ def compile_failed_check_leaderboard(results: Sequence[FieldTestResult]) -> list
         if not is_informative_result(result):
             continue
         for check in _confirmed_failed_checks(result):
-            name = check.name or SENTINEL_UNKNOWN_CHECK
+            name = check.name or get_static_config().sentinel_unknown_check
             row = grouped.setdefault(
                 name,
                 {
@@ -145,7 +131,7 @@ def compile_failed_check_leaderboard(results: Sequence[FieldTestResult]) -> list
             if (
                 result.alpha_id
                 and result.alpha_id not in row["example_alpha_ids"]
-                and len(row["example_alpha_ids"]) < FAILED_CHECK_MAX_EXAMPLE_IDS
+                and len(row["example_alpha_ids"]) < get_static_config().failed_check_max_example_ids
             ):
                 row["example_alpha_ids"].append(result.alpha_id)
 
@@ -166,16 +152,22 @@ def compile_failed_check_leaderboard(results: Sequence[FieldTestResult]) -> list
         leaderboard,
         key=lambda row: (
             -row["count"],
-            -(row["avg_closeness"] if row["avg_closeness"] is not None else STATS_DEFAULT_SCORE),
+            -(
+                row["avg_closeness"]
+                if row["avg_closeness"] is not None
+                else get_static_config().stats_default_score
+            ),
             row["name"],
         ),
     )
 
 
 def compile_near_pass_summary(
-    results: Sequence[FieldTestResult], limit: int = STATS_NEARPASS_SUMMARY_LIMIT
+    results: Sequence[FieldTestResult], limit: int | None = None
 ) -> list[dict[str, Any]]:
     """列出最接近通过检查的 Alpha，用于指导下一轮变体搜索。"""
+    if limit is None:
+        limit = get_static_config().stats_nearpass_summary_limit
     if limit <= 0:
         return []
     rows: list[dict[str, Any]] = []
@@ -212,20 +204,24 @@ def compile_optimization_hints(
 ) -> list[str]:
     """根据失败分布生成下一轮搜索建议。"""
     dominant_names = {
-        str(row.get("name")) for row in failed_check_leaderboard[:OPTIMIZATION_HINT_TOP_N]
+        str(row.get("name"))
+        for row in failed_check_leaderboard[: get_static_config().optimization_hint_top_n]
     }
     hints: list[str] = []
     if not failed_check_leaderboard:
         return ["还没有失败检查记录；先运行更广泛的探索样本。"]
-    if CHECK_LOW_SHARPE in dominant_names or CHECK_LOW_SUB_UNIVERSE_SHARPE in dominant_names:
+    if (
+        get_static_config().check_low_sharpe in dominant_names
+        or get_static_config().check_low_sub_universe_sharpe in dominant_names
+    ):
         hints.append("夏普比率是主要阻碍；优先使用组中性化、zscore/spread 和较少原始级别式的模板。")
-    if CHECK_LOW_FITNESS in dominant_names:
+    if get_static_config().check_low_fitness in dominant_names:
         hints.append("适应性较弱；优先使用能同时提升夏普和换手率的表达式，而不是仅平滑级别。")
-    if CHECK_LOW_TURNOVER in dominant_names:
+    if get_static_config().check_low_turnover in dominant_names:
         hints.append("换手率过低；尝试更短的 delta 窗口、rank-then-delta 变体或更低的衰减。")
-    if CHECK_HIGH_TURNOVER in dominant_names:
+    if get_static_config().check_high_turnover in dominant_names:
         hints.append("换手率过高；尝试更长的窗口、更高的衰减或更平滑的 ts_mean/ts_decay 结构。")
-    if CHECK_CONCENTRATED_WEIGHT in dominant_names:
+    if get_static_config().check_concentrated_weight in dominant_names:
         hints.append(
             "权重集中度过高；优先使用 group_rank/group_zscore 变体，避免原始比率或稀疏级别信号。"
         )

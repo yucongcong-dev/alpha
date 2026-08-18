@@ -19,10 +19,7 @@ from ..analysis.results_persistence import (
     ResultPersistenceContext,
 )
 from ..analysis.template_stats import update_template_stats_with_result
-from ..config._constants_strings import (
-    STATUS_ERROR,
-    STATUS_SKIPPED,
-)
+from ..config.static_config import get_static_config
 from ..models.domain import FieldTestResult
 from ..models.result_predicates import (
     is_attempted_result,
@@ -117,14 +114,14 @@ def apply_result_state_updates(
 
 def log_completed_result(result: FieldTestResult) -> None:
     """Emit the canonical log line for one completed result."""
-    if result.status == STATUS_ERROR:
+    if result.status == get_static_config().status_error:
         logger.error(
             "[result] field=%s template=%s status=ERROR message=%s",
             result.field_id,
             result.template_name,
             result.message,
         )
-    elif result.status == STATUS_SKIPPED:
+    elif result.status == get_static_config().status_skipped:
         logger.info(
             "[result] field=%s template=%s status=SKIPPED message=%s",
             result.field_id,

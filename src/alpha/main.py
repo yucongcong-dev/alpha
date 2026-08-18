@@ -10,9 +10,6 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
-_UNBOUND_CLI_CONFIG = object()
-_cli_config_version: object = _UNBOUND_CLI_CONFIG
-
 
 def _configure_application_logging(config: ApplicationConfig) -> None:
     """Configure console/file logging once after the CLI boundary is parsed."""
@@ -40,8 +37,8 @@ def main() -> int:
     Returns:
         int: 退出状态码（0=正常, 1=错误, 130=用户中断）。
     """
-    # These modules import YAML-backed constants.  ``run_cli_entry`` binds the
-    # explicit settings file before this dispatcher reaches them.
+    # These modules are imported after ``run_cli_entry`` has bound the active
+    # settings file; static configuration resolves lazily via ``get_static_config``.
     from .app import bootstrap, finalize, planning, run_lock, run_loop, submission_check_refresh
     from .cli import parser
     from .config.application import CleanConfig
@@ -74,10 +71,9 @@ def run_cli_entry() -> int:
     try:
         # Keep raw argv handling at the CLI dispatcher.  ``__main__`` only
         # performs interpreter/logging setup before it delegates here.
-        from .config.yaml import activate_config_from_argv, get_yaml_config_version
+        from .config.yaml import activate_config_from_argv
 
         activate_config_from_argv()
-        _ensure_single_cli_config_snapshot(get_yaml_config_version())
         return main()
     except KeyboardInterrupt:
         logger.warning("[abort] 用户中断")
@@ -85,24 +81,6 @@ def run_cli_entry() -> int:
     except Exception as exc:
         logger.error("[error] %s", exc, exc_info=True)
         return 1
-
-
-def _ensure_single_cli_config_snapshot(config_version: object) -> None:
-    """Reject changing YAML sources after import-time constants are initialized.
-
-    Alpha is a single-run CLI.  Most application modules import immutable
-    YAML-backed constants, so allowing another invocation with different YAML
-    sources in this interpreter would silently combine two configurations.
-    """
-    global _cli_config_version
-    if _cli_config_version is _UNBOUND_CLI_CONFIG:
-        _cli_config_version = config_version
-        return
-    if _cli_config_version != config_version:
-        raise ValueError(
-            "同一 Python 进程只能运行一份 YAML 配置；"
-            "请使用新的进程执行不同的 --config 或修改后的配置文件。"
-        )
 
 
 if __name__ == "__main__":

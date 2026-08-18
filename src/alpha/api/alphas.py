@@ -4,10 +4,7 @@ from __future__ import annotations
 
 import logging
 
-from ..config._constants_api import (
-    ALPHAS_URL,
-    SIM_ACCEPT_HEADER,
-)
+from ..config.static_config import get_static_config
 from .api_types import ApiPayload
 from .payloads import safe_json_bytes
 
@@ -21,8 +18,8 @@ class BrainAlphasMixin:
         """获取 Alpha 详情。"""
         _, _, content = self.request(  # type: ignore[attr-defined]
             "GET",
-            f"{ALPHAS_URL}/{alpha_id}",
-            headers=SIM_ACCEPT_HEADER,
+            f"{get_static_config().alphas_url}/{alpha_id}",
+            headers=get_static_config().sim_accept_header,
             expected={200},
         )
         return safe_json_bytes(content)
@@ -31,8 +28,8 @@ class BrainAlphasMixin:
         """触发网页 Check Submission 并返回提交检查结果。"""
         _, _, content = self.request(  # type: ignore[attr-defined]
             "GET",
-            f"{ALPHAS_URL}/{alpha_id}/check",
-            headers=SIM_ACCEPT_HEADER,
+            f"{get_static_config().alphas_url}/{alpha_id}/check",
+            headers=get_static_config().sim_accept_header,
             expected={200},
         )
         return safe_json_bytes(content)

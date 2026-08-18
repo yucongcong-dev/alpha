@@ -10,13 +10,8 @@ from __future__ import annotations
 from collections.abc import Sequence
 import logging
 
-from ..config._constants_thresholds import (
-    CHECK_CONCENTRATED_WEIGHT,
-    CHECK_LOW_FITNESS,
-    CHECK_LOW_SHARPE,
-    CHECK_LOW_SUB_UNIVERSE_SHARPE,
-)
 from ..config.models import DatasetExpressionPolicy
+from ..config.static_config import get_static_config
 from ..models.domain import FieldTestResult, TemplateCandidate
 from ..models.io_types import RunFilters
 from ..models.runtime_protocols import TemplateFeedback
@@ -63,8 +58,8 @@ def should_skip_expression_by_history(
         if not failed_checks:
             continue
         values = {check.name: check.value for check in failed_checks}
-        low_sharpe = values.get(CHECK_LOW_SHARPE)
-        low_fitness = values.get(CHECK_LOW_FITNESS)
+        low_sharpe = values.get(get_static_config().check_low_sharpe)
+        low_fitness = values.get(get_static_config().check_low_fitness)
         if (
             isinstance(low_sharpe, (int, float))
             and isinstance(low_fitness, (int, float))
@@ -72,7 +67,10 @@ def should_skip_expression_by_history(
             and low_fitness < 0.0
         ):
             return True
-        if CHECK_CONCENTRATED_WEIGHT in values and CHECK_LOW_SUB_UNIVERSE_SHARPE in values:
+        if (
+            get_static_config().check_concentrated_weight in values
+            and get_static_config().check_low_sub_universe_sharpe in values
+        ):
             return True
     return False
 

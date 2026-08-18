@@ -7,28 +7,7 @@ from datetime import datetime, timezone
 from math import pow
 from typing import Any
 
-from ..config._constants_strings import (
-    SENTINEL_UNKNOWN_CHECK,
-    STAT_FIELD_ATTEMPTED_TEMPLATES,
-    STAT_FIELD_ERRORS,
-    STAT_FIELD_FAILED_CHECK_COUNTS,
-    STAT_FIELD_FIELD_ID,
-    STAT_FIELD_FIELD_NAME,
-    STAT_FIELD_FIELD_TYPE,
-    STAT_FIELD_QUEUE_TIMEOUTS,
-    STAT_FIELD_SUBMITTABLE,
-    STAT_FIELD_TOP_FAILED_CHECKS,
-    STATUS_ERROR,
-    STATUS_SKIPPED,
-)
-from ..config._constants_thresholds import (
-    FIELD_PRIORITY_ATTEMPTED_HIGH,
-    FIELD_PRIORITY_ATTEMPTED_LOW,
-    FIELD_PRIORITY_SCORE_HIGH,
-    FIELD_PRIORITY_SCORE_LOW,
-    STATS_DEFAULT_SCORE,
-    STATS_PERFORMANCE_TOP_N,
-)
+from ..config.static_config import get_static_config
 from ..models.domain import FieldFeedbackMap, FieldTestResult
 from ..models.result_predicates import has_pending_checks, is_queue_timeout_result
 
@@ -42,45 +21,45 @@ def compile_field_performance_summary(results: Sequence[FieldTestResult]) -> lis
         summary = grouped.setdefault(
             result.field_id,
             {
-                STAT_FIELD_FIELD_ID: result.field_id,
-                STAT_FIELD_FIELD_NAME: result.field_name,
-                STAT_FIELD_FIELD_TYPE: result.field_type,
-                STAT_FIELD_ATTEMPTED_TEMPLATES: 0,
-                STAT_FIELD_SUBMITTABLE: 0,
-                STAT_FIELD_ERRORS: 0,
-                STAT_FIELD_QUEUE_TIMEOUTS: 0,
-                STAT_FIELD_FAILED_CHECK_COUNTS: {},
+                get_static_config().stat_field_field_id: result.field_id,
+                get_static_config().stat_field_field_name: result.field_name,
+                get_static_config().stat_field_field_type: result.field_type,
+                get_static_config().stat_field_attempted_templates: 0,
+                get_static_config().stat_field_submittable: 0,
+                get_static_config().stat_field_errors: 0,
+                get_static_config().stat_field_queue_timeouts: 0,
+                get_static_config().stat_field_failed_check_counts: {},
             },
         )
         if is_queue_timeout_result(result):
-            summary[STAT_FIELD_QUEUE_TIMEOUTS] += 1
+            summary[get_static_config().stat_field_queue_timeouts] += 1
             continue
-        if result.status == STATUS_SKIPPED:
+        if result.status == get_static_config().status_skipped:
             continue
 
-        summary[STAT_FIELD_ATTEMPTED_TEMPLATES] += 1
+        summary[get_static_config().stat_field_attempted_templates] += 1
         if result.submittable:
-            summary[STAT_FIELD_SUBMITTABLE] += 1
-        if result.status == STATUS_ERROR:
-            summary[STAT_FIELD_ERRORS] += 1
+            summary[get_static_config().stat_field_submittable] += 1
+        if result.status == get_static_config().status_error:
+            summary[get_static_config().stat_field_errors] += 1
         for check in result.failed_checks or []:
-            name = check.name or SENTINEL_UNKNOWN_CHECK
-            summary[STAT_FIELD_FAILED_CHECK_COUNTS][name] = (
-                summary[STAT_FIELD_FAILED_CHECK_COUNTS].get(name, 0) + 1
+            name = check.name or get_static_config().sentinel_unknown_check
+            summary[get_static_config().stat_field_failed_check_counts][name] = (
+                summary[get_static_config().stat_field_failed_check_counts].get(name, 0) + 1
             )
 
     rows = list(grouped.values())
     for row in rows:
-        counts = row[STAT_FIELD_FAILED_CHECK_COUNTS]
-        row[STAT_FIELD_TOP_FAILED_CHECKS] = sorted(
+        counts = row[get_static_config().stat_field_failed_check_counts]
+        row[get_static_config().stat_field_top_failed_checks] = sorted(
             counts.items(), key=lambda item: (-item[1], item[0])
-        )[:STATS_PERFORMANCE_TOP_N]
+        )[: get_static_config().stats_performance_top_n]
     return sorted(
         rows,
         key=lambda row: (
-            -row[STAT_FIELD_SUBMITTABLE],
-            -row[STAT_FIELD_ATTEMPTED_TEMPLATES],
-            row[STAT_FIELD_FIELD_ID],
+            -row[get_static_config().stat_field_submittable],
+            -row[get_static_config().stat_field_attempted_templates],
+            row[get_static_config().stat_field_field_id],
         ),
     )
 
@@ -89,19 +68,21 @@ def field_priority(field_id: str, field_feedback: FieldFeedbackMap) -> float:
     """返回字段在续跑排序中使用的历史优先级分数。"""
     summary: dict[str, Any] | None = field_feedback.get(field_id)
     if not summary:
-        return STATS_DEFAULT_SCORE
-    best_score = float(summary.get("best_score", STATS_DEFAULT_SCORE))
-    attempted_templates = int(summary.get(STAT_FIELD_ATTEMPTED_TEMPLATES, 0) or 0)
+        return get_static_config().stats_default_score
+    best_score = float(summary.get("best_score", get_static_config().stats_default_score))
+    attempted_templates = int(
+        summary.get(get_static_config().stat_field_attempted_templates, 0) or 0
+    )
     if (
-        attempted_templates >= FIELD_PRIORITY_ATTEMPTED_HIGH
-        and best_score < FIELD_PRIORITY_SCORE_HIGH
+        attempted_templates >= get_static_config().field_priority_attempted_high
+        and best_score < get_static_config().field_priority_score_high
     ):
-        return STATS_DEFAULT_SCORE - float(attempted_templates)
+        return get_static_config().stats_default_score - float(attempted_templates)
     if (
-        attempted_templates >= FIELD_PRIORITY_ATTEMPTED_LOW
-        and best_score < FIELD_PRIORITY_SCORE_LOW
+        attempted_templates >= get_static_config().field_priority_attempted_low
+        and best_score < get_static_config().field_priority_score_low
     ):
-        return STATS_DEFAULT_SCORE - float(attempted_templates)
+        return get_static_config().stats_default_score - float(attempted_templates)
     return best_score
 
 
@@ -118,7 +99,10 @@ def decay_field_feedback(
     if summary is None:
         return None
     result = dict(summary)
-    raw_score = float(result.get("best_score", STATS_DEFAULT_SCORE) or STATS_DEFAULT_SCORE)
+    raw_score = float(
+        result.get("best_score", get_static_config().stats_default_score)
+        or get_static_config().stats_default_score
+    )
     latest = result.get("latest_result_at")
     if half_life_days <= 0 or not latest:
         result["effective_best_score"] = raw_score

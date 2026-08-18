@@ -8,16 +8,8 @@ import logging
 from typing import Protocol
 
 from ..analysis.field_stats import decay_field_feedback
-from ..config._constants_strings import (
-    FEEDBACK_STAGE_RESIMULATE,
-    SENTINEL_UNKNOWN,
-    STAT_FIELD_ATTEMPTED_TEMPLATES,
-)
-from ..config._constants_thresholds import (
-    DRY_RUN_SAMPLE_LIMIT,
-    STATS_DEFAULT_SCORE,
-)
 from ..config.models import DatasetExpressionPolicy
+from ..config.static_config import get_static_config
 from ..generators.fields import choose_field_name
 from ..models.domain import FieldTestResult, TemplateField, TemplateLibrary
 from ..models.io_types import RunFilters
@@ -101,15 +93,18 @@ def _record_feedback_explain_counts(
         field_feedback,
         expression_policy.feedback_loop_policy,
     )
-    if feedback_stage == FEEDBACK_STAGE_RESIMULATE:
+    if feedback_stage == get_static_config().feedback_stage_resimulate:
         explain_counts["feedback_resimulate"] += 1
         explain_counts["feedback_settings_budget"] += (
             expression_policy.feedback_loop_policy.resimulate.settings_variant_budget
         )
         return
 
-    attempted = int(field_feedback.get(STAT_FIELD_ATTEMPTED_TEMPLATES, 0) or 0)
-    best_score = float(field_feedback.get("best_score", STATS_DEFAULT_SCORE) or STATS_DEFAULT_SCORE)
+    attempted = int(field_feedback.get(get_static_config().stat_field_attempted_templates, 0) or 0)
+    best_score = float(
+        field_feedback.get("best_score", get_static_config().stats_default_score)
+        or get_static_config().stats_default_score
+    )
     if attempted < expression_policy.feedback_loop_policy.resimulate.min_attempted_templates:
         explain_counts["feedback_generate_attempts"] += 1
     elif best_score < expression_policy.feedback_loop_policy.resimulate.min_best_score:
@@ -136,9 +131,11 @@ def build_dry_run_plan_summary(
     build_pending: FieldPendingTemplateBuilder,
     full_run: bool,
     max_new_simulations: int,
-    sample_limit: int = DRY_RUN_SAMPLE_LIMIT,
+    sample_limit: int | None = None,
 ) -> DryRunPlanSummary:
     """Build the planned queue and its explain counters without rendering output."""
+    if sample_limit is None:
+        sample_limit = get_static_config().dry_run_sample_limit
     planned_fields = 0
     eligible_templates = 0
     filtered_templates = 0
@@ -165,7 +162,7 @@ def build_dry_run_plan_summary(
     build_ctx.feedback.candidate_filter_counts = explain_counts
 
     for field in fields:
-        field_id = str(first_non_empty(field.field_id, SENTINEL_UNKNOWN))
+        field_id = str(first_non_empty(field.field_id, get_static_config().sentinel_unknown))
         field_name = choose_field_name(field)
         if should_skip(field_id, field_name, filters):
             explain_counts["field_skipped"] += 1
@@ -285,10 +282,12 @@ def print_dry_run_plan(
     build_pending: FieldPendingTemplateBuilder,
     full_run: bool,
     max_new_simulations: int,
-    sample_limit: int = DRY_RUN_SAMPLE_LIMIT,
+    sample_limit: int | None = None,
     log: logging.Logger = logger,
 ) -> None:
     """Build and render the planned field/template queue without creating simulations."""
+    if sample_limit is None:
+        sample_limit = get_static_config().dry_run_sample_limit
     summary = build_dry_run_plan_summary(
         options=options,
         fields=fields,

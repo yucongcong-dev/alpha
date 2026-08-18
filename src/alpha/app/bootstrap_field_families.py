@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import re
 
-from ..config._constants_thresholds import PREFERRED_FIELD_RANK_SENTINEL
+from ..config.static_config import get_static_config
 
 _FIELD_ALL_SUFFIX = re.compile(r"_all$")
 _FIELD_WINDOW_TOKEN = re.compile(r"_(?:last_)?\d+(?:_days?)?(?=_|$)")
@@ -31,7 +31,11 @@ def preferred_field_rank(field_name: str, preferred_order: dict[str, int]) -> in
         for label, rank in preferred_order.items()
         if str(label).strip().lower() in normalized.split("_")
     ]
-    return min(semantic_matches) if semantic_matches else PREFERRED_FIELD_RANK_SENTINEL
+    return (
+        min(semantic_matches)
+        if semantic_matches
+        else get_static_config().preferred_field_rank_sentinel
+    )
 
 
 def field_window_rank(field_name: str) -> int:

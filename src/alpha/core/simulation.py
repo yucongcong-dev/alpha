@@ -11,10 +11,7 @@ from collections.abc import Callable
 import logging
 
 from ..api.client import BrainClient
-from ..config._constants_strings import (
-    SENTINEL_UNKNOWN,
-    STATUS_SKIPPED,
-)
+from ..config.static_config import get_static_config
 from ..generators.fields import choose_field_type
 from ..models.domain import (
     FieldTestContext,
@@ -67,7 +64,7 @@ def _complete_field_test_from_simulation(
             message="submission checks aborted because stop was requested",
             simulation_id=simulation_id,
             alpha_id=alpha_id,
-            status=STATUS_SKIPPED,
+            status=get_static_config().status_skipped,
         )
 
     check_result = run_check_submission_stage(
@@ -128,9 +125,11 @@ def run_field_test(
         raise ValueError("template_library_fingerprint cannot be empty")
 
     ctx = FieldTestContext(
-        field_id=str(first_non_empty(field.field_id, SENTINEL_UNKNOWN)),
+        field_id=str(first_non_empty(field.field_id, get_static_config().sentinel_unknown)),
         field_type=choose_field_type(field),
-        field_name=str(first_non_empty(field.field_name, field.field_id, SENTINEL_UNKNOWN)),
+        field_name=str(
+            first_non_empty(field.field_name, field.field_id, get_static_config().sentinel_unknown)
+        ),
         template_name=template_name,
         template_family=str(first_non_empty(field.metadata.get("template_family"), "")),
         template_stage=str(first_non_empty(field.metadata.get("template_stage"), "")),

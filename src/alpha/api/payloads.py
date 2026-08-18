@@ -7,10 +7,7 @@ from __future__ import annotations
 import json
 from typing import Any
 
-from ..config._constants_strings import (
-    PAYLOAD_TEXT_TRUNCATION_LIMIT,
-    SIM_ACTIVE_STATES,
-)
+from ..config.static_config import get_static_config
 from ..utils.helpers import first_non_empty
 from .api_types import ApiPayload, ApiResultList
 
@@ -23,14 +20,18 @@ def safe_json_bytes(content: bytes) -> ApiPayload:
             return data
         return {"data": data}
     except ValueError:
-        return {"text": content.decode("utf-8", errors="replace")[:PAYLOAD_TEXT_TRUNCATION_LIMIT]}
+        return {
+            "text": content.decode("utf-8", errors="replace")[
+                : get_static_config().payload_text_truncation_limit
+            ]
+        }
 
 
 def simulation_payload_is_pending(payload: ApiPayload) -> tuple[bool, str, Any]:
     """从 simulation 响应体判断任务是否仍在等待。"""
     status = str(first_non_empty(payload.get("status"), payload.get("state"), "")).upper()
     progress = first_non_empty(payload.get("progress"), payload.get("stage"), "")
-    return status in SIM_ACTIVE_STATES, status, progress
+    return status in get_static_config().sim_active_states, status, progress
 
 
 def extract_total(payload: ApiPayload) -> int | None:

@@ -10,10 +10,7 @@ from __future__ import annotations
 from collections.abc import Sequence
 from typing import Any
 
-from ...config._constants_strings import (
-    TEMPLATE_STAGE_EVENT_CONDITIONED,
-    TEMPLATE_STAGE_GROUP_SECOND_ORDER,
-)
+from ...config.static_config import get_static_config
 from ...models.domain import TemplateCandidate
 from ...models.domain_types import TemplateMetadata
 from .classification import classify_expression_family, classify_template_stage
@@ -57,9 +54,9 @@ def _enrich_candidate_metadata(
     if not enriched.get("layer"):
         enriched["layer"] = (
             "group"
-            if enriched["stage"] == TEMPLATE_STAGE_GROUP_SECOND_ORDER
+            if enriched["stage"] == get_static_config().template_stage_group_second_order
             else "event"
-            if enriched["stage"] == TEMPLATE_STAGE_EVENT_CONDITIONED
+            if enriched["stage"] == get_static_config().template_stage_event_conditioned
             else "first_order"
         )
     return enriched

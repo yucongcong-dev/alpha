@@ -103,18 +103,18 @@ def test_removed_compat_file_check_rejects_dynamic_facade_helper(tmp_path: Path)
     assert any("src/alpha/_facade.py" in error for error in errors)
 
 
-def test_removed_compat_file_check_rejects_constants_facade(tmp_path: Path) -> None:
+def test_removed_compat_file_check_rejects_removed_constants_modules(tmp_path: Path) -> None:
     alpha_dir = tmp_path / "src" / "alpha"
     app_dir = alpha_dir / "app"
     config_dir = alpha_dir / "config"
     app_dir.mkdir(parents=True)
     config_dir.mkdir(parents=True)
-    (config_dir / "constants.py").write_text("", encoding="utf-8")
+    (config_dir / "_constants_thresholds.py").write_text("", encoding="utf-8")
 
     errors = check_repo.removed_compat_file_check(tmp_path)
 
     assert any("compatibility aggregate files" in error for error in errors)
-    assert any("src/alpha/config/constants.py" in error for error in errors)
+    assert any("src/alpha/config/_constants_thresholds.py" in error for error in errors)
 
 
 def test_compat_import_check_rejects_package_facade_import(tmp_path: Path) -> None:
@@ -159,17 +159,17 @@ def test_compat_import_check_rejects_models_runtime_import(tmp_path: Path) -> No
     assert any("tests/test_legacy.py:1" in error for error in errors)
 
 
-def test_compat_import_check_rejects_constants_facade_import(tmp_path: Path) -> None:
+def test_compat_import_check_rejects_removed_constants_import(tmp_path: Path) -> None:
     test_file = tmp_path / "tests" / "test_legacy.py"
     test_file.parent.mkdir(parents=True)
     test_file.write_text(
-        "from alpha.config." + "constants import STATUS_ERROR\n",
+        "from alpha.config." + "_constants_thresholds import SUBMIT_MIN_FITNESS\n",
         encoding="utf-8",
     )
 
     errors = check_repo.compat_import_check(tmp_path)
 
-    assert any("concrete _constants_* modules" in error for error in errors)
+    assert any("alpha.config.static_config" in error for error in errors)
     assert any("tests/test_legacy.py:1" in error for error in errors)
 
 

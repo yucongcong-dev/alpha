@@ -6,10 +6,7 @@
 
 from __future__ import annotations
 
-from ..config._constants_strings import (
-    STATUS_ERROR,
-    STATUS_SKIPPED,
-)
+from ..config.static_config import get_static_config
 from .domain import FieldTestResult
 from .submission_check import SubmissionCheckOutcome, SubmissionCheckState
 
@@ -50,19 +47,26 @@ def is_queue_timeout_result(result: FieldTestResult) -> bool:
 
 def is_retryable_infrastructure_result(result: FieldTestResult) -> bool:
     """Return whether a failed candidate should be retried instead of learned from."""
-    return result.status == STATUS_ERROR and result.failed_stage in {"simulation", "worker"}
+    return result.status == get_static_config().status_error and result.failed_stage in {
+        "simulation",
+        "worker",
+    }
 
 
 def is_attempted_result(result: FieldTestResult) -> bool:
     """Return whether a persisted result is terminal for candidate de-duplication."""
-    return result.status != STATUS_SKIPPED and not is_retryable_infrastructure_result(result)
+    return (
+        result.status != get_static_config().status_skipped
+        and not is_retryable_infrastructure_result(result)
+    )
 
 
 def is_informative_result(result: FieldTestResult) -> bool:
     """判断结果是否应参与模板/字段质量学习。"""
-    return result.status not in {STATUS_ERROR, STATUS_SKIPPED} and not is_queue_timeout_result(
-        result
-    )
+    return result.status not in {
+        get_static_config().status_error,
+        get_static_config().status_skipped,
+    } and not is_queue_timeout_result(result)
 
 
 def is_feedback_eligible_result(result: FieldTestResult) -> bool:

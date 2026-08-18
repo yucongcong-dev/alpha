@@ -6,7 +6,7 @@ from collections import Counter
 from dataclasses import dataclass
 import logging
 
-from ..config._constants_strings import SENTINEL_UNKNOWN
+from ..config.static_config import get_static_config
 from ..models.domain import TemplateField
 from ..utils.helpers import first_non_empty
 
@@ -131,7 +131,7 @@ def render_dry_run_plan(summary: DryRunPlanSummary, *, log: logging.Logger) -> N
             "coverage=%.4f alpha_count=%d user_count=%d",
             index,
             len(summary.field_samples),
-            str(first_non_empty(field.field_id, SENTINEL_UNKNOWN)),
+            str(first_non_empty(field.field_id, get_static_config().sentinel_unknown)),
             field.metadata.get("selection_rank", "?"),
             float(field.metadata.get("selection_score", 0.0) or 0.0),
             field.metadata.get("selection_family", "unknown"),

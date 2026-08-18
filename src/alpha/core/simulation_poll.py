@@ -7,13 +7,8 @@ import logging
 
 from ..api.api_types import SimulationPayload
 from ..api.client import BrainClient, retry_operation
-from ..config._constants_strings import (
-    API_KEY_PROGRESS,
-    API_KEY_STATE,
-    API_KEY_STATUS,
-    STATUS_SKIPPED,
-)
 from ..config.runtime_values import resolve_http_runtime_config
+from ..config.static_config import get_static_config
 from ..exceptions import BrainStopRequested
 from ..models.domain import FieldTestContext, FieldTestResult
 from ..models.runtime_config import SimulationStageConfig
@@ -72,9 +67,9 @@ def run_simulation_poll_stage(
             should_abort=should_abort,
         )
         progress = first_non_empty(
-            simulation_result.get(API_KEY_PROGRESS),
-            simulation_result.get(API_KEY_STATUS),
-            simulation_result.get(API_KEY_STATE),
+            simulation_result.get(get_static_config().api_key_progress),
+            simulation_result.get(get_static_config().api_key_status),
+            simulation_result.get(get_static_config().api_key_state),
         )
         logger.info(
             "[simulation] completed simulation_id=%s simulation_location=%s progress=%s",
@@ -96,7 +91,7 @@ def run_simulation_poll_stage(
             failed_stage="stopped",
             message=str(exc),
             simulation_id=simulation_id,
-            status=STATUS_SKIPPED,
+            status=get_static_config().status_skipped,
         )
     except Exception as exc:
         return handle_stage_error(

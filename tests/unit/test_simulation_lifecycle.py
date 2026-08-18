@@ -8,7 +8,7 @@ from unittest.mock import patch
 
 import pytest
 
-from alpha.config._constants_strings import STATUS_SKIPPED
+from alpha.config.static_config import get_static_config
 from alpha.core.simulation import (
     resume_field_test,
     resume_field_test_in_worker,
@@ -127,7 +127,7 @@ def test_run_simulation_create_stage_skips_when_stop_signal_is_set() -> None:
     )
 
     assert isinstance(result, FieldTestResult)
-    assert result.status == STATUS_SKIPPED
+    assert result.status == get_static_config().status_skipped
     assert result.failed_stage == "stopped"
 
 
@@ -158,7 +158,7 @@ def test_run_simulation_poll_stage_skips_when_stop_is_requested() -> None:
         )
 
     assert isinstance(result, FieldTestResult)
-    assert result.status == STATUS_SKIPPED
+    assert result.status == get_static_config().status_skipped
     assert result.failed_stage == "stopped"
     assert result.simulation_id == "sim-1"
 

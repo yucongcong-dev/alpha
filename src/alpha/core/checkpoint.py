@@ -18,7 +18,7 @@ import os
 import time
 from typing import Any
 
-from ..config._constants_thresholds import CHECKPOINT_PENDING_FUTURES_LIMIT
+from ..config.static_config import get_static_config
 from ..runtime.concurrency import RuntimeConcurrencyState
 from ..runtime.contexts import CheckpointIdentity
 from ..runtime.state import ExecutionState
@@ -168,7 +168,7 @@ def save_interrupt_report(
             "simulation_location": str(meta.simulation_location),
             "simulation_id": str(meta.simulation_id),
         }
-        for meta in pending_contexts[-CHECKPOINT_PENDING_FUTURES_LIMIT:]
+        for meta in pending_contexts[-get_static_config().checkpoint_pending_futures_limit :]
     ]
 
     result_ledger = execution_state.result_ledger

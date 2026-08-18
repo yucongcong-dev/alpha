@@ -5,53 +5,29 @@ from __future__ import annotations
 from collections.abc import Sequence
 from typing import Any
 
-from ..config._constants_strings import (
-    SENTINEL_UNKNOWN_CHECK,
-    STAT_FIELD_ATTEMPTED,
-    STAT_FIELD_CONCENTRATED_WEIGHT,
-    STAT_FIELD_ERRORS,
-    STAT_FIELD_FAILED_CHECK_COUNTS,
-    STAT_FIELD_LOW_FITNESS,
-    STAT_FIELD_LOW_SHARPE,
-    STAT_FIELD_LOW_SUB_UNIVERSE_SHARPE,
-    STAT_FIELD_QUEUE_TIMEOUTS,
-    STAT_FIELD_SIMULATED,
-    STAT_FIELD_SUBMITTABLE,
-    STAT_FIELD_TEMPLATE_NAME,
-    STAT_FIELD_TOP_FAILED_CHECKS,
-    STATUS_ERROR,
-    STATUS_SIMULATED,
-    STATUS_SKIPPED,
-)
-from ..config._constants_thresholds import (
-    CHECK_CONCENTRATED_WEIGHT,
-    CHECK_LOW_FITNESS,
-    CHECK_LOW_SHARPE,
-    CHECK_LOW_SUB_UNIVERSE_SHARPE,
-    STATS_PERFORMANCE_TOP_N,
-)
+from ..config.static_config import get_static_config
 from ..models.domain import FieldTestResult
 from ..models.result_predicates import has_pending_checks, is_queue_timeout_result
 
 _FAILED_CHECK_COUNTERS = {
-    CHECK_LOW_SHARPE: STAT_FIELD_LOW_SHARPE,
-    CHECK_LOW_FITNESS: STAT_FIELD_LOW_FITNESS,
-    CHECK_CONCENTRATED_WEIGHT: STAT_FIELD_CONCENTRATED_WEIGHT,
-    CHECK_LOW_SUB_UNIVERSE_SHARPE: STAT_FIELD_LOW_SUB_UNIVERSE_SHARPE,
+    get_static_config().check_low_sharpe: get_static_config().stat_field_low_sharpe,
+    get_static_config().check_low_fitness: get_static_config().stat_field_low_fitness,
+    get_static_config().check_concentrated_weight: get_static_config().stat_field_concentrated_weight,
+    get_static_config().check_low_sub_universe_sharpe: get_static_config().stat_field_low_sub_universe_sharpe,
 }
 
 
 def _new_template_stat() -> dict[str, Any]:
     return {
-        STAT_FIELD_ATTEMPTED: 0,
-        STAT_FIELD_SUBMITTABLE: 0,
-        STAT_FIELD_ERRORS: 0,
-        STAT_FIELD_SIMULATED: 0,
-        STAT_FIELD_QUEUE_TIMEOUTS: 0,
-        STAT_FIELD_LOW_SHARPE: 0,
-        STAT_FIELD_LOW_FITNESS: 0,
-        STAT_FIELD_CONCENTRATED_WEIGHT: 0,
-        STAT_FIELD_LOW_SUB_UNIVERSE_SHARPE: 0,
+        get_static_config().stat_field_attempted: 0,
+        get_static_config().stat_field_submittable: 0,
+        get_static_config().stat_field_errors: 0,
+        get_static_config().stat_field_simulated: 0,
+        get_static_config().stat_field_queue_timeouts: 0,
+        get_static_config().stat_field_low_sharpe: 0,
+        get_static_config().stat_field_low_fitness: 0,
+        get_static_config().stat_field_concentrated_weight: 0,
+        get_static_config().stat_field_low_sub_universe_sharpe: 0,
         "template_stage": "",
         "template_role": "",
         "template_activation_scope": "",
@@ -87,18 +63,18 @@ def _update_failed_check_counts(stat: dict[str, Any], result: FieldTestResult) -
 
 def _update_template_outcome_counts(stat: dict[str, Any], result: FieldTestResult) -> None:
     if is_queue_timeout_result(result):
-        stat[STAT_FIELD_QUEUE_TIMEOUTS] += 1
+        stat[get_static_config().stat_field_queue_timeouts] += 1
         return
-    if result.status == STATUS_SKIPPED:
+    if result.status == get_static_config().status_skipped:
         return
 
-    stat[STAT_FIELD_ATTEMPTED] += 1
+    stat[get_static_config().stat_field_attempted] += 1
     if result.submittable:
-        stat[STAT_FIELD_SUBMITTABLE] += 1
-    if result.status == STATUS_SIMULATED:
-        stat[STAT_FIELD_SIMULATED] += 1
-    if result.status == STATUS_ERROR:
-        stat[STAT_FIELD_ERRORS] += 1
+        stat[get_static_config().stat_field_submittable] += 1
+    if result.status == get_static_config().status_simulated:
+        stat[get_static_config().stat_field_simulated] += 1
+    if result.status == get_static_config().status_error:
+        stat[get_static_config().stat_field_errors] += 1
     _update_failed_check_counts(stat, result)
 
 
@@ -134,42 +110,42 @@ def compile_template_performance_summary(
         summary = grouped.setdefault(
             result.template_name,
             {
-                STAT_FIELD_TEMPLATE_NAME: result.template_name,
-                STAT_FIELD_ATTEMPTED: 0,
-                STAT_FIELD_SUBMITTABLE: 0,
-                STAT_FIELD_ERRORS: 0,
-                STAT_FIELD_QUEUE_TIMEOUTS: 0,
-                STAT_FIELD_FAILED_CHECK_COUNTS: {},
+                get_static_config().stat_field_template_name: result.template_name,
+                get_static_config().stat_field_attempted: 0,
+                get_static_config().stat_field_submittable: 0,
+                get_static_config().stat_field_errors: 0,
+                get_static_config().stat_field_queue_timeouts: 0,
+                get_static_config().stat_field_failed_check_counts: {},
             },
         )
         if is_queue_timeout_result(result):
-            summary[STAT_FIELD_QUEUE_TIMEOUTS] += 1
+            summary[get_static_config().stat_field_queue_timeouts] += 1
             continue
-        if result.status == STATUS_SKIPPED:
+        if result.status == get_static_config().status_skipped:
             continue
 
-        summary[STAT_FIELD_ATTEMPTED] += 1
+        summary[get_static_config().stat_field_attempted] += 1
         if result.submittable:
-            summary[STAT_FIELD_SUBMITTABLE] += 1
-        if result.status == STATUS_ERROR:
-            summary[STAT_FIELD_ERRORS] += 1
+            summary[get_static_config().stat_field_submittable] += 1
+        if result.status == get_static_config().status_error:
+            summary[get_static_config().stat_field_errors] += 1
         for check in result.failed_checks or []:
-            name = check.name or SENTINEL_UNKNOWN_CHECK
-            summary[STAT_FIELD_FAILED_CHECK_COUNTS][name] = (
-                summary[STAT_FIELD_FAILED_CHECK_COUNTS].get(name, 0) + 1
+            name = check.name or get_static_config().sentinel_unknown_check
+            summary[get_static_config().stat_field_failed_check_counts][name] = (
+                summary[get_static_config().stat_field_failed_check_counts].get(name, 0) + 1
             )
 
     rows = list(grouped.values())
     for row in rows:
-        counts = row[STAT_FIELD_FAILED_CHECK_COUNTS]
-        row[STAT_FIELD_TOP_FAILED_CHECKS] = sorted(
+        counts = row[get_static_config().stat_field_failed_check_counts]
+        row[get_static_config().stat_field_top_failed_checks] = sorted(
             counts.items(), key=lambda item: (-item[1], item[0])
-        )[:STATS_PERFORMANCE_TOP_N]
+        )[: get_static_config().stats_performance_top_n]
     return sorted(
         rows,
         key=lambda row: (
-            -row[STAT_FIELD_SUBMITTABLE],
-            -row[STAT_FIELD_ATTEMPTED],
-            row[STAT_FIELD_TEMPLATE_NAME],
+            -row[get_static_config().stat_field_submittable],
+            -row[get_static_config().stat_field_attempted],
+            row[get_static_config().stat_field_template_name],
         ),
     )

@@ -4,10 +4,8 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 
-from ..config._constants_strings import TEMPLATE_STAGE_GROUP_SECOND_ORDER
-from ..config._constants_templates import ALLOWED_EXTERNAL_RATIO_PARTNERS
-from ..config._constants_thresholds import DELTA_STD_PRIORITY_BOOST
 from ..config.models import DatasetExpressionPolicy
+from ..config.static_config import get_static_config
 from ..generators.field_transforms import build_field_view, build_ratio_expression
 from ..models.domain import FieldView, TemplateCandidate, TemplateField
 from .fields import choose_field_name
@@ -34,28 +32,28 @@ def build_high_conviction_ratio_templates(
             "group_rank({ratio_expr}, subindustry)",
             228,
             "high_conviction_ratio",
-            TEMPLATE_STAGE_GROUP_SECOND_ORDER,
+            get_static_config().template_stage_group_second_order,
         ),
         (
             "hc_ratio_group_zscore_252_{ratio_label}",
             "group_rank(ts_zscore({ratio_expr}, 252), subindustry)",
             226,
             "high_conviction_ratio",
-            TEMPLATE_STAGE_GROUP_SECOND_ORDER,
+            get_static_config().template_stage_group_second_order,
         ),
         (
             "hc_ratio_decay_zscore_252_{ratio_label}",
             "ts_decay_linear(group_rank(ts_zscore({ratio_expr}, 252), subindustry), 20)",
             224,
             "high_conviction_ratio",
-            TEMPLATE_STAGE_GROUP_SECOND_ORDER,
+            get_static_config().template_stage_group_second_order,
         ),
         (
             "hc_ratio_industry_zscore_252_{ratio_label}",
             "group_rank(ts_zscore({ratio_expr}, 252), industry)",
             222,
             "high_conviction_ratio",
-            TEMPLATE_STAGE_GROUP_SECOND_ORDER,
+            get_static_config().template_stage_group_second_order,
         ),
     )
     templates: list[TemplateCandidate] = []
@@ -104,7 +102,10 @@ def extend_ratio_templates(
     )
 
     for partner in partner_names:
-        if partner not in fields_by_name and partner not in ALLOWED_EXTERNAL_RATIO_PARTNERS:
+        if (
+            partner not in fields_by_name
+            and partner not in get_static_config().allowed_external_ratio_partners
+        ):
             continue
         denominator_view = (
             build_field_view(fields_by_name[partner], expression_policy)
@@ -225,11 +226,11 @@ def _extend_ratio_delta_rank_templates(
                 _make_template_candidate(
                     name,
                     expr,
-                    pri + DELTA_STD_PRIORITY_BOOST + ratio_priority_boost,
+                    pri + get_static_config().delta_std_priority_boost + ratio_priority_boost,
                     metadata=_candidate_metadata(
                         family="group_ratio_level",
                         layer="group",
-                        stage=TEMPLATE_STAGE_GROUP_SECOND_ORDER,
+                        stage=get_static_config().template_stage_group_second_order,
                         requires_partner_field=True,
                     ),
                 )
@@ -249,11 +250,11 @@ def _extend_ratio_delta_over_std_templates(
             _make_template_candidate(
                 f"group_ratio_delta_over_std_{delta}_{std}_{ratio_label}",
                 f"group_rank(ts_delta({ratio_expr}, {delta}) / ts_std_dev({ratio_expr}, {std}), subindustry)",
-                pri + DELTA_STD_PRIORITY_BOOST + ratio_priority_boost,
+                pri + get_static_config().delta_std_priority_boost + ratio_priority_boost,
                 metadata=_candidate_metadata(
                     family="group_vol_scaled_delta",
                     layer="group",
-                    stage=TEMPLATE_STAGE_GROUP_SECOND_ORDER,
+                    stage=get_static_config().template_stage_group_second_order,
                     requires_partner_field=True,
                 ),
             )

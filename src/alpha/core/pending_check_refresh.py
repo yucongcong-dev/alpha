@@ -14,7 +14,7 @@ from typing import cast
 
 from ..api.client import BrainClient
 from ..api.timing import wait_seconds
-from ..config._constants_strings import STATUS_ERROR
+from ..config.static_config import get_static_config
 from ..exceptions import BrainHTTPError, BrainStopRequested
 from ..models.domain import FieldTestResult
 from ..models.result_predicates import needs_submission_check_refresh
@@ -273,7 +273,7 @@ def _refresh_pending_check_result(
             raise
         refreshed = replace(
             result,
-            status=STATUS_ERROR,
+            status=get_static_config().status_error,
             submittable=False,
             message=f"permanent check submission error: {exc}",
             failed_stage="check_submission",

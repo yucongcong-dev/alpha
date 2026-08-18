@@ -7,7 +7,7 @@ from __future__ import annotations
 from collections.abc import Sequence
 from typing import Any
 
-from ..config._constants_strings import STATUS_ERROR
+from ..config.static_config import get_static_config
 from ..models.domain import FailedCheck, FieldTestContext, FieldTestResult
 from ..models.domain_parsers import coerce_failed_checks
 
@@ -30,12 +30,13 @@ def build_failure_result(
     template_role: str = "",
     template_activation_scope: str = "",
     policy_version: str = "",
-    status: str = STATUS_ERROR,
+    status: str | None = None,
     failed_checks: Sequence[FailedCheck | dict[str, Any]] | None = None,
     settings: dict[str, Any] | None = None,
     metrics: dict[str, Any] | None = None,
     error_type: str = "",
 ) -> FieldTestResult:
+    status = status if status is not None else get_static_config().status_error
     return FieldTestResult(
         field_id=field_id,
         field_type=field_type,

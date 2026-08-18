@@ -9,24 +9,18 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 
-from ...config._constants_templates import (
-    SIMILARITY_PENALTY_OFFSET_GROUP_RATIO_LEVEL,
-    SIMILARITY_PENALTY_OFFSET_LEGACY_GROUP_LEVEL,
-    SIMILARITY_PENALTY_OFFSET_LEGACY_LEVEL,
-    SIMILARITY_PENALTY_OFFSET_LEGACY_NEG_RATIO,
-    SIMILARITY_PENALTY_OFFSET_LEGACY_RATIO,
-)
+from ...config.static_config import get_static_config
 from ...models.domain import TemplateCandidate
 from .candidates import _coerce_template_candidate, _make_template_candidate
 from .classification import classify_expression_family
 from .metadata import TemplateMetadataMap
 
 _SIMILARITY_PENALTY_OFFSETS: dict[str, int] = {
-    "legacy_level": SIMILARITY_PENALTY_OFFSET_LEGACY_LEVEL,
-    "legacy_group_level": SIMILARITY_PENALTY_OFFSET_LEGACY_GROUP_LEVEL,
-    "legacy_ratio": SIMILARITY_PENALTY_OFFSET_LEGACY_RATIO,
-    "legacy_neg_ratio": SIMILARITY_PENALTY_OFFSET_LEGACY_NEG_RATIO,
-    "group_ratio_level": SIMILARITY_PENALTY_OFFSET_GROUP_RATIO_LEVEL,
+    "legacy_level": get_static_config().similarity_penalty_offset_legacy_level,
+    "legacy_group_level": get_static_config().similarity_penalty_offset_legacy_group_level,
+    "legacy_ratio": get_static_config().similarity_penalty_offset_legacy_ratio,
+    "legacy_neg_ratio": get_static_config().similarity_penalty_offset_legacy_neg_ratio,
+    "group_ratio_level": get_static_config().similarity_penalty_offset_group_ratio_level,
 }
 """家族名到相似度惩罚减免值的映射。"""
 

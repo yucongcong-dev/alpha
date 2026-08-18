@@ -4,11 +4,8 @@ from __future__ import annotations
 
 from typing import Any
 
-from ._constants_thresholds import (
-    DEFAULT_SETTINGS_VARIANT_BUDGET,
-    STATS_DEFAULT_SCORE,
-)
 from .models import FeedbackLoopPolicy, FeedbackPhasePolicy, FieldTransformSpec, FieldTransformStage
+from .static_config import get_static_config
 
 
 def tuple_tuple_int(value: Any, width: int) -> tuple[tuple[int, ...], ...]:
@@ -103,16 +100,18 @@ def coerce_feedback_phase_policy(value: Any) -> FeedbackPhasePolicy | None:
     except (TypeError, ValueError):
         min_attempted_templates = 0
     try:
-        min_best_score = float(value.get("min_best_score", STATS_DEFAULT_SCORE))
+        min_best_score = float(value.get("min_best_score", get_static_config().stats_default_score))
     except (TypeError, ValueError):
-        min_best_score = STATS_DEFAULT_SCORE
+        min_best_score = get_static_config().stats_default_score
     try:
         settings_variant_budget = int(
-            value.get("settings_variant_budget", DEFAULT_SETTINGS_VARIANT_BUDGET)
-            or DEFAULT_SETTINGS_VARIANT_BUDGET
+            value.get(
+                "settings_variant_budget", get_static_config().default_settings_variant_budget
+            )
+            or get_static_config().default_settings_variant_budget
         )
     except (TypeError, ValueError):
-        settings_variant_budget = DEFAULT_SETTINGS_VARIANT_BUDGET
+        settings_variant_budget = get_static_config().default_settings_variant_budget
     return FeedbackPhasePolicy(
         min_attempted_templates=min_attempted_templates,
         min_best_score=min_best_score,

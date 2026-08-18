@@ -10,18 +10,8 @@ from __future__ import annotations
 from collections.abc import Sequence
 import re
 
-from ...config._constants_templates import ALLOWED_EXTERNAL_RATIO_PARTNERS
-from ...config._constants_thresholds import (
-    PARTNER_KEYWORD_MATCH_SCORE,
-    PARTNER_PREFERRED_BASE_SCORE,
-    PARTNER_RANK_MAX_SCORE,
-    PARTNER_RANK_STEP_PENALTY,
-    PARTNER_REVERSE_KEYWORD_SCORE,
-    PARTNER_SELF_MATCH_PENALTY,
-    PARTNER_SHARED_TOKEN_WEIGHT,
-    PARTNER_SUBSTRING_SCORE,
-)
 from ...config.models import DatasetExpressionPolicy
+from ...config.static_config import get_static_config
 from ...generators.fields import choose_field_name, choose_field_type
 from ...models.domain import TemplateField
 
@@ -53,24 +43,30 @@ def score_partner_candidate(
     得分越高表示越适合配对；负值表示应排除。
     """
     if field_name == partner_name:
-        return PARTNER_SELF_MATCH_PENALTY
+        return get_static_config().partner_self_match_penalty
     field_tokens = set(tokenize_field_name(field_name))
     partner_tokens = set(tokenize_field_name(partner_name))
     score = 0
     preferred_partners = policy.ratio_partner_candidates.get(field_name, ())
     if partner_name in preferred_partners:
-        score += PARTNER_PREFERRED_BASE_SCORE
+        score += get_static_config().partner_preferred_base_score
         preferred_rank = preferred_partners.index(partner_name)
-        score += max(0, PARTNER_RANK_MAX_SCORE - preferred_rank * PARTNER_RANK_STEP_PENALTY)
+        score += max(
+            0,
+            get_static_config().partner_rank_max_score
+            - preferred_rank * get_static_config().partner_rank_step_penalty,
+        )
     if partner_name in policy.ratio_keywords.get(field_name, ()):
-        score += PARTNER_KEYWORD_MATCH_SCORE
+        score += get_static_config().partner_keyword_match_score
     if field_name in policy.ratio_keywords.get(partner_name, ()):
-        score += PARTNER_REVERSE_KEYWORD_SCORE
+        score += get_static_config().partner_reverse_keyword_score
     if field_tokens & partner_tokens:
-        score += PARTNER_SHARED_TOKEN_WEIGHT * len(field_tokens & partner_tokens)
+        score += get_static_config().partner_shared_token_weight * len(
+            field_tokens & partner_tokens
+        )
     for token in field_tokens:
         if token and token in partner_name:
-            score += PARTNER_SUBSTRING_SCORE
+            score += get_static_config().partner_substring_score
     score += int(policy.preferred_partner_score_bonuses.get(partner_name, 0))
     return score
 
@@ -107,7 +103,7 @@ def discover_partner_fields(
             continue
         if (
             partner_name not in available_by_name
-            and partner_name not in ALLOWED_EXTERNAL_RATIO_PARTNERS
+            and partner_name not in get_static_config().allowed_external_ratio_partners
         ):
             continue
         candidates.append((10_000 - len(candidates), partner_name))

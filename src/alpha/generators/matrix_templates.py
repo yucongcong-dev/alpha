@@ -14,21 +14,8 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 
-from ..config._constants_strings import (
-    TEMPLATE_STAGE_FIRST_ORDER,
-    TEMPLATE_STAGE_GROUP_SECOND_ORDER,
-)
-from ..config._constants_templates import (
-    LEGACY_MATRIX_GROUP_RANK_INDUSTRY_PRIORITY,
-    LEGACY_MATRIX_GROUP_RANK_SUBINDUSTRY_PRIORITY,
-    LEGACY_MATRIX_NEG_DEFAULT_PRIORITY,
-    LEGACY_MATRIX_NEG_NEGATIVE_RAW_PRIORITY,
-    LEGACY_MATRIX_NEG_POSITIVE_RAW_PRIORITY,
-    LEGACY_MATRIX_RANK_RAW_FIELD_PRIORITY,
-    LEGACY_MATRIX_RAW_FIELD_PRIORITY,
-)
-from ..config._constants_thresholds import DELTA_STD_PRIORITY_BOOST
 from ..config.models import DatasetExpressionPolicy
+from ..config.static_config import get_static_config
 from ..models.domain import FieldView, TemplateCandidate, TemplateField
 from .ratio_templates import extend_ratio_templates
 from .templates.candidates import (
@@ -59,11 +46,11 @@ def build_matrix_templates(
             _make_template_candidate(
                 f"group_delta_over_std_subindustry_{delta}_{std}",
                 f"group_rank(ts_delta({preprocessed_expression}, {delta}) / ts_std_dev({preprocessed_expression}, {std}), subindustry)",
-                pri + DELTA_STD_PRIORITY_BOOST,
+                pri + get_static_config().delta_std_priority_boost,
                 metadata=_candidate_metadata(
                     family="group_vol_scaled_delta",
                     layer="group",
-                    stage=TEMPLATE_STAGE_GROUP_SECOND_ORDER,
+                    stage=get_static_config().template_stage_group_second_order,
                 ),
             )
         )
@@ -73,7 +60,7 @@ def build_matrix_templates(
             _make_template_candidate(
                 candidate.name,
                 candidate.expression,
-                candidate.priority + DELTA_STD_PRIORITY_BOOST
+                candidate.priority + get_static_config().delta_std_priority_boost
                 if "delta_over_std" in candidate.name
                 else candidate.priority,
                 metadata=candidate.metadata,
@@ -116,41 +103,41 @@ def _build_legacy_matrix_templates(
         _make_template_candidate(
             "raw_field",
             preprocessed_expression,
-            LEGACY_MATRIX_RAW_FIELD_PRIORITY,
+            get_static_config().legacy_matrix_raw_field_priority,
             metadata=_candidate_metadata(
                 family="legacy_level",
                 layer="first_order",
-                stage=TEMPLATE_STAGE_FIRST_ORDER,
+                stage=get_static_config().template_stage_first_order,
             ),
         ),
         _make_template_candidate(
             "group_rank_subindustry",
             f"group_rank({preprocessed_expression}, subindustry)",
-            LEGACY_MATRIX_GROUP_RANK_SUBINDUSTRY_PRIORITY,
+            get_static_config().legacy_matrix_group_rank_subindustry_priority,
             metadata=_candidate_metadata(
                 family="legacy_group_level",
                 layer="group",
-                stage=TEMPLATE_STAGE_GROUP_SECOND_ORDER,
+                stage=get_static_config().template_stage_group_second_order,
             ),
         ),
         _make_template_candidate(
             "group_rank_industry",
             f"group_rank({preprocessed_expression}, industry)",
-            LEGACY_MATRIX_GROUP_RANK_INDUSTRY_PRIORITY,
+            get_static_config().legacy_matrix_group_rank_industry_priority,
             metadata=_candidate_metadata(
                 family="legacy_group_level",
                 layer="group",
-                stage=TEMPLATE_STAGE_GROUP_SECOND_ORDER,
+                stage=get_static_config().template_stage_group_second_order,
             ),
         ),
         _make_template_candidate(
             "rank_raw_field",
             f"rank({preprocessed_expression})",
-            LEGACY_MATRIX_RANK_RAW_FIELD_PRIORITY,
+            get_static_config().legacy_matrix_rank_raw_field_priority,
             metadata=_candidate_metadata(
                 family="legacy_level",
                 layer="first_order",
-                stage=TEMPLATE_STAGE_FIRST_ORDER,
+                stage=get_static_config().template_stage_first_order,
             ),
         ),
     ]
@@ -158,14 +145,14 @@ def _build_legacy_matrix_templates(
         expression_policy.use_curated_heuristics
         and field_name in expression_policy.positive_raw_fields
     ):
-        priority = LEGACY_MATRIX_NEG_POSITIVE_RAW_PRIORITY
+        priority = get_static_config().legacy_matrix_neg_positive_raw_priority
     elif (
         expression_policy.use_curated_heuristics
         and field_name in expression_policy.negative_raw_fields
     ):
-        priority = LEGACY_MATRIX_NEG_NEGATIVE_RAW_PRIORITY
+        priority = get_static_config().legacy_matrix_neg_negative_raw_priority
     elif expression_policy.use_curated_heuristics:
-        priority = LEGACY_MATRIX_NEG_DEFAULT_PRIORITY
+        priority = get_static_config().legacy_matrix_neg_default_priority
     else:
         return legacy
 
@@ -177,7 +164,7 @@ def _build_legacy_matrix_templates(
             metadata=_candidate_metadata(
                 family="legacy_level",
                 layer="first_order",
-                stage=TEMPLATE_STAGE_FIRST_ORDER,
+                stage=get_static_config().template_stage_first_order,
             ),
         )
     )

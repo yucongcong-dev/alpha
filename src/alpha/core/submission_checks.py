@@ -8,8 +8,8 @@ import logging
 from ..api.api_types import SimulationPayload
 from ..api.client import BrainClient, retry_operation
 from ..api.timing import wait_seconds
-from ..config._constants_strings import STATUS_SKIPPED
 from ..config.runtime_values import resolve_http_runtime_config
+from ..config.static_config import get_static_config
 from ..exceptions import BrainAPIError, BrainHTTPError, BrainStopRequested
 from ..models.domain import FailedCheck, FieldTestContext, FieldTestResult
 from ..models.domain_parsers import parse_failed_check
@@ -252,7 +252,7 @@ def run_check_submission_stage(
             message=str(exc),
             simulation_id=simulation_id,
             alpha_id=alpha_id,
-            status=STATUS_SKIPPED,
+            status=get_static_config().status_skipped,
         )
     except Exception as exc:
         return handle_stage_error(

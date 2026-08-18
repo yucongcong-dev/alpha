@@ -5,12 +5,8 @@ from __future__ import annotations
 from collections.abc import Sequence
 from typing import Any
 
-from ..config._constants_strings import SENTINEL_UNKNOWN
-from ..config._constants_thresholds import (
-    PREFERRED_FIELD_RANK_SENTINEL,
-    STATS_DEFAULT_SCORE,
-)
 from ..config.models import DatasetExpressionPolicy
+from ..config.static_config import get_static_config
 from ..generators.fields import choose_field_name
 from ..models.domain import TemplateField
 from ..models.runtime_options import FieldSelectionOptions
@@ -83,7 +79,7 @@ def _append_with_family_cap(
     for field in candidates:
         if len(selected) >= target:
             return
-        field_id = field.field_id or SENTINEL_UNKNOWN
+        field_id = field.field_id or get_static_config().sentinel_unknown
         if field_id in selected_ids:
             continue
         family = infer_field_family(choose_field_name(field))
@@ -115,9 +111,9 @@ def _select_diverse_fields(
         field
         for field in fields
         if _is_promising_feedback(
-            field.field_id or SENTINEL_UNKNOWN,
+            field.field_id or get_static_config().sentinel_unknown,
             priority=_feedback_priority(
-                field.field_id or SENTINEL_UNKNOWN,
+                field.field_id or get_static_config().sentinel_unknown,
                 historical_state=historical_state,
                 expression_policy=expression_policy,
             ),
@@ -128,7 +124,10 @@ def _select_diverse_fields(
     unexplored = [
         field
         for field in fields
-        if historical_state.field_feedback.get(field.field_id or SENTINEL_UNKNOWN) is None
+        if historical_state.field_feedback.get(
+            field.field_id or get_static_config().sentinel_unknown
+        )
+        is None
     ]
 
     selected: list[TemplateField] = []
@@ -209,7 +208,7 @@ def attach_selection_to_fields(
 ) -> list[TemplateField]:
     selected_fields: list[TemplateField] = []
     for field in fields:
-        field_id = field.field_id or SENTINEL_UNKNOWN
+        field_id = field.field_id or get_static_config().sentinel_unknown
         selected_fields.append(
             _attach_selection_metadata(
                 field,
@@ -233,7 +232,7 @@ def _field_sort_key(
     historical_state: HistoricalRunState,
     expression_policy: DatasetExpressionPolicy,
 ) -> FieldSortKey:
-    field_id = item.field_id or SENTINEL_UNKNOWN
+    field_id = item.field_id or get_static_config().sentinel_unknown
     field_name = item.field_name
     field_type = item.field_type.upper()
     feedback = historical_state.field_feedback.get(field_id)
@@ -251,14 +250,14 @@ def _field_sort_key(
     is_unexplored = feedback is None
     preferred_rank = preferred_field_rank(field_name, expression_policy.preferred_field_order)
     preferred_type_rank = expression_policy.preferred_field_type_order.get(
-        field_type, PREFERRED_FIELD_RANK_SENTINEL
+        field_type, get_static_config().preferred_field_rank_sentinel
     )
-    is_preferred_direction = preferred_rank < PREFERRED_FIELD_RANK_SENTINEL
+    is_preferred_direction = preferred_rank < get_static_config().preferred_field_rank_sentinel
     feedback_rank = (
         0
         if is_promising_seen
         else 1
-        if feedback is not None and priority > STATS_DEFAULT_SCORE
+        if feedback is not None and priority > get_static_config().stats_default_score
         else 2
         if is_unexplored
         else 3
@@ -298,7 +297,7 @@ def rank_and_select_exploration_fields(
             field
             for field in fields
             if _feedback_priority(
-                field.field_id or SENTINEL_UNKNOWN,
+                field.field_id or get_static_config().sentinel_unknown,
                 historical_state=historical_state,
                 expression_policy=expression_policy,
             )

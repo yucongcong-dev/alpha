@@ -22,8 +22,7 @@ import os
 import time
 from typing import Any, Protocol
 
-from ..config._constants_strings import SENTINEL_UNKNOWN
-from ..config._constants_thresholds import FIELDS_CACHE_TTL_HOURS
+from ..config.static_config import get_static_config
 from ..io.common import atomic_write_json
 from ..models.domain import TemplateField
 from ..models.domain_parsers import parse_template_field
@@ -69,7 +68,7 @@ def choose_field_type(field: dict[str, Any] | TemplateField) -> str:
         value = field.get(key)
         if value is not None and value != "":
             return str(value).upper()
-    return str(SENTINEL_UNKNOWN).upper()
+    return str(get_static_config().sentinel_unknown).upper()
 
 
 class DatasetFieldClient(Protocol):
@@ -97,7 +96,7 @@ def load_fields_cache(
     universe: str,
     instrument_type: str,
     delay: int,
-    cache_ttl_hours: int = FIELDS_CACHE_TTL_HOURS,
+    cache_ttl_hours: int | None = None,
 ) -> list[TemplateField]:
     """
     仅在数据集上下文完全匹配且磁盘缓存未过期时加载字段缓存。
@@ -123,6 +122,8 @@ def load_fields_cache(
         缓存文件包含 cache_key 和 cached_at 字段，分别用于
         验证缓存作用域和检查过期时间。
     """
+    if cache_ttl_hours is None:
+        cache_ttl_hours = get_static_config().fields_cache_ttl_hours
     if not path or not os.path.exists(path):
         return []
     try:

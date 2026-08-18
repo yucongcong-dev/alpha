@@ -6,9 +6,8 @@ from collections.abc import Sequence
 from typing import Any
 
 from ..analysis.field_stats import decay_field_feedback, field_priority
-from ..config._constants_strings import SENTINEL_UNKNOWN
-from ..config._constants_thresholds import STATS_DEFAULT_SCORE
 from ..config.models import DatasetExpressionPolicy
+from ..config.static_config import get_static_config
 from ..models.domain import TemplateField
 from ..runtime.contexts import HistoricalRunState
 
@@ -33,7 +32,10 @@ def feedback_priority(
     )
     if feedback is None:
         return field_priority(field_id, historical_state.field_feedback)
-    return float(feedback.get("best_score", STATS_DEFAULT_SCORE) or STATS_DEFAULT_SCORE)
+    return float(
+        feedback.get("best_score", get_static_config().stats_default_score)
+        or get_static_config().stats_default_score
+    )
 
 
 def is_promising_feedback(
@@ -48,7 +50,7 @@ def is_promising_feedback(
     if feedback is None:
         return False
     if _safe_int(feedback.get("submittable_templates")) > 0:
-        return priority > STATS_DEFAULT_SCORE
+        return priority > get_static_config().stats_default_score
     if priority < expression_policy.promising_field_min_priority:
         return False
     attempted = _safe_int(feedback.get("attempted_templates"))
@@ -65,7 +67,7 @@ def selection_reason(
 ) -> str:
     if explicit:
         return "explicit"
-    field_id = field.field_id or SENTINEL_UNKNOWN
+    field_id = field.field_id or get_static_config().sentinel_unknown
     feedback = historical_state.field_feedback.get(field_id)
     if feedback is not None:
         priority = feedback_priority(
@@ -95,7 +97,7 @@ def field_selection_scores(
 ) -> dict[str, float]:
     scores: dict[str, float] = {}
     for field in fields:
-        field_id = field.field_id or SENTINEL_UNKNOWN
+        field_id = field.field_id or get_static_config().sentinel_unknown
         if historical_state.field_feedback.get(field_id) is None:
             scores[field_id] = 0.0
         else:

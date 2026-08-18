@@ -8,7 +8,7 @@ import logging
 import math
 from typing import Any
 
-from ..config._constants_thresholds import CHECKPOINT_RESUME_SAFETY_SECONDS
+from ..config.static_config import get_static_config
 from ..exceptions import CheckpointConsistencyError
 from ..runtime.concurrency import RuntimeConcurrencyState
 from ..runtime.contexts import CheckpointIdentity
@@ -216,7 +216,7 @@ def load_pipeline_state(
     if last_submission > 0:
         execution_state.last_submission_at = max(
             0,
-            monotonic() - CHECKPOINT_RESUME_SAFETY_SECONDS,
+            monotonic() - get_static_config().checkpoint_resume_safety_seconds,
         )
 
     log.info(

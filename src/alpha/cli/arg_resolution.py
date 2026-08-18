@@ -7,14 +7,10 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from typing import cast
 
-from ..config._constants_thresholds import (
-    FULL_RUN_MAX_NEW_SIMULATIONS,
-    SMOKE_TEST_MAX_PENDING_CYCLES,
-    SMOKE_TEST_MAX_QUEUE_SECONDS,
-)
 from ..config.profiles import get_dataset_profile
 from ..config.settings_spec import dataset_profile_keys, yaml_default_settings
 from ..config.simulation_dates import resolve_simulation_dates
+from ..config.static_config import get_static_config
 from ..config.strategy_profiles import (
     get_strategy_profile_runtime_defaults,
     normalize_strategy_profile,
@@ -330,8 +326,8 @@ def _run_mode_layer(
             max_templates_per_field=1,
             max_concurrent_simulations=1,
             max_concurrent_creates=1,
-            simulation_max_pending_cycles=SMOKE_TEST_MAX_PENDING_CYCLES,
-            simulation_max_queue_seconds=SMOKE_TEST_MAX_QUEUE_SECONDS,
+            simulation_max_pending_cycles=get_static_config().smoke_test_max_pending_cycles,
+            simulation_max_queue_seconds=get_static_config().smoke_test_max_queue_seconds,
         )
     elif run_mode is RunMode.FULL:
         _reject_mode_conflicts(state.values, explicit_cli_keys, mode="full")
@@ -348,7 +344,7 @@ def _run_mode_layer(
             "max_new_simulations" not in explicit_cli_keys
             and _as_number(state.values.get("max_new_simulations", 0)) <= 0
         ):
-            updates["max_new_simulations"] = FULL_RUN_MAX_NEW_SIMULATIONS
+            updates["max_new_simulations"] = get_static_config().full_run_max_new_simulations
     return ResolvedConfigLayer(RUN_MODE_SOURCE, updates)
 
 
@@ -386,8 +382,8 @@ def _reject_mode_conflicts(
             if key in explicit_cli_keys and values.get(key) != expected
         ]
         bounded_values = {
-            "simulation_max_pending_cycles": SMOKE_TEST_MAX_PENDING_CYCLES,
-            "simulation_max_queue_seconds": SMOKE_TEST_MAX_QUEUE_SECONDS,
+            "simulation_max_pending_cycles": get_static_config().smoke_test_max_pending_cycles,
+            "simulation_max_queue_seconds": get_static_config().smoke_test_max_queue_seconds,
         }
         conflicts.extend(
             key

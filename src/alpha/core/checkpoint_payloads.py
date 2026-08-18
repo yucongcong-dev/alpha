@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from ..config._constants_strings import SENTINEL_UNKNOWN
+from ..config.static_config import get_static_config
 from ..runtime.contexts import PendingFutureContext
 from ..runtime.state import ExecutionState
 
@@ -84,7 +84,7 @@ def restore_pending_simulations(
             PendingFutureContext(
                 field_id=field_id,
                 field_name=str(item.get("field_name", "") or field_id),
-                field_type=str(item.get("field_type", "") or SENTINEL_UNKNOWN),
+                field_type=str(item.get("field_type", "") or get_static_config().sentinel_unknown),
                 template_name=template_name,
                 template_family=str(item.get("template_family", "") or ""),
                 template_stage=str(item.get("template_stage", "") or ""),

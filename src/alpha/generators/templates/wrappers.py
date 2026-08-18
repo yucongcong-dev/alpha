@@ -2,10 +2,7 @@
 
 from __future__ import annotations
 
-from ...config._constants_strings import (
-    TEMPLATE_STAGE_EVENT_CONDITIONED,
-    TEMPLATE_STAGE_GROUP_SECOND_ORDER,
-)
+from ...config.static_config import get_static_config
 from ...models.domain import TemplateCandidate
 from .candidates import _candidate_metadata, _make_template_candidate
 
@@ -43,7 +40,7 @@ def build_bucket_group_templates(
                 metadata=_candidate_metadata(
                     family="bucket_group_rank",
                     layer="group",
-                    stage=TEMPLATE_STAGE_GROUP_SECOND_ORDER,
+                    stage=get_static_config().template_stage_group_second_order,
                 ),
             )
         )
@@ -69,7 +66,7 @@ def build_trade_when_templates(
                 metadata=_candidate_metadata(
                     family="event_trade_when",
                     layer="event",
-                    stage=TEMPLATE_STAGE_EVENT_CONDITIONED,
+                    stage=get_static_config().template_stage_event_conditioned,
                 ),
             )
         )

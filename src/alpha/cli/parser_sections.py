@@ -6,13 +6,13 @@ import argparse
 import os
 from typing import Any
 
-from ..config._constants_thresholds import DEFAULT_DATASET_ID
 from ..config.settings_spec import (
     SettingSpec,
     get_setting,
     section_settings,
     settings_by_yaml_section,
 )
+from ..config.static_config import get_static_config
 from .constants import DEFAULT_CREDS_FILE, DEFAULT_CREDS_KEY_FILE
 
 
@@ -106,7 +106,7 @@ def add_credentials_arguments(parser: Any) -> None:
 def _add_dataset_id_argument(arguments: Any) -> None:
     arguments.add_argument(
         "--dataset-id",
-        default=DEFAULT_DATASET_ID,
+        default=get_static_config().default_dataset_id,
         help="数据集 ID；run/clean 命令必须显式指定",
     )
 

@@ -61,7 +61,7 @@ def test_configure_application_logging_uses_file_for_live_run(monkeypatch, tmp_p
     setup.assert_called_once_with(log_file, verbose=False, quiet=True)
 
 
-def test_run_cli_entry_activates_custom_config_before_yaml_backed_constants(tmp_path) -> None:
+def test_run_cli_entry_activates_custom_config_before_static_config(tmp_path) -> None:
     config_path = tmp_path / "custom-settings.yaml"
     config_path.write_text(
         "global:\n  strings:\n    status:\n      error: custom_error_status\n",
@@ -78,8 +78,9 @@ def test_run_cli_entry_activates_custom_config_before_yaml_backed_constants(tmp_
             sys.executable,
             "-c",
             "import alpha.main; "
-            "alpha.main.main = lambda: __import__('alpha.config._constants_strings', "
-            "fromlist=['STATUS_ERROR']).STATUS_ERROR == 'custom_error_status'; "
+            "alpha.main.main = lambda: __import__('alpha.config.static_config', "
+            "fromlist=['get_static_config']).get_static_config().status_error "
+            "== 'custom_error_status'; "
             "print(alpha.main.run_cli_entry())",
             "--config",
             str(config_path),
@@ -111,8 +112,8 @@ def test_importing_main_alone_has_no_argv_side_effect(tmp_path) -> None:
             sys.executable,
             "-c",
             "import alpha.main; "
-            "from alpha.config._constants_strings import STATUS_ERROR; "
-            "print(STATUS_ERROR)",
+            "from alpha.config.static_config import get_static_config; "
+            "print(get_static_config().status_error)",
             "--config",
             str(config_path),
         ],
@@ -125,7 +126,7 @@ def test_importing_main_alone_has_no_argv_side_effect(tmp_path) -> None:
     assert completed.stdout.strip() == "error"
 
 
-def test_run_cli_entry_rejects_switching_config_sources_in_one_process(tmp_path) -> None:
+def test_run_cli_entry_re_resolves_static_config_per_invocation(tmp_path) -> None:
     first_config = tmp_path / "first.yaml"
     second_config = tmp_path / "second.yaml"
     first_config.write_text(
@@ -144,11 +145,10 @@ def test_run_cli_entry_rejects_switching_config_sources_in_one_process(tmp_path)
     script = """
 import sys
 import alpha.main
+from alpha.config.static_config import get_static_config
 
 def inspect_constant():
-    from alpha.config._constants_strings import STATUS_ERROR
-
-    print(STATUS_ERROR)
+    print(get_static_config().status_error)
     return 0
 
 alpha.main.main = inspect_constant
@@ -156,7 +156,7 @@ first_config, second_config = sys.argv[1:]
 sys.argv = ["alpha", "--config", first_config]
 assert alpha.main.run_cli_entry() == 0
 sys.argv = ["alpha", "--config", second_config]
-assert alpha.main.run_cli_entry() == 1
+assert alpha.main.run_cli_entry() == 0
 """
 
     completed = subprocess.run(
@@ -168,8 +168,7 @@ assert alpha.main.run_cli_entry() == 1
     )
 
     assert completed.returncode == 0, completed.stderr
-    assert completed.stdout.strip() == "first_config"
-    assert "只能运行一份 YAML 配置" in completed.stderr
+    assert completed.stdout.strip() == "first_config\nsecond_config"
 
 
 def test_main_routes_dry_run_around_runtime_bootstrap_and_finalize(monkeypatch) -> None:

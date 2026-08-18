@@ -10,7 +10,7 @@ from alpha.app.bootstrap_pending_checks import (
     persist_reconciled_historical_results,
     reconcile_pending_check_results,
 )
-from alpha.config._constants_strings import STATUS_ERROR
+from alpha.config.static_config import get_static_config
 import alpha.core.pending_check_refresh as pending_check_refresh
 from alpha.core.pending_check_refresh import (
     DEFAULT_PENDING_CHECK_REFRESH_LIMIT,
@@ -195,7 +195,7 @@ def test_reconcile_pending_check_results_does_not_replace_terminal_run_result(
 ) -> None:
     terminal = replace(
         _pending_result(alpha_id="alpha_terminal"),
-        status=STATUS_ERROR,
+        status=get_static_config().status_error,
         submittable=False,
         message="simulation failed",
         failed_stage="simulation",
@@ -538,7 +538,7 @@ def test_pending_check_service_terminalizes_permanent_http_error(monkeypatch) ->
     refreshed, count = _refresh_pending(object(), [_pending_result()], retries=2)
 
     assert count == 1
-    assert refreshed[0].status == STATUS_ERROR
+    assert refreshed[0].status == get_static_config().status_error
     assert refreshed[0].submittable is False
     assert refreshed[0].failed_stage == "check_submission"
     assert refreshed[0].failed_checks == []

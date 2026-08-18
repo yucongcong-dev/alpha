@@ -15,8 +15,8 @@ from contextlib import suppress
 import threading
 import time
 
-from ..config._constants_api import DEFAULT_RATE_LIMIT_MAX_RETRIES
 from ..config.runtime_values import HttpRuntimeConfig, load_http_runtime_config
+from ..config.static_config import get_static_config
 from ..exceptions import BrainAPIError
 from ..models.runtime_options import ApiClientOptions
 from .alphas import BrainAlphasMixin
@@ -49,7 +49,7 @@ class BrainClient(BrainSessionMixin, BrainFieldsMixin, BrainSimulationsMixin, Br
         email: str,
         password: str,
         min_request_interval: float = 0.0,
-        rate_limit_max_retries: int = DEFAULT_RATE_LIMIT_MAX_RETRIES,
+        rate_limit_max_retries: int | None = None,
         http_config: HttpRuntimeConfig | None = None,
         request_deadline: float | None = None,
         request_abort: Callable[[], bool] | None = None,
@@ -62,7 +62,12 @@ class BrainClient(BrainSessionMixin, BrainFieldsMixin, BrainSimulationsMixin, Br
         self.email = email
         self.password = password
         self.min_request_interval = max(min_request_interval, 0.0)
-        self.rate_limit_max_retries = max(rate_limit_max_retries, 1)
+        resolved_rate_limit_retries = (
+            get_static_config().default_rate_limit_max_retries
+            if rate_limit_max_retries is None
+            else rate_limit_max_retries
+        )
+        self.rate_limit_max_retries = max(resolved_rate_limit_retries, 1)
         self.http_config = http_config or load_http_runtime_config()
         self.request_deadline = request_deadline
         self.request_abort = request_abort

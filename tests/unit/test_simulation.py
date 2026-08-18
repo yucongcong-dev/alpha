@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from unittest.mock import patch
 
-from alpha.config._constants_strings import STATUS_SKIPPED
+from alpha.config.static_config import get_static_config
 from alpha.core.simulation_parsing import (
     extract_alpha_id,
     summarize_failure,
@@ -424,7 +424,7 @@ def test_run_check_submission_stage_skips_when_stop_is_requested() -> None:
         )
 
     assert isinstance(result, FieldTestResult)
-    assert result.status == STATUS_SKIPPED
+    assert result.status == get_static_config().status_skipped
     assert result.failed_stage == "stopped"
     check_submission.assert_called_once_with(
         client,

@@ -14,14 +14,7 @@ import time
 
 import pytest
 
-from alpha.config._constants_api import (
-    API_BASE,
-    AUTH_URL,
-    SIM_ACCEPT_HEADER,
-    VERSION_HEADER,
-)
 from alpha.config._constants_core import _yaml_val
-from alpha.config._constants_thresholds import DEFAULT_DATASET_ID
 from alpha.config.expression_policy_coercion import coerce_expression_policy_override
 from alpha.config.expression_policy_merging import (
     expression_policy_overrides_for_dataset,
@@ -35,6 +28,7 @@ from alpha.config.runtime_values import (
     load_http_runtime_config,
     resolve_http_runtime_config,
 )
+from alpha.config.static_config import clear_static_config_cache, get_static_config
 from alpha.config.strategy_profiles import load_strategy_profile_schemas
 import alpha.config.yaml as yaml_module
 from alpha.config.yaml import (
@@ -56,28 +50,28 @@ class TestConfigConstants:
     """配置常量测试用例"""
 
     def test_api_base_is_string(self) -> None:
-        assert isinstance(API_BASE, str)
-        assert API_BASE.startswith("https://")
+        assert isinstance(get_static_config().api_base, str)
+        assert get_static_config().api_base.startswith("https://")
 
     def test_auth_url_contains_api_base(self) -> None:
-        assert AUTH_URL.startswith(API_BASE)
+        assert get_static_config().auth_url.startswith(get_static_config().api_base)
 
     def test_default_dataset_id(self) -> None:
-        assert DEFAULT_DATASET_ID == ""
+        assert get_static_config().default_dataset_id == ""
 
     def test_version_header_format(self) -> None:
-        assert isinstance(VERSION_HEADER, dict)
-        assert "Accept" in VERSION_HEADER
-        assert "version=2.0" in VERSION_HEADER["Accept"]
+        assert isinstance(get_static_config().version_header, dict)
+        assert "Accept" in get_static_config().version_header
+        assert "version=2.0" in get_static_config().version_header["Accept"]
 
     def test_sim_accept_header_format(self) -> None:
-        assert isinstance(SIM_ACCEPT_HEADER, dict)
-        assert "Accept" in SIM_ACCEPT_HEADER
-        assert "version=3.0" in SIM_ACCEPT_HEADER["Accept"]
+        assert isinstance(get_static_config().sim_accept_header, dict)
+        assert "Accept" in get_static_config().sim_accept_header
+        assert "version=3.0" in get_static_config().sim_accept_header["Accept"]
 
     def test_auth_url_is_https(self) -> None:
         """AUTH_URL 也应该是 HTTPS 的。"""
-        assert AUTH_URL.startswith("https://")
+        assert get_static_config().auth_url.startswith("https://")
 
 
 def test_curated_heuristics_are_loaded_only_from_yaml() -> None:
@@ -580,6 +574,31 @@ def test_get_yaml_config_reloads_when_content_changes_with_same_stat_metadata(tm
     assert second["global"]["limits"]["limit"] == 20
 
 
+def test_static_config_reloads_when_active_yaml_changes(tmp_path) -> None:
+    original_path = get_active_config_path()
+    config_path = tmp_path / "settings.yaml"
+    config_path.write_text(
+        "global:\n  quality:\n    submit:\n      min_fitness: 1.11\n",
+        encoding="utf-8",
+    )
+    try:
+        set_active_config_path(str(config_path))
+        clear_yaml_caches()
+        clear_static_config_cache()
+        assert get_static_config().submit_min_fitness == 1.11
+
+        config_path.write_text(
+            "global:\n  quality:\n    submit:\n      min_fitness: 2.22\n",
+            encoding="utf-8",
+        )
+        os.utime(config_path, None)
+        assert get_static_config().submit_min_fitness == 2.22
+    finally:
+        set_active_config_path(original_path or "")
+        clear_yaml_caches()
+        clear_static_config_cache()
+
+
 def test_yaml_validation_is_scoped_to_each_cached_path(monkeypatch, tmp_path) -> None:
     first_path = tmp_path / "first.yaml"
     second_path = tmp_path / "second.yaml"
@@ -656,8 +675,8 @@ def test_resolve_http_runtime_config_keeps_standalone_fallback(monkeypatch) -> N
     assert resolve_http_runtime_config(object()) is fallback
 
 
-def test_cli_config_is_bound_before_yaml_backed_constants_import(tmp_path) -> None:
-    """The CLI settings file must govern both constants and runtime snapshots."""
+def test_cli_config_is_bound_before_static_config_resolves(tmp_path) -> None:
+    """The CLI settings file must govern both static and runtime snapshots."""
     config_path = tmp_path / "settings.yaml"
     config_path.write_text(
         "global:\n"
@@ -674,10 +693,10 @@ sys.argv = ["alpha", "--config", sys.argv[1]]
 import alpha.main
 
 def inspect_bound_config():
-    from alpha.config._constants_thresholds import SUBMIT_MIN_FITNESS
+    from alpha.config.static_config import get_static_config
     from alpha.config.runtime_values import get_runtime_config
 
-    assert SUBMIT_MIN_FITNESS == 1.35
+    assert get_static_config().submit_min_fitness == 1.35
     assert get_runtime_config().http.simulation_retry_wait == 12.5
     return 0
 

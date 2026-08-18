@@ -9,17 +9,7 @@ from pathlib import Path
 import time
 from typing import Any
 
-from ..config._constants_strings import (
-    API_KEY_MESSAGE,
-    API_KEY_STATUS,
-    SENTINEL_UNKNOWN,
-    SENTINEL_UNKNOWN_STATUS,
-    STAT_FIELD_FIELD_ID,
-    STAT_FIELD_FIELD_NAME,
-    STAT_FIELD_FIELD_TYPE,
-    STAT_FIELD_SUBMITTABLE,
-    STAT_FIELD_TEMPLATE_NAME,
-)
+from ..config.static_config import get_static_config
 from ..io.output_paths import build_output_sidecar_paths
 from ..io.results_store import load_results_rows_from_journal
 from ..models.domain import FieldTestResult, ResultRow
@@ -89,10 +79,25 @@ def _rows_to_results(rows: list[Any], *, source: str) -> list[FieldTestResult]:
         try:
             results.append(
                 FieldTestResult(
-                    field_id=str(row.get(STAT_FIELD_FIELD_ID, SENTINEL_UNKNOWN)),
-                    field_type=str(row.get(STAT_FIELD_FIELD_TYPE, SENTINEL_UNKNOWN)),
-                    field_name=str(row.get(STAT_FIELD_FIELD_NAME, SENTINEL_UNKNOWN)),
-                    template_name=str(row.get(STAT_FIELD_TEMPLATE_NAME, "")),
+                    field_id=str(
+                        row.get(
+                            get_static_config().stat_field_field_id,
+                            get_static_config().sentinel_unknown,
+                        )
+                    ),
+                    field_type=str(
+                        row.get(
+                            get_static_config().stat_field_field_type,
+                            get_static_config().sentinel_unknown,
+                        )
+                    ),
+                    field_name=str(
+                        row.get(
+                            get_static_config().stat_field_field_name,
+                            get_static_config().sentinel_unknown,
+                        )
+                    ),
+                    template_name=str(row.get(get_static_config().stat_field_template_name, "")),
                     template_family=str(row.get("template_family", "")),
                     template_stage=str(row.get("template_stage", "")),
                     template_role=str(row.get("template_role", "")),
@@ -100,9 +105,14 @@ def _rows_to_results(rows: list[Any], *, source: str) -> list[FieldTestResult]:
                     policy_version=str(row.get("policy_version", "")),
                     simulation_id=row.get("simulation_id"),
                     alpha_id=row.get("alpha_id"),
-                    status=str(row.get(API_KEY_STATUS, SENTINEL_UNKNOWN_STATUS)),
-                    submittable=row.get(STAT_FIELD_SUBMITTABLE),
-                    message=str(row.get(API_KEY_MESSAGE, "")),
+                    status=str(
+                        row.get(
+                            get_static_config().api_key_status,
+                            get_static_config().sentinel_unknown_status,
+                        )
+                    ),
+                    submittable=row.get(get_static_config().stat_field_submittable),
+                    message=str(row.get(get_static_config().api_key_message, "")),
                     expression=str(row.get("expression", "")),
                     settings_fingerprint=str(row.get("settings_fingerprint", "")),
                     template_library_fingerprint=str(row.get("template_library_fingerprint", "")),

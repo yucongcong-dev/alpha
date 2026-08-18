@@ -10,7 +10,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import Any
 
-from ..config._constants_strings import STATUS_ERROR
+from ..config.static_config import get_static_config
 from ..models.domain import (
     AnalysisInputs,
     AnalysisPayload,
@@ -64,7 +64,7 @@ def build_results_summary_payload(
             item = None
         if include_embedded_results and item is not None:
             results_dicts.append(item)
-        if result.status == STATUS_ERROR:
+        if result.status == get_static_config().status_error:
             error_count += 1
         if is_queue_timeout_result(result):
             queue_timeout_count += 1

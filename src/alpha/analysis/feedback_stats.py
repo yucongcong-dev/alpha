@@ -6,14 +6,7 @@ from collections.abc import Sequence
 from datetime import datetime, timezone
 from typing import Any
 
-from ..config._constants_strings import (
-    SENTINEL_UNKNOWN_CHECK,
-    STAT_FIELD_ATTEMPTED_TEMPLATES,
-    STAT_FIELD_FAILED_CHECK_COUNTS,
-    STAT_FIELD_FIELD_NAME,
-    STATUS_SIMULATED,
-)
-from ..config._constants_thresholds import STATS_DEFAULT_SCORE
+from ..config.static_config import get_static_config
 from ..models.domain import FieldFeedbackMap, FieldTestResult
 from ..models.result_predicates import is_feedback_eligible_result
 from .failed_checks import score_failed_checks
@@ -63,9 +56,9 @@ def _update_latest_result_timestamp(summary: dict[str, Any], result: FieldTestRe
 
 
 def _increment_failed_check_counts(summary: dict[str, Any], result: FieldTestResult) -> None:
-    counts = summary[STAT_FIELD_FAILED_CHECK_COUNTS]
+    counts = summary[get_static_config().stat_field_failed_check_counts]
     for check in result.failed_checks or []:
-        name = check.name or SENTINEL_UNKNOWN_CHECK
+        name = check.name or get_static_config().sentinel_unknown_check
         counts[name] = int(counts.get(name, 0) or 0) + 1
 
 
@@ -92,19 +85,19 @@ def update_field_feedback_with_result(
     summary: dict[str, Any] = feedback.setdefault(
         result.field_id,
         {
-            STAT_FIELD_FIELD_NAME: result.field_name,
-            "best_score": STATS_DEFAULT_SCORE,
+            get_static_config().stat_field_field_name: result.field_name,
+            "best_score": get_static_config().stats_default_score,
             "best_expression": "",
             "best_template_name": "",
             "best_template_family": "",
             "best_template_stage": "",
-            STAT_FIELD_ATTEMPTED_TEMPLATES: 0,
+            get_static_config().stat_field_attempted_templates: 0,
             "submittable_templates": 0,
-            STAT_FIELD_FAILED_CHECK_COUNTS: {},
+            get_static_config().stat_field_failed_check_counts: {},
         },
     )
-    current_attempted = summary.get(STAT_FIELD_ATTEMPTED_TEMPLATES, 0)
-    summary[STAT_FIELD_ATTEMPTED_TEMPLATES] = int(current_attempted or 0) + 1
+    current_attempted = summary.get(get_static_config().stat_field_attempted_templates, 0)
+    summary[get_static_config().stat_field_attempted_templates] = int(current_attempted or 0) + 1
     _update_latest_result_timestamp(summary, result)
     _increment_failed_check_counts(summary, result)
     if result.submittable is True:
@@ -112,7 +105,7 @@ def update_field_feedback_with_result(
         if summary["best_score"] <= _PASSED_FEEDBACK_SCORE:
             _record_best_template(summary, result, score=_PASSED_FEEDBACK_SCORE)
         return feedback
-    if result.status != STATUS_SIMULATED or not result.failed_checks:
+    if result.status != get_static_config().status_simulated or not result.failed_checks:
         return feedback
     score = score_failed_checks(result.failed_checks)
     if score > summary["best_score"]:
@@ -157,7 +150,7 @@ def update_global_failed_check_counts_with_result(
     if not is_feedback_eligible_result(result):
         return counts
     for check in result.failed_checks or []:
-        name = check.name or SENTINEL_UNKNOWN_CHECK
+        name = check.name or get_static_config().sentinel_unknown_check
         counts[name] = counts.get(name, 0) + 1
     return counts
 

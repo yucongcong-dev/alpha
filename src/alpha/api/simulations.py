@@ -8,13 +8,8 @@ import logging
 import time
 from typing import cast
 
-from ..config._constants_api import (
-    API_BASE,
-    SIM_ACCEPT_HEADER,
-    SIMULATIONS_URL,
-)
-from ..config._constants_strings import SIM_TERMINAL_STATES
 from ..config.runtime_values import resolve_http_runtime_config
+from ..config.static_config import get_static_config
 from ..exceptions import BrainAPIError, BrainQueueBusyError, BrainStopRequested
 from ..utils.helpers import first_non_empty
 from .api_types import SimulationPayload
@@ -32,9 +27,9 @@ class BrainSimulationsMixin:
         """创建模拟任务并返回后续轮询使用的 Location 地址。"""
         _, response_headers, _ = self.request(  # type: ignore[attr-defined]
             "POST",
-            SIMULATIONS_URL,
+            get_static_config().simulations_url,
             data=json.dumps(payload),
-            headers=SIM_ACCEPT_HEADER,
+            headers=get_static_config().sim_accept_header,
             expected={201},
         )
         location = cast(str, response_header(response_headers, "Location"))
@@ -161,7 +156,7 @@ class BrainSimulationsMixin:
         should_abort: Callable[[], bool] | None,
     ) -> tuple[bool, int, float | None]:
         body_status = str(first_non_empty(payload.get("status"), payload.get("state"), "")).upper()
-        if body_status in SIM_TERMINAL_STATES:
+        if body_status in get_static_config().sim_terminal_states:
             logger.info(
                 "[simulation] terminal state detected body_status=%s ignoring Retry-After header",
                 body_status,
@@ -208,7 +203,9 @@ class BrainSimulationsMixin:
         should_abort: Callable[[], bool] | None = None,
     ) -> SimulationPayload:
         """轮询单个模拟任务，直到完成或超出排队/等待预算。"""
-        url = location if location.startswith("http") else f"{API_BASE}{location}"
+        url = (
+            location if location.startswith("http") else f"{get_static_config().api_base}{location}"
+        )
         http_config = resolve_http_runtime_config(self)
         poll_count = 0
         pending_cycles = 0
@@ -227,7 +224,7 @@ class BrainSimulationsMixin:
             _, response_headers, content = self.request(  # type: ignore[attr-defined]
                 "GET",
                 url,
-                headers=SIM_ACCEPT_HEADER,
+                headers=get_static_config().sim_accept_header,
                 expected={200, 202},
             )
             payload = safe_json_bytes(content)

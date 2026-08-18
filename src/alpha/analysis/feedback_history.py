@@ -7,8 +7,8 @@ from datetime import datetime, timezone
 import logging
 from pathlib import Path
 
-from ..config._constants_strings import FEEDBACK_STAGE_RESIMULATE
 from ..config.models import DatasetExpressionPolicy
+from ..config.static_config import get_static_config
 from ..models.domain import FieldTestResult
 from ..models.domain_types import FieldFeedbackMap, FieldFeedbackSummary
 from ..models.runtime_protocols import TemplateStats
@@ -207,6 +207,6 @@ def choose_settings_variant_budget(
     """根据反馈阶段分配 settings 变体预算。"""
     policy = expression_policy or get_dataset_expression_policy(dataset_id)
     stage = resolve_feedback_stage(field_feedback, policy.feedback_loop_policy)
-    if stage == FEEDBACK_STAGE_RESIMULATE:
+    if stage == get_static_config().feedback_stage_resimulate:
         return policy.feedback_loop_policy.resimulate.settings_variant_budget
     return policy.feedback_loop_policy.generate.settings_variant_budget

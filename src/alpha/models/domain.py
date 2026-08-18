@@ -11,7 +11,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass, field
 from typing import Any
 
-from ..config._constants_strings import STATUS_ERROR
+from ..config.static_config import get_static_config
 from .domain_types import (
     AnalysisInputs as AnalysisInputs,
 )
@@ -184,11 +184,12 @@ class FieldTestContext:
         message: str,
         simulation_id: str | None = None,
         alpha_id: str | None = None,
-        status: str = STATUS_ERROR,
+        status: str | None = None,
         failed_checks: Sequence[FailedCheck] | None = None,
         metrics: dict[str, Any] | None = None,
         error_type: str = "",
     ) -> FieldTestResult:
+        status = status if status is not None else get_static_config().status_error
         return FieldTestResult(
             field_id=self.field_id,
             field_type=self.field_type,

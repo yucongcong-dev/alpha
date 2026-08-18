@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from dataclasses import field as dataclass_field
 import logging
 
-from ..config._constants_strings import SENTINEL_UNKNOWN
+from ..config.static_config import get_static_config
 from ..core.executor import (
     build_pending_templates_for_field,
     inflight_template_keys,
@@ -206,7 +206,7 @@ class FieldSchedulingSession:
         self.round_index = round_index
         self.execution_state = context.runtime.execution_state
         self.runtime_state = context.runtime.runtime_state
-        self.field_id = str(first_non_empty(field.field_id, SENTINEL_UNKNOWN))
+        self.field_id = str(first_non_empty(field.field_id, get_static_config().sentinel_unknown))
         self.field_name = choose_field_name(field)
         self.field_type = choose_field_type(field)
         self.seed_phase_active = context.runtime.seed_phase.active

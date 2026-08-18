@@ -22,9 +22,8 @@ from dataclasses import replace
 import logging
 import zlib
 
-from ..config._constants_strings import SENTINEL_UNKNOWN
-from ..config._constants_thresholds import DRY_RUN_SAMPLE_LIMIT
 from ..config.models import DatasetExpressionPolicy
+from ..config.static_config import get_static_config
 from ..generators.fields import choose_field_name, choose_field_type
 from ..generators.templates.metadata import normalize_template_role
 from ..models.domain import FieldTestResult, TemplateCandidate, TemplateField, TemplateLibrary
@@ -138,7 +137,7 @@ def inflight_template_keys(
     """
     reserved: set[tuple[str, str, str, str]] = set()
     for context in pending_futures.values():
-        field_id = str(first_non_empty(context.field_id, SENTINEL_UNKNOWN))
+        field_id = str(first_non_empty(context.field_id, get_static_config().sentinel_unknown))
         template_name = str(first_non_empty(context.template_name, ""))
         expression = str(first_non_empty(context.expression, ""))
         settings_fingerprint = str(first_non_empty(context.settings_fingerprint, ""))
@@ -181,7 +180,7 @@ def build_pending_templates_for_field(
         - 已尝试的键会被跳过
     """
     active_services = planning_services or build_template_planning_services()
-    field_id = str(first_non_empty(field.field_id, SENTINEL_UNKNOWN))
+    field_id = str(first_non_empty(field.field_id, get_static_config().sentinel_unknown))
     field_name = choose_field_name(field)
     field_type = choose_field_type(field)
     templates, field_feedback, expression_policy = resolve_field_template_candidates(
@@ -256,7 +255,7 @@ def print_dry_run_plan(
     expression_policy: DatasetExpressionPolicy,
     full_run: bool,
     max_new_simulations: int,
-    sample_limit: int = DRY_RUN_SAMPLE_LIMIT,
+    sample_limit: int | None = None,
 ) -> None:
     """
     打印本轮计划执行的字段/模板，不创建任何 simulation。
@@ -294,6 +293,8 @@ def print_dry_run_plan(
         - 打印计划字段数、模板数、禁用模板数等信息
         - 打印最多 sample_limit 个样本详情
     """
+    if sample_limit is None:
+        sample_limit = get_static_config().dry_run_sample_limit
     _dry_run.print_dry_run_plan(
         options=options,
         fields=fields,

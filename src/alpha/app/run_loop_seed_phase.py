@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from ..config._constants_strings import SENTINEL_UNKNOWN
+from ..config.static_config import get_static_config
 from ..models.domain import TemplateField
 from ..runtime.state import ExecutionState
 from ..utils.helpers import first_non_empty
@@ -28,7 +28,10 @@ class SeedPhaseState:
         resolved_field_ids: set[str] | None = None,
     ) -> SeedPhaseState:
         """Build seed state for the selected field set."""
-        targets = {str(first_non_empty(item.field_id, SENTINEL_UNKNOWN)) for item in fields}
+        targets = {
+            str(first_non_empty(item.field_id, get_static_config().sentinel_unknown))
+            for item in fields
+        }
         return cls(
             enabled=enabled,
             target_field_ids=targets,

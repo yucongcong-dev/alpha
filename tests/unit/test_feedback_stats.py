@@ -11,7 +11,7 @@ from alpha.analysis.feedback_stats import (
     update_global_failed_check_counts_with_result,
 )
 from alpha.analysis.field_stats import decay_field_feedback, field_priority
-from alpha.config._constants_thresholds import STATS_DEFAULT_SCORE
+from alpha.config.static_config import get_static_config
 from alpha.models.domain import FieldTestResult
 from alpha.models.domain_parsers import coerce_failed_checks
 
@@ -116,7 +116,7 @@ def test_queue_timeout_does_not_update_global_failures() -> None:
 
 
 def test_field_priority_uses_history_and_penalizes_exhausted_fields() -> None:
-    assert field_priority("unknown", {}) == STATS_DEFAULT_SCORE
+    assert field_priority("unknown", {}) == get_static_config().stats_default_score
     assert (
         field_priority("cash_st", {"cash_st": {"best_score": 0.5, "attempted_templates": 2}}) == 0.5
     )

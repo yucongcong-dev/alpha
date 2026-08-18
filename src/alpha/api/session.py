@@ -10,10 +10,7 @@ import time
 from typing import Any
 from urllib.parse import urlencode
 
-from ..config._constants_api import (
-    AUTH_URL,
-    DEFAULT_HEADERS,
-)
+from ..config.static_config import get_static_config
 from ..exceptions import BrainAPIError, BrainHTTPError, BrainRateLimitError, BrainStopRequested
 from .api_types import ApiParams
 from .http_backend import HttpBackend, response_header
@@ -111,8 +108,8 @@ class BrainSessionMixin:
         token = base64.b64encode(f"{self.email}:{self.password}".encode()).decode("ascii")
         status, _, content = self.raw_request(
             "POST",
-            AUTH_URL,
-            headers={**DEFAULT_HEADERS, "Authorization": f"Basic {token}"},
+            get_static_config().auth_url,
+            headers={**get_static_config().default_headers, "Authorization": f"Basic {token}"},
             data=b"{}",
         )
         if status not in (200, 201):
@@ -131,7 +128,7 @@ class BrainSessionMixin:
         **kwargs: Any,
     ) -> tuple[int, dict[str, str], bytes]:
         """发送带共享头、退避与重试策略的 HTTP 请求。"""
-        merged_headers = dict(DEFAULT_HEADERS)
+        merged_headers = dict(get_static_config().default_headers)
         http_config = self.http_config  # type: ignore[attr-defined]
         if headers:
             merged_headers.update(headers)

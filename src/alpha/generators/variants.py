@@ -4,18 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from ..config._constants_strings import (
-    GROUP_NAME_SUBINDUSTRY,
-    NEUTRALIZATION_INDUSTRY,
-    NEUTRALIZATION_MARKET,
-    NEUTRALIZATION_NONE,
-)
-from ..config._constants_thresholds import (
-    SETTINGS_VARIANT_DECAY_FAST,
-    SETTINGS_VARIANT_DECAY_SLOW,
-    TRUNCATION_TIGHTER_MAX,
-    TRUNCATION_WEB_DEFAULT,
-)
+from ..config.static_config import get_static_config
 from ..models.domain import SettingsVariant
 from ..models.domain_parsers import parse_settings_variant
 from ..models.runtime_options import TemplateBuildOptions
@@ -48,18 +37,24 @@ def build_setting_variants(
             variants.append(casted)
 
     tighter_truncation = min(
-        float(base_settings.get("truncation", TRUNCATION_WEB_DEFAULT)), TRUNCATION_TIGHTER_MAX
+        float(base_settings.get("truncation", get_static_config().truncation_web_default)),
+        get_static_config().truncation_tighter_max,
     )
 
-    add_variant(decay=SETTINGS_VARIANT_DECAY_SLOW)
-    add_variant(decay=SETTINGS_VARIANT_DECAY_FAST)
+    add_variant(decay=get_static_config().settings_variant_decay_slow)
+    add_variant(decay=get_static_config().settings_variant_decay_fast)
     add_variant(truncation=tighter_truncation)
 
     if "group_neutralize(" in lower_expr:
-        add_variant(neutralization=NEUTRALIZATION_NONE, truncation=tighter_truncation)
-    elif GROUP_NAME_SUBINDUSTRY in lower_expr or "group_rank(" in lower_expr:
-        add_variant(neutralization=NEUTRALIZATION_INDUSTRY, truncation=tighter_truncation)
+        add_variant(
+            neutralization=get_static_config().neutralization_none, truncation=tighter_truncation
+        )
+    elif get_static_config().group_name_subindustry in lower_expr or "group_rank(" in lower_expr:
+        add_variant(
+            neutralization=get_static_config().neutralization_industry,
+            truncation=tighter_truncation,
+        )
     else:
-        add_variant(neutralization=NEUTRALIZATION_MARKET)
+        add_variant(neutralization=get_static_config().neutralization_market)
 
     return variants

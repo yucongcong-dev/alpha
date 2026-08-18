@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from ..config._constants_strings import STATUS_ERROR
+from ..config.static_config import get_static_config
 from ..models.domain import FieldTestResult
 from ..models.result_predicates import has_pending_checks, is_queue_timeout_result
 
@@ -24,7 +24,9 @@ class ExecutionMetrics:
         return cls(
             unique_field_ids=frozenset(result.field_id for result in results),
             submittable_count=sum(1 for result in results if result.submittable),
-            error_count=sum(1 for result in results if result.status == STATUS_ERROR),
+            error_count=sum(
+                1 for result in results if result.status == get_static_config().status_error
+            ),
             queue_timeout_count=sum(1 for result in results if is_queue_timeout_result(result)),
             pending_check_count=sum(1 for result in results if has_pending_checks(result)),
         )
@@ -34,7 +36,7 @@ class ExecutionMetrics:
         return ExecutionMetrics(
             unique_field_ids=self.unique_field_ids | {result.field_id},
             submittable_count=self.submittable_count + int(bool(result.submittable)),
-            error_count=self.error_count + int(result.status == STATUS_ERROR),
+            error_count=self.error_count + int(result.status == get_static_config().status_error),
             queue_timeout_count=self.queue_timeout_count + int(is_queue_timeout_result(result)),
             pending_check_count=self.pending_check_count + int(has_pending_checks(result)),
         )

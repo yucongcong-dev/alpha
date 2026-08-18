@@ -4,31 +4,6 @@ from __future__ import annotations
 
 from typing import Any
 
-from ..config._constants_strings import (
-    FEEDBACK_STAGE_GENERATE,
-    FEEDBACK_STAGE_RESIMULATE,
-    STAT_FIELD_ATTEMPTED_TEMPLATES,
-    TEMPLATE_STAGE_EVENT_CONDITIONED,
-    TEMPLATE_STAGE_GROUP_SECOND_ORDER,
-)
-from ..config._constants_templates import (
-    DEFAULT_MATRIX_DELTA_OVER_STD_WINDOWS,
-    DEFAULT_MATRIX_DIVERSIFIED_TEMPLATE_SPECS,
-    DEFAULT_PREFERRED_PARTNER_SCORE_BONUSES,
-    DEFAULT_RATIO_DELTA_OVER_STD_WINDOWS,
-    DEFAULT_RATIO_DELTA_RANK_WINDOWS,
-    DEFAULT_RATIO_DIVERSIFIED_TEMPLATE_SPECS,
-    NEGATIVE_RAW_FIELDS,
-    POSITIVE_RAW_FIELDS,
-    RATIO_KEYWORDS,
-    RATIO_LEGACY_TEMPLATE_SPECS,
-    RATIO_PARTNER_CANDIDATES,
-)
-from ..config._constants_thresholds import (
-    BACKFILL_WINDOW,
-    FEEDBACK_MUTATION_HIGHSCORE_THRESHOLD,
-    STATS_DEFAULT_SCORE,
-)
 from ..config.models import (
     DatasetExpressionPolicy,
     FeedbackLoopPolicy,
@@ -37,6 +12,7 @@ from ..config.models import (
     FieldTransformStage,
 )
 from ..config.policy_overrides import apply_yaml_expression_policy_overrides
+from ..config.static_config import get_static_config
 from ..models.domain_types import FieldFeedbackSummary
 
 
@@ -45,17 +21,17 @@ def _default_feedback_loop_policy() -> FeedbackLoopPolicy:
     return FeedbackLoopPolicy(
         generate=FeedbackPhasePolicy(
             min_attempted_templates=0,
-            min_best_score=STATS_DEFAULT_SCORE,
+            min_best_score=get_static_config().stats_default_score,
             settings_variant_budget=1,
         ),
         resimulate=FeedbackPhasePolicy(
             min_attempted_templates=3,
-            min_best_score=FEEDBACK_MUTATION_HIGHSCORE_THRESHOLD,
+            min_best_score=get_static_config().feedback_mutation_highscore_threshold,
             settings_variant_budget=3,
             enable_template_pruning=True,
             preferred_template_stages=(
-                TEMPLATE_STAGE_GROUP_SECOND_ORDER,
-                TEMPLATE_STAGE_EVENT_CONDITIONED,
+                get_static_config().template_stage_group_second_order,
+                get_static_config().template_stage_event_conditioned,
             ),
         ),
     )
@@ -76,15 +52,17 @@ def _base_expression_policy(
         "dataset_id": dataset_id,
         "use_curated_heuristics": use_curated_heuristics,
         "partner_limit": 4,
-        "matrix_delta_over_std_windows": DEFAULT_MATRIX_DELTA_OVER_STD_WINDOWS,
-        "matrix_diversified_template_specs": DEFAULT_MATRIX_DIVERSIFIED_TEMPLATE_SPECS,
-        "ratio_delta_rank_windows": DEFAULT_RATIO_DELTA_RANK_WINDOWS,
-        "ratio_delta_over_std_windows": DEFAULT_RATIO_DELTA_OVER_STD_WINDOWS,
-        "ratio_diversified_template_specs": DEFAULT_RATIO_DIVERSIFIED_TEMPLATE_SPECS,
-        "ratio_legacy_template_specs": RATIO_LEGACY_TEMPLATE_SPECS,
-        "ratio_partner_candidates": dict(RATIO_PARTNER_CANDIDATES),
-        "ratio_keywords": dict(RATIO_KEYWORDS),
-        "preferred_partner_score_bonuses": dict(DEFAULT_PREFERRED_PARTNER_SCORE_BONUSES),
+        "matrix_delta_over_std_windows": get_static_config().default_matrix_delta_over_std_windows,
+        "matrix_diversified_template_specs": get_static_config().default_matrix_diversified_template_specs,
+        "ratio_delta_rank_windows": get_static_config().default_ratio_delta_rank_windows,
+        "ratio_delta_over_std_windows": get_static_config().default_ratio_delta_over_std_windows,
+        "ratio_diversified_template_specs": get_static_config().default_ratio_diversified_template_specs,
+        "ratio_legacy_template_specs": get_static_config().ratio_legacy_template_specs,
+        "ratio_partner_candidates": dict(get_static_config().ratio_partner_candidates),
+        "ratio_keywords": dict(get_static_config().ratio_keywords),
+        "preferred_partner_score_bonuses": dict(
+            get_static_config().default_preferred_partner_score_bonuses
+        ),
         "default_field_transform": FieldTransformSpec(),
         "matrix_field_transform": backfill_transform,
         "vector_field_transform": backfill_transform,
@@ -94,8 +72,8 @@ def _base_expression_policy(
     }
     if use_curated_heuristics:
         policy_kwargs.update(
-            positive_raw_fields=set(POSITIVE_RAW_FIELDS),
-            negative_raw_fields=set(NEGATIVE_RAW_FIELDS),
+            positive_raw_fields=set(get_static_config().positive_raw_fields),
+            negative_raw_fields=set(get_static_config().negative_raw_fields),
         )
     return DatasetExpressionPolicy(**policy_kwargs)
 
@@ -103,7 +81,7 @@ def _base_expression_policy(
 def get_dataset_expression_policy(
     dataset_id: str,
     *,
-    default_backfill_window: int = BACKFILL_WINDOW,
+    default_backfill_window: int | None = None,
     use_curated_heuristics: bool | None = None,
 ) -> DatasetExpressionPolicy:
     """Return the dataset expression policy after YAML overrides.
@@ -113,6 +91,8 @@ def get_dataset_expression_policy(
     """
     if use_curated_heuristics is None:
         use_curated_heuristics = use_curated_heuristics_for_dataset(dataset_id)
+    if default_backfill_window is None:
+        default_backfill_window = get_static_config().backfill_window
 
     base_policy = _base_expression_policy(
         dataset_id,
@@ -132,17 +112,19 @@ def resolve_feedback_stage(
 ) -> str:
     """Resolve whether a field should generate or resimulate templates."""
     if not field_feedback:
-        return FEEDBACK_STAGE_GENERATE
+        return get_static_config().feedback_stage_generate
     feedback: dict[str, Any] = dict(field_feedback)
-    attempted = int(feedback.get(STAT_FIELD_ATTEMPTED_TEMPLATES, 0) or 0)
-    raw_best_score = feedback.get("best_score", STATS_DEFAULT_SCORE)
-    best_score = float(STATS_DEFAULT_SCORE if raw_best_score is None else raw_best_score)
+    attempted = int(feedback.get(get_static_config().stat_field_attempted_templates, 0) or 0)
+    raw_best_score = feedback.get("best_score", get_static_config().stats_default_score)
+    best_score = float(
+        get_static_config().stats_default_score if raw_best_score is None else raw_best_score
+    )
     if (
         attempted >= loop_policy.resimulate.min_attempted_templates
         and best_score >= loop_policy.resimulate.min_best_score
     ):
-        return FEEDBACK_STAGE_RESIMULATE
-    return FEEDBACK_STAGE_GENERATE
+        return get_static_config().feedback_stage_resimulate
+    return get_static_config().feedback_stage_generate
 
 
 def use_curated_heuristics_for_dataset(
